@@ -203,8 +203,9 @@ Deno.serve(async (req) => {
 
     // Determine which items need a notification
     const notifiable = allItems.filter((i: any) => {
-      if (!i.provider_id || i.provider_id === "bureau") return false;
-      if (i.block_type === "self_arranged" || i.block_type === "bureau") return false;
+      if (!i.provider_id) return false;
+      if (isBureauItem(i)) return false;
+      if (i.block_type === "self_arranged") return false;
       // never sent to partner: skip
       if (i.skip_partner_notification && !i.customer_approved_at && i.status === "pending") return false;
       return true;
