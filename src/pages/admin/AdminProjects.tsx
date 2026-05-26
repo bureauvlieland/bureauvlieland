@@ -1124,16 +1124,17 @@ const AdminProjectsContent = () => {
                   }
 
                   if (deleteTarget.program_id) {
-                    // Notify partners about cancellation before deleting
-                    try {
-                      await supabase.functions.invoke("notify-partner-cancellation", {
-                        body: {
-                          request_id: deleteTarget.program_id,
-                          origin: window.location.origin,
-                        },
-                      });
-                    } catch (e) {
-                      console.error("Partner notification failed:", e);
+                    if (notifyPartnersOnDelete) {
+                      try {
+                        await supabase.functions.invoke("notify-partner-cancellation", {
+                          body: {
+                            request_id: deleteTarget.program_id,
+                            origin: window.location.origin,
+                          },
+                        });
+                      } catch (e) {
+                        console.error("Partner notification failed:", e);
+                      }
                     }
 
                     await supabase
@@ -1149,18 +1150,25 @@ const AdminProjectsContent = () => {
                       .eq("id", deleteTarget.accommodation_id);
                   }
 
-                  toast({ title: "Project verwijderd", description: "Het project is succesvol verwijderd. Partners met openstaande aanvragen zijn geïnformeerd." });
+                  toast({
+                    title: "Project verwijderd",
+                    description: notifyPartnersOnDelete
+                      ? "Het project is verwijderd. Partners met openstaande aanvragen zijn geïnformeerd."
+                      : "Het project is verwijderd. Informeer partners desgewenst handmatig.",
+                  });
                   queryClient.invalidateQueries({ queryKey: ["admin-projects-unified"] });
                 } catch {
                   toast({ title: "Fout", description: "Kon het project niet verwijderen.", variant: "destructive" });
                 } finally {
                   setIsDeleting(false);
                   setDeleteTarget(null);
+                  setNotifyPartnersOnDelete(false);
                 }
               }}
             >
               {isDeleting ? "Verwijderen..." : "Verwijderen"}
             </AlertDialogAction>
+
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
