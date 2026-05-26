@@ -68,7 +68,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    if (item.provider_id === "bureau") {
+    if (isBureauItem(item)) {
       return new Response(
         JSON.stringify({ success: true, skipped: "bureau item — geen partner notificatie" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
