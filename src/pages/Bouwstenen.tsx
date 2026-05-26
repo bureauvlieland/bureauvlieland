@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { Loader2, ArrowRight, Search, Info, Clock, Users, MapPin } from "lucide-react";
+import { Loader2, Search, Info, Clock, Users, MapPin } from "lucide-react";
 import {
   Dialog,
   DialogContent,
