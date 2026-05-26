@@ -252,7 +252,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
     }
   };
 
-  const handleQuoteDecline = async (declineReason: string) => {
+  const handleQuoteDecline = async (
+    declineReason: string,
+    _proposedArrival?: string,
+    _proposedDeparture?: string
+  ) => {
     if (!accommodationQuote) return false;
     try {
       const { error } = await supabase
