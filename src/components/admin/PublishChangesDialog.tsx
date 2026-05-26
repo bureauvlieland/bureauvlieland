@@ -140,7 +140,10 @@ export function PublishChangesDialog({
   partners,
   onPublished,
 }: Props) {
-  const [notifyCustomer, setNotifyCustomer] = useState(true);
+  // Default: GEEN automatische mails. Admin moet bewust per ontvanger
+  // aanvinken wie er een notificatie krijgt — wijzigingen worden eerst
+  // gepubliceerd, communicatie loopt daarna handmatig.
+  const [notifyCustomer, setNotifyCustomer] = useState(false);
   const [notifyPartners, setNotifyPartners] = useState<Record<string, boolean>>({});
   const [adminNote, setAdminNote] = useState("");
   const [publishing, setPublishing] = useState(false);
