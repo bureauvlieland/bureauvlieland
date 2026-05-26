@@ -1,71 +1,99 @@
-## Bevindingen
+## Doel
 
-Twee kernproblemen na audit van de e-mail flows:
+De partner-omgeving overzichtelijker maken: één projectgericht overzicht (gesorteerd op datum) i.p.v. tabs met losse items, en een eigen project-pagina (eigen URL) met alle relevante info en acties — in plaats van de huidige zij-sheet.
 
-### 1. Bureau-items bereiken externe partners
+Volgorde: **eerst** de resterende handmatig-mailen punten uit de vorige chat afmaken, **daarna** pas aan de partner-redesign beginnen.
 
-De huidige uitsluiting controleert alleen `provider_id === "bureau"`, maar in de database staan ferry- en fietsitems als `block_type = "bureau"` met `provider_id` = `"rederij"`, `"fietsverhuur"` of `"bureau-vlieland"` — sommige met een `provider_email` ingevuld (bijv. `groepen@rederij-doeksen.nl`). Daardoor krijgen Doeksen en Jan van Vlieland alsnog mails over data-, prijs-, annulerings- en verwijderwijzigingen.
+---
 
-Functies waar de check te smal is:
+## Fase 1 — Restpunten handmatig mailen afronden
 
-- `update-customer-program` (data-/personen-/akkoordwijziging door klant)
-- `publish-program-changes` (admin publiceert wijzigingen)
-- `notify-partner-cancellation`
-- `notify-partner-item-deletion`
-- `notify-partner-price-change`
-- `accept-quote-proposal`, `send-items-to-partners`, `notify-partners-informational` (controle of bureau-blocks correct uitgesloten worden)
+1. **`update-customer-program`** — auto-mail bij wijziging aantal personen ook verwijderen; vervangen door `admin_todo` + interne mail naar `hallo@bureauvlieland.nl`.
+2. **Project-annulering handmatig maken** — `cancel-program-request` en het annuleren van losse items vanuit admin: geen auto-fan-out meer naar partners. Bevestigingsdialog krijgt checkbox "Partners informeren" (default uit) of een aparte knop "Partner mailen over annulering" per item.
+3. **Granulair "Mail partner"-knoppen** in admin item-popovers (prijswijziging, datawijziging, verwijdering, annulering) — één duidelijke knop per actie, met dezelfde edge-function als nu maar alleen on-demand.
+4. Door alle edge-functions lopen voor consistente `block_type === 'bureau'` exclusie (de helper uit vorige beurt overal toepassen).
 
-### 2. Wijzigingen sturen automatisch partner-mails
+Geen mailtemplate-wijzigingen tenzij we tegen kapotte verwijzingen aanlopen.
 
-Bij wijziging door klant of admin gaan er nu automatisch partner-notificaties uit:
+---
 
-- **Klant** wijzigt data/aantal personen → `update-customer-program` mailt alle providers met e-mail.
-- **Admin** publiceert wijzigingen via `PublishChangesDialog` → `publish-program-changes` mailt alle betrokken partners.
-- **Admin** wijzigt prijs in `AdminRequestDetail` → roept `notify-partner-price-change` en `notify-customer-price-change` automatisch aan.
+## Fase 2 — Partner-omgeving redesign
 
-Wens: deze mails alleen handmatig vanuit admin.
+### Nieuwe routes
 
-## Plan
+- `/partner/dashboard` — projectgericht overzicht (vervangt huidige unified-list met tabs)
+- `/partner/project/:projectId` — nieuwe project-pagina (eigen URL, deelbaar, terug-knop)
+- Oude item-zij-sheet (`PartnerItemSheet`) wordt niet meer geopend vanuit het overzicht; blijft beschikbaar als embedded blok binnen de project-pagina (of vervangen door inline cards).
 
-### A. Centrale bureau-check
+`projectId` = `program_request_id` voor activiteiten; voor losse logies-aanvragen `accommodation_request_id` (URL prefix `/partner/logies/:id` om ze te onderscheiden).
 
-Eén helper introduceren die `block_type === "bureau"` als waarheid neemt voor "centraal door bureau gefactureerd / geen partnercommunicatie". De check `provider_id === "bureau"` overal vervangen of aanvullen met `block_type === "bureau"`.
+### Overzicht (`/partner/dashboard`)
 
-Toepassen in alle bovengenoemde edge functions zodat Rederij Doeksen, Fietsverhuur Jan van Vlieland en alle andere bureau-managed leveranciers nooit meer partner-mails of cancellation/deletion/price-mails ontvangen, ongeacht welk `provider_id` of `provider_email` op het item staat.
+- Eén kaart per project. Per kaart: klantnaam (geanonimiseerd waar nodig), aankomst- en vertrekdatum, aantal personen, korte samenvatting items van die partner (bv. "2 activiteiten · 1 nog te beantwoorden"), statuschip.
+- Sortering: chronologisch op aankomstdatum, eerstvolgende bovenaan.
+- Drie collapsible secties: **Actie vereist** (open), **Aankomend** (open), **Afgerond / Geannuleerd** (dicht, 3-maanden retentie blijft gelden).
+- Logies-aanvragen krijgen ook project-kaarten in dezelfde lijst, met label "Logies".
+- Banners (`PartnerActionBanner`, `PartnerChangesSinceBanner`) en stats blijven bovenaan.
+- Filter/zoek op klantnaam of datum (lichte versie van bestaande filters).
 
-### B. Auto-mails bij klant- en adminwijzigingen uitschakelen
+### Project-pagina (`/partner/project/:id`)
 
-1. `**update-customer-program**` — de blokken die providers mailen bij datum- of personenwijziging worden verwijderd. In plaats daarvan:
-  - admin_todo aanmaken ("Klant heeft data/aantal personen gewijzigd — informeer betrokken partners handmatig") met deeplink naar het project.
-  - Interne mail naar `hallo@bureauvlieland.nl` met de wijziging + lijst betrokken partners (zelfde patroon als de bestaande counter-proposal notificatie).
-  - Geen mails meer naar partners.
-2. `**publish-program-changes**` — partner-fan-out vervangen door:
-  - admin_todo + interne bureau-mail met overzicht van wijzigingen per partner.
-  - De klantmail (samenvatting wijzigingen voor de klant) blijft bestaan.
-  - De `PublishChangesDialog` UI laat zien: "Wijzigingen gepubliceerd. Informeer partners handmatig vanuit het project."
-3. `**AdminRequestDetail` prijswijziging** — de automatische `notify-partner-price-change` invoke verwijderen. Op de plek van de prijsknop komt:
-  - Toast met knop "Partner informeren" die `notify-partner-price-change` aanroept (handmatig).
-  - `notify-customer-price-change` blijft automatisch (wens betreft alleen partner-mails… → controleren met user, zie open vraag).
-4. **Handmatige verzendknoppen** — in het project-detailscherm per item een "Mail partner over wijziging" actie naast de bestaande e-mail-popover, die de juiste notify-functie aanroept. Bureau-items tonen deze knop niet.
+Layout: header + tabs of secties op één pagina (geen sheet meer).
 
-### C. Overige checks tijdens de audit
+- **Header**: project-titel (datum + klantnaam-display), key-feiten (aankomst, vertrek, aantal personen, dieetwensen, bijzonderheden klant, locatievoorkeuren), terug-knop.
+- **Items-blok**: alle items van deze partner binnen dit project, elk een kaart met:
+  - status, datum/tijd, aantal, prijs
+  - inline acties per item: akkoord, afwijzen, prijs/aantal voorstellen, status-update, factuur uploaden
+  - bestaande logica uit `PartnerItemSheet` hergebruiken (componenten extraheren naar herbruikbare blokken: `ItemDetailsCard`, `ItemActionsCard`, `ItemPriceProposal`, etc.).
+- **Chat-blok** (project-breed): één thread per project met Bureau Vlieland. Vervangt per-item chats — bestaande chat-tabel krijgt een tweede scope `project_id`/`accommodation_request_id` naast `item_id` (zie technisch onder).
+- **Geschiedenis/activiteitenlogboek** onderaan: mails, statuswijzigingen.
 
-- URL's / domeinen: alle hardcoded `https://bureauvlieland.nl/...` links blijven correct, geen `lovable.app` URL's in productie-mails (steekproef bevestigt OK; volledige scan tijdens implementatie).
-- Reply-To, From en TEST-mode rerouting: alle aangepaste functies behouden bestaande `getRecipientEmail`/TEST-prefix gedrag.
-- `email_log`-contract: nieuwe interne bureau-mails krijgen `template_name` + `actor` conform `_shared/EMAIL_LOGGING.md`.
+### Componenten (refactor)
 
-## Open vragen voor jou
+- `PartnerItemSheet` (1167 regels) opsplitsen in herbruikbare cards die zowel op de nieuwe project-pagina als (eventueel) in een lichtgewicht popover gebruikt kunnen worden.
+- `PartnerUnifiedList` vervangen door `PartnerProjectsList` met `PartnerProjectCard`.
+- Nieuwe pagina: `src/pages/PartnerProject.tsx`.
 
-1. **Prijswijziging klant**: moet `notify-customer-price-change` ook handmatig worden? Of blijft de klant-mail wel automatisch (alleen partner-mails handmatig)?
+### Chat-aanpassing (klein)
 
-Handmatig
+Huidige chat is per `item_id`. Voor "één thread per project":
+- Nieuwe kolom `chat_messages.scope` (`'item' | 'project' | 'accommodation_request'`) + `scope_id`, of: nieuwe `project_chat_threads`-tabel met `program_request_id` + `partner_id`.
+- Voorkeur: minimalistisch — nieuwe kolommen op bestaande `chat_messages` tabel, RLS uitbreiden zodat partners alleen threads zien voor hun eigen items binnen dat project.
+- Bestaande per-item berichten blijven leesbaar, gegroepeerd onder de project-thread (oude `item_id`-berichten worden chronologisch ingevoegd).
 
-&nbsp;
+### Impersonatie
 
-1. `cancel-program-request` **en** `notify-partner-cancellation`: bij annulering van een heel project / item — wil je daar óók een handmatige knop in plaats van automatisch, of mag annulering automatisch blijven mailen (mits bureau-items uitgesloten)?
+- `?impersonate=<partnerId>` blijft werken op zowel `/partner/dashboard` als `/partner/project/:id` (al verplicht volgens core memory).
 
-Handmatig
+### Routes-update in `src/App.tsx`
 
-1. **Handmatige knop locatie**: voorkeur voor knop per item (granulair) of per partner-groep (één knop, één mail met alle gewijzigde items voor die partner)?
+Nieuwe route toevoegen, oude blijven werken (geen breaking change voor partner-bookmarks; oude per-item URL's zijn er nu niet, dus geen redirect-werk).
 
-Per item
+---
+
+## Technische notities (Fase 2)
+
+- Geen migratie nodig voor de overzichts-/project-pagina zelf, behalve eventueel de chat-scope kolom.
+- Datafetch in `PartnerDashboard` groepeert reeds per `program_request_id` — voornamelijk presentatielaag-werk.
+- Project-pagina haalt data via bestaande edge-functions / queries; volledig anonimisering van klant-PII volgens bestaande regel (`bureau_central`).
+- Geen wijziging aan mailtriggers in deze fase (die zijn in Fase 1 al handmatig gemaakt).
+
+---
+
+## Buiten scope
+
+- Mobile-app-shell of pushmeldingen.
+- Wijzigingen aan logies-detailpagina anders dan inpassen in project-kaartenlijst.
+- Wijzigingen aan stats/YTD/financiën-modules.
+- Wijzigingen aan klanten-portal of admin-portal (anders dan Fase 1 mail-knoppen).
+
+---
+
+## Uitvoer-volgorde
+
+1. Fase 1 afronden (1 turn).
+2. Refactor `PartnerItemSheet` → herbruikbare cards.
+3. Bouw `/partner/project/:id` pagina.
+4. Vervang overzicht door projectkaarten + sortering op datum.
+5. Chat-scope uitbreiden naar project-breed.
+6. QA in preview met impersonatie.
