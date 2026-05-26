@@ -10,6 +10,7 @@ import {
   renderEffectiveTimeLine,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -207,8 +208,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const items = (allItems || []) as ProgramItem[];
 
     // 3. Separate bureau items (no email needed) from external partner items
-    const bureauItems = items.filter(i => i.provider_id === "bureau");
-    const partnerItems = items.filter(i => i.provider_id !== "bureau");
+    const bureauItems = items.filter(i => isBureauItem(i));
+    const partnerItems = items.filter(i => !isBureauItem(i));
 
     // 4. If dry_run, return preview data without sending
     if (dry_run) {

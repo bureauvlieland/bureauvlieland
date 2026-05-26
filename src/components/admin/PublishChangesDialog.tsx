@@ -140,7 +140,10 @@ export function PublishChangesDialog({
   partners,
   onPublished,
 }: Props) {
-  const [notifyCustomer, setNotifyCustomer] = useState(true);
+  // Default: GEEN automatische mails. Admin moet bewust per ontvanger
+  // aanvinken wie er een notificatie krijgt — wijzigingen worden eerst
+  // gepubliceerd, communicatie loopt daarna handmatig.
+  const [notifyCustomer, setNotifyCustomer] = useState(false);
   const [notifyPartners, setNotifyPartners] = useState<Record<string, boolean>>({});
   const [adminNote, setAdminNote] = useState("");
   const [publishing, setPublishing] = useState(false);
@@ -193,13 +196,10 @@ export function PublishChangesDialog({
 
   const hasBlocking = warnings.some((w) => w.severity === "blocking");
 
-  // Initial: alle partners aangevinkt
+  // Default: geen partners aangevinkt — admin kiest bewust per partner.
   useMemo(() => {
-    const map: Record<string, boolean> = {};
-    involvedPartners.forEach((p) => {
-      if (p.contact_email || p.email) map[p.id] = true;
-    });
-    setNotifyPartners(map);
+    setNotifyPartners({});
+    setNotifyCustomer(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
@@ -381,7 +381,12 @@ export function PublishChangesDialog({
           )}
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Ontvangers</Label>
+            <Label className="text-sm font-medium">Ontvangers (optioneel)</Label>
+            <p className="text-xs text-muted-foreground">
+              Standaard worden er geen mails verstuurd. Vink hieronder aan
+              wie je nu wilt informeren — of publiceer eerst en mail later
+              handmatig per onderdeel.
+            </p>
             <div className="space-y-2 rounded-md border p-3">
               <div className="flex items-center gap-2">
                 <Checkbox

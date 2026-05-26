@@ -1131,27 +1131,15 @@ const AdminRequestDetail = () => {
             : null,
         });
 
-        // Notificeer externe partner alleen wanneer er al eerder contact was over deze prijs
+        // Geen automatische mails meer bij prijswijziging — admin
+        // informeert partner en klant handmatig via de mail-knoppen
+        // in het item-detail (popover). Hierdoor voorkomen we ongewenste
+        // notificaties bij interne correcties of bureau-items.
         if (isExternalPartner && hadPartnerQuote && price !== null) {
-          try {
-            await supabase.functions.invoke("notify-partner-price-change", {
-              body: { item_id: itemId, origin: window.location.origin },
-            });
-          } catch (notifyErr) {
-            console.error("Could not notify partner of price change:", notifyErr);
-          }
+          toast.info("Prijs gewijzigd — informeer de partner handmatig via de mail-knop bij het onderdeel.");
         }
-
-        // Notificeer ook de klant wanneer deze al eerder akkoord had gegeven —
-        // de DB-trigger reset customer_approved_at, dus de klant moet opnieuw bevestigen.
         if (hadCustomerApproval && price !== null) {
-          try {
-            await supabase.functions.invoke("notify-customer-price-change", {
-              body: { item_id: itemId, origin: window.location.origin },
-            });
-          } catch (notifyErr) {
-            console.error("Could not notify customer of price change:", notifyErr);
-          }
+          toast.info("Klant moet opnieuw bevestigen — stuur handmatig een melding wanneer gewenst.");
         }
       }
 

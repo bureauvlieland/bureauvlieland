@@ -11,6 +11,7 @@ import {
   renderEffectiveTimeLine,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -94,7 +95,7 @@ async function groupItemsByProvider(items: ProgramItem[], supabase: any): Promis
   }
 
   for (const item of items) {
-    if (item.provider_id === "bureau") continue;
+    if (isBureauItem(item)) continue;
 
     const partner = partnerMap.get(item.provider_id);
     const email = item.provider_email || (partner ? (partner.contact_email || partner.email) : undefined);

@@ -8,6 +8,7 @@ import {
   buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -67,7 +68,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    if (item.provider_id === "bureau") {
+    if (isBureauItem(item)) {
       return new Response(
         JSON.stringify({ success: true, skipped: "bureau item — geen partner notificatie" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
