@@ -14,7 +14,7 @@ interface PartnerLocationMapProps {
 export const PartnerLocationMap = ({ lat, lng, label, address, isVisible }: PartnerLocationMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
-  const hasCoords = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+  const hasCoords = lat !== null && lng !== null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
   const directionsTarget = hasCoords ? `${lat},${lng}` : address ?? label;
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(directionsTarget)}`;
 
