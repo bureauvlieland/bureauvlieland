@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       .in("status", ["pending", "confirmed", "accepted", "counter_proposed"]);
 
     const notifiableItems = (openItems || []).filter(
-      (i: any) => i.block_type !== "self_arranged" && i.provider_id !== "bureau"
+      (i: any) => i.block_type !== "self_arranged" && !isBureauItem(i)
     );
 
     // Cancel items
