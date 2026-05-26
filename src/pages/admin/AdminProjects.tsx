@@ -285,6 +285,8 @@ const AdminProjectsContent = () => {
   const [actionOnly, setActionOnly] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteAccommodation, setDeleteAccommodation] = useState(false);
+  const [notifyPartnersOnDelete, setNotifyPartnersOnDelete] = useState(false);
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
