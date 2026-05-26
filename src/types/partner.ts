@@ -44,6 +44,7 @@ export interface PartnerItem {
   updated_at: string;
   duration: string | null;
   admin_price_notes: string | null;
+  partner_instructions: string | null;
   // Proposed alternative fields (set when partner proposes alternative)
   proposed_time: string | null;
   proposed_date: string | null;

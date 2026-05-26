@@ -42,7 +42,8 @@ interface ChangeRow {
     | "description"
     | "location"
     | "provider"
-    | "invoicing";
+    | "invoicing"
+    | "partner_instructions";
   oldValue: string | null;
   newValue: string | null;
 }
@@ -61,6 +62,7 @@ const fieldLabel: Record<ChangeRow["field"], string> = {
   location: "Locatie",
   provider: "Uitvoerder",
   invoicing: "Facturatie",
+  partner_instructions: "Instructie voor partner",
 };
 
 function formatVal(v: string | null): string {
@@ -402,6 +404,15 @@ Deno.serve(async (req) => {
           it.pending_admin_price_notes,
         );
       }
+      if (it.pending_partner_instructions !== null && it.pending_partner_instructions !== undefined) {
+        pushDiff(
+          "partner_instructions",
+          it.partner_instructions,
+          it.pending_partner_instructions,
+          it.partner_instructions,
+          it.pending_partner_instructions,
+        );
+      }
       // Locatie wordt als groep beheerd: zodra pending_location_address gezet
       // is (incl. "" sentinel voor expliciet leeg) publiceren we alle drie de
       // velden, zodat oude lat/lng niet blijven hangen bij een adreswijziging.
@@ -518,6 +529,7 @@ Deno.serve(async (req) => {
         pending_admin_price_override: null,
         pending_price_type: null,
         pending_admin_price_notes: null,
+        pending_partner_instructions: null,
         pending_location_lat: null,
         pending_location_lng: null,
         pending_location_address: null,
@@ -551,6 +563,9 @@ Deno.serve(async (req) => {
       }
       if (it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined) {
         upd.admin_price_notes = it.pending_admin_price_notes;
+      }
+      if (it.pending_partner_instructions !== null && it.pending_partner_instructions !== undefined) {
+        upd.partner_instructions = it.pending_partner_instructions;
       }
       // Locatie als groep promoten: als er een pending adres staat (ook "")
       // schrijven we adres, lat en lng allemaal naar live — null overschrijft

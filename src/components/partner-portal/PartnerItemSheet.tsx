@@ -510,6 +510,19 @@ export const PartnerItemSheet = ({
             </div>
           </div>
 
+          {/* Partner instructions — operationele instructie van Bureau Vlieland */}
+          {item.partner_instructions && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Instructie van Bureau Vlieland</h3>
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
+                  <p className="text-sm whitespace-pre-wrap">{item.partner_instructions}</p>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Admin price notes / Toelichting Bureau Vlieland */}
           {item.admin_price_notes && (
             <>

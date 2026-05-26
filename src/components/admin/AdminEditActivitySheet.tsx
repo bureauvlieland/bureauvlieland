@@ -61,6 +61,7 @@ interface ProgramRequestItem {
   status: string;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  partner_instructions?: string | null;
   price_type?: string | null;
   override_people?: number | null;
   location_lat?: number | null;
@@ -105,6 +106,7 @@ export const AdminEditActivitySheet = ({
     item?.block_type === "bureau" ? "bureau" : "partner"
   );
   const [notes, setNotes] = useState(item?.customer_notes ?? "");
+  const [partnerInstructions, setPartnerInstructions] = useState(item?.partner_instructions ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(item?.location_lat ?? null);
@@ -138,6 +140,7 @@ export const AdminEditActivitySheet = ({
       setPriceType(pt === "per_person_per_day" || pt === "total" ? pt : "per_person");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
+      setPartnerInstructions(item.partner_instructions || "");
       setSelectedProviderId(item.provider_id || "bureau");
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
@@ -220,6 +223,7 @@ export const AdminEditActivitySheet = ({
           admin_price_override: price,
           price_type: priceType,
           customer_notes: notes || null,
+          partner_instructions: partnerInstructions || null,
           block_type: newBlockType,
           location_lat: locationLat,
           location_lng: locationLng,
@@ -264,6 +268,7 @@ export const AdminEditActivitySheet = ({
           pending_admin_price_override: diff(item.admin_price_override ?? null, price),
           pending_price_type: diff(item.price_type ?? "per_person", priceType),
           pending_customer_notes: diff(item.customer_notes ?? null, notes || null),
+          pending_partner_instructions: diff(item.partner_instructions ?? null, partnerInstructions || null),
           pending_block_type: diff(item.block_type, newBlockType),
           // Locatie als groep behandelen: zodra adres, lat of lng wijzigt,
           // schrijven we alle drie naar pending. Zo kan bv. een adres-wijziging
@@ -639,6 +644,21 @@ export const AdminEditActivitySheet = ({
               placeholder="Specifieke wensen van de klant..."
               rows={2}
             />
+          </div>
+
+          {/* Partner instructions — operationeel, alleen zichtbaar voor partner */}
+          <div className="space-y-2">
+            <Label htmlFor="editPartnerInstructions">Instructie voor partner (optioneel)</Label>
+            <Textarea
+              id="editPartnerInstructions"
+              value={partnerInstructions}
+              onChange={(e) => setPartnerInstructions(e.target.value)}
+              placeholder="Bijv. '10 minuten van tevoren aanwezig zijn' of 'geen krentenbollen meenemen'..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Niet zichtbaar voor de klant. Alleen de partner ziet deze instructie in zijn portaal.
+            </p>
           </div>
 
           {/* Actions */}
