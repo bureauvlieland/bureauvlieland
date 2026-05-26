@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import { differenceInDays } from 'date-fns';
 import { RefreshCw, ArrowRight, Home, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
