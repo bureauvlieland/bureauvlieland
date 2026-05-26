@@ -8,13 +8,11 @@ import { PartnerChangesSinceBanner } from "@/components/partner-portal/PartnerCh
 
 import { PartnerCompactStats, type StatType } from "@/components/partner-portal/PartnerCompactStats";
 import { PartnerYtdModule } from "@/components/partner-portal/PartnerYtdModule";
-import { PartnerUnifiedList } from "@/components/partner-portal/PartnerUnifiedList";
+import { PartnerProjectsList } from "@/components/partner-portal/PartnerProjectsList";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
 import { PartnerUpcomingActivities } from "@/components/partner-portal/PartnerUpcomingActivities";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
