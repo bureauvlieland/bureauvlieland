@@ -62,6 +62,7 @@ interface ProgramRequestItem {
   admin_price_override: number | null;
   admin_price_notes: string | null;
   partner_instructions?: string | null;
+  pending_partner_instructions?: string | null;
   price_type?: string | null;
   override_people?: number | null;
   location_lat?: number | null;
