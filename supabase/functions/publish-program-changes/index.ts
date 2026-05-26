@@ -42,7 +42,8 @@ interface ChangeRow {
     | "description"
     | "location"
     | "provider"
-    | "invoicing";
+    | "invoicing"
+    | "partner_instructions";
   oldValue: string | null;
   newValue: string | null;
 }
