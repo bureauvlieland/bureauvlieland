@@ -39,6 +39,8 @@ import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { resolveAutoTodo } from "@/lib/autoTodoCreator";
 import { getPriceTypeSuffix } from "@/lib/portalPricing";
+import { useAutoSaveField } from "@/hooks/useAutoSaveField";
+import { FieldSaveIndicator } from "@/components/admin/FieldSaveIndicator";
 
 interface PartnerOption {
   id: string;
