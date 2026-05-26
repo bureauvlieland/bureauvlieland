@@ -726,72 +726,11 @@ const PartnerDashboardContent = () => {
           />
         )}
 
-        {/* Workflow tabs with unified list */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
-        >
-          <ScrollArea className="w-full sticky top-0 bg-background z-10">
-            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
-              <TabsTrigger value="action" className="relative whitespace-nowrap">
-                Actie nodig
-                {actionCount > 0 && (
-                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                    {actionCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="in_progress" className="whitespace-nowrap">
-                In behandeling
-                {inProgressCount > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {inProgressCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              {expiredCount > 0 && (
-                <TabsTrigger value="expired" className="whitespace-nowrap">
-                  Verlopen
-                  <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
-                    {expiredCount}
-                  </span>
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="accepted" className="whitespace-nowrap">
-                Bevestigd door klant
-                {acceptedCount > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {acceptedCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="whitespace-nowrap">
-                Afgerond
-                {recentCancelledCount > 0 && (
-                  <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
-                    {recentCancelledCount}
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-
-          {(["action", "in_progress", "expired", "accepted", "completed"] as const).map((tab) => (
-            <TabsContent key={tab} value={tab} className="mt-6">
-              <PartnerUnifiedList
-                items={data.items}
-                accommodationQuotes={accommodationQuotes}
-                filter={tab}
-                onSelectItem={(item) => {
-                  setSelectedItem(item);
-                  setShowSheet(true);
-                }}
-                onSelectQuote={handleSelectQuote}
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
+        {/* Project-grouped overview */}
+        <PartnerProjectsList
+          items={data.items}
+          accommodationQuotes={accommodationQuotes}
+        />
       </div>
 
       {/* Item detail sheet */}
