@@ -404,21 +404,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
             {isBureauCentral && <BureauCentralBadge variant="compact" />}
 
-            {(req.dietary_notes || req.guest_names) && (
-              <div className="border-t pt-4 space-y-2 text-sm">
-                {req.dietary_notes && (
-                  <div className="flex items-start gap-2">
-                    <Utensils className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="font-medium text-xs uppercase text-muted-foreground tracking-wide">
-                        Dieetwensen
-                      </p>
-                      <p>{req.dietary_notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          <GuestDetailsBlock
+            guestNames={req.guest_names}
+            dietaryNotes={req.dietary_notes}
+          />
+
           </Card>
 
           {/* Items + chat in 2-col layout */}
