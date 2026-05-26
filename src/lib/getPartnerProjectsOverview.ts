@@ -152,6 +152,7 @@ export function buildPartnerOverviewRows(
       itemCount: 1,
       actionCount,
       termsAccepted: false,
+      isConcept: false,
     });
   });
 
