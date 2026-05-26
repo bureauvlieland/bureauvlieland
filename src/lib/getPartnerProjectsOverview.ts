@@ -102,15 +102,18 @@ export function buildPartnerOverviewRows(
     const sorted = [...dates].sort();
     const earliest = toDate(sorted[0] ?? null);
     const end = toDate(sorted[sorted.length - 1] ?? null);
-    const derivedStatus = deriveActivityStatus(items);
-    const actionCount = items.filter(isItemActionRequired).length;
+    const isConcept = items.every(i => i.is_concept);
+    const derivedStatus: DerivedStatus = isConcept ? "concept" : deriveActivityStatus(items);
+    const actionCount = isConcept ? 0 : items.filter(isItemActionRequired).length;
 
     rows.push({
       id: requestId,
       href: `/partner/project/${requestId}`,
       reference: req.reference_number ?? null,
       kind: "activities",
-      customerLabel: req.customer_company || req.customer_name,
+      customerLabel: isConcept
+        ? "Aanvraag in voorbereiding"
+        : req.customer_company || req.customer_name,
       numberOfPeople: req.number_of_people ?? 1,
       earliestDate: earliest,
       endDate: end,
@@ -121,6 +124,7 @@ export function buildPartnerOverviewRows(
       itemCount: items.length,
       actionCount,
       termsAccepted: !!req.terms_accepted_at,
+      isConcept,
     });
   });
 
