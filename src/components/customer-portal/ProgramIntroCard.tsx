@@ -170,7 +170,9 @@ export const ProgramIntroCard = ({
                 {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
               </div>
               <p className="text-xs text-muted-foreground">
-                Niet-bindend. Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden.
+                Hiermee gaat u akkoord met de getoonde onderdelen en indicatieve prijzen.
+                Wijzigt een aanbieder iets wezenlijks, dan vragen we u dat onderdeel opnieuw te bevestigen.
+                Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden.
               </p>
             </>
           )}
