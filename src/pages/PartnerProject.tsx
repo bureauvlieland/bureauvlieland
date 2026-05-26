@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+import { cn } from "@/lib/utils";
 
 type Mode = "activities" | "accommodation";
 
