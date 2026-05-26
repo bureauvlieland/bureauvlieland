@@ -562,6 +562,9 @@ Deno.serve(async (req) => {
       if (it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined) {
         upd.admin_price_notes = it.pending_admin_price_notes;
       }
+      if (it.pending_partner_instructions !== null && it.pending_partner_instructions !== undefined) {
+        upd.partner_instructions = it.pending_partner_instructions;
+      }
       // Locatie als groep promoten: als er een pending adres staat (ook "")
       // schrijven we adres, lat en lng allemaal naar live — null overschrijft
       // dan ook oude waarden.
