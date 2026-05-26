@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, Utensils, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare } from "lucide-react";
+import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -403,21 +404,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
             {isBureauCentral && <BureauCentralBadge variant="compact" />}
 
-            {(req.dietary_notes || req.guest_names) && (
-              <div className="border-t pt-4 space-y-2 text-sm">
-                {req.dietary_notes && (
-                  <div className="flex items-start gap-2">
-                    <Utensils className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="font-medium text-xs uppercase text-muted-foreground tracking-wide">
-                        Dieetwensen
-                      </p>
-                      <p>{req.dietary_notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          <GuestDetailsBlock
+            guestNames={req.guest_names}
+            dietaryNotes={req.dietary_notes}
+          />
+
           </Card>
 
           {/* Items + chat in 2-col layout */}
@@ -639,14 +630,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
           {isBureauCentral && <BureauCentralBadge variant="compact" />}
 
-          {req.special_requests && (
-            <div className="border-t pt-4 text-sm">
-              <p className="font-medium text-xs uppercase text-muted-foreground tracking-wide mb-1">
-                Bijzonderheden
-              </p>
-              <p>{req.special_requests}</p>
-            </div>
-          )}
+          <GuestDetailsBlock
+            roomAssignment={(req as any).room_assignment}
+            dietaryNotes={req.special_requests}
+          />
+
         </Card>
 
         <div className="grid lg:grid-cols-[1fr_400px] gap-6">
