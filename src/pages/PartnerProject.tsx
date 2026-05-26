@@ -319,7 +319,10 @@ const PartnerProjectContent = ({ mode }: Props) => {
     const sorted = [...dates].sort();
     const arrival = sorted[0];
     const departure = sorted[sorted.length - 1];
-    const customerLabel = req.customer_company || req.customer_name;
+    const isConceptProject = projectItems.every((i) => i.is_concept);
+    const customerLabel = isConceptProject
+      ? "Aanvraag in voorbereiding"
+      : req.customer_company || req.customer_name;
     const isBureauCentral = req.invoicing_mode === "bureau_central";
 
     return (
@@ -335,7 +338,9 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
           {/* Header */}
           <div>
-            <h1 className="text-2xl font-bold">{customerLabel}</h1>
+            <h1 className={cn("text-2xl font-bold", isConceptProject && "italic text-muted-foreground")}>
+              {customerLabel}
+            </h1>
             <p className="text-muted-foreground mt-1">
               {arrival && format(parseISO(arrival), "EEE d MMM", { locale: nl })}
               {departure && departure !== arrival && (
@@ -346,6 +351,16 @@ const PartnerProjectContent = ({ mode }: Props) => {
                 : ""}
             </p>
           </div>
+
+          {isConceptProject && (
+            <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+              <p className="font-medium">Concept — nog niet vrijgegeven door Bureau Vlieland</p>
+              <p className="mt-1">
+                Deze aanvraag is in voorbereiding. Je kunt 'm vast bekijken; klantgegevens en acties komen
+                pas vrij zodra Bureau Vlieland de aanvraag officieel naar je verstuurt.
+              </p>
+            </div>
+          )}
 
           {/* Project info card */}
           <Card className="p-5 space-y-4">
