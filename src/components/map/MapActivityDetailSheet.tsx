@@ -236,8 +236,15 @@ export const MapActivityDetailSheet = ({
 
           {/* Cross-sell */}
           <div>
-            <h3 className="text-sm font-semibold mb-3">Maak het compleet</h3>
+            <h3 className="text-sm font-semibold mb-3">Andere opties</h3>
             <div className="grid sm:grid-cols-3 gap-2">
+              <Link to="/snel-aanvragen" className="block">
+                <Card className="p-3 h-full hover:bg-accent/50 transition-colors border">
+                  <Sparkles className="h-5 w-5 text-primary mb-2" />
+                  <p className="text-sm font-medium leading-tight">Andere datum?</p>
+                  <p className="text-xs text-muted-foreground mt-1">Los aanvragen</p>
+                </Card>
+              </Link>
               <Link to="/logies-aanvragen" className="block">
                 <Card className="p-3 h-full hover:bg-accent/50 transition-colors border">
                   <Bed className="h-5 w-5 text-primary mb-2" />
@@ -247,16 +254,9 @@ export const MapActivityDetailSheet = ({
               </Link>
               <Link to="/programma-samenstellen" className="block">
                 <Card className="p-3 h-full hover:bg-accent/50 transition-colors border">
-                  <Sparkles className="h-5 w-5 text-primary mb-2" />
+                  <UtensilsCrossed className="h-5 w-5 text-primary mb-2" />
                   <p className="text-sm font-medium leading-tight">Compleet programma?</p>
                   <p className="text-xs text-muted-foreground mt-1">Stel zelf samen</p>
-                </Card>
-              </Link>
-              <Link to="/onze-werkwijze" className="block">
-                <Card className="p-3 h-full hover:bg-accent/50 transition-colors border">
-                  <UtensilsCrossed className="h-5 w-5 text-primary mb-2" />
-                  <p className="text-sm font-medium leading-tight">Hoe werken wij?</p>
-                  <p className="text-xs text-muted-foreground mt-1">Onze werkwijze</p>
                 </Card>
               </Link>
             </div>
