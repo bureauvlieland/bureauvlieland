@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Info,
   Play,
+  MapPin,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -240,6 +242,16 @@ export const PartnerProjectItemRow = ({
                 {effectiveTime}
               </span>
             )}
+            <span className="inline-flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {effectivePeople} pers.
+            </span>
+            {item.location_address && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {item.location_address}
+              </span>
+            )}
             {lineTotal != null && (
               <span className="font-medium text-foreground">€{formatEur(lineTotal)}</span>
             )}
@@ -301,10 +313,22 @@ export const PartnerProjectItemRow = ({
         </div>
       )}
 
-      {/* Customer notes inline (small, no dup) */}
+      {/* Partner instruction from Bureau Vlieland (prominent) */}
+      {item.partner_instructions && mode === "idle" && (
+        <div className="mx-4 mb-3 -mt-1 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs">
+          <p className="font-medium text-amber-900 dark:text-amber-200 mb-0.5">
+            Instructie van Bureau Vlieland
+          </p>
+          <p className="whitespace-pre-wrap text-amber-900 dark:text-amber-100">
+            {item.partner_instructions}
+          </p>
+        </div>
+      )}
+
+      {/* Customer notes inline */}
       {item.customer_notes && mode === "idle" && (
         <div className="px-4 pb-3 -mt-1 text-xs text-muted-foreground">
-          <span className="font-medium">Klant:</span> {item.customer_notes}
+          <span className="font-medium">Wens van klant:</span> {item.customer_notes}
         </div>
       )}
 

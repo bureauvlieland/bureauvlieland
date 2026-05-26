@@ -251,6 +251,8 @@ interface ProgramRequestItem {
   pending_provider_name?: string | null;
   pending_provider_email?: string | null;
   pending_block_type?: string | null;
+  partner_instructions?: string | null;
+  pending_partner_instructions?: string | null;
 }
 
 interface HistoryEntry {
@@ -2744,6 +2746,8 @@ const AdminRequestDetail = () => {
           admin_price_notes: i.admin_price_notes ?? null,
           price_type: i.price_type ?? null,
           location_address: i.location_address ?? null,
+          partner_instructions: i.partner_instructions ?? null,
+          pending_partner_instructions: i.pending_partner_instructions ?? null,
           pending_preferred_time: i.pending_preferred_time ?? null,
           pending_day_index: i.pending_day_index ?? null,
           pending_customer_notes: i.pending_customer_notes ?? null,

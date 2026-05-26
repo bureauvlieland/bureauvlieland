@@ -62,6 +62,7 @@ interface ProgramRequestItem {
   admin_price_override: number | null;
   admin_price_notes: string | null;
   partner_instructions?: string | null;
+  pending_partner_instructions?: string | null;
   price_type?: string | null;
   override_people?: number | null;
   location_lat?: number | null;
@@ -106,7 +107,9 @@ export const AdminEditActivitySheet = ({
     item?.block_type === "bureau" ? "bureau" : "partner"
   );
   const [notes, setNotes] = useState(item?.customer_notes ?? "");
-  const [partnerInstructions, setPartnerInstructions] = useState(item?.partner_instructions ?? "");
+  const [partnerInstructions, setPartnerInstructions] = useState(
+    item?.pending_partner_instructions ?? item?.partner_instructions ?? ""
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(item?.location_lat ?? null);
@@ -140,7 +143,7 @@ export const AdminEditActivitySheet = ({
       setPriceType(pt === "per_person_per_day" || pt === "total" ? pt : "per_person");
       setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
       setNotes(item.customer_notes || "");
-      setPartnerInstructions(item.partner_instructions || "");
+      setPartnerInstructions(item.pending_partner_instructions ?? item.partner_instructions ?? "");
       setSelectedProviderId(item.provider_id || "bureau");
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);

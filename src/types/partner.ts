@@ -45,6 +45,9 @@ export interface PartnerItem {
   duration: string | null;
   admin_price_notes: string | null;
   partner_instructions: string | null;
+  location_address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
   // Proposed alternative fields (set when partner proposes alternative)
   proposed_time: string | null;
   proposed_date: string | null;
