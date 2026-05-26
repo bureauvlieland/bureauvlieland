@@ -134,6 +134,8 @@ Deno.serve(async (req) => {
 
     const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
     const activeItems = (items || []).filter(item => {
+      // Exclude items whose parent program_request is cancelled
+      if (item.program_requests?.status === "cancelled" || item.program_requests?.cancelled_at) return false;
       if (activeStatuses.includes(item.status)) return true;
       return new Date(item.updated_at) > cutoffDate;
     });
