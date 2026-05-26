@@ -2219,6 +2219,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           override_people: number | null
+          partner_instructions: string | null
           partner_price_change_acknowledged_at: string | null
           pending_added: boolean
           pending_admin_price_notes: string | null
@@ -2235,6 +2236,7 @@ export type Database = {
           pending_location_lng: number | null
           pending_marked_for_removal: boolean
           pending_override_people: number | null
+          pending_partner_instructions: string | null
           pending_preferred_time: string | null
           pending_price_type: string | null
           pending_provider_email: string | null
@@ -2306,6 +2308,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           override_people?: number | null
+          partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           pending_added?: boolean
           pending_admin_price_notes?: string | null
@@ -2322,6 +2325,7 @@ export type Database = {
           pending_location_lng?: number | null
           pending_marked_for_removal?: boolean
           pending_override_people?: number | null
+          pending_partner_instructions?: string | null
           pending_preferred_time?: string | null
           pending_price_type?: string | null
           pending_provider_email?: string | null
@@ -2393,6 +2397,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           override_people?: number | null
+          partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           pending_added?: boolean
           pending_admin_price_notes?: string | null
@@ -2409,6 +2414,7 @@ export type Database = {
           pending_location_lng?: number | null
           pending_marked_for_removal?: boolean
           pending_override_people?: number | null
+          pending_partner_instructions?: string | null
           pending_preferred_time?: string | null
           pending_price_type?: string | null
           pending_provider_email?: string | null
