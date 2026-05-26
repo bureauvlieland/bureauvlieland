@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
           <p>Beste ${sanitizeHtml(program.customer_name)},</p>
           <p>Uw aanvraag voor <strong>${dates}</strong> is succesvol geannuleerd.</p>
           ${reason ? `<div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;"><p><strong>Reden:</strong> ${sanitizeHtml(reason)}</p></div>` : ""}
-          <p>Alle betrokken aanbieder(s) zijn op de hoogte gesteld.</p>
+          <p>Bureau Vlieland neemt contact op met de betrokken aanbieder(s) over deze annulering.</p>
           <p style="color: #718096; font-size: 14px;">Met vriendelijke groet,<br>Erwin & Team Bureau Vlieland</p>
         </div>
       `,
