@@ -511,7 +511,7 @@ export const PartnerItemSheet = ({
             </div>
           </div>
 
-          {(item.location_address || (item.location_lat && item.location_lng)) && (
+          {(item.location_address || (item.location_lat !== null && item.location_lng !== null)) && (
             <PartnerLocationMap
               lat={item.location_lat}
               lng={item.location_lng}
