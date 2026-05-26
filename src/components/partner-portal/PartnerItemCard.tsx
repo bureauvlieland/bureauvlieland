@@ -290,6 +290,14 @@ export const PartnerItemCard = ({
           </div>
         )}
 
+        {/* Partner instructions — operationele instructie van Bureau Vlieland */}
+        {item.partner_instructions && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-sm">
+            <p className="text-amber-900 dark:text-amber-200 font-medium mb-1">Instructie van Bureau Vlieland:</p>
+            <p className="whitespace-pre-wrap text-amber-900 dark:text-amber-100">{item.partner_instructions}</p>
+          </div>
+        )}
+
         {/* Admin price notes / Toelichting Bureau Vlieland */}
         {item.admin_price_notes && (
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
