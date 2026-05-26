@@ -175,18 +175,42 @@ Deno.serve(async (req) => {
 
     // Attach sibling items to each partner item for conflict detection
     // Also strip customer contact details for bureau_central projects
+    // For "concept" items (skip_partner_notification=true & pending) — strip ALL PII;
+    // partner sees only that something is in preparation.
     const itemsWithSiblings = activeItems.map(item => {
+      const isConcept = !!item.skip_partner_notification && item.status === "pending";
       const isBureauCentral = item.program_requests?.invoicing_mode === "bureau_central";
-      const programRequests = isBureauCentral
-        ? {
-            ...item.program_requests,
-            customer_email: undefined,
-            customer_phone: undefined,
-          }
-        : item.program_requests;
+      let programRequests = item.program_requests;
+      if (isConcept) {
+        programRequests = {
+          ...programRequests,
+          customer_name: "",
+          customer_email: undefined,
+          customer_phone: undefined,
+          customer_company: null,
+          billing_company_name: null,
+          billing_kvk_number: null,
+          billing_vat_number: null,
+          billing_address_street: null,
+          billing_address_postal: null,
+          billing_address_city: null,
+          billing_contact_name: null,
+          billing_contact_email: null,
+          billing_reference: null,
+          guest_names: null,
+          dietary_notes: null,
+        };
+      } else if (isBureauCentral) {
+        programRequests = {
+          ...programRequests,
+          customer_email: undefined,
+          customer_phone: undefined,
+        };
+      }
 
       return {
         ...item,
+        is_concept: isConcept,
         program_requests: programRequests,
         sibling_items: allRequestItems[item.request_id] || [],
       };
