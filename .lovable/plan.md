@@ -1,98 +1,69 @@
-## Doel
+## Wat ik ga aanpassen
 
-Klanten moeten activiteiten op twee manieren kunnen aanvragen, beide vanuit de bouwstenen-pagina:
-
-1. **Toevoegen aan programma** (huidige flow) — meerdaags, ferry/fiets standaard erbij.
-2. **Direct aanvragen** (nieuw) — losse activiteit(en) op een gewenste datum/tijd, zonder verplichte ferry & fiets. Daarna nog uitbreidbaar.
-
-Daarnaast: MAP-activiteiten (direct boekbaar aanbod) ook aanvraagbaar maken als ze niet als geplande slot staan.
+Drie samenhangende issues, opgelost in één pass.
 
 ---
 
-## 1. Bouwstenen-pagina — twee CTA's per kaart
+### 1. Partnerinstructie wordt niet zichtbaar opgeslagen (root cause + fix)
 
-In `src/pages/Bouwstenen.tsx`:
+**Wat ik in de database zag:** voor programma `7ejU9NbDn8gA` staat bij geen enkel item een (pending) partner-instructie. De save-logica in `AdminEditActivitySheet` is technisch correct, maar er is geen visuele bevestiging dat een veld is opgeslagen, en niets waarschuwt je als je het paneel sluit zonder op **Opslaan** te klikken — vandaar de indruk dat het "verdwijnt".
 
-- Vervang de huidige `Toevoegen`-knop door **twee duidelijke acties** per kaart:
-  - Primair: **"Direct aanvragen"** → start de losse-aanvraag flow (zie §3).
-  - Secundair: **"Toevoegen aan programma"** → huidige `?block=` deeplink naar `/programma-samenstellen`.
-- Hover/contrast bug fixen: huidige `variant="ghost" text-primary` levert onleesbare hover op. Gebruik standaard `Button` varianten (`default` + `outline`) met semantic tokens — geen handmatige kleur-classes.
-- Zelfde knoppen ook in de detail-`Dialog` onderaan.
+**Fix (combineert auto-save én vangnet):**
 
-Visueel ongeveer:
+- **Auto-save bij blur + debounce (800ms)** voor `partner_instructions`, `customer_notes`, `admin_price_notes` en `block_name`. Schrijft naar `pending_partner_instructions` (of live als `pending_added=true`), exact via dezelfde diff-logica die nu in `handleSave` zit — geëxtraheerd naar `savePartialItem(itemId, patch)`.
+- **Status-indicator** rechts onder elk auto-save veld: "Niet opgeslagen" → spinner "Opslaan…" → "✓ Opgeslagen om 14:32".
+- **Dirty-guard:** als er nog een save bezig is of er staan unsaved wijzigingen in de niet-auto-save velden (prijs, locatie, uitvoerder, dag, tijd), toon AlertDialog "Wijzigingen weggooien?" bij sluiten van het sheet.
+- **Opslaan-knop blijft bestaan** voor de overige velden (prijs/locatie/uitvoerder); blijft de "publish all at once" moment van vandaag.
 
-```text
-[ Direct aanvragen ]   [ Toevoegen aan programma ]
-```
+**Bestanden:**
 
-## 2. MAP-activiteiten als bouwstenen
-
-Op `/activiteiten-boeken` (en in `MapActivityDetailSheet`):
-
-- Als een MAP-activiteit gekoppeld is aan een bestaande building block (via partner/activity_type), voeg in de detail-sheet naast "Direct boeken" óók knoppen toe: **"Direct aanvragen"** en **"Toevoegen aan programma"** → linkt naar dezelfde flow als vanuit Bouwstenen.
-- Voor MAP-activity-types zónder bijbehorende building block: tonen we een fallback CTA "Aanvragen op andere datum" die het maatwerk-formulier (`MaatwerkIntakeForm`) opent, voorgevuld met de activiteit-naam en partner. Dit voorkomt dat we MAP-aanbod 1-op-1 als building block moeten dubbelen.
-
-(Backend: geen nieuwe tabellen nodig — we hergebruiken `program_request_items` / maatwerk.)
-
-## 3. Nieuwe "Direct aanvragen" flow (quick request)
-
-Nieuwe route: **`/snel-aanvragen`** (of query-flag op `/programma-samenstellen`, zie technische sectie).
-
-Stappen, opzettelijk uitgekleed:
-
-1. **Selectie** — start met de gekozen bouwsteen in de mini-cart. Klant kan via "Nog een activiteit toevoegen" een lichte versie van `AddActivitySheet` openen om meer bouwstenen toe te voegen. **Geen ferry/fiets auto-toevoegen.**
-2. **Wanneer & wie** — compacte versie van `BasicsForm`: 1 datum (default) + optioneel "ik wil ook tijd doorgeven" → tijd per item, aantal personen.
-3. **Contact** — hergebruik bestaande `CheckoutContactForm`.
-4. **Bevestiging** — hergebruik `CheckoutSuccess`.
-
-Vanuit stap 1 kan een klant doorklikken naar de volledige programma-builder (`/programma-samenstellen`) als ze meerdere dagen willen plannen — cart en datum blijven behouden via `CartContext`.
-
-## 4. Vindbaarheid & navigatie (advies)
-
-- **Hero-CTA** op `/bouwstenen`: naast "Stel programma samen" een tweede prominente CTA "Activiteit los aanvragen".
-- **MegaDropdown "Programma's"** (`src/components/navigation/MegaDropdown.tsx`): voeg item toe **"Losse activiteit aanvragen"** → `/bouwstenen` (anchor naar grid) of `/snel-aanvragen`.
-- **Homepage** (`src/components/home/...`): in `ActivitiesShowcase` of een nieuwe band laten zien dat losse aanvragen ook kan ("Geen heel programma nodig? Vraag één activiteit aan.").
-- Bouwstenen-pagina krijgt boven het grid een korte intro-strook: "Stel een compleet programma samen óf vraag losse activiteiten aan."
+- `src/components/admin/AdminEditActivitySheet.tsx` — refactor save-logica, voeg auto-save useEffect + status-state toe, dirty-tracking, AlertDialog bij close.
+- `src/lib/partialItemSave.ts` (nieuw) — herbruikbare `savePartialItem` met dezelfde diff-regels als de huidige `handleSave`.
 
 ---
 
-## Technische sectie
+### 2. Partnerpagina toont locatie + instructie niet
 
-**CartContext aanpassen** (`src/contexts/CartContext.tsx`):
-- Nieuw veld `mode: "program" | "quick"` (gepersisteerd).
-- Ferry/fiets auto-toevoegen in `ProgrammaSamenstellen.tsx` alleen wanneer `mode === "program"`.
-- Bij overstappen quick → program: ferry/fiets alsnog injecteren.
+Conform jouw keuze blijven pending wijzigingen onzichtbaar voor de partner tot je op **Publiceer & verstuur** klikt. Geen verandering aan partnerportaal-rendering — `PartnerProjectItemRow` toont `partner_instructions` en `location_address` al correct zodra ze live staan (regels 249-254 en 317-326 zijn al aanwezig).
 
-**Nieuwe pagina `src/pages/SnelAanvragen.tsx`**:
-- Hergebruikt `CartContext`, `CheckoutContactForm`, `CheckoutSuccess`.
-- Eigen lichte builder: lijst van geselecteerde items met inline datum/tijd, `AddActivitySheet`-knop, geen DayTabs/reorder.
-- Knop "Uitbreiden tot volledig programma" → `navigate("/programma-samenstellen")` met `mode=program`.
-
-**Bouwstenen kaart-knoppen** (`src/pages/Bouwstenen.tsx`):
-- `Direct aanvragen` → `navigate('/snel-aanvragen?block=<id>')`.
-- `Toevoegen aan programma` → bestaande `/programma-samenstellen?block=<id>` deeplink (zet `mode=program`).
-- Hover-bug: vervang `variant="ghost" className="text-primary hover:text-primary"` door `variant="default"` (primair) en `variant="outline"` (secundair). Geen directe kleur-classes.
-
-**MAP-koppeling**:
-- In `useMapActivities` / detail-sheet: lookup of er een building block bestaat met dezelfde `provider_id` + matchende naam/activity_type. Zo ja: bouwsteen-id meegeven aan CTA's. Zo nee: maatwerk-fallback.
-- Geen nieuwe edge function nodig; bestaande `program-request` endpoint accepteert al losse items.
-
-**Navigatie**:
-- `MegaDropdown` programmas-array uitbreiden met `Losse activiteit aanvragen` (href `/snel-aanvragen`).
-- `programmasHrefs` in `Navigation.tsx` aanvullen met `/snel-aanvragen`.
-
-**Reset/draft-recovery**:
-- `useProgramDraft` per mode scheiden (key suffix `:quick` vs `:program`) zodat een quick-aanvraag niet je grote programma-concept overschrijft.
-
-**Tests/verificatie**:
-- Snel-aanvragen zonder ferry/fiets → indien klant submit, `program_request_items` bevat alleen geselecteerde bouwstenen.
-- Overstap quick → program injecteert ferry/fiets en behoudt items.
-- Hover op beide knoppen leesbaar in light + (eventueel) dark.
+**Wat hier wel verandert:** een duidelijker label in `AdminEditActivitySheet` boven de auto-save velden zoals "Wijzigingen worden pas zichtbaar voor partner ná Publiceer & verstuur", zodat de verwachting klopt.
 
 ---
 
-## Out of scope (deze ronde)
+### 3. Slide-in rechts → inline uitklappen op admin projectdetail
 
-- MAP-activity-types automatisch als nieuwe building blocks aanmaken in de DB.
-- Realtime beschikbaarheidscheck bij quick-aanvraag (blijft offerteproces, geen instant boeking).
-- Partner-portal wijzigingen — flow valt op bestaande `program_request_items` structuur.
+`AdminEditActivitySheet` (rechter Sheet) wordt vervangen door een **inline expandable row** in `AdminRequestDetail` waar de activiteit staat. De huidige form-inhoud blijft 1-op-1 hetzelfde, maar wordt gerenderd binnen een `Collapsible` (shadcn) direct onder de geklikte activiteit.
+
+**Aanpak:**
+
+- Extract de body van `AdminEditActivitySheet` naar `AdminEditActivityForm` (props identiek, geen Sheet-wrapper).
+- In `AdminRequestDetail`, vervang de drie `setEditingItem(item)` triggers door `setExpandedItemId(item.id === expanded ? null : item.id)` en render `<AdminEditActivityForm>` inline onder die rij wanneer `expandedItemId === item.id`.
+- De oude `AdminEditActivitySheet` wordt een dunne wrapper die nog steeds de form rendert in een Sheet, voor plekken die geen inline context hebben (bv. mobile of waar nu nog niet geconverteerd is). Bij twijfel houden we hem voorlopig in stand maar gebruiken hem niet meer vanuit `AdminRequestDetail`.
+
+**Bestanden:**
+
+- `src/components/admin/AdminEditActivityForm.tsx` (nieuw — body uit `AdminEditActivitySheet.tsx`).
+- `src/components/admin/AdminEditActivitySheet.tsx` — wordt dunne Sheet-wrapper om de Form.
+- `src/pages/admin/AdminRequestDetail.tsx` — vervang sheet-trigger door `expandedItemId` state + inline render onder geklikte rij; verwijder `<AdminEditActivitySheet>` mount aan de onderkant.
+
+---
+
+## Geen wijzigingen nodig in
+
+- Database / migrations (alles speelt zich af in bestaande kolommen `pending_partner_instructions` etc.).
+- Edge function `publish-program-changes` (lees pending al correct).
+- Partnerportaal-rendering.
+- Klantportaal (`CustomerProgramItem` gebruikt al `Collapsible`, geen slide-in daar).
+
+---
+
+## Verificatie na build
+
+1. Open een item, type in "Instructie voor partner" → na 1 sec verschijnt "✓ Opgeslagen". Sluit en heropen — tekst staat er. DB-check op `pending_partner_instructions`.
+2. Verander prijs zonder op Opslaan te klikken, klik X → AlertDialog "Wijzigingen weggooien?".
+3. Klik op activiteit in admin-projectdetail → klapt inline open onder de rij i.p.v. paneel rechts. Tweede klik op zelfde rij sluit hem.
+4. Klik op "Publiceer & verstuur" → partner krijgt mail met instructie + locatie in de regel.  
+  
+  
+En de locatie moet toegevoegd worden aan de activiteit. De partner ziet de locatie nu niet. Check ook of de groepssamenstelling en dieten wel worden getoond. 
+  &nbsp;
