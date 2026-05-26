@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, Utensils, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare } from "lucide-react";
+import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
