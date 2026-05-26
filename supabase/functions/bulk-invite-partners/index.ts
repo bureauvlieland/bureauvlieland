@@ -110,7 +110,7 @@ async function invitePartner(
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}` },
         body: JSON.stringify({
-          Messages: [{
+          Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: recipientEmail, Name: partner.name }],
             Subject: emailSubject,

@@ -56,7 +56,7 @@ const sendEmailViaMailjet = async (
       },
       body: JSON.stringify({
         Messages: [
-          {
+          { TrackClicks: "disabled", TrackOpens: "disabled",
             From: {
               Email: "hallo@bureauvlieland.nl",
               Name: "Bureau Vlieland",

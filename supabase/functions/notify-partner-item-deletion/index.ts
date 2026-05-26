@@ -70,7 +70,7 @@ async function sendCancellationEmail(opts: {
       Authorization: "Basic " + btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`),
     },
     body: JSON.stringify({
-      Messages: [{
+      Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
         From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
         To: [{ Email: recipientEmail, Name: partner_name }],
         Subject: subject,

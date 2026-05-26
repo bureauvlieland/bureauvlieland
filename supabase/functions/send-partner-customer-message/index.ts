@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         Messages: [
-          {
+          { TrackClicks: "disabled", TrackOpens: "disabled",
             From: { Email: SENDER_EMAIL, Name: `${quote.accommodation_name} via Bureau Vlieland` },
             To: [{ Email: recipient, Name: customerDisplayName }],
             Bcc: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
