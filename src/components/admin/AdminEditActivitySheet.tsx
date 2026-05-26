@@ -268,6 +268,7 @@ export const AdminEditActivitySheet = ({
           pending_admin_price_override: diff(item.admin_price_override ?? null, price),
           pending_price_type: diff(item.price_type ?? "per_person", priceType),
           pending_customer_notes: diff(item.customer_notes ?? null, notes || null),
+          pending_partner_instructions: diff(item.partner_instructions ?? null, partnerInstructions || null),
           pending_block_type: diff(item.block_type, newBlockType),
           // Locatie als groep behandelen: zodra adres, lat of lng wijzigt,
           // schrijven we alle drie naar pending. Zo kan bv. een adres-wijziging
