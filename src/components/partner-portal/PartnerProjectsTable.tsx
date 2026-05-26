@@ -94,11 +94,15 @@ function Group({ bucket, items, urlSuffix }: { bucket: TimeBucket; items: Partne
 }
 
 function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string }) {
-  const overdue = isPastDate(row.earliestDate) && row.derivedStatus !== "afgerond" && row.derivedStatus !== "geannuleerd";
+  const overdue =
+    !row.isConcept &&
+    isPastDate(row.earliestDate) &&
+    row.derivedStatus !== "afgerond" &&
+    row.derivedStatus !== "geannuleerd";
   const navTo = `${row.href}${urlSuffix}`;
 
   return (
-    <TableRow className="cursor-pointer">
+    <TableRow className={cn("cursor-pointer", row.isConcept && "opacity-60")}>
       <TableCell>
         <Link to={navTo} className="block">
           <div className="flex items-center gap-1.5">
@@ -127,7 +131,7 @@ function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string })
         </Link>
       </TableCell>
       <TableCell>
-        <Link to={navTo} className="block font-medium">
+        <Link to={navTo} className={cn("block font-medium", row.isConcept && "italic text-muted-foreground")}>
           {row.customerLabel}
         </Link>
       </TableCell>
@@ -139,13 +143,21 @@ function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string })
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge className={cn("font-normal", DERIVED_STATUS_TONE[row.derivedStatus])} variant="secondary">
-          {DERIVED_STATUS_LABEL[row.derivedStatus]}
-        </Badge>
+        {row.isConcept ? (
+          <Badge variant="outline" className="font-normal border-dashed">
+            Concept — nog niet vrijgegeven
+          </Badge>
+        ) : (
+          <Badge className={cn("font-normal", DERIVED_STATUS_TONE[row.derivedStatus])} variant="secondary">
+            {DERIVED_STATUS_LABEL[row.derivedStatus]}
+          </Badge>
+        )}
       </TableCell>
       <TableCell className="text-center text-sm text-muted-foreground">{row.itemCount}</TableCell>
       <TableCell className="text-center">
-        {row.actionCount > 0 ? (
+        {row.isConcept ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : row.actionCount > 0 ? (
           <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{row.actionCount}</Badge>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
