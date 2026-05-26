@@ -242,6 +242,16 @@ export const PartnerProjectItemRow = ({
                 {effectiveTime}
               </span>
             )}
+            <span className="inline-flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {effectivePeople} pers.
+            </span>
+            {item.location_address && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {item.location_address}
+              </span>
+            )}
             {lineTotal != null && (
               <span className="font-medium text-foreground">€{formatEur(lineTotal)}</span>
             )}
