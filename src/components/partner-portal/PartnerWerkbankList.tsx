@@ -70,6 +70,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
   const rows: WerkbankRow[] = [];
 
   data.items.forEach(i => {
+    if (i.is_concept) return; // concepts are read-only previews, no action yet
     const req = i.program_requests;
     if (req.cancelled_at || req.status === "cancelled" || i.status === "cancelled" || i.status === "unavailable") return;
 
