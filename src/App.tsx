@@ -67,6 +67,7 @@ const PartnerGuides = lazy(() => import("./pages/PartnerGuides"));
 const PartnerResetPassword = lazy(() => import("./pages/PartnerResetPassword"));
 const PartnerPlanning = lazy(() => import("./pages/PartnerPlanning"));
 const PartnerProfile = lazy(() => import("./pages/PartnerProfile"));
+const PartnerProject = lazy(() => import("./pages/PartnerProject"));
 
 // Lazy-loaded admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -193,6 +194,8 @@ const App = () => {
             <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/project/:id" element={<PartnerProject mode="activities" />} />
+            <Route path="/partner/logies/:id" element={<PartnerProject mode="accommodation" />} />
             <Route path="/partner/profiel" element={<PartnerProfile />} />
             <Route path="/partner/aanbod" element={<PartnerBlocks />} />
             <Route path="/partner/facturatie" element={<PartnerFinance />} />
