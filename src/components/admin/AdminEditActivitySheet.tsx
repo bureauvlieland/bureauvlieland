@@ -119,6 +119,48 @@ export const AdminEditActivitySheet = ({
   const [locationAddress, setLocationAddress] = useState(item?.location_address ?? "");
   const [selectedProviderId, setSelectedProviderId] = useState(item?.provider_id ?? "bureau");
   const [partners, setPartners] = useState<PartnerOption[]>([]);
+  const [showDirtyConfirm, setShowDirtyConfirm] = useState(false);
+
+  // --- Auto-save voor de tekstvelden zonder validatie. Schrijft naar
+  // pending_<col> met debounce; status zichtbaar onder elk veld zodat
+  // admin nooit twijfelt of het opgeslagen is.
+  const autoNameInitial = (item as any)?.pending_block_name ?? item?.block_name ?? "";
+  const autoDescInitial = (item as any)?.pending_admin_price_notes ?? item?.admin_price_notes ?? "";
+  const autoNotesInitial = (item as any)?.pending_customer_notes ?? item?.customer_notes ?? "";
+  const autoInstrInitial = item?.pending_partner_instructions ?? item?.partner_instructions ?? "";
+
+  const nameSave = useAutoSaveField({
+    item,
+    field: "block_name",
+    value: customName,
+    initialValue: autoNameInitial,
+    disabled: !open || !item,
+  });
+  const descSave = useAutoSaveField({
+    item,
+    field: "admin_price_notes",
+    value: customDescription,
+    initialValue: autoDescInitial,
+    disabled: !open || !item,
+  });
+  const notesSave = useAutoSaveField({
+    item,
+    field: "customer_notes",
+    value: notes,
+    initialValue: autoNotesInitial,
+    disabled: !open || !item,
+  });
+  const instrSave = useAutoSaveField({
+    item,
+    field: "partner_instructions",
+    value: partnerInstructions,
+    initialValue: autoInstrInitial,
+    disabled: !open || !item,
+  });
+
+  const anyAutoSaveBusy = [nameSave, descSave, notesSave, instrSave].some(
+    (s) => s.status === "saving" || s.isDirty,
+  );
 
   // Fetch partners for executor dropdown
   useEffect(() => {
