@@ -289,8 +289,6 @@ const AdminEmailTemplates = () => {
 };
 
 export default AdminEmailTemplates;
-    </>
-  );
-};
+
 
 export default AdminEmailTemplates;
