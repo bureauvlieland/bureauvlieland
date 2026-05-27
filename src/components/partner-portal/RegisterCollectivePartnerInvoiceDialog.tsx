@@ -303,18 +303,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                 </div>
               </div>
             </div>
-            <div className="pt-3 border-t border-amber-200 dark:border-amber-800">
-              <div className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
-                <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-medium">Stuur de PDF naar:</div>
-                  <a href={`mailto:${INKOOP_INBOX}`} className="underline">{INKOOP_INBOX}</a>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Factuur wordt automatisch ingelezen en aan het project gekoppeld.
-                  </div>
-                </div>
-              </div>
-            </div>
+
+
           </div>
 
 
