@@ -128,7 +128,7 @@ const AdminEmailTemplates = () => {
     return acc;
   }, {} as Record<string, EmailTemplate[]>);
 
-  const categoryOrder = ["Programma", "Offerte", "Status", "Wijziging", "Annulering", "Herinnering", "Logies", "Partner", "Overig"];
+  const categoryOrder = ["Programma", "Offerte", "Status", "Wijziging", "Annulering", "Herinnering", "Logies", "Partner", "Commissie", "Overig"];
 
   return (
     <>
