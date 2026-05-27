@@ -278,6 +278,17 @@ const AdminEmailTemplates = () => {
         onSave={handleSaveTemplate}
         isSaving={updateTemplateMutation.isPending}
       />
+
+      <EmailTemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        template={previewTemplate}
+      />
+    </>
+  );
+};
+
+export default AdminEmailTemplates;
     </>
   );
 };
