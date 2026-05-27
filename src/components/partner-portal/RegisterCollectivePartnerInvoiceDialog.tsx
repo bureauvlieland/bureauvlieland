@@ -20,6 +20,16 @@ import { toast } from "sonner";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
+import { getItemLineTotal } from "@/lib/portalPricing";
+
+/** Te-factureren bedrag: partner-quote heeft voorrang, anders admin-inschatting × pers × dagen. */
+const getBillableAmount = (item: PartnerItem): number => {
+  const people = item.program_requests.number_of_people || 1;
+  const days = Math.max((item.program_requests.selected_dates || []).length, 1);
+  return getItemLineTotal(item as unknown as Parameters<typeof getItemLineTotal>[0], people, days) ?? 0;
+};
+const isEstimatedAmount = (item: PartnerItem): boolean =>
+  item.quoted_price == null && item.admin_price_override != null;
 
 interface BureauDetails {
   companyName?: string;
@@ -84,10 +94,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     setSelectedIds(ids);
     const initialAmounts: Record<string, string> = {};
     for (const it of projectItems) {
-      const prefill = it.quoted_price && it.quoted_price > 0
-        ? String(it.quoted_price).replace(".", ",")
-        : "";
-      initialAmounts[it.id] = prefill;
+      const amt = getBillableAmount(it);
+      initialAmounts[it.id] = amt > 0 ? amt.toFixed(2).replace(".", ",") : "";
     }
     setAmounts(initialAmounts);
     setInvoiceNumber("");
@@ -283,11 +291,16 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                     />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{it.block_name}</div>
-                      {it.quoted_price ? (
-                        <div className="text-xs text-muted-foreground">
-                          Bevestigde prijs: €{it.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
-                        </div>
-                      ) : null}
+                      {(() => {
+                        const amt = getBillableAmount(it);
+                        if (!amt) return null;
+                        const label = isEstimatedAmount(it) ? "Geschat bedrag" : "Bevestigde prijs";
+                        return (
+                          <div className="text-xs text-muted-foreground">
+                            {label}: €{amt.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="w-32">
                       <div className="relative">

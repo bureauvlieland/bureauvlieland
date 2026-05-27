@@ -31,6 +31,23 @@ import {
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+import { getItemLineTotal } from "@/lib/portalPricing";
+
+/**
+ * Bepaal het te-factureren bedrag voor een partner-item.
+ * Valt terug op admin_price_override × pers × dagen wanneer de partner zelf nog
+ * geen `quoted_price` heeft ingevuld maar de admin-inschatting bij bevestiging
+ * is overgenomen. Sluit aan op de helper uit `portalPricing.ts` die zowel
+ * klantportaal als admin-financiën gebruiken.
+ */
+const getBillableAmount = (item: PartnerItem): number => {
+  const people = item.program_requests.number_of_people || 1;
+  const days = Math.max((item.program_requests.selected_dates || []).length, 1);
+  // getItemLineTotal is structureel compatibel (gebruikt alleen prijsvelden)
+  return getItemLineTotal(item as unknown as Parameters<typeof getItemLineTotal>[0], people, days) ?? 0;
+};
+const isEstimatedAmount = (item: PartnerItem): boolean =>
+  item.quoted_price == null && item.admin_price_override != null;
 
 interface AccommodationQuoteWithInvoice extends PartnerAccommodationQuote {
   invoiced_amount: number | null;
@@ -329,7 +346,7 @@ const PartnerFinanceContent = () => {
     invoicedAccommodations.reduce((sum, q) => sum + (q.invoiced_amount || 0), 0);
   
   const totalToBeInvoiced = 
-    toBeInvoicedItems.reduce((sum, i) => sum + (i.quoted_price || 0), 0) +
+    toBeInvoicedItems.reduce((sum, i) => sum + getBillableAmount(i), 0) +
     toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
   
   const totalCommission = 
@@ -346,8 +363,9 @@ const PartnerFinanceContent = () => {
 
   // Calculate expected commission for items to be invoiced
   const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
-    if (!i.quoted_price) return sum;
-    return sum + calculateExpectedActivityCommission(i.quoted_price, i.commission_percentage);
+    const amount = getBillableAmount(i);
+    if (!amount) return sum;
+    return sum + calculateExpectedActivityCommission(amount, i.commission_percentage);
   }, 0);
 
   const expectedAccommodationCommission = toBeInvoicedAccommodations.reduce((sum, q) => {
@@ -494,7 +512,7 @@ const PartnerFinanceContent = () => {
                 }, {})
               ).map(([requestId, items]) => {
                 const project = items[0].program_requests;
-                const total = items.reduce((s, i) => s + (i.quoted_price || 0), 0);
+                const total = items.reduce((s, i) => s + getBillableAmount(i), 0);
                 return (
                   <Card key={requestId}>
                     <CardContent className="p-4 space-y-3">
@@ -528,14 +546,25 @@ const PartnerFinanceContent = () => {
                         </div>
                       </div>
                       <div className="rounded-md border divide-y text-sm">
-                        {items.map((it) => (
-                          <div key={it.id} className="flex items-center justify-between p-2">
-                            <span className="truncate">{it.block_name}</span>
-                            <span className="font-medium">
-                              €{(it.quoted_price || 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        ))}
+                        {items.map((it) => {
+                          const amount = getBillableAmount(it);
+                          const estimated = isEstimatedAmount(it);
+                          return (
+                            <div key={it.id} className="flex items-center justify-between p-2 gap-2">
+                              <span className="truncate flex items-center gap-2">
+                                {it.block_name}
+                                {estimated && (
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1 text-amber-700 border-amber-300">
+                                    inschatting
+                                  </Badge>
+                                )}
+                              </span>
+                              <span className="font-medium whitespace-nowrap">
+                                €{amount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
                         <Button
@@ -672,16 +701,17 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
 
+  const billableAmount = getBillableAmount(item);
+  const estimated = isEstimatedAmount(item);
+
   // Calculate expected commission for "to-invoice" items
   const calculateExpectedCommission = () => {
-    if (variant !== "to-invoice" || !item.quoted_price) return null;
-    
+    if (variant !== "to-invoice" || !billableAmount) return null;
+
     const vatRate = 21; // Activities use 21% VAT
-    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
+    const amountExclVat = billableAmount / (1 + vatRate / 100);
     const commissionPercentage = item.commission_percentage ?? 15;
-    const commissionAmount = amountExclVat * (commissionPercentage / 100);
-    
-    return commissionAmount;
+    return amountExclVat * (commissionPercentage / 100);
   };
 
   const expectedCommission = calculateExpectedCommission();
@@ -720,8 +750,10 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
             {variant === "to-invoice" ? (
               <>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Bevestigde prijs</p>
-                  <p className="font-semibold">€{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {estimated ? "Geschatte prijs" : "Bevestigde prijs"}
+                  </p>
+                  <p className="font-semibold">€{billableAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
                   {expectedCommission !== null && (
                     <p className="text-xs text-amber-600">
                       Verwachte commissie: €{expectedCommission.toFixed(2)}
