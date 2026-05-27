@@ -31,6 +31,22 @@ import {
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+import { getItemLineTotal } from "@/lib/portalPricing";
+
+/**
+ * Bepaal het te-factureren bedrag voor een partner-item.
+ * Valt terug op admin_price_override × pers × dagen wanneer de partner zelf nog
+ * geen `quoted_price` heeft ingevuld maar de admin-inschatting bij bevestiging
+ * is overgenomen. Sluit aan op de helper uit `portalPricing.ts` die zowel
+ * klantportaal als admin-financiën gebruiken.
+ */
+const getBillableAmount = (item: PartnerItem): number => {
+  const people = item.program_requests.number_of_people || 1;
+  const days = Math.max((item.program_requests.selected_dates || []).length, 1);
+  return getItemLineTotal(item, people, days) ?? 0;
+};
+const isEstimatedAmount = (item: PartnerItem): boolean =>
+  item.quoted_price == null && item.admin_price_override != null;
 
 interface AccommodationQuoteWithInvoice extends PartnerAccommodationQuote {
   invoiced_amount: number | null;
