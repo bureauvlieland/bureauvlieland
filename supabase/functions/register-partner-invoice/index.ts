@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
         invoice_number: invoicedNumber,
         invoice_date: invoicedDate,
         amount_excl_vat: totalExcl,
-        vat_rate: vatRate,
+        vat_rate: headerVatRate,
         vat_amount: totalVat,
         amount_incl_vat: totalIncl,
         description: headerDescription,
