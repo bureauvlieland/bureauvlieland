@@ -12,7 +12,7 @@ import { Loader2, ArrowLeft, User, Mail, Phone, Building2, AlertCircle, RotateCc
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
-import { trackProgramRequestSubmitted } from "@/lib/analytics";
+import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 import {
