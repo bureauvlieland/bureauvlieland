@@ -50,6 +50,9 @@ const templateCategories: Record<string, string> = {
   accommodation_quote_notification: "Logies",
   accommodation_selected_partner: "Logies",
   accommodation_selected_customer: "Logies",
+  reminder_activity_pending: "Herinnering",
+  reminder_quote_pending: "Herinnering",
+  reminder_partner_quote: "Herinnering",
 };
 
 const AdminEmailTemplates = () => {
