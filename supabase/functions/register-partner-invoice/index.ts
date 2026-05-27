@@ -387,6 +387,7 @@ Deno.serve(async (req) => {
         commissionAmount: totalCommission,
         invoicingMode,
         collective: isCollective,
+        viaEmail: isViaEmail,
         itemCount: dbItems.length,
         invoiceId: newInvoice.id,
       },
