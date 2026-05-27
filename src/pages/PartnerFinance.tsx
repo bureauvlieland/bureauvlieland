@@ -701,16 +701,17 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
 
+  const billableAmount = getBillableAmount(item);
+  const estimated = isEstimatedAmount(item);
+
   // Calculate expected commission for "to-invoice" items
   const calculateExpectedCommission = () => {
-    if (variant !== "to-invoice" || !item.quoted_price) return null;
-    
+    if (variant !== "to-invoice" || !billableAmount) return null;
+
     const vatRate = 21; // Activities use 21% VAT
-    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
+    const amountExclVat = billableAmount / (1 + vatRate / 100);
     const commissionPercentage = item.commission_percentage ?? 15;
-    const commissionAmount = amountExclVat * (commissionPercentage / 100);
-    
-    return commissionAmount;
+    return amountExclVat * (commissionPercentage / 100);
   };
 
   const expectedCommission = calculateExpectedCommission();
