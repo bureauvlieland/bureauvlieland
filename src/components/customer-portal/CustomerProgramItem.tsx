@@ -143,16 +143,11 @@ export const CustomerProgramItem = ({
                 {isSelfArranged ? (
                   <MicroPill tone="amber">Zelf te regelen</MicroPill>
                 ) : item.status === "pending" ? (
-                  // Less is more: tijdens "wachten op aanbieders" tonen we geen
-                  // statuschip per onderdeel. De globale voortgang in de sidebar
-                  // ("X van Y bevestigd") vertelt het verhaal al. Pas zodra de
-                  // partner reageert verschijnt er weer een badge.
-                  null
+                  <MicroPill tone="amber">Pending</MicroPill>
                 ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
                   <MicroPill tone="emerald">Bevestigd</MicroPill>
                 ) : (
                   <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={
-                    needsCustomerAction && item.status === "confirmed" ? "Beschikbaar" :
                     needsCustomerAction && item.status === "alternative" ? "Alternatief voorstel" :
                     undefined
                   } />
