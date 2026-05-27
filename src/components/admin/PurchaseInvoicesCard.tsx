@@ -198,6 +198,11 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
         invoice={forwardDialogInvoice}
         onClose={() => setForwardDialogInvoice(null)}
       />
+
+      <UploadInvoicePdfDialog
+        invoice={uploadPdfTarget}
+        onClose={() => setUploadPdfTarget(null)}
+      />
     </>
   );
 }
