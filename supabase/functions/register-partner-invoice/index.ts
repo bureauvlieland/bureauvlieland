@@ -82,13 +82,17 @@ Deno.serve(async (req) => {
     const origin = reqBody.origin || req.headers.get("origin") || "";
 
     // Normalize to items[] array. Legacy single-item callers still supported.
-    const itemsList: Array<{ itemId: string; amount: number }> =
+    const itemsList: Array<{ itemId: string; amount: number; vatRate: number }> =
       Array.isArray(items) && items.length > 0
         ? items
             .filter((x: any) => x && x.itemId && Number(x.amount) > 0)
-            .map((x: any) => ({ itemId: String(x.itemId), amount: Number(x.amount) }))
+            .map((x: any) => ({
+              itemId: String(x.itemId),
+              amount: Number(x.amount),
+              vatRate: x.vatRate !== undefined && x.vatRate !== null ? Number(x.vatRate) : 21,
+            }))
         : itemId && Number(invoicedAmount) > 0
-          ? [{ itemId: String(itemId), amount: Number(invoicedAmount) }]
+          ? [{ itemId: String(itemId), amount: Number(invoicedAmount), vatRate: 21 }]
           : [];
 
     if (!partnerToken || !invoicedNumber || !invoicedDate || itemsList.length === 0) {
