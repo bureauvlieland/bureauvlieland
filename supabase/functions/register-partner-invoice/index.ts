@@ -189,9 +189,11 @@ Deno.serve(async (req) => {
     const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
 
     const isCollective = dbItems.length > 1;
-    const headerDescription = isCollective
+    const baseDescription = isCollective
       ? `Verzamelfactuur ${dbItems.length} onderdelen — ${project.customer_company || project.customer_name}${project.reference_number ? ` (${project.reference_number})` : ""}`
       : `${dbItems[0].block_name} — ${project.customer_company || project.customer_name}`;
+    const headerDescription = isViaEmail ? `[via e-mail] ${baseDescription}` : baseDescription;
+    const headerStatus = isViaEmail ? "pending_email_match" : "pending";
 
     // Create ONE purchase invoice header (bureau_central is the default; we always store it
     // so admin has a single source of truth, regardless of mode).
@@ -209,7 +211,7 @@ Deno.serve(async (req) => {
         amount_incl_vat: totalIncl,
         description: headerDescription,
         file_path: filePath || null,
-        status: "pending",
+        status: headerStatus,
         registered_by: "partner",
       })
       .select()
