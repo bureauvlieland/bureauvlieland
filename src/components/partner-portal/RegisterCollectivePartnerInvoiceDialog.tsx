@@ -366,14 +366,26 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between text-sm">
+                <span>Subtotaal excl. BTW</span>
+                <span>€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+              </div>
+              {vatBreakdown.map((g) => (
+                <div key={g.rate} className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    BTW {g.rate}% over €{g.excl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                  </span>
+                  <span>€{g.vat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between text-sm pt-1 border-t mt-1">
                 <span className="font-semibold">Totaal incl. BTW</span>
                 <span className="font-semibold">€{totalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>waarvan excl. BTW (basis commissie)</span>
-                <span>€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+              <div className="text-xs text-muted-foreground pt-0.5">
+                Commissie wordt berekend over het bedrag excl. BTW.
               </div>
             </div>
+
           </div>
 
           <Separator />
