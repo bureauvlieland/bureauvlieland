@@ -174,6 +174,7 @@ const ProgrammaOpMaat = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
       console.error("Error submitting maatwerk:", err);
+      trackSubmitFailed({ formType: 'maatwerk_intake', error: err, extra: { source: 'programma_op_maat' } });
       toast({
         title: "Aanvraag niet verzonden",
         description: err?.message || "Er ging iets mis. Probeer het opnieuw of bel ons op 0562 700 208.",
