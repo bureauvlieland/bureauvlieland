@@ -2170,6 +2170,7 @@ const AdminRequestDetail = () => {
                                               numberOfDays={getNumberOfDays(request?.selected_dates)}
                                               priceType={item.price_type === "total" ? "total" : item.price_type === "per_person_per_day" ? "per_person_per_day" : "per_person"}
                                               hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, getNumberOfDays(request?.selected_dates))}
+                                              partnerConfirmed={item.status === "confirmed" || item.status === "accepted"}
                                               onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                             />
                                             <AdminItemBillingLinesEditor
