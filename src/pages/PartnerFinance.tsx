@@ -695,6 +695,7 @@ const PartnerFinanceContent = () => {
         initialSelectedIds={collectiveInitialIds}
         commissionPercentage={data.partner.commission_percentage}
         mode={collectiveMode}
+        bureauDetails={bureauDetails}
         onSubmit={handleCollectiveInvoiceRegister}
       />
     </div>
