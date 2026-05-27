@@ -53,6 +53,10 @@ const templateCategories: Record<string, string> = {
   reminder_activity_pending: "Herinnering",
   reminder_quote_pending: "Herinnering",
   reminder_partner_quote: "Herinnering",
+  partner_activity_unconfirmed_t7: "Herinnering",
+  partner_briefing_t3: "Partner",
+  partner_invoice_reminder_t1: "Commissie",
+  partner_invoice_reminder_t7: "Commissie",
 };
 
 const AdminEmailTemplates = () => {
@@ -124,7 +128,7 @@ const AdminEmailTemplates = () => {
     return acc;
   }, {} as Record<string, EmailTemplate[]>);
 
-  const categoryOrder = ["Programma", "Offerte", "Status", "Wijziging", "Annulering", "Herinnering", "Logies", "Partner", "Overig"];
+  const categoryOrder = ["Programma", "Offerte", "Status", "Wijziging", "Annulering", "Herinnering", "Logies", "Partner", "Commissie", "Overig"];
 
   return (
     <>

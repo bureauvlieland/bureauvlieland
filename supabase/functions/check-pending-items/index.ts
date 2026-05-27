@@ -728,19 +728,19 @@ Deno.serve(async (req) => {
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Get executed items
+    // Get executed items (incl. fields needed for partner invoice reminders)
     const { data: executedItems } = await supabase
       .from("program_request_items")
-      .select("id, block_name, provider_name, provider_id, request_id, executed_at")
+      .select("id, block_name, provider_name, provider_id, request_id, executed_at, block_type, quoted_price, proforma_amount_excl_vat")
       .not("executed_at", "is", null)
       .neq("status", "cancelled");
 
     if (executedItems && executedItems.length > 0) {
-      // Get request info for customer names
+      // Get request info for customer names + reference
       const execRequestIds = [...new Set(executedItems.map(i => i.request_id))];
       const { data: execRequests } = await supabase
         .from("program_requests")
-        .select("id, customer_name")
+        .select("id, customer_name, customer_company, reference_number")
         .in("id", execRequestIds);
       const execReqMap = new Map((execRequests || []).map(r => [r.id, r]));
 
@@ -752,9 +752,29 @@ Deno.serve(async (req) => {
         .in("item_id", execItemIds);
       const invoicedItemIds = new Set((existingInvoices || []).map(i => i.item_id));
 
+      // Pre-fetch partner contacts for executed items (skip bureau items)
+      const execPartnerIds = [...new Set(
+        executedItems
+          .filter(i => i.provider_id && i.block_type !== "bureau")
+          .map(i => i.provider_id as string)
+      )];
+      const execPartners = execPartnerIds.length > 0
+        ? (await supabase
+            .from("partners")
+            .select("id, name, email, contact_email")
+            .in("id", execPartnerIds)).data || []
+        : [];
+      const partnerMap = new Map(execPartners.map((p: any) => [p.id, p]));
+
+      const formatEuro = (n: number | null | undefined) =>
+        typeof n === "number"
+          ? n.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })
+          : "n.t.b.";
+
       for (const item of executedItems) {
-        const req = execReqMap.get(item.request_id);
-        const customerName = req?.customer_name || "Onbekend";
+        const req = execReqMap.get(item.request_id) as any;
+        const customerName = req?.customer_company || req?.customer_name || "Onbekend";
+        const referenceNumber = req?.reference_number || "—";
 
         // Post-execution feedback: 1 day after executed_at
         if (item.executed_at && item.executed_at <= oneDayAgo) {
@@ -794,6 +814,42 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Partner invoice reminder T+1: 1 day after execution, no purchase invoice
+        if (
+          canSendEmail &&
+          item.executed_at && item.executed_at <= oneDayAgo &&
+          !invoicedItemIds.has(item.id) &&
+          item.block_type !== "bureau"
+        ) {
+          const partner = partnerMap.get(item.provider_id as string) as any;
+          if (partner) {
+            const partnerEmail = partner.contact_email || partner.email;
+            const partnerName = partner.name || item.provider_name || "partner";
+            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+            await sendReminderEmail({
+              templateId: "partner_invoice_reminder_t1",
+              recipientEmail: partnerEmail,
+              recipientName: partnerName,
+              subject: `Vriendelijk verzoek: factuur voor "${item.block_name}" (${customerName})`,
+              variables: {
+                partner_name: partnerName,
+                block_name: item.block_name,
+                customer_name: customerName,
+                reference_number: referenceNumber,
+                amount_excl_vat: amountExcl,
+                portal_url: "https://bureauvlieland.nl/partner",
+              },
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Gisteren is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              logExtra: {
+                email_type: "partner_invoice_reminder_t1",
+                related_partner_id: item.provider_id as string,
+                related_request_id: item.request_id,
+                related_item_id: item.id,
+              },
+            });
+          }
+        }
+
         // Post-execution invoice check: 7 days after executed_at, no purchase invoice
         if (item.executed_at && item.executed_at <= sevenDaysAgo && !invoicedItemIds.has(item.id)) {
           const { data: existingCheck } = await supabase
@@ -829,9 +885,147 @@ Deno.serve(async (req) => {
               if (!icError) totalCreated++;
             }
           }
+
+          // Partner invoice escalation T+7
+          if (canSendEmail && item.block_type !== "bureau") {
+            const partner = partnerMap.get(item.provider_id as string) as any;
+            if (partner) {
+              const partnerEmail = partner.contact_email || partner.email;
+              const partnerName = partner.name || item.provider_name || "partner";
+              const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+              await sendReminderEmail({
+                templateId: "partner_invoice_reminder_t7",
+                recipientEmail: partnerEmail,
+                recipientName: partnerName,
+                subject: `Herinnering: factuur ontbreekt nog voor "${item.block_name}" (${customerName})`,
+                variables: {
+                  partner_name: partnerName,
+                  block_name: item.block_name,
+                  customer_name: customerName,
+                  reference_number: referenceNumber,
+                  amount_excl_vat: amountExcl,
+                  portal_url: "https://bureauvlieland.nl/partner",
+                },
+                fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je deze deze week alsnog sturen?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+                logExtra: {
+                  email_type: "partner_invoice_reminder_t7",
+                  related_partner_id: item.provider_id as string,
+                  related_request_id: item.request_id,
+                  related_item_id: item.id,
+                },
+              });
+            }
+          }
         }
       }
     }
+
+    // =============================================
+     // PARTNER EVENT-DATE EMAILS: T-7 onbevestigd & T-3 briefing
+    // =============================================
+    if (canSendEmail) {
+      const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+      const in7 = new Date(todayMidnight); in7.setDate(in7.getDate() + 7);
+      const in3 = new Date(todayMidnight); in3.setDate(in3.getDate() + 3);
+      const horizon = new Date(todayMidnight); horizon.setDate(horizon.getDate() + 8);
+
+      const { data: upcomingItems } = await supabase
+        .from("program_request_items")
+        .select(`
+          id, block_name, status, day_index, provider_id, provider_name,
+          block_type, request_id, preferred_time, proposed_time, confirmed_time,
+          program_requests!inner (
+            id, customer_name, customer_company, reference_number,
+            selected_dates, number_of_people, status, cancelled_at
+          )
+        `)
+        .in("status", ["pending", "confirmed"])
+        .neq("block_type", "self_arranged")
+        .neq("block_type", "bureau");
+
+      const fmtDateNL = (s: string) =>
+        new Date(s).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+      for (const item of upcomingItems || []) {
+        const reqRow: any = Array.isArray(item.program_requests)
+          ? item.program_requests[0]
+          : item.program_requests;
+        if (!reqRow || reqRow.status !== "active" || reqRow.cancelled_at) continue;
+        if (!item.provider_id) continue;
+
+        const dates: string[] = Array.isArray(reqRow.selected_dates) ? reqRow.selected_dates : [];
+        const dateStr = dates[item.day_index ?? 0] || dates[0];
+        if (!dateStr) continue;
+        const eventDate = new Date(String(dateStr).slice(0, 10) + "T00:00:00");
+        if (isNaN(eventDate.getTime())) continue;
+        if (eventDate < todayMidnight || eventDate > horizon) continue;
+
+        const daysUntil = Math.round((eventDate.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("name, email, contact_email")
+          .eq("id", item.provider_id)
+          .maybeSingle();
+        if (!partner) continue;
+        const partnerEmail = partner.contact_email || partner.email;
+        const partnerName = partner.name || item.provider_name || "partner";
+        const customerName = reqRow.customer_company || reqRow.customer_name || "Onbekend";
+        const portalUrl = "https://bureauvlieland.nl/partner";
+
+        // T-7: still pending
+        if (daysUntil === 7 && item.status === "pending") {
+          await sendReminderEmail({
+            templateId: "partner_activity_unconfirmed_t7",
+            recipientEmail: partnerEmail,
+            recipientName: partnerName,
+            subject: `Reactie nodig: "${item.block_name}" over 7 dagen voor ${customerName}`,
+            variables: {
+              partner_name: partnerName,
+              block_name: item.block_name,
+              customer_name: customerName,
+              event_date: fmtDateNL(String(dateStr)),
+              portal_url: portalUrl,
+            },
+            fallbackHtml: `<p>Hoi ${partnerName},</p><p>De activiteit "<strong>${item.block_name}</strong>" voor ${customerName} staat over 7 dagen (${fmtDateNL(String(dateStr))}) gepland, maar we hebben nog geen bevestiging van je. Reageer s.v.p. vandaag nog via het partnerportaal.</p>`,
+            logExtra: {
+              email_type: "partner_activity_unconfirmed_t7",
+              related_partner_id: item.provider_id,
+              related_request_id: item.request_id,
+              related_item_id: item.id,
+            },
+          });
+        }
+
+        // T-3: confirmed → briefing
+        if (daysUntil === 3 && item.status === "confirmed") {
+          const timeInfo = item.confirmed_time || item.proposed_time || item.preferred_time || "n.t.b.";
+          await sendReminderEmail({
+            templateId: "partner_briefing_t3",
+            recipientEmail: partnerEmail,
+            recipientName: partnerName,
+            subject: `Briefing: "${item.block_name}" over 3 dagen voor ${customerName}`,
+            variables: {
+              partner_name: partnerName,
+              block_name: item.block_name,
+              customer_name: customerName,
+              event_date: fmtDateNL(String(dateStr)),
+              number_of_people: String(reqRow.number_of_people || "n.t.b."),
+              time_info: String(timeInfo),
+              portal_url: portalUrl,
+            },
+            fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een korte heads-up: over 3 dagen (${fmtDateNL(String(dateStr))}) staat "<strong>${item.block_name}</strong>" voor ${customerName} gepland (${reqRow.number_of_people || "?"} pers., tijd: ${timeInfo}).</p>`,
+            logExtra: {
+              email_type: "partner_briefing_t3",
+              related_partner_id: item.provider_id,
+              related_request_id: item.request_id,
+              related_item_id: item.id,
+            },
+          });
+        }
+      }
+    }
+
 
     // =============================================
     // CHECK 9: Quotes expiring soon (within 3 days)
