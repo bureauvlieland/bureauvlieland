@@ -18,6 +18,7 @@ interface PurchaseInvoicesCardProps {
 export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
   const { invoices, isLoading, stats, markAsPaid, getDownloadUrl } = usePurchaseInvoicesByRequest(requestId);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
 
   const handleDownloadPdf = async (filePath: string) => {
     const url = await getDownloadUrl(filePath);
