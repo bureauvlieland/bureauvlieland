@@ -17,7 +17,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
-import { trackProgramRequestSubmitted } from "@/lib/analytics";
+import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage } from "@/lib/entryPageTracker";
 import { MultiDatePicker } from "@/components/configurator/MultiDatePicker";
 import heroImage from "@/assets/beach-signs.jpg";
