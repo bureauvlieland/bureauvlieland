@@ -193,7 +193,7 @@ export const RequestFormModal = ({
 
       // Log creation in history
       await supabase.from("program_request_history").insert({
-        request_id: requestData.id,
+        request_id: requestId,
         action: "created",
         actor: "customer",
         actor_name: formData.name,
