@@ -47,6 +47,7 @@ const PartnerFinanceContent = () => {
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
