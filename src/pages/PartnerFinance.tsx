@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
+import { RegisterCollectivePartnerInvoiceDialog, type CollectiveInvoiceSubmitPayload } from "@/components/partner-portal/RegisterCollectivePartnerInvoiceDialog";
 import { UploadInvoicePdfPartnerDialog } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
 import { toast } from "sonner";
 import { 
@@ -24,6 +26,7 @@ import {
   FileText,
   BedDouble,
   Upload,
+  Mail,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -48,6 +51,8 @@ const PartnerFinanceContent = () => {
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
+  const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
+  const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -195,6 +200,50 @@ const PartnerFinanceContent = () => {
       return { success: true, commission: result.commission };
     } catch (err) {
       console.error("Error registering invoice:", err);
+      toast.error("Er is een fout opgetreden bij het registreren van de factuur");
+      return { success: false };
+    }
+  };
+
+  // Collective (verzamelfactuur) registration: multiple items, one PDF, one invoice nr.
+  const handleCollectiveInvoiceRegister = async (
+    payload: CollectiveInvoiceSubmitPayload
+  ): Promise<{ success: boolean }> => {
+    if (!partnerToken) return { success: false };
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            partnerToken,
+            items: payload.items,
+            invoicedNumber: payload.invoicedNumber,
+            invoicedDate: payload.invoicedDate,
+            notes: payload.notes,
+            filePath: payload.filePath,
+          }),
+        }
+      );
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Failed");
+      }
+      toast.success(
+        payload.items.length > 1
+          ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
+          : "Factuur geregistreerd"
+      );
+      setCollectiveRequestId(null);
+      setCollectiveInitialIds([]);
+      await refetchData();
+      return { success: true };
+    } catch (err) {
+      console.error("Error registering collective invoice:", err);
       toast.error("Er is een fout opgetreden bij het registreren van de factuur");
       return { success: false };
     }
@@ -421,18 +470,86 @@ const PartnerFinanceContent = () => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {/* Activity items to invoice */}
-              {toBeInvoicedItems.map((item) => (
-                <InvoiceItemCard 
-                  key={item.id} 
-                  item={item} 
-                  variant="to-invoice" 
-                  onInvoice={() => {
-                    setSelectedItem(item);
-                    setShowInvoiceDialog(true);
-                  }}
-                />
-              ))}
+              {/* Inbox tip banner */}
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Tip:</strong> je kunt je factuur ook gewoon mailen naar{" "}
+                  <a href="mailto:inkoop@reply.bureauvlieland.nl" className="underline font-medium">
+                    inkoop@reply.bureauvlieland.nl
+                  </a>{" "}
+                  — Bureau Vlieland verwerkt 'm dan automatisch (PDF wordt ingelezen en gekoppeld aan je project).
+                </AlertDescription>
+              </Alert>
+
+              {/* Activities grouped per project — partner factureert per project één verzamelfactuur */}
+              {Object.entries(
+                toBeInvoicedItems.reduce<Record<string, PartnerItem[]>>((acc, it) => {
+                  (acc[it.request_id] ||= []).push(it);
+                  return acc;
+                }, {})
+              ).map(([requestId, items]) => {
+                const project = items[0].program_requests;
+                const total = items.reduce((s, i) => s + (i.quoted_price || 0), 0);
+                return (
+                  <Card key={requestId}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold">
+                              {project.customer_company || project.customer_name}
+                            </h3>
+                            {project.reference_number && (
+                              <Badge variant="outline" className="text-xs">
+                                {project.reference_number}
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              {items.length} onderdeel{items.length !== 1 ? "en" : ""}
+                            </Badge>
+                          </div>
+                          {project.selected_dates?.[0] && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(parseISO(project.selected_dates[0]), "d MMM yyyy", { locale: nl })}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Totaal te factureren</p>
+                          <p className="text-lg font-bold">
+                            €{total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-md border divide-y text-sm">
+                        {items.map((it) => (
+                          <div key={it.id} className="flex items-center justify-between p-2">
+                            <span className="truncate">{it.block_name}</span>
+                            <span className="font-medium">
+                              €{(it.quoted_price || 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setCollectiveRequestId(requestId);
+                            setCollectiveInitialIds(items.map((i) => i.id));
+                          }}
+                        >
+                          <Receipt className="h-4 w-4 mr-2" />
+                          {items.length > 1 ? "Verzamelfactuur registreren" : "Factuur registreren"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
               {/* Accommodation items to invoice */}
               {toBeInvoicedAccommodations.map((quote) => (
                 <AccommodationInvoiceCard key={quote.id} quote={quote} variant="to-invoice" />
@@ -497,6 +614,28 @@ const PartnerFinanceContent = () => {
         item={uploadPdfItem}
         onClose={() => setUploadPdfItem(null)}
         onUploaded={refetchData}
+      />
+
+      <RegisterCollectivePartnerInvoiceDialog
+        isOpen={!!collectiveRequestId}
+        onClose={() => {
+          setCollectiveRequestId(null);
+          setCollectiveInitialIds([]);
+        }}
+        projectItems={
+          collectiveRequestId
+            ? data.items.filter(
+                (i) =>
+                  i.request_id === collectiveRequestId &&
+                  !i.invoiced_number &&
+                  (getEffectiveStatus(i) === "accepted" || getEffectiveStatus(i) === "executed") &&
+                  i.program_requests.terms_accepted_at !== null
+              )
+            : []
+        }
+        initialSelectedIds={collectiveInitialIds}
+        commissionPercentage={data.partner.commission_percentage}
+        onSubmit={handleCollectiveInvoiceRegister}
       />
     </div>
   );

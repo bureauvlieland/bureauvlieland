@@ -67,10 +67,31 @@ Deno.serve(async (req) => {
 
   try {
     const reqBody = await req.json();
-    const { partnerToken, itemId, invoicedAmount, invoicedNumber, invoicedDate, notes, filePath } = reqBody;
+    const {
+      partnerToken,
+      invoicedNumber,
+      invoicedDate,
+      notes,
+      filePath,
+      // Legacy single-item mode:
+      itemId,
+      invoicedAmount,
+      // New collective mode (preferred):
+      items, // [{ itemId, amount }]
+    } = reqBody;
     const origin = reqBody.origin || req.headers.get("origin") || "";
 
-    if (!partnerToken || !itemId || !invoicedAmount || !invoicedNumber || !invoicedDate) {
+    // Normalize to items[] array. Legacy single-item callers still supported.
+    const itemsList: Array<{ itemId: string; amount: number }> =
+      Array.isArray(items) && items.length > 0
+        ? items
+            .filter((x: any) => x && x.itemId && Number(x.amount) > 0)
+            .map((x: any) => ({ itemId: String(x.itemId), amount: Number(x.amount) }))
+        : itemId && Number(invoicedAmount) > 0
+          ? [{ itemId: String(itemId), amount: Number(invoicedAmount) }]
+          : [];
+
+    if (!partnerToken || !invoicedNumber || !invoicedDate || itemsList.length === 0) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -96,233 +117,232 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Guard: Bureau Vlieland is de centrale facturerende partij — kan geen inkoopfactuur aan zichzelf registreren
     if (partner.id === "bureau") {
       return new Response(
-        JSON.stringify({ error: "Bureau Vlieland kan geen inkoopfactuur aan zichzelf registreren. Bureau-managed items lopen via de verkoopfacturen (bureau_invoices)." }),
+        JSON.stringify({ error: "Bureau Vlieland kan geen inkoopfactuur aan zichzelf registreren." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify item belongs to this partner and get invoicing_mode
-    const { data: item, error: itemError } = await supabase
+    // Fetch all items, verify they belong to this partner and share the same project
+    const itemIds = itemsList.map((x) => x.itemId);
+    const { data: dbItems, error: itemsError } = await supabase
       .from("program_request_items")
       .select("*, program_requests!inner(id, customer_name, customer_email, customer_company, selected_dates, invoicing_mode, reference_number)")
-      .eq("id", itemId)
-      .eq("provider_id", partner.id)
-      .single();
+      .in("id", itemIds)
+      .eq("provider_id", partner.id);
 
-    if (itemError || !item) {
+    if (itemsError || !dbItems || dbItems.length !== itemsList.length) {
       return new Response(
-        JSON.stringify({ error: "Item not found or not assigned to this partner" }),
+        JSON.stringify({ error: "One or more items not found or not assigned to this partner" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const invoicingMode = item.program_requests.invoicing_mode || "bureau_central";
-
-    // Calculate commission
-    const commissionPercentage = partner.commission_percentage;
-    const commissionAmount = (invoicedAmount * commissionPercentage) / 100;
-
-    // Calculate VAT (assume 21% for activities)
-    const vatRate = 21;
-    const vatAmount = invoicedAmount * (vatRate / 100);
-    const amountInclVat = invoicedAmount + vatAmount;
-
-    // If bureau_central mode, create a purchase invoice record instead of just updating the item
-    if (invoicingMode === "bureau_central") {
-      // Create purchase invoice record
-      const { error: purchaseError } = await supabase
-        .from("partner_purchase_invoices")
-        .insert({
-          request_id: item.request_id,
-          item_id: itemId,
-          partner_id: partner.id,
-          invoice_number: invoicedNumber,
-          invoice_date: invoicedDate,
-          amount_excl_vat: invoicedAmount,
-          vat_rate: vatRate,
-          vat_amount: vatAmount,
-          amount_incl_vat: amountInclVat,
-          description: `${item.block_name} - ${item.program_requests.customer_company || item.program_requests.customer_name}`,
-          file_path: filePath || null,
-          status: "pending",
-          registered_by: "partner",
-        });
-
-      if (purchaseError) {
-        console.error("Error creating purchase invoice:", purchaseError);
-        return new Response(
-          JSON.stringify({ error: "Failed to register purchase invoice" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    // Update item with invoice details (for both modes)
-    const { error: updateError } = await supabase
-      .from("program_request_items")
-      .update({
-        invoiced_amount: invoicedAmount,
-        invoiced_number: invoicedNumber,
-        invoiced_date: invoicedDate,
-        invoiced_file_path: filePath || null,
-        commission_percentage: commissionPercentage,
-        commission_amount: commissionAmount,
-        commission_status: commissionPercentage > 0 ? "pending" : "not_applicable",
-        commission_notes: notes || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", itemId);
-
-    if (updateError) {
-      console.error("Error updating item:", updateError);
+    // All items must belong to the same project (1 project per verzamelfactuur).
+    const requestIds = Array.from(new Set(dbItems.map((i: any) => i.request_id)));
+    if (requestIds.length !== 1) {
       return new Response(
-        JSON.stringify({ error: "Failed to register invoice" }),
+        JSON.stringify({ error: "Een verzamelfactuur mag maar één project bevatten." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const requestId = requestIds[0];
+    const project = dbItems[0].program_requests;
+
+    const invoicingMode = project.invoicing_mode || "bureau_central";
+    const vatRate = 21; // Activities: 21% VAT
+    const commissionPercentage = partner.commission_percentage;
+
+    // Build allocations + totals
+    const amountByItem = new Map(itemsList.map((x) => [x.itemId, x.amount]));
+    let totalExcl = 0;
+    const allocations = dbItems.map((it: any, idx: number) => {
+      const amt = Number(amountByItem.get(it.id) || 0);
+      totalExcl += amt;
+      const vatAmt = +(amt * (vatRate / 100)).toFixed(2);
+      return {
+        item_id: it.id,
+        amount_excl_vat: amt,
+        vat_rate: vatRate,
+        vat_amount: vatAmt,
+        amount_incl_vat: +(amt + vatAmt).toFixed(2),
+        sort_order: idx,
+      };
+    });
+    totalExcl = +totalExcl.toFixed(2);
+    const totalVat = +(totalExcl * (vatRate / 100)).toFixed(2);
+    const totalIncl = +(totalExcl + totalVat).toFixed(2);
+    const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
+
+    const isCollective = dbItems.length > 1;
+    const headerDescription = isCollective
+      ? `Verzamelfactuur ${dbItems.length} onderdelen — ${project.customer_company || project.customer_name}${project.reference_number ? ` (${project.reference_number})` : ""}`
+      : `${dbItems[0].block_name} — ${project.customer_company || project.customer_name}`;
+
+    // Create ONE purchase invoice header (bureau_central is the default; we always store it
+    // so admin has a single source of truth, regardless of mode).
+    const { data: newInvoice, error: purchaseError } = await supabase
+      .from("partner_purchase_invoices")
+      .insert({
+        request_id: requestId,
+        item_id: isCollective ? null : dbItems[0].id,
+        partner_id: partner.id,
+        invoice_number: invoicedNumber,
+        invoice_date: invoicedDate,
+        amount_excl_vat: totalExcl,
+        vat_rate: vatRate,
+        vat_amount: totalVat,
+        amount_incl_vat: totalIncl,
+        description: headerDescription,
+        file_path: filePath || null,
+        status: "pending",
+        registered_by: "partner",
+      })
+      .select()
+      .single();
+
+    if (purchaseError || !newInvoice) {
+      console.error("Error creating purchase invoice:", purchaseError);
+      return new Response(
+        JSON.stringify({ error: "Failed to register purchase invoice" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Log to history
-    await supabase.from("program_request_history").insert({
-      request_id: item.request_id,
-      item_id: itemId,
-      action: invoicingMode === "bureau_central" ? "purchase_invoice_registered" : "invoice_registered",
-      actor: "partner",
-      actor_name: partner.name,
-      new_value: {
-        invoiced_amount: invoicedAmount,
-        invoiced_number: invoicedNumber,
-        invoiced_date: invoicedDate,
-        commission_percentage: commissionPercentage,
-        commission_amount: commissionAmount,
-        invoicing_mode: invoicingMode,
-      },
-      notes: invoicingMode === "bureau_central" 
-        ? `Partner heeft inkoopfactuur ${invoicedNumber} geregistreerd aan Bureau Vlieland (€${invoicedAmount})`
-        : `Partner heeft factuur ${invoicedNumber} geregistreerd (€${invoicedAmount})`,
-    });
-
-    // Create auto todo for commission handling if commission > 0
-    if (commissionPercentage > 0 && commissionAmount > 0) {
-      const { data: existingTodo } = await supabase
-        .from("admin_todos")
-        .select("id")
-        .eq("auto_type", "commission_pending")
-        .eq("auto_entity_id", itemId)
-        .neq("status", "done")
-        .maybeSingle();
-      
-      if (!existingTodo) {
-        await supabase.from("admin_todos").insert({
-          title: `Commissie factureren: ${partner.name} - €${commissionAmount.toFixed(2)}`,
-          description: `Partner ${partner.name} heeft factuur ${invoicedNumber} geregistreerd voor activiteit "${item.block_name}". Commissie van ${commissionPercentage}% moet worden gefactureerd.`,
-          priority: "normal",
-          status: "todo",
-          related_request_id: item.request_id,
-          related_partner_id: partner.id,
-          auto_type: "commission_pending",
-          auto_entity_id: itemId,
-        });
-        console.log(`Created commission_pending todo for item ${itemId}`);
-      }
+    // Insert allocations (always — even with one item, so the data shape is consistent)
+    const allocationRows = allocations.map((a) => ({ ...a, invoice_id: newInvoice.id }));
+    const { error: allocErr } = await supabase
+      .from("partner_purchase_invoice_allocations")
+      .insert(allocationRows);
+    if (allocErr) {
+      console.error("Error inserting allocations:", allocErr);
+      // Non-fatal: header is created. Roll back to keep data clean.
+      await supabase.from("partner_purchase_invoices").delete().eq("id", newInvoice.id);
+      return new Response(
+        JSON.stringify({ error: "Failed to register invoice allocations" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Create auto todo for purchase invoice processing if bureau_central
-    if (invoicingMode === "bureau_central") {
-      await supabase.from("admin_todos").insert({
-        title: `Inkoopfactuur verwerken: ${partner.name} - ${invoicedNumber}`,
-        description: `Partner ${partner.name} heeft inkoopfactuur ${invoicedNumber} (€${invoicedAmount}) geregistreerd voor project ${item.program_requests.reference_number || item.request_id}. Factuur doorsturen naar Snelstart.`,
-        priority: "normal",
-        status: "todo",
-        related_request_id: item.request_id,
-        related_partner_id: partner.id,
-        auto_type: "purchase_invoice_pending",
-        auto_entity_id: itemId,
+    // Update each program_request_items row with denormalized invoice metadata
+    // so existing UI (admin + partner) keeps working until fully migrated.
+    for (const a of allocations) {
+      const itemCommission = +((a.amount_excl_vat * commissionPercentage) / 100).toFixed(2);
+      await supabase
+        .from("program_request_items")
+        .update({
+          invoiced_amount: a.amount_excl_vat,
+          invoiced_number: invoicedNumber,
+          invoiced_date: invoicedDate,
+          invoiced_file_path: filePath || null,
+          commission_percentage: commissionPercentage,
+          commission_amount: itemCommission,
+          commission_status: commissionPercentage > 0 ? "pending" : "not_applicable",
+          commission_notes: notes || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", a.item_id);
+    }
+
+    // Log to history (one entry per item)
+    for (const a of allocations) {
+      const it = dbItems.find((i: any) => i.id === a.item_id);
+      await supabase.from("program_request_history").insert({
+        request_id: requestId,
+        item_id: a.item_id,
+        action: "purchase_invoice_registered",
+        actor: "partner",
+        actor_name: partner.name,
+        new_value: {
+          invoice_id: newInvoice.id,
+          invoiced_amount: a.amount_excl_vat,
+          invoiced_number: invoicedNumber,
+          invoiced_date: invoicedDate,
+          commission_percentage: commissionPercentage,
+          collective: isCollective,
+        },
+        notes: isCollective
+          ? `Partner heeft onderdeel "${it?.block_name}" gefactureerd op verzamelfactuur ${invoicedNumber} (€${a.amount_excl_vat})`
+          : `Partner heeft inkoopfactuur ${invoicedNumber} geregistreerd aan Bureau Vlieland (€${a.amount_excl_vat})`,
       });
     }
 
-    // Send notification email to Bureau Vlieland
-    const customerName = item.program_requests.customer_company || item.program_requests.customer_name;
-    const activityDate = item.program_requests.selected_dates?.[item.day_index] || "Onbekend";
-    
+    // Commission todo (once per invoice)
+    if (commissionPercentage > 0 && totalCommission > 0) {
+      await supabase.from("admin_todos").insert({
+        title: `Commissie factureren: ${partner.name} - €${totalCommission.toFixed(2)}`,
+        description: `Partner ${partner.name} heeft factuur ${invoicedNumber} geregistreerd (${dbItems.length} onderdeel${dbItems.length > 1 ? "en" : ""}) voor project ${project.reference_number || requestId}. Commissie van ${commissionPercentage}% moet worden gefactureerd.`,
+        priority: "normal",
+        status: "todo",
+        related_request_id: requestId,
+        related_partner_id: partner.id,
+        auto_type: "commission_pending",
+        auto_entity_id: newInvoice.id,
+      });
+    }
+
+    // Purchase invoice processing todo (once per invoice)
+    if (invoicingMode === "bureau_central") {
+      await supabase.from("admin_todos").insert({
+        title: `Inkoopfactuur verwerken: ${partner.name} - ${invoicedNumber}`,
+        description: `Partner ${partner.name} heeft inkoopfactuur ${invoicedNumber} (€${totalExcl}) geregistreerd voor project ${project.reference_number || requestId}. Factuur doorsturen naar Snelstart.`,
+        priority: "normal",
+        status: "todo",
+        related_request_id: requestId,
+        related_partner_id: partner.id,
+        auto_type: "purchase_invoice_pending",
+        auto_entity_id: newInvoice.id,
+      });
+    }
+
+    // Notification email to Bureau Vlieland
+    const customerName = project.customer_company || project.customer_name;
+    const itemsListHtml = dbItems
+      .map((it: any) => {
+        const amt = amountByItem.get(it.id) || 0;
+        return `<tr><td style="padding:6px 0;">${it.block_name}</td><td style="padding:6px 0;text-align:right;">€${amt.toFixed(2)}</td></tr>`;
+      })
+      .join("");
+
     const bureauEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a365d;">Nieuwe factuurregistratie</h2>
-        
-        <p><strong>${partner.name}</strong> heeft een factuur geregistreerd.</p>
-        
-        <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #2d3748;">Factuurgegevens</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Factuurnummer:</td>
-              <td style="padding: 8px 0; font-weight: bold;">${invoicedNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Bedrag excl. BTW:</td>
-              <td style="padding: 8px 0; font-weight: bold;">€${invoicedAmount.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Factuurdatum:</td>
-              <td style="padding: 8px 0;">${invoicedDate}</td>
-            </tr>
-            ${commissionPercentage > 0 ? `
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Commissie (${commissionPercentage}%):</td>
-              <td style="padding: 8px 0; font-weight: bold; color: #2b6cb0;">€${commissionAmount.toFixed(2)}</td>
-            </tr>
-            ` : ''}
+        <h2 style="color: #1a365d;">Nieuwe ${isCollective ? "verzamelfactuur" : "factuurregistratie"}</h2>
+        <p><strong>${partner.name}</strong> heeft een ${isCollective ? "verzamelfactuur" : "factuur"} geregistreerd voor project <strong>${project.reference_number || requestId}</strong> (${customerName}).</p>
+
+        <div style="background:#f7fafc;padding:20px;border-radius:8px;margin:20px 0;">
+          <h3 style="margin-top:0;color:#2d3748;">Factuurgegevens</h3>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:6px 0;color:#718096;">Factuurnummer:</td><td style="padding:6px 0;font-weight:bold;">${invoicedNumber}</td></tr>
+            <tr><td style="padding:6px 0;color:#718096;">Factuurdatum:</td><td style="padding:6px 0;">${invoicedDate}</td></tr>
+            <tr><td style="padding:6px 0;color:#718096;">Totaal excl. BTW:</td><td style="padding:6px 0;font-weight:bold;">€${totalExcl.toFixed(2)}</td></tr>
+            ${commissionPercentage > 0 ? `<tr><td style="padding:6px 0;color:#718096;">Commissie (${commissionPercentage}%):</td><td style="padding:6px 0;font-weight:bold;color:#2b6cb0;">€${totalCommission.toFixed(2)}</td></tr>` : ""}
           </table>
         </div>
-        
-        <div style="background: #edf2f7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #2d3748;">Activiteit</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Activiteit:</td>
-              <td style="padding: 8px 0;">${item.block_name}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Klant:</td>
-              <td style="padding: 8px 0;">${customerName}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #718096;">Datum:</td>
-              <td style="padding: 8px 0;">${activityDate}</td>
-            </tr>
+
+        <div style="background:#edf2f7;padding:20px;border-radius:8px;margin:20px 0;">
+          <h3 style="margin-top:0;color:#2d3748;">Onderdelen op deze factuur</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            ${itemsListHtml}
+            <tr><td style="padding-top:10px;border-top:1px solid #cbd5e0;font-weight:bold;">Totaal excl. BTW</td><td style="padding-top:10px;border-top:1px solid #cbd5e0;text-align:right;font-weight:bold;">€${totalExcl.toFixed(2)}</td></tr>
           </table>
         </div>
-        
-        ${notes ? `
-        <div style="background: #fffaf0; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <strong>Opmerking partner:</strong><br/>
-          ${notes}
-        </div>
-        ` : ''}
-        
-        ${commissionPercentage > 0 ? `
-        <p style="color: #718096; font-size: 14px;">
-          💰 Deze commissie staat klaar om gefactureerd te worden in het admin dashboard.
-        </p>
-        ` : ''}
-        
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-        <p style="color: #a0aec0; font-size: 12px;">
-          Dit is een automatisch bericht van Bureau Vlieland.
-        </p>
+
+        ${notes ? `<div style="background:#fffaf0;padding:15px;border-radius:8px;margin:20px 0;"><strong>Opmerking partner:</strong><br/>${notes}</div>` : ""}
+
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />
+        <p style="color:#a0aec0;font-size:12px;">Automatisch bericht van Bureau Vlieland.</p>
       </div>
     `;
 
     const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
-    const bureauSubject = `${getSubjectPrefix(origin)}Factuur geregistreerd: ${partner.name} - ${item.block_name}`;
+    const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd: ${partner.name} - ${project.reference_number || customerName}`;
     const sendOk = await sendEmailNotification(
       bureauRecipient,
       "Bureau Vlieland",
       bureauSubject,
       bureauEmailHtml,
-      item.program_requests?.reference_number || null
+      project.reference_number || null
     );
 
     await logEmail({
@@ -332,25 +352,28 @@ Deno.serve(async (req) => {
       subject: bureauSubject,
       status: sendOk ? "sent" : "failed",
       sent_by: "system",
-      related_request_id: item.request_id,
+      related_request_id: requestId,
       related_partner_id: partner.id,
-      related_item_id: itemId,
       metadata: {
         template_name: "partner_invoice_registered_bureau",
         actor: "partner → bureau",
         invoicedNumber,
-        invoicedAmount,
-        commissionAmount,
+        invoicedAmount: totalExcl,
+        commissionAmount: totalCommission,
         invoicingMode,
+        collective: isCollective,
+        itemCount: dbItems.length,
+        invoiceId: newInvoice.id,
       },
     });
 
     return new Response(
       JSON.stringify({
         success: true,
+        invoiceId: newInvoice.id,
         commission: {
           percentage: commissionPercentage,
-          amount: commissionAmount,
+          amount: totalCommission,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
