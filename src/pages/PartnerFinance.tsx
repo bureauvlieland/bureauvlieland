@@ -32,6 +32,7 @@ import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
 import { getItemLineTotal } from "@/lib/portalPricing";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 /**
  * Bepaal het te-factureren bedrag voor een partner-item.
