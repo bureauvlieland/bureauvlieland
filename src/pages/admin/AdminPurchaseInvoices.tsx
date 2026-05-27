@@ -456,6 +456,12 @@ export default function AdminPurchaseInvoices() {
         onClose={() => setAddDialogOpen(false)}
       />
 
+      {/* Upload PDF to existing invoice */}
+      <UploadInvoicePdfDialog
+        invoice={uploadPdfTarget}
+        onClose={() => setUploadPdfTarget(null)}
+      />
+
       {/* Single delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
