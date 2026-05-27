@@ -33,10 +33,17 @@ const isEstimatedAmount = (item: PartnerItem): boolean =>
 
 interface BureauDetails {
   companyName?: string;
+  legalName?: string;
+  street?: string;
+  postalCode?: string;
+  city?: string;
   kvkNumber?: string;
   vatNumber?: string;
-  address?: string;
+  iban?: string;
+  /** @deprecated administratie-mail wordt niet meer in dit dialoog getoond */
   email?: string;
+  /** @deprecated los adresveld; gebruik street + postalCode + city */
+  address?: string;
 }
 
 export interface CollectiveInvoiceSubmitPayload {
