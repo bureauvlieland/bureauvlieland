@@ -9,7 +9,7 @@ import { ChevronLeft, Loader2, CheckCircle, ArrowRight, Home } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
-import { trackProgramRequestSubmitted } from "@/lib/analytics";
+import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage } from "@/lib/entryPageTracker";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -171,6 +171,7 @@ export const MaatwerkIntakeForm = ({
       });
     } catch (error: any) {
       console.error("Error submitting maatwerk request:", error);
+      trackSubmitFailed({ formType: 'maatwerk_intake', error });
       toast({
         title: "Er ging iets mis",
         description: error.message || "Probeer het later opnieuw.",

@@ -12,7 +12,7 @@ import { Loader2, ArrowLeft, User, Mail, Phone, Building2, AlertCircle, RotateCc
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
-import { trackProgramRequestSubmitted } from "@/lib/analytics";
+import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 import {
@@ -228,6 +228,14 @@ export const CheckoutContactForm = ({
       onSuccess(token);
     } catch (error: any) {
       console.error("Error sending program request:", error);
+      trackSubmitFailed({
+        formType: 'program_request',
+        error,
+        extra: {
+          number_of_people: numberOfPeople,
+          items_count: cartItems.length,
+        },
+      });
       const friendly =
         "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
       setSubmitError(friendly);

@@ -163,6 +163,49 @@ export const trackQuoteRequestSubmitted = (data: {
 };
 
 /**
+ * Track when a form submission fails (request/quote/maatwerk).
+ * Captures route, auth state, supabase error context for debugging.
+ */
+export const trackSubmitFailed = (data: {
+  formType: 'program_request' | 'quote_request' | 'maatwerk_intake' | 'accommodation_request';
+  stage?: string;
+  error: unknown;
+  userType?: 'anon' | 'authenticated';
+  extra?: Record<string, unknown>;
+}) => {
+  const err = data.error as any;
+  const errorMessage =
+    (err && (err.message || err.error_description || err.msg)) ||
+    (typeof err === 'string' ? err : 'Unknown error');
+  const errorCode = err?.code || err?.status || err?.statusCode || null;
+  const errorDetails = err?.details || err?.hint || null;
+
+  let userType = data.userType;
+  if (!userType && typeof window !== 'undefined') {
+    try {
+      const hasSession = Object.keys(window.localStorage).some(
+        (k) => k.startsWith('sb-') && k.endsWith('-auth-token'),
+      );
+      userType = hasSession ? 'authenticated' : 'anon';
+    } catch {
+      userType = 'anon';
+    }
+  }
+
+  trackEvent('submit_failed', {
+    form_type: data.formType,
+    stage: data.stage || 'submit',
+    error_message: String(errorMessage).slice(0, 500),
+    error_code: errorCode ? String(errorCode) : null,
+    error_details: errorDetails ? String(errorDetails).slice(0, 500) : null,
+    user_type: userType || 'unknown',
+    route: typeof window !== 'undefined' ? window.location.pathname : null,
+    referrer: typeof document !== 'undefined' ? document.referrer || null : null,
+    ...(data.extra || {}),
+  });
+};
+
+/**
  * Track when a program is shared
  */
 export const trackShareProgram = (method: 'whatsapp' | 'email' | 'link' | 'print') => {
