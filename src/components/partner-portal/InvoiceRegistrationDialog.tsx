@@ -480,12 +480,12 @@ export const InvoiceRegistrationDialog = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting || isUploading}>
             Annuleren
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Registreren
+          <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
+            {(isSubmitting || isUploading) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isUploading ? "PDF uploaden..." : "Registreren"}
           </Button>
         </DialogFooter>
       </DialogContent>
