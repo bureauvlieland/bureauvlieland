@@ -43,7 +43,8 @@ import { getItemLineTotal } from "@/lib/portalPricing";
 const getBillableAmount = (item: PartnerItem): number => {
   const people = item.program_requests.number_of_people || 1;
   const days = Math.max((item.program_requests.selected_dates || []).length, 1);
-  return getItemLineTotal(item, people, days) ?? 0;
+  // getItemLineTotal is structureel compatibel (gebruikt alleen prijsvelden)
+  return getItemLineTotal(item as unknown as Parameters<typeof getItemLineTotal>[0], people, days) ?? 0;
 };
 const isEstimatedAmount = (item: PartnerItem): boolean =>
   item.quoted_price == null && item.admin_price_override != null;
