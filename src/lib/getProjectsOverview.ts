@@ -19,6 +19,8 @@ export interface OverviewRow {
   readinessTotal: number;
   programId: string | null;
   accommodationId: string | null;
+  isNew?: boolean;
+
 }
 
 interface FetchOptions {
@@ -32,6 +34,14 @@ function toDate(s: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function isFresh(createdAt: string | null | undefined): boolean {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (isNaN(t)) return false;
+  return Date.now() - t < 24 * 60 * 60 * 1000;
+}
+
+
 export async function fetchProjectsOverview({ logiesView = false }: FetchOptions = {}): Promise<OverviewRow[]> {
   const [
     { data: programs, error: progError },
@@ -44,15 +54,16 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       .select(`
         id, reference_number, customer_name, customer_company, number_of_people,
         selected_dates, status, terms_accepted_at, linked_accommodation_id,
-        quote_status, completion_status
+        quote_status, completion_status, created_at
       `)
       .neq("status", "deleted"),
     supabase
       .from("accommodation_requests")
       .select(`
         id, reference_number, customer_name, customer_company, number_of_guests,
-        arrival_date, departure_date, status, linked_program_id
+        arrival_date, departure_date, status, linked_program_id, created_at
       `),
+
     supabase
       .from("program_request_items")
       .select("request_id, status, skip_partner_notification, customer_approved_at"),
@@ -122,7 +133,9 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         readinessTotal: 0,
         programId: program?.id ?? null,
         accommodationId: acc.id,
+        isNew: isFresh(acc.created_at) && !program,
       });
+
     });
     return rows.sort(sortByEarliest);
   }
@@ -183,7 +196,9 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       readinessTotal: checks.length,
       programId: prog.id,
       accommodationId: linkedAcc?.id ?? null,
+      isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
     });
+
   });
 
   // logies-only (without linked program)
@@ -220,7 +235,9 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       readinessTotal: checks.length,
       programId: null,
       accommodationId: acc.id,
+      isNew: isFresh(acc.created_at),
     });
+
   });
 
   return rows.sort(sortByEarliest);
