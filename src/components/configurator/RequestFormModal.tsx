@@ -30,7 +30,7 @@ import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlo
 import { CheckCircle, Loader2, Building2, Info, AlertCircle, ExternalLink, MessageSquare, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
-import { trackProgramRequestSubmitted } from "@/lib/analytics";
+import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 
 // Event type options for the dropdown
