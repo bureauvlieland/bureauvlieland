@@ -233,8 +233,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            Verzamelfactuur registreren
+            {isEmailMode ? <Mail className="h-5 w-5" /> : <Receipt className="h-5 w-5" />}
+            {isEmailMode ? "Markeer als gefactureerd via e-mail" : "Verzamelfactuur registreren"}
           </DialogTitle>
           <DialogDescription>
             Project {project?.reference_number || ""} — {customerLabel}
