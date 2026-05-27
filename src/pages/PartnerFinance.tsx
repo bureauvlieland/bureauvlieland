@@ -469,18 +469,86 @@ const PartnerFinanceContent = () => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {/* Activity items to invoice */}
-              {toBeInvoicedItems.map((item) => (
-                <InvoiceItemCard 
-                  key={item.id} 
-                  item={item} 
-                  variant="to-invoice" 
-                  onInvoice={() => {
-                    setSelectedItem(item);
-                    setShowInvoiceDialog(true);
-                  }}
-                />
-              ))}
+              {/* Inbox tip banner */}
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Tip:</strong> je kunt je factuur ook gewoon mailen naar{" "}
+                  <a href="mailto:inkoop@reply.bureauvlieland.nl" className="underline font-medium">
+                    inkoop@reply.bureauvlieland.nl
+                  </a>{" "}
+                  — Bureau Vlieland verwerkt 'm dan automatisch (PDF wordt ingelezen en gekoppeld aan je project).
+                </AlertDescription>
+              </Alert>
+
+              {/* Activities grouped per project — partner factureert per project één verzamelfactuur */}
+              {Object.entries(
+                toBeInvoicedItems.reduce<Record<string, PartnerItem[]>>((acc, it) => {
+                  (acc[it.request_id] ||= []).push(it);
+                  return acc;
+                }, {})
+              ).map(([requestId, items]) => {
+                const project = items[0].program_requests;
+                const total = items.reduce((s, i) => s + (i.quoted_price || 0), 0);
+                return (
+                  <Card key={requestId}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold">
+                              {project.customer_company || project.customer_name}
+                            </h3>
+                            {project.reference_number && (
+                              <Badge variant="outline" className="text-xs">
+                                {project.reference_number}
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              {items.length} onderdeel{items.length !== 1 ? "en" : ""}
+                            </Badge>
+                          </div>
+                          {project.selected_dates?.[0] && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(parseISO(project.selected_dates[0]), "d MMM yyyy", { locale: nl })}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Totaal te factureren</p>
+                          <p className="text-lg font-bold">
+                            €{total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-md border divide-y text-sm">
+                        {items.map((it) => (
+                          <div key={it.id} className="flex items-center justify-between p-2">
+                            <span className="truncate">{it.block_name}</span>
+                            <span className="font-medium">
+                              €{(it.quoted_price || 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setCollectiveRequestId(requestId);
+                            setCollectiveInitialIds(items.map((i) => i.id));
+                          }}
+                        >
+                          <Receipt className="h-4 w-4 mr-2" />
+                          {items.length > 1 ? "Verzamelfactuur registreren" : "Factuur registreren"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
               {/* Accommodation items to invoice */}
               {toBeInvoicedAccommodations.map((quote) => (
                 <AccommodationInvoiceCard key={quote.id} quote={quote} variant="to-invoice" />
