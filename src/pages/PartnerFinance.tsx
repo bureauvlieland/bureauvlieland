@@ -500,9 +500,10 @@ interface InvoiceItemCardProps {
   item: PartnerItem;
   variant: "to-invoice" | "invoiced";
   onInvoice?: () => void;
+  onUploadPdf?: () => void;
 }
 
-const InvoiceItemCard = ({ item, variant, onInvoice }: InvoiceItemCardProps) => {
+const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemCardProps) => {
   const request = item.program_requests;
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
