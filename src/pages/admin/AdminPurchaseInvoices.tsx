@@ -43,6 +43,7 @@ import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
+import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { Plus } from "lucide-react";
 import {
   AlertDialog,
