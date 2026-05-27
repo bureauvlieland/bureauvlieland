@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
       invoicedDate,
       notes,
       filePath,
+      viaEmail,
       // Legacy single-item mode:
       itemId,
       invoicedAmount,
@@ -80,6 +81,7 @@ Deno.serve(async (req) => {
       items, // [{ itemId, amount }]
     } = reqBody;
     const origin = reqBody.origin || req.headers.get("origin") || "";
+    const isViaEmail = viaEmail === true;
 
     // Normalize to items[] array. Legacy single-item callers still supported.
     const itemsList: Array<{ itemId: string; amount: number; vatRate: number }> =
@@ -187,9 +189,11 @@ Deno.serve(async (req) => {
     const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
 
     const isCollective = dbItems.length > 1;
-    const headerDescription = isCollective
+    const baseDescription = isCollective
       ? `Verzamelfactuur ${dbItems.length} onderdelen — ${project.customer_company || project.customer_name}${project.reference_number ? ` (${project.reference_number})` : ""}`
       : `${dbItems[0].block_name} — ${project.customer_company || project.customer_name}`;
+    const headerDescription = isViaEmail ? `[via e-mail] ${baseDescription}` : baseDescription;
+    const headerStatus = isViaEmail ? "pending_email_match" : "pending";
 
     // Create ONE purchase invoice header (bureau_central is the default; we always store it
     // so admin has a single source of truth, regardless of mode).
@@ -207,7 +211,7 @@ Deno.serve(async (req) => {
         amount_incl_vat: totalIncl,
         description: headerDescription,
         file_path: filePath || null,
-        status: "pending",
+        status: headerStatus,
         registered_by: "partner",
       })
       .select()
@@ -316,10 +320,20 @@ Deno.serve(async (req) => {
       })
       .join("");
 
+    const viaEmailBanner = isViaEmail
+      ? `<div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 16px;border-radius:8px;margin:16px 0;font-size:14px;">
+           <strong>Let op:</strong> partner heeft aangegeven dat de PDF per e-mail is verzonden naar
+           <a href="mailto:inkoop@reply.bureauvlieland.nl">inkoop@reply.bureauvlieland.nl</a>.
+           De factuur wordt automatisch gekoppeld zodra hij binnenkomt.
+         </div>`
+      : "";
+
     const bureauEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a365d;">Nieuwe ${isCollective ? "verzamelfactuur" : "factuurregistratie"}</h2>
+        <h2 style="color: #1a365d;">Nieuwe ${isCollective ? "verzamelfactuur" : "factuurregistratie"}${isViaEmail ? " (via e-mail)" : ""}</h2>
         <p><strong>${partner.name}</strong> heeft een ${isCollective ? "verzamelfactuur" : "factuur"} geregistreerd voor project <strong>${project.reference_number || requestId}</strong> (${customerName}).</p>
+
+        ${viaEmailBanner}
 
         <div style="background:#f7fafc;padding:20px;border-radius:8px;margin:20px 0;">
           <h3 style="margin-top:0;color:#2d3748;">Factuurgegevens</h3>
@@ -347,7 +361,7 @@ Deno.serve(async (req) => {
     `;
 
     const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
-    const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd: ${partner.name} - ${project.reference_number || customerName}`;
+    const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd${isViaEmail ? " (via e-mail)" : ""}: ${partner.name} - ${project.reference_number || customerName}`;
     const sendOk = await sendEmailNotification(
       bureauRecipient,
       "Bureau Vlieland",
@@ -373,6 +387,7 @@ Deno.serve(async (req) => {
         commissionAmount: totalCommission,
         invoicingMode,
         collective: isCollective,
+        viaEmail: isViaEmail,
         itemCount: dbItems.length,
         invoiceId: newInvoice.id,
       },

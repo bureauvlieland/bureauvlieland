@@ -53,6 +53,7 @@ const PartnerFinanceContent = () => {
   const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
   const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
   const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
+  const [collectiveMode, setCollectiveMode] = useState<"upload" | "email">("upload");
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -226,6 +227,7 @@ const PartnerFinanceContent = () => {
             invoicedDate: payload.invoicedDate,
             notes: payload.notes,
             filePath: payload.filePath,
+            viaEmail: payload.viaEmail,
           }),
         }
       );
@@ -234,9 +236,11 @@ const PartnerFinanceContent = () => {
         throw new Error(err.error || "Failed");
       }
       toast.success(
-        payload.items.length > 1
-          ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
-          : "Factuur geregistreerd"
+        payload.viaEmail
+          ? "Bedankt — we koppelen je mail zodra hij binnen is"
+          : payload.items.length > 1
+            ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
+            : "Factuur geregistreerd"
       );
       setCollectiveRequestId(null);
       setCollectiveInitialIds([]);
@@ -533,10 +537,23 @@ const PartnerFinanceContent = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="flex justify-end">
+                      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCollectiveMode("email");
+                            setCollectiveRequestId(requestId);
+                            setCollectiveInitialIds(items.map((i) => i.id));
+                          }}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Gefactureerd via e-mail
+                        </Button>
                         <Button
                           size="sm"
                           onClick={() => {
+                            setCollectiveMode("upload");
                             setCollectiveRequestId(requestId);
                             setCollectiveInitialIds(items.map((i) => i.id));
                           }}
@@ -621,6 +638,7 @@ const PartnerFinanceContent = () => {
         onClose={() => {
           setCollectiveRequestId(null);
           setCollectiveInitialIds([]);
+          setCollectiveMode("upload");
         }}
         projectItems={
           collectiveRequestId
@@ -635,6 +653,7 @@ const PartnerFinanceContent = () => {
         }
         initialSelectedIds={collectiveInitialIds}
         commissionPercentage={data.partner.commission_percentage}
+        mode={collectiveMode}
         onSubmit={handleCollectiveInvoiceRegister}
       />
     </div>

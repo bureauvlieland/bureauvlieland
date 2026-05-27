@@ -35,6 +35,7 @@ export interface CollectiveInvoiceSubmitPayload {
   invoicedDate: string;
   notes?: string;
   filePath?: string;
+  viaEmail?: boolean;
 }
 
 interface Props {
@@ -46,6 +47,8 @@ interface Props {
   initialSelectedIds: string[];
   commissionPercentage: number;
   bureauDetails?: BureauDetails | null;
+  /** "upload" = PDF verplicht; "email" = partner bevestigt verzending naar inkoop@. */
+  mode?: "upload" | "email";
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
 
@@ -58,8 +61,10 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
   initialSelectedIds,
   commissionPercentage,
   bureauDetails,
+  mode = "upload",
   onSubmit,
 }: Props) => {
+  const isEmailMode = mode === "email";
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -168,7 +173,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     }
     if (!invoiceNumber.trim()) e.invoiceNumber = "Factuurnummer is verplicht";
     if (!invoiceDate) e.invoiceDate = "Factuurdatum is verplicht";
-    if (!selectedFile) e.file = "PDF van de factuur is verplicht";
+    if (!isEmailMode && !selectedFile) e.file = "PDF van de factuur is verplicht";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -180,11 +185,19 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
 
     setIsSubmitting(true);
     try {
-      const filePath = (await uploadFile(firstItem)) || undefined;
-      if (!filePath) {
-        setErrors({ file: "Upload van PDF is mislukt" });
-        return;
+      let filePath: string | undefined;
+      if (!isEmailMode) {
+        const uploaded = await uploadFile(firstItem);
+        if (!uploaded) {
+          setErrors({ file: "Upload van PDF is mislukt" });
+          return;
+        }
+        filePath = uploaded;
       }
+      const emailNoteSuffix = `Factuur verzonden via e-mail naar ${INKOOP_INBOX}`;
+      const combinedNotes = isEmailMode
+        ? [notes?.trim(), emailNoteSuffix].filter(Boolean).join(" — ")
+        : notes || undefined;
       const payload: CollectiveInvoiceSubmitPayload = {
         items: Array.from(selectedIds).map((id) => {
           const item = projectItems.find((p) => p.id === id);
@@ -200,8 +213,9 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
         }),
         invoicedNumber: invoiceNumber.trim(),
         invoicedDate: invoiceDate,
-        notes: notes || undefined,
+        notes: combinedNotes || undefined,
         filePath,
+        viaEmail: isEmailMode,
       };
       const res = await onSubmit(payload);
       if (!res.success) {
@@ -219,8 +233,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            Verzamelfactuur registreren
+            {isEmailMode ? <Mail className="h-5 w-5" /> : <Receipt className="h-5 w-5" />}
+            {isEmailMode ? "Markeer als gefactureerd via e-mail" : "Verzamelfactuur registreren"}
           </DialogTitle>
           <DialogDescription>
             Project {project?.reference_number || ""} — {customerLabel}
@@ -342,32 +356,47 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             </Alert>
           )}
 
-          <div className="space-y-2">
-            <Label>PDF van de factuur *</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            {selectedFile ? (
-              <div className="flex items-center justify-between gap-2 rounded-md border p-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm truncate">{selectedFile.name}</span>
+          {isEmailMode ? (
+            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
+              <Mail className="h-4 w-4" />
+              <AlertDescription className="space-y-1">
+                <div className="font-medium text-amber-900 dark:text-amber-200">
+                  Je bevestigt dat je factuur {invoiceNumber ? <strong>#{invoiceNumber}</strong> : "(vul nummer hierboven in)"} per e-mail hebt verzonden naar{" "}
+                  <a href={`mailto:${INKOOP_INBOX}`} className="underline font-medium">{INKOOP_INBOX}</a>.
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                  <X className="h-4 w-4" />
+                <div className="text-xs text-muted-foreground">
+                  Bureau Vlieland koppelt de PDF automatisch zodra de e-mail binnenkomt. De onderdelen worden direct als gefactureerd geregistreerd.
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-2">
+              <Label>PDF van de factuur *</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              {selectedFile ? (
+                <div className="flex items-center justify-between gap-2 rounded-md border p-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm truncate">{selectedFile.name}</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" /> PDF uploaden (verplicht)
                 </Button>
-              </div>
-            ) : (
-              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" /> PDF uploaden (verplicht)
-              </Button>
-            )}
-            {errors.file && <p className="text-sm text-destructive">{errors.file}</p>}
-          </div>
+              )}
+              {errors.file && <p className="text-sm text-destructive">{errors.file}</p>}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Opmerkingen (optioneel)</Label>
@@ -383,7 +412,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
             {(isSubmitting || isUploading) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Factuur registreren
+            {isEmailMode ? "Bevestig verzending" : "Factuur registreren"}
           </Button>
         </DialogFooter>
       </DialogContent>

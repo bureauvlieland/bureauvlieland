@@ -1,47 +1,42 @@
-# Fix verzamelfactuurdialoog partner
+## Doel
 
-## Probleem
+Op `/partner/facturatie` (tab "Nog te factureren") wil de partner per project één actie hebben: **"Markeer als gefactureerd via e-mail"**. Dit bevestigt dat de verzamelfactuur via e-mail naar `inkoop@reply.bureauvlieland.nl` is gestuurd. De onderdelen worden direct als gefactureerd geregistreerd — de PDF volgt automatisch via de inkoop-inbox (Mailjet Parse → koppeling op factuurnummer).
 
-In `RegisterCollectivePartnerInvoiceDialog.tsx`:
+## Wijzigingen
 
-1. **"Factureer aan" toont `administratie@bureauvlieland.nl**` (uit `bureauDetails.email`) i.p.v. de inkoop-inbox waar de partner de PDF naartoe kan mailen. Inconsistent met de banner op `/partner/facturatie` die wél `inkoop@reply.bureauvlieland.nl` toont.
-2. **Bedragen worden als "excl. BTW" gelabeld**, maar businessregel is: alle prijzen die partner en klant zien zijn **incl. BTW**. Alleen de **commissie (10–15%)** wordt over het **ex-BTW**-bedrag berekend.
+### 1. `RegisterCollectivePartnerInvoiceDialog.tsx` — modus toevoegen
+- Nieuwe prop `mode: "upload" | "email"` (default `"upload"`).
+- In `mode = "email"`:
+  - Titel: *"Markeer verzamelfactuur als verzonden via e-mail"*.
+  - PDF-upload sectie wordt vervangen door een prominent amber blok:
+    > "Je bevestigt dat je de factuur (#<nummer>) hebt verstuurd naar **inkoop@reply.bureauvlieland.nl**. Wij koppelen de PDF automatisch zodra hij binnenkomt."
+  - `filePath` blijft leeg in de payload; PDF-validatie wordt overgeslagen.
+  - Notes krijgen automatisch suffix: *"Factuur verzonden via e-mail naar inkoop@reply.bureauvlieland.nl"*.
+- Submit-knop tekst: *"Bevestig verzending"* i.p.v. *"Registreer factuur"*.
+- Rest (item-selectie, bedragen incl. BTW, commissie-berekening) blijft identiek.
 
-## Oplossing
+### 2. `PartnerFinance.tsx` — tweede knop per projectkaart
+- Naast de bestaande knop "Verzamelfactuur registreren" komt een variant-`outline` knop **"Gefactureerd via e-mail"** (icon: `Mail`).
+- Beide knoppen openen dezelfde dialog; nieuwe state `collectiveMode: "upload" | "email"` bepaalt de modus.
+- De algemene inkoop-inbox tip-banner blijft staan (context blijft duidelijk).
 
-### 1. Inkoopinbox tonen, niet `administratie@`
+### 3. `register-partner-invoice` edge function — `via_email` flag
+- Payload accepteert optioneel `viaEmail: boolean`.
+- Als `viaEmail = true`:
+  - `filePath` mag leeg zijn (validatie aanpassen).
+  - `partner_purchase_invoices.registered_by` blijft `'partner'`, maar `status` wordt `'pending_email_match'` (nieuwe waarde, geen schema-wijziging — het is een vrij tekstveld).
+  - `description` krijgt prefix `[via e-mail]` zodat admin het in de inkoopinbox direct herkent.
+- Items worden gewoon gemarkeerd als gefactureerd (denormalized fields op `program_request_items` blijven werken zoals nu).
 
-In het amber "Factureer aan Bureau Vlieland"-blok:
+### 4. Memory update
+- `mem://style/partner-invoice-dialog-rules` aanvullen: *"Partner heeft twee paden om te bevestigen: PDF uploaden in portal, of markeren als verzonden via inkoop-inbox. Bij e-mail-pad is PDF niet vereist; admin matcht binnenkomende mail later op factuurnummer."*
 
-- Verwijder `bureauInfo.email` (administratie-adres) of vervang door `**inkoop@reply.bureauvlieland.nl**` met label "PDF mailen kan ook naar:".
-- Voorkeur: behoud KvK/BTW/adres voor formele factuuradressering, en zet een aparte regel "PDF mag ook gemaild worden naar [inkoop@reply.bureauvlieland.nl](mailto:inkoop@reply.bureauvlieland.nl)" → maakt dubbele upload-route expliciet.
-
-### 2. Prijzen als incl. BTW behandelen
-
-- Inputvelden per item blijven het bedrag **incl. BTW** (geen extra rekenstap voor de partner; dat matcht hoe `quoted_price` is opgeslagen).
-- Label `Totaal excl. BTW` → `**Totaal incl. BTW**`.
-- Commissieberekening aanpassen: per item BTW-tarief ophalen (via `useItemVatRates` zoals admin doet), ex-BTW per regel afleiden met `calculateFromInclVat`, optellen → `commissionAmount = totalExcl × commissionPercentage / 100`.
-- Toon zowel **Totaal incl. BTW** als (kleinere regel) "Totaal excl. BTW (basis commissie): €X,XX" zodat het transparant is.
-
-### 3. Edge function `register-partner-invoice`
-
-- Geeft `amount` mee per item als **incl. BTW** (huidige opslag in `program_request_items.invoiced_amount`). Controleren of de allocation-tabel ook incl. BTW verwacht; zo niet, ex-BTW erbij berekenen en opslaan. (Pas alleen aan als nodig — eerst tabelvelden checken.)
-
-## Memory toevoegen
-
-`mem://style/partner-invoice-dialog-rules` — type: preference
-
-> Partner-facing factuurdialogen tonen prijzen **incl. BTW** (label nooit "excl"). Commissie wordt berekend over ex-BTW (afgeleid via VAT rate). "Factureer aan"-blokken tonen het **inkoop-inboxadres** (`inkoop@reply.bureauvlieland.nl`), niet `administratie@`.
+## Out of scope (nu niet)
+- Automatische matching tussen `pending_email_match` rijen en inkomende Mailjet Parse mails (bestaat al voor de directe inbox-flow; werkt straks ook hier zolang factuurnummer overeenkomt).
+- Admin UI-aanpassing voor de nieuwe status — bestaande inkoopfacturen-lijst toont 'm gewoon als status-label.
 
 ## Bestanden
-
-- `src/components/partner-portal/RegisterCollectivePartnerInvoiceDialog.tsx`
-- (mogelijk) `supabase/functions/register-partner-invoice/index.ts` — alleen als allocations ex-BTW vereisen
-- `mem://style/partner-invoice-dialog-rules` (nieuw)
-- `mem://index.md` (Memories-lijst uitbreiden)
-
-## Vraag voor jou
-
-Wil je in het amber blok **alleen** het inkoopadres tonen (clean), of **én** de formele bedrijfsgegevens (KvK/BTW/adres) **én** een aparte regel "PDF kan ook gemaild worden naar inkoop@…"? Mijn voorkeur: het tweede, want de partner heeft beide nodig (bedrijfsgegevens om de factuur op te stellen + mailroute als alternatief voor upload).
-
-Het tweede
+- `src/components/partner-portal/RegisterCollectivePartnerInvoiceDialog.tsx` (edit)
+- `src/pages/PartnerFinance.tsx` (edit)
+- `supabase/functions/register-partner-invoice/index.ts` (edit)
+- `mem://style/partner-invoice-dialog-rules` + `mem://index.md` (edit)
