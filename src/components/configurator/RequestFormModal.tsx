@@ -248,6 +248,7 @@ export const RequestFormModal = ({
       });
     } catch (error: any) {
       console.error("Error sending program request:", error);
+      trackSubmitFailed({ formType: 'program_request', error, extra: { source: 'request_form_modal' } });
       toast({
         title: "Er ging iets mis",
         description: error.message || "Probeer het later opnieuw of neem direct contact met ons op.",
