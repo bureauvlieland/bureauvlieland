@@ -14,7 +14,7 @@ interface ItemStatusBadgeProps {
  * stijl als alle andere statuslabels in het product, geen iconen meer.
  */
 const TONE_BY_STATUS: Record<ItemStatus, MicroPillTone> = {
-  pending: "blue",
+  pending: "amber",
   confirmed: "emerald",
   accepted: "emerald",
   unavailable: "red",
@@ -26,8 +26,8 @@ const TONE_BY_STATUS: Record<ItemStatus, MicroPillTone> = {
 };
 
 const LABEL_BY_STATUS: Record<ItemStatus, string> = {
-  pending: "Wacht op aanbieder",
-  confirmed: "Beschikbaar",
+  pending: "Pending",
+  confirmed: "Bevestigd",
   accepted: "Akkoord",
   unavailable: "Niet beschikbaar",
   alternative: "Alternatief voorstel",
