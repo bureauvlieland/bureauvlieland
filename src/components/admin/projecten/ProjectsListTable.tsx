@@ -133,7 +133,15 @@ function Row({ row }: { row: OverviewRow }) {
       </TableCell>
       <TableCell>
         <Link to={navTo} className="block">
-          <div className="font-medium">{row.customerCompany || row.customerName}</div>
+          <div className="flex items-center gap-2 font-medium">
+            <span>{row.customerCompany || row.customerName}</span>
+            {row.isNew && (
+              <Badge className="h-4 bg-emerald-500 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-emerald-500">
+                Nieuw
+              </Badge>
+            )}
+          </div>
+
           {row.customerCompany && (
             <div className="text-xs text-muted-foreground">{row.customerName}</div>
           )}
