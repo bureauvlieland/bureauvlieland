@@ -814,6 +814,42 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Partner invoice reminder T+1: 1 day after execution, no purchase invoice
+        if (
+          canSendEmail &&
+          item.executed_at && item.executed_at <= oneDayAgo &&
+          !invoicedItemIds.has(item.id) &&
+          item.block_type !== "bureau"
+        ) {
+          const partner = partnerMap.get(item.provider_id as string) as any;
+          if (partner) {
+            const partnerEmail = partner.contact_email || partner.email;
+            const partnerName = partner.name || item.provider_name || "partner";
+            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+            await sendReminderEmail({
+              templateId: "partner_invoice_reminder_t1",
+              recipientEmail: partnerEmail,
+              recipientName: partnerName,
+              subject: `Vriendelijk verzoek: factuur voor "${item.block_name}" (${customerName})`,
+              variables: {
+                partner_name: partnerName,
+                block_name: item.block_name,
+                customer_name: customerName,
+                reference_number: referenceNumber,
+                amount_excl_vat: amountExcl,
+                portal_url: "https://bureauvlieland.nl/partner",
+              },
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Gisteren is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              logExtra: {
+                email_type: "partner_invoice_reminder_t1",
+                related_partner_id: item.provider_id as string,
+                related_request_id: item.request_id,
+                related_item_id: item.id,
+              },
+            });
+          }
+        }
+
         // Post-execution invoice check: 7 days after executed_at, no purchase invoice
         if (item.executed_at && item.executed_at <= sevenDaysAgo && !invoicedItemIds.has(item.id)) {
           const { data: existingCheck } = await supabase
@@ -847,6 +883,37 @@ Deno.serve(async (req) => {
                   auto_entity_id: item.id,
                 });
               if (!icError) totalCreated++;
+            }
+          }
+
+          // Partner invoice escalation T+7
+          if (canSendEmail && item.block_type !== "bureau") {
+            const partner = partnerMap.get(item.provider_id as string) as any;
+            if (partner) {
+              const partnerEmail = partner.contact_email || partner.email;
+              const partnerName = partner.name || item.provider_name || "partner";
+              const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+              await sendReminderEmail({
+                templateId: "partner_invoice_reminder_t7",
+                recipientEmail: partnerEmail,
+                recipientName: partnerName,
+                subject: `Herinnering: factuur ontbreekt nog voor "${item.block_name}" (${customerName})`,
+                variables: {
+                  partner_name: partnerName,
+                  block_name: item.block_name,
+                  customer_name: customerName,
+                  reference_number: referenceNumber,
+                  amount_excl_vat: amountExcl,
+                  portal_url: "https://bureauvlieland.nl/partner",
+                },
+                fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je deze deze week alsnog sturen?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+                logExtra: {
+                  email_type: "partner_invoice_reminder_t7",
+                  related_partner_id: item.provider_id as string,
+                  related_request_id: item.request_id,
+                  related_item_id: item.id,
+                },
+              });
             }
           }
         }
