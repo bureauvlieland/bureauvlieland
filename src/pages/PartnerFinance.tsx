@@ -50,6 +50,8 @@ const PartnerFinanceContent = () => {
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
+  const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
+  const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchDashboard = async () => {
