@@ -196,7 +196,9 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       readinessTotal: checks.length,
       programId: prog.id,
       accommodationId: linkedAcc?.id ?? null,
+      isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
     });
+
   });
 
   // logies-only (without linked program)
