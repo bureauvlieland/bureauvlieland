@@ -82,13 +82,17 @@ Deno.serve(async (req) => {
     const origin = reqBody.origin || req.headers.get("origin") || "";
 
     // Normalize to items[] array. Legacy single-item callers still supported.
-    const itemsList: Array<{ itemId: string; amount: number }> =
+    const itemsList: Array<{ itemId: string; amount: number; vatRate: number }> =
       Array.isArray(items) && items.length > 0
         ? items
             .filter((x: any) => x && x.itemId && Number(x.amount) > 0)
-            .map((x: any) => ({ itemId: String(x.itemId), amount: Number(x.amount) }))
+            .map((x: any) => ({
+              itemId: String(x.itemId),
+              amount: Number(x.amount),
+              vatRate: x.vatRate !== undefined && x.vatRate !== null ? Number(x.vatRate) : 21,
+            }))
         : itemId && Number(invoicedAmount) > 0
-          ? [{ itemId: String(itemId), amount: Number(invoicedAmount) }]
+          ? [{ itemId: String(itemId), amount: Number(invoicedAmount), vatRate: 21 }]
           : [];
 
     if (!partnerToken || !invoicedNumber || !invoicedDate || itemsList.length === 0) {
@@ -151,28 +155,35 @@ Deno.serve(async (req) => {
     const project = dbItems[0].program_requests;
 
     const invoicingMode = project.invoicing_mode || "bureau_central";
-    const vatRate = 21; // Activities: 21% VAT
     const commissionPercentage = partner.commission_percentage;
 
-    // Build allocations + totals
-    const amountByItem = new Map(itemsList.map((x) => [x.itemId, x.amount]));
+    // Build allocations + totals. VAT rate comes per item from the client
+    // (derived from the building block); default to 21% for safety.
+    const infoByItem = new Map(itemsList.map((x) => [x.itemId, x]));
     let totalExcl = 0;
+    let totalVat = 0;
     const allocations = dbItems.map((it: any, idx: number) => {
-      const amt = Number(amountByItem.get(it.id) || 0);
+      const info = infoByItem.get(it.id);
+      const amt = Number(info?.amount || 0);
+      const rate = Number(info?.vatRate ?? 21);
+      const vatAmt = +(amt * (rate / 100)).toFixed(2);
       totalExcl += amt;
-      const vatAmt = +(amt * (vatRate / 100)).toFixed(2);
+      totalVat += vatAmt;
       return {
         item_id: it.id,
         amount_excl_vat: amt,
-        vat_rate: vatRate,
+        vat_rate: rate,
         vat_amount: vatAmt,
         amount_incl_vat: +(amt + vatAmt).toFixed(2),
         sort_order: idx,
       };
     });
     totalExcl = +totalExcl.toFixed(2);
-    const totalVat = +(totalExcl * (vatRate / 100)).toFixed(2);
+    totalVat = +totalVat.toFixed(2);
     const totalIncl = +(totalExcl + totalVat).toFixed(2);
+    // Header VAT rate: use first allocation's rate if uniform, else 0 (mixed)
+    const uniqueRates = Array.from(new Set(allocations.map((a) => a.vat_rate)));
+    const headerVatRate = uniqueRates.length === 1 ? uniqueRates[0] : 0;
     const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
 
     const isCollective = dbItems.length > 1;
@@ -191,7 +202,7 @@ Deno.serve(async (req) => {
         invoice_number: invoicedNumber,
         invoice_date: invoicedDate,
         amount_excl_vat: totalExcl,
-        vat_rate: vatRate,
+        vat_rate: headerVatRate,
         vat_amount: totalVat,
         amount_incl_vat: totalIncl,
         description: headerDescription,
@@ -300,7 +311,7 @@ Deno.serve(async (req) => {
     const customerName = project.customer_company || project.customer_name;
     const itemsListHtml = dbItems
       .map((it: any) => {
-        const amt = amountByItem.get(it.id) || 0;
+        const amt = infoByItem.get(it.id)?.amount || 0;
         return `<tr><td style="padding:6px 0;">${it.block_name}</td><td style="padding:6px 0;text-align:right;">€${amt.toFixed(2)}</td></tr>`;
       })
       .join("");
