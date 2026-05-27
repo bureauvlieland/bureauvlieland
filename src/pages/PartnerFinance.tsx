@@ -750,8 +750,10 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
             {variant === "to-invoice" ? (
               <>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Bevestigde prijs</p>
-                  <p className="font-semibold">€{item.quoted_price?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {estimated ? "Geschatte prijs" : "Bevestigde prijs"}
+                  </p>
+                  <p className="font-semibold">€{billableAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
                   {expectedCommission !== null && (
                     <p className="text-xs text-amber-600">
                       Verwachte commissie: €{expectedCommission.toFixed(2)}
