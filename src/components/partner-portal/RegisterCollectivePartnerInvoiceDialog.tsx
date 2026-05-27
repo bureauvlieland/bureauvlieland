@@ -17,6 +17,8 @@ import { Loader2, Info, Receipt, Building2, Mail, Upload, File as FileIcon, X } 
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
+import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
 
 interface BureauDetails {
@@ -28,7 +30,7 @@ interface BureauDetails {
 }
 
 export interface CollectiveInvoiceSubmitPayload {
-  items: Array<{ itemId: string; amount: number }>;
+  items: Array<{ itemId: string; amount: number; amountInclVat: number; vatRate: number }>;
   invoicedNumber: string;
   invoicedDate: string;
   notes?: string;
@@ -46,6 +48,8 @@ interface Props {
   bureauDetails?: BureauDetails | null;
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
+
+const INKOOP_INBOX = "inkoop@reply.bureauvlieland.nl";
 
 export const RegisterCollectivePartnerInvoiceDialog = ({
   isOpen,
@@ -66,6 +70,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { getItemVatRate } = useItemVatRates(projectItems);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -91,13 +97,20 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
 
   const parseAmt = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
 
-  const totalExcl = useMemo(() => {
-    let t = 0;
-    for (const id of selectedIds) t += parseAmt(amounts[id] || "");
-    return t;
-  }, [selectedIds, amounts]);
+  const { totalIncl, totalExcl } = useMemo(() => {
+    let incl = 0;
+    let excl = 0;
+    for (const id of selectedIds) {
+      const item = projectItems.find((p) => p.id === id);
+      const inclAmt = parseAmt(amounts[id] || "");
+      incl += inclAmt;
+      const rate = item ? getItemVatRate(item) : 21;
+      excl += calculateFromInclVat(inclAmt, rate).amountExclVat;
+    }
+    return { totalIncl: +incl.toFixed(2), totalExcl: +excl.toFixed(2) };
+  }, [selectedIds, amounts, projectItems, getItemVatRate]);
 
-  const commissionAmount = (totalExcl * commissionPercentage) / 100;
+  const commissionAmount = +((totalExcl * commissionPercentage) / 100).toFixed(2);
 
   const bureauInfo = {
     companyName: bureauDetails?.companyName || "Bureau Vlieland",
@@ -173,10 +186,18 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
         return;
       }
       const payload: CollectiveInvoiceSubmitPayload = {
-        items: Array.from(selectedIds).map((id) => ({
-          itemId: id,
-          amount: parseAmt(amounts[id] || ""),
-        })),
+        items: Array.from(selectedIds).map((id) => {
+          const item = projectItems.find((p) => p.id === id);
+          const incl = parseAmt(amounts[id] || "");
+          const rate = item ? getItemVatRate(item) : 21;
+          const breakdown = calculateFromInclVat(incl, rate);
+          return {
+            itemId: id,
+            amount: breakdown.amountExclVat,
+            amountInclVat: breakdown.amountInclVat,
+            vatRate: rate,
+          };
+        }),
         invoicedNumber: invoiceNumber.trim(),
         invoicedDate: invoiceDate,
         notes: notes || undefined,
@@ -215,16 +236,26 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             {bureauInfo.kvkNumber && <div className="text-muted-foreground">KvK: {bureauInfo.kvkNumber}</div>}
             {bureauInfo.vatNumber && <div className="text-muted-foreground">BTW: {bureauInfo.vatNumber}</div>}
             {bureauInfo.email && (
-              <a href={`mailto:${bureauInfo.email}`} className="flex items-center gap-1 text-amber-700 dark:text-amber-400 hover:underline">
-                <Mail className="h-3 w-3" /> {bureauInfo.email}
-              </a>
+              <div className="text-muted-foreground">Administratie: {bureauInfo.email}</div>
             )}
+            <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
+                <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-medium">PDF mailen kan ook naar:</div>
+                  <a href={`mailto:${INKOOP_INBOX}`} className="underline">{INKOOP_INBOX}</a>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Factuur wordt automatisch ingelezen en aan het project gekoppeld.
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <Separator />
 
           <div className="space-y-2">
-            <Label>Onderdelen op deze factuur</Label>
+            <Label>Onderdelen op deze factuur (bedragen incl. BTW)</Label>
             <div className="rounded-md border divide-y">
               {projectItems.map((it) => {
                 const checked = selectedIds.has(it.id);
@@ -240,7 +271,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                       <div className="font-medium truncate">{it.block_name}</div>
                       {it.quoted_price ? (
                         <div className="text-xs text-muted-foreground">
-                          Bevestigde prijs: €{it.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                          Bevestigde prijs: €{it.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
                         </div>
                       ) : null}
                     </div>
@@ -262,9 +293,15 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
               })}
             </div>
             {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}
-            <div className="flex items-center justify-between text-sm pt-2">
-              <span className="text-muted-foreground">Totaal excl. BTW</span>
-              <span className="font-semibold">€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+            <div className="space-y-1 pt-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold">Totaal incl. BTW</span>
+                <span className="font-semibold">€{totalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>waarvan excl. BTW (basis commissie)</span>
+                <span>€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+              </div>
             </div>
           </div>
 
@@ -299,7 +336,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Commissie Bureau Vlieland ({commissionPercentage}%): <strong>€{commissionAmount.toFixed(2)}</strong>
+                Commissie Bureau Vlieland ({commissionPercentage}% over €{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} excl. BTW): <strong>€{commissionAmount.toFixed(2)}</strong>
                 <div className="text-muted-foreground text-sm">U ontvangt hiervoor een aparte factuur van Bureau Vlieland.</div>
               </AlertDescription>
             </Alert>
