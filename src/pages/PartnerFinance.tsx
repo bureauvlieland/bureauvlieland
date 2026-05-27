@@ -454,7 +454,12 @@ const PartnerFinanceContent = () => {
             <div className="space-y-4">
               {/* Invoiced activity items */}
               {invoicedItems.map((item) => (
-                <InvoiceItemCard key={item.id} item={item} variant="invoiced" />
+                <InvoiceItemCard
+                  key={item.id}
+                  item={item}
+                  variant="invoiced"
+                  onUploadPdf={() => setUploadPdfItem(item)}
+                />
               ))}
               {/* Invoiced accommodation items */}
               {invoicedAccommodations.map((quote) => (
