@@ -14,9 +14,11 @@ import {
   FileText,
   RefreshCw,
   Edit,
+  Eye,
   Mail,
 } from "lucide-react";
 import { EmailTemplateSheet } from "@/components/admin/EmailTemplateSheet";
+import { EmailTemplatePreviewDialog } from "@/components/admin/EmailTemplatePreviewDialog";
 
 interface EmailTemplate {
   id: string;
