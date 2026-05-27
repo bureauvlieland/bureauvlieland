@@ -356,6 +356,31 @@ export const CheckoutContactForm = ({
               </p>
             </div>
 
+            {submitError && (
+              <Alert variant="destructive" className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <AlertTitle>Aanvraag niet verzonden</AlertTitle>
+                  <AlertDescription>{submitError}</AlertDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => executeSubmit()}
+                  disabled={isSubmitting}
+                  className="gap-2 shrink-0"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  )}
+                  Opnieuw proberen
+                </Button>
+              </Alert>
+            )}
+
             <Button
               type="submit"
               size="lg"
