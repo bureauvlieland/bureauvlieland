@@ -53,6 +53,7 @@ const PartnerFinanceContent = () => {
   const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
   const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
   const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
+  const [collectiveMode, setCollectiveMode] = useState<"upload" | "email">("upload");
 
   useEffect(() => {
     const fetchDashboard = async () => {
