@@ -23,6 +23,7 @@ import {
   Building2,
   FileText,
   BedDouble,
+  Upload,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
