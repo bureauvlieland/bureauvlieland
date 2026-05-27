@@ -25,6 +25,7 @@ import {
   FileText,
   BedDouble,
   Upload,
+  Mail,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
