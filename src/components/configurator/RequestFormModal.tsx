@@ -137,9 +137,11 @@ export const RequestFormModal = ({
       // Event type is stored as description metadata; origin is always 'self_service' for configurator
       const finalEventType = formData.eventType || inferredEventType || 'niet_gespecificeerd';
       
-      const { data: requestData, error: insertError } = await supabase
+      const requestId = crypto.randomUUID();
+      const { error: insertError } = await supabase
         .from("program_requests")
         .insert({
+          id: requestId,
           customer_token: token,
           customer_name: formData.name,
           customer_email: formData.email,
@@ -151,9 +153,7 @@ export const RequestFormModal = ({
           origin: 'self_service',
           program_description: finalEventType,
           quote_status: 'concept',
-        })
-        .select()
-        .single();
+        });
 
       if (insertError) throw insertError;
 
@@ -161,7 +161,7 @@ export const RequestFormModal = ({
       const itemsToInsert = blocksWithDetails.map((block) => {
         const fullBlock = getBlockById(allBlocks, block.id);
         return {
-          request_id: requestData.id,
+          request_id: requestId,
           block_id: block.id,
           block_name: block.name,
           block_category: block.category,
