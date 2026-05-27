@@ -8,7 +8,8 @@ import { format, subHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
-import { Loader2, ArrowLeft, User, Mail, Phone, Building2 } from "lucide-react";
+import { Loader2, ArrowLeft, User, Mail, Phone, Building2, AlertCircle, RotateCcw } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted } from "@/lib/analytics";
@@ -43,6 +44,7 @@ export const CheckoutContactForm = ({
   
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -90,6 +92,7 @@ export const CheckoutContactForm = ({
 
   const executeSubmit = async () => {
     setDuplicateWarningOpen(false);
+    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
@@ -225,10 +228,12 @@ export const CheckoutContactForm = ({
       onSuccess(token);
     } catch (error: any) {
       console.error("Error sending program request:", error);
+      const friendly =
+        "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
+      setSubmitError(friendly);
       toast({
-        title: "Er ging iets mis",
-        description:
-          error.message || "Probeer het later opnieuw of neem direct contact met ons op.",
+        title: "Aanvraag niet verzonden",
+        description: friendly,
         variant: "destructive",
       });
     } finally {
@@ -350,6 +355,31 @@ export const CheckoutContactForm = ({
                 . Uw gegevens worden alleen gebruikt voor het verwerken van deze aanvraag.
               </p>
             </div>
+
+            {submitError && (
+              <Alert variant="destructive" className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <AlertTitle>Aanvraag niet verzonden</AlertTitle>
+                  <AlertDescription>{submitError}</AlertDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => executeSubmit()}
+                  disabled={isSubmitting}
+                  className="gap-2 shrink-0"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  )}
+                  Opnieuw proberen
+                </Button>
+              </Alert>
+            )}
 
             <Button
               type="submit"
