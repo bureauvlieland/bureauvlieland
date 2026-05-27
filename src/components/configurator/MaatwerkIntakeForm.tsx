@@ -95,9 +95,11 @@ export const MaatwerkIntakeForm = ({
       }
       const programDescription = descriptionParts.length > 0 ? descriptionParts.join("\n") : null;
 
-      const { data: requestData, error: insertError } = await supabase
+      const requestId = crypto.randomUUID();
+      const { error: insertError } = await supabase
         .from("program_requests")
         .insert({
+          id: requestId,
           customer_token: token,
           customer_name: formData.name,
           customer_email: formData.email,
@@ -109,15 +111,13 @@ export const MaatwerkIntakeForm = ({
           origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: programDescription,
           invoicing_mode: "bureau_central",
-        })
-        .select()
-        .single();
+        });
 
       if (insertError) throw insertError;
 
       // Log creation in history
       await supabase.from("program_request_history").insert({
-        request_id: requestData.id,
+        request_id: requestId,
         action: "created",
         actor: "customer",
         actor_name: formData.name,
