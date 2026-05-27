@@ -236,9 +236,11 @@ const PartnerFinanceContent = () => {
         throw new Error(err.error || "Failed");
       }
       toast.success(
-        payload.items.length > 1
-          ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
-          : "Factuur geregistreerd"
+        payload.viaEmail
+          ? "Bedankt — we koppelen je mail zodra hij binnen is"
+          : payload.items.length > 1
+            ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
+            : "Factuur geregistreerd"
       );
       setCollectiveRequestId(null);
       setCollectiveInitialIds([]);
