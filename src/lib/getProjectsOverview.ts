@@ -46,15 +46,16 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       .select(`
         id, reference_number, customer_name, customer_company, number_of_people,
         selected_dates, status, terms_accepted_at, linked_accommodation_id,
-        quote_status, completion_status
+        quote_status, completion_status, created_at
       `)
       .neq("status", "deleted"),
     supabase
       .from("accommodation_requests")
       .select(`
         id, reference_number, customer_name, customer_company, number_of_guests,
-        arrival_date, departure_date, status, linked_program_id
+        arrival_date, departure_date, status, linked_program_id, created_at
       `),
+
     supabase
       .from("program_request_items")
       .select("request_id, status, skip_partner_notification, customer_approved_at"),
