@@ -173,7 +173,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     }
     if (!invoiceNumber.trim()) e.invoiceNumber = "Factuurnummer is verplicht";
     if (!invoiceDate) e.invoiceDate = "Factuurdatum is verplicht";
-    if (!selectedFile) e.file = "PDF van de factuur is verplicht";
+    if (!isEmailMode && !selectedFile) e.file = "PDF van de factuur is verplicht";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
