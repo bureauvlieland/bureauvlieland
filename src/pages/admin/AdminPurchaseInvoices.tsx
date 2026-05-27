@@ -384,7 +384,7 @@ export default function AdminPurchaseInvoices() {
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {invoice.file_path && (
+                          {invoice.file_path ? (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -392,6 +392,16 @@ export default function AdminPurchaseInvoices() {
                               title="Download PDF"
                             >
                               <Download className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setUploadPdfTarget(invoice)}
+                              title="PDF toevoegen"
+                              className="text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                            >
+                              <Upload className="h-4 w-4" />
                             </Button>
                           )}
                           {invoice.status === "pending" && (
