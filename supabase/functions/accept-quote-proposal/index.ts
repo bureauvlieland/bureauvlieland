@@ -137,55 +137,46 @@ function generatePartnerNotificationEmail(
     })
     .join("");
 
+  const customerLabel = sanitizeHtml(program.customer_company || program.customer_name || "");
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-        Nieuwe aanvraag via Bureau Vlieland
+      <h2 style="color: #0F4C5C; border-bottom: 2px solid #0F4C5C; padding-bottom: 10px;">
+        Aanvraag bevestigd door klant
       </h2>
-      
-      <p>Beste ${sanitizeHtml(group.partnerName)},</p>
-      
-      <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland. De klant heeft akkoord gegeven op het programmavoorstel.</p>
-      
+
+      <p>Hoi ${sanitizeHtml(group.partnerName)},</p>
+
+      <p>Goed nieuws: de klant heeft akkoord gegeven op het programmavoorstel. Wij hebben onderstaande onderdelen definitief in het programma opgenomen en willen je vragen ze te bevestigen via het partnerportaal.</p>
+
       <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748;">📅 Programma details</h3>
+        <h3 style="margin-top: 0; color: #2d3748; font-size:15px;">Aanvraag</h3>
         <table style="width: 100%; border-collapse: collapse;">
           <tr><td style="padding: 5px 0; color: #666;">Referentie:</td><td style="padding: 5px 0;"><strong>${program.reference_number || "-"}</strong></td></tr>
+          <tr><td style="padding: 5px 0; color: #666;">Klant:</td><td style="padding: 5px 0;"><strong>${customerLabel || "-"}</strong></td></tr>
           <tr><td style="padding: 5px 0; color: #666;">Datum(s):</td><td style="padding: 5px 0;"><strong>${formattedDates}</strong></td></tr>
           <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${program.number_of_people}</strong></td></tr>
         </table>
       </div>
-      
+
       <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
-        <h3 style="margin-top: 0; color: #276749;">🎯 Aangevraagde activiteiten bij jullie</h3>
+        <h3 style="margin-top: 0; color: #276749;">Onderdelen voor jou</h3>
         <ul style="padding-left: 20px; margin-bottom: 0;">
           ${itemsHtml}
         </ul>
       </div>
-      
-      <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
-        <h3 style="margin-top: 0; color: #2b6cb0;">📋 Partnerportaal</h3>
-        <p style="margin-bottom: 12px;">
-          Bekijk en beheer deze aanvraag in je partnerportaal. 
-          Bevestig beschikbaarheid of geef een alternatief door.
-        </p>
-        <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
-          Ga naar partnerportaal →
+
+      <div style="text-align:center; margin: 24px 0;">
+        <a href="${portalUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600;">
+          Bevestig in partnerportaal →
         </a>
       </div>
-      
-      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-      
-      <p style="color: #666; font-size: 14px;">
-        <strong>Dit is een vrijblijvende aanvraag.</strong> Neem contact op met Bureau Vlieland om 
-        beschikbaarheid te bevestigen en verdere details te bespreken.
+
+      <p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
+        <strong>Facturatie:</strong> Bureau Vlieland regelt de communicatie en facturatie richting de klant. Stuur jouw factuur na uitvoering naar <a href="mailto:facturatie@bureauvlieland.nl">facturatie@bureauvlieland.nl</a>. Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
       </p>
-      
-      <p style="margin-top: 30px;">
-        Met vriendelijke groet,<br>
-        <strong>Bureau Vlieland</strong><br>
-        📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a><br>
-        📞 0562 700 208
+
+      <p style="margin-top: 24px; color:#666; font-size:13px;">
+        Met vriendelijke groet,<br><strong>Bureau Vlieland</strong>
       </p>
     </div>
   `;
