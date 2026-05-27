@@ -14,9 +14,11 @@ import {
   FileText,
   RefreshCw,
   Edit,
+  Eye,
   Mail,
 } from "lucide-react";
 import { EmailTemplateSheet } from "@/components/admin/EmailTemplateSheet";
+import { EmailTemplatePreviewDialog } from "@/components/admin/EmailTemplatePreviewDialog";
 
 interface EmailTemplate {
   id: string;
@@ -64,6 +66,8 @@ const AdminEmailTemplates = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: templates = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-templates"],
@@ -238,6 +242,17 @@ const AdminEmailTemplates = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
+                                  onClick={() => {
+                                    setPreviewTemplate(template);
+                                    setPreviewOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Preview
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => handleEditTemplate(template)}
                                 >
                                   <Edit className="h-4 w-4 mr-1" />
@@ -262,6 +277,12 @@ const AdminEmailTemplates = () => {
         template={selectedTemplate}
         onSave={handleSaveTemplate}
         isSaving={updateTemplateMutation.isPending}
+      />
+
+      <EmailTemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        template={previewTemplate}
       />
     </>
   );
