@@ -615,6 +615,28 @@ const PartnerFinanceContent = () => {
         onClose={() => setUploadPdfItem(null)}
         onUploaded={refetchData}
       />
+
+      <RegisterCollectivePartnerInvoiceDialog
+        isOpen={!!collectiveRequestId}
+        onClose={() => {
+          setCollectiveRequestId(null);
+          setCollectiveInitialIds([]);
+        }}
+        projectItems={
+          collectiveRequestId
+            ? data.items.filter(
+                (i) =>
+                  i.request_id === collectiveRequestId &&
+                  !i.invoiced_number &&
+                  (getEffectiveStatus(i) === "accepted" || getEffectiveStatus(i) === "executed") &&
+                  i.program_requests.terms_accepted_at !== null
+              )
+            : []
+        }
+        initialSelectedIds={collectiveInitialIds}
+        commissionPercentage={data.partner.commission_percentage}
+        onSubmit={handleCollectiveInvoiceRegister}
+      />
     </div>
   );
 };
