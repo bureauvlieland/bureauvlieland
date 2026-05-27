@@ -204,6 +204,50 @@ const PartnerFinanceContent = () => {
     }
   };
 
+  // Collective (verzamelfactuur) registration: multiple items, one PDF, one invoice nr.
+  const handleCollectiveInvoiceRegister = async (
+    payload: CollectiveInvoiceSubmitPayload
+  ): Promise<{ success: boolean }> => {
+    if (!partnerToken) return { success: false };
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            partnerToken,
+            items: payload.items,
+            invoicedNumber: payload.invoicedNumber,
+            invoicedDate: payload.invoicedDate,
+            notes: payload.notes,
+            filePath: payload.filePath,
+          }),
+        }
+      );
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Failed");
+      }
+      toast.success(
+        payload.items.length > 1
+          ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
+          : "Factuur geregistreerd"
+      );
+      setCollectiveRequestId(null);
+      setCollectiveInitialIds([]);
+      await refetchData();
+      return { success: true };
+    } catch (err) {
+      console.error("Error registering collective invoice:", err);
+      toast.error("Er is een fout opgetreden bij het registreren van de factuur");
+      return { success: false };
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6">
