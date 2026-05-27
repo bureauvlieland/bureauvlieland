@@ -141,7 +141,7 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                     <div className="flex items-center gap-2">
                       {getStatusBadge(invoice)}
                       <div className="flex items-center gap-1">
-                        {invoice.file_path && (
+                        {invoice.file_path ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -150,6 +150,16 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                             title="Download PDF"
                           >
                             <Download className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                            onClick={() => setUploadPdfTarget(invoice)}
+                            title="PDF toevoegen"
+                          >
+                            <Upload className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {invoice.status === "pending" && (
