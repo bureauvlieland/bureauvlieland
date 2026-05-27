@@ -228,10 +228,12 @@ export const CheckoutContactForm = ({
       onSuccess(token);
     } catch (error: any) {
       console.error("Error sending program request:", error);
+      const friendly =
+        "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
+      setSubmitError(friendly);
       toast({
-        title: "Er ging iets mis",
-        description:
-          error.message || "Probeer het later opnieuw of neem direct contact met ons op.",
+        title: "Aanvraag niet verzonden",
+        description: friendly,
         variant: "destructive",
       });
     } finally {
