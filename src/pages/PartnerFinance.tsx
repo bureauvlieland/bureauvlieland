@@ -572,17 +572,35 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                 )}
               </>
             ) : (
-              <div className="text-right">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-3 w-3" />
-                  <span>{item.invoiced_number}</span>
-                </div>
-                <p className="font-semibold">€{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
-                {item.commission_amount && item.commission_amount > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Commissie: €{item.commission_amount.toFixed(2)}
-                  </p>
+              <div className="flex items-center gap-3">
+                {!item.invoiced_file_path && onUploadPdf && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                    onClick={onUploadPdf}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    PDF toevoegen
+                  </Button>
                 )}
+                <div className="text-right">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span>{item.invoiced_number}</span>
+                    {!item.invoiced_file_path && (
+                      <Badge variant="outline" className="text-xs border-amber-500 text-amber-700">
+                        PDF ontbreekt
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="font-semibold">€{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  {item.commission_amount && item.commission_amount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Commissie: €{item.commission_amount.toFixed(2)}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
