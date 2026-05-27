@@ -363,8 +363,9 @@ const PartnerFinanceContent = () => {
 
   // Calculate expected commission for items to be invoiced
   const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
-    if (!i.quoted_price) return sum;
-    return sum + calculateExpectedActivityCommission(i.quoted_price, i.commission_percentage);
+    const amount = getBillableAmount(i);
+    if (!amount) return sum;
+    return sum + calculateExpectedActivityCommission(amount, i.commission_percentage);
   }, 0);
 
   const expectedAccommodationCommission = toBeInvoicedAccommodations.reduce((sum, q) => {
