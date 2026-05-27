@@ -492,6 +492,12 @@ const PartnerFinanceContent = () => {
           billing_reference: selectedItem.program_requests.billing_reference,
         } : null}
       />
+
+      <UploadInvoicePdfPartnerDialog
+        item={uploadPdfItem}
+        onClose={() => setUploadPdfItem(null)}
+        onUploaded={refetchData}
+      />
     </div>
   );
 };
