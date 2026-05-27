@@ -134,11 +134,42 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
 
   const bureauInfo = {
     companyName: bureauDetails?.companyName || "Bureau Vlieland",
+    legalName: bureauDetails?.legalName || bureauDetails?.companyName || "Bureau Vlieland B.V.",
+    street: bureauDetails?.street || "",
+    postalCode: bureauDetails?.postalCode || "",
+    city: bureauDetails?.city || bureauDetails?.address || "Vlieland",
     kvkNumber: bureauDetails?.kvkNumber || "",
     vatNumber: bureauDetails?.vatNumber || "",
-    address: bureauDetails?.address || "Vlieland",
-    email: bureauDetails?.email || "administratie@bureauvlieland.nl",
+    iban: bureauDetails?.iban || "",
   };
+  const addressLine = [bureauInfo.street, [bureauInfo.postalCode, bureauInfo.city].filter(Boolean).join("  ")]
+    .filter(Boolean)
+    .join(", ");
+
+  /** Geselecteerde regels gegroepeerd per BTW-tarief: { rate -> { excl, vat, incl } } */
+  const vatBreakdown = useMemo(() => {
+    const groups = new Map<number, { excl: number; vat: number; incl: number }>();
+    for (const id of selectedIds) {
+      const item = projectItems.find((p) => p.id === id);
+      const inclAmt = parseAmt(amounts[id] || "");
+      if (inclAmt <= 0) continue;
+      const rate = item ? getItemVatRate(item) : 21;
+      const { amountExclVat, vatAmount, amountInclVat } = calculateFromInclVat(inclAmt, rate);
+      const cur = groups.get(rate) || { excl: 0, vat: 0, incl: 0 };
+      cur.excl += amountExclVat;
+      cur.vat += vatAmount;
+      cur.incl += amountInclVat;
+      groups.set(rate, cur);
+    }
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([rate, v]) => ({
+        rate,
+        excl: +v.excl.toFixed(2),
+        vat: +v.vat.toFixed(2),
+        incl: +v.incl.toFixed(2),
+      }));
+  }, [selectedIds, amounts, projectItems, getItemVatRate]);
 
   const toggleItem = (id: string) => {
     const next = new Set(selectedIds);
