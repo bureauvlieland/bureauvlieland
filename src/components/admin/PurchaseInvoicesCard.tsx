@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight } from "lucide-react";
+import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload } from "lucide-react";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
+import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
@@ -17,6 +18,7 @@ interface PurchaseInvoicesCardProps {
 export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
   const { invoices, isLoading, stats, markAsPaid, getDownloadUrl } = usePurchaseInvoicesByRequest(requestId);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
 
   const handleDownloadPdf = async (filePath: string) => {
     const url = await getDownloadUrl(filePath);
@@ -139,7 +141,7 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                     <div className="flex items-center gap-2">
                       {getStatusBadge(invoice)}
                       <div className="flex items-center gap-1">
-                        {invoice.file_path && (
+                        {invoice.file_path ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -148,6 +150,16 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                             title="Download PDF"
                           >
                             <Download className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                            onClick={() => setUploadPdfTarget(invoice)}
+                            title="PDF toevoegen"
+                          >
+                            <Upload className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         {invoice.status === "pending" && (
@@ -185,6 +197,11 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
         onClose={() => setForwardDialogInvoice(null)}
+      />
+
+      <UploadInvoicePdfDialog
+        invoice={uploadPdfTarget}
+        onClose={() => setUploadPdfTarget(null)}
       />
     </>
   );

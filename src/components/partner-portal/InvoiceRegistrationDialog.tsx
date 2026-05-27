@@ -106,6 +106,10 @@ export const InvoiceRegistrationDialog = ({
       newErrors.invoiceDate = "Factuurdatum is verplicht";
     }
 
+    if (!selectedFile) {
+      newErrors.file = "PDF van de factuur is verplicht";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -423,18 +427,65 @@ export const InvoiceRegistrationDialog = ({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>PDF van de factuur *</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            {selectedFile ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/30 p-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <File className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm truncate">{selectedFile.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    ({(selectedFile.size / 1024).toFixed(0)} KB)
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => setSelectedFile(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className={`w-full ${errors.file ? "border-destructive" : ""}`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                PDF uploaden (max 10MB)
+              </Button>
+            )}
+            {errors.file && (
+              <p className="text-sm text-destructive">{errors.file}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Verplicht: upload de PDF zodat Bureau Vlieland deze direct kan doorsturen naar de boekhouding.
+            </p>
+          </div>
+
           {errors.submit && (
             <p className="text-sm text-destructive">{errors.submit}</p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting || isUploading}>
             Annuleren
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Registreren
+          <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
+            {(isSubmitting || isUploading) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isUploading ? "PDF uploaden..." : "Registreren"}
           </Button>
         </DialogFooter>
       </DialogContent>
