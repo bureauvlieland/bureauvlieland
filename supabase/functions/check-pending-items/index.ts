@@ -728,19 +728,19 @@ Deno.serve(async (req) => {
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Get executed items
+    // Get executed items (incl. fields needed for partner invoice reminders)
     const { data: executedItems } = await supabase
       .from("program_request_items")
-      .select("id, block_name, provider_name, provider_id, request_id, executed_at")
+      .select("id, block_name, provider_name, provider_id, request_id, executed_at, block_type, quoted_price, proforma_amount_excl_vat")
       .not("executed_at", "is", null)
       .neq("status", "cancelled");
 
     if (executedItems && executedItems.length > 0) {
-      // Get request info for customer names
+      // Get request info for customer names + reference
       const execRequestIds = [...new Set(executedItems.map(i => i.request_id))];
       const { data: execRequests } = await supabase
         .from("program_requests")
-        .select("id, customer_name")
+        .select("id, customer_name, customer_company, reference_number")
         .in("id", execRequestIds);
       const execReqMap = new Map((execRequests || []).map(r => [r.id, r]));
 
@@ -752,9 +752,29 @@ Deno.serve(async (req) => {
         .in("item_id", execItemIds);
       const invoicedItemIds = new Set((existingInvoices || []).map(i => i.item_id));
 
+      // Pre-fetch partner contacts for executed items (skip bureau items)
+      const execPartnerIds = [...new Set(
+        executedItems
+          .filter(i => i.provider_id && i.block_type !== "bureau")
+          .map(i => i.provider_id as string)
+      )];
+      const execPartners = execPartnerIds.length > 0
+        ? (await supabase
+            .from("partners")
+            .select("id, name, email, contact_email")
+            .in("id", execPartnerIds)).data || []
+        : [];
+      const partnerMap = new Map(execPartners.map((p: any) => [p.id, p]));
+
+      const formatEuro = (n: number | null | undefined) =>
+        typeof n === "number"
+          ? n.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })
+          : "n.t.b.";
+
       for (const item of executedItems) {
-        const req = execReqMap.get(item.request_id);
-        const customerName = req?.customer_name || "Onbekend";
+        const req = execReqMap.get(item.request_id) as any;
+        const customerName = req?.customer_company || req?.customer_name || "Onbekend";
+        const referenceNumber = req?.reference_number || "—";
 
         // Post-execution feedback: 1 day after executed_at
         if (item.executed_at && item.executed_at <= oneDayAgo) {
