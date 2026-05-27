@@ -20,6 +20,16 @@ import { toast } from "sonner";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
+import { getItemLineTotal } from "@/lib/portalPricing";
+
+/** Te-factureren bedrag: partner-quote heeft voorrang, anders admin-inschatting × pers × dagen. */
+const getBillableAmount = (item: PartnerItem): number => {
+  const people = item.program_requests.number_of_people || 1;
+  const days = Math.max((item.program_requests.selected_dates || []).length, 1);
+  return getItemLineTotal(item as unknown as Parameters<typeof getItemLineTotal>[0], people, days) ?? 0;
+};
+const isEstimatedAmount = (item: PartnerItem): boolean =>
+  item.quoted_price == null && item.admin_price_override != null;
 
 interface BureauDetails {
   companyName?: string;
