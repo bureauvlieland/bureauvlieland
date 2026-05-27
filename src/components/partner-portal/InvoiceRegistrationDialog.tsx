@@ -106,6 +106,10 @@ export const InvoiceRegistrationDialog = ({
       newErrors.invoiceDate = "Factuurdatum is verplicht";
     }
 
+    if (!selectedFile) {
+      newErrors.file = "PDF van de factuur is verplicht";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
