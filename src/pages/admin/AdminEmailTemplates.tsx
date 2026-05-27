@@ -66,6 +66,8 @@ const AdminEmailTemplates = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: templates = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-templates"],
