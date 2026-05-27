@@ -33,10 +33,17 @@ const isEstimatedAmount = (item: PartnerItem): boolean =>
 
 interface BureauDetails {
   companyName?: string;
+  legalName?: string;
+  street?: string;
+  postalCode?: string;
+  city?: string;
   kvkNumber?: string;
   vatNumber?: string;
-  address?: string;
+  iban?: string;
+  /** @deprecated administratie-mail wordt niet meer in dit dialoog getoond */
   email?: string;
+  /** @deprecated los adresveld; gebruik street + postalCode + city */
+  address?: string;
 }
 
 export interface CollectiveInvoiceSubmitPayload {
@@ -127,11 +134,42 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
 
   const bureauInfo = {
     companyName: bureauDetails?.companyName || "Bureau Vlieland",
+    legalName: bureauDetails?.legalName || bureauDetails?.companyName || "Bureau Vlieland B.V.",
+    street: bureauDetails?.street || "",
+    postalCode: bureauDetails?.postalCode || "",
+    city: bureauDetails?.city || bureauDetails?.address || "Vlieland",
     kvkNumber: bureauDetails?.kvkNumber || "",
     vatNumber: bureauDetails?.vatNumber || "",
-    address: bureauDetails?.address || "Vlieland",
-    email: bureauDetails?.email || "administratie@bureauvlieland.nl",
+    iban: bureauDetails?.iban || "",
   };
+  const addressLine = [bureauInfo.street, [bureauInfo.postalCode, bureauInfo.city].filter(Boolean).join("  ")]
+    .filter(Boolean)
+    .join(", ");
+
+  /** Geselecteerde regels gegroepeerd per BTW-tarief: { rate -> { excl, vat, incl } } */
+  const vatBreakdown = useMemo(() => {
+    const groups = new Map<number, { excl: number; vat: number; incl: number }>();
+    for (const id of selectedIds) {
+      const item = projectItems.find((p) => p.id === id);
+      const inclAmt = parseAmt(amounts[id] || "");
+      if (inclAmt <= 0) continue;
+      const rate = item ? getItemVatRate(item) : 21;
+      const { amountExclVat, vatAmount, amountInclVat } = calculateFromInclVat(inclAmt, rate);
+      const cur = groups.get(rate) || { excl: 0, vat: 0, incl: 0 };
+      cur.excl += amountExclVat;
+      cur.vat += vatAmount;
+      cur.incl += amountInclVat;
+      groups.set(rate, cur);
+    }
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([rate, v]) => ({
+        rate,
+        excl: +v.excl.toFixed(2),
+        vat: +v.vat.toFixed(2),
+        incl: +v.incl.toFixed(2),
+      }));
+  }, [selectedIds, amounts, projectItems, getItemVatRate]);
 
   const toggleItem = (id: string) => {
     const next = new Set(selectedIds);
@@ -250,21 +288,26 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-2 text-sm">
-            <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
-              <Building2 className="h-4 w-4" /> Factureer aan {bureauInfo.companyName}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3 text-sm">
+            <div>
+              <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
+                <Building2 className="h-4 w-4" /> Facturatiegegevens
+              </div>
+              <div className="mt-1 space-y-0.5 text-foreground">
+                <div className="font-medium">{bureauInfo.legalName}</div>
+                {addressLine && <div className="text-muted-foreground">{addressLine}</div>}
+                <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
+                  {bureauInfo.kvkNumber && <span>KvK: {bureauInfo.kvkNumber}</span>}
+                  {bureauInfo.vatNumber && <span>BTW: {bureauInfo.vatNumber}</span>}
+                  {bureauInfo.iban && <span>IBAN: {bureauInfo.iban}</span>}
+                </div>
+              </div>
             </div>
-            {bureauInfo.address && <div className="text-muted-foreground">{bureauInfo.address}</div>}
-            {bureauInfo.kvkNumber && <div className="text-muted-foreground">KvK: {bureauInfo.kvkNumber}</div>}
-            {bureauInfo.vatNumber && <div className="text-muted-foreground">BTW: {bureauInfo.vatNumber}</div>}
-            {bureauInfo.email && (
-              <div className="text-muted-foreground">Administratie: {bureauInfo.email}</div>
-            )}
-            <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800">
+            <div className="pt-3 border-t border-amber-200 dark:border-amber-800">
               <div className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
                 <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 <div>
-                  <div className="font-medium">PDF mailen kan ook naar:</div>
+                  <div className="font-medium">Stuur de PDF naar:</div>
                   <a href={`mailto:${INKOOP_INBOX}`} className="underline">{INKOOP_INBOX}</a>
                   <div className="text-xs text-muted-foreground mt-1">
                     Factuur wordt automatisch ingelezen en aan het project gekoppeld.
@@ -273,6 +316,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
               </div>
             </div>
           </div>
+
 
           <Separator />
 
@@ -322,14 +366,26 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between text-sm">
+                <span>Subtotaal excl. BTW</span>
+                <span>€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+              </div>
+              {vatBreakdown.map((g) => (
+                <div key={g.rate} className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    BTW {g.rate}% over €{g.excl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                  </span>
+                  <span>€{g.vat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between text-sm pt-1 border-t mt-1">
                 <span className="font-semibold">Totaal incl. BTW</span>
                 <span className="font-semibold">€{totalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>waarvan excl. BTW (basis commissie)</span>
-                <span>€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+              <div className="text-xs text-muted-foreground pt-0.5">
+                Commissie wordt berekend over het bedrag excl. BTW.
               </div>
             </div>
+
           </div>
 
           <Separator />
