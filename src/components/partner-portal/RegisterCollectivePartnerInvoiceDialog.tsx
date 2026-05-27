@@ -185,11 +185,19 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
 
     setIsSubmitting(true);
     try {
-      const filePath = (await uploadFile(firstItem)) || undefined;
-      if (!filePath) {
-        setErrors({ file: "Upload van PDF is mislukt" });
-        return;
+      let filePath: string | undefined;
+      if (!isEmailMode) {
+        const uploaded = await uploadFile(firstItem);
+        if (!uploaded) {
+          setErrors({ file: "Upload van PDF is mislukt" });
+          return;
+        }
+        filePath = uploaded;
       }
+      const emailNoteSuffix = `Factuur verzonden via e-mail naar ${INKOOP_INBOX}`;
+      const combinedNotes = isEmailMode
+        ? [notes?.trim(), emailNoteSuffix].filter(Boolean).join(" — ")
+        : notes || undefined;
       const payload: CollectiveInvoiceSubmitPayload = {
         items: Array.from(selectedIds).map((id) => {
           const item = projectItems.find((p) => p.id === id);
@@ -205,8 +213,9 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
         }),
         invoicedNumber: invoiceNumber.trim(),
         invoicedDate: invoiceDate,
-        notes: notes || undefined,
+        notes: combinedNotes || undefined,
         filePath,
+        viaEmail: isEmailMode,
       };
       const res = await onSubmit(payload);
       if (!res.success) {
