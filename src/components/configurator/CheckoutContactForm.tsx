@@ -92,6 +92,7 @@ export const CheckoutContactForm = ({
 
   const executeSubmit = async () => {
     setDuplicateWarningOpen(false);
+    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
