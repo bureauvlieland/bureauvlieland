@@ -94,10 +94,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     setSelectedIds(ids);
     const initialAmounts: Record<string, string> = {};
     for (const it of projectItems) {
-      const prefill = it.quoted_price && it.quoted_price > 0
-        ? String(it.quoted_price).replace(".", ",")
-        : "";
-      initialAmounts[it.id] = prefill;
+      const amt = getBillableAmount(it);
+      initialAmounts[it.id] = amt > 0 ? amt.toFixed(2).replace(".", ",") : "";
     }
     setAmounts(initialAmounts);
     setInvoiceNumber("");
