@@ -31,6 +31,9 @@ interface AdminQuotePriceEditorProps {
   /** True wanneer de admin-override nieuwer is dan de laatste partner-acknowledge.
    *  In dat geval is de override de geldende prijs en is `quoted_price` verouderd. */
   hasOpenAdminPriceChange?: boolean;
+  /** True wanneer de partner het item heeft bevestigd (status confirmed/accepted).
+   *  In dat geval geldt de admin-schatting als door de partner geaccepteerde prijs. */
+  partnerConfirmed?: boolean;
 }
 
 export const AdminQuotePriceEditor = ({
@@ -43,6 +46,7 @@ export const AdminQuotePriceEditor = ({
   onSave,
   disabled = false,
   hasOpenAdminPriceChange = false,
+  partnerConfirmed = false,
 }: AdminQuotePriceEditorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editPrice, setEditPrice] = useState<string>(
