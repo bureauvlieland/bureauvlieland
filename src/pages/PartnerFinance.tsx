@@ -537,10 +537,23 @@ const PartnerFinanceContent = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="flex justify-end">
+                      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCollectiveMode("email");
+                            setCollectiveRequestId(requestId);
+                            setCollectiveInitialIds(items.map((i) => i.id));
+                          }}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Gefactureerd via e-mail
+                        </Button>
                         <Button
                           size="sm"
                           onClick={() => {
+                            setCollectiveMode("upload");
                             setCollectiveRequestId(requestId);
                             setCollectiveInitialIds(items.map((i) => i.id));
                           }}
