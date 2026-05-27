@@ -19,6 +19,8 @@ export interface OverviewRow {
   readinessTotal: number;
   programId: string | null;
   accommodationId: string | null;
+  isNew?: boolean;
+
 }
 
 interface FetchOptions {
