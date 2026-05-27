@@ -346,7 +346,7 @@ const PartnerFinanceContent = () => {
     invoicedAccommodations.reduce((sum, q) => sum + (q.invoiced_amount || 0), 0);
   
   const totalToBeInvoiced = 
-    toBeInvoicedItems.reduce((sum, i) => sum + (i.quoted_price || 0), 0) +
+    toBeInvoicedItems.reduce((sum, i) => sum + getBillableAmount(i), 0) +
     toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
   
   const totalCommission = 
