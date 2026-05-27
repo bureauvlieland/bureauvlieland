@@ -34,6 +34,14 @@ function toDate(s: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function isFresh(createdAt: string | null | undefined): boolean {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (isNaN(t)) return false;
+  return Date.now() - t < 24 * 60 * 60 * 1000;
+}
+
+
 export async function fetchProjectsOverview({ logiesView = false }: FetchOptions = {}): Promise<OverviewRow[]> {
   const [
     { data: programs, error: progError },
