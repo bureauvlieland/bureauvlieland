@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight } from "lucide-react";
+import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload } from "lucide-react";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
+import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
