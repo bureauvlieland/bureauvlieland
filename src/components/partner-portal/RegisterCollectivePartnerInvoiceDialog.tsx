@@ -35,6 +35,7 @@ export interface CollectiveInvoiceSubmitPayload {
   invoicedDate: string;
   notes?: string;
   filePath?: string;
+  viaEmail?: boolean;
 }
 
 interface Props {
@@ -46,6 +47,8 @@ interface Props {
   initialSelectedIds: string[];
   commissionPercentage: number;
   bureauDetails?: BureauDetails | null;
+  /** "upload" = PDF verplicht; "email" = partner bevestigt verzending naar inkoop@. */
+  mode?: "upload" | "email";
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
 
