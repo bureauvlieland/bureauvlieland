@@ -105,9 +105,11 @@ const ProgrammaOpMaat = () => {
       const isoDates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
       const formattedDates = selectedDates.map((d) => format(d, "EEEE d MMMM yyyy", { locale: nl }));
 
-      const { data: requestData, error: insertError } = await supabase
+      const requestId = crypto.randomUUID();
+      const { error: insertError } = await supabase
         .from("program_requests")
         .insert({
+          id: requestId,
           customer_token: token,
           customer_name: formData.name,
           customer_email: formData.email,
@@ -119,14 +121,12 @@ const ProgrammaOpMaat = () => {
           origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: `Maatwerk ${programType}${wantsAccommodation ? " — logies gewenst" : ""}`,
           invoicing_mode: "bureau_central",
-        })
-        .select()
-        .single();
+        });
 
       if (insertError) throw insertError;
 
       await supabase.from("program_request_history").insert({
-        request_id: requestData.id,
+        request_id: requestId,
         action: "created",
         actor: "customer",
         actor_name: formData.name,
