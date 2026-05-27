@@ -155,28 +155,35 @@ Deno.serve(async (req) => {
     const project = dbItems[0].program_requests;
 
     const invoicingMode = project.invoicing_mode || "bureau_central";
-    const vatRate = 21; // Activities: 21% VAT
     const commissionPercentage = partner.commission_percentage;
 
-    // Build allocations + totals
-    const amountByItem = new Map(itemsList.map((x) => [x.itemId, x.amount]));
+    // Build allocations + totals. VAT rate comes per item from the client
+    // (derived from the building block); default to 21% for safety.
+    const infoByItem = new Map(itemsList.map((x) => [x.itemId, x]));
     let totalExcl = 0;
+    let totalVat = 0;
     const allocations = dbItems.map((it: any, idx: number) => {
-      const amt = Number(amountByItem.get(it.id) || 0);
+      const info = infoByItem.get(it.id);
+      const amt = Number(info?.amount || 0);
+      const rate = Number(info?.vatRate ?? 21);
+      const vatAmt = +(amt * (rate / 100)).toFixed(2);
       totalExcl += amt;
-      const vatAmt = +(amt * (vatRate / 100)).toFixed(2);
+      totalVat += vatAmt;
       return {
         item_id: it.id,
         amount_excl_vat: amt,
-        vat_rate: vatRate,
+        vat_rate: rate,
         vat_amount: vatAmt,
         amount_incl_vat: +(amt + vatAmt).toFixed(2),
         sort_order: idx,
       };
     });
     totalExcl = +totalExcl.toFixed(2);
-    const totalVat = +(totalExcl * (vatRate / 100)).toFixed(2);
+    totalVat = +totalVat.toFixed(2);
     const totalIncl = +(totalExcl + totalVat).toFixed(2);
+    // Header VAT rate: use first allocation's rate if uniform, else 0 (mixed)
+    const uniqueRates = Array.from(new Set(allocations.map((a) => a.vat_rate)));
+    const headerVatRate = uniqueRates.length === 1 ? uniqueRates[0] : 0;
     const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
 
     const isCollective = dbItems.length > 1;
