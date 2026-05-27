@@ -227,6 +227,7 @@ const PartnerFinanceContent = () => {
             invoicedDate: payload.invoicedDate,
             notes: payload.notes,
             filePath: payload.filePath,
+            viaEmail: payload.viaEmail,
           }),
         }
       );
