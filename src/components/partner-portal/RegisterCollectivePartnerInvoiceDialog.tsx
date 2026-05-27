@@ -291,11 +291,16 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                     />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{it.block_name}</div>
-                      {it.quoted_price ? (
-                        <div className="text-xs text-muted-foreground">
-                          Bevestigde prijs: €{it.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
-                        </div>
-                      ) : null}
+                      {(() => {
+                        const amt = getBillableAmount(it);
+                        if (!amt) return null;
+                        const label = isEstimatedAmount(it) ? "Geschat bedrag" : "Bevestigde prijs";
+                        return (
+                          <div className="text-xs text-muted-foreground">
+                            {label}: €{amt.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="w-32">
                       <div className="relative">
