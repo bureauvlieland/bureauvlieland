@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
+import { UploadInvoicePdfPartnerDialog } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
 import { toast } from "sonner";
 import { 
   AlertCircle, 
@@ -22,6 +23,7 @@ import {
   Building2,
   FileText,
   BedDouble,
+  Upload,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -45,6 +47,7 @@ const PartnerFinanceContent = () => {
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -451,7 +454,12 @@ const PartnerFinanceContent = () => {
             <div className="space-y-4">
               {/* Invoiced activity items */}
               {invoicedItems.map((item) => (
-                <InvoiceItemCard key={item.id} item={item} variant="invoiced" />
+                <InvoiceItemCard
+                  key={item.id}
+                  item={item}
+                  variant="invoiced"
+                  onUploadPdf={() => setUploadPdfItem(item)}
+                />
               ))}
               {/* Invoiced accommodation items */}
               {invoicedAccommodations.map((quote) => (
@@ -484,6 +492,12 @@ const PartnerFinanceContent = () => {
           billing_reference: selectedItem.program_requests.billing_reference,
         } : null}
       />
+
+      <UploadInvoicePdfPartnerDialog
+        item={uploadPdfItem}
+        onClose={() => setUploadPdfItem(null)}
+        onUploaded={refetchData}
+      />
     </div>
   );
 };
@@ -492,9 +506,10 @@ interface InvoiceItemCardProps {
   item: PartnerItem;
   variant: "to-invoice" | "invoiced";
   onInvoice?: () => void;
+  onUploadPdf?: () => void;
 }
 
-const InvoiceItemCard = ({ item, variant, onInvoice }: InvoiceItemCardProps) => {
+const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemCardProps) => {
   const request = item.program_requests;
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
@@ -563,17 +578,35 @@ const InvoiceItemCard = ({ item, variant, onInvoice }: InvoiceItemCardProps) => 
                 )}
               </>
             ) : (
-              <div className="text-right">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-3 w-3" />
-                  <span>{item.invoiced_number}</span>
-                </div>
-                <p className="font-semibold">€{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
-                {item.commission_amount && item.commission_amount > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Commissie: €{item.commission_amount.toFixed(2)}
-                  </p>
+              <div className="flex items-center gap-3">
+                {!item.invoiced_file_path && onUploadPdf && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                    onClick={onUploadPdf}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    PDF toevoegen
+                  </Button>
                 )}
+                <div className="text-right">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span>{item.invoiced_number}</span>
+                    {!item.invoiced_file_path && (
+                      <Badge variant="outline" className="text-xs border-amber-500 text-amber-700">
+                        PDF ontbreekt
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="font-semibold">€{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  {item.commission_amount && item.commission_amount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Commissie: €{item.commission_amount.toFixed(2)}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
