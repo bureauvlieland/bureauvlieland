@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
     const customerName = project.customer_company || project.customer_name;
     const itemsListHtml = dbItems
       .map((it: any) => {
-        const amt = amountByItem.get(it.id) || 0;
+        const amt = infoByItem.get(it.id)?.amount || 0;
         return `<tr><td style="padding:6px 0;">${it.block_name}</td><td style="padding:6px 0;text-align:right;">€${amt.toFixed(2)}</td></tr>`;
       })
       .join("");
