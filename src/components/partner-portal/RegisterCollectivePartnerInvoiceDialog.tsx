@@ -288,21 +288,26 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-2 text-sm">
-            <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
-              <Building2 className="h-4 w-4" /> Factureer aan {bureauInfo.companyName}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3 text-sm">
+            <div>
+              <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
+                <Building2 className="h-4 w-4" /> Facturatiegegevens
+              </div>
+              <div className="mt-1 space-y-0.5 text-foreground">
+                <div className="font-medium">{bureauInfo.legalName}</div>
+                {addressLine && <div className="text-muted-foreground">{addressLine}</div>}
+                <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
+                  {bureauInfo.kvkNumber && <span>KvK: {bureauInfo.kvkNumber}</span>}
+                  {bureauInfo.vatNumber && <span>BTW: {bureauInfo.vatNumber}</span>}
+                  {bureauInfo.iban && <span>IBAN: {bureauInfo.iban}</span>}
+                </div>
+              </div>
             </div>
-            {bureauInfo.address && <div className="text-muted-foreground">{bureauInfo.address}</div>}
-            {bureauInfo.kvkNumber && <div className="text-muted-foreground">KvK: {bureauInfo.kvkNumber}</div>}
-            {bureauInfo.vatNumber && <div className="text-muted-foreground">BTW: {bureauInfo.vatNumber}</div>}
-            {bureauInfo.email && (
-              <div className="text-muted-foreground">Administratie: {bureauInfo.email}</div>
-            )}
-            <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800">
+            <div className="pt-3 border-t border-amber-200 dark:border-amber-800">
               <div className="flex items-start gap-2 text-amber-800 dark:text-amber-300">
                 <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 <div>
-                  <div className="font-medium">PDF mailen kan ook naar:</div>
+                  <div className="font-medium">Stuur de PDF naar:</div>
                   <a href={`mailto:${INKOOP_INBOX}`} className="underline">{INKOOP_INBOX}</a>
                   <div className="text-xs text-muted-foreground mt-1">
                     Factuur wordt automatisch ingelezen en aan het project gekoppeld.
@@ -311,6 +316,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
               </div>
             </div>
           </div>
+
 
           <Separator />
 
