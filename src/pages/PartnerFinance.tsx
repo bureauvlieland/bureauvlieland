@@ -512,7 +512,7 @@ const PartnerFinanceContent = () => {
                 }, {})
               ).map(([requestId, items]) => {
                 const project = items[0].program_requests;
-                const total = items.reduce((s, i) => s + (i.quoted_price || 0), 0);
+                const total = items.reduce((s, i) => s + getBillableAmount(i), 0);
                 return (
                   <Card key={requestId}>
                     <CardContent className="p-4 space-y-3">
