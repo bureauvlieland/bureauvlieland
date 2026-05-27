@@ -72,6 +72,17 @@ const PartnerFinanceContent = () => {
   const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
   const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
   const [collectiveMode, setCollectiveMode] = useState<"upload" | "email">("upload");
+  const { getSetting } = useAppSettings();
+  const bureauDetails = {
+    companyName: getSetting<string>("bureau_company_name", "Bureau Vlieland"),
+    legalName: getSetting<string>("bureau_legal_name", "Bureau Vlieland B.V."),
+    street: getSetting<string>("bureau_street", ""),
+    postalCode: getSetting<string>("bureau_postal_code", ""),
+    city: getSetting<string>("bureau_city", ""),
+    kvkNumber: getSetting<string>("bureau_kvk_number", ""),
+    vatNumber: getSetting<string>("bureau_vat_number", ""),
+    iban: getSetting<string>("bureau_iban", ""),
+  };
 
   useEffect(() => {
     const fetchDashboard = async () => {
