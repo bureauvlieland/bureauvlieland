@@ -171,6 +171,7 @@ export const MaatwerkIntakeForm = ({
       });
     } catch (error: any) {
       console.error("Error submitting maatwerk request:", error);
+      trackSubmitFailed({ formType: 'maatwerk_intake', error });
       toast({
         title: "Er ging iets mis",
         description: error.message || "Probeer het later opnieuw.",
