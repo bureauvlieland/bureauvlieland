@@ -79,14 +79,19 @@ export const InvoiceRegistrationDialog = ({
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
-      setAmount("");
+      // Prefill bedrag met geoffreerde prijs (partner past alleen aan als
+      // werkelijke factuur afwijkt, bv. bij schatting o.b.v. aantal personen).
+      const prefill = item?.quoted_price && item.quoted_price > 0
+        ? String(item.quoted_price).replace(".", ",")
+        : "";
+      setAmount(prefill);
       setInvoiceNumber("");
       setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
       setNotes("");
       setErrors({});
       setSelectedFile(null);
     }
-  }, [isOpen]);
+  }, [isOpen, item?.id, item?.quoted_price]);
 
   const parsedAmount = parseFloat(amount.replace(",", ".")) || 0;
   const commissionAmount = (parsedAmount * commissionPercentage) / 100;
