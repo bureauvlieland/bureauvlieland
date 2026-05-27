@@ -61,8 +61,10 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
   initialSelectedIds,
   commissionPercentage,
   bureauDetails,
+  mode = "upload",
   onSubmit,
 }: Props) => {
+  const isEmailMode = mode === "email";
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [invoiceNumber, setInvoiceNumber] = useState("");
