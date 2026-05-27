@@ -546,14 +546,25 @@ const PartnerFinanceContent = () => {
                         </div>
                       </div>
                       <div className="rounded-md border divide-y text-sm">
-                        {items.map((it) => (
-                          <div key={it.id} className="flex items-center justify-between p-2">
-                            <span className="truncate">{it.block_name}</span>
-                            <span className="font-medium">
-                              €{(it.quoted_price || 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        ))}
+                        {items.map((it) => {
+                          const amount = getBillableAmount(it);
+                          const estimated = isEstimatedAmount(it);
+                          return (
+                            <div key={it.id} className="flex items-center justify-between p-2 gap-2">
+                              <span className="truncate flex items-center gap-2">
+                                {it.block_name}
+                                {estimated && (
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1 text-amber-700 border-amber-300">
+                                    inschatting
+                                  </Badge>
+                                )}
+                              </span>
+                              <span className="font-medium whitespace-nowrap">
+                                €{amount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
                         <Button
