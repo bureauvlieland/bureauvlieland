@@ -638,6 +638,7 @@ const PartnerFinanceContent = () => {
         onClose={() => {
           setCollectiveRequestId(null);
           setCollectiveInitialIds([]);
+          setCollectiveMode("upload");
         }}
         projectItems={
           collectiveRequestId
@@ -652,6 +653,7 @@ const PartnerFinanceContent = () => {
         }
         initialSelectedIds={collectiveInitialIds}
         commissionPercentage={data.partner.commission_percentage}
+        mode={collectiveMode}
         onSubmit={handleCollectiveInvoiceRegister}
       />
     </div>
