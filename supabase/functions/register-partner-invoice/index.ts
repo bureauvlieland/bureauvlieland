@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
       invoicedDate,
       notes,
       filePath,
+      viaEmail,
       // Legacy single-item mode:
       itemId,
       invoicedAmount,
@@ -80,6 +81,7 @@ Deno.serve(async (req) => {
       items, // [{ itemId, amount }]
     } = reqBody;
     const origin = reqBody.origin || req.headers.get("origin") || "";
+    const isViaEmail = viaEmail === true;
 
     // Normalize to items[] array. Legacy single-item callers still supported.
     const itemsList: Array<{ itemId: string; amount: number; vatRate: number }> =
