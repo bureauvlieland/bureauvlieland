@@ -235,7 +235,9 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       readinessTotal: checks.length,
       programId: null,
       accommodationId: acc.id,
+      isNew: isFresh(acc.created_at),
     });
+
   });
 
   return rows.sort(sortByEarliest);
