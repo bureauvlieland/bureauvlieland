@@ -93,18 +93,20 @@ export const ProgramNavigation = ({
           className="flex items-center gap-1 py-2 overflow-x-auto"
           onKeyDown={handleKeyDown}
         >
-          <Button
-            variant={activeView === "splash" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => handleClick("splash")}
-            className={tabClass("splash")}
-            role="tab"
-            aria-selected={activeView === "splash"}
-          >
-            <LayoutGrid className="h-4 w-4" />
-            Overzicht
-            {renderBadge("splash")}
-          </Button>
+          {isMultiDay && (
+            <Button
+              variant={activeView === "splash" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => handleClick("splash")}
+              className={tabClass("splash")}
+              role="tab"
+              aria-selected={activeView === "splash"}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Overzicht
+              {renderBadge("splash")}
+            </Button>
+          )}
 
           {showEventTabs && (
             <>
