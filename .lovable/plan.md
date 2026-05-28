@@ -1,54 +1,69 @@
 ## Doel
+Alle klant-, partner- en admin-mails inhoudelijk consistent maken met het Bureau Vlieland-model: één partij, één factuur, partner ziet geen klant-PII, correcte aanspreektoon en juiste e-mailadressen.
 
-De kop van het "Verzamelfactuur registreren"-dialoog herschrijven zodat de partner een volwaardig **facturatiegegevens-blok** ziet, en in het totalen-blok een **BTW-uitsplitsing per tarief** krijgt.
+## Gevonden directe fout
+De screenshot komt uit de template `booking_confirmed_partner` / “Definitieve boeking - Partner”. Daar staat nu nog:
 
-## Wijzigingen
+- facturatie naar `facturatie@bureauvlieland.nl`
+- suggestie dat de partner direct na klantakkoord factureert
+- potentieel klant-/facturatiegegevens richting partner
 
-### 1. `src/pages/PartnerFinance.tsx` — bureau-gegevens doorgeven
-Op dit moment wordt `bureauDetails` niet meegegeven aan `RegisterCollectivePartnerInvoiceDialog`, waardoor het dialoog terugvalt op de hardcoded defaults ("Vlieland" + administratie-mail). We gaan de instellingen ophalen via `getSetting()` (zoals `AdminInvoicePreview.tsx` al doet) en doorgeven:
+Dat is inhoudelijk niet meer passend bij het huidige model.
 
-- `legalName`  ← `bureau_legal_name`
-- `street`     ← `bureau_street`
-- `postalCode` ← `bureau_postal_code`
-- `city`       ← `bureau_city`
-- `kvkNumber`  ← `bureau_kvk_number`
-- `vatNumber`  ← `bureau_vat_number`
-- `iban`       ← `bureau_iban`
+## Plan van aanpak
 
-### 2. `RegisterCollectivePartnerInvoiceDialog.tsx` — kop herontwerpen
-Het amber-blok wordt opnieuw opgebouwd in **twee duidelijk gescheiden secties**:
+1. **Eén inhoudelijke bron van waarheid vastleggen**
+   - Partner-facing facturen: upload via partnerportaal of mailroute `inkoop@reply.bureauvlieland.nl`.
+   - Geen partnerfacturen rechtstreeks naar de klant.
+   - Geen klantfactuurgegevens/PII naar partners.
+   - Bureau Vlieland factureert centraal aan de klant.
+   - Partnercommunicatie: informeel “je”. Klantcommunicatie: formeel “u”.
+   - Positionering: “lokale specialist / reisagent / boekingskantoor + programma-ontwikkelaar”; niet “regie op het eiland”.
 
-```text
-┌─ Facturatiegegevens ──────────────────────────────┐
-│ Bureau Vlieland B.V.                              │
-│ Sikkelduin 11, 8899 CG  Vlieland                  │
-│ KvK: …   BTW: …   IBAN: …                         │
-├───────────────────────────────────────────────────┤
-│ ✉  Stuur de PDF naar:                             │
-│    inkoop@reply.bureauvlieland.nl                 │
-│    Factuur wordt automatisch ingelezen en gekoppeld.│
-└───────────────────────────────────────────────────┘
-```
+2. **Live e-mailtemplates in Lovable Cloud nalopen en corrigeren**
+   - Alle rijen in `email_templates` scannen op:
+     - `facturatie@bureauvlieland.nl`
+     - `administratie@bureauvlieland.nl` waar dat eigenlijk geen partner-inbox hoort te zijn
+     - klantgegevens in partnermails
+     - “direct/rechtstreeks naar klant” formuleringen
+     - oude commissie-/facturatiemodelteksten
+     - verkeerde aanspreekvorm “u/je”
+   - De foutieve `booking_confirmed_partner` template herschrijven naar:
+     - bevestiging dat de klant definitief akkoord heeft gegeven
+     - overzicht van alleen relevante boekings-/uitvoeringsdetails
+     - duidelijke facturatie-instructie: factuur pas volgens proces aan Bureau Vlieland, via portaal of `inkoop@reply.bureauvlieland.nl`, met referentie
+     - geen klantfactuurgegevens tonen
 
-- `administratie@bureauvlieland.nl` wordt **verwijderd** (niet langer in het blok).
-- De `BureauDetails`-interface krijgt de extra velden hierboven.
-- De prop blijft optioneel; lege velden worden simpelweg weggelaten.
+3. **Hardcoded mailteksten in backend functions nalopen**
+   - Vooral fallbackteksten en directe Mailjet bodies in `supabase/functions/*` controleren.
+   - De specifieke fallback in `update-customer-program` aanpassen zodat die niet alsnog klantfactuurgegevens naar partners mailt als de database-template ontbreekt.
+   - Waar mogelijk dezelfde correcte tekstblokken gebruiken als de live template.
 
-### 3. BTW-uitsplitsing in het totalenblok
-Naast `totalIncl` en `totalExcl` berekenen we per geselecteerde regel een groepering op BTW-tarief (9% / 21% / 0%). In de UI wordt het totaalblok:
+4. **Partnerportaal- en gids-teksten nalopen**
+   - Frontendteksten in partnergidsen, facturatiedialogen en partnerkaarten controleren op dezelfde regels.
+   - `facturatie@bureauvlieland.nl` vervangen waar partnerfacturen bedoeld zijn door `inkoop@reply.bureauvlieland.nl` of de bestaande portaal-uploadroute.
+   - Oude formuleringen zoals “verrekent vervolgens commissie met u” corrigeren naar het actuele commissiemodel.
 
-```text
-Subtotaal excl. BTW                €959,33
-  BTW 9%  over €100,00              €9,00
-  BTW 21% over €859,33            €180,46
-─────────────────────────────────────────
-Totaal incl. BTW                 €1.065,00
-Commissie wordt berekend over excl. BTW
-```
+5. **E-mailadressen consistent maken**
+   - Algemene afzender/reply: `hallo@bureauvlieland.nl` of project-reply-adres.
+   - Administratie/footer: `administratie@bureauvlieland.nl` waar het om Bureau Vlieland bedrijfsgegevens gaat.
+   - Partnerfacturen/inkoop: `inkoop@reply.bureauvlieland.nl`.
+   - Oude of foutieve adressen (`facturatie@bureauvlieland.nl` in partnerinstructies) verwijderen uit actuele teksten.
 
-Tarieven per item komen uit het bestaande `useItemVatRates`/`getItemVatRate`. Tarieven met €0 worden niet getoond. De aparte commissie-`Alert` daaronder blijft staan.
+6. **Auditrapport toevoegen**
+   - Een korte `.lovable` auditnotitie toevoegen met:
+     - welke templates/teksten zijn gecontroleerd
+     - welke inhoudelijke regels zijn afgedwongen
+     - resterende bewuste uitzonderingen, als die er zijn
+   - Dit voorkomt dat we later opnieuw dezelfde discussie krijgen.
 
-## Scope
-- Alleen frontend: `RegisterCollectivePartnerInvoiceDialog.tsx` + `PartnerFinance.tsx`.
-- Geen wijzigingen aan de edge function of database — bedragen worden al incl. BTW geregistreerd en backend rekent zelf de splitsing.
-- `InvoiceRegistrationDialog.tsx` (per-item dialoog) en de `BureauCentralBadge` blijven ongewijzigd; mocht je willen kan ik hetzelfde patroon daar later toepassen.
+7. **Validatie**
+   - Na wijzigingen opnieuw zoeken op alle risicofragmenten.
+   - De gecorrigeerde live templates uitlezen om te bevestigen dat de oude passage verdwenen is.
+   - Controleren dat de partnerbevestigingsmail geen klantfacturatiegegevens meer bevat.
+
+## Technische uitvoering
+- Databasewijzigingen via een nieuwe migratie die bestaande `email_templates` bijwerkt.
+- Codewijzigingen in de relevante backend function(s) en partner-facing frontendteksten.
+- Geen wijziging aan gegenereerde Cloud-client/types bestanden.
+- Geen oude migratiegeschiedenis herschrijven; actuele correcties gaan via nieuwe migratie en actuele code.
