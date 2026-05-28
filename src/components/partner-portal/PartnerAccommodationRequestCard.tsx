@@ -275,7 +275,7 @@ export const PartnerAccommodationRequestCard = ({
             <div className="text-sm text-muted-foreground space-y-1">
               <p>Bureau Vlieland verzorgt centraal de facturatie aan de klant. Na afloop van het verblijf:</p>
               <ol className="list-decimal list-inside space-y-0.5 text-xs">
-                <li>Stuur uw factuur (voor de geoffreerde prijs) naar facturatie@bureauvlieland.nl</li>
+                <li>Stuur uw factuur (voor de geoffreerde prijs) naar inkoop@reply.bureauvlieland.nl (of upload in het partnerportaal)</li>
                 <li>Registreer de factuur hier in het portaal</li>
                 <li>Bureau Vlieland factureert de klant en verrekent de commissie met u</li>
               </ol>
