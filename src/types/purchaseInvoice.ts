@@ -25,6 +25,7 @@ export interface PurchaseInvoice {
   paid_at: string | null;
   forwarded_to_accounting_at: string | null;
   forwarded_by: string | null;
+  payment_batch_id: string | null;
 }
 
 export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
@@ -43,6 +44,11 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
     id: string;
     block_name: string;
   };
+  payment_batch?: {
+    id: string;
+    batch_reference: string;
+    requested_execution_date: string;
+  } | null;
 }
 
 export interface PurchaseInvoiceLine {

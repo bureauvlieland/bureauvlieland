@@ -142,10 +142,17 @@ export default function AdminPurchaseInvoices() {
         );
       case "forwarded":
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            <ArrowRight className="h-3 w-3 mr-1" />
-            Doorgestuurd {invoice.forwarded_to_accounting_at && format(new Date(invoice.forwarded_to_accounting_at), "EEE d MMM", { locale: nl })}
-          </Badge>
+          <div className="flex flex-col gap-1 items-start">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              <ArrowRight className="h-3 w-3 mr-1" />
+              Doorgestuurd {invoice.forwarded_to_accounting_at && format(new Date(invoice.forwarded_to_accounting_at), "EEE d MMM", { locale: nl })}
+            </Badge>
+            {invoice.payment_batch && (
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                In batch {invoice.payment_batch.batch_reference}
+              </Badge>
+            )}
+          </div>
         );
       case "paid":
         return (
