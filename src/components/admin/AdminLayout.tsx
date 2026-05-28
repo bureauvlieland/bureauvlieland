@@ -37,6 +37,7 @@ import {
   Settings,
   LayoutTemplate,
   Receipt,
+  Banknote,
   HandCoins,
   ChevronDown,
   MessageCircle,
