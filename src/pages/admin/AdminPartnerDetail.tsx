@@ -407,6 +407,8 @@ const AdminPartnerDetail = () => {
             contact_email: formData.contact_email || null,
             phone: formData.phone || null,
             kvk_number: formData.kvk_number || null,
+            iban: formData.iban?.replace(/\s/g, "").toUpperCase() || null,
+            bic: formData.bic?.replace(/\s/g, "").toUpperCase() || null,
             address_street: formData.address_street || null,
             address_postal: formData.address_postal || null,
             address_city: formData.address_city || null,
