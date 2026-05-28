@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Sparkles, Archive, Layers } from "lucide-react";
+import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw } from "lucide-react";
+import { useReconcileTodos } from "@/hooks/useReconcileTodos";
 import {
   listProjectsForWerkbank,
   type ProjectSummary,
@@ -187,6 +189,29 @@ export default function AdminWerkbank() {
   }, [projects]);
 
   const [claudiaOpen, setClaudiaOpen] = useState(false);
+  const reconcile = useReconcileTodos();
+  const autoRanRef = useRef(false);
+
+  // Run silently on mount + every 5 min while page is open.
+  useEffect(() => {
+    if (autoRanRef.current) return;
+    autoRanRef.current = true;
+    reconcile.mutate();
+    const id = window.setInterval(() => reconcile.mutate(), 5 * 60_000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleManualReconcile = () => {
+    reconcile.mutate(undefined, {
+      onSuccess: (r) => {
+        toast.success(
+          `Acties geactualiseerd: ${r.closed} afgerond, ${r.created} nieuw`,
+        );
+      },
+      onError: (e: any) => toast.error(e?.message ?? "Actualiseren mislukt"),
+    });
+  };
 
   return (
     <AdminLayout>
@@ -205,6 +230,17 @@ export default function AdminWerkbank() {
                 <TabsTrigger value="projecten">Projecten</TabsTrigger>
               </TabsList>
             </Tabs>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleManualReconcile}
+              disabled={reconcile.isPending}
+              className="gap-1.5"
+              title="Werk openstaande acties bij"
+            >
+              <RefreshCw className={cn("h-4 w-4", reconcile.isPending && "animate-spin")} />
+              Actualiseer
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setClaudiaOpen(true)} className="gap-1.5">
               <Sparkles className="h-4 w-4 text-primary" />
               Claudia
