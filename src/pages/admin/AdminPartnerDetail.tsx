@@ -648,6 +648,30 @@ const AdminPartnerDetail = () => {
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="iban">IBAN (voor SEPA-betaalbatches)</Label>
+                    <Input
+                      id="iban"
+                      value={formData.iban}
+                      onChange={(e) => handleChange("iban", e.target.value.toUpperCase())}
+                      placeholder="NL00 BANK 0123 4567 89"
+                    />
+                    <p className="text-xs text-slate-500">
+                      Wordt gebruikt om inkoopfacturen automatisch in een ING-betaalbatch op te nemen.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bic">BIC (optioneel)</Label>
+                    <Input
+                      id="bic"
+                      value={formData.bic}
+                      onChange={(e) => handleChange("bic", e.target.value.toUpperCase())}
+                      placeholder="INGBNL2A"
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
