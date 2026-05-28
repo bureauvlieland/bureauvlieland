@@ -1298,29 +1298,26 @@ Deno.serve(async (req) => {
         const emailBody = template?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Definitieve boeking bevestigd</h2>
-              <p>Beste ${sanitizeHtml(provider.name)},</p>
-              <p>De klant heeft de boeking definitief bevestigd. Hieronder de facturatiegegevens:</p>
-              
-              <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                <h3 style="margin-top: 0;">Facturatiegegevens</h3>
-                ${billingTableHtml}
+              <p>Hoi ${sanitizeHtml(provider.name)},</p>
+              <p>De klant heeft de boeking definitief bevestigd. Het onderdeel staat hiermee vast in de planning.</p>
+
+              <div style="background: #f4f7fb; padding: 14px 18px; border-radius: 6px; margin: 16px 0;">
+                <p style="margin:0 0 8px;"><strong>Onderdeel:</strong></p>
+                <ul style="margin:0; padding-left:18px;">${itemsList}</ul>
+                <p style="margin:8px 0 0;"><strong>Datum(s):</strong> ${selectedDates}</p>
+                <p style="margin:4px 0 0;"><strong>Aantal personen:</strong> ${program.number_of_people}</p>
               </div>
-              
-              <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                <h3 style="margin-top: 0;">Geboekte activiteit(en)</h3>
-                <ul>${itemsList}</ul>
-                <p><strong>Datum:</strong> ${selectedDates}</p>
-                <p><strong>Aantal personen:</strong> ${program.number_of_people}</p>
-              </div>
-              
-              <p style="color: #666; font-size: 14px;">
-                Let op: Uw eigen algemene voorwaarden zijn van toepassing op deze boeking. 
-                De klant is hiervan op de hoogte gesteld.
+
+              <p style="background:#f8f9fa; padding:12px 16px; border-left:3px solid #1e3a5f; border-radius:4px;">
+                <strong>Facturatie:</strong> Bureau Vlieland factureert centraal aan de klant — stuur jouw factuur dus niet rechtstreeks naar de klant.
+                Je factureert ná uitvoering aan Bureau Vlieland: upload de factuur in je partnerportaal of mail de PDF naar
+                <a href="mailto:inkoop@reply.bureauvlieland.nl">inkoop@reply.bureauvlieland.nl</a>. Vermeld het referentienummer voor snelle verwerking.
               </p>
-              
+
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             </div>
         `;
+
 
         emailMessages.push({
           From: { Email: SENDER_EMAIL, Name: SENDER_NAME },

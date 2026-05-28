@@ -539,10 +539,11 @@ const PartnerGuides = () => {
                   <div className="bg-muted p-3 rounded-lg">
                     <p className="font-medium">Hoe werkt het?</p>
                     <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
-                      <li>Je stuurt jouw factuur (voor de geoffreerde prijs) naar <strong>facturatie@bureauvlieland.nl</strong></li>
+                      <li>Je registreert je factuur (voor de geoffreerde prijs) in het partnerportaal, of mailt de PDF naar <strong>inkoop@reply.bureauvlieland.nl</strong></li>
                       <li>Bureau Vlieland factureert de klant en verrekent de commissie met jou</li>
                     </ol>
                   </div>
+
                 </AccordionContent>
               </AccordionItem>
 
@@ -599,9 +600,10 @@ const PartnerGuides = () => {
                   </ol>
                   <div className="bg-muted p-3 rounded-lg text-sm space-y-2">
                     <p>
-                      Stuur uw factuur naar <strong>facturatie@bureauvlieland.nl</strong> — niet rechtstreeks naar de klant. U kunt een factuurkopie uploaden bij het registreren.
+                      Stuur uw factuur naar <strong>inkoop@reply.bureauvlieland.nl</strong> of upload deze direct bij het registreren in het portaal — nooit rechtstreeks naar de klant.
                     </p>
                   </div>
+
                   <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800 text-sm">
                     <strong>Tip:</strong> Vermeld het referentienummer (bijv. #BV-2501-0001) op uw factuur 
                     voor eenvoudige verwerking.
@@ -777,8 +779,9 @@ const PartnerGuides = () => {
                     Altijd naar Bureau Vlieland — nooit rechtstreeks aan de eindklant. Bureau Vlieland verzorgt centraal de facturatie aan de klant en verrekent vervolgens de commissie met u.
                   </p>
                   <p>
-                    Stuur uw factuur (voor de geoffreerde prijs) naar <strong>facturatie@bureauvlieland.nl</strong>. Vermeld het referentienummer van het project voor snelle verwerking.
+                    Stuur uw factuur (voor de geoffreerde prijs) naar <strong>inkoop@reply.bureauvlieland.nl</strong>, of registreer + upload deze direct in het partnerportaal. Vermeld het referentienummer van het project voor snelle verwerking.
                   </p>
+
                 </AccordionContent>
               </AccordionItem>
 
