@@ -445,6 +445,7 @@ const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/berichten\/templates/, title: "Email templates" },
   { match: /^\/admin\/berichten/, title: "Berichtencentrum" },
   { match: /^\/admin\/logs/, title: "Activiteitenlog" },
+  { match: /^\/admin\/bankafschriften/, title: "Bankafschriften" },
   { match: /^\/admin\/logies\/[^/]+/, title: "Logiesdetail" },
   { match: /^\/admin\/dashboard/, title: "Dashboard" },
   { match: /^\/admin\/todos/, title: "Taken" },
