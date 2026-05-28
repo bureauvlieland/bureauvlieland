@@ -44,6 +44,11 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
     id: string;
     block_name: string;
   };
+  payment_batch?: {
+    id: string;
+    batch_reference: string;
+    requested_execution_date: string;
+  } | null;
 }
 
 export interface PurchaseInvoiceLine {
