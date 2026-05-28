@@ -61,6 +61,8 @@ interface Partner {
   contact_email: string | null;
   phone: string | null;
   kvk_number: string | null;
+  iban: string | null;
+  bic: string | null;
   address_street: string | null;
   address_postal: string | null;
   address_city: string | null;
