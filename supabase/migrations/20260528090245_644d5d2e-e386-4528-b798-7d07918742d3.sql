@@ -1,0 +1,2 @@
+ALTER TABLE public.partner_purchase_invoices DROP CONSTRAINT IF EXISTS valid_purchase_invoice_status;
+ALTER TABLE public.partner_purchase_invoices ADD CONSTRAINT valid_purchase_invoice_status CHECK (status = ANY (ARRAY['pending'::text, 'pending_email_match'::text, 'forwarded'::text, 'paid'::text]));
