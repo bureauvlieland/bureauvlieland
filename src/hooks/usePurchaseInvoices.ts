@@ -49,6 +49,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         partner: invoice.partners,
         program_request: invoice.program_requests,
         program_request_item: invoice.program_request_items,
+        payment_batch: invoice.payment_batches,
       })) as PurchaseInvoiceWithRelations[];
     },
   });
