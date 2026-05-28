@@ -61,6 +61,8 @@ interface Partner {
   contact_email: string | null;
   phone: string | null;
   kvk_number: string | null;
+  iban: string | null;
+  bic: string | null;
   address_street: string | null;
   address_postal: string | null;
   address_city: string | null;
@@ -141,6 +143,8 @@ const AdminPartnerDetail = () => {
     contact_email: "",
     phone: "",
     kvk_number: "",
+    iban: "",
+    bic: "",
     address_street: "",
     address_postal: "",
     address_city: "",
@@ -195,6 +199,8 @@ const AdminPartnerDetail = () => {
         contact_email: (data as any).contact_email || "",
         phone: data.phone || "",
         kvk_number: data.kvk_number || "",
+        iban: (data as any).iban || "",
+        bic: (data as any).bic || "",
         address_street: data.address_street || "",
         address_postal: data.address_postal || "",
         address_city: data.address_city || "",
@@ -347,6 +353,8 @@ const AdminPartnerDetail = () => {
           email: formData.email,
           phone: formData.phone || null,
           kvk_number: formData.kvk_number || null,
+          iban: formData.iban?.replace(/\s/g, "").toUpperCase() || null,
+          bic: formData.bic?.replace(/\s/g, "").toUpperCase() || null,
           address_street: formData.address_street || null,
           address_postal: formData.address_postal || null,
           address_city: formData.address_city || null,
@@ -399,6 +407,8 @@ const AdminPartnerDetail = () => {
             contact_email: formData.contact_email || null,
             phone: formData.phone || null,
             kvk_number: formData.kvk_number || null,
+            iban: formData.iban?.replace(/\s/g, "").toUpperCase() || null,
+            bic: formData.bic?.replace(/\s/g, "").toUpperCase() || null,
             address_street: formData.address_street || null,
             address_postal: formData.address_postal || null,
             address_city: formData.address_city || null,
@@ -635,6 +645,30 @@ const AdminPartnerDetail = () => {
                       onChange={(e) => handleChange("kvk_number", e.target.value)}
                       placeholder="12345678"
                       className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="iban">IBAN (voor SEPA-betaalbatches)</Label>
+                    <Input
+                      id="iban"
+                      value={formData.iban}
+                      onChange={(e) => handleChange("iban", e.target.value.toUpperCase())}
+                      placeholder="NL00 BANK 0123 4567 89"
+                    />
+                    <p className="text-xs text-slate-500">
+                      Wordt gebruikt om inkoopfacturen automatisch in een ING-betaalbatch op te nemen.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bic">BIC (optioneel)</Label>
+                    <Input
+                      id="bic"
+                      value={formData.bic}
+                      onChange={(e) => handleChange("bic", e.target.value.toUpperCase())}
+                      placeholder="INGBNL2A"
                     />
                   </div>
                 </div>
