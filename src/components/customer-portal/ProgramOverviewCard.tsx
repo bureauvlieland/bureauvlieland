@@ -187,7 +187,7 @@ export const ProgramOverviewCard = ({
               </p>
               
               {/* Program description */}
-              {programDescription && (
+              {programDescription && programDescription.trim().toLowerCase() !== "niet_gespecificeerd" && (
                 <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border/50">
                   <p className="text-sm italic text-foreground/90 whitespace-pre-line">
                     "{programDescription}"
