@@ -199,6 +199,8 @@ const AdminPartnerDetail = () => {
         contact_email: (data as any).contact_email || "",
         phone: data.phone || "",
         kvk_number: data.kvk_number || "",
+        iban: (data as any).iban || "",
+        bic: (data as any).bic || "",
         address_street: data.address_street || "",
         address_postal: data.address_postal || "",
         address_city: data.address_city || "",
