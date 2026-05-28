@@ -118,7 +118,7 @@ function generatePartnerNotificationEmail(
         </a>
       </div>
       <p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
-        <strong>Facturatie:</strong> Bureau Vlieland regelt de communicatie en facturatie richting de klant. Stuur jouw factuur na uitvoering naar <a href="mailto:facturatie@bureauvlieland.nl">facturatie@bureauvlieland.nl</a>. Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
+        <strong>Facturatie:</strong> Bureau Vlieland regelt de communicatie en facturatie richting de klant. Stuur jouw factuur na uitvoering naar <a href="mailto:inkoop@reply.bureauvlieland.nl">inkoop@reply.bureauvlieland.nl</a> (of upload in het partnerportaal). Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
       </p>
       <p style="margin-top: 24px; color:#666; font-size:13px;">
         Met vriendelijke groet,<br><strong>Bureau Vlieland</strong>
