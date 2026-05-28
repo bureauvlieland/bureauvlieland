@@ -136,11 +136,31 @@ export const ProgramOverviewCard = ({
         <div className="space-y-4">
         {/* Header */}
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-                  {isMaatwerk ? "Uw maatwerkprogramma" : "Uw voorstel"}
-                </h1>
+            <div className="flex-1 min-w-0">
+              {(() => {
+                const isConfirmed = !!termsAcceptedAt || quoteStatus === "definitief_bevestigd" || quoteStatus === "akkoord_ontvangen";
+                const eyebrow = isConfirmed
+                  ? "Programma voor"
+                  : isMaatwerk
+                    ? "Maatwerkprogramma voor"
+                    : "Voorstel voor";
+                const headline = customerCompany?.trim()
+                  || (isMaatwerk ? "Uw maatwerkprogramma" : "Uw voorstel");
+                const hasPersonalHeadline = !!customerCompany?.trim();
+                return (
+                  <>
+                    {hasPersonalHeadline && (
+                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                        {eyebrow}
+                      </p>
+                    )}
+                    <h1 className="text-2xl md:text-4xl font-bold tracking-tight mt-0.5 break-words">
+                      {headline}
+                    </h1>
+                  </>
+                );
+              })()}
+              <div className="flex items-center gap-2 flex-wrap mt-2">
                 {referenceNumber && (
                   <Badge variant="outline" className="font-mono text-xs">
                     #{referenceNumber}
@@ -159,7 +179,7 @@ export const ProgramOverviewCard = ({
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-2">
                 {isMaatwerk
                   ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
                   : "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
@@ -272,12 +292,6 @@ export const ProgramOverviewCard = ({
             )}
           </div>
 
-          {/* Company name if available */}
-          {customerCompany && (
-            <p className="text-sm text-muted-foreground pt-2 border-t">
-              Voorstel voor <span className="font-medium text-foreground">{customerCompany}</span>
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>
