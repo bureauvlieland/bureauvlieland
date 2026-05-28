@@ -292,12 +292,6 @@ export const ProgramOverviewCard = ({
             )}
           </div>
 
-          {/* Company name if available */}
-          {customerCompany && (
-            <p className="text-sm text-muted-foreground pt-2 border-t">
-              Voorstel voor <span className="font-medium text-foreground">{customerCompany}</span>
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>
