@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
             : req;
           if (
             (reqRow && reqRow.completion_status === "fully_invoiced") ||
-            (item && salesByRequest.get(item.request_id) ?? 0) > 0 ||
+            (item && (salesByRequest.get(item.request_id) ?? 0) > 0) ||
             (t.related_request_id &&
               (salesByRequest.get(t.related_request_id) ?? 0) > 0)
           ) {
