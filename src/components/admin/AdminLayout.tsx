@@ -139,6 +139,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Facturatie", url: "/admin/facturatie", icon: Euro, badge: invoicingCount },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
         { title: "Inkoop-inbox", url: "/admin/inkoopfacturen/inbox", icon: Inbox, badge: inboxCount },
+        { title: "Betaalbatches", url: "/admin/betaalbatches", icon: Banknote },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
       ],
     },
