@@ -25,6 +25,7 @@ export interface PurchaseInvoice {
   paid_at: string | null;
   forwarded_to_accounting_at: string | null;
   forwarded_by: string | null;
+  payment_batch_id: string | null;
 }
 
 export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
