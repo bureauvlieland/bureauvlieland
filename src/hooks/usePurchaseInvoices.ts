@@ -22,7 +22,8 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           *,
           partners!inner(id, name, email),
           program_requests!inner(id, reference_number, customer_name, customer_company),
-          program_request_items(id, block_name)
+          program_request_items(id, block_name),
+          payment_batches(id, batch_reference, requested_execution_date)
         `)
         .order("created_at", { ascending: false });
 
