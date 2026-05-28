@@ -143,6 +143,8 @@ const AdminPartnerDetail = () => {
     contact_email: "",
     phone: "",
     kvk_number: "",
+    iban: "",
+    bic: "",
     address_street: "",
     address_postal: "",
     address_city: "",
