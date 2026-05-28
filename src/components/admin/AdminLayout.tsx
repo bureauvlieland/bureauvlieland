@@ -52,6 +52,7 @@ import {
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
+import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 
 interface AdminLayoutProps {
