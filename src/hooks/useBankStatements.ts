@@ -162,7 +162,7 @@ export function useConfirmMatch() {
       if (type === "sales") {
         await supabase
           .from("bureau_invoices")
-          .update({ bank_line_id: line.id, paid_at: nowIso, status: "paid" })
+          .update({ bank_line_id: line.id, status: "paid" })
           .eq("id", invoiceId);
       } else if (type === "purchase") {
         await supabase
@@ -172,7 +172,7 @@ export function useConfirmMatch() {
       } else if (type === "batch") {
         await supabase
           .from("payment_batches")
-          .update({ bank_line_id: line.id, status: "paid", paid_at: nowIso })
+          .update({ bank_line_id: line.id, status: "paid" })
           .eq("id", invoiceId);
       }
     },
