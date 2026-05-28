@@ -734,6 +734,143 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_statement_lines: {
+        Row: {
+          amount: number
+          booking_date: string | null
+          confidence: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          counterparty_iban: string | null
+          counterparty_name: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          direction: string
+          end_to_end_id: string | null
+          id: string
+          matched_invoice_id: string | null
+          matched_invoice_type: string | null
+          notes: string | null
+          remittance_info: string | null
+          statement_id: string
+          status: string
+          suggestions: Json | null
+          updated_at: string
+          value_date: string | null
+        }
+        Insert: {
+          amount: number
+          booking_date?: string | null
+          confidence?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          counterparty_iban?: string | null
+          counterparty_name?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          direction: string
+          end_to_end_id?: string | null
+          id?: string
+          matched_invoice_id?: string | null
+          matched_invoice_type?: string | null
+          notes?: string | null
+          remittance_info?: string | null
+          statement_id: string
+          status?: string
+          suggestions?: Json | null
+          updated_at?: string
+          value_date?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_date?: string | null
+          confidence?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          counterparty_iban?: string | null
+          counterparty_name?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          direction?: string
+          end_to_end_id?: string | null
+          id?: string
+          matched_invoice_id?: string | null
+          matched_invoice_type?: string | null
+          notes?: string | null
+          remittance_info?: string | null
+          statement_id?: string
+          status?: string
+          suggestions?: Json | null
+          updated_at?: string
+          value_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statement_lines_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_statements: {
+        Row: {
+          account_name: string | null
+          closing_balance: number | null
+          created_at: string
+          currency: string | null
+          file_name: string | null
+          file_path: string
+          iban: string | null
+          id: string
+          line_count: number | null
+          matched_count: number | null
+          opening_balance: number | null
+          raw_message_id: string | null
+          statement_date: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          account_name?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          currency?: string | null
+          file_name?: string | null
+          file_path: string
+          iban?: string | null
+          id?: string
+          line_count?: number | null
+          matched_count?: number | null
+          opening_balance?: number | null
+          raw_message_id?: string | null
+          statement_date?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          account_name?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          currency?: string | null
+          file_name?: string | null
+          file_path?: string
+          iban?: string | null
+          id?: string
+          line_count?: number | null
+          matched_count?: number | null
+          opening_balance?: number | null
+          raw_message_id?: string | null
+          statement_date?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       building_blocks: {
         Row: {
           block_type: Database["public"]["Enums"]["building_block_type"]
@@ -888,6 +1025,7 @@ export type Database = {
         Row: {
           amount_excl_vat: number
           amount_incl_vat: number | null
+          bank_line_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -905,6 +1043,7 @@ export type Database = {
         Insert: {
           amount_excl_vat: number
           amount_incl_vat?: number | null
+          bank_line_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -922,6 +1061,7 @@ export type Database = {
         Update: {
           amount_excl_vat?: number
           amount_incl_vat?: number | null
+          bank_line_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -937,6 +1077,13 @@ export type Database = {
           vat_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "bureau_invoices_bank_line_id_fkey"
+            columns: ["bank_line_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statement_lines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bureau_invoices_request_id_fkey"
             columns: ["request_id"]
@@ -1680,6 +1827,7 @@ export type Database = {
           amount_excl_vat: number
           amount_incl_vat: number
           approved_at: string | null
+          bank_line_id: string | null
           created_at: string
           description: string | null
           file_path: string | null
@@ -1703,6 +1851,7 @@ export type Database = {
           amount_excl_vat: number
           amount_incl_vat: number
           approved_at?: string | null
+          bank_line_id?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -1726,6 +1875,7 @@ export type Database = {
           amount_excl_vat?: number
           amount_incl_vat?: number
           approved_at?: string | null
+          bank_line_id?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -1746,6 +1896,13 @@ export type Database = {
           vat_rate?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_purchase_invoices_bank_line_id_fkey"
+            columns: ["bank_line_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statement_lines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_purchase_invoices_item_id_fkey"
             columns: ["item_id"]
@@ -2046,6 +2203,7 @@ export type Database = {
       }
       payment_batches: {
         Row: {
+          bank_line_id: string | null
           batch_reference: string
           created_at: string
           created_by: string | null
@@ -2058,6 +2216,7 @@ export type Database = {
           xml_file_path: string | null
         }
         Insert: {
+          bank_line_id?: string | null
           batch_reference: string
           created_at?: string
           created_by?: string | null
@@ -2070,6 +2229,7 @@ export type Database = {
           xml_file_path?: string | null
         }
         Update: {
+          bank_line_id?: string | null
           batch_reference?: string
           created_at?: string
           created_by?: string | null
@@ -2081,7 +2241,15 @@ export type Database = {
           transaction_count?: number
           xml_file_path?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_batches_bank_line_id_fkey"
+            columns: ["bank_line_id"]
+            isOneToOne: false
+            referencedRelation: "bank_statement_lines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       program_change_log: {
         Row: {
