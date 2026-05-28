@@ -1691,6 +1691,7 @@ export type Database = {
           item_id: string | null
           paid_at: string | null
           partner_id: string
+          payment_batch_id: string | null
           registered_by: string
           request_id: string
           status: string
@@ -1713,6 +1714,7 @@ export type Database = {
           item_id?: string | null
           paid_at?: string | null
           partner_id: string
+          payment_batch_id?: string | null
           registered_by?: string
           request_id: string
           status?: string
@@ -1735,6 +1737,7 @@ export type Database = {
           item_id?: string | null
           paid_at?: string | null
           partner_id?: string
+          payment_batch_id?: string | null
           registered_by?: string
           request_id?: string
           status?: string
@@ -1762,6 +1765,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_purchase_invoices_payment_batch_fk"
+            columns: ["payment_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payment_batches"
             referencedColumns: ["id"]
           },
           {
@@ -1903,6 +1913,7 @@ export type Database = {
           availability_notes: string | null
           bank_account_name: string | null
           bank_iban: string | null
+          bic: string | null
           booking_contact_name: string | null
           booking_contact_phone: string | null
           commission_percentage: number
@@ -1911,6 +1922,7 @@ export type Database = {
           email: string
           gallery_images: Json | null
           highlight_features: Json | null
+          iban: string | null
           id: string
           image_url: string | null
           invited_at: string | null
@@ -1948,6 +1960,7 @@ export type Database = {
           availability_notes?: string | null
           bank_account_name?: string | null
           bank_iban?: string | null
+          bic?: string | null
           booking_contact_name?: string | null
           booking_contact_phone?: string | null
           commission_percentage?: number
@@ -1956,6 +1969,7 @@ export type Database = {
           email: string
           gallery_images?: Json | null
           highlight_features?: Json | null
+          iban?: string | null
           id: string
           image_url?: string | null
           invited_at?: string | null
@@ -1993,6 +2007,7 @@ export type Database = {
           availability_notes?: string | null
           bank_account_name?: string | null
           bank_iban?: string | null
+          bic?: string | null
           booking_contact_name?: string | null
           booking_contact_phone?: string | null
           commission_percentage?: number
@@ -2001,6 +2016,7 @@ export type Database = {
           email?: string
           gallery_images?: Json | null
           highlight_features?: Json | null
+          iban?: string | null
           id?: string
           image_url?: string | null
           invited_at?: string | null
@@ -2025,6 +2041,45 @@ export type Database = {
           updated_at?: string
           uses_default_terms?: boolean | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      payment_batches: {
+        Row: {
+          batch_reference: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          requested_execution_date: string
+          status: string
+          total_amount: number
+          transaction_count: number
+          xml_file_path: string | null
+        }
+        Insert: {
+          batch_reference: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          requested_execution_date: string
+          status?: string
+          total_amount?: number
+          transaction_count?: number
+          xml_file_path?: string | null
+        }
+        Update: {
+          batch_reference?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          requested_execution_date?: string
+          status?: string
+          total_amount?: number
+          transaction_count?: number
+          xml_file_path?: string | null
         }
         Relationships: []
       }
