@@ -144,6 +144,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
         { title: "Inkoop-inbox", url: "/admin/inkoopfacturen/inbox", icon: Inbox, badge: inboxCount },
         { title: "Betaalbatches", url: "/admin/betaalbatches", icon: Banknote },
+        { title: "Bankafschriften", url: "/admin/bankafschriften", icon: Landmark, badge: bankPendingCount },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
       ],
     },
