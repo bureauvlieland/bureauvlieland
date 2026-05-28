@@ -114,6 +114,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
   const { data: openTicketsCount = 0 } = useOpenTicketsCount();
+  const { data: bankPendingCount = 0 } = useBankPendingCount();
 
   const menuSections: MenuSection[] = [
     {
