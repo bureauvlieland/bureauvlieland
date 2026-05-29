@@ -48,7 +48,9 @@ import {
   BedDouble,
   // Copy icon removed: tijdelijke wachtwoorden worden niet meer getoond
   Key,
+  MessageCircle,
 } from "lucide-react";
+import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
 import { AdminPartnerRevenueChart } from "@/components/admin/AdminPartnerRevenueChart";
@@ -164,6 +166,7 @@ const AdminPartnerDetail = () => {
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [accommodationQuotes, setAccommodationQuotes] = useState<RelatedAccommodationQuote[]>([]);
   const [isLoadingAccommodationQuotes, setIsLoadingAccommodationQuotes] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
 
   const isAccommodationPartner = formData.partner_type === "accommodation" || formData.partner_type === "both";
 
@@ -1157,6 +1160,15 @@ const AdminPartnerDetail = () => {
           )}
         </div>
       </AdminLayout>
+      {!isNew && partner && (
+        <SendWhatsAppDialog
+          open={whatsappOpen}
+          onOpenChange={setWhatsappOpen}
+          defaultPhone={formData.phone}
+          partnerId={partner.id}
+          contextLabel={partner.name}
+        />
+      )}
     </>
   );
 };
