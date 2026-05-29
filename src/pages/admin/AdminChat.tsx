@@ -172,15 +172,33 @@ const AdminChat = () => {
             </Tabs>
           </div>
 
+          {/* Channel filter */}
+          <div className="px-3 pt-2 pb-1">
+            <Tabs value={channelFilter} onValueChange={(v) => setChannelFilter(v as ChannelFilter)}>
+              <TabsList className="w-full h-8">
+                <TabsTrigger value="all" className="flex-1 text-[11px] px-1">Alle</TabsTrigger>
+                <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <User className="h-3 w-3" /> Klant
+                </TabsTrigger>
+                <TabsTrigger value="partner_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <Building2 className="h-3 w-3" /> Partner
+                </TabsTrigger>
+                <TabsTrigger value="whatsapp" className="flex-1 text-[11px] px-1 gap-1">
+                  <MessageCircle className="h-3 w-3 text-emerald-600" /> WhatsApp
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           {/* Conversations */}
           <div className="flex-1 overflow-y-auto">
-            {filteredConversations.length === 0 && (
+            {channelFiltered.length === 0 && (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 Geen gesprekken
               </div>
             )}
-            {filteredConversations.map((conv) => (
+            {channelFiltered.map((conv) => (
               <ChatConversationItem
                 key={conv.id}
                 conversation={conv}
@@ -190,6 +208,62 @@ const AdminChat = () => {
               />
             ))}
           </div>
+        </div>
+
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col bg-slate-50">
+          {!activeConversation ? (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Selecteer een gesprek</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Chat header */}
+              <div className="px-4 py-3 bg-white border-b flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div>
+                    <p className="font-medium flex items-center gap-2">
+                      {activeConversation.source === "whatsapp" && (
+                        <MessageCircle className="h-4 w-4 text-emerald-600" aria-label="WhatsApp" />
+                      )}
+                      {activeConversation.visitor_name || activeConversation.phone_number || "Bezoeker"}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      {activeConversation.source === "whatsapp" ? (
+                        <>
+                          <Phone className="h-3 w-3" />
+                          {activeConversation.phone_number || "WhatsApp"}
+                        </>
+                      ) : (
+                        <>
+                          {activeConversation.visitor_email} •{" "}
+                          {activeConversation.source === "partner_portal" ? "Partnerportaal" : "Klantportaal"}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  {activeConversation.source_partner_id && (
+                    <button
+                      onClick={() => navigate(`/admin/partners/${activeConversation.source_partner_id}`)}
+                      className="text-xs bg-secondary/40 text-foreground px-2 py-1 rounded-full flex items-center gap-1 hover:bg-secondary/60 transition-colors"
+                    >
+                      <Building2 className="h-3 w-3" />
+                      Partner
+                    </button>
+                  )}
+                  {activeConversation.request_id && projectRefs[activeConversation.request_id] && (
+                    <button
+                      onClick={() => navigate(`/admin/aanvragen/${activeConversation.request_id}`)}
+                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full flex items-center gap-1 hover:bg-primary/20 transition-colors"
+                    >
+                      <FileText className="h-3 w-3" />
+                      {projectRefs[activeConversation.request_id]}
+                    </button>
+                  )}
+                </div>
         </div>
 
         {/* Chat area */}
