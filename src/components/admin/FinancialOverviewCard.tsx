@@ -310,13 +310,15 @@ export const FinancialOverviewCard = ({
             })}
 
             {/* Coordination fee */}
-            <div className="flex items-center justify-between text-sm pt-1">
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>Coördinatiefee ({numberOfPeople} pers.)</span>
-              </div>
-              <span className="font-medium tabular-nums">{formatCurrency(coordinationFee)}</span>
-            </div>
+            <FeeRow
+              label={`Coördinatiefee (${numberOfPeople} pers.)`}
+              amount={getCoordinationFee(numberOfPeople)}
+              excluded={isExcluded("coordination_fee")}
+              feeKey="coordination_fee"
+              onToggleFee={onToggleFee}
+              formatCurrency={formatCurrency}
+            />
+
 
             {/* Extra costs inline */}
             {extraCostItems.map((item) => {
