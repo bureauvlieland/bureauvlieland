@@ -97,11 +97,12 @@ const AdminChat = () => {
     }
   };
 
+  const activeConversation = conversations.find(
+    (c) => c.id === activeConversationId
+  );
+
   const handleSaveToProject = async () => {
     if (!activeConversationId) return;
-    setSaving(true);
-    const success = await saveChatToProject(activeConversationId);
-    setSaving(false);
     setSaving(true);
     const success = await saveChatToProject(activeConversationId);
     setSaving(false);
