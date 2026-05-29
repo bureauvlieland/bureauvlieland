@@ -328,10 +328,6 @@ export const FinancialOverviewCard = ({
               </div>
             )}
 
-
-            />
-
-
             {/* Extra costs inline */}
             {extraCostItems.map((item) => {
               const billingLines = linesByItem[item.id];
@@ -395,37 +391,85 @@ export const FinancialOverviewCard = ({
             )}
 
             {/* Tourist tax */}
-            {touristTax > 0 && (
-              <div className="flex items-center justify-between text-sm">
+            {effectiveTouristTax > 0 && (
+              <div className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-2">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
                 </div>
-                <span className="font-medium tabular-nums">{formatCurrency(touristTax)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveTouristTax)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("tourist_tax", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Nature contribution */}
-            {natureContribution > 0 && (
-              <div className="flex items-center justify-between text-sm">
+            {effectiveNatureContribution > 0 && (
+              <div className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-2">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Natuurbijdrage ({numberOfPeople} pers.)</span>
                 </div>
-                <span className="font-medium tabular-nums">{formatCurrency(natureContribution)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveNatureContribution)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("nature_contribution", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Central surcharge */}
-            {centralSurcharge > 0 && (
-              <div className="flex items-center justify-between text-sm">
+            {effectiveCentralSurcharge > 0 && (
+              <div className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-2">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Opslag centrale facturatie ({numberOfPeople} pers.)</span>
                 </div>
-                <span className="font-medium tabular-nums">{formatCurrency(centralSurcharge)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveCentralSurcharge)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("central_surcharge", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Uitgesloten kostenposten — terugzetten */}
+            {onToggleFee && excludedFees.length > 0 && (
+              <div className="pt-2 mt-2 border-t border-dashed">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Uitgesloten van factuur</p>
+                <div className="flex flex-wrap gap-1">
+                  {(excludedFees as ExcludableFeeKey[]).map((key) => (
+                    <Button
+                      key={key}
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs gap-1 text-muted-foreground"
+                      onClick={() => onToggleFee(key, false)}
+                      title="Terugzetten op factuur"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {EXCLUDABLE_FEE_LABELS[key] ?? key}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           </div>
 
           {/* Totals */}
