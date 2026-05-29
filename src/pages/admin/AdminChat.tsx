@@ -87,7 +87,7 @@ const AdminChat = () => {
     if (!message.trim()) return;
     const text = message;
     setMessage("");
-    await sendMessage(text);
+    await handleSendWithToast(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -97,13 +97,11 @@ const AdminChat = () => {
     }
   };
 
-  const handleSend = async () => {
-    if (!message.trim()) return;
-    const text = message;
-    setMessage("");
-    await handleSendWithToast(text);
-  };
+  const handleSaveToProject = async () => {
     if (!activeConversationId) return;
+    setSaving(true);
+    const success = await saveChatToProject(activeConversationId);
+    setSaving(false);
     setSaving(true);
     const success = await saveChatToProject(activeConversationId);
     setSaving(false);
