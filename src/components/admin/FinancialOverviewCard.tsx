@@ -310,13 +310,15 @@ export const FinancialOverviewCard = ({
             })}
 
             {/* Coordination fee */}
-            <FeeRow
-              label={`Coördinatiefee (${numberOfPeople} pers.)`}
-              amount={getCoordinationFee(numberOfPeople)}
-              excluded={isExcluded("coordination_fee")}
-              feeKey="coordination_fee"
-              onToggleFee={onToggleFee}
-              formatCurrency={formatCurrency}
+            {renderFeeRow({
+              label: `Coördinatiefee (${numberOfPeople} pers.)`,
+              amount: getCoordinationFee(numberOfPeople),
+              feeKey: "coordination_fee",
+              excluded: isExcluded("coordination_fee"),
+              onToggleFee,
+              formatCurrency,
+            })}
+
             />
 
 
