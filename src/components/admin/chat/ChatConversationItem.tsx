@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
-import { User, Building2, Clock, FileText } from "lucide-react";
+import { User, Building2, Clock, FileText, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { ChatConversation } from "@/hooks/useChat";
 
@@ -25,13 +25,15 @@ export function ChatConversationItem({ conversation: conv, isActive, projectRef,
       )}
     >
       <div className="flex items-center gap-2 mb-1">
-        {conv.source === "partner_portal" ? (
+        {conv.source === "whatsapp" ? (
+          <MessageCircle className="h-3.5 w-3.5 text-emerald-600" aria-label="WhatsApp" />
+        ) : conv.source === "partner_portal" ? (
           <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
         ) : (
           <User className="h-3.5 w-3.5 text-muted-foreground" />
         )}
         <span className="font-medium text-sm truncate">
-          {conv.visitor_name || "Bezoeker"}
+          {conv.visitor_name || conv.phone_number || "Bezoeker"}
         </span>
         <Badge
           variant={conv.status === "active" ? "default" : "secondary"}
@@ -40,7 +42,9 @@ export function ChatConversationItem({ conversation: conv, isActive, projectRef,
           {conv.status === "active" ? "Actief" : conv.status === "waiting" ? "Wacht" : "Gesloten"}
         </Badge>
       </div>
-      <p className="text-xs text-muted-foreground truncate">{conv.visitor_email}</p>
+      <p className="text-xs text-muted-foreground truncate">
+        {conv.source === "whatsapp" ? (conv.phone_number || "WhatsApp") : conv.visitor_email}
+      </p>
       <div className="flex items-center gap-2 mt-1">
         <p className="text-[10px] text-muted-foreground flex items-center gap-1">
           <Clock className="h-3 w-3" />
