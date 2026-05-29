@@ -264,43 +264,6 @@ const AdminChat = () => {
                     </button>
                   )}
                 </div>
-        </div>
-
-        {/* Chat area */}
-        <div className="flex-1 flex flex-col bg-slate-50">
-          {!activeConversation ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Selecteer een gesprek</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Chat header */}
-              <div className="px-4 py-3 bg-white border-b flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {activeConversation.visitor_name || "Bezoeker"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {activeConversation.visitor_email} •{" "}
-                      {activeConversation.source === "partner_portal"
-                        ? "Partnerportaal"
-                        : "Klantportaal"}
-                    </p>
-                  </div>
-                  {activeConversation.request_id && projectRefs[activeConversation.request_id] && (
-                    <button
-                      onClick={() => navigate(`/admin/aanvragen/${activeConversation.request_id}`)}
-                      className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full flex items-center gap-1 hover:bg-primary/20 transition-colors"
-                    >
-                      <FileText className="h-3 w-3" />
-                      {projectRefs[activeConversation.request_id]}
-                    </button>
-                  )}
-                </div>
                 <div className="flex items-center gap-2">
                   {activeConversation.request_id && (
                     <AlertDialog>
