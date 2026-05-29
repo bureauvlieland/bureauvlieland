@@ -60,7 +60,6 @@ const getLineTotal = (item: FinancialItem, n: number, days: number = 1) => centr
 
 const sumBillingLines = (lines: ProgramItemBillingLine[]) =>
   lines.reduce((sum, l) => sum + Number(l.amount_incl_vat || 0), 0);
-
 export const FinancialOverviewCard = ({
   requestId,
   numberOfPeople,
@@ -78,6 +77,8 @@ export const FinancialOverviewCard = ({
   accommodationExtras = [],
   accommodationName,
   linesByItem = {},
+  excludedFees = [],
+  onToggleFee,
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
@@ -87,7 +88,12 @@ export const FinancialOverviewCard = ({
     invoices.map((i) => i.id),
   );
 
-  const programItems = items.filter(
+  const isExcluded = (key: ExcludableFeeKey) => excludedFees.includes(key);
+  const effectiveCoordinationFee = isExcluded("coordination_fee") ? 0 : getCoordinationFee(numberOfPeople);
+  const effectiveTouristTax = isExcluded("tourist_tax") ? 0 : touristTax;
+  const effectiveNatureContribution = isExcluded("nature_contribution") ? 0 : natureContribution;
+  const effectiveCentralSurcharge = isExcluded("central_surcharge") ? 0 : centralSurcharge;
+
     (item) => item.status !== "cancelled" && item.day_index !== -1
   );
   const extraCostItems = items.filter((item) => item.day_index === -1);
