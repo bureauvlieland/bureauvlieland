@@ -54,7 +54,6 @@ interface FinancialOverviewCardProps {
   onToggleFee?: (key: ExcludableFeeKey, nextExcluded: boolean) => void;
 }
 
-}
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
 const getLineTotal = (item: FinancialItem, n: number, days: number = 1) => centralLineTotal(item as any, n, days);
