@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight } from "lucide-react";
+import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight, X, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -14,6 +14,9 @@ import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 import type { ProgramItemBillingLine } from "@/types/programItemBillingLine";
 import { calculateExtraTotal, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
+import { EXCLUDABLE_FEE_LABELS, type ExcludableFeeKey } from "@/lib/excludedFees";
+import { cn } from "@/lib/utils";
+
 
 interface FinancialItem {
   id: string;
