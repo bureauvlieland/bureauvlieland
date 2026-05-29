@@ -30,7 +30,12 @@ import {
   X,
   FileText,
   Save,
+  User,
+  Building2,
+  Phone,
 } from "lucide-react";
+
+type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
 
 const AdminChat = () => {
   const {
@@ -55,7 +60,21 @@ const AdminChat = () => {
 
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const channelFiltered =
+    channelFilter === "all"
+      ? filteredConversations
+      : filteredConversations.filter((c) => c.source === channelFilter);
+
+  const handleSendWithToast = async (text: string) => {
+    try {
+      await sendMessage(text);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Versturen mislukt");
+    }
+  };
 
   // Auto-scroll
   useEffect(() => {
@@ -78,11 +97,12 @@ const AdminChat = () => {
     }
   };
 
-  const activeConversation = conversations.find(
-    (c) => c.id === activeConversationId
-  );
-
-  const handleSaveToProject = async () => {
+  const handleSend = async () => {
+    if (!message.trim()) return;
+    const text = message;
+    setMessage("");
+    await handleSendWithToast(text);
+  };
     if (!activeConversationId) return;
     setSaving(true);
     const success = await saveChatToProject(activeConversationId);
