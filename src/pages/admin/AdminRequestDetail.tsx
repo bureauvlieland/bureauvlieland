@@ -130,7 +130,8 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle } from "lucide-react";
+import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
 import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 
 const LegendPill = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -284,6 +285,7 @@ const AdminRequestDetail = () => {
   const [bureauInvoices, setBureauInvoices] = useState<BureauInvoice[]>([]);
   const [linkedAccommodation, setLinkedAccommodation] = useState<LinkedAccommodation | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -1236,6 +1238,12 @@ const AdminRequestDetail = () => {
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Chat met klant
               </Button>
+              {request.customer_phone && (
+                <Button variant="outline" onClick={() => setWhatsappOpen(true)}>
+                  <MessageCircle className="h-4 w-4 mr-2 text-emerald-600" />
+                  Stuur WhatsApp
+                </Button>
+              )}
               {/* Quote mode actions */}
               {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
                 <>
