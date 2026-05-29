@@ -1121,6 +1121,7 @@ export type Database = {
           id: string
           last_email_notified_at: string | null
           last_message_at: string | null
+          phone_number: string | null
           quote_id: string | null
           request_id: string | null
           source: string
@@ -1130,6 +1131,7 @@ export type Database = {
           updated_at: string
           visitor_email: string
           visitor_name: string
+          whatsapp_contact_id: string | null
         }
         Insert: {
           accommodation_id?: string | null
@@ -1137,6 +1139,7 @@ export type Database = {
           id?: string
           last_email_notified_at?: string | null
           last_message_at?: string | null
+          phone_number?: string | null
           quote_id?: string | null
           request_id?: string | null
           source: string
@@ -1146,6 +1149,7 @@ export type Database = {
           updated_at?: string
           visitor_email?: string
           visitor_name?: string
+          whatsapp_contact_id?: string | null
         }
         Update: {
           accommodation_id?: string | null
@@ -1153,6 +1157,7 @@ export type Database = {
           id?: string
           last_email_notified_at?: string | null
           last_message_at?: string | null
+          phone_number?: string | null
           quote_id?: string | null
           request_id?: string | null
           source?: string
@@ -1162,6 +1167,7 @@ export type Database = {
           updated_at?: string
           visitor_email?: string
           visitor_name?: string
+          whatsapp_contact_id?: string | null
         }
         Relationships: [
           {
@@ -1185,6 +1191,13 @@ export type Database = {
             referencedRelation: "program_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "chat_conversations_whatsapp_contact_id_fkey"
+            columns: ["whatsapp_contact_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_contacts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       chat_messages: {
@@ -1196,6 +1209,7 @@ export type Database = {
           read_at: string | null
           sender_name: string
           sender_type: string
+          twilio_message_sid: string | null
         }
         Insert: {
           content: string
@@ -1205,6 +1219,7 @@ export type Database = {
           read_at?: string | null
           sender_name?: string
           sender_type: string
+          twilio_message_sid?: string | null
         }
         Update: {
           content?: string
@@ -1214,6 +1229,7 @@ export type Database = {
           read_at?: string | null
           sender_name?: string
           sender_type?: string
+          twilio_message_sid?: string | null
         }
         Relationships: [
           {
@@ -3188,6 +3204,39 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          partner_id: string | null
+          phone_number: string
+          request_id: string | null
+          updated_at: string
+          whatsapp_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          phone_number: string
+          request_id?: string | null
+          updated_at?: string
+          whatsapp_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          partner_id?: string | null
+          phone_number?: string
+          request_id?: string | null
+          updated_at?: string
+          whatsapp_name?: string | null
         }
         Relationships: []
       }
