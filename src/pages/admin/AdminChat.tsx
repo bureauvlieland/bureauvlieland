@@ -30,7 +30,12 @@ import {
   X,
   FileText,
   Save,
+  User,
+  Building2,
+  Phone,
 } from "lucide-react";
+
+type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
 
 const AdminChat = () => {
   const {
@@ -55,7 +60,21 @@ const AdminChat = () => {
 
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const channelFiltered =
+    channelFilter === "all"
+      ? filteredConversations
+      : filteredConversations.filter((c) => c.source === channelFilter);
+
+  const handleSendWithToast = async (text: string) => {
+    try {
+      await sendMessage(text);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Versturen mislukt");
+    }
+  };
 
   // Auto-scroll
   useEffect(() => {
@@ -68,7 +87,7 @@ const AdminChat = () => {
     if (!message.trim()) return;
     const text = message;
     setMessage("");
-    await sendMessage(text);
+    await handleSendWithToast(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -153,15 +172,33 @@ const AdminChat = () => {
             </Tabs>
           </div>
 
+          {/* Channel filter */}
+          <div className="px-3 pt-2 pb-1">
+            <Tabs value={channelFilter} onValueChange={(v) => setChannelFilter(v as ChannelFilter)}>
+              <TabsList className="w-full h-8">
+                <TabsTrigger value="all" className="flex-1 text-[11px] px-1">Alle</TabsTrigger>
+                <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <User className="h-3 w-3" /> Klant
+                </TabsTrigger>
+                <TabsTrigger value="partner_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <Building2 className="h-3 w-3" /> Partner
+                </TabsTrigger>
+                <TabsTrigger value="whatsapp" className="flex-1 text-[11px] px-1 gap-1">
+                  <MessageCircle className="h-3 w-3 text-emerald-600" /> WhatsApp
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           {/* Conversations */}
           <div className="flex-1 overflow-y-auto">
-            {filteredConversations.length === 0 && (
+            {channelFiltered.length === 0 && (
               <div className="p-8 text-center text-muted-foreground text-sm">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 Geen gesprekken
               </div>
             )}
-            {filteredConversations.map((conv) => (
+            {channelFiltered.map((conv) => (
               <ChatConversationItem
                 key={conv.id}
                 conversation={conv}
@@ -186,18 +223,37 @@ const AdminChat = () => {
             <>
               {/* Chat header */}
               <div className="px-4 py-3 bg-white border-b flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <div>
-                    <p className="font-medium">
-                      {activeConversation.visitor_name || "Bezoeker"}
+                    <p className="font-medium flex items-center gap-2">
+                      {activeConversation.source === "whatsapp" && (
+                        <MessageCircle className="h-4 w-4 text-emerald-600" aria-label="WhatsApp" />
+                      )}
+                      {activeConversation.visitor_name || activeConversation.phone_number || "Bezoeker"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {activeConversation.visitor_email} •{" "}
-                      {activeConversation.source === "partner_portal"
-                        ? "Partnerportaal"
-                        : "Klantportaal"}
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      {activeConversation.source === "whatsapp" ? (
+                        <>
+                          <Phone className="h-3 w-3" />
+                          {activeConversation.phone_number || "WhatsApp"}
+                        </>
+                      ) : (
+                        <>
+                          {activeConversation.visitor_email} •{" "}
+                          {activeConversation.source === "partner_portal" ? "Partnerportaal" : "Klantportaal"}
+                        </>
+                      )}
                     </p>
                   </div>
+                  {activeConversation.source_partner_id && (
+                    <button
+                      onClick={() => navigate(`/admin/partners/${activeConversation.source_partner_id}`)}
+                      className="text-xs bg-secondary/40 text-foreground px-2 py-1 rounded-full flex items-center gap-1 hover:bg-secondary/60 transition-colors"
+                    >
+                      <Building2 className="h-3 w-3" />
+                      Partner
+                    </button>
+                  )}
                   {activeConversation.request_id && projectRefs[activeConversation.request_id] && (
                     <button
                       onClick={() => navigate(`/admin/aanvragen/${activeConversation.request_id}`)}

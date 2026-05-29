@@ -4,16 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ChatMessage {
   id: string;
   conversation_id: string;
-  sender_type: "visitor" | "admin";
+  sender_type: "visitor" | "admin" | "customer";
   sender_name: string;
   content: string;
   read_at: string | null;
   created_at: string;
+  twilio_message_sid?: string | null;
 }
 
 export interface ChatConversation {
   id: string;
-  source: "customer_portal" | "partner_portal";
+  source: "customer_portal" | "partner_portal" | "whatsapp";
   source_token: string | null;
   source_partner_id: string | null;
   visitor_name: string;
@@ -22,6 +23,8 @@ export interface ChatConversation {
   status: "active" | "waiting" | "closed";
   last_message_at: string;
   created_at: string;
+  phone_number?: string | null;
+  whatsapp_contact_id?: string | null;
 }
 
 interface UseChatOptions {

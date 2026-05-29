@@ -76,14 +76,15 @@ export function useAdminChat() {
         .order("created_at", { ascending: true });
       if (data) setMessages(data as unknown as ChatMessage[]);
 
-      // Mark visitor messages as read
+      // Mark inbound messages as read (visitor / customer)
       await supabase
         .from("chat_messages")
         .update({ read_at: new Date().toISOString() })
         .eq("conversation_id", activeConversationId)
-        .eq("sender_type", "visitor")
+        .in("sender_type", ["visitor", "customer"])
         .is("read_at", null);
     };
+    loadMessages();
     loadMessages();
 
     const channel = supabase
@@ -99,7 +100,7 @@ export function useAdminChat() {
           if (prev.some(m => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
-        if (newMsg.sender_type === "visitor") {
+        if (newMsg.sender_type === "visitor" || newMsg.sender_type === "customer") {
           supabase
             .from("chat_messages")
             .update({ read_at: new Date().toISOString() })
@@ -120,12 +121,13 @@ export function useAdminChat() {
       const { data } = await supabase
         .from("chat_messages")
         .select("conversation_id")
-        .eq("sender_type", "visitor")
+        .in("sender_type", ["visitor", "customer"])
         .is("read_at", null);
       const ids = new Set((data || []).map((r: { conversation_id: string }) => r.conversation_id));
       setUnreadConversationIds(ids);
       setUnreadCount(ids.size);
     };
+    fetchUnread();
     fetchUnread();
 
     const channel = supabase
@@ -173,6 +175,25 @@ export function useAdminChat() {
   const sendMessage = useCallback(async (content: string) => {
     if (!activeConversationId || !content.trim()) return;
 
+    const conv = conversations.find((c) => c.id === activeConversationId);
+
+    // WhatsApp: send via Twilio edge function
+    if (conv?.source === "whatsapp") {
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: { conversation_id: activeConversationId, content: content.trim() },
+      });
+      if (error || (data as { error?: string })?.error) {
+        console.error("whatsapp-send failed", error || data);
+        throw new Error(
+          (data as { error?: string; details?: string })?.details ||
+            (data as { error?: string })?.error ||
+            error?.message ||
+            "Versturen mislukt",
+        );
+      }
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     const senderName = session?.user.email?.split("@")[0] || "Admin";
 
@@ -192,7 +213,7 @@ export function useAdminChat() {
     supabase.functions.invoke("notify-new-chat-reply", {
       body: { conversation_id: activeConversationId },
     }).catch((err) => console.error("Failed to send chat reply notification:", err));
-  }, [activeConversationId]);
+  }, [activeConversationId, conversations]);
 
   const closeConversation = useCallback(async (id: string) => {
     await supabase
