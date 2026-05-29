@@ -194,7 +194,7 @@ export const FinancialOverviewCard = ({
     calculateVatAmount(coordinationFee + effectiveCentralSurcharge, coordVatRate),
   );
 
-  );
+
 
   // Extra costs: prefer billing lines if any, otherwise standard rate
   extraCostItems.forEach((item) => {
