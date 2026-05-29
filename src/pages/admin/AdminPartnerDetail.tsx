@@ -529,6 +529,12 @@ const AdminPartnerDetail = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {!isNew && partner && formData.phone && (
+                <Button variant="outline" onClick={() => setWhatsappOpen(true)}>
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Stuur WhatsApp
+                </Button>
+              )}
               {!isNew && partner && !partner.password_set_at && (
                 <Button variant="outline" onClick={handleInvitePartner} disabled={isInviting}>
                   {partner.auth_user_id ? (
