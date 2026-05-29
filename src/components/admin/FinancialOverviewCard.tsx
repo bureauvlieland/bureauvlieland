@@ -310,14 +310,24 @@ export const FinancialOverviewCard = ({
             })}
 
             {/* Coordination fee */}
-            {renderFeeRow({
-              label: `Coördinatiefee (${numberOfPeople} pers.)`,
-              amount: getCoordinationFee(numberOfPeople),
-              feeKey: "coordination_fee",
-              excluded: isExcluded("coordination_fee"),
-              onToggleFee,
-              formatCurrency,
-            })}
+            {effectiveCoordinationFee > 0 && (
+              <div className="flex items-center justify-between text-sm pt-1 group">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Coördinatiefee ({numberOfPeople} pers.)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveCoordinationFee)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("coordination_fee", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
 
             />
 
