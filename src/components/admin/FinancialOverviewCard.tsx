@@ -164,7 +164,8 @@ export const FinancialOverviewCard = ({
   const accommodationVatRate = 9;
 
   const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal
-    + touristTax + natureContribution + centralSurcharge + accommodationGrandTotal;
+    + effectiveTouristTax + effectiveNatureContribution + effectiveCentralSurcharge + accommodationGrandTotal;
+
 
   // Aggregate VAT per rate. For items with billing lines we sum exact excl/vat amounts (no rounding loss).
   const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
