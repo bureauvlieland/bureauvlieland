@@ -2759,6 +2759,15 @@ const AdminRequestDetail = () => {
         customerEmail={request.customer_email}
       />
 
+      <SendWhatsAppDialog
+        open={whatsappOpen}
+        onOpenChange={setWhatsappOpen}
+        defaultPhone={request.customer_phone}
+        requestId={request.id}
+        contextLabel={request.customer_name}
+      />
+
+
       <PublishChangesDialog
         open={publishDialogOpen}
         onOpenChange={setPublishDialogOpen}
