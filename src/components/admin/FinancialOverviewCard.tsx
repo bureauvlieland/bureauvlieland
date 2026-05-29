@@ -94,11 +94,13 @@ export const FinancialOverviewCard = ({
   const effectiveNatureContribution = isExcluded("nature_contribution") ? 0 : natureContribution;
   const effectiveCentralSurcharge = isExcluded("central_surcharge") ? 0 : centralSurcharge;
 
+  const programItems = items.filter(
     (item) => item.status !== "cancelled" && item.day_index !== -1
   );
   const extraCostItems = items.filter((item) => item.day_index === -1);
 
-  const coordinationFee = getCoordinationFee(numberOfPeople);
+  const coordinationFee = effectiveCoordinationFee;
+
   const coordVatRate = getVatRate("standard");
   const accommodationExtrasTotal = accommodationExtras.reduce(
     (sum, extra) => sum + calculateExtraTotal(extra),
