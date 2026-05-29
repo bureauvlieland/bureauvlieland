@@ -187,12 +187,13 @@ export const FinancialOverviewCard = ({
       addToGroup(vatRate, calculateExclVat(lineTotal, vatRate), calculateVatAmount(lineTotal, vatRate));
     }
   });
-
-  // Coordination fee + central surcharge → standard VAT
+  // Coordination fee + central surcharge → standard VAT (beide kunnen uitgesloten zijn)
   addToGroup(
     coordVatRate,
-    calculateExclVat(coordinationFee + centralSurcharge, coordVatRate),
-    calculateVatAmount(coordinationFee + centralSurcharge, coordVatRate),
+    calculateExclVat(coordinationFee + effectiveCentralSurcharge, coordVatRate),
+    calculateVatAmount(coordinationFee + effectiveCentralSurcharge, coordVatRate),
+  );
+
   );
 
   // Extra costs: prefer billing lines if any, otherwise standard rate
