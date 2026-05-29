@@ -2542,84 +2542,96 @@ const AdminRequestDetail = () => {
                 );
               })()}
 
-              {/* Overige kosten section */}
-              {items.filter(item => item.day_index === -1).length > 0 && (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                    <div>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Euro className="h-5 w-5" />
-                        Overige kosten
-                      </CardTitle>
-                      <CardDescription>Losse facturabele kosten buiten het programma</CardDescription>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => setAddCostOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Kosten toevoegen
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Omschrijving</TableHead>
-                          <TableHead>Toelichting</TableHead>
-                          <TableHead>Bedrag</TableHead>
-                          <TableHead className="w-[60px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.filter(item => item.day_index === -1).map((item) => (
-                          <TableRow
-                            key={item.id}
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => setEditingCost(item)}
-                          >
-                            <TableCell className="font-medium">{item.block_name}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {item.admin_price_notes || "-"}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              €{(item.admin_price_override ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => setEditingCost(item)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={async () => {
-                                  const { data, error } = await supabase.functions.invoke(
-                                    "notify-partner-item-deletion",
-                                    { body: { request_id: request!.id, item_ids: [item.id], origin: window.location.origin } }
-                                  );
-                                  if (error || (data as any)?.error) {
-                                    toast.error("Fout bij verwijderen");
-                                  } else {
-                                    toast.success("Kosten verwijderd");
-                                    fetchRequestData();
-                                  }
-                                }}
+              {/* Overige kosten section — altijd zichtbaar zodat losse kosten ook op een 'leeg' project toegevoegd kunnen worden */}
+              {(() => {
+                const extraCosts = items.filter((item) => item.day_index === -1);
+                return (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
+                      <div>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Euro className="h-4 w-4" />
+                          Overige kosten
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                          Losse facturabele kosten buiten het programma
+                        </CardDescription>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setAddCostOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Kosten toevoegen
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {extraCosts.length === 0 ? (
+                        <div className="px-6 py-6 text-center text-sm text-muted-foreground">
+                          Nog geen losse kosten geregistreerd.
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Omschrijving</TableHead>
+                              <TableHead>Toelichting</TableHead>
+                              <TableHead>Bedrag</TableHead>
+                              <TableHead className="w-[60px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {extraCosts.map((item) => (
+                              <TableRow
+                                key={item.id}
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => setEditingCost(item)}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
+                                <TableCell className="font-medium">{item.block_name}</TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {item.admin_price_notes || "-"}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  €{(item.admin_price_override ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => setEditingCost(item)}
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={async () => {
+                                        const { data, error } = await supabase.functions.invoke(
+                                          "notify-partner-item-deletion",
+                                          { body: { request_id: request!.id, item_ids: [item.id], origin: window.location.origin } }
+                                        );
+                                        if (error || (data as any)?.error) {
+                                          toast.error("Fout bij verwijderen");
+                                        } else {
+                                          toast.success("Kosten verwijderd");
+                                          fetchRequestData();
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
 
               <div className="grid md:grid-cols-3 gap-6">
                 <Card>

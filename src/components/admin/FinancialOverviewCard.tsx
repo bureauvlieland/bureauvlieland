@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight } from "lucide-react";
+import { Euro, Plus, CheckCircle2, Clock, FileText, Mail, ArrowRight, X, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -14,6 +14,9 @@ import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 import type { ProgramItemBillingLine } from "@/types/programItemBillingLine";
 import { calculateExtraTotal, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
+import { EXCLUDABLE_FEE_LABELS, type ExcludableFeeKey } from "@/lib/excludedFees";
+import { cn } from "@/lib/utils";
+
 
 interface FinancialItem {
   id: string;
@@ -28,7 +31,6 @@ interface FinancialItem {
   price_type?: string | null;
   override_people?: number | null;
 }
-
 interface FinancialOverviewCardProps {
   requestId: string;
   numberOfPeople: number;
@@ -46,14 +48,18 @@ interface FinancialOverviewCardProps {
   accommodationExtras?: AccommodationQuoteExtra[];
   accommodationName?: string;
   linesByItem?: Record<string, ProgramItemBillingLine[]>;
+  /** Per-project uitgesloten automatische kostenposten. */
+  excludedFees?: string[];
+  /** Callback wanneer admin een kostenpost in-/uitsluit van de factuur. */
+  onToggleFee?: (key: ExcludableFeeKey, nextExcluded: boolean) => void;
 }
+
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
 const getLineTotal = (item: FinancialItem, n: number, days: number = 1) => centralLineTotal(item as any, n, days);
 
 const sumBillingLines = (lines: ProgramItemBillingLine[]) =>
   lines.reduce((sum, l) => sum + Number(l.amount_incl_vat || 0), 0);
-
 export const FinancialOverviewCard = ({
   requestId,
   numberOfPeople,
@@ -71,6 +77,8 @@ export const FinancialOverviewCard = ({
   accommodationExtras = [],
   accommodationName,
   linesByItem = {},
+  excludedFees = [],
+  onToggleFee,
 }: FinancialOverviewCardProps) => {
   const { getCoordinationFee, getVatRate } = useAppSettings();
   const navigate = useNavigate();
@@ -80,12 +88,19 @@ export const FinancialOverviewCard = ({
     invoices.map((i) => i.id),
   );
 
+  const isExcluded = (key: ExcludableFeeKey) => excludedFees.includes(key);
+  const effectiveCoordinationFee = isExcluded("coordination_fee") ? 0 : getCoordinationFee(numberOfPeople);
+  const effectiveTouristTax = isExcluded("tourist_tax") ? 0 : touristTax;
+  const effectiveNatureContribution = isExcluded("nature_contribution") ? 0 : natureContribution;
+  const effectiveCentralSurcharge = isExcluded("central_surcharge") ? 0 : centralSurcharge;
+
   const programItems = items.filter(
     (item) => item.status !== "cancelled" && item.day_index !== -1
   );
   const extraCostItems = items.filter((item) => item.day_index === -1);
 
-  const coordinationFee = getCoordinationFee(numberOfPeople);
+  const coordinationFee = effectiveCoordinationFee;
+
   const coordVatRate = getVatRate("standard");
   const accommodationExtrasTotal = accommodationExtras.reduce(
     (sum, extra) => sum + calculateExtraTotal(extra),
@@ -149,7 +164,8 @@ export const FinancialOverviewCard = ({
   const accommodationVatRate = 9;
 
   const grandTotalInclVat = programTotal + coordinationFee + extraCostsTotal
-    + touristTax + natureContribution + centralSurcharge + accommodationGrandTotal;
+    + effectiveTouristTax + effectiveNatureContribution + effectiveCentralSurcharge + accommodationGrandTotal;
+
 
   // Aggregate VAT per rate. For items with billing lines we sum exact excl/vat amounts (no rounding loss).
   const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
@@ -171,13 +187,14 @@ export const FinancialOverviewCard = ({
       addToGroup(vatRate, calculateExclVat(lineTotal, vatRate), calculateVatAmount(lineTotal, vatRate));
     }
   });
-
-  // Coordination fee + central surcharge → standard VAT
+  // Coordination fee + central surcharge → standard VAT (beide kunnen uitgesloten zijn)
   addToGroup(
     coordVatRate,
-    calculateExclVat(coordinationFee + centralSurcharge, coordVatRate),
-    calculateVatAmount(coordinationFee + centralSurcharge, coordVatRate),
+    calculateExclVat(coordinationFee + effectiveCentralSurcharge, coordVatRate),
+    calculateVatAmount(coordinationFee + effectiveCentralSurcharge, coordVatRate),
   );
+
+
 
   // Extra costs: prefer billing lines if any, otherwise standard rate
   extraCostItems.forEach((item) => {
@@ -211,9 +228,10 @@ export const FinancialOverviewCard = ({
     );
   });
   // Tourist tax & nature contribution = 0% VAT
-  if (touristTax + natureContribution > 0) {
-    addToGroup(0, touristTax + natureContribution, 0);
+  if (effectiveTouristTax + effectiveNatureContribution > 0) {
+    addToGroup(0, effectiveTouristTax + effectiveNatureContribution, 0);
   }
+
 
   const sortedVatGroups = Object.entries(vatGroups)
     .map(([rate, v]) => ({ rate: Number(rate), ...v }))
@@ -292,13 +310,23 @@ export const FinancialOverviewCard = ({
             })}
 
             {/* Coordination fee */}
-            <div className="flex items-center justify-between text-sm pt-1">
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>Coördinatiefee ({numberOfPeople} pers.)</span>
+            {effectiveCoordinationFee > 0 && (
+              <div className="flex items-center justify-between text-sm pt-1 group">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Coördinatiefee ({numberOfPeople} pers.)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveCoordinationFee)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("coordination_fee", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <span className="font-medium tabular-nums">{formatCurrency(coordinationFee)}</span>
-            </div>
+            )}
 
             {/* Extra costs inline */}
             {extraCostItems.map((item) => {
@@ -363,37 +391,85 @@ export const FinancialOverviewCard = ({
             )}
 
             {/* Tourist tax */}
-            {touristTax > 0 && (
-              <div className="flex items-center justify-between text-sm">
+            {effectiveTouristTax > 0 && (
+              <div className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-2">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
                 </div>
-                <span className="font-medium tabular-nums">{formatCurrency(touristTax)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveTouristTax)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("tourist_tax", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Nature contribution */}
-            {natureContribution > 0 && (
-              <div className="flex items-center justify-between text-sm">
+            {effectiveNatureContribution > 0 && (
+              <div className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-2">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Natuurbijdrage ({numberOfPeople} pers.)</span>
                 </div>
-                <span className="font-medium tabular-nums">{formatCurrency(natureContribution)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveNatureContribution)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("nature_contribution", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Central surcharge */}
-            {centralSurcharge > 0 && (
-              <div className="flex items-center justify-between text-sm">
+            {effectiveCentralSurcharge > 0 && (
+              <div className="flex items-center justify-between text-sm group">
                 <div className="flex items-center gap-2">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>Opslag centrale facturatie ({numberOfPeople} pers.)</span>
                 </div>
-                <span className="font-medium tabular-nums">{formatCurrency(centralSurcharge)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium tabular-nums">{formatCurrency(effectiveCentralSurcharge)}</span>
+                  {onToggleFee && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                      title="Verwijder van factuur" onClick={() => onToggleFee("central_surcharge", true)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
+
+            {/* Uitgesloten kostenposten — terugzetten */}
+            {onToggleFee && excludedFees.length > 0 && (
+              <div className="pt-2 mt-2 border-t border-dashed">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Uitgesloten van factuur</p>
+                <div className="flex flex-wrap gap-1">
+                  {(excludedFees as ExcludableFeeKey[]).map((key) => (
+                    <Button
+                      key={key}
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs gap-1 text-muted-foreground"
+                      onClick={() => onToggleFee(key, false)}
+                      title="Terugzetten op factuur"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {EXCLUDABLE_FEE_LABELS[key] ?? key}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           </div>
 
           {/* Totals */}

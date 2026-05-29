@@ -1,63 +1,61 @@
-## Doel
+## Wat ik wil doen
 
-Op de Werkbank (`/admin/werkbank`) moeten openstaande, automatisch aangemaakte acties (`admin_todos` met `auto_type`) zichzelf actualiseren — niet alleen voor facturatie/betalingen, maar voor álle auto-types. Dit gebeurt:
+Drie aanpassingen op de projectdetailpagina (`AdminRequestDetail.tsx`) — alleen frontend/presentatie, plus per-project overrides voor fees.
 
-1. **Automatisch** bij het openen van de Werkbank en daarna iedere 5 minuten zolang de pagina open is.
-2. **Handmatig** via een nieuwe knop "Actualiseer" in de header naast het Claudia-icoon.
+### 1. "Overige kosten" altijd zichtbaar
 
-## Aanpak
+**Probleem:** In `AdminRequestDetail.tsx` regel 2546 is de hele kaart geconditioneerd op `items.filter(item => item.day_index === -1).length > 0`. Op een project zonder losse kosten zie je dus ook de "+ Kosten toevoegen" knop niet — daarom lijkt het alsof de functionaliteit ontbreekt.
 
-### 1. Edge function `reconcile-admin-todos`
+**Fix:** conditie verwijderen. Bij 0 items toont de kaart alleen de header + knop + lege‑staat regel ("Nog geen losse kosten geregistreerd").
 
-Eén nieuwe functie die per openstaande todo (`status in ('todo','in_progress')`) controleert of het anker nog actueel is. Indien resolved → `status='done'`, `completed_at=now()`. Daarna roept dezelfde functie `check-pending-items` aan voor het aanmaken/bijwerken van nieuwe todos.
+### 2. Kostenposten van de factuur kunnen verwijderen
 
-Resolutieregels per `auto_type`:
+Op het Financieel Overzicht naast elke automatische kostenpost een klein kruisje/oog‑icoontje (per project):
 
-| auto_type | Sluit als… |
-|---|---|
-| `post_execution_invoice_check` | `bureau_invoices` voor `related_request_id` bestaat |
-| `post_execution_feedback` | item heeft `feedback_collected_at` of project `completion_status='fully_invoiced'` |
-| `purchase_invoice_pending`, `purchase_invoice_inbox` | bijbehorende `partner_purchase_invoices.status in ('paid','rejected','archived')` of inbox-item afgehandeld |
-| `commission_pending` | gekoppelde `payment_batches.status='paid'` |
-| `invoicing_ready` | request `completion_status='fully_invoiced'` |
-| `quote_pending_partner` | quote-status ≠ `pending` |
-| `quote_pending_customer` | request `customer_approved_at` is gezet of quote-status afgerond |
-| `quote_expiring_soon`, `quote_expired_partner` | quote-status afgerond/afgewezen |
-| `request_no_response` | partner heeft gereageerd (item.status ≠ pending) |
-| `send_items_to_partners` | hergebruik bestaande `ensureSendItemsTodo`-logica (geen items meer ready) |
-| `all_partners_responded` | reeds afgehandelde aanvraag |
-| `customer_status_update_due`, `customer_status_email_due` | request `customer_status_last_sent_at` recent (< drempel) |
-| `customer_inputs_missing` | request heeft vereiste velden (people/dates) |
-| `customer_date_change_partner_notify` | alle partners genotificeerd of items niet meer pending |
-| `customer_cancellation` | project `status='cancelled'` afgehandeld of todo > 7 dagen oud |
-| `book_ferry_tickets` | ticket-item heeft `booking_reference` |
-| `new_request_received`, `new_program_request`, `new_accommodation_request` | request niet meer `status='new'` (in behandeling) |
-| `partner_status_update`, `partner_reminder` | gekoppeld item/quote afgerond |
-| `inbound_email` | bijbehorende e-mail `handled_at` is gezet |
-| `stale_pending_change` | item heeft geen pending wijziging meer |
+- Toeristenbelasting
+- Natuurbijdrage
+- Opslag centrale facturatie
+- Coördinatiefee
 
-Algemeen: als `related_request_id` verwijst naar een verwijderd of geannuleerd project → sluiten. Idempotent en service-role.
+Klik = uitsluiten van factuur (regel verdwijnt visueel uit kostenoverzicht én uit totalen). Opnieuw aan = terugzetten op de standaard uit `app_settings`.
 
-### 2. UI op `AdminWerkbank.tsx`
+Opslag op `program_requests` als één jsonb kolom `excluded_fees` (array van keys: `tourist_tax | nature_contribution | central_surcharge | coordination_fee`). `calculateUnifiedInvoiceTotals` / `FinancialOverviewCard` houden hier rekening mee door de betreffende fee op 0 te zetten.
 
-- "Actualiseer"-knop (icon `RefreshCw`) in de header, links van Claudia.
-- On click: invoke `reconcile-admin-todos` → toast met `{closed, created, updated}` → invalidate queries `["werkbank-projects"]`, `["admin-todos"]`, `["admin-todo-count"]`, `["claudia-recommendations-count"]`, `["inbox"]`.
-- `useEffect` met `setInterval(5 * 60_000)` die stilletjes hetzelfde aanroept (zonder toast).
-- Eerste call ook bij mount (achter een `useRef`-guard zodat dev-strict-mode niet dubbelt).
+### 3. Compactere financiële weergave
 
-### 3. Hook
+Onder de Communicatie‑kaart staan nu 4 losse blokken onder elkaar:
+1. Prijscontrole (oranje waarschuwing)
+2. Facturatiemodel + Inkoopfacturen Partners (grid 1/3 + 2/3)
+3. Voltooiingsstatus + Financieel Overzicht (grid 1/2 + 1/2)
+4. Marge Overzicht (volle breedte)
 
-`src/hooks/useReconcileTodos.ts` — wrapper rond `supabase.functions.invoke('reconcile-admin-todos')` met `useMutation`, terugkerende stats en automatische invalidations.
+Herindeling naar **één compact "Facturatie" blok**:
+
+```text
+┌─ Facturatie ─────────────────────────────────────────────┐
+│ [Status pill: Klaar voor facturatie]   [Factuur maken ▾] │
+│ ────────────────────────────────────────────────────────  │
+│  Links: Voltooiingsstatus (compacte checklist)            │
+│  Rechts: Financieel Overzicht (met fee‑toggles)           │
+│ ────────────────────────────────────────────────────────  │
+│  Tabs: [Inkoopfacturen] [Overige kosten] [Marge]          │
+└──────────────────────────────────────────────────────────┘
+```
+
+- Facturatiemodel zin verdwijnt (info verhuist naar tooltip op de titel).
+- Prijscontrole‑waarschuwing wordt een inline badge boven het Financieel Overzicht (alleen tonen bij verschil).
+- "Overige kosten", "Inkoopfacturen" en "Marge" worden tabs i.p.v. drie aparte kaarten → scheelt ~60% verticale ruimte.
+
+## Technisch
+
+**Migratie:** `ALTER TABLE program_requests ADD COLUMN excluded_fees text[] DEFAULT '{}'`.
+
+**Files:**
+- `src/pages/admin/AdminRequestDetail.tsx` — conditie weghalen (regel 2546), financieel blok herstructureren (regel 2624‑2678).
+- `src/components/admin/FinancialOverviewCard.tsx` — toggle‑iconen + nieuwe prop `excludedFees`; bij excluded de regel doorstrepen en uit subtotaal halen.
+- `src/lib/invoiceTotals.ts` / `adminInvoicingTotals.ts` — `excluded_fees` doorgeven en betreffende fees op 0 zetten.
+- Nieuwe component `FacturatieBlok.tsx` met interne Tabs (Inkoopfacturen / Overige kosten / Marge).
 
 ## Buiten scope
-
-- Geen heropenen van eerder afgeronde todos.
-- Geen aanpassingen aan `check-pending-items` zelf (alleen hergebruiken vanuit de nieuwe functie).
-- Geen wijziging aan de bestaande cron-schedules.
-
-## Technische details
-
-- Nieuwe bestanden: `supabase/functions/reconcile-admin-todos/index.ts`, `src/hooks/useReconcileTodos.ts`.
-- Edit: `src/pages/admin/AdminWerkbank.tsx` (knop + interval).
-- Edge function uses service role en logt totals in `console.log` voor edge function logs.
-- Run-tijd target: < 3 s bij ≤ 200 openstaande todos (batch reads per type).
+- Geen wijziging aan PDF‑rendering (gebruikt dezelfde totals‑helper → werkt automatisch).
+- Geen wijziging aan klantportaal.
