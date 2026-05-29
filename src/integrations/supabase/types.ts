@@ -2702,6 +2702,7 @@ export type Database = {
           customer_phone: string
           customer_token: string
           dietary_notes: string | null
+          excluded_fees: string[]
           expires_at: string
           general_notes: string | null
           guest_details_updated_at: string | null
@@ -2755,6 +2756,7 @@ export type Database = {
           customer_phone: string
           customer_token: string
           dietary_notes?: string | null
+          excluded_fees?: string[]
           expires_at?: string
           general_notes?: string | null
           guest_details_updated_at?: string | null
@@ -2808,6 +2810,7 @@ export type Database = {
           customer_phone?: string
           customer_token?: string
           dietary_notes?: string | null
+          excluded_fees?: string[]
           expires_at?: string
           general_notes?: string | null
           guest_details_updated_at?: string | null
