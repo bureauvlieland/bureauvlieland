@@ -226,10 +226,11 @@ export const FinancialOverviewCard = ({
       calculateExclVat(extraTotal, extraVatRate),
       calculateVatAmount(extraTotal, extraVatRate),
     );
-  });
   // Tourist tax & nature contribution = 0% VAT
-  if (touristTax + natureContribution > 0) {
-    addToGroup(0, touristTax + natureContribution, 0);
+  if (effectiveTouristTax + effectiveNatureContribution > 0) {
+    addToGroup(0, effectiveTouristTax + effectiveNatureContribution, 0);
+  }
+
   }
 
   const sortedVatGroups = Object.entries(vatGroups)
