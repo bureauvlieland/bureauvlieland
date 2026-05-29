@@ -470,7 +470,7 @@ export const FinancialOverviewCard = ({
             )}
           </div>
 
-          </div>
+
 
           {/* Totals */}
           <Separator className="my-3" />
