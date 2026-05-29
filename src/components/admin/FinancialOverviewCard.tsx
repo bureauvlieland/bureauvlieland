@@ -31,7 +31,6 @@ interface FinancialItem {
   price_type?: string | null;
   override_people?: number | null;
 }
-
 interface FinancialOverviewCardProps {
   requestId: string;
   numberOfPeople: number;
@@ -49,6 +48,12 @@ interface FinancialOverviewCardProps {
   accommodationExtras?: AccommodationQuoteExtra[];
   accommodationName?: string;
   linesByItem?: Record<string, ProgramItemBillingLine[]>;
+  /** Per-project uitgesloten automatische kostenposten. */
+  excludedFees?: string[];
+  /** Callback wanneer admin een kostenpost in-/uitsluit van de factuur. */
+  onToggleFee?: (key: ExcludableFeeKey, nextExcluded: boolean) => void;
+}
+
 }
 
 // Wrappers to avoid type incompatibility with the full ProgramRequestItem
