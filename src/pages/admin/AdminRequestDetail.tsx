@@ -546,20 +546,21 @@ const AdminRequestDetail = () => {
 
     // ─── Phase B: Quote sent, waiting on customer ─────────────────────
     else if (phase === "B_waiting_customer") {
-      subject = `Uw offerte staat klaar — graag uw akkoord${refShort}`;
-      body += `Uw offerte staat klaar in het klantportaal. We wachten nu op uw akkoord voordat we de onderdelen definitief bij onze partners kunnen vastleggen.\n\n`;
+      subject = `Uw programmavoorstel staat klaar in het klantportaal${refShort}`;
+      body += `Uw programmavoorstel staat voor u klaar in het klantportaal. U kunt het daar rustig doornemen en — wanneer het naar wens is — uw akkoord geven. Dit voorstel is nog vrijblijvend; pas na ondertekening van de algemene voorwaarden wordt uw boeking definitief.\n\n`;
       body += `📋 Programma: ${dateStr} | ${request.number_of_people} personen\n\n`;
 
-      const actions = buildActionItems();
-      if (actions.length > 0) {
-        body += `── Wat we van u nodig hebben ──\n`;
-        for (const a of actions) body += `📌 ${a}\n`;
-        body += `\n`;
-      }
+      body += `── In het klantportaal kunt u ──\n`;
+      body += `📌 Het volledige programma met indicatieve prijzen bekijken\n`;
+      body += `📌 Per onderdeel of in één keer akkoord geven\n`;
+      const extraActions = buildActionItems().filter(
+        (a) => !a.toLowerCase().includes("bekijk de offerte"),
+      );
+      for (const a of extraActions) body += `📌 ${a}\n`;
+      body += `\n`;
 
-      body += `👉 Bekijk uw offerte en geef akkoord:\n${portalUrl}\n\n`;
-      body += `Zodra wij uw akkoord hebben ontvangen, benaderen wij direct de partners om de onderdelen vast te leggen. U ontvangt dan automatisch updates per onderdeel.\n\n`;
-      body += `Heeft u vragen over de offerte? Neem gerust contact met ons op.\n`;
+      body += `👉 Open uw klantportaal:\n${portalUrl}\n\n`;
+      body += `Zodra u akkoord geeft, vragen wij voor u beschikbaarheid op bij de aanbieders en houden wij u per onderdeel op de hoogte. Heeft u vragen of wensen voor aanpassing? Laat het ons gerust weten — we denken graag mee.\n`;
     }
 
     // ─── Phase C: Partners contacted ──────────────────────────────────
