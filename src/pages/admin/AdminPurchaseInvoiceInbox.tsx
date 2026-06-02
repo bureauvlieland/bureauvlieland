@@ -24,6 +24,7 @@ import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
+import { CollectiveInvoiceSheet } from "@/components/admin/purchase-invoices/CollectiveInvoiceSheet";
 import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
 export default function AdminPurchaseInvoiceInbox() {
@@ -31,6 +32,7 @@ export default function AdminPurchaseInvoiceInbox() {
   const [tab, setTab] = useState<InboxStatus | "all">("new");
   const { items, isLoading, discard, rescan } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
+  const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
 
   const handleDownload = async (path: string) => {
     const { data, error } = await supabase.storage
