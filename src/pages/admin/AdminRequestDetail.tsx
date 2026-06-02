@@ -1348,7 +1348,7 @@ const AdminRequestDetail = () => {
                         </Tooltip>
                       </TooltipProvider>
                     )}
-                    {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
+                    {isQuoteMode && ["concept", "in_afstemming"].includes(request.quote_status ?? "concept") && (
                       <AdminSendQuoteDialog
                         requestId={request.id}
                         customerName={request.customer_name}
@@ -1361,6 +1361,7 @@ const AdminRequestDetail = () => {
                         onSuccess={fetchRequestData}
                       />
                     )}
+
                     <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
                       <MessageSquare className="h-4 w-4 mr-2" /> Chat
                     </Button>
