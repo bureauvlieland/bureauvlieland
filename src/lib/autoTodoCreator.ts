@@ -327,4 +327,9 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     color: "text-purple-700",
     bgColor: "bg-purple-100",
   },
+  customer_aftersales: {
+    label: "Aftersales / review",
+    color: "text-pink-700",
+    bgColor: "bg-pink-100",
+  },
 };
