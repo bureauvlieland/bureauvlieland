@@ -20,7 +20,12 @@ const json = (body: unknown, status = 200) =>
 function normalizePhone(raw: string): string {
   const stripped = raw.replace(/^whatsapp:/i, "").trim();
   if (stripped.startsWith("+")) return stripped;
-  return `+${stripped.replace(/\D/g, "")}`;
+  const digits = stripped.replace(/\D/g, "");
+  // Dutch local format: 06… / 0… -> +31…
+  if (digits.startsWith("00")) return `+${digits.slice(2)}`;
+  if (digits.startsWith("0")) return `+31${digits.slice(1)}`;
+  if (digits.startsWith("31")) return `+${digits}`;
+  return `+${digits}`;
 }
 
 Deno.serve(async (req) => {
