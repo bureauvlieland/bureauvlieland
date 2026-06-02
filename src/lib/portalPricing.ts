@@ -275,3 +275,31 @@ export function calculateDayTotal(
     .filter((i) => i.status !== "cancelled" && (i.quoted_price != null || i.admin_price_override != null))
     .reduce((sum, item) => sum + getItemEffectivePrice(item, numberOfPeople, numberOfDays), 0);
 }
+
+/**
+ * Resultaat van een aantal-mismatch tussen `quoted_price` (door partner bevestigd totaal)
+ * en de afgeleide p.p.-prijs × huidige `effectivePeople`.
+ *
+ * Use case: partner bevestigde €32 p.p. × 14p = €448; klant verlaagt naar 13p.
+ * `quoted_price` (448) past niet meer bij €32 × 13 = €416. De **p.p.-prijs blijft de afspraak**;
+ * het totaal moet meebewegen en de partner krijgt een nette notificatie.
+ *
+ * Geeft `null` als er geen actie nodig is.
+ */
+export function getHeadcountMismatch(
+  item: PricingItem,
+  programPeople: number,
+  numberOfDays: number = 1,
+): { unitPrice: number; oldTotal: number; newTotal: number; peopleNow: number } | null {
+  if (!isPerPersonItem(item)) return null;
+  if (item.quoted_price == null) return null;
+  if (item.admin_price_override == null) return null;
+  const peopleNow = getEffectivePeople(item, programPeople);
+  if (peopleNow < 1) return null;
+  const dayMultiplier = isPerDayItem(item) ? Math.max(numberOfDays, 1) : 1;
+  const unitPrice = item.admin_price_override;
+  const newTotal = unitPrice * peopleNow * dayMultiplier;
+  const oldTotal = item.quoted_price;
+  if (Math.abs(newTotal - oldTotal) <= 0.01) return null;
+  return { unitPrice, oldTotal, newTotal, peopleNow };
+}
