@@ -1724,12 +1724,14 @@ const AdminRequestDetail = () => {
             selectedDates={request.selected_dates as string[]}
           />
 
-          <Tabs defaultValue="activiteiten" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList>
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
               <TabsTrigger value="financien">Financiën</TabsTrigger>
+              <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
               <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
             </TabsList>
+
 
             {/* Tab: Activiteiten */}
             <TabsContent value="activiteiten">
