@@ -24,6 +24,7 @@ import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
+import { CollectiveInvoiceSheet } from "@/components/admin/purchase-invoices/CollectiveInvoiceSheet";
 import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
 export default function AdminPurchaseInvoiceInbox() {
@@ -31,6 +32,7 @@ export default function AdminPurchaseInvoiceInbox() {
   const [tab, setTab] = useState<InboxStatus | "all">("new");
   const { items, isLoading, discard, rescan } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
+  const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
 
   const handleDownload = async (path: string) => {
     const { data, error } = await supabase.storage
@@ -198,8 +200,25 @@ export default function AdminPurchaseInvoiceInbox() {
                     )}
                     {item.status === "new" && (
                       <>
+                        {isLikelyCollective(item) && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-amber-600 hover:bg-amber-700"
+                            onClick={() =>
+                              setCollectiveItem({
+                                item,
+                                partnerId: guessPartnerId(item) || "rederij",
+                              })
+                            }
+                            disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" /> Verzamelfactuur
+                          </Button>
+                        )}
                         <Button
                           size="sm"
+                          variant={isLikelyCollective(item) ? "outline" : "default"}
                           onClick={() => setProcessingItem(item)}
                           disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
                         >
@@ -236,6 +255,25 @@ export default function AdminPurchaseInvoiceInbox() {
         onClose={() => setProcessingItem(null)}
         inboxItem={processingItem || undefined}
       />
+      <CollectiveInvoiceSheet
+        open={!!collectiveItem}
+        onClose={() => setCollectiveItem(null)}
+        inboxItem={collectiveItem?.item || null}
+        partnerId={collectiveItem?.partnerId || "rederij"}
+      />
     </AdminLayout>
   );
+}
+
+function isLikelyCollective(item: PurchaseInvoiceInboxItem): boolean {
+  const supplier = (item.scan_result?.supplier_name || "").toLowerCase();
+  const from = `${item.from_email || ""} ${item.from_name || ""}`.toLowerCase();
+  const text = `${supplier} ${from} ${item.subject || ""}`.toLowerCase();
+  return /doeksen|rederij/.test(text);
+}
+
+function guessPartnerId(item: PurchaseInvoiceInboxItem): string | null {
+  const text = `${item.scan_result?.supplier_name || ""} ${item.from_email || ""}`.toLowerCase();
+  if (/doeksen|rederij/.test(text)) return "rederij";
+  return null;
 }

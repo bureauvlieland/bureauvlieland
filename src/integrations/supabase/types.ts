@@ -1838,6 +1838,81 @@ export type Database = {
           },
         ]
       }
+      partner_purchase_invoice_ticket_matches: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          booking_reference: string
+          created_at: string
+          customer_label: string | null
+          departure_date: string | null
+          id: string
+          invoice_id: string
+          item_id: string | null
+          match_confidence: number | null
+          match_status: string
+          notes: string | null
+          route: string | null
+          supplier_commission: number
+          tourist_tax: number
+          updated_at: string
+          vat_amount: number
+        }
+        Insert: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          booking_reference: string
+          created_at?: string
+          customer_label?: string | null
+          departure_date?: string | null
+          id?: string
+          invoice_id: string
+          item_id?: string | null
+          match_confidence?: number | null
+          match_status?: string
+          notes?: string | null
+          route?: string | null
+          supplier_commission?: number
+          tourist_tax?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          booking_reference?: string
+          created_at?: string
+          customer_label?: string | null
+          departure_date?: string | null
+          id?: string
+          invoice_id?: string
+          item_id?: string | null
+          match_confidence?: number | null
+          match_status?: string
+          notes?: string | null
+          route?: string | null
+          supplier_commission?: number
+          tourist_tax?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_purchase_invoice_ticket_matches_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_purchase_invoice_ticket_matches_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_purchase_invoices: {
         Row: {
           amount_excl_vat: number
@@ -1852,13 +1927,16 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          is_collective: boolean
           item_id: string | null
           paid_at: string | null
           partner_id: string
           payment_batch_id: string | null
           registered_by: string
-          request_id: string
+          request_id: string | null
           status: string
+          supplier_commission_excl_vat: number | null
+          supplier_commission_vat: number | null
           updated_at: string
           vat_amount: number
           vat_rate: number
@@ -1876,13 +1954,16 @@ export type Database = {
           id?: string
           invoice_date: string
           invoice_number: string
+          is_collective?: boolean
           item_id?: string | null
           paid_at?: string | null
           partner_id: string
           payment_batch_id?: string | null
           registered_by?: string
-          request_id: string
+          request_id?: string | null
           status?: string
+          supplier_commission_excl_vat?: number | null
+          supplier_commission_vat?: number | null
           updated_at?: string
           vat_amount: number
           vat_rate?: number
@@ -1900,13 +1981,16 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          is_collective?: boolean
           item_id?: string | null
           paid_at?: string | null
           partner_id?: string
           payment_batch_id?: string | null
           registered_by?: string
-          request_id?: string
+          request_id?: string | null
           status?: string
+          supplier_commission_excl_vat?: number | null
+          supplier_commission_vat?: number | null
           updated_at?: string
           vat_amount?: number
           vat_rate?: number
@@ -2460,6 +2544,7 @@ export type Database = {
           override_people: number | null
           partner_instructions: string | null
           partner_price_change_acknowledged_at: string | null
+          partner_purchase_price: number | null
           pending_added: boolean
           pending_admin_price_notes: string | null
           pending_admin_price_override: number | null
@@ -2493,6 +2578,8 @@ export type Database = {
           provider_email: string | null
           provider_id: string
           provider_name: string
+          purchase_invoice_id: string | null
+          purchase_invoice_matched_at: string | null
           quoted_at: string | null
           quoted_notes: string | null
           quoted_price: number | null
@@ -2549,6 +2636,7 @@ export type Database = {
           override_people?: number | null
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
+          partner_purchase_price?: number | null
           pending_added?: boolean
           pending_admin_price_notes?: string | null
           pending_admin_price_override?: number | null
@@ -2582,6 +2670,8 @@ export type Database = {
           provider_email?: string | null
           provider_id: string
           provider_name: string
+          purchase_invoice_id?: string | null
+          purchase_invoice_matched_at?: string | null
           quoted_at?: string | null
           quoted_notes?: string | null
           quoted_price?: number | null
@@ -2638,6 +2728,7 @@ export type Database = {
           override_people?: number | null
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
+          partner_purchase_price?: number | null
           pending_added?: boolean
           pending_admin_price_notes?: string | null
           pending_admin_price_override?: number | null
@@ -2671,6 +2762,8 @@ export type Database = {
           provider_email?: string | null
           provider_id?: string
           provider_name?: string
+          purchase_invoice_id?: string | null
+          purchase_invoice_matched_at?: string | null
           quoted_at?: string | null
           quoted_notes?: string | null
           quoted_price?: number | null
@@ -2685,6 +2778,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "program_request_items_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "program_request_items_request_id_fkey"
             columns: ["request_id"]
