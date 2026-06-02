@@ -139,7 +139,9 @@ Deno.serve(async (req) => {
     if (matchErr) console.error("Insert matches failed:", matchErr);
 
     // 3) Update linked program_request_items
-    const linked = body.bookings.filter((b) => b.item_id && b.match_status === "matched" || b.match_status === "manual");
+    const linked = body.bookings.filter(
+      (b) => b.item_id && (b.match_status === "matched" || b.match_status === "manual"),
+    );
     for (const b of linked) {
       if (!b.item_id) continue;
       await adminClient
