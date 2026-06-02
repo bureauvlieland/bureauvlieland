@@ -24,7 +24,8 @@ export type AutoTodoType =
   | "partner_status_update"
   | "forward_accommodation_quote"
   | "quote_expiring_soon"
-  | "customer_counter_proposal";
+  | "customer_counter_proposal"
+  | "customer_aftersales";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
