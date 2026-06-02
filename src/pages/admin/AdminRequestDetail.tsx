@@ -1377,13 +1377,14 @@ const AdminRequestDetail = () => {
                             <ExternalLink className="h-4 w-4" /> Klantportaal
                           </Link>
                         </DropdownMenuItem>
-                        {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
+                        {isQuoteMode && ["concept", "in_afstemming"].includes(request.quote_status ?? "concept") && (
                           <DropdownMenuItem asChild>
                             <Link to={`/admin/projecten/${request.id}/offerte-preview`} className="flex items-center gap-2">
                               <FileText className="h-4 w-4" /> Preview offerte (PDF)
                             </Link>
                           </DropdownMenuItem>
                         )}
+
                         <DropdownMenuItem onClick={async () => {
                           try {
                             const { data, error } = await supabase.functions.invoke("generate-program-docx", { body: { request_id: request.id } });
