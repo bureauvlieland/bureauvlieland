@@ -1353,6 +1353,21 @@ const AdminRequestDetail = () => {
                 </Link>
               </Button>
               {request.status !== "cancelled" && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleSendAftersales(false)}
+                  disabled={isSendingAftersales}
+                  title={
+                    request.aftersales_sent_at
+                      ? `Al verstuurd op ${new Date(request.aftersales_sent_at).toLocaleString("nl-NL")} — klik om opnieuw te versturen`
+                      : "Bedank-mail met review-links naar de klant"
+                  }
+                >
+                  <Send className="h-4 w-4 mr-2 text-pink-600" />
+                  {request.aftersales_sent_at ? "Aftersales opnieuw" : "Aftersales-mail"}
+                </Button>
+              )}
+              {request.status !== "cancelled" && (
                 <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
                   <Ban className="h-4 w-4 mr-2" />
                   Annuleren
