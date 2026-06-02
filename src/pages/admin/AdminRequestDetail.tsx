@@ -66,7 +66,19 @@ import {
   CalendarPlus,
   Check,
   ShieldCheck,
+  MoreHorizontal,
+  ChevronRight,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 import { Input } from "@/components/ui/input";
 import {
   Popover,
