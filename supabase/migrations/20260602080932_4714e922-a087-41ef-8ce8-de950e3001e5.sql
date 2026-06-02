@@ -1,0 +1,1 @@
+ALTER TABLE public.program_requests ADD COLUMN IF NOT EXISTS aftersales_sent_at timestamptz;

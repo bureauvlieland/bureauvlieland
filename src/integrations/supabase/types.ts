@@ -2697,6 +2697,7 @@ export type Database = {
       program_requests: {
         Row: {
           admin_created_by: string | null
+          aftersales_sent_at: string | null
           billing_address_city: string | null
           billing_address_postal: string | null
           billing_address_street: string | null
@@ -2751,6 +2752,7 @@ export type Database = {
         }
         Insert: {
           admin_created_by?: string | null
+          aftersales_sent_at?: string | null
           billing_address_city?: string | null
           billing_address_postal?: string | null
           billing_address_street?: string | null
@@ -2805,6 +2807,7 @@ export type Database = {
         }
         Update: {
           admin_created_by?: string | null
+          aftersales_sent_at?: string | null
           billing_address_city?: string | null
           billing_address_postal?: string | null
           billing_address_street?: string | null
