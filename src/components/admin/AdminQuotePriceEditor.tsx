@@ -34,6 +34,9 @@ interface AdminQuotePriceEditorProps {
   /** True wanneer de partner het item heeft bevestigd (status confirmed/accepted).
    *  In dat geval geldt de admin-schatting als door de partner geaccepteerde prijs. */
   partnerConfirmed?: boolean;
+  /** Wanneer aanwezig én er een mismatch is tussen `quoted_price` en `override × people × days`,
+   *  toont de popover een actieknop "Behoud p.p.-prijs, pas totaal aan & informeer partner". */
+  onSyncTotalToOverride?: (newTotal: number) => Promise<void>;
 }
 
 export const AdminQuotePriceEditor = ({
@@ -47,6 +50,7 @@ export const AdminQuotePriceEditor = ({
   disabled = false,
   hasOpenAdminPriceChange = false,
   partnerConfirmed = false,
+  onSyncTotalToOverride,
 }: AdminQuotePriceEditorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editPrice, setEditPrice] = useState<string>(
