@@ -66,7 +66,19 @@ import {
   CalendarPlus,
   Check,
   ShieldCheck,
+  MoreHorizontal,
+  ChevronRight,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -85,7 +97,7 @@ import {
   type ItemQuoteStatus,
 } from "@/types/programRequest";
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
-import { NextStepBanner } from "@/components/admin/NextStepBanner";
+
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 
@@ -304,6 +316,23 @@ const AdminRequestDetail = () => {
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(() => searchParams.get("tab") || "activiteiten");
+
+  // Keep activeTab in sync with ?tab=
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && t !== activeTab) setActiveTab(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleTabChange = (v: string) => {
+    setActiveTab(v);
+    const next = new URLSearchParams(searchParams);
+    if (v === "activiteiten") next.delete("tab");
+    else next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
+
 
   const pendingItems = items.filter(
     (i) =>
@@ -368,8 +397,10 @@ const AdminRequestDetail = () => {
   // Auto-open status-mail sheet when navigated from a todo with ?action=status-email
   useEffect(() => {
     if (searchParams.get("action") === "status-email") {
+      setActiveTab("communicatie");
       setStatusEmailOpen(true);
       setHighlightStatusEmail(true);
+
       // Clear the param so refresh doesn't reopen the sheet
       const next = new URLSearchParams(searchParams);
       next.delete("action");
@@ -1237,167 +1268,174 @@ const AdminRequestDetail = () => {
             </div>
           )}
 
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/admin/projecten")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-2xl font-bold text-slate-900">
-                    {request.customer_name}
-                  </h1>
-                  {request.reference_number && (
-                    <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded">
-                      {request.reference_number}
-                    </code>
-                  )}
-                  {isQuoteMode && (
-                    <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
-                      <Sparkles className="h-3 w-3" />
-                      Maatwerk
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <p className="text-slate-500">
-                    Aanvraag van {format(new Date(request.created_at), "EEE d MMMM yyyy", { locale: nl })}
-                  </p>
-                  {isQuoteMode && request.quote_status && (
-                    <AdminQuoteStatusBadge status={request.quote_status} />
-                  )}
-                </div>
-                <div className="mt-2">
-                  <CompletionActions
-                    entityType="program"
-                    entityId={request.id}
-                    completionStatus={request.completion_status}
-                    completedAt={(request as any).completed_at ?? null}
-                    outstanding={calculateOutstandingAmount()}
-                    variant="full"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" onClick={() => setChatOpen(true)}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Chat met klant
-              </Button>
-              {request.customer_phone && (
-                <Button variant="outline" onClick={() => setWhatsappOpen(true)}>
-                  <MessageCircle className="h-4 w-4 mr-2 text-emerald-600" />
-                  Stuur WhatsApp
-                </Button>
-              )}
-              {/* Quote mode actions */}
-              {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
-                <>
-                  <Button variant="outline" asChild>
-                    <Link to={`/admin/projecten/${request.id}/offerte-preview`}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Preview PDF
-                    </Link>
-                  </Button>
-                  <AdminSendQuoteDialog
-                    requestId={request.id}
-                    customerName={request.customer_name}
-                    customerEmail={request.customer_email}
-                    customerCompany={request.customer_company}
-                    numberOfPeople={request.number_of_people}
-                    programDates={request.selected_dates as string[]}
-                    currentValidUntil={request.quote_valid_until}
-                    portalUrl={customerPortalUrl}
-                    onSuccess={fetchRequestData}
-                  />
-                </>
-              )}
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    const { data, error } = await supabase.functions.invoke("generate-program-docx", {
-                      body: { request_id: request.id },
-                    });
-                    if (error) throw error;
-                    const blob = data instanceof Blob
-                      ? data
-                      : new Blob([data as ArrayBuffer], {
-                          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        });
-                    const baseName = request.reference_number
-                      ? `Programma-${request.reference_number}`
-                      : `Programma-${request.customer_company || request.customer_name}`;
-                    const fileName = `${baseName}.docx`.replace(/\s+/g, "-");
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = fileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  } catch (e: any) {
-                    toast.error(e?.message ?? "Word-document genereren mislukt");
-                  }
-                }}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Word-document
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to={customerPortalUrl} target="_blank">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Klantportaal
-                </Link>
-              </Button>
-              {request.status !== "cancelled" && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleSendAftersales(false)}
-                  disabled={isSendingAftersales}
-                  title={
-                    request.aftersales_sent_at
-                      ? `Al verstuurd op ${new Date(request.aftersales_sent_at).toLocaleString("nl-NL")} — klik om opnieuw te versturen`
-                      : "Bedank-mail met review-links naar de klant"
-                  }
-                >
-                  <Send className="h-4 w-4 mr-2 text-pink-600" />
-                  {request.aftersales_sent_at ? "Aftersales opnieuw" : "Aftersales-mail"}
-                </Button>
-              )}
-              {request.status !== "cancelled" && (
-                <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
-                  <Ban className="h-4 w-4 mr-2" />
-                  Annuleren
-                </Button>
-              )}
-            </div>
-          </div>
+          {/* === Sticky top-bar === */}
+          {(() => {
+            const datesArr = request.selected_dates as string[];
+            const dateLabel = datesArr.length === 0
+              ? ""
+              : datesArr.length === 1
+                ? format(new Date(datesArr[0]), "d MMM yyyy", { locale: nl })
+                : `${format(new Date(datesArr[0]), "d MMM", { locale: nl })}–${format(new Date(datesArr[datesArr.length - 1]), "d MMM yyyy", { locale: nl })}`;
+            const validUntil = request.quote_valid_until ? new Date(request.quote_valid_until + "T00:00:00") : null;
+            const isQuoteExpired = validUntil ? validUntil < new Date() : false;
 
-          {/* Quote mode info banner */}
-          {isQuoteMode && (
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium text-primary">Maatwerkofferte</p>
-                      <p className="text-sm text-muted-foreground">
-                        Bureau Vlieland beheert de offerte en factureert centraal.
+            const primaryAction = (!request.program_published_at && items.length > 0)
+              ? { label: isPublishing ? "Publiceren..." : "Publiceer naar klant", onClick: handlePublishProgram, loading: isPublishing, icon: <Send className="h-4 w-4 mr-2" /> }
+              : readyToSendCount > 0
+                ? { label: "Bekijk & verstuur", onClick: handlePreviewSendToPartners, loading: isSendingToPartners, icon: <Send className="h-4 w-4 mr-2" /> }
+                : (waitingForCustomerCount > 0 || request.quote_status === "offerte_verstuurd")
+                  ? { label: "Stuur status-mail", onClick: () => { setActiveTab("communicatie"); setStatusEmailOpen(true); }, icon: <Mail className="h-4 w-4 mr-2" />, loading: false }
+                  : null;
+            const primaryDetail = (!request.program_published_at && items.length > 0)
+              ? "De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer als offerte."
+              : readyToSendCount > 0
+                ? `${readyToSendCount} ${readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen.`
+                : waitingForCustomerCount > 0
+                  ? `${waitingForCustomerCount} ${waitingForCustomerCount === 1 ? "onderdeel wacht" : "onderdelen wachten"} op klantakkoord.`
+                  : null;
+
+            return (
+              <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur border-b">
+                <div className="flex flex-col lg:flex-row lg:items-start gap-3">
+                  {/* Title block */}
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <Button variant="ghost" size="icon" onClick={() => navigate("/admin/projecten")} className="shrink-0 h-9 w-9">
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h1 className="text-xl font-bold text-slate-900 truncate">{request.customer_name}</h1>
+                        {request.reference_number && (
+                          <code className="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded">{request.reference_number}</code>
+                        )}
+                        {isQuoteMode && (
+                          <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary text-xs">
+                            <Sparkles className="h-3 w-3" /> Maatwerk
+                          </Badge>
+                        )}
+                        {isQuoteMode && request.quote_status && (
+                          <AdminQuoteStatusBadge status={request.quote_status} />
+                        )}
+                        <CompletionActions
+                          entityType="program"
+                          entityId={request.id}
+                          completionStatus={request.completion_status}
+                          completedAt={(request as any).completed_at ?? null}
+                          outstanding={calculateOutstandingAmount()}
+                          variant="compact"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Aangevraagd {format(new Date(request.created_at), "d MMM yyyy", { locale: nl })}
+                        {" · "}{request.number_of_people} pers.
+                        {dateLabel && <> · {dateLabel}</>}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Status: </span>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {primaryAction && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={primaryAction.onClick} disabled={primaryAction.loading} size="sm">
+                              {primaryAction.icon}
+                              {primaryAction.loading ? "Bezig…" : primaryAction.label}
+                            </Button>
+                          </TooltipTrigger>
+                          {primaryDetail && <TooltipContent className="max-w-xs">{primaryDetail}</TooltipContent>}
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
+                      <AdminSendQuoteDialog
+                        requestId={request.id}
+                        customerName={request.customer_name}
+                        customerEmail={request.customer_email}
+                        customerCompany={request.customer_company}
+                        numberOfPeople={request.number_of_people}
+                        programDates={request.selected_dates as string[]}
+                        currentValidUntil={request.quote_valid_until}
+                        portalUrl={customerPortalUrl}
+                        onSuccess={fetchRequestData}
+                      />
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
+                      <MessageSquare className="h-4 w-4 mr-2" /> Chat
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-9 w-9">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-60">
+                        <DropdownMenuItem asChild>
+                          <Link to={customerPortalUrl} target="_blank" className="flex items-center gap-2">
+                            <ExternalLink className="h-4 w-4" /> Klantportaal
+                          </Link>
+                        </DropdownMenuItem>
+                        {isQuoteMode && request.quote_status && ["concept", "in_afstemming"].includes(request.quote_status) && (
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/projecten/${request.id}/offerte-preview`} className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" /> Preview offerte (PDF)
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.functions.invoke("generate-program-docx", { body: { request_id: request.id } });
+                            if (error) throw error;
+                            const blob = data instanceof Blob ? data : new Blob([data as ArrayBuffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+                            const baseName = request.reference_number ? `Programma-${request.reference_number}` : `Programma-${request.customer_company || request.customer_name}`;
+                            const fileName = `${baseName}.docx`.replace(/\s+/g, "-");
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url; a.download = fileName;
+                            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          } catch (e: any) { toast.error(e?.message ?? "Word-document genereren mislukt"); }
+                        }}>
+                          <FileText className="h-4 w-4 mr-2" /> Word-document
+                        </DropdownMenuItem>
+                        {request.customer_phone && (
+                          <DropdownMenuItem onClick={() => setWhatsappOpen(true)}>
+                            <MessageCircle className="h-4 w-4 mr-2 text-emerald-600" /> Stuur WhatsApp
+                          </DropdownMenuItem>
+                        )}
+                        {request.status !== "cancelled" && (
+                          <DropdownMenuItem
+                            onClick={() => handleSendAftersales(false)}
+                            disabled={isSendingAftersales}
+                          >
+                            <Send className="h-4 w-4 mr-2 text-pink-600" />
+                            {request.aftersales_sent_at ? "Aftersales opnieuw" : "Aftersales-mail"}
+                          </DropdownMenuItem>
+                        )}
+                        {request.status !== "cancelled" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setCancelDialogOpen(true)}>
+                              <Ban className="h-4 w-4 mr-2" /> Aanvraag annuleren
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Maatwerk-strip: status + geldig tot */}
+                {isQuoteMode && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs border-t pt-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Offerte-status:</span>
                       <Select
                         value={request.quote_status || "concept"}
                         onValueChange={(v) => handleQuoteStatusChange(v as QuoteStatus)}
                       >
-                        <SelectTrigger className="h-8 w-[180px]">
+                        <SelectTrigger className="h-7 w-[170px] text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1411,304 +1449,268 @@ const AdminRequestDetail = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {(() => {
-                      const validUntil = request.quote_valid_until ? new Date(request.quote_valid_until + "T00:00:00") : null;
-                      const isExpired = validUntil ? validUntil < new Date() : false;
-                      return (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Geldig tot: </span>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="sm" className={cn("h-auto px-1.5 py-0.5 font-medium", isExpired && "text-destructive")}>
-                                <CalendarIcon className="mr-1 h-3.5 w-3.5" />
-                                {validUntil ? format(validUntil, "d MMM yyyy", { locale: nl }) : "Stel in"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CalendarPicker
-                                mode="single"
-                                selected={validUntil || undefined}
-                                onSelect={async (date) => {
-                                  if (!date) return;
-                                  const dateStr = format(date, "yyyy-MM-dd");
-                                  const updates: Record<string, string> = { quote_valid_until: dateStr };
-                                  // If extending past today and status is verlopen, revert to offerte_verstuurd
-                                  if (date >= new Date() && request.quote_status === "verlopen") {
-                                    updates.quote_status = "offerte_verstuurd";
-                                  }
-                                  const { error } = await supabase.from("program_requests").update(updates).eq("id", request.id);
-                                  if (error) {
-                                    toast.error("Kon verloopdatum niet opslaan");
-                                  } else {
-                                    toast.success("Verloopdatum bijgewerkt");
-                                    fetchRequestData();
-                                  }
-                                }}
-                                className="p-3 pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          {isExpired && request.quote_status !== "verlopen" && request.quote_status !== "geannuleerd" && (
-                            <Badge variant="destructive" className="text-xs">Verlopen</Badge>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Status banner if cancelled */}
-          {request.status === "cancelled" && (
-            <Card className="bg-red-50 border-red-200">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-red-900">Aanvraag geannuleerd</p>
-                    <p className="text-sm text-red-700">
-                      {request.cancelled_at && (
-                        <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Geldig tot:</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className={cn("h-7 px-2 text-xs font-medium", isQuoteExpired && "text-destructive")}>
+                            <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                            {validUntil ? format(validUntil, "d MMM yyyy", { locale: nl }) : "Stel in"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarPicker
+                            mode="single"
+                            selected={validUntil || undefined}
+                            onSelect={async (date) => {
+                              if (!date) return;
+                              const dateStr = format(date, "yyyy-MM-dd");
+                              const updates: Record<string, string> = { quote_valid_until: dateStr };
+                              if (date >= new Date() && request.quote_status === "verlopen") {
+                                updates.quote_status = "offerte_verstuurd";
+                              }
+                              const { error } = await supabase.from("program_requests").update(updates).eq("id", request.id);
+                              if (error) toast.error("Kon verloopdatum niet opslaan");
+                              else { toast.success("Verloopdatum bijgewerkt"); fetchRequestData(); }
+                            }}
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      {isQuoteExpired && request.quote_status !== "verlopen" && request.quote_status !== "geannuleerd" && (
+                        <Badge variant="destructive" className="text-[10px] h-4 px-1.5">Verlopen</Badge>
                       )}
-                      {request.cancellation_reason && (
-                        <> - {request.cancellation_reason}</>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Compact combined customer + event card */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Customer info */}
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Klantgegevens
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <User className="h-4 w-4 text-slate-400" />
-                      <span>{request.customer_name}</span>
                     </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Cancelled alert */}
+          {request.status === "cancelled" && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Aanvraag geannuleerd</AlertTitle>
+              <AlertDescription>
+                {request.cancelled_at && <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>}
+                {request.cancellation_reason && <> · {request.cancellation_reason}</>}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* === Snel-overzicht: 4 compacte kaarten met popovers === */}
+          {(() => {
+            const datesArr = request.selected_dates as string[];
+            const dateLabelShort = datesArr.length === 0 ? "—" : datesArr.length === 1
+              ? format(new Date(datesArr[0]), "d MMM", { locale: nl })
+              : `${format(new Date(datesArr[0]), "d MMM", { locale: nl })}–${format(new Date(datesArr[datesArr.length - 1]), "d MMM", { locale: nl })}`;
+            const hasCatering = items.some((i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering"));
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Klant */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-left rounded-lg border bg-card hover:bg-accent/30 transition-colors p-3 flex items-start gap-2.5 min-w-0">
+                      <User className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Klant</p>
+                        <p className="text-sm font-medium truncate">{request.customer_name}</p>
+                        {request.customer_company && (
+                          <p className="text-xs text-slate-500 truncate">{request.customer_company}</p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-300 mt-1" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-72 space-y-2">
                     <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-slate-400" />
-                      <a href={`mailto:${request.customer_email}`} className="text-primary hover:underline">
-                        {request.customer_email}
-                      </a>
+                      <User className="h-4 w-4 text-slate-400" /> <span>{request.customer_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm min-w-0">
+                      <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                      <a href={`mailto:${request.customer_email}`} className="text-primary hover:underline truncate">{request.customer_email}</a>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-slate-400" />
-                      <a href={`tel:${request.customer_phone}`} className="hover:underline">
-                        {request.customer_phone}
-                      </a>
+                      <a href={`tel:${request.customer_phone}`} className="hover:underline">{request.customer_phone}</a>
                     </div>
                     {request.customer_company && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Building2 className="h-4 w-4 text-slate-400" />
-                        <span>{request.customer_company}</span>
+                        <Building2 className="h-4 w-4 text-slate-400" /> <span>{request.customer_company}</span>
                       </div>
                     )}
-                  </div>
-                </div>
+                  </PopoverContent>
+                </Popover>
 
-                {/* Event details */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Evenement details
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setEditDetailsOpen(true)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-slate-400" />
-                      <span>{request.number_of_people} personen</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-slate-400 mt-0.5" />
-                      <div>
-                        {(request.selected_dates as string[]).map((date, idx) => (
-                          <div key={idx}>
-                            Dag {idx + 1}: {format(new Date(date), "EEE d MMMM yyyy", { locale: nl })}
-                          </div>
-                        ))}
+                {/* Programma */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-left rounded-lg border bg-card hover:bg-accent/30 transition-colors p-3 flex items-start gap-2.5 min-w-0">
+                      <Calendar className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Programma</p>
+                        <p className="text-sm font-medium truncate">
+                          {datesArr.length === 1 ? "1 dag" : `${datesArr.length} dagen`} · {request.number_of_people} pers.
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">{dateLabelShort}</p>
                       </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-300 mt-1" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold">Programma-details</h4>
+                      <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setEditDetailsOpen(true)}>
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> Bewerken
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="h-4 w-4 text-slate-400" /> {request.number_of_people} personen
+                    </div>
+                    <div className="space-y-0.5 text-sm pl-6">
+                      {datesArr.map((d, idx) => (
+                        <div key={idx} className="text-slate-700">
+                          Dag {idx + 1}: {format(new Date(d), "EEE d MMM yyyy", { locale: nl })}
+                        </div>
+                      ))}
                     </div>
                     {request.general_notes && (
-                      <p className="text-sm text-slate-600 pt-1 border-t">{request.general_notes}</p>
+                      <div className="border-t pt-2">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">Notities</p>
+                        <p className="text-sm text-slate-700 whitespace-pre-line">{request.general_notes}</p>
+                      </div>
                     )}
                     {request.program_description && (
-                      <div className="pt-1 border-t">
-                        <p className="text-xs text-slate-400 mb-1">Omschrijving</p>
-                        <p className="text-sm text-slate-700 italic whitespace-pre-line">
-                          "{request.program_description}"
-                        </p>
+                      <div className="border-t pt-2">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">Omschrijving</p>
+                        <p className="text-sm text-slate-700 italic whitespace-pre-line line-clamp-6">"{request.program_description}"</p>
                       </div>
                     )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Groep & wensen */}
-          <Card>
-            <CardContent className="p-6">
-              <GuestDetailsDisplay
-                guestNames={(request as any).guest_names ?? null}
-                dietaryNotes={(request as any).dietary_notes ?? null}
-                roomAssignment={null}
-                showDietary={items.some((i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering"))}
-                showRoomAssignment={false}
-                updatedAt={(request as any).guest_details_updated_at ?? null}
-                onEdit={() => setGuestDialogOpen(true)}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Status summary + linked accommodation row */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Status summary */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Activiteiten status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">In afwachting</span>
-                  <Badge variant="outline">{statusSummary.pending}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Bevestigd</span>
-                  <Badge className="bg-green-100 text-green-800">{statusSummary.confirmed}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Niet beschikbaar</span>
-                  <Badge className="bg-red-100 text-red-800">{statusSummary.unavailable}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Alternatief</span>
-                  <Badge className="bg-amber-100 text-amber-800">{statusSummary.alternative}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Geannuleerd</span>
-                  <Badge className="bg-slate-100 text-slate-800">{statusSummary.cancelled}</Badge>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex items-center justify-between font-semibold">
-                  <span>Totaal</span>
-                  <span>{items.length} activiteiten</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Linked Accommodation */}
-            {linkedAccommodation && (
-              <Card className="border-indigo-200 bg-indigo-50/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Hotel className="h-5 w-5 text-indigo-600" />
-                    Gekoppelde logies
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-slate-400" />
-                    <span>
-                      {format(new Date(linkedAccommodation.arrival_date), "d MMM", { locale: nl })} -{" "}
-                      {format(new Date(linkedAccommodation.departure_date), "d MMM yyyy", { locale: nl })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-slate-400" />
-                    <span>{linkedAccommodation.number_of_guests} gasten</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <Badge variant={
-                      linkedAccommodation.status === "accepted" ? "default" :
-                      linkedAccommodation.status === "quoted" ? "outline" :
-                      "secondary"
-                    }>
-                      {linkedAccommodation.status === "submitted" ? "Nieuw" :
-                       linkedAccommodation.status === "processing" ? "In behandeling" :
-                       linkedAccommodation.status === "quoted" ? "Offertes verstuurd" :
-                       linkedAccommodation.status === "accepted" ? "Geaccepteerd" :
-                       linkedAccommodation.status}
-                    </Badge>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/admin/logies/${linkedAccommodation.id}`}>
-                        Bekijken
-                      </Link>
-                    </Button>
-                  </div>
-                  {selectedAccommodationQuote?.customer_terms_accepted_at && (
-                    <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        Deel-akkoord vastgelegd
+                    {(hasCatering || (request as any).guest_names || (request as any).dietary_notes) && (
+                      <div className="border-t pt-2">
+                        <Button variant="outline" size="sm" className="w-full" onClick={() => setGuestDialogOpen(true)}>
+                          <Users className="h-4 w-4 mr-2" /> Groep & wensen bewerken
+                        </Button>
                       </div>
-                      <div className="mt-0.5 text-emerald-800">
-                        {format(new Date(selectedAccommodationQuote.customer_terms_accepted_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
-                        {selectedAccommodationQuote.customer_signature_name && (
-                          <> · ondertekend door <span className="font-medium">{selectedAccommodationQuote.customer_signature_name}</span></>
+                    )}
+                  </PopoverContent>
+                </Popover>
+
+                {/* Logies */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-left rounded-lg border bg-card hover:bg-accent/30 transition-colors p-3 flex items-start gap-2.5 min-w-0">
+                      <Hotel className={cn("h-4 w-4 mt-0.5 shrink-0", linkedAccommodation ? "text-indigo-600" : "text-slate-400")} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Logies</p>
+                        {linkedAccommodation ? (
+                          <>
+                            <p className="text-sm font-medium truncate">
+                              {linkedAccommodation.status === "submitted" ? "Nieuw" :
+                               linkedAccommodation.status === "processing" ? "In behandeling" :
+                               linkedAccommodation.status === "quoted" ? "Offertes verstuurd" :
+                               linkedAccommodation.status === "accepted" ? "Geaccepteerd" :
+                               linkedAccommodation.status}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate">{linkedAccommodation.number_of_guests} gasten</p>
+                          </>
+                        ) : datesArr.length > 1 ? (
+                          <>
+                            <p className="text-sm font-medium text-primary">Nog regelen</p>
+                            <p className="text-xs text-slate-500">Meerdaags programma</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-slate-500">Niet nodig</p>
+                            <p className="text-xs text-slate-500">1-daags programma</p>
+                          </>
                         )}
                       </div>
-                    </div>
-                  )}
-                  {selectedAccommodationQuote && !selectedAccommodationQuote.customer_terms_accepted_at && (
-                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        Geen deel-akkoord vastgelegd (legacy)
-                      </div>
-                      <div className="mt-0.5 text-amber-800">
-                        Deze logies is geselecteerd vóór het deel-akkoord werd geïntroduceerd. Bevestig de voorwaarden bij het eindakkoord of vraag de klant het opnieuw te bevestigen.
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-300 mt-1" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-80 space-y-2">
+                    {linkedAccommodation ? (
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="h-4 w-4 text-slate-400" />
+                          {format(new Date(linkedAccommodation.arrival_date), "d MMM", { locale: nl })} – {format(new Date(linkedAccommodation.departure_date), "d MMM yyyy", { locale: nl })}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Users className="h-4 w-4 text-slate-400" /> {linkedAccommodation.number_of_guests} gasten
+                        </div>
+                        {selectedAccommodationQuote?.customer_terms_accepted_at && (
+                          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <ShieldCheck className="h-3.5 w-3.5" /> Deel-akkoord vastgelegd
+                            </div>
+                            <div className="mt-0.5 text-emerald-800">
+                              {format(new Date(selectedAccommodationQuote.customer_terms_accepted_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}
+                              {selectedAccommodationQuote.customer_signature_name && (
+                                <> · door <span className="font-medium">{selectedAccommodationQuote.customer_signature_name}</span></>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {selectedAccommodationQuote && !selectedAccommodationQuote.customer_terms_accepted_at && (
+                          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                            <div className="flex items-center gap-1.5 font-medium">
+                              <AlertTriangle className="h-3.5 w-3.5" /> Geen deel-akkoord (legacy)
+                            </div>
+                            <div className="mt-0.5 text-amber-800">
+                              Bevestig de voorwaarden bij het eindakkoord of vraag de klant opnieuw.
+                            </div>
+                          </div>
+                        )}
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <Link to={`/admin/logies/${linkedAccommodation.id}`}>Logiespagina openen</Link>
+                        </Button>
+                      </>
+                    ) : datesArr.length > 1 ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">Meerdaags programma — wil je logies regelen?</p>
+                        <Button size="sm" className="w-full" onClick={() => setCreateAccommodationOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" /> Logiesaanvraag maken
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Programma is 1-daags, geen logies nodig.</p>
+                    )}
+                  </PopoverContent>
+                </Popover>
 
-            {/* Logies CTA when no accommodation linked */}
-            {!linkedAccommodation && (request.selected_dates as string[]).length > 1 && (
-              <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Hotel className="h-5 w-5 text-primary" />
-                    Logies regelen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Meerdaags programma — logies regelen?
-                  </p>
-                  <Button onClick={() => setCreateAccommodationOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Logiesaanvraag maken
-                    </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                {/* Activiteiten-status */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-left rounded-lg border bg-card hover:bg-accent/30 transition-colors p-3 flex items-start gap-2.5 min-w-0">
+                      <FileText className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Activiteiten</p>
+                        <p className="text-sm font-medium">{items.length} totaal</p>
+                        <p className="text-xs text-slate-500 flex gap-2 mt-0.5">
+                          <span className="text-green-700">✓ {statusSummary.confirmed}</span>
+                          <span className="text-amber-700">⏳ {statusSummary.pending}</span>
+                          {statusSummary.unavailable > 0 && <span className="text-red-700">✕ {statusSummary.unavailable}</span>}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-300 mt-1" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 space-y-1.5">
+                    <h4 className="text-sm font-semibold mb-1">Activiteiten status</h4>
+                    <div className="flex items-center justify-between text-sm"><span className="text-slate-600">In afwachting</span><Badge variant="outline">{statusSummary.pending}</Badge></div>
+                    <div className="flex items-center justify-between text-sm"><span className="text-slate-600">Bevestigd</span><Badge className="bg-green-100 text-green-800">{statusSummary.confirmed}</Badge></div>
+                    <div className="flex items-center justify-between text-sm"><span className="text-slate-600">Niet beschikbaar</span><Badge className="bg-red-100 text-red-800">{statusSummary.unavailable}</Badge></div>
+                    <div className="flex items-center justify-between text-sm"><span className="text-slate-600">Alternatief</span><Badge className="bg-amber-100 text-amber-800">{statusSummary.alternative}</Badge></div>
+                    <div className="flex items-center justify-between text-sm"><span className="text-slate-600">Geannuleerd</span><Badge className="bg-slate-100 text-slate-800">{statusSummary.cancelled}</Badge></div>
+                    <Separator className="my-1.5" />
+                    <div className="flex items-center justify-between text-sm font-semibold"><span>Totaal</span><span>{items.length}</span></div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            );
+          })()}
 
           {/* Partner Conflict Detection */}
           <AdminPartnerConflictBanner
@@ -1722,85 +1724,14 @@ const AdminRequestDetail = () => {
             selectedDates={request.selected_dates as string[]}
           />
 
-          {/* Single consolidated "Volgende stap" banner — derived from lifecycle */}
-          <NextStepBanner
-            project={{
-              status: request.status,
-              quote_status: request.quote_status,
-              terms_accepted_at: request.terms_accepted_at,
-              billing_company_name: request.billing_company_name,
-              completion_status: request.completion_status,
-              cancelled_at: request.cancelled_at,
-              linked_accommodation_id: request.linked_accommodation_id,
-              hasSelectedAccommodation: !!selectedAccommodationQuote,
-            }}
-            items={items}
-            primaryAction={(() => {
-              if (!request.program_published_at && items.length > 0) {
-                return {
-                  label: isPublishing ? "Publiceren..." : "Publiceer naar klant",
-                  onClick: handlePublishProgram,
-                  loading: isPublishing,
-                  icon: <Send className="h-4 w-4 mr-2" />,
-                };
-              }
-              if (readyToSendCount > 0) {
-                return {
-                  label: "Bekijk & verstuur",
-                  onClick: handlePreviewSendToPartners,
-                  loading: isSendingToPartners,
-                  icon: <Send className="h-4 w-4 mr-2" />,
-                };
-              }
-              if (
-                waitingForCustomerCount > 0 ||
-                request.quote_status === "offerte_verstuurd"
-              ) {
-                return {
-                  label: "Stuur status-mail",
-                  onClick: () => setStatusEmailOpen(true),
-                  icon: <Mail className="h-4 w-4 mr-2" />,
-                };
-              }
-              return null;
-            })()}
-            detail={
-              !request.program_published_at && items.length > 0
-                ? "De klant kan het programma al bekijken, maar kan nog geen akkoord geven. Publiceer als offerte."
-                : readyToSendCount > 0
-                ? `${readyToSendCount} ${readyToSendCount === 1 ? "onderdeel is" : "onderdelen zijn"} klaar om naar partners te sturen.`
-                : waitingForCustomerCount > 0
-                ? `${waitingForCustomerCount} ${waitingForCustomerCount === 1 ? "onderdeel wacht" : "onderdelen wachten"} op klantakkoord.`
-                : undefined
-            }
-          />
-
-
-          {/* Communicatie-hub: altijd zichtbaar boven de tabs voor pre-sales en lopende correspondentie */}
-          <ProjectCommunicationsCard
-            requestId={request.id}
-            accommodationId={request.linked_accommodation_id || undefined}
-            customerName={request.customer_name}
-            customerEmail={request.customer_email}
-            onOpenStatusEmail={() => setStatusEmailOpen(true)}
-            highlightStatusEmail={highlightStatusEmail}
-            partnerRecipients={
-              Array.from(
-                new Map(
-                  items
-                    .filter((i) => i.provider_email && i.provider_id)
-                    .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
-                ).values()
-              )
-            }
-          />
-
-          <Tabs defaultValue="activiteiten" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList>
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
               <TabsTrigger value="financien">Financiën</TabsTrigger>
+              <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
               <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
             </TabsList>
+
 
             {/* Tab: Activiteiten */}
             <TabsContent value="activiteiten">
@@ -2774,7 +2705,26 @@ const AdminRequestDetail = () => {
             </TabsContent>
 
             {/* Tab: Communicatie */}
-            {/* Tab "Communicatie" verwijderd — kaart staat nu permanent boven de tabs */}
+            <TabsContent value="communicatie">
+              <ProjectCommunicationsCard
+                requestId={request.id}
+                accommodationId={request.linked_accommodation_id || undefined}
+                customerName={request.customer_name}
+                customerEmail={request.customer_email}
+                onOpenStatusEmail={() => setStatusEmailOpen(true)}
+                highlightStatusEmail={highlightStatusEmail}
+                partnerRecipients={
+                  Array.from(
+                    new Map(
+                      items
+                        .filter((i) => i.provider_email && i.provider_id)
+                        .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
+                    ).values()
+                  )
+                }
+              />
+            </TabsContent>
+
 
             {/* Tab: Geschiedenis */}
             <TabsContent value="geschiedenis">
