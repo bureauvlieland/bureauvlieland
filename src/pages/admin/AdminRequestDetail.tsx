@@ -2705,7 +2705,26 @@ const AdminRequestDetail = () => {
             </TabsContent>
 
             {/* Tab: Communicatie */}
-            {/* Tab "Communicatie" verwijderd — kaart staat nu permanent boven de tabs */}
+            <TabsContent value="communicatie">
+              <ProjectCommunicationsCard
+                requestId={request.id}
+                accommodationId={request.linked_accommodation_id || undefined}
+                customerName={request.customer_name}
+                customerEmail={request.customer_email}
+                onOpenStatusEmail={() => setStatusEmailOpen(true)}
+                highlightStatusEmail={highlightStatusEmail}
+                partnerRecipients={
+                  Array.from(
+                    new Map(
+                      items
+                        .filter((i) => i.provider_email && i.provider_id)
+                        .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
+                    ).values()
+                  )
+                }
+              />
+            </TabsContent>
+
 
             {/* Tab: Geschiedenis */}
             <TabsContent value="geschiedenis">
