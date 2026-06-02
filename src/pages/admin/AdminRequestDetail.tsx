@@ -179,6 +179,8 @@ interface ProgramRequest {
   program_published_at: string | null;
   // Billing fields
   billing_company_name: string | null;
+  // Aftersales
+  aftersales_sent_at: string | null;
 }
 
 interface LinkedAccommodation {
