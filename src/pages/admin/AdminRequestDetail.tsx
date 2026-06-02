@@ -316,6 +316,23 @@ const AdminRequestDetail = () => {
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(() => searchParams.get("tab") || "activiteiten");
+
+  // Keep activeTab in sync with ?tab=
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && t !== activeTab) setActiveTab(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleTabChange = (v: string) => {
+    setActiveTab(v);
+    const next = new URLSearchParams(searchParams);
+    if (v === "activiteiten") next.delete("tab");
+    else next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
+
 
   const pendingItems = items.filter(
     (i) =>
