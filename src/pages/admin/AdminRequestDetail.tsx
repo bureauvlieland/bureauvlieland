@@ -2181,6 +2181,19 @@ const AdminRequestDetail = () => {
                                               hasOpenAdminPriceChange={hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, getNumberOfDays(request?.selected_dates))}
                                               partnerConfirmed={item.status === "confirmed" || item.status === "accepted"}
                                               onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
+                                              onSyncTotalToOverride={async (newTotal) => {
+                                                try {
+                                                  const { error } = await supabase.functions.invoke("notify-partner-headcount-change", {
+                                                    body: { item_id: item.id, origin: window.location.origin },
+                                                  });
+                                                  if (error) throw error;
+                                                  toast.success(`Totaal aangepast naar €${newTotal.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} en partner geïnformeerd`);
+                                                  fetchRequestData({ silent: true });
+                                                } catch (err) {
+                                                  console.error(err);
+                                                  toast.error("Aanpassen mislukt — probeer opnieuw");
+                                                }
+                                              }}
                                             />
                                             <AdminItemBillingLinesEditor
                                               itemId={item.id}
