@@ -200,8 +200,25 @@ export default function AdminPurchaseInvoiceInbox() {
                     )}
                     {item.status === "new" && (
                       <>
+                        {isLikelyCollective(item) && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-amber-600 hover:bg-amber-700"
+                            onClick={() =>
+                              setCollectiveItem({
+                                item,
+                                partnerId: guessPartnerId(item) || "rederij",
+                              })
+                            }
+                            disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" /> Verzamelfactuur
+                          </Button>
+                        )}
                         <Button
                           size="sm"
+                          variant={isLikelyCollective(item) ? "outline" : "default"}
                           onClick={() => setProcessingItem(item)}
                           disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
                         >
