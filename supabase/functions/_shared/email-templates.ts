@@ -353,6 +353,9 @@ export const TemplateIds = {
   ITEM_ADDED_PARTNER: "item_added_partner",
   ITEM_CHANGES_PARTNER: "item_changes_partner",
   ITEM_CHANGES_CUSTOMER: "item_changes_customer",
+
+  // Aftersales / review request
+  CUSTOMER_AFTERSALES_REVIEW: "customer_aftersales_review",
 } as const;
 
 /**
