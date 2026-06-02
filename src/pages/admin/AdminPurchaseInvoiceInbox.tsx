@@ -277,6 +277,3 @@ function guessPartnerId(item: PurchaseInvoiceInboxItem): string | null {
   if (/doeksen|rederij/.test(text)) return "rederij";
   return null;
 }
-    </AdminLayout>
-  );
-}
