@@ -921,6 +921,101 @@ Deno.serve(async (req) => {
     }
 
     // =============================================
+    // POST-EXECUTION AFTERSALES / REVIEW MAIL (per project)
+    // =============================================
+    try {
+      // Settings (with sensible defaults)
+      const { data: aftersalesSettings } = await supabase
+        .from("app_settings")
+        .select("id, value")
+        .in("id", [
+          "customer_aftersales_days_after",
+          "customer_aftersales_auto_send",
+        ]);
+      const settingsMap = new Map(
+        (aftersalesSettings || []).map((s: any) => [s.id, s.value]),
+      );
+      const daysAfter = Number(settingsMap.get("customer_aftersales_days_after") ?? 3) || 3;
+      const autoSend = Boolean(settingsMap.get("customer_aftersales_auto_send") ?? false);
+
+      const cutoff = new Date(now.getTime() - daysAfter * 24 * 60 * 60 * 1000).toISOString();
+
+      // Group all program_request_items by request, to determine completion + last execution
+      const { data: aftersalesItems } = await supabase
+        .from("program_request_items")
+        .select("request_id, status, executed_at, block_type")
+        .neq("status", "cancelled");
+
+      const byRequest = new Map<string, { lastExecuted: string | null; allExecuted: boolean }>();
+      for (const it of aftersalesItems || []) {
+        const cur = byRequest.get(it.request_id) || { lastExecuted: null, allExecuted: true };
+        if (!it.executed_at) {
+          cur.allExecuted = false;
+        } else if (!cur.lastExecuted || it.executed_at > cur.lastExecuted) {
+          cur.lastExecuted = it.executed_at;
+        }
+        byRequest.set(it.request_id, cur);
+      }
+
+      const eligibleRequestIds = [...byRequest.entries()]
+        .filter(([, v]) => v.allExecuted && v.lastExecuted && v.lastExecuted <= cutoff)
+        .map(([id]) => id);
+
+      if (eligibleRequestIds.length > 0) {
+        const { data: eligibleRequests } = await supabase
+          .from("program_requests")
+          .select("id, reference_number, customer_name, customer_company, customer_email, aftersales_sent_at, status, cancelled_at")
+          .in("id", eligibleRequestIds);
+
+        for (const reqRow of eligibleRequests || []) {
+          if (!reqRow.customer_email) continue;
+          if (reqRow.aftersales_sent_at) continue;
+          if (reqRow.cancelled_at || reqRow.status === "cancelled") continue;
+
+          const customerName = reqRow.customer_company || reqRow.customer_name || "Onbekend";
+
+          if (autoSend && canSendEmail) {
+            try {
+              const { error: invokeErr } = await supabase.functions.invoke(
+                "send-customer-aftersales",
+                { body: { request_id: reqRow.id, sent_by: "system" } },
+              );
+              if (!invokeErr) totalCreated++;
+            } catch (e) {
+              console.error("auto-send aftersales failed", reqRow.id, e);
+            }
+            continue;
+          }
+
+          // Todo path
+          const { data: existing } = await supabase
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "customer_aftersales")
+            .eq("auto_entity_id", reqRow.id)
+            .maybeSingle();
+
+          if (!existing) {
+            const { error: todoError } = await supabase
+              .from("admin_todos")
+              .insert({
+                title: `Aftersales-mail versturen aan ${customerName}`,
+                description: `Het programma is uitgevoerd. Verstuur de aftersales-mail met de vraag om een review op Google en de eigen site.`,
+                priority: "low",
+                status: "todo",
+                related_request_id: reqRow.id,
+                auto_type: "customer_aftersales",
+                auto_entity_id: reqRow.id,
+              });
+            if (!todoError) totalCreated++;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("aftersales block error", e);
+    }
+
+    // =============================================
      // PARTNER EVENT-DATE EMAILS: T-7 onbevestigd & T-3 briefing
     // =============================================
     if (canSendEmail) {

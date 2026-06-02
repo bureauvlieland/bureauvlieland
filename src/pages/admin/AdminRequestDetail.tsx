@@ -179,6 +179,8 @@ interface ProgramRequest {
   program_published_at: string | null;
   // Billing fields
   billing_company_name: string | null;
+  // Aftersales
+  aftersales_sent_at: string | null;
 }
 
 interface LinkedAccommodation {
@@ -377,6 +379,50 @@ const AdminRequestDetail = () => {
       return () => clearTimeout(t);
     }
   }, [searchParams, setSearchParams]);
+
+  const [isSendingAftersales, setIsSendingAftersales] = useState(false);
+
+  const handleSendAftersales = async (force = false) => {
+    if (!request) return;
+    if (request.aftersales_sent_at && !force) {
+      const ok = window.confirm(
+        `De aftersales-mail is al verstuurd op ${new Date(request.aftersales_sent_at).toLocaleString("nl-NL")}. Nogmaals versturen?`,
+      );
+      if (!ok) return;
+      force = true;
+    } else if (!force) {
+      const ok = window.confirm(
+        `Aftersales-mail versturen naar ${request.customer_email} met de vraag om een review op Google en bureauvlieland.nl?`,
+      );
+      if (!ok) return;
+    }
+    setIsSendingAftersales(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-customer-aftersales", {
+        body: { request_id: request.id, force, origin: window.location.origin },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Aftersales-mail verstuurd");
+      fetchRequestData({ silent: true });
+    } catch (e: any) {
+      toast.error(e?.message || "Versturen mislukt");
+    } finally {
+      setIsSendingAftersales(false);
+    }
+  };
+
+  // Auto-open aftersales action when navigated from a todo with ?action=aftersales
+  useEffect(() => {
+    if (searchParams.get("action") === "aftersales" && request) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("action");
+      setSearchParams(next, { replace: true });
+      handleSendAftersales();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, request?.id]);
+
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
@@ -1306,6 +1352,21 @@ const AdminRequestDetail = () => {
                   Klantportaal
                 </Link>
               </Button>
+              {request.status !== "cancelled" && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleSendAftersales(false)}
+                  disabled={isSendingAftersales}
+                  title={
+                    request.aftersales_sent_at
+                      ? `Al verstuurd op ${new Date(request.aftersales_sent_at).toLocaleString("nl-NL")} — klik om opnieuw te versturen`
+                      : "Bedank-mail met review-links naar de klant"
+                  }
+                >
+                  <Send className="h-4 w-4 mr-2 text-pink-600" />
+                  {request.aftersales_sent_at ? "Aftersales opnieuw" : "Aftersales-mail"}
+                </Button>
+              )}
               {request.status !== "cancelled" && (
                 <Button variant="destructive" onClick={() => setCancelDialogOpen(true)}>
                   <Ban className="h-4 w-4 mr-2" />

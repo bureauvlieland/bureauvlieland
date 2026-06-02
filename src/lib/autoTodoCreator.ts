@@ -24,7 +24,8 @@ export type AutoTodoType =
   | "partner_status_update"
   | "forward_accommodation_quote"
   | "quote_expiring_soon"
-  | "customer_counter_proposal";
+  | "customer_counter_proposal"
+  | "customer_aftersales";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -325,5 +326,10 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Tegenvoorstel",
     color: "text-purple-700",
     bgColor: "bg-purple-100",
+  },
+  customer_aftersales: {
+    label: "Aftersales / review",
+    color: "text-pink-700",
+    bgColor: "bg-pink-100",
   },
 };
