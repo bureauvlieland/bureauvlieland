@@ -397,8 +397,10 @@ const AdminRequestDetail = () => {
   // Auto-open status-mail sheet when navigated from a todo with ?action=status-email
   useEffect(() => {
     if (searchParams.get("action") === "status-email") {
+      setActiveTab("communicatie");
       setStatusEmailOpen(true);
       setHighlightStatusEmail(true);
+
       // Clear the param so refresh doesn't reopen the sheet
       const next = new URLSearchParams(searchParams);
       next.delete("action");
