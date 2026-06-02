@@ -3484,6 +3484,7 @@ export type Database = {
         Returns: boolean
       }
       program_request_exists: { Args: { _id: string }; Returns: boolean }
+      program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       scan_stale_pending_changes: { Args: never; Returns: number }
       touch_partner_last_seen: {
         Args: { p_partner_id: string }
