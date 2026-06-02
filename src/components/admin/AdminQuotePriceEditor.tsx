@@ -246,14 +246,36 @@ export const AdminQuotePriceEditor = ({
           </div>
 
           {mismatch && overrideTotal !== null && (
-            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <div>
-                <strong>Inconsistente prijs.</strong> De partner heeft {formatPrice(originalPrice)} bevestigd,
-                maar de berekening ({formatPrice(overridePrice)}
-                {priceType === "per_person_per_day" ? ` × ${numberOfPeople}p × ${numberOfDays}d` : ` × ${numberOfPeople}p`})
-                = {formatPrice(overrideTotal)}. Pas de prijs of het type aan om dit gelijk te trekken.
+            <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <strong>Inconsistente prijs.</strong> De partner heeft {formatPrice(originalPrice)} bevestigd,
+                  maar de berekening ({formatPrice(overridePrice)}
+                  {priceType === "per_person_per_day" ? ` × ${numberOfPeople}p × ${numberOfDays}d` : ` × ${numberOfPeople}p`})
+                  = {formatPrice(overrideTotal)}. Meestal komt dit doordat het aantal gasten is gewijzigd.
+                </div>
               </div>
+              {onSyncTotalToOverride && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isSaving}
+                  className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                  onClick={async () => {
+                    setIsSaving(true);
+                    try {
+                      await onSyncTotalToOverride(overrideTotal);
+                      setIsOpen(false);
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                >
+                  Behoud {formatPrice(overridePrice)} {priceType === "per_person_per_day" ? "p.p.p.d." : "p.p."} → pas totaal aan naar {formatPrice(overrideTotal)} & informeer partner
+                </Button>
+              )}
             </div>
           )}
 
