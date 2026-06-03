@@ -13,14 +13,25 @@ export function useAdminChat() {
   const [isOnline, setIsOnline] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>("waiting");
 
-  // Load conversations
+  // Load conversations (alleen die met minimaal 1 bericht — voorkomt lege chats
+  // die ontstaan zodra een klant/partner het chatvenster opent zonder te typen)
   const loadConversations = useCallback(async () => {
     const { data } = await supabase
       .from("chat_conversations")
-      .select("*")
+      .select("*, chat_messages!inner(id)")
       .order("last_message_at", { ascending: false })
       .limit(50);
-    if (data) setConversations(data as unknown as ChatConversation[]);
+    if (data) {
+      const seen = new Set<string>();
+      const unique = (data as Array<ChatConversation & { chat_messages?: unknown }>)
+        .filter((c) => {
+          if (seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
+        })
+        .map(({ chat_messages: _msgs, ...rest }) => rest as ChatConversation);
+      setConversations(unique);
+    }
   }, []);
 
   // Derived filtered lists
