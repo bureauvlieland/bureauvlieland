@@ -591,3 +591,112 @@ function ManualLinkPopover({
     </Popover>
   );
 }
+
+function ProjectPickerPopover({
+  defaultQuery,
+  onPick,
+}: {
+  defaultQuery: string;
+  onPick: (project: { request_id: string; reference_number: string | null; customer_label: string }) => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(defaultQuery ?? "");
+  const [results, setResults] = useState<
+    { request_id: string; reference_number: string | null; customer_label: string; sub: string }[]
+  >([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = setTimeout(() => void search(query), 200);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, query]);
+
+  async function search(q: string) {
+    setBusy(true);
+    try {
+      let req = supabase
+        .from("program_requests")
+        .select("id, reference_number, customer_name, customer_company, status, selected_dates")
+        .not("status", "in", "(cancelled,deleted)")
+        .order("created_at", { ascending: false })
+        .limit(40);
+
+      const term = q.trim();
+      if (term.length >= 2) {
+        req = req.or(
+          `reference_number.ilike.%${term}%,customer_name.ilike.%${term}%,customer_company.ilike.%${term}%`,
+        );
+      }
+      const { data, error } = await req;
+      if (error) throw error;
+      const mapped = (data ?? []).map((r: any) => {
+        const dates: string[] = Array.isArray(r.selected_dates) ? r.selected_dates : [];
+        const dateLabel = dates.length ? dates[0] : "";
+        return {
+          request_id: r.id as string,
+          reference_number: (r.reference_number ?? null) as string | null,
+          customer_label: (r.customer_company || r.customer_name || "—") as string,
+          sub: [r.status, dateLabel].filter(Boolean).join(" · "),
+        };
+      });
+      setResults(mapped);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Zoeken mislukt");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="h-6 text-xs">
+          <Link2 className="h-3 w-3 mr-1" />
+          Boek als losse kosten op project…
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[420px] p-0">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Zoek op klant, bedrijf of projectreferentie…"
+            value={query}
+            onValueChange={setQuery}
+          />
+          <CommandList>
+            {busy && <div className="p-3 text-xs text-muted-foreground">Zoeken…</div>}
+            {!busy && results.length === 0 && (
+              <CommandEmpty>Geen projecten gevonden.</CommandEmpty>
+            )}
+            <CommandGroup>
+              {results.map((r) => (
+                <CommandItem
+                  key={r.request_id}
+                  value={r.request_id}
+                  onSelect={async () => {
+                    setOpen(false);
+                    await onPick({
+                      request_id: r.request_id,
+                      reference_number: r.reference_number,
+                      customer_label: r.customer_label,
+                    });
+                  }}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <div className="text-sm">
+                    <span className="font-mono text-xs text-muted-foreground mr-2">
+                      {r.reference_number || "—"}
+                    </span>
+                    {r.customer_label}
+                  </div>
+                  {r.sub && <div className="text-xs text-muted-foreground">{r.sub}</div>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
