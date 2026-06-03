@@ -228,11 +228,12 @@ const PartnerFinanceContent = () => {
       setSelectedItem(null);
       await refetchData();
       return { success: true, commission: result.commission };
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error registering invoice:", err);
-      toast.error("Er is een fout opgetreden bij het registreren van de factuur");
+      toast.error(err?.message || "Er is een fout opgetreden bij het registreren van de factuur");
       return { success: false };
     }
+
   };
 
   // Collective (verzamelfactuur) registration: multiple items, one PDF, one invoice nr.
