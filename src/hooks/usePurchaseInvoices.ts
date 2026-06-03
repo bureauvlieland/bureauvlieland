@@ -140,10 +140,15 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       toast.success("Inkoopfactuur geregistreerd");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error creating purchase invoice:", error);
-      toast.error("Fout bij registreren inkoopfactuur");
+      if (error?.code === "duplicate_invoice") {
+        toast.error(error.message || "Deze factuur lijkt al geregistreerd te zijn.");
+      } else {
+        toast.error("Fout bij registreren inkoopfactuur");
+      }
     },
+
   });
 
   const updateInvoice = useMutation({
