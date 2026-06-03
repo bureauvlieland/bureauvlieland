@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
+import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 
 type MatchStatus = "matched" | "ambiguous" | "unmatched" | "manual" | "internal";
 
@@ -72,6 +73,18 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [forwarding, setForwarding] = useState(false);
   const [forwardToSnelstart, setForwardToSnelstart] = useState(true);
+  const [extraCostTarget, setExtraCostTarget] = useState<{
+    idx: number;
+    project: { request_id: string; reference_number: string | null; customer_label: string };
+    prefill: {
+      description: string;
+      amount: number;
+      vatRate: number;
+      notes: string;
+      providerName: string;
+      bookingReference: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
     if (open && inboxItem) {
@@ -149,53 +162,29 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     });
   }
 
-  async function bookAsExtraOnProject(
+  function bookAsExtraOnProject(
     idx: number,
     project: { request_id: string; reference_number: string | null; customer_label: string },
   ) {
     const b = bookings[idx];
-    try {
-      // Bereken effectief BTW-tarief uit de regel (0/9/21) — Doeksen-overtocht = 9%, TB = 0%
-      const vatRate = b.amount_excl_vat > 0
-        ? Math.round((b.vat_amount / b.amount_excl_vat) * 100)
-        : 9;
-      const datesLabel = (b.departure_dates || []).join(" / ");
-      const description = `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
-      const notes = `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
-
-      const { data: created, error } = await supabase
-        .from("program_request_items")
-        .insert({
-          request_id: project.request_id,
-          block_id: null as never,
-          block_name: description,
-          block_category: "overig",
-          block_type: "bureau",
-          provider_name: "Rederij Doeksen",
-          provider_id: "bureau",
-          day_index: -1,
-          status: "confirmed",
-          booking_reference: b.resnr,
-          admin_price_override: b.amount_incl_vat,
-          admin_price_notes: notes,
-          price_type: "total",
-          vat_rate: vatRate,
-          skip_partner_notification: true,
-        } as never)
-        .select("id")
-        .single();
-      if (error || !created) throw error || new Error("Aanmaken mislukt");
-      updateBooking(idx, {
-        item_id: (created as { id: string }).id,
-        match_status: "manual",
-        project,
-      });
-      toast.success(
-        `Toegevoegd als overige kosten bij ${project.reference_number || project.customer_label}`,
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Aanmaken mislukt");
-    }
+    const vatRate = b.amount_excl_vat > 0
+      ? Math.round((b.vat_amount / b.amount_excl_vat) * 100)
+      : 9;
+    const datesLabel = (b.departure_dates || []).join(" / ");
+    const description = `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
+    const notes = `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
+    setExtraCostTarget({
+      idx,
+      project,
+      prefill: {
+        description,
+        amount: b.amount_incl_vat,
+        vatRate,
+        notes,
+        providerName: "Rederij Doeksen",
+        bookingReference: b.resnr,
+      },
+    });
   }
 
   async function finalize() {
@@ -351,6 +340,30 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
           </div>
         )}
       </SheetContent>
+
+      {extraCostTarget && (
+        <AdminAddCostSheet
+          open={!!extraCostTarget}
+          onOpenChange={(o) => {
+            if (!o) setExtraCostTarget(null);
+          }}
+          requestId={extraCostTarget.project.request_id}
+          onSuccess={() => {}}
+          prefill={extraCostTarget.prefill}
+          onCreatedItem={async (newItemId) => {
+            const { idx, project } = extraCostTarget;
+            updateBooking(idx, {
+              item_id: newItemId,
+              match_status: "manual",
+              project,
+            });
+            toast.success(
+              `Toegevoegd als overige kosten bij ${project.reference_number || project.customer_label}`,
+            );
+            setExtraCostTarget(null);
+          }}
+        />
+      )}
     </Sheet>
   );
 }
