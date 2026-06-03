@@ -212,6 +212,7 @@ export function useChat(options: UseChatOptions) {
           visitor_name: options.visitorName,
           visitor_email: options.visitorEmail,
           request_id: options.requestId || null,
+          accommodation_request_id: options.accommodationRequestId || null,
           status: "active",
           last_message_at: new Date().toISOString(),
         })
