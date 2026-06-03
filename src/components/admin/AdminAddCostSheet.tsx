@@ -116,23 +116,31 @@ export const AdminAddCostSheet = ({
         if (error) throw error;
         toast.success("Kosten bijgewerkt");
       } else {
-        const { error } = await supabase.from("program_request_items").insert({
-          request_id: requestId,
-          block_id: null as any,
-          block_name: description.trim(),
-          block_category: "overig",
-          block_type: "bureau",
-          provider_name: "Bureau Vlieland",
-          provider_id: "bureau",
-          day_index: -1,
-          status: "confirmed",
-          admin_price_override: parsedAmount,
-          admin_price_notes: notes.trim() || null,
-          skip_partner_notification: true,
-          price_type: "total",
-        });
+        const { data: inserted, error } = await supabase
+          .from("program_request_items")
+          .insert({
+            request_id: requestId,
+            block_id: null as any,
+            block_name: description.trim(),
+            block_category: "overig",
+            block_type: "bureau",
+            provider_name: prefill?.providerName || "Bureau Vlieland",
+            provider_id: "bureau",
+            day_index: -1,
+            status: "confirmed",
+            admin_price_override: parsedAmount,
+            admin_price_notes: notes.trim() || null,
+            skip_partner_notification: true,
+            price_type: "total",
+            vat_rate: Number(vatRate),
+          })
+          .select("id")
+          .single();
         if (error) throw error;
         toast.success("Kosten toegevoegd");
+        if (inserted && onCreatedItem) {
+          await onCreatedItem((inserted as { id: string }).id);
+        }
       }
 
       onOpenChange(false);
