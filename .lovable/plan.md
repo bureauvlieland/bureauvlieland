@@ -1,54 +1,34 @@
-## Wat er nu mis gaat
+## Wat er nu mist
 
-De werkbank-status "Stilte — opvolgen" wordt afgeleid uit `program_requests.updated_at` (gebruikt als proxy voor *last_outbound_at*) met een drempel van **5 dagen**. Zie `src/lib/projectCommunication.ts` (constante `STILTE_DRIEMPEL_DAGEN = 5`) en `src/lib/getProject.ts` regel 200/211:
+In de "Verzamelfactuur verwerken"-sheet (`src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`) zijn er drie paden per orderregel:
 
-```ts
-last_outbound_at: p.updated_at,
-```
+- **matched / manual** → groen, project getoond.
+- **ambiguous** → meerdere kandidaten, dropdown om er één te kiezen.
+- **unmatched** → alleen "Markeer als intern".
 
-Het probleem: een verstuurde **Status update** / **Mail klant** / **Mail partner** wordt wel in `email_log` weggeschreven, maar **raakt de `program_requests`-rij niet aan**. Daardoor verandert `updated_at` niet en blijft het project op rood staan, ook al ging er gisteren een mail uit. Hetzelfde geldt voor het logies-spoor (`lodging_requests.updated_at`).
-
-Er is op dit moment **geen snooze op projectniveau** — alleen op losse todo's (`admin_todos.snoozed_until`). De Inbox toont een project zodra `comm === "bij_bureau"` of `"stilte"`, zonder ontsnappingsmogelijkheid.
+Bij **unmatched** is er nu geen knop om alsnog handmatig aan een bestaand ticket-item te koppelen. Dat is precies wat je hier nodig hebt: de Doeksen-Resnr's 12777224 / 12777275 / 12777279 (Stedelijk Gymnasium Haarlem) horen bij een bestaand project, alleen is `booking_reference` niet (correct) ingevuld op het `program_request_item`.
 
 ## Voorstel
 
-### 1. Echte "laatste uitgaande communicatie" gebruiken (de hoofdfix)
+Voeg bij `unmatched` (en als secundaire optie ook bij `ambiguous`) een **"Koppel handmatig…"**-knop toe naast "Markeer als intern". Deze opent een Popover met een Command-zoekvak:
 
-In `listProjectsForWerkbank` ophalen: per project (en per lodging request) het `MAX(created_at)` uit `email_log` waar `direction = 'outbound'` (of een gelijkwaardig filter dat we al gebruiken). Die waarde gebruiken als `last_outbound_at` voor `getProgramCommunicationState` / `getLodgingCommunicationState`, met fallback naar `updated_at` als er nog niets gemaild is.
+- Zoeken op klantnaam, projectreferentie (bijv. BV-2605-xxxx), of bestaande Resnr.
+- Resultaten: open `program_request_items` van partner `rederij` (ferry-tickets) uit actieve/recente projecten, gesorteerd op service-datum aflopend, met label `referentienummer · klant · route · datum`.
+- Standaard ook tickets zónder `booking_reference` voorrang geven (dat zijn de waarschijnlijke kandidaten).
+- Selectie zet exact dezelfde state als `chooseCandidate`: `item_id`, `match_status="manual"`, `project = {…}`. De bestaande `finalize-collective-invoice` edge function schrijft dan `program_request_items.booking_reference = resnr` weg en de match is permanent.
 
-Effect: zodra je gisteren mailt, gaat de teller terug naar 1 dag en verdwijnt "Stilte" automatisch tot je weer 5 dagen niets hoort.
-
-Drempel `STILTE_DRIEMPEL_DAGEN = 5` blijft staan (consistent met de bestaande memory "Silence=Agreement na 7 dagen" — die 7 gaat over juridische silence-agreement, niet over de werkbank-kleur; 5 voor opvolgen blijft logisch).
-
-### 2. Optionele project-snooze in de werkbank
-
-Voor situaties waarin je net telefonisch contact had of bewust wilt wachten zonder mail te sturen:
-
-- Veld `snoozed_until date` toevoegen aan `program_requests` (en `lodging_requests`), via migration met de gebruikelijke GRANT/RLS-discipline.
-- In `loadInbox` (`src/lib/getInbox.ts`) projecten met `snoozed_until > today` overslaan in de communicatie-driven loop (todos blijven via hun eigen snooze-logica werken).
-- Knop "Snooze" in `ProjectDetailPanel` werkbank-header → popover met snelle opties (1 dag / 3 dagen / 1 week / aangepast), zelfde patroon als de bestaande `TodoSnoozeChip`.
-- Snooze-chip tonen op de projectkaart en in detail, met "Wakker maken" om te herstellen.
-
-### 3. Visuele consistentie
-
-- Stilte-chip krijgt tooltip "X dagen geen contact (laatste mail: …)" zodat duidelijk is waarom een project rood is.
+Bewust géén automatische "maak nieuw ticket aan"-route: als er echt geen ticket bestaat hoort het project zelf eerst aangevuld te worden, of de regel blijft een interne kostenpost.
 
 ## Technische details
 
-**Bestanden:**
+**Bestand:** `src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`
 
-- `src/lib/getProject.ts` — extra select naar `email_log` (group by `request_id` / `accommodation_request_id`) en doorgeven aan `getProgram/LodgingCommunicationState`.
-- `src/lib/projectCommunication.ts` — geen wijzigingen aan de logica, evt. extra veld `lastOutboundReason` voor tooltip.
-- `src/lib/getInbox.ts` — snooze-filter op projectniveau.
-- `supabase/migrations/…` — `snoozed_until date null` op `program_requests` en `lodging_requests` + GRANT-blok.
-- `src/components/admin/werkbank/ProjectDetailPanel.tsx` + `InboxList.tsx` — snooze-knop en -chip.
+1. Nieuwe sub-component `ManualLinkPopover` met `cmdk`-gebaseerde search (we gebruiken `@/components/ui/command` al elders).
+2. Query: `program_request_items` joined met `program_requests`, filter `provider_id = 'rederij'` (of `block_type = 'bureau_ticket'` afhankelijk van wat consistent is met de bestaande matcher in `parse-collective-invoice`), `request.status not in ('cancelled','deleted')`. Limit 50, debounce 250 ms, ILIKE op `customer_name` / `reference_number` / `booking_reference`.
+3. Reken kandidaten uit *deze* factuur (al gekozen `item_id`'s) uit de selectielijst om dubbele koppeling te voorkomen.
+4. UI: knop "Koppel handmatig…" → Popover met zoekveld + lijst; bij `onSelect` aanroep van bestaande `chooseCandidate(idx, candidateItemId)` (of een lichte variant die zelf de `Candidate` opbouwt uit de query-rij).
+5. Bij `ambiguous` als secundaire optie naast de bestaande dropdown ("Andere zoeken…").
 
-**Out of scope:** wijziging van de 7-daagse silence-agreement workflow, AV/akkoord-logica, of partner-portal weergave.
+**Geen backend-wijzigingen nodig** — `finalize-collective-invoice` accepteert `match_status: "manual"` met `item_id` al en schrijft `booking_reference` weg.
 
-## Open vraag
-
-Wil je **alleen de fix** (punt 1 — werkbank reageert eindelijk correct op verstuurde mails), of ook **de project-snoozeknop** (punten 1+2)?
-
-punt 1
-
-&nbsp;
+**Out of scope:** wijzigen van de auto-matcher, nieuwe tickets aanmaken vanuit deze sheet, of bulk-acties.

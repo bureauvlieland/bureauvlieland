@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, AlertTriangle, XCircle, MinusCircle, Loader2, ExternalLink, Send } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { CheckCircle2, AlertTriangle, XCircle, MinusCircle, Loader2, ExternalLink, Send, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -135,6 +137,18 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     updateBooking(idx, { match_status: "internal", item_id: null, project: null });
   }
 
+  function linkManual(idx: number, cand: Candidate) {
+    updateBooking(idx, {
+      item_id: cand.item_id,
+      match_status: "manual",
+      project: {
+        request_id: cand.request_id,
+        reference_number: cand.reference_number,
+        customer_label: cand.customer_label,
+      },
+    });
+  }
+
   async function finalize() {
     if (!data || !inboxItem) return;
     setForwarding(true);
@@ -230,8 +244,10 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                 <BookingRow
                   key={b.resnr + idx}
                   booking={b}
+                  usedItemIds={bookings.map((x) => x.item_id).filter((x): x is string => !!x)}
                   onChooseCandidate={(id) => chooseCandidate(idx, id)}
                   onMarkInternal={() => markInternal(idx)}
+                  onLinkManual={(cand) => linkManual(idx, cand)}
                 />
               ))}
             </div>
@@ -291,12 +307,16 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
 
 function BookingRow({
   booking,
+  usedItemIds,
   onChooseCandidate,
   onMarkInternal,
+  onLinkManual,
 }: {
   booking: Booking;
+  usedItemIds: string[];
   onChooseCandidate: (itemId: string) => void;
   onMarkInternal: () => void;
+  onLinkManual: (cand: Candidate) => void;
 }) {
   const icon = {
     matched: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
@@ -341,7 +361,7 @@ function BookingRow({
       {/* Project link / picker */}
       <div className="mt-2 pl-6 text-xs">
         {(booking.match_status === "matched" || booking.match_status === "manual") && booking.project && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted-foreground">→ Project</span>
             <a
               href={`/admin/projecten/${booking.project.request_id}`}
@@ -352,11 +372,19 @@ function BookingRow({
               {booking.project.reference_number || booking.project.customer_label}
               <ExternalLink className="h-3 w-3" />
             </a>
+            {booking.match_status === "manual" && (
+              <ManualLinkPopover
+                defaultQuery={booking.customer_name}
+                usedItemIds={usedItemIds}
+                triggerLabel="Wijzig…"
+                onPick={onLinkManual}
+              />
+            )}
           </div>
         )}
 
         {booking.match_status === "ambiguous" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted-foreground">Meerdere kandidaten:</span>
             <Select onValueChange={onChooseCandidate}>
               <SelectTrigger className="h-7 w-[280px] text-xs">
@@ -370,14 +398,26 @@ function BookingRow({
                 ))}
               </SelectContent>
             </Select>
+            <ManualLinkPopover
+              defaultQuery={booking.customer_name}
+              usedItemIds={usedItemIds}
+              triggerLabel="Anders zoeken…"
+              onPick={onLinkManual}
+            />
           </div>
         )}
 
         {booking.match_status === "unmatched" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="text-red-700 border-red-300">
               Geen ticket gevonden voor Resnr {booking.resnr}
             </Badge>
+            <ManualLinkPopover
+              defaultQuery={booking.customer_name}
+              usedItemIds={usedItemIds}
+              triggerLabel="Koppel handmatig…"
+              onPick={onLinkManual}
+            />
             <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={onMarkInternal}>
               Markeer als intern
             </Button>
@@ -389,5 +429,120 @@ function BookingRow({
         )}
       </div>
     </div>
+  );
+}
+
+function ManualLinkPopover({
+  defaultQuery,
+  usedItemIds,
+  triggerLabel,
+  onPick,
+}: {
+  defaultQuery: string;
+  usedItemIds: string[];
+  triggerLabel: string;
+  onPick: (cand: Candidate) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(defaultQuery ?? "");
+  const [results, setResults] = useState<Candidate[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = setTimeout(() => void search(query), 200);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, query]);
+
+  async function search(q: string) {
+    setBusy(true);
+    try {
+      let req = supabase
+        .from("program_request_items")
+        .select(`
+          id, request_id, block_name, booking_reference,
+          program_requests!inner(id, reference_number, customer_name, customer_company, status, selected_dates)
+        `)
+        .eq("provider_id", "rederij")
+        .not("program_requests.status", "in", "(cancelled,deleted)")
+        .order("created_at", { ascending: false })
+        .limit(40);
+
+      const term = q.trim();
+      if (term.length >= 2) {
+        // OR over: ref number, customer name/company op de joined tabel, of booking_reference
+        req = req.or(
+          `booking_reference.ilike.%${term}%,program_requests.reference_number.ilike.%${term}%,program_requests.customer_name.ilike.%${term}%,program_requests.customer_company.ilike.%${term}%`,
+        );
+      }
+
+      const { data, error } = await req;
+      if (error) throw error;
+      const mapped: Candidate[] = (data ?? [])
+        .filter((r: any) => !usedItemIds.includes(r.id))
+        .map((r: any) => ({
+          item_id: r.id,
+          request_id: r.request_id,
+          reference_number: r.program_requests?.reference_number ?? null,
+          customer_label:
+            r.program_requests?.customer_company || r.program_requests?.customer_name || "—",
+          block_name: r.booking_reference
+            ? `${r.block_name} · al gekoppeld aan ${r.booking_reference}`
+            : r.block_name,
+        }));
+      setResults(mapped);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Zoeken mislukt");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" className="h-6 text-xs">
+          <Link2 className="h-3 w-3 mr-1" />
+          {triggerLabel}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[420px] p-0">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Zoek op klant, projectreferentie of Resnr…"
+            value={query}
+            onValueChange={setQuery}
+          />
+          <CommandList>
+            {busy && <div className="p-3 text-xs text-muted-foreground">Zoeken…</div>}
+            {!busy && results.length === 0 && (
+              <CommandEmpty>Geen ferry-tickets gevonden.</CommandEmpty>
+            )}
+            <CommandGroup>
+              {results.map((c) => (
+                <CommandItem
+                  key={c.item_id}
+                  value={c.item_id}
+                  onSelect={() => {
+                    onPick(c);
+                    setOpen(false);
+                  }}
+                  className="flex flex-col items-start gap-0.5"
+                >
+                  <div className="text-sm">
+                    <span className="font-mono text-xs text-muted-foreground mr-2">
+                      {c.reference_number || "—"}
+                    </span>
+                    {c.customer_label}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{c.block_name}</div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
