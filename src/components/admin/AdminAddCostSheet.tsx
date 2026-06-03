@@ -30,12 +30,22 @@ interface EditingCostItem {
   vat_rate?: number | null;
 }
 
+interface PrefillData {
+  description?: string;
+  amount?: number;
+  vatRate?: number;
+  notes?: string;
+  providerName?: string;
+}
+
 interface AdminAddCostSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
   onSuccess: () => void;
   editingItem?: EditingCostItem | null;
+  prefill?: PrefillData | null;
+  onCreatedItem?: (itemId: string) => void | Promise<void>;
 }
 
 export const AdminAddCostSheet = ({
@@ -44,6 +54,8 @@ export const AdminAddCostSheet = ({
   requestId,
   onSuccess,
   editingItem,
+  prefill,
+  onCreatedItem,
 }: AdminAddCostSheetProps) => {
   const isEdit = !!editingItem;
   const [description, setDescription] = useState("");
