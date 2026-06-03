@@ -19,7 +19,7 @@ import { z } from "zod";
 const formSchema = z.object({
   name: z.string().trim().min(2, "Vul uw naam in (min. 2 tekens)").max(100),
   email: z.string().trim().email("Vul een geldig e-mailadres in").max(255),
-  phone: z.string().trim().min(10, "Vul een geldig telefoonnummer in").max(20),
+  phone: z.string().trim().min(5, "Vul een geldig telefoonnummer in").max(20).regex(/^[0-9+\s().-]+$/, "Vul een geldig telefoonnummer in"),
   company: z.string().trim().max(100).optional(),
   wishes: z.string().trim().max(2000).optional(),
 });
