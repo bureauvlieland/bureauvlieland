@@ -236,7 +236,7 @@ export async function listProjectsForWerkbank(opts: {
           quotesPending: lodgingQuotes.filter((q) => q.status === "pending").length,
           quotesAwaitingCustomerChoice: lodgingQuotes.filter((q) => q.status === "submitted").length,
           quoteSelected: lodgingQuotes.some((q) => q.status === "selected"),
-          last_outbound_at: lodging.updated_at,
+          last_outbound_at: lastLodgingMailAt.get(lodging.id) ?? lodging.updated_at,
         })
       : null;
 
