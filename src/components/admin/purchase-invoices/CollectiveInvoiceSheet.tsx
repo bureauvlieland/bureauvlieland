@@ -149,6 +149,44 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     });
   }
 
+  async function bookAsExtraOnProject(
+    idx: number,
+    project: { request_id: string; reference_number: string | null; customer_label: string },
+  ) {
+    const b = bookings[idx];
+    try {
+      const { data: created, error } = await supabase
+        .from("program_request_items")
+        .insert({
+          request_id: project.request_id,
+          block_name: `Doeksen — extra (Resnr ${b.resnr})`,
+          block_category: "ferry",
+          provider_name: "Rederij Doeksen",
+          provider_id: "rederij",
+          block_type: "bureau",
+          day_index: -1,
+          status: "confirmed",
+          booking_reference: b.resnr,
+          quoted_price: b.amount_incl_vat,
+          quoted_at: new Date().toISOString(),
+          skip_partner_notification: true,
+        } as never)
+        .select("id")
+        .single();
+      if (error || !created) throw error || new Error("Aanmaken mislukt");
+      updateBooking(idx, {
+        item_id: (created as { id: string }).id,
+        match_status: "manual",
+        project,
+      });
+      toast.success(
+        `Kostenpost toegevoegd aan ${project.reference_number || project.customer_label}`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Aanmaken mislukt");
+    }
+  }
+
   async function finalize() {
     if (!data || !inboxItem) return;
     setForwarding(true);
