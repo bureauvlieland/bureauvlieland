@@ -286,6 +286,7 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                   onChooseCandidate={(id) => chooseCandidate(idx, id)}
                   onMarkInternal={() => markInternal(idx)}
                   onLinkManual={(cand) => linkManual(idx, cand)}
+                  onBookOnProject={(project) => bookAsExtraOnProject(idx, project)}
                 />
               ))}
             </div>
