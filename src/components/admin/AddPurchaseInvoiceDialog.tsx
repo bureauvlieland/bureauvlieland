@@ -198,6 +198,20 @@ export function AddPurchaseInvoiceDialog({
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptDuplicate, setAcceptDuplicate] = useState(false);
+
+  // Duplicate check (same partner + invoice number)
+  const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
+    partnerId,
+    invoiceNumber,
+    { enabled: open },
+  );
+
+  // Reset override when key fields change
+  useEffect(() => {
+    setAcceptDuplicate(false);
+  }, [partnerId, invoiceNumber]);
+
 
   const { data: partners } = useQuery({
     queryKey: ["partners-active-list"],
