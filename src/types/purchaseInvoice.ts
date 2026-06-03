@@ -91,7 +91,10 @@ export interface PurchaseInvoiceInsert {
   registered_by?: string;
   lines?: PurchaseInvoiceLine[];
   allocations?: PurchaseInvoiceAllocation[];
+  /** When true, skip the duplicate (partner_id + invoice_number) check. */
+  allowDuplicate?: boolean;
 }
+
 
 export interface PurchaseInvoiceUpdate {
   status?: PurchaseInvoiceStatus;
