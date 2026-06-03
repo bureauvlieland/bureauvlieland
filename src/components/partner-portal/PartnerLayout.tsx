@@ -320,7 +320,14 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
           sourcePartnerId={partner.id}
           visitorName={partner.name}
           visitorEmail={partner.email}
+          accommodationRequestId={
+            (() => {
+              const m = location.pathname.match(/^\/partner\/logies\/([^/]+)/);
+              return m ? m[1] : undefined;
+            })()
+          }
         />
+
       </div>
     </SidebarProvider>
   );
