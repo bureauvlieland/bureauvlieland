@@ -210,7 +210,7 @@ const AdminChat = () => {
                 key={conv.id}
                 conversation={conv}
                 isActive={activeConversationId === conv.id}
-                projectRef={conv.request_id ? projectRefs[conv.request_id] : undefined}
+                projectRef={projectRefs[conv.id]}
                 onClick={() => setActiveConversationId(conv.id)}
               />
             ))}
