@@ -1,25 +1,35 @@
-## Probleem
+# Logies-project tonen in admin chat
 
-De knop "Verzamelfactuur" in de inkoopfactuur-inbox roept twee edge functions aan:
-- `parse-collective-invoice` (AI-scan + auto-match)
-- `finalize-collective-invoice` (opslaan + Snelstart)
+Op dit moment toont de admin-chat alleen een chip met het programma-referentienummer (uit `program_requests`). Wanneer een logies-partner (zoals Badhotel Bruin) vanuit een specifieke logies-aanvraag (bijv. "Deloitte") chat, is dat verband nergens zichtbaar — admin weet niet bij welk project de vraag hoort.
 
-Beide bestaan wel in `supabase/functions/` lokaal, maar zijn **niet gedeployd** op Lovable Cloud. Een aanroep geeft een 404 (`NOT_FOUND`) terug, vandaar de generieke "Parse mislukt" toast.
+## Aanpak
 
-Bewijs:
-- `supabase/curl /parse-collective-invoice` → 404 NOT_FOUND
-- `supabase/curl /finalize-collective-invoice` → 404 NOT_FOUND
-- Geen edge-logs voor beide functions ooit.
+### 1. Datamodel
+- Migratie: `chat_conversations.accommodation_request_id uuid null references public.accommodation_requests(id) on delete set null` + index.
+- Bestaande `request_id` (= `program_requests`) blijft ongemoeid; logies krijgt zijn eigen veld zodat de verwijzing eenduidig is en de juiste admin-route gebruikt kan worden.
 
-## Plan
+### 2. Partnerportaal (chat-context meegeven)
+- `ChatWidget` krijgt optionele prop `accommodationRequestId`.
+- `useChat` accepteert + persist `accommodationRequestId` in `chat_conversations` (insert + matching bij hervatten).
+- `PartnerLayout`: detecteer route `/partner/logies/:id` (via `useParams`/`useMatch`) en geef het id door aan `ChatWidget`. Voor `/partner/projecten/:id` blijft `requestId` werken zoals nu.
 
-1. Deploy `parse-collective-invoice` (bestaand bestand in repo, geen wijzigingen).
-2. Deploy `finalize-collective-invoice` (idem).
-3. Verifieer dat `LOVABLE_API_KEY` als secret aanwezig is (nodig voor de Gemini-scan in parse).
-4. Test door opnieuw op "Verzamelfactuur" te klikken op de Doeksen-mail in de inbox; controleer edge-logs voor errors (PDF-base64, AI-respons).
+### 3. Admin chat-weergave
+- `useConversationProjects` uitbreiden zodat het ook labels ophaalt voor `accommodation_request_id` (klantnaam + datum uit `accommodation_requests`, bijv. "Deloitte · 2 jul").
+- `AdminChat` header: tweede chip naast de partner-chip, met `Bed`-icoon, die linkt naar `/admin/logies/:id` (mode: logies-detailpagina). Zelfde chip ook in `ChatConversationItem` sidebar onder de partnernaam.
+- "Opslaan bij project"-actie ondersteunt straks ook logies (notitie op `accommodation_requests` i.p.v. `program_requests`). Als dit te veel scope is, valt deze knop terug op uitsluitend programma-projecten — chip-link blijft de primaire verbetering.
 
-Geen code- of schema-wijzigingen nodig — alleen deploy.
+## Technische details
 
-## Eventuele opvolging
+Bestanden:
+- `supabase/migrations/<ts>_chat_accommodation_link.sql` — kolom + index.
+- `src/integrations/supabase/types.ts` — auto-regen.
+- `src/hooks/useChat.ts` — type + insert/match logica.
+- `src/components/chat/ChatWidget.tsx` — extra prop doorzetten.
+- `src/components/partner-portal/PartnerLayout.tsx` — route-detectie en prop meegeven.
+- `src/hooks/useConversationProjects.ts` — extra fetch voor logies-labels; return type wordt `{ program?: string; accommodation?: { id; label } }` per conversation-id.
+- `src/pages/admin/AdminChat.tsx` — extra chip in header + doorgeven aan `ChatConversationItem`.
+- `src/components/admin/chat/ChatConversationItem.tsx` — render extra chip.
 
-Als na deploy de AI alsnog faalt op de PDF (Gemini accepteert PDF-bytes via `image_url` niet altijd), schakelen we over op `application/pdf`-multimodal-input zoals in andere parse-functions in dit project — dat behandelen we pas als de logs dat aantonen.
+## Open vraag
+
+Voor het "Opslaan bij project"-pad bij een logies-conversatie: wil je dat de chat als notitie op de logies-aanvraag wordt opgeslagen (extra werk), of laten we die knop voorlopig alleen werken voor programma-projecten en is een zichtbare link naar het logies-project genoeg? Ik ga uit van het laatste tenzij je anders aangeeft.
