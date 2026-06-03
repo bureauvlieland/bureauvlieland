@@ -2698,6 +2698,12 @@ const AdminRequestDetail = () => {
                   linesByItem={billingLinesByItem}
                 />
               </div>
+              {/* Partner-nacalculatie */}
+              <AdminPostChargesSection
+                requestId={request.id}
+                accommodationRequestId={request.linked_accommodation_id || undefined}
+                onChanged={fetchRequestData}
+              />
               {/* Margin overview */}
               <ProjectProfitSummary
                 purchaseInvoices={purchaseInvoices || []}
