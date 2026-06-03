@@ -350,12 +350,14 @@ function BookingRow({
   onChooseCandidate,
   onMarkInternal,
   onLinkManual,
+  onBookOnProject,
 }: {
   booking: Booking;
   usedItemIds: string[];
   onChooseCandidate: (itemId: string) => void;
   onMarkInternal: () => void;
   onLinkManual: (cand: Candidate) => void;
+  onBookOnProject: (project: { request_id: string; reference_number: string | null; customer_label: string }) => void | Promise<void>;
 }) {
   const icon = {
     matched: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
