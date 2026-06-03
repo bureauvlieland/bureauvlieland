@@ -505,6 +505,10 @@ const PartnerProjectContent = ({ mode }: Props) => {
               )}
             </div>
 
+            {!isConceptProject && id && partnerId && (
+              <PartnerPostChargesSection partnerId={partnerId} requestId={id} />
+            )}
+
             {!isConceptProject && (
               <div className="lg:sticky lg:top-6 lg:self-start">
                 <ProjectChatPanel
