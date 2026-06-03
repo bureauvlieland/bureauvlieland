@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ import {
   User,
   Building2,
   Phone,
+  ArrowLeft,
 } from "lucide-react";
 
 type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
@@ -127,8 +129,13 @@ const AdminChat = () => {
   return (
     <AdminLayout>
       <div className="h-[calc(100vh-56px)] lg:h-screen flex">
-        {/* Sidebar */}
-        <div className="w-80 border-r bg-white flex flex-col">
+        {/* Sidebar — full width op mobiel, vaste breedte op desktop. Verbergen op mobiel zodra een gesprek geopend is. */}
+        <div
+          className={cn(
+            "w-full lg:w-80 border-r bg-white flex-col",
+            activeConversationId ? "hidden lg:flex" : "flex"
+          )}
+        >
           {/* Header */}
           <div className="p-4 border-b space-y-3">
             <div className="flex items-center justify-between">
@@ -210,8 +217,13 @@ const AdminChat = () => {
           </div>
         </div>
 
-        {/* Chat area */}
-        <div className="flex-1 flex flex-col bg-slate-50">
+        {/* Chat area — verbergen op mobiel zolang er geen gesprek is geselecteerd */}
+        <div
+          className={cn(
+            "flex-1 flex-col bg-slate-50",
+            activeConversation ? "flex" : "hidden lg:flex"
+          )}
+        >
           {!activeConversation ? (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
@@ -222,9 +234,18 @@ const AdminChat = () => {
           ) : (
             <>
               {/* Chat header */}
-              <div className="px-4 py-3 bg-white border-b flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div>
+              <div className="px-4 py-3 bg-white border-b flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden h-8 w-8 flex-shrink-0"
+                    onClick={() => setActiveConversationId(null)}
+                    aria-label="Terug naar gesprekken"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="min-w-0">
                     <p className="font-medium flex items-center gap-2">
                       {activeConversation.source === "whatsapp" && (
                         <MessageCircle className="h-4 w-4 text-emerald-600" aria-label="WhatsApp" />
