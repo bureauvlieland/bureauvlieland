@@ -44,6 +44,9 @@ import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
+import { useDuplicatePurchaseInvoiceCheck } from "@/lib/purchaseInvoiceDuplicateCheck";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 interface ScanLineItem {
   description: string;
