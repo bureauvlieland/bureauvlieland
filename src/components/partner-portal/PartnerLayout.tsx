@@ -179,6 +179,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
 
 export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
