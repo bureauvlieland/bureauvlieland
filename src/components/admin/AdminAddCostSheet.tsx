@@ -30,12 +30,22 @@ interface EditingCostItem {
   vat_rate?: number | null;
 }
 
+interface PrefillData {
+  description?: string;
+  amount?: number;
+  vatRate?: number;
+  notes?: string;
+  providerName?: string;
+}
+
 interface AdminAddCostSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
   onSuccess: () => void;
   editingItem?: EditingCostItem | null;
+  prefill?: PrefillData | null;
+  onCreatedItem?: (itemId: string) => void | Promise<void>;
 }
 
 export const AdminAddCostSheet = ({
@@ -44,6 +54,8 @@ export const AdminAddCostSheet = ({
   requestId,
   onSuccess,
   editingItem,
+  prefill,
+  onCreatedItem,
 }: AdminAddCostSheetProps) => {
   const isEdit = !!editingItem;
   const [description, setDescription] = useState("");
@@ -63,6 +75,13 @@ export const AdminAddCostSheet = ({
         );
         setVatRate(editingItem.vat_rate != null ? String(editingItem.vat_rate) : "21");
         setNotes(editingItem.admin_price_notes ?? "");
+      } else if (prefill) {
+        setDescription(prefill.description ?? "");
+        setAmount(
+          prefill.amount != null ? String(prefill.amount).replace(".", ",") : ""
+        );
+        setVatRate(prefill.vatRate != null ? String(prefill.vatRate) : "21");
+        setNotes(prefill.notes ?? "");
       } else {
         setDescription("");
         setAmount("");
@@ -70,7 +89,7 @@ export const AdminAddCostSheet = ({
         setNotes("");
       }
     }
-  }, [open, editingItem]);
+  }, [open, editingItem, prefill]);
 
   const handleSubmit = async () => {
     if (!description.trim()) {
@@ -97,23 +116,31 @@ export const AdminAddCostSheet = ({
         if (error) throw error;
         toast.success("Kosten bijgewerkt");
       } else {
-        const { error } = await supabase.from("program_request_items").insert({
-          request_id: requestId,
-          block_id: null as any,
-          block_name: description.trim(),
-          block_category: "overig",
-          block_type: "bureau",
-          provider_name: "Bureau Vlieland",
-          provider_id: "bureau",
-          day_index: -1,
-          status: "confirmed",
-          admin_price_override: parsedAmount,
-          admin_price_notes: notes.trim() || null,
-          skip_partner_notification: true,
-          price_type: "total",
-        });
+        const { data: inserted, error } = await supabase
+          .from("program_request_items")
+          .insert({
+            request_id: requestId,
+            block_id: null as any,
+            block_name: description.trim(),
+            block_category: "overig",
+            block_type: "bureau",
+            provider_name: prefill?.providerName || "Bureau Vlieland",
+            provider_id: "bureau",
+            day_index: -1,
+            status: "confirmed",
+            admin_price_override: parsedAmount,
+            admin_price_notes: notes.trim() || null,
+            skip_partner_notification: true,
+            price_type: "total",
+            vat_rate: Number(vatRate),
+          })
+          .select("id")
+          .single();
         if (error) throw error;
         toast.success("Kosten toegevoegd");
+        if (inserted && onCreatedItem) {
+          await onCreatedItem((inserted as { id: string }).id);
+        }
       }
 
       onOpenChange(false);

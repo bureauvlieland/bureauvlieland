@@ -1,34 +1,68 @@
-## Wat er nu mist
 
-In de "Verzamelfactuur verwerken"-sheet (`src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`) zijn er drie paden per orderregel:
+# Nacalculatie door partners + admin-verwerking
 
-- **matched / manual** → groen, project getoond.
-- **ambiguous** → meerdere kandidaten, dropdown om er één te kiezen.
-- **unmatched** → alleen "Markeer als intern".
+Partners (logies, catering, activiteiten) kunnen achteraf losse nacalculatie-regels opvoeren per project — denk aan p.m.-posten, meerverbruik of afwijkingen op de offerte. Die regels zijn niet zichtbaar voor de klant; alleen admin ziet ze, krijgt er een signaal van en kan ze met één klik (of na bewerking) als "Overige kosten" op het project zetten zodat ze meegaan in de factuur.
 
-Bij **unmatched** is er nu geen knop om alsnog handmatig aan een bestaand ticket-item te koppelen. Dat is precies wat je hier nodig hebt: de Doeksen-Resnr's 12777224 / 12777275 / 12777279 (Stedelijk Gymnasium Haarlem) horen bij een bestaand project, alleen is `booking_reference` niet (correct) ingevuld op het `program_request_item`.
+## Nieuwe tabel: `partner_post_charges`
 
-## Voorstel
+Aparte laag — bestaande `quoted_price` op items blijft ongemoeid.
 
-Voeg bij `unmatched` (en als secundaire optie ook bij `ambiguous`) een **"Koppel handmatig…"**-knop toe naast "Markeer als intern". Deze opent een Popover met een Command-zoekvak:
+Kolommen:
+- `id`, `created_at`, `updated_at`
+- `partner_id` (text, fk partners)
+- `request_id` (uuid, fk program_requests) — voor activiteiten/catering
+- `accommodation_request_id` (uuid, nullable) — voor logies
+- `related_item_id` (uuid, nullable) — optionele koppeling aan bestaand `program_request_items` of `accommodation_quote_extras`
+- `description` (text), `notes` (text, optioneel)
+- `amount_incl_vat` (numeric), `vat_rate` (numeric, default 21)
+- `service_date` (date, optioneel)
+- `status` (text): `submitted` → `processed` → `rejected`
+- `processed_at`, `processed_by`, `processed_item_id` (uuid → program_request_items.id) — referentie naar het Overige-kosten item dat hieruit ontstond
+- `reject_reason` (text, optioneel)
 
-- Zoeken op klantnaam, projectreferentie (bijv. BV-2605-xxxx), of bestaande Resnr.
-- Resultaten: open `program_request_items` van partner `rederij` (ferry-tickets) uit actieve/recente projecten, gesorteerd op service-datum aflopend, met label `referentienummer · klant · route · datum`.
-- Standaard ook tickets zónder `booking_reference` voorrang geven (dat zijn de waarschijnlijke kandidaten).
-- Selectie zet exact dezelfde state als `chooseCandidate`: `item_id`, `match_status="manual"`, `project = {…}`. De bestaande `finalize-collective-invoice` edge function schrijft dan `program_request_items.booking_reference = resnr` weg en de match is permanent.
+RLS:
+- Partner: insert + select + update (alleen eigen, alleen zolang `status='submitted'`)
+- Admin: full access
+- GRANT volgens conventie
 
-Bewust géén automatische "maak nieuw ticket aan"-route: als er echt geen ticket bestaat hoort het project zelf eerst aangevuld te worden, of de regel blijft een interne kostenpost.
+## Partnerportaal — Nacalculatie-blok
 
-## Technische details
+Op `PartnerProject.tsx` (activiteiten/catering) en `PartnerAccommodation.tsx` (logies) een nieuw sectie-blok "Nacalculatie / nabookingen":
+- Lijst van eerder ingediende regels met status-badge (Ingediend / Verwerkt / Afgewezen)
+- Knop "Regel toevoegen" → dialog met omschrijving, bedrag incl. BTW, BTW-tarief, datum (optioneel), notitie
+- Tekstuele uitleg: "Voeg hier kosten toe die achteraf zijn ontstaan of afwijken van de offerte. Bureau Vlieland verwerkt deze in de eindfactuur."
+- Verwijderen alleen mogelijk zolang status `submitted`
 
-**Bestand:** `src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`
+## Admin — signalering
 
-1. Nieuwe sub-component `ManualLinkPopover` met `cmdk`-gebaseerde search (we gebruiken `@/components/ui/command` al elders).
-2. Query: `program_request_items` joined met `program_requests`, filter `provider_id = 'rederij'` (of `block_type = 'bureau_ticket'` afhankelijk van wat consistent is met de bestaande matcher in `parse-collective-invoice`), `request.status not in ('cancelled','deleted')`. Limit 50, debounce 250 ms, ILIKE op `customer_name` / `reference_number` / `booking_reference`.
-3. Reken kandidaten uit *deze* factuur (al gekozen `item_id`'s) uit de selectielijst om dubbele koppeling te voorkomen.
-4. UI: knop "Koppel handmatig…" → Popover met zoekveld + lijst; bij `onSelect` aanroep van bestaande `chooseCandidate(idx, candidateItemId)` (of een lichte variant die zelf de `Candidate` opbouwt uit de query-rij).
-5. Bij `ambiguous` als secundaire optie naast de bestaande dropdown ("Andere zoeken…").
+Bij elke nieuwe `partner_post_charges` met `status='submitted'`:
+1. **Auto-todo** in werkbank (`auto_type='partner_post_charge'`, `auto_entity_id=charge.id`) — titel: "Partner X: nacalculatie € … voor project Y"
+2. **Badge op project** in `AdminProjectsOverview` en `AdminProjectDetail` — pill "N nacalculatie(s) te verwerken" (oranje)
+3. **Sectie in Financieel Overzicht** op projectdetail: aparte kaart "Openstaande nacalculaties" boven de extra kosten
 
-**Geen backend-wijzigingen nodig** — `finalize-collective-invoice` accepteert `match_status: "manual"` met `item_id` al en schrijft `booking_reference` weg.
+DB trigger op insert maakt de todo aan (vergelijkbaar met `create_todo_for_new_accommodation_request`).
 
-**Out of scope:** wijzigen van de auto-matcher, nieuwe tickets aanmaken vanuit deze sheet, of bulk-acties.
+## Admin — verwerken
+
+In de nieuwe sectie per regel twee knoppen:
+- **Overnemen** — maakt direct een `program_request_items` met `block_type='bureau'`, `day_index=-1`, `skip_partner_notification=true`, `provider_name=<partnernaam>`, `block_name=<description>`, `admin_price_override=<amount_incl_vat>`, `vat_rate=<vat>`, `admin_price_notes` verwijst naar partner + originele notitie. Zet charge op `processed` met `processed_item_id`. Sluit todo.
+- **Bewerken & overnemen** — opent `AdminAddCostSheet` voorgevuld met bedrag/omschrijving/BTW/notitie; bij opslaan zelfde resultaat.
+- **Afwijzen** — vraag reden, zet `status='rejected'`, sluit todo. Partner ziet de afwijzing + reden.
+
+## Technisch
+
+- Migratie: nieuwe tabel + RLS + GRANT + trigger voor auto-todo + trigger `update_updated_at_column`.
+- `usePartnerPostCharges` hook (partner-kant) + `useAdminPostCharges` hook (admin-kant).
+- Nieuwe componenten:
+  - `src/components/partner-portal/PostChargesSection.tsx`
+  - `src/components/partner-portal/AddPostChargeDialog.tsx`
+  - `src/components/admin/PostChargesSection.tsx` (in projectdetail Facturatie-tab)
+  - Hergebruik `AdminAddCostSheet` met nieuwe `prefill` prop + callback `onCreated(itemId)` om charge te markeren als processed.
+- `AdminProjectsOverview`: badge-query meenemen (count van `submitted`).
+- Email-notificatie: niet in v1 (todo + badge volstaat). Later eventueel toevoegen.
+
+## Out of scope
+
+- Bestandsuploads/bonnetjes bij nacalculatie (kan in v2)
+- Klantzichtbaarheid van deze regels (blijft admin-only; ze komen wel ongelabeld op de eindfactuur via het Overige-kosten item)
+- Automatisch matchen met bestaande items (admin koppelt handmatig indien gewenst via `related_item_id` veld in dialog)

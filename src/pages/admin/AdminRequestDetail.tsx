@@ -99,6 +99,7 @@ import {
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
+import { AdminPostChargesSection } from "@/components/admin/AdminPostChargesSection";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
@@ -2697,6 +2698,12 @@ const AdminRequestDetail = () => {
                   linesByItem={billingLinesByItem}
                 />
               </div>
+              {/* Partner-nacalculatie */}
+              <AdminPostChargesSection
+                requestId={request.id}
+                accommodationRequestId={request.linked_accommodation_id || undefined}
+                onChanged={fetchRequestData}
+              />
               {/* Margin overview */}
               <ProjectProfitSummary
                 purchaseInvoices={purchaseInvoices || []}

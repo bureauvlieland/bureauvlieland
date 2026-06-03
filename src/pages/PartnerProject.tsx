@@ -13,6 +13,7 @@ import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/Part
 import { ProjectChatPanel } from "@/components/partner-portal/ProjectChatPanel";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { BureauCentralBadge } from "@/components/partner-portal/BureauCentralBadge";
+import { PartnerPostChargesSection } from "@/components/partner-portal/PartnerPostChargesSection";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -502,7 +503,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
                   />
                 ))
               )}
+              {!isConceptProject && id && partnerId && (
+                <PartnerPostChargesSection partnerId={partnerId} requestId={id} />
+              )}
             </div>
+
 
             {!isConceptProject && (
               <div className="lg:sticky lg:top-6 lg:self-start">
@@ -709,6 +714,13 @@ const PartnerProjectContent = ({ mode }: Props) => {
                 </p>
               )}
             </Card>
+
+            {accommodationQuote.status === "selected" && partnerId && (
+              <PartnerPostChargesSection
+                partnerId={partnerId}
+                accommodationRequestId={req.id}
+              />
+            )}
           </div>
 
           <div className="lg:sticky lg:top-6 lg:self-start">

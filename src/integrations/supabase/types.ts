@@ -1784,6 +1784,66 @@ export type Database = {
           },
         ]
       }
+      partner_post_charges: {
+        Row: {
+          accommodation_request_id: string | null
+          amount_incl_vat: number
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          partner_id: string
+          processed_at: string | null
+          processed_by: string | null
+          processed_item_id: string | null
+          reject_reason: string | null
+          related_item_id: string | null
+          request_id: string | null
+          service_date: string | null
+          status: string
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          accommodation_request_id?: string | null
+          amount_incl_vat: number
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          partner_id: string
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_item_id?: string | null
+          reject_reason?: string | null
+          related_item_id?: string | null
+          request_id?: string | null
+          service_date?: string | null
+          status?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          accommodation_request_id?: string | null
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          partner_id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_item_id?: string | null
+          reject_reason?: string | null
+          related_item_id?: string | null
+          request_id?: string | null
+          service_date?: string | null
+          status?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: []
+      }
       partner_purchase_invoice_allocations: {
         Row: {
           amount_excl_vat: number
