@@ -714,6 +714,13 @@ const PartnerProjectContent = ({ mode }: Props) => {
                 </p>
               )}
             </Card>
+
+            {accommodationQuote.status === "selected" && partnerId && (
+              <PartnerPostChargesSection
+                partnerId={partnerId}
+                accommodationRequestId={req.id}
+              />
+            )}
           </div>
 
           <div className="lg:sticky lg:top-6 lg:self-start">
