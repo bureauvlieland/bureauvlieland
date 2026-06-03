@@ -1,35 +1,54 @@
-# Logies-project tonen in admin chat
+## Wat er nu mis gaat
 
-Op dit moment toont de admin-chat alleen een chip met het programma-referentienummer (uit `program_requests`). Wanneer een logies-partner (zoals Badhotel Bruin) vanuit een specifieke logies-aanvraag (bijv. "Deloitte") chat, is dat verband nergens zichtbaar — admin weet niet bij welk project de vraag hoort.
+De werkbank-status "Stilte — opvolgen" wordt afgeleid uit `program_requests.updated_at` (gebruikt als proxy voor *last_outbound_at*) met een drempel van **5 dagen**. Zie `src/lib/projectCommunication.ts` (constante `STILTE_DRIEMPEL_DAGEN = 5`) en `src/lib/getProject.ts` regel 200/211:
 
-## Aanpak
+```ts
+last_outbound_at: p.updated_at,
+```
 
-### 1. Datamodel
-- Migratie: `chat_conversations.accommodation_request_id uuid null references public.accommodation_requests(id) on delete set null` + index.
-- Bestaande `request_id` (= `program_requests`) blijft ongemoeid; logies krijgt zijn eigen veld zodat de verwijzing eenduidig is en de juiste admin-route gebruikt kan worden.
+Het probleem: een verstuurde **Status update** / **Mail klant** / **Mail partner** wordt wel in `email_log` weggeschreven, maar **raakt de `program_requests`-rij niet aan**. Daardoor verandert `updated_at` niet en blijft het project op rood staan, ook al ging er gisteren een mail uit. Hetzelfde geldt voor het logies-spoor (`lodging_requests.updated_at`).
 
-### 2. Partnerportaal (chat-context meegeven)
-- `ChatWidget` krijgt optionele prop `accommodationRequestId`.
-- `useChat` accepteert + persist `accommodationRequestId` in `chat_conversations` (insert + matching bij hervatten).
-- `PartnerLayout`: detecteer route `/partner/logies/:id` (via `useParams`/`useMatch`) en geef het id door aan `ChatWidget`. Voor `/partner/projecten/:id` blijft `requestId` werken zoals nu.
+Er is op dit moment **geen snooze op projectniveau** — alleen op losse todo's (`admin_todos.snoozed_until`). De Inbox toont een project zodra `comm === "bij_bureau"` of `"stilte"`, zonder ontsnappingsmogelijkheid.
 
-### 3. Admin chat-weergave
-- `useConversationProjects` uitbreiden zodat het ook labels ophaalt voor `accommodation_request_id` (klantnaam + datum uit `accommodation_requests`, bijv. "Deloitte · 2 jul").
-- `AdminChat` header: tweede chip naast de partner-chip, met `Bed`-icoon, die linkt naar `/admin/logies/:id` (mode: logies-detailpagina). Zelfde chip ook in `ChatConversationItem` sidebar onder de partnernaam.
-- "Opslaan bij project"-actie ondersteunt straks ook logies (notitie op `accommodation_requests` i.p.v. `program_requests`). Als dit te veel scope is, valt deze knop terug op uitsluitend programma-projecten — chip-link blijft de primaire verbetering.
+## Voorstel
+
+### 1. Echte "laatste uitgaande communicatie" gebruiken (de hoofdfix)
+
+In `listProjectsForWerkbank` ophalen: per project (en per lodging request) het `MAX(created_at)` uit `email_log` waar `direction = 'outbound'` (of een gelijkwaardig filter dat we al gebruiken). Die waarde gebruiken als `last_outbound_at` voor `getProgramCommunicationState` / `getLodgingCommunicationState`, met fallback naar `updated_at` als er nog niets gemaild is.
+
+Effect: zodra je gisteren mailt, gaat de teller terug naar 1 dag en verdwijnt "Stilte" automatisch tot je weer 5 dagen niets hoort.
+
+Drempel `STILTE_DRIEMPEL_DAGEN = 5` blijft staan (consistent met de bestaande memory "Silence=Agreement na 7 dagen" — die 7 gaat over juridische silence-agreement, niet over de werkbank-kleur; 5 voor opvolgen blijft logisch).
+
+### 2. Optionele project-snooze in de werkbank
+
+Voor situaties waarin je net telefonisch contact had of bewust wilt wachten zonder mail te sturen:
+
+- Veld `snoozed_until date` toevoegen aan `program_requests` (en `lodging_requests`), via migration met de gebruikelijke GRANT/RLS-discipline.
+- In `loadInbox` (`src/lib/getInbox.ts`) projecten met `snoozed_until > today` overslaan in de communicatie-driven loop (todos blijven via hun eigen snooze-logica werken).
+- Knop "Snooze" in `ProjectDetailPanel` werkbank-header → popover met snelle opties (1 dag / 3 dagen / 1 week / aangepast), zelfde patroon als de bestaande `TodoSnoozeChip`.
+- Snooze-chip tonen op de projectkaart en in detail, met "Wakker maken" om te herstellen.
+
+### 3. Visuele consistentie
+
+- Stilte-chip krijgt tooltip "X dagen geen contact (laatste mail: …)" zodat duidelijk is waarom een project rood is.
 
 ## Technische details
 
-Bestanden:
-- `supabase/migrations/<ts>_chat_accommodation_link.sql` — kolom + index.
-- `src/integrations/supabase/types.ts` — auto-regen.
-- `src/hooks/useChat.ts` — type + insert/match logica.
-- `src/components/chat/ChatWidget.tsx` — extra prop doorzetten.
-- `src/components/partner-portal/PartnerLayout.tsx` — route-detectie en prop meegeven.
-- `src/hooks/useConversationProjects.ts` — extra fetch voor logies-labels; return type wordt `{ program?: string; accommodation?: { id; label } }` per conversation-id.
-- `src/pages/admin/AdminChat.tsx` — extra chip in header + doorgeven aan `ChatConversationItem`.
-- `src/components/admin/chat/ChatConversationItem.tsx` — render extra chip.
+**Bestanden:**
+
+- `src/lib/getProject.ts` — extra select naar `email_log` (group by `request_id` / `accommodation_request_id`) en doorgeven aan `getProgram/LodgingCommunicationState`.
+- `src/lib/projectCommunication.ts` — geen wijzigingen aan de logica, evt. extra veld `lastOutboundReason` voor tooltip.
+- `src/lib/getInbox.ts` — snooze-filter op projectniveau.
+- `supabase/migrations/…` — `snoozed_until date null` op `program_requests` en `lodging_requests` + GRANT-blok.
+- `src/components/admin/werkbank/ProjectDetailPanel.tsx` + `InboxList.tsx` — snooze-knop en -chip.
+
+**Out of scope:** wijziging van de 7-daagse silence-agreement workflow, AV/akkoord-logica, of partner-portal weergave.
 
 ## Open vraag
 
-Voor het "Opslaan bij project"-pad bij een logies-conversatie: wil je dat de chat als notitie op de logies-aanvraag wordt opgeslagen (extra werk), of laten we die knop voorlopig alleen werken voor programma-projecten en is een zichtbare link naar het logies-project genoeg? Ik ga uit van het laatste tenzij je anders aangeeft.
+Wil je **alleen de fix** (punt 1 — werkbank reageert eindelijk correct op verstuurde mails), of ook **de project-snoozeknop** (punten 1+2)?
+
+punt 1
+
+&nbsp;
