@@ -75,6 +75,13 @@ export const AdminAddCostSheet = ({
         );
         setVatRate(editingItem.vat_rate != null ? String(editingItem.vat_rate) : "21");
         setNotes(editingItem.admin_price_notes ?? "");
+      } else if (prefill) {
+        setDescription(prefill.description ?? "");
+        setAmount(
+          prefill.amount != null ? String(prefill.amount).replace(".", ",") : ""
+        );
+        setVatRate(prefill.vatRate != null ? String(prefill.vatRate) : "21");
+        setNotes(prefill.notes ?? "");
       } else {
         setDescription("");
         setAmount("");
@@ -82,7 +89,7 @@ export const AdminAddCostSheet = ({
         setNotes("");
       }
     }
-  }, [open, editingItem]);
+  }, [open, editingItem, prefill]);
 
   const handleSubmit = async () => {
     if (!description.trim()) {
