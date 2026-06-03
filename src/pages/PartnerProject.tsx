@@ -503,11 +503,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
                   />
                 ))
               )}
+              {!isConceptProject && id && partnerId && (
+                <PartnerPostChargesSection partnerId={partnerId} requestId={id} />
+              )}
             </div>
 
-            {!isConceptProject && id && partnerId && (
-              <PartnerPostChargesSection partnerId={partnerId} requestId={id} />
-            )}
 
             {!isConceptProject && (
               <div className="lg:sticky lg:top-6 lg:self-start">
