@@ -130,6 +130,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Duplicate guard: block same partner + invoice number (normalized).
+    const normalize = (v: string) => (v || "").replace(/[\s\-_.]/g, "").toUpperCase();
+    const normalizedNew = normalize(invoicedNumber);
+    if (normalizedNew) {
+      const { data: existing } = await supabase
+        .from("partner_purchase_invoices")
+        .select("id, invoice_number, invoice_date, amount_incl_vat, amount_excl_vat, status")
+        .eq("partner_id", partner.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      const dup = (existing || []).find((r: any) => normalize(r.invoice_number) === normalizedNew);
+      if (dup) {
+        return new Response(
+          JSON.stringify({
+            error: `Factuurnummer ${dup.invoice_number} is al geregistreerd op ${dup.invoice_date} (€${Number(dup.amount_incl_vat ?? dup.amount_excl_vat).toFixed(2)}). Neem contact op met Bureau Vlieland als dit een nieuwe factuur betreft.`,
+            code: "duplicate_invoice",
+            duplicate: dup,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+
     // Fetch all items, verify they belong to this partner and share the same project
     const itemIds = itemsList.map((x) => x.itemId);
     const { data: dbItems, error: itemsError } = await supabase
