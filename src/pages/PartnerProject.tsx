@@ -211,16 +211,20 @@ const PartnerProjectContent = ({ mode }: Props) => {
           }),
         }
       );
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({} as any));
+        throw new Error(errData?.error || "Failed");
+      }
       const result = await response.json();
       await refetch();
       setShowInvoiceDialog(false);
       setSelectedItem(null);
       return { success: true, commission: result.commission };
-    } catch {
-      toast({ title: "Fout", description: "Kon factuur niet registreren.", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Fout", description: err?.message || "Kon factuur niet registreren.", variant: "destructive" });
       return { success: false };
     }
+
   };
 
   const handleQuoteSubmit = async (quoteData: any) => {
