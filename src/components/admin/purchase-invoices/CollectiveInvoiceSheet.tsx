@@ -137,6 +137,18 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     updateBooking(idx, { match_status: "internal", item_id: null, project: null });
   }
 
+  function linkManual(idx: number, cand: Candidate) {
+    updateBooking(idx, {
+      item_id: cand.item_id,
+      match_status: "manual",
+      project: {
+        request_id: cand.request_id,
+        reference_number: cand.reference_number,
+        customer_label: cand.customer_label,
+      },
+    });
+  }
+
   async function finalize() {
     if (!data || !inboxItem) return;
     setForwarding(true);
