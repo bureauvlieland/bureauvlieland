@@ -99,6 +99,7 @@ import {
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 
 import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
+import { AdminPostChargesSection } from "@/components/admin/AdminPostChargesSection";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
