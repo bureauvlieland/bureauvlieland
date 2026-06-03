@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw } from "lucide-react";
+import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw, ArrowLeft } from "lucide-react";
 import { useReconcileTodos } from "@/hooks/useReconcileTodos";
 import {
   listProjectsForWerkbank,
