@@ -9,6 +9,8 @@ import type {
   PurchaseInvoiceFilters,
   PurchaseInvoiceStats 
 } from "@/types/purchaseInvoice";
+import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
+
 
 export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
   const queryClient = useQueryClient();
