@@ -35,6 +35,7 @@ import {
   Building2,
   Phone,
   ArrowLeft,
+  BedDouble,
 } from "lucide-react";
 
 type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
