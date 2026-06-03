@@ -134,6 +134,9 @@ export const AdminAddCostSheet = ({
             skip_partner_notification: true,
             price_type: "total",
             vat_rate: Number(vatRate),
+            ...(prefill?.bookingReference
+              ? { booking_reference: prefill.bookingReference }
+              : {}),
           })
           .select("id")
           .single();
