@@ -1,51 +1,25 @@
 ## Probleem
 
-Op project **BV-2605-0014** (Petra Dolstra) ontbreken de knoppen **"Offerte versturen"** en de primaire actie rechtsboven. In de database staat `quote_status = NULL`, terwijl de offerte-status-dropdown via een UI-fallback "Concept" toont. Daardoor faalt de render-conditie:
+De knop "Verzamelfactuur" in de inkoopfactuur-inbox roept twee edge functions aan:
+- `parse-collective-invoice` (AI-scan + auto-match)
+- `finalize-collective-invoice` (opslaan + Snelstart)
 
-```ts
-isQuoteMode && request.quote_status && ["concept","in_afstemming"].includes(request.quote_status)
-// → null is falsy → knop verdwijnt
-```
+Beide bestaan wel in `supabase/functions/` lokaal, maar zijn **niet gedeployd** op Lovable Cloud. Een aanroep geeft een 404 (`NOT_FOUND`) terug, vandaar de generieke "Parse mislukt" toast.
 
-Hetzelfde geldt voor de "Preview offerte (PDF)"-menu-item in het ⋯-menu.
+Bewijs:
+- `supabase/curl /parse-collective-invoice` → 404 NOT_FOUND
+- `supabase/curl /finalize-collective-invoice` → 404 NOT_FOUND
+- Geen edge-logs voor beide functions ooit.
 
-## Oplossing (2 lagen)
+## Plan
 
-### 1. Frontend — direct herstel (defensief)
-In `src/pages/admin/AdminRequestDetail.tsx` de check normaliseren met dezelfde fallback als de dropdown:
+1. Deploy `parse-collective-invoice` (bestaand bestand in repo, geen wijzigingen).
+2. Deploy `finalize-collective-invoice` (idem).
+3. Verifieer dat `LOVABLE_API_KEY` als secret aanwezig is (nodig voor de Gemini-scan in parse).
+4. Test door opnieuw op "Verzamelfactuur" te klikken op de Doeksen-mail in de inbox; controleer edge-logs voor errors (PDF-base64, AI-respons).
 
-```ts
-const effectiveQuoteStatus = request.quote_status ?? (isQuoteMode ? "concept" : null);
-```
+Geen code- of schema-wijzigingen nodig — alleen deploy.
 
-en die gebruiken in:
-- de `AdminSendQuoteDialog`-conditie (regel ~1351)
-- de "Preview offerte (PDF)"-menu-item (regel ~1379)
+## Eventuele opvolging
 
-Hiermee zien álle bestaande maatwerk-projecten zonder `quote_status` meteen weer hun verzendknop.
-
-### 2. Data-fix — eenmalige migratie
-Backfill `quote_status = 'concept'` voor alle bestaande maatwerk-aanvragen waar het veld nog `NULL` is:
-
-```sql
-UPDATE public.program_requests
-SET quote_status = 'concept'
-WHERE request_type = 'quote'
-  AND quote_status IS NULL;
-```
-
-### 3. Preventie — nieuwe rijen
-Default zetten zodat dit niet meer kan ontstaan:
-
-```sql
-ALTER TABLE public.program_requests
-  ALTER COLUMN quote_status SET DEFAULT 'concept';
-```
-
-(Bestaande NULL's zijn al opgelost door stap 2; nieuwe maatwerk-aanvragen krijgen automatisch `concept`.)
-
-## Verificatie
-
-- Open BV-2605-0014 → "Offerte versturen"-knop staat naast Chat.
-- Statusdropdown toont nog steeds "Concept" en blijft werken.
-- Andere maatwerk-projecten met al een gevulde `quote_status` blijven ongewijzigd.
+Als na deploy de AI alsnog faalt op de PDF (Gemini accepteert PDF-bytes via `image_url` niet altijd), schakelen we over op `application/pdf`-multimodal-input zoals in andere parse-functions in dit project — dat behandelen we pas als de logs dat aantonen.
