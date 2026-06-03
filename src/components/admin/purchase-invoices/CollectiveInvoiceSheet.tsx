@@ -340,6 +340,30 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
           </div>
         )}
       </SheetContent>
+
+      {extraCostTarget && (
+        <AdminAddCostSheet
+          open={!!extraCostTarget}
+          onOpenChange={(o) => {
+            if (!o) setExtraCostTarget(null);
+          }}
+          requestId={extraCostTarget.project.request_id}
+          onSuccess={() => {}}
+          prefill={extraCostTarget.prefill}
+          onCreatedItem={async (newItemId) => {
+            const { idx, project } = extraCostTarget;
+            updateBooking(idx, {
+              item_id: newItemId,
+              match_status: "manual",
+              project,
+            });
+            toast.success(
+              `Toegevoegd als overige kosten bij ${project.reference_number || project.customer_label}`,
+            );
+            setExtraCostTarget(null);
+          }}
+        />
+      )}
     </Sheet>
   );
 }
