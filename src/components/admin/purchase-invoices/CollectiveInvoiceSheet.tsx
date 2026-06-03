@@ -459,6 +459,10 @@ function BookingRow({
               triggerLabel="Koppel handmatig…"
               onPick={onLinkManual}
             />
+            <ProjectPickerPopover
+              defaultQuery={booking.customer_name}
+              onPick={onBookOnProject}
+            />
             <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={onMarkInternal}>
               Markeer als intern
             </Button>
