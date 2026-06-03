@@ -178,6 +178,13 @@ export default function AdminWerkbank() {
     setParams(next, { replace: true });
   };
 
+  const handleBack = () => {
+    setSelectedId(null);
+    const next = new URLSearchParams(params);
+    next.delete("id");
+    setParams(next, { replace: true });
+  };
+
   const counts = useMemo(() => {
     const list = projects ?? [];
     return {
