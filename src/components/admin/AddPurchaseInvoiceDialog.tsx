@@ -550,7 +550,9 @@ export function AddPurchaseInvoiceDialog({
         registered_by: "admin",
         lines: validLines.length > 0 ? validLines : undefined,
         allocations: validAllocations.length > 0 ? validAllocations : undefined,
+        allowDuplicate: acceptDuplicate,
       });
+
 
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
