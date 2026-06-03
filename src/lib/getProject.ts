@@ -153,6 +153,34 @@ export async function listProjectsForWerkbank(opts: {
     if (l.linked_program_id) lodgingByProgramId.set(l.linked_program_id, l);
   }
 
+  // Echte "laatste uitgaande mail" per request — proxy voor last_outbound_at.
+  // email_log bevat alleen verzonden transactionele mails (inbound loopt via een
+  // ander spoor). We pakken het meest recente created_at per request_id /
+  // accommodation_request_id en gebruiken dat als anker voor de stilte-detectie.
+  const programIds = (programs ?? []).map((p) => p.id);
+  const lastProgramMailAt = new Map<string, string>();
+  const lastLodgingMailAt = new Map<string, string>();
+  if (programIds.length || lodgingIds.length) {
+    const filters = [
+      programIds.length ? `related_request_id.in.(${programIds.join(",")})` : null,
+      lodgingIds.length ? `related_accommodation_id.in.(${lodgingIds.join(",")})` : null,
+    ].filter(Boolean) as string[];
+    const { data: mails } = await supabase
+      .from("email_log")
+      .select("related_request_id, related_accommodation_id, created_at")
+      .or(filters.join(","))
+      .order("created_at", { ascending: false })
+      .limit(2000);
+    for (const m of mails ?? []) {
+      if (m.related_request_id && !lastProgramMailAt.has(m.related_request_id)) {
+        lastProgramMailAt.set(m.related_request_id, m.created_at);
+      }
+      if (m.related_accommodation_id && !lastLodgingMailAt.has(m.related_accommodation_id)) {
+        lastLodgingMailAt.set(m.related_accommodation_id, m.created_at);
+      }
+    }
+  }
+
   const summaries: ProjectSummary[] = ((programs ?? []) as ProgramRow[]).map((p) => {
     const items: ProgramItemRow[] = p.program_request_items ?? [];
     const lodging = lodgingByProgramId.get(p.id) ?? null;
@@ -197,7 +225,7 @@ export async function listProjectsForWerkbank(opts: {
     const programComm = getProgramCommunicationState({
       pipeline: programPipeline,
       quote_status: p.quote_status,
-      last_outbound_at: p.updated_at,
+      last_outbound_at: lastProgramMailAt.get(p.id) ?? p.updated_at,
       itemsReadyForPartner,
       itemsAwaitingPartnerResponse,
     });
@@ -208,7 +236,7 @@ export async function listProjectsForWerkbank(opts: {
           quotesPending: lodgingQuotes.filter((q) => q.status === "pending").length,
           quotesAwaitingCustomerChoice: lodgingQuotes.filter((q) => q.status === "submitted").length,
           quoteSelected: lodgingQuotes.some((q) => q.status === "selected"),
-          last_outbound_at: lodging.updated_at,
+          last_outbound_at: lastLodgingMailAt.get(lodging.id) ?? lodging.updated_at,
         })
       : null;
 
