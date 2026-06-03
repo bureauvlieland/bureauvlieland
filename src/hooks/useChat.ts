@@ -20,6 +20,7 @@ export interface ChatConversation {
   visitor_name: string;
   visitor_email: string;
   request_id: string | null;
+  accommodation_request_id: string | null;
   status: "active" | "waiting" | "closed";
   last_message_at: string;
   created_at: string;
@@ -34,6 +35,7 @@ interface UseChatOptions {
   visitorName: string;
   visitorEmail: string;
   requestId?: string;
+  accommodationRequestId?: string;
 }
 
 /**
