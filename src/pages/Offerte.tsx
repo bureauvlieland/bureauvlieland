@@ -49,7 +49,7 @@ const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
   company: z.string().max(100, "Maximaal 100 karakters").optional(),
   email: z.string().email("Ongeldig email adres").max(255, "Maximaal 255 karakters"),
-  phone: z.string().min(10, "Ongeldig telefoonnummer").max(20, "Maximaal 20 karakters"),
+  phone: z.string().trim().min(5, "Ongeldig telefoonnummer").max(20, "Maximaal 20 karakters").regex(/^[0-9+\s().-]+$/, "Ongeldig telefoonnummer"),
   numberOfPeople: z.string().min(1, "Aantal personen is verplicht"),
   startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
   numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
