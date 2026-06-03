@@ -462,6 +462,13 @@ export function AddPurchaseInvoiceDialog({
     const excl = parseFloat(amountExcl);
     if (isNaN(excl) || excl <= 0) return toast.error("Bedrag excl. BTW is verplicht");
 
+    if (duplicateInvoice && !acceptDuplicate) {
+      return toast.error(
+        `Factuurnummer ${duplicateInvoice.invoice_number} is al geregistreerd voor deze leverancier. Vink "Toch opslaan" aan om door te gaan.`,
+      );
+    }
+
+
     // Validate allocations if any are set
     const validAllocations = allocations
       .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
