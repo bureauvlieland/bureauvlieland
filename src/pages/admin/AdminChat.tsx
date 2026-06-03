@@ -128,8 +128,13 @@ const AdminChat = () => {
   return (
     <AdminLayout>
       <div className="h-[calc(100vh-56px)] lg:h-screen flex">
-        {/* Sidebar */}
-        <div className="w-80 border-r bg-white flex flex-col">
+        {/* Sidebar — full width op mobiel, vaste breedte op desktop. Verbergen op mobiel zodra een gesprek geopend is. */}
+        <div
+          className={cn(
+            "w-full lg:w-80 border-r bg-white flex-col",
+            activeConversationId ? "hidden lg:flex" : "flex"
+          )}
+        >
           {/* Header */}
           <div className="p-4 border-b space-y-3">
             <div className="flex items-center justify-between">
