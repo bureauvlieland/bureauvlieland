@@ -225,7 +225,7 @@ export async function listProjectsForWerkbank(opts: {
     const programComm = getProgramCommunicationState({
       pipeline: programPipeline,
       quote_status: p.quote_status,
-      last_outbound_at: p.updated_at,
+      last_outbound_at: lastProgramMailAt.get(p.id) ?? p.updated_at,
       itemsReadyForPartner,
       itemsAwaitingPartnerResponse,
     });
