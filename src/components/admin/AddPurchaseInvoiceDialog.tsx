@@ -920,6 +920,32 @@ export function AddPurchaseInvoiceDialog({
               </div>
             </div>
 
+            {duplicateInvoice && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 p-3 space-y-2">
+                <div className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Mogelijk dubbele inkoopfactuur</p>
+                    <p className="text-xs mt-0.5">
+                      Factuurnummer <strong>{duplicateInvoice.invoice_number}</strong> is al geregistreerd
+                      voor deze leverancier op {duplicateInvoice.invoice_date} voor €
+                      {Number(duplicateInvoice.amount_incl_vat ?? duplicateInvoice.amount_excl_vat).toFixed(2)}
+                      {" "}(status: {duplicateInvoice.status}).
+                    </p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-100 cursor-pointer">
+                  <Checkbox
+                    checked={acceptDuplicate}
+                    onCheckedChange={(v) => setAcceptDuplicate(v === true)}
+                  />
+                  Toch opslaan — ik weet zeker dat dit een andere factuur is
+                </label>
+              </div>
+            )}
+
+
+
             {/* Order lines */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
