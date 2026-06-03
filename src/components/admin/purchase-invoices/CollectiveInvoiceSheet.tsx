@@ -73,6 +73,18 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [forwarding, setForwarding] = useState(false);
   const [forwardToSnelstart, setForwardToSnelstart] = useState(true);
+  const [extraCostTarget, setExtraCostTarget] = useState<{
+    idx: number;
+    project: { request_id: string; reference_number: string | null; customer_label: string };
+    prefill: {
+      description: string;
+      amount: number;
+      vatRate: number;
+      notes: string;
+      providerName: string;
+      bookingReference: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
     if (open && inboxItem) {
