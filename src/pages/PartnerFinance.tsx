@@ -276,11 +276,12 @@ const PartnerFinanceContent = () => {
       setCollectiveInitialIds([]);
       await refetchData();
       return { success: true };
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error registering collective invoice:", err);
-      toast.error("Er is een fout opgetreden bij het registreren van de factuur");
+      toast.error(err?.message || "Er is een fout opgetreden bij het registreren van de factuur");
       return { success: false };
     }
+
   };
 
   if (isLoading) {
