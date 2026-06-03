@@ -9,6 +9,8 @@ import type {
   PurchaseInvoiceFilters,
   PurchaseInvoiceStats 
 } from "@/types/purchaseInvoice";
+import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
+
 
 export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
   const queryClient = useQueryClient();
@@ -63,7 +65,24 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
 
   const createInvoice = useMutation({
     mutationFn: async (invoice: PurchaseInvoiceInsert) => {
-      const { lines, allocations, ...invoiceData } = invoice;
+      const { lines, allocations, allowDuplicate, ...invoiceData } = invoice;
+
+      // Duplicate guard: same partner + invoice number should not be registered twice.
+      if (!allowDuplicate && invoiceData.partner_id && invoiceData.invoice_number) {
+        const dup = await findDuplicatePurchaseInvoice(
+          invoiceData.partner_id,
+          invoiceData.invoice_number,
+        );
+        if (dup) {
+          const err: any = new Error(
+            `Factuurnummer ${dup.invoice_number} is al geregistreerd voor deze leverancier (${dup.invoice_date}, €${Number(dup.amount_incl_vat ?? dup.amount_excl_vat).toFixed(2)}).`,
+          );
+          err.code = "duplicate_invoice";
+          err.duplicate = dup;
+          throw err;
+        }
+      }
+
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
         .insert(invoiceData)
@@ -71,6 +90,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         .single();
 
       if (error) throw error;
+
 
       // Insert order lines if provided
       if (lines && lines.length > 0 && data?.id) {
@@ -120,10 +140,15 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       toast.success("Inkoopfactuur geregistreerd");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error creating purchase invoice:", error);
-      toast.error("Fout bij registreren inkoopfactuur");
+      if (error?.code === "duplicate_invoice") {
+        toast.error(error.message || "Deze factuur lijkt al geregistreerd te zijn.");
+      } else {
+        toast.error("Fout bij registreren inkoopfactuur");
+      }
     },
+
   });
 
   const updateInvoice = useMutation({

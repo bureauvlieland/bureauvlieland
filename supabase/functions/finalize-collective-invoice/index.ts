@@ -85,6 +85,30 @@ Deno.serve(async (req) => {
       .single();
     if (!inbox) return j({ error: "Inbox item not found" }, 404);
 
+    // Duplicate guard
+    const normalize = (v: string) => (v || "").replace(/[\s\-_.]/g, "").toUpperCase();
+    const normalizedNew = normalize(body.invoice.invoice_number);
+    if (normalizedNew) {
+      const { data: existing } = await adminClient
+        .from("partner_purchase_invoices")
+        .select("id, invoice_number, invoice_date, amount_incl_vat, amount_excl_vat, status")
+        .eq("partner_id", body.partner_id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      const dup = (existing || []).find((r: any) => normalize(r.invoice_number) === normalizedNew);
+      if (dup) {
+        return j(
+          {
+            error: `Verzamelfactuur ${dup.invoice_number} is al verwerkt op ${dup.invoice_date} (€${Number(dup.amount_incl_vat ?? dup.amount_excl_vat).toFixed(2)}).`,
+            code: "duplicate_invoice",
+            duplicate: dup,
+          },
+          409,
+        );
+      }
+    }
+
+
     // 1) Insert invoice (collective: request_id null, is_collective true)
     const supplierVat = body.invoice.total_vat > 0
       ? +((body.invoice.total_vat / body.invoice.total_excl_vat) * 100).toFixed(2)
