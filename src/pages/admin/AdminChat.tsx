@@ -33,6 +33,7 @@ import {
   User,
   Building2,
   Phone,
+  ArrowLeft,
 } from "lucide-react";
 
 type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
