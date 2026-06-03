@@ -36,6 +36,7 @@ interface PrefillData {
   vatRate?: number;
   notes?: string;
   providerName?: string;
+  bookingReference?: string;
 }
 
 interface AdminAddCostSheetProps {

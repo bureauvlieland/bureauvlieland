@@ -1,39 +1,28 @@
-## Doel
+# Bewerkbaar boeken als overige kosten vanuit verzamelfactuur
 
-Op rode (`unmatched`) regels in de Doeksen-verzamelfactuur-sheet een derde actie toevoegen waarmee de admin de regel direct als **losse kostenpost** (Overige kosten / bureau-item) op een bestaand project boekt — vergelijkbaar met de "Overnemen"-flow van partner-nacalculatie.
+## Probleem
+Nu boekt `bookAsExtraOnProject` in `CollectiveInvoiceSheet.tsx` de regel direct weg zodra je een project kiest — zonder kans om bedrag of omschrijving aan te passen.
 
-## Waar
+## Oplossing
+Hergebruik de bestaande `AdminAddCostSheet` (die al `prefill` + `onCreatedItem` ondersteunt, net zoals `AdminPostChargesSection` doet voor nacalculaties).
 
-`src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`, in het `unmatched`-blok (regels 410–425), naast "Koppel handmatig…" en "Markeer als intern".
+### Flow
+1. In `BookingRow` blijft de project-picker bestaan, maar bij keuze opent een **bevestigings-sheet** (`AdminAddCostSheet`) met prefill:
+   - Omschrijving: `Overtocht Rederij Doeksen — <data>`
+   - Bedrag: `amount_incl_vat`
+   - BTW: berekend uit `vat_amount / amount_excl_vat` (9% default)
+   - Toelichting: `Verzamelfactuur Doeksen · Resnr <resnr> · <klantnaam>`
+   - `providerName: "Rederij Doeksen"`
+2. Gebruiker kan omschrijving, bedrag, BTW en toelichting nog wijzigen vóór opslaan.
+3. Na opslaan via `onCreatedItem(newItemId)`: zet `booking_reference` op het zojuist aangemaakte item (AdminAddCostSheet slaat dat veld nu niet op) en update de booking row naar `match_status: "manual"` met `item_id`.
 
-## Nieuwe actie: "Boek als extra kosten op project…"
+### Wijzigingen
+- **`src/components/admin/AdminAddCostSheet.tsx`**: `prefill` uitbreiden met optionele `bookingReference?: string`; meegeven aan de insert. Geen breaking changes voor bestaande callers.
+- **`src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`**:
+  - State `extraCostTarget: { idx, project, prefill } | null` toevoegen.
+  - `bookAsExtraOnProject` vervangen: opent voortaan de sheet i.p.v. direct insert.
+  - `AdminAddCostSheet` renderen onderaan met `onCreatedItem` callback die `updateBooking(idx, { item_id, match_status: "manual", project })` doet en toast toont.
 
-1. Opent een popover met een projectzoeker (referentie / klantnaam / bedrijf), filterend op `program_requests` met status ≠ `cancelled/deleted`.
-2. Na keuze maakt het een nieuwe `program_request_items` rij aan:
-   - `request_id` = gekozen project
-   - `block_type` = `bureau`
-   - `provider_id` = `rederij`
-   - `day_index` = `-1` (interne/pinned bureau-laag)
-   - `block_name` = bv. `"Doeksen — extra (Resnr {resnr})"`
-   - `booking_reference` = de Resnr van de regel
-   - `quoted_price` = bedrag (incl. BTW) van de regel
-   - `skip_partner_notification` = `true`
-3. Vervolgens behandelt de sheet de booking-regel als een normale `matched`-koppeling: `match_status: "matched"`, `item_id` = nieuwe item-id, `project` = gekozen project — zodat de verzamelfactuur de kosten op dat project alloceert (zelfde pad als bestaande matches).
-
-## UX-details
-
-- Knop-label: **"Boek als losse kosten op project…"** (ghost button, zelfde stijl als "Koppel handmatig…").
-- Bevestigingstoast: *"Kostenpost toegevoegd aan {referentie} — {klant}"*.
-- Na aanmaken: rode rand wordt groen, Resnr-badge verdwijnt, project-link verschijnt zoals bij andere matched-regels.
-- Geen wijziging aan "Markeer als intern" of "Koppel handmatig…".
-
-## Technisch
-
-- Hergebruik het bestaande `ManualLinkPopover`-zoekpatroon, maar zonder filter op `provider_id = rederij` voor het zoeken naar projecten (we zoeken `program_requests` ipv items). Eenvoudigste: nieuwe kleine `ProjectPickerPopover` die `program_requests` zoekt.
-- Itemcreatie via `supabase.from('program_request_items').insert(...)` met service-role niet nodig (admin RLS dekt dit al).
-- Geen migraties nodig; `program_request_items` ondersteunt `block_type='bureau'`, `day_index=-1`, en `booking_reference` al (zoals gebruikt in bestaande Doeksen- en partner-nacalculatie-flows).
-
-## Niet in scope
-
-- Geen wijziging aan partner-nacalculatie of admin-projectaanmaak (eerdere vraag blijft openstaan).
-- Geen nieuwe statussen of triggers.
+### Buiten scope
+- Geen wijziging aan de matching-logica, finalize-flow of edge functions.
+- Project kiezen gebeurt nog steeds via bestaande `ManualLinkPopover` / candidate-select; daarna opent pas de cost-sheet.
