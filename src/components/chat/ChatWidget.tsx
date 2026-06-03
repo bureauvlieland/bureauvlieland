@@ -16,6 +16,7 @@ interface ChatWidgetProps {
   visitorName: string;
   visitorEmail: string;
   requestId?: string;
+  accommodationRequestId?: string;
   defaultOpen?: boolean;
 }
 
@@ -26,6 +27,7 @@ export const ChatWidget = ({
   visitorName,
   visitorEmail,
   requestId,
+  accommodationRequestId,
   defaultOpen = false,
 }: ChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -46,6 +48,7 @@ export const ChatWidget = ({
     visitorName,
     visitorEmail,
     requestId,
+    accommodationRequestId,
   });
 
   // Auto-scroll to bottom

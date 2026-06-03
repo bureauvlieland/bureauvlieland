@@ -1117,6 +1117,7 @@ export type Database = {
       chat_conversations: {
         Row: {
           accommodation_id: string | null
+          accommodation_request_id: string | null
           created_at: string
           id: string
           last_email_notified_at: string | null
@@ -1135,6 +1136,7 @@ export type Database = {
         }
         Insert: {
           accommodation_id?: string | null
+          accommodation_request_id?: string | null
           created_at?: string
           id?: string
           last_email_notified_at?: string | null
@@ -1153,6 +1155,7 @@ export type Database = {
         }
         Update: {
           accommodation_id?: string | null
+          accommodation_request_id?: string | null
           created_at?: string
           id?: string
           last_email_notified_at?: string | null

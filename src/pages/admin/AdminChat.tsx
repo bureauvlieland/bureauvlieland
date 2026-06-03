@@ -35,6 +35,7 @@ import {
   Building2,
   Phone,
   ArrowLeft,
+  BedDouble,
 } from "lucide-react";
 
 type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
@@ -210,7 +211,7 @@ const AdminChat = () => {
                 key={conv.id}
                 conversation={conv}
                 isActive={activeConversationId === conv.id}
-                projectRef={conv.request_id ? projectRefs[conv.request_id] : undefined}
+                projectRef={projectRefs[conv.id]}
                 onClick={() => setActiveConversationId(conv.id)}
               />
             ))}
@@ -275,13 +276,22 @@ const AdminChat = () => {
                       Partner
                     </button>
                   )}
-                  {activeConversation.request_id && projectRefs[activeConversation.request_id] && (
+                  {projectRefs[activeConversation.id]?.program && (
                     <button
-                      onClick={() => navigate(`/admin/aanvragen/${activeConversation.request_id}`)}
+                      onClick={() => navigate(`/admin/aanvragen/${projectRefs[activeConversation.id]!.program!.id}`)}
                       className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full flex items-center gap-1 hover:bg-primary/20 transition-colors"
                     >
                       <FileText className="h-3 w-3" />
-                      {projectRefs[activeConversation.request_id]}
+                      {projectRefs[activeConversation.id]!.program!.reference}
+                    </button>
+                  )}
+                  {projectRefs[activeConversation.id]?.accommodation && (
+                    <button
+                      onClick={() => navigate(`/admin/logies/${projectRefs[activeConversation.id]!.accommodation!.id}`)}
+                      className="text-xs bg-amber-100 text-amber-900 px-2 py-1 rounded-full flex items-center gap-1 hover:bg-amber-200 transition-colors"
+                    >
+                      <BedDouble className="h-3 w-3" />
+                      {projectRefs[activeConversation.id]!.accommodation!.label}
                     </button>
                   )}
                 </div>
@@ -299,8 +309,8 @@ const AdminChat = () => {
                           <AlertDialogTitle>Chat opslaan bij project?</AlertDialogTitle>
                           <AlertDialogDescription>
                             De volledige chatgeschiedenis wordt opgeslagen als notitie bij het project
-                            {projectRefs[activeConversation.request_id!] && (
-                              <> ({projectRefs[activeConversation.request_id!]})</>
+                            {projectRefs[activeConversation.id]?.program && (
+                              <> ({projectRefs[activeConversation.id]!.program!.reference})</>
                             )}
                             . Dit is zichtbaar in de projecttijdlijn.
                           </AlertDialogDescription>

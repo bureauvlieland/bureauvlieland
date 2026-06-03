@@ -2,39 +2,82 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { ChatConversation } from "@/hooks/useChat";
 
-/** Fetches reference_numbers for conversations that have a request_id */
-export function useConversationProjects(conversations: ChatConversation[]) {
-  const [projectRefs, setProjectRefs] = useState<Record<string, string>>({});
+export interface ConversationProjectRef {
+  program?: { id: string; reference: string };
+  accommodation?: { id: string; label: string };
+}
 
-  const requestIds = useMemo(
-    () => conversations.map(c => c.request_id).filter(Boolean) as string[],
+/** Fetches project labels (program + lodging) for conversations. Keyed by conversation.id. */
+export function useConversationProjects(conversations: ChatConversation[]) {
+  const [refs, setRefs] = useState<Record<string, ConversationProjectRef>>({});
+
+  const programIds = useMemo(
+    () =>
+      Array.from(
+        new Set(conversations.map((c) => c.request_id).filter(Boolean) as string[])
+      ),
+    [conversations]
+  );
+  const accommodationIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          conversations
+            .map((c) => c.accommodation_request_id)
+            .filter(Boolean) as string[]
+        )
+      ),
     [conversations]
   );
 
   useEffect(() => {
-    if (requestIds.length === 0) {
-      setProjectRefs({});
-      return;
-    }
-
     const fetchRefs = async () => {
-      const { data } = await supabase
-        .from("program_requests")
-        .select("id, reference_number")
-        .in("id", requestIds);
+      const [progRes, accRes] = await Promise.all([
+        programIds.length
+          ? supabase
+              .from("program_requests")
+              .select("id, reference_number")
+              .in("id", programIds)
+          : Promise.resolve({ data: [] as { id: string; reference_number: string | null }[] }),
+        accommodationIds.length
+          ? supabase
+              .from("accommodation_requests")
+              .select("id, reference_number, customer_name")
+              .in("id", accommodationIds)
+          : Promise.resolve({
+              data: [] as { id: string; reference_number: string | null; customer_name: string | null }[],
+            }),
+      ]);
 
-      if (data) {
-        const map: Record<string, string> = {};
-        for (const row of data) {
-          if (row.reference_number) {
-            map[row.id] = row.reference_number;
-          }
-        }
-        setProjectRefs(map);
+      const progMap = new Map<string, string>();
+      for (const row of progRes.data || []) {
+        if (row.reference_number) progMap.set(row.id, row.reference_number);
       }
+      const accMap = new Map<string, string>();
+      for (const row of accRes.data || []) {
+        const label = row.reference_number || row.customer_name || "Logies";
+        accMap.set(row.id, label);
+      }
+
+      const next: Record<string, ConversationProjectRef> = {};
+      for (const c of conversations) {
+        const entry: ConversationProjectRef = {};
+        if (c.request_id && progMap.has(c.request_id)) {
+          entry.program = { id: c.request_id, reference: progMap.get(c.request_id)! };
+        }
+        if (c.accommodation_request_id && accMap.has(c.accommodation_request_id)) {
+          entry.accommodation = {
+            id: c.accommodation_request_id,
+            label: accMap.get(c.accommodation_request_id)!,
+          };
+        }
+        if (entry.program || entry.accommodation) next[c.id] = entry;
+      }
+      setRefs(next);
     };
     fetchRefs();
-  }, [requestIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programIds.join(","), accommodationIds.join(",")]);
 
-  return projectRefs;
+  return refs;
 }

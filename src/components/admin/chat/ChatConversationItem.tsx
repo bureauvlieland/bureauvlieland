@@ -2,14 +2,15 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
-import { User, Building2, Clock, FileText, MessageCircle } from "lucide-react";
+import { User, Building2, Clock, FileText, MessageCircle, BedDouble } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { ChatConversation } from "@/hooks/useChat";
+import type { ConversationProjectRef } from "@/hooks/useConversationProjects";
 
 interface ChatConversationItemProps {
   conversation: ChatConversation;
   isActive: boolean;
-  projectRef?: string;
+  projectRef?: ConversationProjectRef;
   onClick: () => void;
 }
 
@@ -45,21 +46,33 @@ export function ChatConversationItem({ conversation: conv, isActive, projectRef,
       <p className="text-xs text-muted-foreground truncate">
         {conv.source === "whatsapp" ? (conv.phone_number || "WhatsApp") : conv.visitor_email}
       </p>
-      <div className="flex items-center gap-2 mt-1">
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
         <p className="text-[10px] text-muted-foreground flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true, locale: nl })}
         </p>
-        {projectRef && (
+        {projectRef?.program && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/admin/aanvragen/${conv.request_id}`);
+              navigate(`/admin/aanvragen/${projectRef.program!.id}`);
             }}
             className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex items-center gap-0.5 hover:bg-primary/20 transition-colors"
           >
             <FileText className="h-2.5 w-2.5" />
-            {projectRef}
+            {projectRef.program.reference}
+          </button>
+        )}
+        {projectRef?.accommodation && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/logies/${projectRef.accommodation!.id}`);
+            }}
+            className="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 hover:bg-amber-200 transition-colors"
+          >
+            <BedDouble className="h-2.5 w-2.5" />
+            {projectRef.accommodation.label}
           </button>
         )}
       </div>

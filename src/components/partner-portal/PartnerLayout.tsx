@@ -179,6 +179,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
 
 export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
@@ -320,7 +321,14 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
           sourcePartnerId={partner.id}
           visitorName={partner.name}
           visitorEmail={partner.email}
+          accommodationRequestId={
+            (() => {
+              const m = location.pathname.match(/^\/partner\/logies\/([^/]+)/);
+              return m ? m[1] : undefined;
+            })()
+          }
         />
+
       </div>
     </SidebarProvider>
   );
