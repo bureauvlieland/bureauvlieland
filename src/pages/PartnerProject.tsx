@@ -13,6 +13,7 @@ import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/Part
 import { ProjectChatPanel } from "@/components/partner-portal/ProjectChatPanel";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { BureauCentralBadge } from "@/components/partner-portal/BureauCentralBadge";
+import { PartnerPostChargesSection } from "@/components/partner-portal/PartnerPostChargesSection";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
