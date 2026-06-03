@@ -244,8 +244,10 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                 <BookingRow
                   key={b.resnr + idx}
                   booking={b}
+                  usedItemIds={bookings.map((x) => x.item_id).filter((x): x is string => !!x)}
                   onChooseCandidate={(id) => chooseCandidate(idx, id)}
                   onMarkInternal={() => markInternal(idx)}
+                  onLinkManual={(cand) => linkManual(idx, cand)}
                 />
               ))}
             </div>
