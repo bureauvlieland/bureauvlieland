@@ -1,28 +1,23 @@
-# Bewerkbaar boeken als overige kosten vanuit verzamelfactuur
-
 ## Probleem
-Nu boekt `bookAsExtraOnProject` in `CollectiveInvoiceSheet.tsx` de regel direct weg zodra je een project kiest — zonder kans om bedrag of omschrijving aan te passen.
+
+Project BV-2605-0013 staat in de DB op `quote_status = 'offerte_verstuurd'`, maar `quote_sent_at` en `quote_pdf_path` zijn `null` — de offerte is nooit daadwerkelijk verzonden. Waarschijnlijk is de status handmatig via het dropdown veranderd zonder dat de mail eruit ging.
+
+In `AdminRequestDetail.tsx` (regels 1352 en 1381) wordt de knop **"Stuur offerte"** alleen getoond als `quote_status` één van `concept` / `in_afstemming` is. Bij `offerte_verstuurd` verdwijnt zowel de hoofdknop als de actie in het overflow-menu, dus er is geen manier om alsnog (of opnieuw) te versturen zonder eerst de status terug te zetten.
 
 ## Oplossing
-Hergebruik de bestaande `AdminAddCostSheet` (die al `prefill` + `onCreatedItem` ondersteunt, net zoals `AdminPostChargesSection` doet voor nacalculaties).
 
-### Flow
-1. In `BookingRow` blijft de project-picker bestaan, maar bij keuze opent een **bevestigings-sheet** (`AdminAddCostSheet`) met prefill:
-   - Omschrijving: `Overtocht Rederij Doeksen — <data>`
-   - Bedrag: `amount_incl_vat`
-   - BTW: berekend uit `vat_amount / amount_excl_vat` (9% default)
-   - Toelichting: `Verzamelfactuur Doeksen · Resnr <resnr> · <klantnaam>`
-   - `providerName: "Rederij Doeksen"`
-2. Gebruiker kan omschrijving, bedrag, BTW en toelichting nog wijzigen vóór opslaan.
-3. Na opslaan via `onCreatedItem(newItemId)`: zet `booking_reference` op het zojuist aangemaakte item (AdminAddCostSheet slaat dat veld nu niet op) en update de booking row naar `match_status: "manual"` met `item_id`.
+1. **Stuur-knop ook tonen bij `offerte_verstuurd`** in `AdminRequestDetail.tsx`:
+   - Voorwaarde wijzigen naar `["concept", "in_afstemming", "offerte_verstuurd"].includes(...)` op beide plekken (hoofdknop + overflow-menu).
+   - Label dynamisch: `"Stuur offerte"` bij concept/afstemming, `"Stuur offerte opnieuw"` bij `offerte_verstuurd`.
+   - Geblokkeerd blijven bij `geaccepteerd`, `afgewezen`, `verlopen`, `geannuleerd` (geen wijziging).
 
-### Wijzigingen
-- **`src/components/admin/AdminAddCostSheet.tsx`**: `prefill` uitbreiden met optionele `bookingReference?: string`; meegeven aan de insert. Geen breaking changes voor bestaande callers.
-- **`src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`**:
-  - State `extraCostTarget: { idx, project, prefill } | null` toevoegen.
-  - `bookAsExtraOnProject` vervangen: opent voortaan de sheet i.p.v. direct insert.
-  - `AdminAddCostSheet` renderen onderaan met `onCreatedItem` callback die `updateBooking(idx, { item_id, match_status: "manual", project })` doet en toast toont.
+2. **Geen wijziging** aan `AdminSendQuoteDialog` zelf — die werkt al en zet bij versturen `quote_sent_at` + `quote_pdf_path` + status naar `offerte_verstuurd` (idempotent).
 
-### Buiten scope
-- Geen wijziging aan de matching-logica, finalize-flow of edge functions.
-- Project kiezen gebeurt nog steeds via bestaande `ManualLinkPopover` / candidate-select; daarna opent pas de cost-sheet.
+3. **Eenmalige correctie van dit project** (optioneel, via data-fix): `quote_status` terug naar `concept` zodat het lijstje "klopt" met de werkelijkheid. Mag ook overgeslagen worden — als de gebruiker met de nieuwe knop alsnog verstuurt, wordt `quote_sent_at` gevuld en is alles consistent.
+
+## Scope
+
+- Frontend-only wijziging in `src/pages/admin/AdminRequestDetail.tsx` (2 conditionele blokken + label).
+- Geen wijzigingen aan edge functions, e-mail logging of database schema.
+
+Wil je dat ik ook de status van dit ene project terugzet naar `concept`, of laat ik dat aan jou over (gewoon opnieuw versturen vanuit de nieuwe knop)?
