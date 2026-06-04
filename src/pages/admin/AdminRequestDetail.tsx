@@ -1349,7 +1349,7 @@ const AdminRequestDetail = () => {
                         </Tooltip>
                       </TooltipProvider>
                     )}
-                    {isQuoteMode && ["concept", "in_afstemming"].includes(request.quote_status ?? "concept") && (
+                    {isQuoteMode && ["concept", "in_afstemming", "offerte_verstuurd"].includes(request.quote_status ?? "concept") && (
                       <AdminSendQuoteDialog
                         requestId={request.id}
                         customerName={request.customer_name}
@@ -1360,8 +1360,15 @@ const AdminRequestDetail = () => {
                         currentValidUntil={request.quote_valid_until}
                         portalUrl={customerPortalUrl}
                         onSuccess={fetchRequestData}
+                        trigger={
+                          <Button>
+                            <Send className="h-4 w-4 mr-2" />
+                            {request.quote_status === "offerte_verstuurd" ? "Offerte opnieuw versturen" : "Offerte versturen"}
+                          </Button>
+                        }
                       />
                     )}
+
 
                     <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
                       <MessageSquare className="h-4 w-4 mr-2" /> Chat
