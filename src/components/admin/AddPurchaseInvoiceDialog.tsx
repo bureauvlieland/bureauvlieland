@@ -1099,10 +1099,15 @@ export function AddPurchaseInvoiceDialog({
             {/* Extra projecten: splits factuur naar meerdere projecten */}
             {requestId && (() => {
               const headerExclNum = parseFloat(amountExcl) || 0;
-              const extrasExcl = extraProjects.reduce(
-                (s, e) => s + (parseFloat(e.amountExclVat) || 0),
-                0,
-              );
+              const extrasExcl = extraProjects.reduce((s, e) => {
+                const headerVal = parseFloat(e.amountExclVat);
+                if (headerVal > 0) return s + headerVal;
+                const allocSum = e.allocations.reduce(
+                  (ss, a) => ss + (parseFloat(a.amount_excl_vat) || 0),
+                  0,
+                );
+                return s + allocSum;
+              }, 0);
               const primaryShareExcl = headerExclNum - extrasExcl;
               const balanced = Math.abs(primaryShareExcl - 0) >= -0.01 && extrasExcl <= headerExclNum + 0.01;
               const addExtra = () => {
