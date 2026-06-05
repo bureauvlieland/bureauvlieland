@@ -293,6 +293,7 @@ export function AddPurchaseInvoiceDialog({
       setAmountIncl("");
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
+      setExtraProjects([]);
     } else {
       setStep("upload");
       setFile(null);
