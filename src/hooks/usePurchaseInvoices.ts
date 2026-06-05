@@ -60,7 +60,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     pending: invoices?.filter(i => i.status === 'pending').length || 0,
     forwarded: invoices?.filter(i => i.status === 'forwarded').length || 0,
     paid: invoices?.filter(i => i.status === 'paid').length || 0,
-    totalAmount: invoices?.reduce((sum, i) => sum + Number(i.amount_excl_vat), 0) || 0,
+    totalAmount: invoices?.reduce((sum, i) => sum + Number(i.amount_incl_vat ?? (Number(i.amount_excl_vat || 0) + Number(i.vat_amount || 0))), 0) || 0,
   };
 
   const createInvoice = useMutation({

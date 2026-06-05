@@ -220,7 +220,7 @@ export default function AdminPurchaseInvoices() {
           </Card>
           <Card className="border-slate-200">
             <CardHeader className="pb-2">
-              <CardDescription>Totaal excl. BTW</CardDescription>
+              <CardDescription>Totaal incl. BTW</CardDescription>
               <CardTitle className="text-2xl flex items-center gap-1">
                 <Euro className="h-5 w-5" />
                 {stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
@@ -348,7 +348,7 @@ export default function AdminPurchaseInvoices() {
                     <TableHead>Partner</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Omschrijving</TableHead>
-                    <TableHead className="text-right">Bedrag excl.</TableHead>
+                    <TableHead className="text-right">Bedrag incl.</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Acties</TableHead>
                   </TableRow>
@@ -386,7 +386,7 @@ export default function AdminPurchaseInvoices() {
                         {invoice.description || invoice.program_request_item?.block_name || "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        €{Number(invoice.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                        €{Number(invoice.amount_incl_vat ?? (Number(invoice.amount_excl_vat || 0) + Number(invoice.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
@@ -479,7 +479,7 @@ export default function AdminPurchaseInvoices() {
                 <>
                   Je staat op het punt om factuur <strong>{deleteTarget.invoice_number || "(zonder nummer)"}</strong>{" "}
                   van <strong>{deleteTarget.partner?.name}</strong> (€
-                  {Number(deleteTarget.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
+                  {Number(deleteTarget.amount_incl_vat ?? (Number(deleteTarget.amount_excl_vat || 0) + Number(deleteTarget.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
                   <br /><br />
                   Dit reset ook de factuur- en commissie-status op het bijbehorende programma-onderdeel.
                   Deze actie kan niet ongedaan worden gemaakt.
