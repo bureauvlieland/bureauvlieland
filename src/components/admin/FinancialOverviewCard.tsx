@@ -347,8 +347,8 @@ export const FinancialOverviewCard = ({
               const total = isFinal ? sumBillingLines(billingLines) : (item.admin_price_override ?? 0);
               return (
                 <div key={item.id}>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between text-sm gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="truncate max-w-[180px]">{item.block_name}</span>
                       {isFinal && (
@@ -357,10 +357,19 @@ export const FinancialOverviewCard = ({
                         </Badge>
                       )}
                     </div>
-                    <span className="font-medium tabular-nums">
-                      {formatCurrency(total)}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium tabular-nums">
+                        {formatCurrency(total)}
+                      </span>
+                      <AdminItemBillingLinesEditor
+                        itemId={item.id}
+                        itemName={item.block_name}
+                        suggestedAmount={total}
+                        defaultVatRate={getItemVatRate(item as any)}
+                      />
+                    </div>
                   </div>
+
                   {isFinal && (
                     <div className="ml-6 mt-0.5 mb-1 space-y-0.5">
                       {billingLines.map((bl) => (
