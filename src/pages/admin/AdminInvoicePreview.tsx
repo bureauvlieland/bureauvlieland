@@ -659,6 +659,16 @@ const AdminInvoicePreview = () => {
         vatLines: totalsLocal.vatLines,
       },
       notes: notes || undefined,
+      priorInvoices: priorInvoices
+        .filter((p) => p.invoice_number !== invoiceNumber)
+        .map((p) => ({
+          invoiceNumber: p.invoice_number,
+          invoiceDate: new Date(p.invoice_date),
+          amountInclVat:
+            p.invoice_type === "credit"
+              ? -Number(p.amount_incl_vat)
+              : Number(p.amount_incl_vat),
+        })),
     });
 
     return blob;
