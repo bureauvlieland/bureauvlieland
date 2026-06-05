@@ -77,6 +77,7 @@ interface ProgramItem {
   price_type: string | null;
   override_people: number | null;
   status: string;
+  booking_reference?: string | null;
 }
 
 interface AccommodationQuoteData {
@@ -454,7 +455,7 @@ const AdminInvoicePreview = () => {
           const itemTotal = billingLines.reduce((s, b) => s + Number(b.amount_incl_vat), 0);
           rows.push({
             description: item.block_name,
-            subDescription: item.provider_name,
+            subDescription: [item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null].filter(Boolean).join(" • "),
             qty: "",
             unitPrice: "",
             amount: fmt(itemTotal),
@@ -503,7 +504,7 @@ const AdminInvoicePreview = () => {
 
         rows.push({
           description: item.block_name,
-          subDescription: item.admin_price_notes || item.provider_name,
+          subDescription: [item.admin_price_notes || item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null].filter(Boolean).join(" • "),
           qty,
           unitPrice: fmt(unitPrice),
           unitPriceSuffix: isPerDay ? "p.p.p.d." : isPerPerson ? "p.p." : "",
@@ -933,7 +934,10 @@ const AdminInvoicePreview = () => {
                                         <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                                           <td className="py-1.5 px-2">
                                             <p className="font-medium">{item.block_name}</p>
-                                            <p className="text-[9px] text-gray-400">{item.provider_name}</p>
+                                            <p className="text-[9px] text-gray-400">
+                                              {item.provider_name}
+                                              {item.booking_reference && <span> • Boekingsnr: {item.booking_reference}</span>}
+                                            </p>
                                           </td>
                                           <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
                                           <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
@@ -996,7 +1000,10 @@ const AdminInvoicePreview = () => {
                                         {item.admin_price_notes && (
                                           <p className="text-[9px] text-gray-500">{item.admin_price_notes}</p>
                                         )}
-                                        <p className="text-[9px] text-gray-400">{item.provider_name}</p>
+                                        <p className="text-[9px] text-gray-400">
+                                          {item.provider_name}
+                                          {item.booking_reference && <span> • Boekingsnr: {item.booking_reference}</span>}
+                                        </p>
                                       </td>
                                       <td className="py-1.5 px-2 text-right">
                                         {qty}
