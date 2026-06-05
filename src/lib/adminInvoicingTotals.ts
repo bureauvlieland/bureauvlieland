@@ -96,10 +96,18 @@ export function calculateAdminInvoicingTotals(
     centralSurcharge +
     accommodationTotal;
 
-  const invoicedTotal = request.invoices.reduce((sum, invoice) => {
-    const amountInclVat = getInvoiceInclVat(invoice);
-    return invoice.invoice_type === "credit" ? sum - amountInclVat : sum + amountInclVat;
-  }, 0);
+  // Een eindfactuur ('final') is het totaalbedrag van het project; eerder verstuurde
+  // deelfacturen (aanbetalingen) zijn daar al op in mindering gebracht en mogen
+  // dus NIET nogmaals worden opgeteld. Credits trekken altijd af.
+  const creditTotal = request.invoices
+    .filter((inv) => inv.invoice_type === "credit")
+    .reduce((sum, inv) => sum + getInvoiceInclVat(inv), 0);
+  const finals = request.invoices.filter((inv) => inv.invoice_type === "final");
+  const partials = request.invoices.filter((inv) => inv.invoice_type === "partial");
+  const baseInvoiced = finals.length > 0
+    ? finals.reduce((sum, inv) => sum + getInvoiceInclVat(inv), 0)
+    : partials.reduce((sum, inv) => sum + getInvoiceInclVat(inv), 0);
+  const invoicedTotal = baseInvoiced - creditTotal;
 
   return {
     programItemsTotal,

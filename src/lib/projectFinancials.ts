@@ -88,12 +88,16 @@ export function calculateProjectGrandTotal({
 
 export function calculateProjectOutstandingAmount(args: CalculateOutstandingArgs): number {
   const grandTotalInclVat = calculateProjectGrandTotal(args);
-  const invoicedInclVat = args.invoices
-    .filter((inv) => inv.invoice_type !== "credit")
-    .reduce((sum, inv) => sum + Number(inv.amount_incl_vat ?? 0), 0);
+  // Eindfactuur = totaalbedrag; deelfacturen (aanbetalingen) zijn daar al op in
+  // mindering gebracht en mogen niet dubbel meetellen.
+  const finals = args.invoices.filter((inv) => inv.invoice_type === "final");
+  const partials = args.invoices.filter((inv) => inv.invoice_type === "partial");
   const creditedInclVat = args.invoices
     .filter((inv) => inv.invoice_type === "credit")
     .reduce((sum, inv) => sum + Number(inv.amount_incl_vat ?? 0), 0);
-  const netInvoicedInclVat = invoicedInclVat - creditedInclVat;
+  const baseInvoiced = finals.length > 0
+    ? finals.reduce((sum, inv) => sum + Number(inv.amount_incl_vat ?? 0), 0)
+    : partials.reduce((sum, inv) => sum + Number(inv.amount_incl_vat ?? 0), 0);
+  const netInvoicedInclVat = baseInvoiced - creditedInclVat;
   return Math.max(0, grandTotalInclVat - netInvoicedInclVat);
 }
