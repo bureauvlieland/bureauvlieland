@@ -144,6 +144,16 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     const b = bookings[idx];
     const cand = b.candidates.find((c) => c.item_id === candidateItemId);
     if (!cand) return;
+    // For Isla rows candidate.item_id is "project:<uuid>" — these candidates do not
+    // map to an existing program_request_item, so route via "book as extra cost".
+    if (candidateItemId.startsWith("project:")) {
+      bookAsExtraOnProject(idx, {
+        request_id: cand.request_id,
+        reference_number: cand.reference_number,
+        customer_label: cand.customer_label,
+      });
+      return;
+    }
     updateBooking(idx, {
       item_id: candidateItemId,
       match_status: "manual",
@@ -180,8 +190,13 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
       ? Math.round((b.vat_amount / b.amount_excl_vat) * 100)
       : 9;
     const datesLabel = (b.departure_dates || []).join(" / ");
-    const description = `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
-    const notes = `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
+    const isIsla = supplierType === "isla";
+    const description = isIsla
+      ? (b.description || `Bagagevervoer Isla Vlieland${datesLabel ? ` — ${datesLabel}` : ""}`)
+      : `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
+    const notes = isIsla
+      ? `Verzamelfactuur Isla Vlieland${b.customer_name ? ` · ${b.customer_name}` : ""}${datesLabel ? ` · ${datesLabel}` : ""}`
+      : `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
     setExtraCostTarget({
       idx,
       project,
@@ -190,7 +205,7 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
         amount: b.amount_incl_vat,
         vatRate,
         notes,
-        providerName: "Rederij Doeksen",
+        providerName: isIsla ? "Isla Vlieland B.V." : "Rederij Doeksen",
         bookingReference: b.resnr,
       },
     });
