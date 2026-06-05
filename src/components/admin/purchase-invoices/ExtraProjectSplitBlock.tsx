@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Check, ChevronsUpDown, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,9 +76,7 @@ export function ExtraProjectSplitBlock({
   const selectedProject = projects.find((p) => p.id === split.requestId);
 
   const availableItems = itemsForProject.filter(
-    (it) =>
-      !split.allocations.some((a) => a.item_id === it.id) &&
-      (!partnerId || !it.provider_id || it.provider_id === partnerId),
+    (it) => !partnerId || !it.provider_id || it.provider_id === partnerId,
   );
 
   const excl = parseFloat(split.amountExclVat) || 0;
@@ -100,6 +98,15 @@ export function ExtraProjectSplitBlock({
         { item_id, amount_excl_vat: "", vat_rate: split.vatRate || "21", notes: "" },
       ],
     });
+  };
+  const splitAlloc = (idx: number) => {
+    const src = split.allocations[idx];
+    if (!src) return;
+    const usedRates = split.allocations.filter((a) => a.item_id === src.item_id).map((a) => a.vat_rate);
+    const nextRate = ["21", "9", "0"].find((r) => !usedRates.includes(r)) || "21";
+    const copy = [...split.allocations];
+    copy.splice(idx + 1, 0, { item_id: src.item_id, amount_excl_vat: "", vat_rate: nextRate, notes: "" });
+    onChange({ allocations: copy });
   };
 
   const allocSumIncl = split.allocations.reduce((s, a) => {
@@ -220,10 +227,10 @@ export function ExtraProjectSplitBlock({
                 const aIncl = aExcl * (1 + aRate / 100);
                 return (
                   <div
-                    key={alloc.item_id}
+                    key={idx}
                     className="grid grid-cols-12 gap-2 items-center text-sm rounded-md p-2 border border-border bg-muted/30"
                   >
-                    <div className="col-span-5 truncate">
+                    <div className="col-span-4 truncate">
                       <div className="font-medium truncate text-xs">
                         {it ? `Dag ${it.day_index + 1}: ${it.block_name}` : "Onbekend onderdeel"}
                       </div>
@@ -256,7 +263,17 @@ export function ExtraProjectSplitBlock({
                     <div className="col-span-1 text-right text-xs tabular-nums text-muted-foreground">
                       €{aIncl.toFixed(2)}
                     </div>
-                    <div className="col-span-1 flex justify-end">
+                    <div className="col-span-2 flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Splits BTW"
+                        onClick={() => splitAlloc(idx)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
