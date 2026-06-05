@@ -553,11 +553,15 @@ export function AddPurchaseInvoiceDialog({
 
       // Validate extra project splits
       const validExtras = extraProjects
-        .filter((e) => e.requestId && parseFloat(e.amountExclVat) > 0)
+        .filter((e) => {
+          if (!e.requestId) return false;
+          const hasHeader = parseFloat(e.amountExclVat) > 0;
+          const hasAllocs = e.allocations.some(
+            (a) => a.item_id && parseFloat(a.amount_excl_vat) > 0,
+          );
+          return hasHeader || hasAllocs;
+        })
         .map((e) => {
-          const eExcl = parseFloat(e.amountExclVat) || 0;
-          const eRate = parseFloat(e.vatRate) || 0;
-          const eVat = eExcl * (eRate / 100);
           const eAllocs = e.allocations
             .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
             .map((a, idx) => {
@@ -574,12 +578,23 @@ export function AddPurchaseInvoiceDialog({
                 sort_order: idx,
               };
             });
+          // Als hoofdbedrag leeg is, leid af uit de onderdelen
+          const headerExclInput = parseFloat(e.amountExclVat);
+          const useDerived = !(headerExclInput > 0) && eAllocs.length > 0;
+          const eExcl = useDerived
+            ? eAllocs.reduce((s, a) => s + a.amount_excl_vat, 0)
+            : headerExclInput || 0;
+          const eIncl = useDerived
+            ? eAllocs.reduce((s, a) => s + a.amount_incl_vat, 0)
+            : eExcl * (1 + (parseFloat(e.vatRate) || 0) / 100);
+          const eVat = eIncl - eExcl;
+          const eRate = useDerived ? 0 : parseFloat(e.vatRate) || 0;
           return {
             requestId: e.requestId,
             amount_excl_vat: eExcl,
             vat_rate: eRate,
             vat_amount: eVat,
-            amount_incl_vat: eExcl + eVat,
+            amount_incl_vat: eIncl,
             allocations: eAllocs,
           };
         });
