@@ -16,6 +16,8 @@ import type { ProgramItemBillingLine } from "@/types/programItemBillingLine";
 import { calculateExtraTotal, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
 import { EXCLUDABLE_FEE_LABELS, type ExcludableFeeKey } from "@/lib/excludedFees";
 import { cn } from "@/lib/utils";
+import { AdminItemBillingLinesEditor } from "@/components/admin/AdminItemBillingLinesEditor";
+
 
 
 interface FinancialItem {
