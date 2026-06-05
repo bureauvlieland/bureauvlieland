@@ -198,6 +198,7 @@ export function AddPurchaseInvoiceDialog({
   const [amountIncl, setAmountIncl] = useState<string>("");
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<LineRow[]>([]);
+  const [extraProjects, setExtraProjects] = useState<ExtraProjectSplit[]>([]);
 
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
