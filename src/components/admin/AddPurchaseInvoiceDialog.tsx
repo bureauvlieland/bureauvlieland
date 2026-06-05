@@ -46,6 +46,10 @@ import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
 import { useDuplicatePurchaseInvoiceCheck } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ExtraProjectSplitBlock,
+  type ExtraProjectSplit,
+} from "@/components/admin/purchase-invoices/ExtraProjectSplitBlock";
 
 
 interface ScanLineItem {
