@@ -8,6 +8,7 @@ export interface AdminInvoicingItemLike {
   admin_price_override?: number | null;
   price_type?: string | null;
   override_people?: number | null;
+  use_actual_costs?: boolean | null;
 }
 
 export interface AdminInvoicingInvoiceLike {
