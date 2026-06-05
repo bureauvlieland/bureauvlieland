@@ -348,7 +348,7 @@ export default function AdminPurchaseInvoices() {
                     <TableHead>Partner</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Omschrijving</TableHead>
-                    <TableHead className="text-right">Bedrag excl.</TableHead>
+                    <TableHead className="text-right">Bedrag incl.</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Acties</TableHead>
                   </TableRow>
