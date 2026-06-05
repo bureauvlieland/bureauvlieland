@@ -578,10 +578,6 @@ function BookingRow({
             </Button>
           </div>
         )}
-              Markeer als intern
-            </Button>
-          </div>
-        )}
 
         {booking.match_status === "internal" && (
           <span className="text-muted-foreground italic">Interne kostenpost — geen klantproject</span>
