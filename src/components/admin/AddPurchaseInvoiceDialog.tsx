@@ -311,6 +311,7 @@ export function AddPurchaseInvoiceDialog({
       setAmountIncl("");
       setDescription("");
       setLines([]);
+      setExtraProjects([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
