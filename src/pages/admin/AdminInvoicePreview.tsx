@@ -455,7 +455,7 @@ const AdminInvoicePreview = () => {
           const itemTotal = billingLines.reduce((s, b) => s + Number(b.amount_incl_vat), 0);
           rows.push({
             description: item.block_name,
-            subDescription: item.provider_name,
+            subDescription: [item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null].filter(Boolean).join(" • "),
             qty: "",
             unitPrice: "",
             amount: fmt(itemTotal),
