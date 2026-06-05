@@ -1,44 +1,39 @@
 ## Doel
 
-1. De knop **Verzamelfactuur** wordt op élke nieuwe inkoopfactuur in de inbox getoond, naast **Verwerken**.
-2. Bij herkende verzamelleveranciers (Doeksen/rederij, Isla Vlieland) is **Verzamelfactuur** de primaire (oranje) knop, anders is **Verwerken** primair.
-3. De verzamelfactuur-flow ondersteunt naast Doeksen ook **Isla Vlieland B.V.** (bagagevervoer), met regel-matching op klantnaam (Isla heeft geen Resnr).
+1. **Verzamelfactuur** terugzetten zoals voor de Isla-uitbreiding: alleen Doeksen, knop alleen prominent bij Doeksen-suppliers.
+2. **Verwerken-dialog** uitbreiden zodat één inkoopfactuur over **meerdere projecten** verdeeld kan worden, elk met optioneel één of meer **onderdelen**.
 
-## UI-wijziging (`AdminPurchaseInvoiceInbox.tsx`)
+## 1. Verzamelfactuur revert
 
-- Knop **Verzamelfactuur** altijd zichtbaar bij `status === "new"`.
-- `isLikelyCollective()` bepaalt welke knop primair is (oranje) — anders outline-stijl.
-- `guessPartnerId()` uitbreiden: `/isla/` → `"isla-vlieland"` (concept-partner-id), `/doeksen|rederij/` → `"rederij"`, anders `null` (gebruiker kan in sheet alsnog leverancier kiezen of het wordt gepromptd).
-- Als `partnerId` niet bekend is wordt 'rederij' niet meer hard fallback; in plaats daarvan opent de sheet met de gescande supplier-naam en laat de matching het werk doen.
+- `supabase/functions/parse-collective-invoice/index.ts`: terug naar Doeksen-only (`extract_doeksen_invoice` prompt, Resnr-matching). `supplier_type` parameter en Isla-prompt verwijderen.
+- `src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`: Isla-specifieke kolommen/logica/`providerId`-prop en `bookAsExtraOnProject`-Isla-prefill terug. Alleen Doeksen-kolommen tonen.
+- `src/pages/admin/AdminPurchaseInvoiceInbox.tsx`: `isLikelyCollective` regex terug naar `doeksen|rederij` (geen `isla|bagage`). Knop blijft altijd zichtbaar (zoals huidige UX), maar is alleen primair amber bij Doeksen.
+- Memory `mem://features/isla-vlieland-collective-invoice` verwijderen uit index.
 
-## Edge-function `parse-collective-invoice`
+## 2. Multi-project Verwerken-dialog
 
-- Huidige parser is Doeksen-specifiek (Resnr/routes/touristtax). We voegen een **supplier-detectie** toe op basis van de gescande PDF-tekst:
-  - `doeksen` → bestaand Doeksen-schema (ongewijzigd).
-  - `isla` → nieuw Isla-schema: per regel `customer_name`, `delivery_date`, `description`, `amount_excl_vat`, `vat`, `amount_incl_vat`. Geen `resnr`, geen `tourist_tax`, geen `supplier_commission`.
-- Response houdt dezelfde `Booking[]`-structuur aan; voor Isla blijven `resnr`, `routes`, `tourist_tax`, `supplier_commission` leeg/0 zodat de bestaande UI gewoon rendert.
-- Matching server-side: voor Isla matchen we per regel op **klantnaam (fuzzy, case-insensitive, levenshtein/normalisatie)** tegen `program_requests.customer_name` (alle niet-geannuleerde projecten in een venster van ±90 dagen rond de factuurdatum). Resultaat per regel:
-  - 1 hit → `matched` + project gekoppeld.
-  - >1 hit → `ambiguous` met candidates.
-  - 0 hit → `unmatched` (admin koppelt handmatig via bestaande picker).
+Huidige situatie: één `request_id` (project) + optioneel verdeling over `allocations` binnen dat project.
 
-## Edge-function `finalize-collective-invoice`
+Nieuw: **"Projecten" blok** met N project-cards. Per project:
+- Project-zoekselector (zoals nu)
+- Bedrag (excl. BTW) — handmatig in te vullen, optellings-check tegen factuurtotaal
+- Optioneel: één of meerdere onderdelen binnen dat project (zelfde allocations-UI als nu)
+- Verwijder-knop
 
-- Voor Isla-regels: kost wordt als **extra kost** op het gekoppelde project geboekt (zelfde mechanisme als nu voor unmatched Doeksen-regels), met `provider_name = "Isla Vlieland B.V."` en `booking_reference = factuurnummer + index`. Geen automatische koppeling aan een specifiek `program_request_item` (Isla heeft geen booking-reference op item-niveau).
-- Snelstart-forward blijft hetzelfde.
+UI:
+- Eerste project verplicht; "+ Project toevoegen" knop daaronder.
+- Live waarschuwing als som projectbedragen ≠ factuurbedrag excl. BTW.
+- Bij submit: één `partner_purchase_invoices` rij **per project** aanmaken (zelfde patroon als CollectiveInvoiceSheet), met gedeelde metadata (factuurnummer, datum, leverancier, file_path) en eigen `request_id`, `amount_excl_vat`, BTW-bedrag, allocations. BTW herberekend pro-rata op tariefniveau, of overgenomen uit allocations als die alle bedragen dekken.
+- Bij één project: gedrag blijft 1-op-1 hetzelfde als nu (geen breaking change).
 
-## CollectiveInvoiceSheet (UI)
+### Technische details
 
-- Toont bij Isla geen kolommen voor Resnr/routes/tourist tax (conditional rendering op `partnerId !== "rederij"` of op aanwezigheid van die velden).
-- Sheettitel + beschrijving worden gegenereerd op basis van `data.invoice.supplier_name`.
+- State refactor: `requestId`/`itemId`/`allocations` → `projectSplits: Array<{ requestId, amountExcl, allocations[] }>`.
+- `inboxItem` markeren als `processed` met de **eerste** aangemaakte invoice-id (zelfde patroon als CollectiveInvoiceSheet).
+- Duplicate-check (`useDuplicatePurchaseInvoiceCheck`) ongewijzigd: per partner + factuurnummer.
+- Bestand: `partner-invoices/{partner_id}/{first_request_id}/{...}.pdf`, gedeeld `file_path` op alle rijen.
 
-## Geen wijziging
+## Risico's
 
-- Doeksen-flow blijft 1-op-1 werken.
-- Bestaande inkoopfactuur-records, koppelingen en Snelstart-integratie ongewijzigd.
-
-## Technische details
-
-- Geen DB-migratie nodig: we hergebruiken `purchase_invoices` + `purchase_invoice_lines` (of huidige tabellen) en koppelen Isla-regels via de bestaande extra-kosten-route.
-- Edge-functions deployen na codewijzigingen.
-- Memory bijwerken: bestaande memo `doeksen-collective-invoice-flow` uitbreiden of nieuwe memo toevoegen voor "Isla collective invoice matching op klantnaam".
+- Veel state in één component; we splitsen niet (te grote refactor). We voegen alleen array-state toe naast bestaande velden.
+- Bestaande callers (`defaultRequestId`) blijven werken: bij prefill wordt 1 project gevuld.

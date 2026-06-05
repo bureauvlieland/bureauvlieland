@@ -46,6 +46,10 @@ import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
 import { useDuplicatePurchaseInvoiceCheck } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ExtraProjectSplitBlock,
+  type ExtraProjectSplit,
+} from "@/components/admin/purchase-invoices/ExtraProjectSplitBlock";
 
 
 interface ScanLineItem {
@@ -194,6 +198,7 @@ export function AddPurchaseInvoiceDialog({
   const [amountIncl, setAmountIncl] = useState<string>("");
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<LineRow[]>([]);
+  const [extraProjects, setExtraProjects] = useState<ExtraProjectSplit[]>([]);
 
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
@@ -258,6 +263,24 @@ export function AddPurchaseInvoiceDialog({
     enabled: !!requestId,
   });
 
+  // Items for extra project splits (one query for all selected extra projectIds)
+  const extraProjectIds = extraProjects.map((e) => e.requestId).filter(Boolean);
+  const { data: extraItems } = useQuery({
+    queryKey: ["program-items-for-extras", extraProjectIds.sort().join(","), partnerId],
+    queryFn: async () => {
+      if (extraProjectIds.length === 0) return [];
+      let q = supabase
+        .from("program_request_items")
+        .select("id, block_name, provider_id, day_index, request_id")
+        .in("request_id", extraProjectIds);
+      if (partnerId) q = q.eq("provider_id", partnerId);
+      const { data, error } = await q.order("day_index");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: extraProjectIds.length > 0,
+  });
+
   // Reset on open
   useEffect(() => {
     if (!open) return;
@@ -288,6 +311,7 @@ export function AddPurchaseInvoiceDialog({
       setAmountIncl("");
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
+      setExtraProjects([]);
     } else {
       setStep("upload");
       setFile(null);
@@ -305,6 +329,7 @@ export function AddPurchaseInvoiceDialog({
       setAmountIncl("");
       setDescription("");
       setLines([]);
+      setExtraProjects([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
@@ -526,18 +551,89 @@ export function AddPurchaseInvoiceDialog({
         headerIncl = calc.amountInclVat;
       }
 
-      // Validate allocation totals match header (if allocations present)
+      // Validate extra project splits
+      const validExtras = extraProjects
+        .filter((e) => e.requestId && parseFloat(e.amountExclVat) > 0)
+        .map((e) => {
+          const eExcl = parseFloat(e.amountExclVat) || 0;
+          const eRate = parseFloat(e.vatRate) || 0;
+          const eVat = eExcl * (eRate / 100);
+          const eAllocs = e.allocations
+            .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
+            .map((a, idx) => {
+              const aExcl = parseFloat(a.amount_excl_vat) || 0;
+              const aRate = parseFloat(a.vat_rate) || 0;
+              const aVat = aExcl * (aRate / 100);
+              return {
+                item_id: a.item_id,
+                amount_excl_vat: aExcl,
+                vat_rate: aRate,
+                vat_amount: aVat,
+                amount_incl_vat: aExcl + aVat,
+                notes: a.notes || null,
+                sort_order: idx,
+              };
+            });
+          return {
+            requestId: e.requestId,
+            amount_excl_vat: eExcl,
+            vat_rate: eRate,
+            vat_amount: eVat,
+            amount_incl_vat: eExcl + eVat,
+            allocations: eAllocs,
+          };
+        });
+
+      // Compute primary share when extras exist
+      const extrasExclSum = validExtras.reduce((s, e) => s + e.amount_excl_vat, 0);
+      const extrasInclSum = validExtras.reduce((s, e) => s + e.amount_incl_vat, 0);
+      if (validExtras.length > 0) {
+        if (extrasExclSum > headerExcl + 0.01) {
+          setIsSubmitting(false);
+          return toast.error(
+            `Som van extra projecten (€${extrasExclSum.toFixed(2)}) is hoger dan factuurtotaal excl. BTW (€${headerExcl.toFixed(2)})`,
+          );
+        }
+        // adjust primary header to remaining share
+        const primaryExcl = headerExcl - extrasExclSum;
+        const primaryIncl = headerIncl - extrasInclSum;
+        const primaryVat = primaryIncl - primaryExcl;
+        if (primaryExcl <= 0.01) {
+          setIsSubmitting(false);
+          return toast.error("Het hoofdproject heeft geen restbedrag — verwijder een extra project of pas het bedrag aan.");
+        }
+        headerExcl = primaryExcl;
+        headerIncl = primaryIncl;
+        headerVat = primaryVat;
+        // when splitting, lines belong to whole invoice — drop them on primary to avoid mismatch
+      }
+
+      // Validate primary allocations match adjusted primary header
       if (validAllocations.length > 0) {
         const allocSum = validAllocations.reduce((s, a) => s + a.amount_incl_vat, 0);
         if (Math.abs(allocSum - headerIncl) > 0.01) {
           setIsSubmitting(false);
-          return toast.error(`Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${headerIncl.toFixed(2)} factuurtotaal`);
+          return toast.error(
+            `Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${headerIncl.toFixed(2)} ${validExtras.length > 0 ? "(hoofdproject)" : "factuurtotaal"}`,
+          );
+        }
+      }
+
+      // Validate each extra's internal allocations
+      for (const e of validExtras) {
+        if (e.allocations.length > 0) {
+          const s = e.allocations.reduce((sum, a) => sum + a.amount_incl_vat, 0);
+          if (Math.abs(s - e.amount_incl_vat) > 0.01) {
+            setIsSubmitting(false);
+            return toast.error(
+              `Onderdeel-verdeling extra project klopt niet: €${s.toFixed(2)} vs €${e.amount_incl_vat.toFixed(2)}`,
+            );
+          }
         }
       }
 
       const created = await createInvoice.mutateAsync({
         request_id: requestId,
-        // When allocations are used, leave legacy item_id null (split is the source of truth)
         item_id: validAllocations.length > 0 ? null : (itemId || null),
         partner_id: partnerId,
         invoice_number: invoiceNumber,
@@ -549,10 +645,30 @@ export function AddPurchaseInvoiceDialog({
         description: description || null,
         file_path: filePath,
         registered_by: "admin",
-        lines: validLines.length > 0 ? validLines : undefined,
+        lines: validExtras.length === 0 && validLines.length > 0 ? validLines : undefined,
         allocations: validAllocations.length > 0 ? validAllocations : undefined,
         allowDuplicate: acceptDuplicate,
       });
+
+      // Create one purchase invoice per extra project (shared invoice_number + file_path)
+      for (const e of validExtras) {
+        await createInvoice.mutateAsync({
+          request_id: e.requestId,
+          item_id: null,
+          partner_id: partnerId,
+          invoice_number: invoiceNumber,
+          invoice_date: format(invoiceDate, "yyyy-MM-dd"),
+          amount_excl_vat: e.amount_excl_vat,
+          vat_rate: e.vat_rate,
+          vat_amount: e.vat_amount,
+          amount_incl_vat: e.amount_incl_vat,
+          description: description ? `${description} (deel project)` : `Aandeel factuur ${invoiceNumber}`,
+          file_path: filePath,
+          registered_by: "admin",
+          allocations: e.allocations.length > 0 ? e.allocations : undefined,
+          allowDuplicate: true,
+        });
+      }
 
 
       // Optional: copy invoice lines into program_item_billing_lines (sales lines) for the linked item
@@ -948,6 +1064,82 @@ export function AddPurchaseInvoiceDialog({
                 </div>
               );
             })()}
+
+            {/* Extra projecten: splits factuur naar meerdere projecten */}
+            {requestId && (() => {
+              const headerExclNum = parseFloat(amountExcl) || 0;
+              const extrasExcl = extraProjects.reduce(
+                (s, e) => s + (parseFloat(e.amountExclVat) || 0),
+                0,
+              );
+              const primaryShareExcl = headerExclNum - extrasExcl;
+              const balanced = Math.abs(primaryShareExcl - 0) >= -0.01 && extrasExcl <= headerExclNum + 0.01;
+              const addExtra = () => {
+                setExtraProjects((prev) => [
+                  ...prev,
+                  { requestId: "", amountExclVat: "", vatRate: vatRate || "21", allocations: [] },
+                ]);
+              };
+              return (
+                <div className="space-y-2 rounded-md border border-dashed border-border p-3 bg-muted/20">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <Label className="text-sm">Extra projecten (splits factuur)</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Heeft deze factuur posten voor meerdere projecten? Voeg er hier extra toe — er wordt dan per project een aparte inkoopfactuur aangemaakt.
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addExtra}>
+                      <Plus className="h-3 w-3 mr-1" /> Project toevoegen
+                    </Button>
+                  </div>
+
+                  {extraProjects.length > 0 && (
+                    <>
+                      <div className="space-y-2">
+                        {extraProjects.map((split, idx) => (
+                          <ExtraProjectSplitBlock
+                            key={idx}
+                            index={idx}
+                            split={split}
+                            projects={(projects as any) || []}
+                            itemsForProject={(extraItems as any || []).filter((it: any) => it.request_id === split.requestId)}
+                            partnerId={partnerId}
+                            onChange={(patch) =>
+                              setExtraProjects((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)))
+                            }
+                            onRemove={() =>
+                              setExtraProjects((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                          />
+                        ))}
+                      </div>
+                      <div
+                        className={cn(
+                          "flex items-center justify-between text-xs px-2 py-1.5 rounded-md",
+                          balanced
+                            ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300"
+                            : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
+                        )}
+                      >
+                        <span>
+                          Hoofdproject: <strong>€{primaryShareExcl.toFixed(2)}</strong> excl. + extra projecten <strong>€{extrasExcl.toFixed(2)}</strong> = €{headerExclNum.toFixed(2)}
+                        </span>
+                        <span>
+                          {primaryShareExcl < -0.01
+                            ? `⚠ Extras > totaal`
+                            : balanced
+                            ? "✓ Klopt"
+                            : ""}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
+
 
             {/* Invoice details */}
             <div className="grid grid-cols-2 gap-3">
