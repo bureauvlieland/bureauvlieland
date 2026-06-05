@@ -991,8 +991,8 @@ export function AddPurchaseInvoiceDialog({
                         const vat = excl * (rate / 100);
                         const incl = excl + vat;
                         return (
-                          <div key={alloc.item_id} className="grid grid-cols-12 gap-2 items-center text-sm bg-background rounded-md p-2 border border-border">
-                            <div className="col-span-5 truncate">
+                          <div key={idx} className="grid grid-cols-12 gap-2 items-center text-sm bg-background rounded-md p-2 border border-border">
+                            <div className="col-span-4 truncate">
                               <div className="font-medium truncate">
                                 {it ? `Dag ${it.day_index + 1}: ${it.block_name}` : "Onbekend onderdeel"}
                               </div>
@@ -1020,7 +1020,10 @@ export function AddPurchaseInvoiceDialog({
                             <div className="col-span-1 text-right text-xs tabular-nums text-muted-foreground">
                               €{incl.toFixed(2)}
                             </div>
-                            <div className="col-span-1 flex justify-end">
+                            <div className="col-span-2 flex justify-end gap-1">
+                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Splits BTW" onClick={() => splitAllocation(idx)}>
+                                <Plus className="h-4 w-4" />
+                              </Button>
                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeAllocation(idx)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
