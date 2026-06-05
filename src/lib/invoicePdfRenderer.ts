@@ -291,14 +291,18 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   }
 
   pdf.setFontSize(9.5);
+  const valueMaxW = rightValueX - rightLabelX - 25;
   for (const [label, value] of metaRows) {
     pdf.setFont("helvetica", "normal");
     setText(pdf, TEXT_MUTED);
     pdf.text(label, rightLabelX, yRight);
     pdf.setFont("helvetica", label === "Factuurnummer" ? "bold" : "normal");
     setText(pdf, TEXT);
-    pdf.text(value, rightValueX, yRight, { align: "right" });
-    yRight += 4.5;
+    const valueLines = pdf.splitTextToSize(value, valueMaxW) as string[];
+    for (let i = 0; i < valueLines.length; i++) {
+      pdf.text(valueLines[i], rightValueX, yRight + i * 4.5, { align: "right" });
+    }
+    yRight += 4.5 * Math.max(1, valueLines.length);
   }
 
   return Math.max(yLeft, yRight) + 4;
