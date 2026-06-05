@@ -106,6 +106,13 @@ export interface InvoiceTotalsSummary {
   vatLines: InvoiceVatLine[];
 }
 
+export interface InvoicePriorInvoice {
+  invoiceNumber: string;
+  invoiceDate: Date;
+  /** Amount incl. VAT; use a negative value for credit notes. */
+  amountInclVat: number;
+}
+
 export interface InvoiceData {
   bureau: InvoiceBureau;
   customer: InvoiceCustomer;
@@ -114,6 +121,8 @@ export interface InvoiceData {
   totals: InvoiceTotalsSummary;
   /** Optional free-text notes shown above the legal block. */
   notes?: string;
+  /** Already-sent invoices for this project (subtracted from the total). */
+  priorInvoices?: InvoicePriorInvoice[];
 }
 
 // ─── Formatters ──────────────────────────────────────────────
@@ -329,8 +338,10 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
   const valueX = MARGIN_L + 38;
 
   let y = y0 + 10;
+  const priorSumTop = (data.priorInvoices ?? []).reduce((s, p) => s + p.amountInclVat, 0);
+  const netDueTop = data.totals.totalInclVat - priorSumTop;
   const rows: Array<[string, string, boolean]> = [
-    ["Te betalen", `${fmtEuro(data.totals.totalInclVat)}  (vóór ${fmtDate(data.meta.dueDate)})`, true],
+    ["Te betalen", `${fmtEuro(netDueTop)}  (vóór ${fmtDate(data.meta.dueDate)})`, true],
     ["IBAN", data.bureau.iban, false],
     ["Op naam van", data.bureau.legalName, false],
     ["Omschrijving", `Factuur ${data.meta.invoiceNumber}`, false],
@@ -494,7 +505,7 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
   const totalsRows: Array<[string, string, boolean]> = [
     ["Totaal excl. btw", fmtEuro(data.totals.totalExclVat), false],
     ["Totaal btw", fmtEuro(data.totals.totalVat), false],
-    ["Te betalen", fmtEuro(data.totals.totalInclVat), true],
+    ["Totaal incl. btw", fmtEuro(data.totals.totalInclVat), false],
   ];
 
   pdf.setFontSize(9.5);
@@ -503,14 +514,41 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
     setText(pdf, bold ? NAVY : TEXT);
     pdf.text(label, rightLabelX, yR);
     pdf.text(value, rightValueX, yR, { align: "right" });
-    if (bold) {
-      // Underline
-      setDraw(pdf, NAVY);
-      pdf.setLineWidth(0.4);
-      pdf.line(rightLabelX, yR + 1.5, rightValueX, yR + 1.5);
-    }
-    yR += bold ? 6 : 4.5;
+    yR += 4.5;
   }
+
+  // Already-invoiced deductions
+  const priorInvoices = data.priorInvoices ?? [];
+  const priorSum = priorInvoices.reduce((s, p) => s + p.amountInclVat, 0);
+  if (priorInvoices.length > 0) {
+    yR += 1;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8.5);
+    setText(pdf, TEXT_MUTED);
+    pdf.text("Reeds gefactureerd:", rightLabelX, yR);
+    yR += 4;
+    pdf.setFontSize(8);
+    for (const prior of priorInvoices) {
+      const label = `${prior.invoiceNumber} (${format(prior.invoiceDate, "d MMM yyyy", { locale: nl })})`;
+      pdf.text(label, rightLabelX + 2, yR);
+      const sign = prior.amountInclVat < 0 ? "" : "-";
+      pdf.text(`${sign}${fmtEuro(Math.abs(prior.amountInclVat))}`, rightValueX, yR, { align: "right" });
+      yR += 3.8;
+    }
+    yR += 1;
+  }
+
+  // Final "Te betalen" — net of prior invoices
+  const netDue = data.totals.totalInclVat - priorSum;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9.5);
+  setText(pdf, NAVY);
+  pdf.text("Te betalen", rightLabelX, yR);
+  pdf.text(fmtEuro(netDue), rightValueX, yR, { align: "right" });
+  setDraw(pdf, NAVY);
+  pdf.setLineWidth(0.4);
+  pdf.line(rightLabelX, yR + 1.5, rightValueX, yR + 1.5);
+  yR += 6;
 
   return Math.max(yL, yR) + 5;
 }

@@ -117,6 +117,7 @@ const AdminInvoicePreview = () => {
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
+  const [priorInvoices, setPriorInvoices] = useState<Array<{ id: string; invoice_number: string; invoice_date: string; amount_incl_vat: number; invoice_type: string }>>([]);
 
   // Load billing lines per item (definitive lines override quoted_price)
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
@@ -294,9 +295,18 @@ const AdminInvoicePreview = () => {
         }
       }
 
+      // Fetch already-registered bureau invoices (to deduct on follow-up invoices)
+      const { data: priorData } = await supabase
+        .from("bureau_invoices")
+        .select("id, invoice_number, invoice_date, amount_incl_vat, invoice_type")
+        .eq("request_id", id)
+        .order("invoice_date", { ascending: true });
+      setPriorInvoices((priorData || []) as any);
+
       // Generate invoice number suggestion
       const ref = requestData.reference_number || "XXXX";
-      setInvoiceNumber(`FV-${ref}-001`);
+      const nextSeq = String(((priorData || []).length || 0) + 1).padStart(3, "0");
+      setInvoiceNumber(`FV-${ref}-${nextSeq}`);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Fout bij laden gegevens");
@@ -649,6 +659,16 @@ const AdminInvoicePreview = () => {
         vatLines: totalsLocal.vatLines,
       },
       notes: notes || undefined,
+      priorInvoices: priorInvoices
+        .filter((p) => p.invoice_number !== invoiceNumber)
+        .map((p) => ({
+          invoiceNumber: p.invoice_number,
+          invoiceDate: new Date(p.invoice_date),
+          amountInclVat:
+            p.invoice_type === "credit"
+              ? -Number(p.amount_incl_vat)
+              : Number(p.amount_incl_vat),
+        })),
     });
 
     return blob;
@@ -1184,28 +1204,76 @@ const AdminInvoicePreview = () => {
                             </div>
                           ))}
                           <div
-                            className="flex justify-between py-2 text-[13px] font-bold mt-1 border-t-2"
-                            style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
+                            className="flex justify-between py-2 text-[11px] mt-1 border-t"
+                            style={{ borderColor: "#cbd5e1" }}
                           >
                             <span>Totaal incl. BTW</span>
                             <span>{formatCurrency(totals.totalInclVat)}</span>
                           </div>
+                          {(() => {
+                            const relevantPrior = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
+                            if (relevantPrior.length === 0) return null;
+                            const priorSum = relevantPrior.reduce(
+                              (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
+                              0,
+                            );
+                            const netDue = totals.totalInclVat - priorSum;
+                            return (
+                              <>
+                                <div className="pt-1 text-[9.5px] text-gray-500 uppercase tracking-wide">
+                                  Reeds gefactureerd
+                                </div>
+                                {relevantPrior.map((p) => {
+                                  const signedAmount = p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat);
+                                  return (
+                                    <div key={p.id} className="flex justify-between py-0.5 text-[10px] text-gray-600">
+                                      <span>
+                                        {p.invoice_number}{" "}
+                                        <span className="text-gray-400">
+                                          ({format(new Date(p.invoice_date), "d MMM yyyy", { locale: nl })})
+                                        </span>
+                                      </span>
+                                      <span>-{formatCurrency(Math.abs(signedAmount))}</span>
+                                    </div>
+                                  );
+                                })}
+                                <div
+                                  className="flex justify-between py-2 text-[13px] font-bold mt-1 border-t-2"
+                                  style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
+                                >
+                                  <span>Nog te voldoen</span>
+                                  <span>{formatCurrency(netDue)}</span>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
                       {/* Payment info */}
-                      <div className="p-3 rounded mb-5 text-[10.5px]" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                        <p className="font-semibold mb-1">Betalingsgegevens</p>
-                        <p>
-                          Gelieve het totaalbedrag van <span className="font-semibold">{formatCurrency(totals.totalInclVat)}</span> over
-                          te maken vóór {format(dueDate, "d MMMM yyyy", { locale: nl })} naar:
-                        </p>
-                        <div className="mt-1.5">
-                          <p>IBAN: <span className="font-mono font-semibold">{iban}</span></p>
-                          <p>T.n.v.: {companyName}</p>
-                          <p>O.v.v.: {invoiceNumber}</p>
-                        </div>
-                      </div>
+                      {(() => {
+                        const relevantPrior = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
+                        const priorSum = relevantPrior.reduce(
+                          (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
+                          0,
+                        );
+                        const netDue = totals.totalInclVat - priorSum;
+                        return (
+                          <div className="p-3 rounded mb-5 text-[10.5px]" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                            <p className="font-semibold mb-1">Betalingsgegevens</p>
+                            <p>
+                              Gelieve het totaalbedrag van <span className="font-semibold">{formatCurrency(netDue)}</span> over
+                              te maken vóór {format(dueDate, "d MMMM yyyy", { locale: nl })} naar:
+                            </p>
+                            <div className="mt-1.5">
+                              <p>IBAN: <span className="font-mono font-semibold">{iban}</span></p>
+                              <p>T.n.v.: {companyName}</p>
+                              <p>O.v.v.: {invoiceNumber}</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
 
                       {/* Notes */}
                       {notes && (
