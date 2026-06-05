@@ -504,7 +504,7 @@ const AdminInvoicePreview = () => {
 
         rows.push({
           description: item.block_name,
-          subDescription: item.admin_price_notes || item.provider_name,
+          subDescription: [item.admin_price_notes || item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null].filter(Boolean).join(" • "),
           qty,
           unitPrice: fmt(unitPrice),
           unitPriceSuffix: isPerDay ? "p.p.p.d." : isPerPerson ? "p.p." : "",
