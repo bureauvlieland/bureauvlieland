@@ -372,10 +372,12 @@ function renderTableHeader(pdf: jsPDF, y: number): number {
 /** Estimate row height in mm before drawing (so we know if a page break is needed). */
 function estimateRowHeight(pdf: jsPDF, row: InvoiceLineRow): number {
   const baseFont = row.isSubRow ? 8.5 : 9.5;
+  const descW = COL_DESC_W - (row.isSubRow ? 6 : 0);
   pdf.setFontSize(baseFont);
-  const descLines = pdf.splitTextToSize(row.description, COL_DESC_W - (row.isSubRow ? 6 : 0));
+  const descLines = pdf.splitTextToSize(row.description, descW) as string[];
+  pdf.setFontSize(7.5);
   const subLines = row.subDescription
-    ? pdf.splitTextToSize(row.subDescription, COL_DESC_W).length
+    ? (pdf.splitTextToSize(row.subDescription, descW) as string[]).length
     : 0;
   const lineH = row.isSubRow ? 3.4 : 4;
   return Math.max(5, descLines.length * lineH + subLines * 3.2 + 1.5);
@@ -402,8 +404,11 @@ function renderRow(pdf: jsPDF, row: InvoiceLineRow, y: number): number {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7.5);
     setText(pdf, TEXT_FAINT);
-    pdf.text(row.subDescription, descX, yCursor);
-    yCursor += 3.2;
+    const subLines = pdf.splitTextToSize(row.subDescription, descW) as string[];
+    for (const ln of subLines) {
+      pdf.text(ln, descX, yCursor);
+      yCursor += 3.2;
+    }
   }
 
   // Right-side cells aligned to the first description line (top of row)
