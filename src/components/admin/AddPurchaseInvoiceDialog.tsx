@@ -263,6 +263,24 @@ export function AddPurchaseInvoiceDialog({
     enabled: !!requestId,
   });
 
+  // Items for extra project splits (one query for all selected extra projectIds)
+  const extraProjectIds = extraProjects.map((e) => e.requestId).filter(Boolean);
+  const { data: extraItems } = useQuery({
+    queryKey: ["program-items-for-extras", extraProjectIds.sort().join(","), partnerId],
+    queryFn: async () => {
+      if (extraProjectIds.length === 0) return [];
+      let q = supabase
+        .from("program_request_items")
+        .select("id, block_name, provider_id, day_index, request_id")
+        .in("request_id", extraProjectIds);
+      if (partnerId) q = q.eq("provider_id", partnerId);
+      const { data, error } = await q.order("day_index");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: extraProjectIds.length > 0,
+  });
+
   // Reset on open
   useEffect(() => {
     if (!open) return;
