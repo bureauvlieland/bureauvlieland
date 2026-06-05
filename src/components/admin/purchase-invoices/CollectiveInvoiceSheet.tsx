@@ -262,7 +262,9 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     <Sheet open={open} onOpenChange={(v) => !v && !forwarding && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Verzamelfactuur verwerken</SheetTitle>
+          <SheetTitle>
+            Verzamelfactuur verwerken{data ? ` — ${supplierLabel}` : ""}
+          </SheetTitle>
           <SheetDescription>
             Eén factuur, meerdere klantboekingen. Controleer de matches en stuur in één keer door.
           </SheetDescription>
@@ -293,9 +295,11 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                   <div className="text-xl font-bold font-mono">
                     {EUR(data.invoice.total_incl_vat)}
                   </div>
-                  <div className="text-xs text-emerald-700">
-                    Commissie BV: {EUR(data.invoice.total_supplier_commission)}
-                  </div>
+                  {supplierType === "doeksen" && data.invoice.total_supplier_commission > 0 && (
+                    <div className="text-xs text-emerald-700">
+                      Commissie BV: {EUR(data.invoice.total_supplier_commission)}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -306,7 +310,9 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                 <BookingRow
                   key={b.resnr + idx}
                   booking={b}
+                  supplierType={supplierType}
                   usedItemIds={bookings.map((x) => x.item_id).filter((x): x is string => !!x)}
+                  partnerId={partnerId}
                   onChooseCandidate={(id) => chooseCandidate(idx, id)}
                   onMarkInternal={() => markInternal(idx)}
                   onLinkManual={(cand) => linkManual(idx, cand)}
