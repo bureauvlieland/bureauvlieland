@@ -106,6 +106,13 @@ export interface InvoiceTotalsSummary {
   vatLines: InvoiceVatLine[];
 }
 
+export interface InvoicePriorInvoice {
+  invoiceNumber: string;
+  invoiceDate: Date;
+  /** Amount incl. VAT; use a negative value for credit notes. */
+  amountInclVat: number;
+}
+
 export interface InvoiceData {
   bureau: InvoiceBureau;
   customer: InvoiceCustomer;
@@ -114,6 +121,8 @@ export interface InvoiceData {
   totals: InvoiceTotalsSummary;
   /** Optional free-text notes shown above the legal block. */
   notes?: string;
+  /** Already-sent invoices for this project (subtracted from the total). */
+  priorInvoices?: InvoicePriorInvoice[];
 }
 
 // ─── Formatters ──────────────────────────────────────────────
