@@ -141,9 +141,24 @@ export const AdminItemBillingLinesEditor = ({
     setDraft((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const persistUseActualCosts = async (next: boolean) => {
+    if (next === initialUseActualCosts) return true;
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ use_actual_costs: next })
+      .eq("id", itemId);
+    if (error) {
+      toast.error("Toggle 'werkelijke kosten' opslaan mislukt");
+      return false;
+    }
+    setInitialUseActualCosts(next);
+    return true;
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     const ok = await saveAll(draft);
+    if (ok) await persistUseActualCosts(useActualCosts);
     setIsSaving(false);
     if (ok) setIsOpen(false);
   };
@@ -151,8 +166,49 @@ export const AdminItemBillingLinesEditor = ({
   const handleClearAll = async () => {
     setIsSaving(true);
     const ok = await saveAll([]);
+    if (ok) await persistUseActualCosts(false);
     setIsSaving(false);
     if (ok) setIsOpen(false);
+  };
+
+  const importFromInvoice = (invoice: LinkedPurchaseInvoice, mode: "replace" | "append") => {
+    // Prefer invoice lines; otherwise fall back to allocation or invoice header as 1 line.
+    let imported: ProgramItemBillingLineInput[] = [];
+    if (invoice.lines.length > 0 && invoice.link_type === "direct") {
+      imported = invoice.lines.map((l, i) => ({
+        description: l.description || `Factuur ${invoice.invoice_number}`,
+        quantity: Number(l.quantity) || 1,
+        unit_price_excl_vat: Number(l.amount_excl_vat) / (Number(l.quantity) || 1),
+        vat_rate: Number(l.vat_rate),
+        sort_order: i,
+      }));
+    } else if (invoice.allocation) {
+      const a = invoice.allocation;
+      imported = [{
+        description: a.notes || `Factuur ${invoice.invoice_number}`,
+        quantity: 1,
+        unit_price_excl_vat: Number(a.amount_excl_vat),
+        vat_rate: Number(a.vat_rate),
+        sort_order: 0,
+      }];
+    } else {
+      imported = [{
+        description: `Factuur ${invoice.invoice_number}`,
+        quantity: 1,
+        unit_price_excl_vat: Number(invoice.amount_excl_vat),
+        vat_rate: Number(invoice.vat_rate),
+        sort_order: 0,
+      }];
+    }
+
+    setDraft((prev) => {
+      if (mode === "replace") return imported.map((d, i) => ({ ...d, sort_order: i }));
+      const merged = [...prev, ...imported];
+      return merged.map((d, i) => ({ ...d, sort_order: i }));
+    });
+    // Default: when importing actuals, also flip toggle on
+    setUseActualCosts(true);
+    toast.success(`${imported.length} regel(s) overgenomen uit factuur ${invoice.invoice_number}`);
   };
 
   return (
