@@ -430,6 +430,14 @@ export const AdminItemBillingLinesEditor = ({
                   <span>Totaal incl. BTW</span>
                   <span className="tabular-nums">{formatCurrency(draftTotals.totalIncl)}</span>
                 </div>
+                {suggestedAmount != null && Math.abs(draftTotals.totalIncl - Number(suggestedAmount)) > 0.5 && (
+                  <div className="flex items-center gap-1 text-amber-700 dark:text-amber-400 pt-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>
+                      Offerte: {formatCurrency(Number(suggestedAmount))} · verschil {formatCurrency(draftTotals.totalIncl - Number(suggestedAmount))}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between gap-2 pt-2">
