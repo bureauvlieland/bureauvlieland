@@ -183,6 +183,11 @@ Deno.serve(async (req) => {
                   vat_amount: { type: ["number", "null"] },
                   amount_incl_vat: { type: ["number", "null"] },
                   description: { type: ["string", "null"] },
+                  prices_include_vat: {
+                    type: ["boolean", "null"],
+                    description:
+                      "true als de unit_price in line_items INCLUSIEF BTW is (horeca/POS-bon), false als exclusief (zakelijke factuur).",
+                  },
                   vat_breakdown: {
                     type: "array",
                     description: "Eén entry per uniek BTW-tarief op de factuur",
@@ -224,6 +229,7 @@ Deno.serve(async (req) => {
                   "description",
                   "line_items",
                   "vat_breakdown",
+                  "prices_include_vat",
                 ],
                 additionalProperties: false,
               },
