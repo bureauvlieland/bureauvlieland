@@ -280,6 +280,66 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Post-process: detect & correct INCL-BTW line prices (typical horeca/POS bonnen).
+    // Frontend dialog computes line totals as qty * unit_price + BTW (assumes excl),
+    // so any unit_price that is actually INCL BTW must be converted to excl here.
+    try {
+      const items: Array<{ quantity: number | null; unit_price: number | null; total_excl_vat: number | null; vat_rate: number | null }> =
+        Array.isArray(extracted.line_items) ? extracted.line_items : [];
+      const headerExcl = Number(extracted.amount_excl_vat) || 0;
+      const headerIncl = Number(extracted.amount_incl_vat) || 0;
+
+      const sumLines = items.reduce((s, li) => {
+        const q = Number(li.quantity ?? 1) || 0;
+        const u = Number(li.unit_price ?? 0) || 0;
+        return s + q * u;
+      }, 0);
+
+      let pricesIncl: boolean | null =
+        typeof extracted.prices_include_vat === "boolean" ? extracted.prices_include_vat : null;
+
+      // Auto-detect when AI didn't flag, or override when sums clearly point the other way.
+      if (items.length > 0 && headerIncl > 0 && headerExcl > 0) {
+        const distToIncl = Math.abs(sumLines - headerIncl);
+        const distToExcl = Math.abs(sumLines - headerExcl);
+        if (distToIncl + 0.5 < distToExcl) pricesIncl = true;
+        else if (distToExcl + 0.5 < distToIncl) pricesIncl = false;
+      }
+
+      if (pricesIncl === true && items.length > 0) {
+        for (const li of items) {
+          const rate = Number(li.vat_rate ?? 0) || 0;
+          const factor = 1 + rate / 100;
+          if (factor > 0) {
+            if (li.unit_price != null) {
+              li.unit_price = Math.round((Number(li.unit_price) / factor) * 100) / 100;
+            }
+            if (li.total_excl_vat != null) {
+              li.total_excl_vat = Math.round((Number(li.total_excl_vat) / factor) * 100) / 100;
+            }
+          }
+        }
+        extracted.prices_include_vat = true;
+
+        // Reconcile: scale lines proportionally if they drift > €0.50 from header excl.
+        const newSumExcl = items.reduce((s, li) => {
+          const q = Number(li.quantity ?? 1) || 0;
+          const u = Number(li.unit_price ?? 0) || 0;
+          return s + q * u;
+        }, 0);
+        if (headerExcl > 0 && newSumExcl > 0 && Math.abs(newSumExcl - headerExcl) > 0.5) {
+          const scale = headerExcl / newSumExcl;
+          for (const li of items) {
+            if (li.unit_price != null) {
+              li.unit_price = Math.round(Number(li.unit_price) * scale * 100) / 100;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("post-process incl-vat conversion failed:", e);
+    }
+
     return new Response(JSON.stringify({ data: extracted }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
