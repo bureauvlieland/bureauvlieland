@@ -1,0 +1,2 @@
+ALTER TABLE public.partner_purchase_invoice_allocations
+  DROP CONSTRAINT IF EXISTS partner_purchase_invoice_allocations_invoice_id_item_id_key;
