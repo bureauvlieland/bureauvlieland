@@ -934,7 +934,10 @@ const AdminInvoicePreview = () => {
                                         <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                                           <td className="py-1.5 px-2">
                                             <p className="font-medium">{item.block_name}</p>
-                                            <p className="text-[9px] text-gray-400">{item.provider_name}</p>
+                                            <p className="text-[9px] text-gray-400">
+                                              {item.provider_name}
+                                              {item.booking_reference && <span> • Boekingsnr: {item.booking_reference}</span>}
+                                            </p>
                                           </td>
                                           <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
                                           <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
