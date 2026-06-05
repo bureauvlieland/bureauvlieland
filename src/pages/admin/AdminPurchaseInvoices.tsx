@@ -220,7 +220,7 @@ export default function AdminPurchaseInvoices() {
           </Card>
           <Card className="border-slate-200">
             <CardHeader className="pb-2">
-              <CardDescription>Totaal excl. BTW</CardDescription>
+              <CardDescription>Totaal incl. BTW</CardDescription>
               <CardTitle className="text-2xl flex items-center gap-1">
                 <Euro className="h-5 w-5" />
                 {stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
