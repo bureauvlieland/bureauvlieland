@@ -103,9 +103,11 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     if (!inboxItem) return;
     setLoading(true);
     try {
+      const supplier_type: "doeksen" | "isla" =
+        partnerId === "bagagevervoer-vlieland" ? "isla" : "doeksen";
       const { data: resp, error } = await supabase.functions.invoke<ParseResponse>(
         "parse-collective-invoice",
-        { body: { inbox_id: inboxItem.id } },
+        { body: { inbox_id: inboxItem.id, supplier_type } },
       );
       if (error || !resp || (resp as any).error) {
         throw new Error((resp as any)?.error || error?.message || "Parse mislukt");
@@ -118,6 +120,10 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
       setLoading(false);
     }
   }
+
+  const supplierType: "doeksen" | "isla" =
+    data?.supplier_type ?? (partnerId === "bagagevervoer-vlieland" ? "isla" : "doeksen");
+  const supplierLabel = supplierType === "isla" ? "Isla Vlieland B.V." : "Rederij Doeksen";
 
   const sumIncl = useMemo(
     () => bookings.reduce((s, b) => s + (b.amount_incl_vat || 0), 0),
