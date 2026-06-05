@@ -386,7 +386,7 @@ export default function AdminPurchaseInvoices() {
                         {invoice.description || invoice.program_request_item?.block_name || "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        €{Number(invoice.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                        €{Number(invoice.amount_incl_vat ?? (Number(invoice.amount_excl_vat || 0) + Number(invoice.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
