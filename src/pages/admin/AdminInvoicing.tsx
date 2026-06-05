@@ -122,6 +122,33 @@ const AdminInvoicing = () => {
 
       if (requestsError) throw requestsError;
 
+      // Also include active requests that already have a bureau invoice,
+      // even when terms_accepted_at is still null (e.g. legacy/manual flow).
+      const { data: invoicedRequestIds, error: invoicedErr } = await supabase
+        .from("bureau_invoices")
+        .select("request_id");
+      if (invoicedErr) throw invoicedErr;
+
+      const knownIds = new Set(requestsData.map((r) => r.id));
+      const extraIds = Array.from(
+        new Set(
+          (invoicedRequestIds ?? [])
+            .map((r) => r.request_id)
+            .filter((id): id is string => !!id && !knownIds.has(id)),
+        ),
+      );
+
+      if (extraIds.length > 0) {
+        const { data: extraRequests, error: extraErr } = await supabase
+          .from("program_requests")
+          .select("*")
+          .eq("status", "active")
+          .in("id", extraIds);
+        if (extraErr) throw extraErr;
+        if (extraRequests) requestsData.push(...extraRequests);
+      }
+
+
       const linkedAccommodationIds = Array.from(
         new Set(
           requestsData
