@@ -479,7 +479,7 @@ export default function AdminPurchaseInvoices() {
                 <>
                   Je staat op het punt om factuur <strong>{deleteTarget.invoice_number || "(zonder nummer)"}</strong>{" "}
                   van <strong>{deleteTarget.partner?.name}</strong> (€
-                  {Number(deleteTarget.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
+                  {Number(deleteTarget.amount_incl_vat ?? (Number(deleteTarget.amount_excl_vat || 0) + Number(deleteTarget.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
                   <br /><br />
                   Dit reset ook de factuur- en commissie-status op het bijbehorende programma-onderdeel.
                   Deze actie kan niet ongedaan worden gemaakt.
