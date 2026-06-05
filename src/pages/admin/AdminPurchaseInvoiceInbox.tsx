@@ -204,30 +204,36 @@ export default function AdminPurchaseInvoiceInbox() {
                     )}
                     {item.status === "new" && (
                       <>
-                        {isLikelyCollective(item) && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="bg-amber-600 hover:bg-amber-700"
-                            onClick={() =>
-                              setCollectiveItem({
-                                item,
-                                partnerId: guessPartnerId(item) || "rederij",
-                              })
-                            }
-                            disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
-                          >
-                            <Sparkles className="h-3 w-3 mr-1" /> Verzamelfactuur
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant={isLikelyCollective(item) ? "outline" : "default"}
-                          onClick={() => setProcessingItem(item)}
-                          disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" /> Verwerken
-                        </Button>
+                        {(() => {
+                          const collective = isLikelyCollective(item);
+                          return (
+                            <>
+                              <Button
+                                size="sm"
+                                variant={collective ? "default" : "outline"}
+                                className={collective ? "bg-amber-600 hover:bg-amber-700" : ""}
+                                onClick={() =>
+                                  setCollectiveItem({
+                                    item,
+                                    partnerId: guessPartnerId(item) || "rederij",
+                                  })
+                                }
+                                disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
+                                title="Splits deze factuur per project (verzamelfactuur)"
+                              >
+                                <Sparkles className="h-3 w-3 mr-1" /> Verzamelfactuur
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={collective ? "outline" : "default"}
+                                onClick={() => setProcessingItem(item)}
+                                disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" /> Verwerken
+                              </Button>
+                            </>
+                          );
+                        })()}
                         <Button
                           size="sm"
                           variant="ghost"
