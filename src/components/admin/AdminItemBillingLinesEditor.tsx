@@ -248,6 +248,71 @@ export const AdminItemBillingLinesEditor = ({
             </p>
           </div>
 
+          {/* Linked purchase invoices */}
+          {!invoicesLoading && linkedInvoices.length > 0 && (
+            <div className="border rounded-md bg-muted/20 p-2 space-y-1.5">
+              <div className="text-xs font-medium text-muted-foreground">Gekoppelde inkoopfacturen</div>
+              {linkedInvoices.map((inv) => {
+                const shown = inv.link_type === "allocation" && inv.allocation
+                  ? inv.allocation.amount_incl_vat
+                  : inv.amount_incl_vat;
+                return (
+                  <div key={inv.id} className="flex items-center justify-between gap-2 text-xs bg-background rounded p-1.5 border">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">
+                        {inv.invoice_number} · {inv.partner_id}
+                        {inv.link_type === "allocation" && (
+                          <span className="ml-1 text-[10px] text-muted-foreground">(deel)</span>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground tabular-nums">
+                        {formatCurrency(shown)} incl. · {new Date(inv.invoice_date).toLocaleDateString("nl-NL")}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => importFromInvoice(inv, "replace")}
+                        title="Vervang huidige regels door regels uit deze factuur"
+                      >
+                        <FileDown className="h-3 w-3 mr-1" /> Vervang
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => importFromInvoice(inv, "append")}
+                        title="Voeg regels toe aan bestaande regels"
+                      >
+                        + Voeg toe
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Toggle */}
+          <div className="flex items-center justify-between gap-2 border rounded-md p-2 bg-background">
+            <div className="space-y-0.5">
+              <Label htmlFor="use-actual-costs" className="text-xs font-medium cursor-pointer">
+                Werkelijke kosten leidend in overzicht
+              </Label>
+              <p className="text-[10px] text-muted-foreground">
+                Aan: Financieel Overzicht toont som van deze regels. Uit: offerteprijs blijft leidend.
+              </p>
+            </div>
+            <Switch
+              id="use-actual-costs"
+              checked={useActualCosts}
+              onCheckedChange={setUseActualCosts}
+              disabled={!hasLines && draft.length === 0}
+            />
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
