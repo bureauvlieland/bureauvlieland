@@ -30,6 +30,7 @@ interface Booking {
   departure_dates: string[];
   routes: string[];
   reference: string | null;
+  description?: string;
   amount_excl_vat: number;
   vat_amount: number;
   amount_incl_vat: number;
@@ -39,9 +40,11 @@ interface Booking {
   item_id: string | null;
   candidates: Candidate[];
   project: { request_id: string; reference_number: string | null; customer_label: string } | null;
+  suggested_projects?: { request_id: string; reference_number: string | null; customer_label: string; similarity?: number }[];
 }
 
 interface ParseResponse {
+  supplier_type?: "doeksen" | "isla";
   invoice: {
     invoice_number: string;
     invoice_date: string;
@@ -60,7 +63,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   inboxItem: PurchaseInvoiceInboxItem | null;
-  partnerId: string; // e.g. "rederij"
+  partnerId: string; // e.g. "rederij" of "bagagevervoer-vlieland"
 }
 
 const EUR = (n: number) =>
