@@ -281,7 +281,7 @@ export const FinancialOverviewCard = ({
               const isFinal = billingLines && billingLines.length > 0;
               return (
                 <div key={item.id}>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {getStatusBadge(item)}
                       <span className="truncate max-w-[180px]">{item.block_name}</span>
@@ -291,9 +291,17 @@ export const FinancialOverviewCard = ({
                         </Badge>
                       )}
                     </div>
-                    <span className="font-medium whitespace-nowrap ml-2 tabular-nums">
-                      {formatItemPrice(item)}
-                    </span>
+                    <div className="flex items-center gap-1 ml-2">
+                      <span className="font-medium whitespace-nowrap tabular-nums">
+                        {formatItemPrice(item)}
+                      </span>
+                      <AdminItemBillingLinesEditor
+                        itemId={item.id}
+                        itemName={item.block_name}
+                        suggestedAmount={getEffectiveItemTotal(item)}
+                        defaultVatRate={getItemVatRate(item as any)}
+                      />
+                    </div>
                   </div>
                   {isFinal && (
                     <div className="ml-6 mt-0.5 mb-1 space-y-0.5">
@@ -309,6 +317,7 @@ export const FinancialOverviewCard = ({
                     </div>
                   )}
                 </div>
+
               );
             })}
 
