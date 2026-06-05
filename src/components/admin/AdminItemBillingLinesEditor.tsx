@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -13,9 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Receipt, Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Receipt, Plus, Trash2, Loader2, CheckCircle2, FileDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useItemBillingLines } from "@/hooks/useItemBillingLines";
+import { usePurchaseInvoicesForItem, type LinkedPurchaseInvoice } from "@/hooks/usePurchaseInvoicesForItem";
 import {
   ProgramItemBillingLineInput,
   VAT_RATE_OPTIONS,
