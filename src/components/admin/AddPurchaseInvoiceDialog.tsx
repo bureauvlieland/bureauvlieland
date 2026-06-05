@@ -974,6 +974,82 @@ export function AddPurchaseInvoiceDialog({
               );
             })()}
 
+            {/* Extra projecten: splits factuur naar meerdere projecten */}
+            {requestId && (() => {
+              const headerExclNum = parseFloat(amountExcl) || 0;
+              const extrasExcl = extraProjects.reduce(
+                (s, e) => s + (parseFloat(e.amountExclVat) || 0),
+                0,
+              );
+              const primaryShareExcl = headerExclNum - extrasExcl;
+              const balanced = Math.abs(primaryShareExcl - 0) >= -0.01 && extrasExcl <= headerExclNum + 0.01;
+              const addExtra = () => {
+                setExtraProjects((prev) => [
+                  ...prev,
+                  { requestId: "", amountExclVat: "", vatRate: vatRate || "21", allocations: [] },
+                ]);
+              };
+              return (
+                <div className="space-y-2 rounded-md border border-dashed border-border p-3 bg-muted/20">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <Label className="text-sm">Extra projecten (splits factuur)</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Heeft deze factuur posten voor meerdere projecten? Voeg er hier extra toe — er wordt dan per project een aparte inkoopfactuur aangemaakt.
+                      </p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addExtra}>
+                      <Plus className="h-3 w-3 mr-1" /> Project toevoegen
+                    </Button>
+                  </div>
+
+                  {extraProjects.length > 0 && (
+                    <>
+                      <div className="space-y-2">
+                        {extraProjects.map((split, idx) => (
+                          <ExtraProjectSplitBlock
+                            key={idx}
+                            index={idx}
+                            split={split}
+                            projects={(projects as any) || []}
+                            itemsForProject={(extraItems as any || []).filter((it: any) => it.request_id === split.requestId)}
+                            partnerId={partnerId}
+                            onChange={(patch) =>
+                              setExtraProjects((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)))
+                            }
+                            onRemove={() =>
+                              setExtraProjects((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                          />
+                        ))}
+                      </div>
+                      <div
+                        className={cn(
+                          "flex items-center justify-between text-xs px-2 py-1.5 rounded-md",
+                          balanced
+                            ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300"
+                            : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
+                        )}
+                      >
+                        <span>
+                          Hoofdproject: <strong>€{primaryShareExcl.toFixed(2)}</strong> excl. + extra projecten <strong>€{extrasExcl.toFixed(2)}</strong> = €{headerExclNum.toFixed(2)}
+                        </span>
+                        <span>
+                          {primaryShareExcl < -0.01
+                            ? `⚠ Extras > totaal`
+                            : balanced
+                            ? "✓ Klopt"
+                            : ""}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
+
+
             {/* Invoice details */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
