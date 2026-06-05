@@ -2704,6 +2704,23 @@ const AdminRequestDetail = () => {
                   accommodationExtras={accommodationExtras}
                   accommodationName={selectedAccommodationQuote?.accommodation_name}
                   linesByItem={billingLinesByItem}
+                  excludedFees={(request as any).excluded_fees ?? []}
+                  onToggleFee={async (key, nextExcluded) => {
+                    const current: string[] = ((request as any).excluded_fees ?? []) as string[];
+                    const next = nextExcluded
+                      ? Array.from(new Set([...current, key]))
+                      : current.filter((k) => k !== key);
+                    const { error } = await supabase
+                      .from("program_requests")
+                      .update({ excluded_fees: next })
+                      .eq("id", request.id);
+                    if (error) {
+                      toast.error("Kon kostenpost niet bijwerken");
+                    } else {
+                      toast.success(nextExcluded ? "Verwijderd van factuur" : "Teruggezet op factuur");
+                      fetchRequestData({ silent: true });
+                    }
+                  }}
                 />
               </div>
               {/* Partner-nacalculatie */}
