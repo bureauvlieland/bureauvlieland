@@ -77,6 +77,7 @@ interface ProgramItem {
   price_type: string | null;
   override_people: number | null;
   status: string;
+  booking_reference?: string | null;
 }
 
 interface AccommodationQuoteData {
