@@ -931,13 +931,26 @@ export function AddPurchaseInvoiceDialog({
               }, 0);
               const diff = totalIncl - allocTotalIncl;
               const matches = Math.abs(diff) < 0.01;
-              const availableItems = items.filter((it: any) => !allocations.some((a) => a.item_id === it.id));
+              const availableItems = items;
 
               const addAllocation = (item_id: string) => {
                 setAllocations((prev) => [
                   ...prev,
                   { item_id, amount_excl_vat: "", vat_rate: vatRate || "21", notes: "" },
                 ]);
+              };
+              const splitAllocation = (idx: number) => {
+                setAllocations((prev) => {
+                  const src = prev[idx];
+                  if (!src) return prev;
+                  const usedRates = prev
+                    .filter((a) => a.item_id === src.item_id)
+                    .map((a) => a.vat_rate);
+                  const nextRate = ["21", "9", "0"].find((r) => !usedRates.includes(r)) || "21";
+                  const copy = [...prev];
+                  copy.splice(idx + 1, 0, { item_id: src.item_id, amount_excl_vat: "", vat_rate: nextRate, notes: "" });
+                  return copy;
+                });
               };
               const updateAllocation = (idx: number, patch: Partial<typeof allocations[number]>) => {
                 setAllocations((prev) => prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
