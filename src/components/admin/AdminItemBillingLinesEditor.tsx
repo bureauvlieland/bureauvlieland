@@ -49,11 +49,29 @@ export const AdminItemBillingLinesEditor = ({
 }: AdminItemBillingLinesEditorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { lines, saveAll, loading } = useItemBillingLines(itemId);
+  const { invoices: linkedInvoices, loading: invoicesLoading, refetch: refetchInvoices } = usePurchaseInvoicesForItem(isOpen ? itemId : null);
   const [draft, setDraft] = useState<ProgramItemBillingLineInput[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [useActualCosts, setUseActualCosts] = useState(false);
+  const [initialUseActualCosts, setInitialUseActualCosts] = useState(false);
 
   const hasLines = lines.length > 0;
   const totalIncl = lines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
+
+  // Load current use_actual_costs flag when opening
+  useEffect(() => {
+    if (!isOpen || !itemId) return;
+    supabase
+      .from("program_request_items")
+      .select("use_actual_costs")
+      .eq("id", itemId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const v = Boolean((data as any)?.use_actual_costs);
+        setUseActualCosts(v);
+        setInitialUseActualCosts(v);
+      });
+  }, [isOpen, itemId]);
 
   // Initialize draft when opening
   useEffect(() => {
