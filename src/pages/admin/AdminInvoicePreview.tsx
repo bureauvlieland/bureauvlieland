@@ -355,7 +355,7 @@ const AdminInvoicePreview = () => {
   const calculateTotals = () => {
     const numberOfPeople = request?.number_of_people || 0;
     const numberOfDays = Math.max(request?.selected_dates?.length || 0, 1);
-    const unified = request
+    const rawUnified = request
       ? calculateUnifiedInvoiceTotals({
           request,
           items,
@@ -376,6 +376,23 @@ const AdminInvoicePreview = () => {
           extraCostsTotal: 0,
           accommodationTotal: 0,
         };
+
+    // Honor per-project excluded fees (set in Financieel Overzicht via "Uitgesloten van factuur").
+    const excludedFees: string[] = ((request as any)?.excluded_fees ?? []) as string[];
+    const isExcluded = (k: string) => excludedFees.includes(k);
+    const removed =
+      (isExcluded("coordination_fee") ? rawUnified.coordinationFee : 0) +
+      (isExcluded("central_surcharge") ? rawUnified.centralSurcharge : 0) +
+      (isExcluded("tourist_tax") ? rawUnified.touristTax : 0) +
+      (isExcluded("nature_contribution") ? rawUnified.natureContribution : 0);
+    const unified = {
+      ...rawUnified,
+      coordinationFee: isExcluded("coordination_fee") ? 0 : rawUnified.coordinationFee,
+      centralSurcharge: isExcluded("central_surcharge") ? 0 : rawUnified.centralSurcharge,
+      touristTax: isExcluded("tourist_tax") ? 0 : rawUnified.touristTax,
+      natureContribution: isExcluded("nature_contribution") ? 0 : rawUnified.natureContribution,
+      grandTotalInclVat: rawUnified.grandTotalInclVat - removed,
+    };
 
     const standardVatRate = Number(settings.default_vat_rate || 21);
     const vatGroups: Record<number, number> = {};
