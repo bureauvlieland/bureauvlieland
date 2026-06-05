@@ -227,10 +227,10 @@ export function ExtraProjectSplitBlock({
                 const aIncl = aExcl * (1 + aRate / 100);
                 return (
                   <div
-                    key={alloc.item_id}
+                    key={idx}
                     className="grid grid-cols-12 gap-2 items-center text-sm rounded-md p-2 border border-border bg-muted/30"
                   >
-                    <div className="col-span-5 truncate">
+                    <div className="col-span-4 truncate">
                       <div className="font-medium truncate text-xs">
                         {it ? `Dag ${it.day_index + 1}: ${it.block_name}` : "Onbekend onderdeel"}
                       </div>
@@ -263,7 +263,17 @@ export function ExtraProjectSplitBlock({
                     <div className="col-span-1 text-right text-xs tabular-nums text-muted-foreground">
                       €{aIncl.toFixed(2)}
                     </div>
-                    <div className="col-span-1 flex justify-end">
+                    <div className="col-span-2 flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Splits BTW"
+                        onClick={() => splitAlloc(idx)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
