@@ -199,6 +199,7 @@ export function AddPurchaseInvoiceDialog({
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptDuplicate, setAcceptDuplicate] = useState(false);
+  const [copyToBillingLines, setCopyToBillingLines] = useState(false);
 
   // Duplicate check (same partner + invoice number)
   const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
