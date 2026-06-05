@@ -338,8 +338,10 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
   const valueX = MARGIN_L + 38;
 
   let y = y0 + 10;
+  const priorSumTop = (data.priorInvoices ?? []).reduce((s, p) => s + p.amountInclVat, 0);
+  const netDueTop = data.totals.totalInclVat - priorSumTop;
   const rows: Array<[string, string, boolean]> = [
-    ["Te betalen", `${fmtEuro(data.totals.totalInclVat)}  (vóór ${fmtDate(data.meta.dueDate)})`, true],
+    ["Te betalen", `${fmtEuro(netDueTop)}  (vóór ${fmtDate(data.meta.dueDate)})`, true],
     ["IBAN", data.bureau.iban, false],
     ["Op naam van", data.bureau.legalName, false],
     ["Omschrijving", `Factuur ${data.meta.invoiceNumber}`, false],
