@@ -591,11 +591,13 @@ function ManualLinkPopover({
   defaultQuery,
   usedItemIds,
   triggerLabel,
+  providerId,
   onPick,
 }: {
   defaultQuery: string;
   usedItemIds: string[];
   triggerLabel: string;
+  providerId?: string;
   onPick: (cand: Candidate) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -619,7 +621,7 @@ function ManualLinkPopover({
           id, request_id, block_name, booking_reference,
           program_requests!inner(id, reference_number, customer_name, customer_company, status, selected_dates)
         `)
-        .eq("provider_id", "rederij")
+        .eq("provider_id", providerId || "rederij")
         .not("program_requests.status", "in", "(cancelled,deleted)")
         .order("created_at", { ascending: false })
         .limit(40);
