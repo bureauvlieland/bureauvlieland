@@ -196,7 +196,7 @@ export const FinancialOverviewCard = ({
 
 
 
-  // Extra costs: prefer billing lines if any, otherwise standard rate
+  // Extra costs: prefer billing lines if any, otherwise resolve VAT per item (via block_id mapping, fallback standard)
   extraCostItems.forEach((item) => {
     if (hasBillingLines(item)) {
       linesByItem[item.id].forEach((bl) => {
@@ -204,7 +204,8 @@ export const FinancialOverviewCard = ({
       });
     } else {
       const total = item.admin_price_override ?? 0;
-      addToGroup(coordVatRate, calculateExclVat(total, coordVatRate), calculateVatAmount(total, coordVatRate));
+      const rate = getItemVatRate(item as any);
+      addToGroup(rate, calculateExclVat(total, rate), calculateVatAmount(total, rate));
     }
   });
 
