@@ -1,0 +1,1 @@
+ALTER TABLE public.program_request_items ADD COLUMN IF NOT EXISTS use_actual_costs boolean NOT NULL DEFAULT false;

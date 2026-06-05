@@ -8,6 +8,7 @@ export interface AdminInvoicingItemLike {
   admin_price_override?: number | null;
   price_type?: string | null;
   override_people?: number | null;
+  use_actual_costs?: boolean | null;
 }
 
 export interface AdminInvoicingInvoiceLike {
@@ -67,7 +68,7 @@ export function calculateAdminInvoicingTotals(
     Array.isArray(linesByItem[item.id]) && linesByItem[item.id].length > 0;
 
   const getEffectiveItemTotal = (item: AdminInvoicingItemLike) => {
-    if (hasBillingLines(item)) return sumBillingLines(linesByItem[item.id]);
+    if (hasBillingLines(item) && item.use_actual_costs) return sumBillingLines(linesByItem[item.id]);
     return centralLineTotal(item as never, request.number_of_people, numberOfDays) ?? 0;
   };
 

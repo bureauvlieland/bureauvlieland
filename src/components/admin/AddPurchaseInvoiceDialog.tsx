@@ -199,6 +199,7 @@ export function AddPurchaseInvoiceDialog({
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptDuplicate, setAcceptDuplicate] = useState(false);
+  const [copyToBillingLines, setCopyToBillingLines] = useState(false);
 
   // Duplicate check (same partner + invoice number)
   const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
@@ -554,6 +555,51 @@ export function AddPurchaseInvoiceDialog({
       });
 
 
+      // Optional: copy invoice lines into program_item_billing_lines (sales lines) for the linked item
+      if (copyToBillingLines && created?.id) {
+        const targetItemId = validAllocations.length === 1
+          ? validAllocations[0].item_id
+          : (validAllocations.length === 0 && itemId ? itemId : null);
+        if (targetItemId) {
+          try {
+            // Wipe existing
+            await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
+            const rowsToInsert = validLines.length > 0
+              ? validLines.map((l, idx) => ({
+                  item_id: targetItemId,
+                  description: l.description,
+                  quantity: l.quantity,
+                  unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
+                  vat_rate: l.vat_rate,
+                  vat_amount: l.vat_amount,
+                  amount_excl_vat: l.amount_excl_vat,
+                  amount_incl_vat: l.amount_incl_vat,
+                  sort_order: idx,
+                }))
+              : [{
+                  item_id: targetItemId,
+                  description: description || `Factuur ${invoiceNumber}`,
+                  quantity: 1,
+                  unit_price_excl_vat: headerExcl,
+                  vat_rate: headerVatRate,
+                  vat_amount: headerVat,
+                  amount_excl_vat: headerExcl,
+                  amount_incl_vat: headerIncl,
+                  sort_order: 0,
+                }];
+            await supabase.from("program_item_billing_lines").insert(rowsToInsert);
+            await supabase
+              .from("program_request_items")
+              .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
+              .eq("id", targetItemId);
+            toast.success("Factuurregels overgenomen op programma-onderdeel");
+          } catch (e) {
+            console.error("copyToBillingLines failed", e);
+            toast.error("Overnemen naar factuurregels mislukt");
+          }
+        }
+      }
+
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
       }
@@ -883,6 +929,21 @@ export function AddPurchaseInvoiceDialog({
                         {matches ? "✓ Klopt" : `Verschil: €${diff.toFixed(2)}`}
                       </span>
                     </div>
+                  )}
+                  {((allocations.length === 1 && parseFloat(allocations[0].amount_excl_vat) > 0) || (allocations.length === 0 && itemId)) && (
+                    <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
+                      <Checkbox
+                        checked={copyToBillingLines}
+                        onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
+                        <span className="block text-muted-foreground">
+                          Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
+                        </span>
+                      </span>
+                    </label>
                   )}
                 </div>
               );

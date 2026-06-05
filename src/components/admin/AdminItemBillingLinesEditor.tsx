@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -13,9 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Receipt, Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Receipt, Plus, Trash2, Loader2, CheckCircle2, FileDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useItemBillingLines } from "@/hooks/useItemBillingLines";
+import { usePurchaseInvoicesForItem, type LinkedPurchaseInvoice } from "@/hooks/usePurchaseInvoicesForItem";
 import {
   ProgramItemBillingLineInput,
   VAT_RATE_OPTIONS,
@@ -44,11 +49,29 @@ export const AdminItemBillingLinesEditor = ({
 }: AdminItemBillingLinesEditorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { lines, saveAll, loading } = useItemBillingLines(itemId);
+  const { invoices: linkedInvoices, loading: invoicesLoading, refetch: refetchInvoices } = usePurchaseInvoicesForItem(isOpen ? itemId : null);
   const [draft, setDraft] = useState<ProgramItemBillingLineInput[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [useActualCosts, setUseActualCosts] = useState(false);
+  const [initialUseActualCosts, setInitialUseActualCosts] = useState(false);
 
   const hasLines = lines.length > 0;
   const totalIncl = lines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
+
+  // Load current use_actual_costs flag when opening
+  useEffect(() => {
+    if (!isOpen || !itemId) return;
+    supabase
+      .from("program_request_items")
+      .select("use_actual_costs")
+      .eq("id", itemId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const v = Boolean((data as any)?.use_actual_costs);
+        setUseActualCosts(v);
+        setInitialUseActualCosts(v);
+      });
+  }, [isOpen, itemId]);
 
   // Initialize draft when opening
   useEffect(() => {
@@ -118,9 +141,24 @@ export const AdminItemBillingLinesEditor = ({
     setDraft((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const persistUseActualCosts = async (next: boolean) => {
+    if (next === initialUseActualCosts) return true;
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ use_actual_costs: next })
+      .eq("id", itemId);
+    if (error) {
+      toast.error("Toggle 'werkelijke kosten' opslaan mislukt");
+      return false;
+    }
+    setInitialUseActualCosts(next);
+    return true;
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     const ok = await saveAll(draft);
+    if (ok) await persistUseActualCosts(useActualCosts);
     setIsSaving(false);
     if (ok) setIsOpen(false);
   };
@@ -128,8 +166,49 @@ export const AdminItemBillingLinesEditor = ({
   const handleClearAll = async () => {
     setIsSaving(true);
     const ok = await saveAll([]);
+    if (ok) await persistUseActualCosts(false);
     setIsSaving(false);
     if (ok) setIsOpen(false);
+  };
+
+  const importFromInvoice = (invoice: LinkedPurchaseInvoice, mode: "replace" | "append") => {
+    // Prefer invoice lines; otherwise fall back to allocation or invoice header as 1 line.
+    let imported: ProgramItemBillingLineInput[] = [];
+    if (invoice.lines.length > 0 && invoice.link_type === "direct") {
+      imported = invoice.lines.map((l, i) => ({
+        description: l.description || `Factuur ${invoice.invoice_number}`,
+        quantity: Number(l.quantity) || 1,
+        unit_price_excl_vat: Number(l.amount_excl_vat) / (Number(l.quantity) || 1),
+        vat_rate: Number(l.vat_rate),
+        sort_order: i,
+      }));
+    } else if (invoice.allocation) {
+      const a = invoice.allocation;
+      imported = [{
+        description: a.notes || `Factuur ${invoice.invoice_number}`,
+        quantity: 1,
+        unit_price_excl_vat: Number(a.amount_excl_vat),
+        vat_rate: Number(a.vat_rate),
+        sort_order: 0,
+      }];
+    } else {
+      imported = [{
+        description: `Factuur ${invoice.invoice_number}`,
+        quantity: 1,
+        unit_price_excl_vat: Number(invoice.amount_excl_vat),
+        vat_rate: Number(invoice.vat_rate),
+        sort_order: 0,
+      }];
+    }
+
+    setDraft((prev) => {
+      if (mode === "replace") return imported.map((d, i) => ({ ...d, sort_order: i }));
+      const merged = [...prev, ...imported];
+      return merged.map((d, i) => ({ ...d, sort_order: i }));
+    });
+    // Default: when importing actuals, also flip toggle on
+    setUseActualCosts(true);
+    toast.success(`${imported.length} regel(s) overgenomen uit factuur ${invoice.invoice_number}`);
   };
 
   return (
@@ -167,6 +246,71 @@ export const AdminItemBillingLinesEditor = ({
             <p className="text-xs text-muted-foreground">
               Deze regels worden gebruikt op de verkoopfactuur. Mix van BTW-tarieven mogelijk binnen één onderdeel (bv. zaalhuur 21% + diner 9%).
             </p>
+          </div>
+
+          {/* Linked purchase invoices */}
+          {!invoicesLoading && linkedInvoices.length > 0 && (
+            <div className="border rounded-md bg-muted/20 p-2 space-y-1.5">
+              <div className="text-xs font-medium text-muted-foreground">Gekoppelde inkoopfacturen</div>
+              {linkedInvoices.map((inv) => {
+                const shown = inv.link_type === "allocation" && inv.allocation
+                  ? inv.allocation.amount_incl_vat
+                  : inv.amount_incl_vat;
+                return (
+                  <div key={inv.id} className="flex items-center justify-between gap-2 text-xs bg-background rounded p-1.5 border">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">
+                        {inv.invoice_number} · {inv.partner_id}
+                        {inv.link_type === "allocation" && (
+                          <span className="ml-1 text-[10px] text-muted-foreground">(deel)</span>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground tabular-nums">
+                        {formatCurrency(shown)} incl. · {new Date(inv.invoice_date).toLocaleDateString("nl-NL")}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => importFromInvoice(inv, "replace")}
+                        title="Vervang huidige regels door regels uit deze factuur"
+                      >
+                        <FileDown className="h-3 w-3 mr-1" /> Vervang
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => importFromInvoice(inv, "append")}
+                        title="Voeg regels toe aan bestaande regels"
+                      >
+                        + Voeg toe
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Toggle */}
+          <div className="flex items-center justify-between gap-2 border rounded-md p-2 bg-background">
+            <div className="space-y-0.5">
+              <Label htmlFor="use-actual-costs" className="text-xs font-medium cursor-pointer">
+                Werkelijke kosten leidend in overzicht
+              </Label>
+              <p className="text-[10px] text-muted-foreground">
+                Aan: Financieel Overzicht toont som van deze regels. Uit: offerteprijs blijft leidend.
+              </p>
+            </div>
+            <Switch
+              id="use-actual-costs"
+              checked={useActualCosts}
+              onCheckedChange={setUseActualCosts}
+              disabled={!hasLines && draft.length === 0}
+            />
           </div>
 
           {loading ? (
@@ -286,6 +430,14 @@ export const AdminItemBillingLinesEditor = ({
                   <span>Totaal incl. BTW</span>
                   <span className="tabular-nums">{formatCurrency(draftTotals.totalIncl)}</span>
                 </div>
+                {suggestedAmount != null && Math.abs(draftTotals.totalIncl - Number(suggestedAmount)) > 0.5 && (
+                  <div className="flex items-center gap-1 text-amber-700 dark:text-amber-400 pt-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>
+                      Offerte: {formatCurrency(Number(suggestedAmount))} · verschil {formatCurrency(draftTotals.totalIncl - Number(suggestedAmount))}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between gap-2 pt-2">
