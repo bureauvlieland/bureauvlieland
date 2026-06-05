@@ -117,6 +117,7 @@ const AdminInvoicePreview = () => {
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
+  const [priorInvoices, setPriorInvoices] = useState<Array<{ id: string; invoice_number: string; invoice_date: string; amount_incl_vat: number; invoice_type: string }>>([]);
 
   // Load billing lines per item (definitive lines override quoted_price)
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
