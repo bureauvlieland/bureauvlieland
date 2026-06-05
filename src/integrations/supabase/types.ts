@@ -2654,6 +2654,7 @@ export type Database = {
           status_updated_by: string | null
           ticket_last_emailed_at: string | null
           updated_at: string
+          use_actual_costs: boolean
           version: number
         }
         Insert: {
@@ -2746,6 +2747,7 @@ export type Database = {
           status_updated_by?: string | null
           ticket_last_emailed_at?: string | null
           updated_at?: string
+          use_actual_costs?: boolean
           version?: number
         }
         Update: {
@@ -2838,6 +2840,7 @@ export type Database = {
           status_updated_by?: string | null
           ticket_last_emailed_at?: string | null
           updated_at?: string
+          use_actual_costs?: boolean
           version?: number
         }
         Relationships: [

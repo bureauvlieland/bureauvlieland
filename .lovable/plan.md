@@ -1,30 +1,40 @@
-## Probleem
+# Orderregels koppelen aan inkoopfactuur
 
-Twee edge functions zijn **niet gedeployed** en geven 404:
-- `parse-bank-statement` (wordt aangeroepen bij upload van .camt053-bestand)
-- `match-bank-lines` (wordt aangeroepen door parse-bank-statement)
+Doel: vanuit zowel het programma-item als de inkoopfactuur de orderregels (program_item_billing_lines) kunnen muteren, en per item kiezen of de werkelijke kosten of de offerteprijs leidend zijn in het Financieel Overzicht.
 
-Hierdoor mislukt het uploaden van .camt053 bankafschriften stilletjes.
+## 1. Database
+Eén kleine migratie:
+- Kolom `use_actual_costs boolean default false` op `program_request_items`.
+  - `false` (default): Financieel Overzicht toont `quoted_price` (huidige gedrag).
+  - `true`: toont som van `program_item_billing_lines` voor dat item.
 
-## Oorzaak
+Geen wijzigingen aan de inkoopfactuur-tabellen — die blijven leidend voor de inkoop, billing_lines blijven leidend voor de verkoop.
 
-Beide bestanden importeren `corsHeaders` uit `npm:@supabase/supabase-js@2/cors` — dat subpath bestaat niet in het pakket, waardoor de deploy faalt. Alle andere (wel werkende) edge functions definiëren `corsHeaders` gewoon inline.
+## 2. AdminItemBillingLinesEditor (per item, projectdetail)
+Bestaande popover uitbreiden:
+- Bovenaan een sectie "Gekoppelde inkoopfacturen" die alle `purchase_invoices` + `partner_purchase_invoice_allocations` toont waar `item_id` = dit item.
+- Per factuur knop **"Regels overnemen"** die de invoice lines (of bij gesplitste factuur: de allocatie-regels) als concept-orderregels in de draft zet. Bestaande regels worden vervangen of aangevuld (keuze in confirm-dialog).
+- Toggle "Werkelijke kosten leidend in overzicht" → schrijft `program_request_items.use_actual_costs`.
+- Footer: korte vergelijking *offerteprijs* vs. *totaal regels incl.* met een waarschuwing bij > €0,50 verschil.
 
-## Oplossing
+## 3. AddPurchaseInvoiceDialog / detail van inkoopfactuur
+- Onder elke allocatie naar een item een link **"Naar factuurregels van [itemnaam]"** die de billing-lines-popover voor dat item opent (zelfde component, geprefiltered).
+- Bij opslaan van een inkoopfactuur mét één enkele item-koppeling: optioneel vinkje **"Direct overnemen als factuurregels"** (alleen tonen als het item nog geen billing_lines heeft). Anders blijft het volledig handmatig — geen auto-overschrijven van bestaande regels.
 
-1. In `supabase/functions/parse-bank-statement/index.ts` en `supabase/functions/match-bank-lines/index.ts`:
-   - Verwijder de import `import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'`
-   - Vervang door inline definitie:
-     ```ts
-     const corsHeaders = {
-       "Access-Control-Allow-Origin": "*",
-       "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-     };
-     ```
-2. Beide functies opnieuw deployen.
-3. Verifiëren met een test-call (verwacht 401 zonder auth = bewijs van deploy).
-4. Eventueel bevestigen door een .camt053 te uploaden in de UI.
+## 4. Financieel Overzicht / pricing-logica
+`src/lib/adminInvoicingTotals.ts` (en daarmee `invoiceTotals.ts` + customer-portal):
+- `getEffectiveItemTotal(item)`:
+  - heeft billing_lines én `item.use_actual_costs === true` → som van billing_lines (huidige gedrag voor admin-view).
+  - heeft billing_lines maar toggle uit → val terug op `quoted_price` (centralLineTotal).
+  - geen billing_lines → `quoted_price`.
+- Customer-portal blijft altijd `quoted_price` tonen (indicatief), dus alleen `linesByItem`-pad in admin/factuur-context aanpassen.
 
-## Scope
+## 5. Verificatie
+- Sandbox-project doorlopen: item zonder regels → quoted blijft; item mét regels en toggle aan → werkelijk bedrag verschijnt; toggle uit → quoted weer terug.
+- Inkoopfactuur splitsen over 2 items → bij beide items "Regels overnemen" werkt los van elkaar.
+- Re-render Financieel Overzicht direct na toggle (invalidate queries voor items + invoicing).
 
-Alleen de twee genoemde edge function bestanden — geen frontend, geen DB.
+## Technische details
+- Bestanden: `program_request_items` migratie, `AdminItemBillingLinesEditor.tsx`, `AddPurchaseInvoiceDialog.tsx`, `adminInvoicingTotals.ts`, `useItemBillingLines.ts` (selectie van invoice lines), nieuw hook `usePurchaseInvoicesForItem(itemId)`.
+- Geen edge-function wijzigingen nodig; alleen client-side mutaties op bestaande tabellen.
+- Types regenereren na migratie.
