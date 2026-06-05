@@ -555,6 +555,51 @@ export function AddPurchaseInvoiceDialog({
       });
 
 
+      // Optional: copy invoice lines into program_item_billing_lines (sales lines) for the linked item
+      if (copyToBillingLines && created?.id) {
+        const targetItemId = validAllocations.length === 1
+          ? validAllocations[0].item_id
+          : (validAllocations.length === 0 && itemId ? itemId : null);
+        if (targetItemId) {
+          try {
+            // Wipe existing
+            await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
+            const rowsToInsert = validLines.length > 0
+              ? validLines.map((l, idx) => ({
+                  item_id: targetItemId,
+                  description: l.description,
+                  quantity: l.quantity,
+                  unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
+                  vat_rate: l.vat_rate,
+                  vat_amount: l.vat_amount,
+                  amount_excl_vat: l.amount_excl_vat,
+                  amount_incl_vat: l.amount_incl_vat,
+                  sort_order: idx,
+                }))
+              : [{
+                  item_id: targetItemId,
+                  description: description || `Factuur ${invoiceNumber}`,
+                  quantity: 1,
+                  unit_price_excl_vat: headerExcl,
+                  vat_rate: headerVatRate,
+                  vat_amount: headerVat,
+                  amount_excl_vat: headerExcl,
+                  amount_incl_vat: headerIncl,
+                  sort_order: 0,
+                }];
+            await supabase.from("program_item_billing_lines").insert(rowsToInsert);
+            await supabase
+              .from("program_request_items")
+              .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
+              .eq("id", targetItemId);
+            toast.success("Factuurregels overgenomen op programma-onderdeel");
+          } catch (e) {
+            console.error("copyToBillingLines failed", e);
+            toast.error("Overnemen naar factuurregels mislukt");
+          }
+        }
+      }
+
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
       }
