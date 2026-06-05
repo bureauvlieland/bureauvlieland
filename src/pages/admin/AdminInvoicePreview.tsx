@@ -1000,7 +1000,10 @@ const AdminInvoicePreview = () => {
                                         {item.admin_price_notes && (
                                           <p className="text-[9px] text-gray-500">{item.admin_price_notes}</p>
                                         )}
-                                        <p className="text-[9px] text-gray-400">{item.provider_name}</p>
+                                        <p className="text-[9px] text-gray-400">
+                                          {item.provider_name}
+                                          {item.booking_reference && <span> • Boekingsnr: {item.booking_reference}</span>}
+                                        </p>
                                       </td>
                                       <td className="py-1.5 px-2 text-right">
                                         {qty}
