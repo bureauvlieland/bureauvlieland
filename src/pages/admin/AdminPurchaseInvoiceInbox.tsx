@@ -154,11 +154,15 @@ export default function AdminPurchaseInvoiceInbox() {
                         <div className="font-medium">{item.scan_result.invoice_date || "—"}</div>
                       </div>
                       <div>
-                        <div className="text-xs text-muted-foreground">Excl. BTW</div>
+                        <div className="text-xs text-muted-foreground">Incl. BTW</div>
                         <div className="font-mono font-semibold">
-                          {item.scan_result.amount_excl_vat != null
-                            ? `€${item.scan_result.amount_excl_vat.toFixed(2)}`
-                            : "—"}
+                          {(() => {
+                            const incl = item.scan_result.amount_incl_vat ??
+                              (item.scan_result.amount_excl_vat != null
+                                ? item.scan_result.amount_excl_vat + (item.scan_result.vat_amount ?? 0)
+                                : null);
+                            return incl != null ? `€${incl.toFixed(2)}` : "—";
+                          })()}
                         </div>
                       </div>
                     </div>
