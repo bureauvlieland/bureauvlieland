@@ -18,13 +18,26 @@ Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regel
 VAT BREAKDOWN (KRITIEK):
 - Vrijwel elke factuur toont onderaan een BTW-overzicht/grondslag-tabel met de subtotalen per tarief (bv. "9% over 871,56 = 78,44" en "21% over 231,40 = 48,60"). Lees dit overzicht ZORGVULDIG.
 - Vul vat_breakdown ALTIJD in met één entry per uniek BTW-tarief dat op de factuur voorkomt (sla 0%-regels met bedrag 0 over).
+- amount_excl in vat_breakdown is ALTIJD exclusief BTW (de grondslag/Exclusief-kolom, NIET de bruto-kolom).
 - Som van vat_breakdown[].amount_excl MOET gelijk zijn aan amount_excl_vat (header).
 - Som van vat_breakdown[].vat_amount MOET gelijk zijn aan vat_amount (header).
 - BIJ GEMENGDE TARIEVEN (meerdere entries in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen — dat leidt tot foute herberekening.
 - Bij één enkel tarief mag header vat_rate gelijk zijn aan dat tarief.
 
+PRICES_INCLUDE_VAT (HEEL BELANGRIJK voor horeca/POS-bonnen):
+- Op horeca-kassabonnen, restaurant-/cafénota's en POS-bonnen staan de prijzen in de kolom "Prijs"/"Totaal" vrijwel altijd INCLUSIEF BTW. Het regeltotaal en "Op factuur"/"Totaal" matchen het BRUTO-bedrag.
+- Op zakelijke facturen (PDF met factuurlay-out, BTW-kolom per regel, "Subtotaal/Excl. BTW"-totaal) staan prijzen meestal EXCLUSIEF BTW.
+- Bepaal dit per factuur en zet prices_include_vat = true of false.
+- Heuristieken voor INCL:
+  * Kolomkoppen "Aant / Artikel / Prijs / Totaal" zonder expliciete "Excl"-aanduiding.
+  * Aanwezigheid van "Bruto"-kolom in onderstaande BTW-tabel.
+  * Sum(line_items.quantity * unit_price) ≈ amount_incl_vat (binnen €1).
+  * Sum(line_items.quantity * unit_price) > amount_excl_vat * 1.05.
+- Bij twijfel: vergelijk Σ(qty × unit_price) met amount_excl_vat en amount_incl_vat — kies het tarief waar de som het dichtst bij ligt.
+
 ORDERREGELS:
 - Vul line_items in met ALLE zichtbare regels van de factuur, indien herkenbaar.
+- unit_price = exact wat in de "Prijs"-kolom staat (kan dus incl OF excl BTW zijn — dat geeft prices_include_vat aan).
 - Per regel MOET je vat_rate invullen (BTW-tarief van die specifieke regel: 0, 9 of 21).
 - Als regel-tarieven niet duidelijk te lezen zijn maar er WEL een BTW-overzicht is, mag line_items leeg blijven — vat_breakdown is dan leidend.
 
@@ -170,6 +183,11 @@ Deno.serve(async (req) => {
                   vat_amount: { type: ["number", "null"] },
                   amount_incl_vat: { type: ["number", "null"] },
                   description: { type: ["string", "null"] },
+                  prices_include_vat: {
+                    type: ["boolean", "null"],
+                    description:
+                      "true als de unit_price in line_items INCLUSIEF BTW is (horeca/POS-bon), false als exclusief (zakelijke factuur).",
+                  },
                   vat_breakdown: {
                     type: "array",
                     description: "Eén entry per uniek BTW-tarief op de factuur",
@@ -211,6 +229,7 @@ Deno.serve(async (req) => {
                   "description",
                   "line_items",
                   "vat_breakdown",
+                  "prices_include_vat",
                 ],
                 additionalProperties: false,
               },
@@ -259,6 +278,66 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Could not parse AI output", raw: toolCall.function.arguments }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Post-process: detect & correct INCL-BTW line prices (typical horeca/POS bonnen).
+    // Frontend dialog computes line totals as qty * unit_price + BTW (assumes excl),
+    // so any unit_price that is actually INCL BTW must be converted to excl here.
+    try {
+      const items: Array<{ quantity: number | null; unit_price: number | null; total_excl_vat: number | null; vat_rate: number | null }> =
+        Array.isArray(extracted.line_items) ? extracted.line_items : [];
+      const headerExcl = Number(extracted.amount_excl_vat) || 0;
+      const headerIncl = Number(extracted.amount_incl_vat) || 0;
+
+      const sumLines = items.reduce((s, li) => {
+        const q = Number(li.quantity ?? 1) || 0;
+        const u = Number(li.unit_price ?? 0) || 0;
+        return s + q * u;
+      }, 0);
+
+      let pricesIncl: boolean | null =
+        typeof extracted.prices_include_vat === "boolean" ? extracted.prices_include_vat : null;
+
+      // Auto-detect when AI didn't flag, or override when sums clearly point the other way.
+      if (items.length > 0 && headerIncl > 0 && headerExcl > 0) {
+        const distToIncl = Math.abs(sumLines - headerIncl);
+        const distToExcl = Math.abs(sumLines - headerExcl);
+        if (distToIncl + 0.5 < distToExcl) pricesIncl = true;
+        else if (distToExcl + 0.5 < distToIncl) pricesIncl = false;
+      }
+
+      if (pricesIncl === true && items.length > 0) {
+        for (const li of items) {
+          const rate = Number(li.vat_rate ?? 0) || 0;
+          const factor = 1 + rate / 100;
+          if (factor > 0) {
+            if (li.unit_price != null) {
+              li.unit_price = Math.round((Number(li.unit_price) / factor) * 100) / 100;
+            }
+            if (li.total_excl_vat != null) {
+              li.total_excl_vat = Math.round((Number(li.total_excl_vat) / factor) * 100) / 100;
+            }
+          }
+        }
+        extracted.prices_include_vat = true;
+
+        // Reconcile: scale lines proportionally if they drift > €0.50 from header excl.
+        const newSumExcl = items.reduce((s, li) => {
+          const q = Number(li.quantity ?? 1) || 0;
+          const u = Number(li.unit_price ?? 0) || 0;
+          return s + q * u;
+        }, 0);
+        if (headerExcl > 0 && newSumExcl > 0 && Math.abs(newSumExcl - headerExcl) > 0.5) {
+          const scale = headerExcl / newSumExcl;
+          for (const li of items) {
+            if (li.unit_price != null) {
+              li.unit_price = Math.round(Number(li.unit_price) * scale * 100) / 100;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("post-process incl-vat conversion failed:", e);
     }
 
     return new Response(JSON.stringify({ data: extracted }), {
