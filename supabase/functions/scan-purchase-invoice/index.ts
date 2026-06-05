@@ -18,13 +18,26 @@ Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regel
 VAT BREAKDOWN (KRITIEK):
 - Vrijwel elke factuur toont onderaan een BTW-overzicht/grondslag-tabel met de subtotalen per tarief (bv. "9% over 871,56 = 78,44" en "21% over 231,40 = 48,60"). Lees dit overzicht ZORGVULDIG.
 - Vul vat_breakdown ALTIJD in met één entry per uniek BTW-tarief dat op de factuur voorkomt (sla 0%-regels met bedrag 0 over).
+- amount_excl in vat_breakdown is ALTIJD exclusief BTW (de grondslag/Exclusief-kolom, NIET de bruto-kolom).
 - Som van vat_breakdown[].amount_excl MOET gelijk zijn aan amount_excl_vat (header).
 - Som van vat_breakdown[].vat_amount MOET gelijk zijn aan vat_amount (header).
 - BIJ GEMENGDE TARIEVEN (meerdere entries in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen — dat leidt tot foute herberekening.
 - Bij één enkel tarief mag header vat_rate gelijk zijn aan dat tarief.
 
+PRICES_INCLUDE_VAT (HEEL BELANGRIJK voor horeca/POS-bonnen):
+- Op horeca-kassabonnen, restaurant-/cafénota's en POS-bonnen staan de prijzen in de kolom "Prijs"/"Totaal" vrijwel altijd INCLUSIEF BTW. Het regeltotaal en "Op factuur"/"Totaal" matchen het BRUTO-bedrag.
+- Op zakelijke facturen (PDF met factuurlay-out, BTW-kolom per regel, "Subtotaal/Excl. BTW"-totaal) staan prijzen meestal EXCLUSIEF BTW.
+- Bepaal dit per factuur en zet prices_include_vat = true of false.
+- Heuristieken voor INCL:
+  * Kolomkoppen "Aant / Artikel / Prijs / Totaal" zonder expliciete "Excl"-aanduiding.
+  * Aanwezigheid van "Bruto"-kolom in onderstaande BTW-tabel.
+  * Sum(line_items.quantity * unit_price) ≈ amount_incl_vat (binnen €1).
+  * Sum(line_items.quantity * unit_price) > amount_excl_vat * 1.05.
+- Bij twijfel: vergelijk Σ(qty × unit_price) met amount_excl_vat en amount_incl_vat — kies het tarief waar de som het dichtst bij ligt.
+
 ORDERREGELS:
 - Vul line_items in met ALLE zichtbare regels van de factuur, indien herkenbaar.
+- unit_price = exact wat in de "Prijs"-kolom staat (kan dus incl OF excl BTW zijn — dat geeft prices_include_vat aan).
 - Per regel MOET je vat_rate invullen (BTW-tarief van die specifieke regel: 0, 9 of 21).
 - Als regel-tarieven niet duidelijk te lezen zijn maar er WEL een BTW-overzicht is, mag line_items leeg blijven — vat_breakdown is dan leidend.
 
