@@ -76,9 +76,7 @@ export function ExtraProjectSplitBlock({
   const selectedProject = projects.find((p) => p.id === split.requestId);
 
   const availableItems = itemsForProject.filter(
-    (it) =>
-      !split.allocations.some((a) => a.item_id === it.id) &&
-      (!partnerId || !it.provider_id || it.provider_id === partnerId),
+    (it) => !partnerId || !it.provider_id || it.provider_id === partnerId,
   );
 
   const excl = parseFloat(split.amountExclVat) || 0;
@@ -100,6 +98,15 @@ export function ExtraProjectSplitBlock({
         { item_id, amount_excl_vat: "", vat_rate: split.vatRate || "21", notes: "" },
       ],
     });
+  };
+  const splitAlloc = (idx: number) => {
+    const src = split.allocations[idx];
+    if (!src) return;
+    const usedRates = split.allocations.filter((a) => a.item_id === src.item_id).map((a) => a.vat_rate);
+    const nextRate = ["21", "9", "0"].find((r) => !usedRates.includes(r)) || "21";
+    const copy = [...split.allocations];
+    copy.splice(idx + 1, 0, { item_id: src.item_id, amount_excl_vat: "", vat_rate: nextRate, notes: "" });
+    onChange({ allocations: copy });
   };
 
   const allocSumIncl = split.allocations.reduce((s, a) => {
