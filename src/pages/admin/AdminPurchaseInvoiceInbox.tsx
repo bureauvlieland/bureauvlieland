@@ -279,11 +279,12 @@ function isLikelyCollective(item: PurchaseInvoiceInboxItem): boolean {
   const supplier = (item.scan_result?.supplier_name || "").toLowerCase();
   const from = `${item.from_email || ""} ${item.from_name || ""}`.toLowerCase();
   const text = `${supplier} ${from} ${item.subject || ""}`.toLowerCase();
-  return /doeksen|rederij/.test(text);
+  return /doeksen|rederij|isla|bagage/.test(text);
 }
 
 function guessPartnerId(item: PurchaseInvoiceInboxItem): string | null {
-  const text = `${item.scan_result?.supplier_name || ""} ${item.from_email || ""}`.toLowerCase();
+  const text = `${item.scan_result?.supplier_name || ""} ${item.from_email || ""} ${item.from_name || ""} ${item.subject || ""}`.toLowerCase();
+  if (/isla|bagage/.test(text)) return "bagagevervoer-vlieland";
   if (/doeksen|rederij/.test(text)) return "rederij";
   return null;
 }
