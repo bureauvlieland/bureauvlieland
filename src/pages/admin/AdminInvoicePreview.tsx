@@ -295,9 +295,18 @@ const AdminInvoicePreview = () => {
         }
       }
 
+      // Fetch already-registered bureau invoices (to deduct on follow-up invoices)
+      const { data: priorData } = await supabase
+        .from("bureau_invoices")
+        .select("id, invoice_number, invoice_date, amount_incl_vat, invoice_type")
+        .eq("request_id", id)
+        .order("invoice_date", { ascending: true });
+      setPriorInvoices((priorData || []) as any);
+
       // Generate invoice number suggestion
       const ref = requestData.reference_number || "XXXX";
-      setInvoiceNumber(`FV-${ref}-001`);
+      const nextSeq = String(((priorData || []).length || 0) + 1).padStart(3, "0");
+      setInvoiceNumber(`FV-${ref}-${nextSeq}`);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Fout bij laden gegevens");
