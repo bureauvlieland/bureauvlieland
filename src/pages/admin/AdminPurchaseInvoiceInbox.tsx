@@ -204,30 +204,36 @@ export default function AdminPurchaseInvoiceInbox() {
                     )}
                     {item.status === "new" && (
                       <>
-                        {isLikelyCollective(item) && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="bg-amber-600 hover:bg-amber-700"
-                            onClick={() =>
-                              setCollectiveItem({
-                                item,
-                                partnerId: guessPartnerId(item) || "rederij",
-                              })
-                            }
-                            disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
-                          >
-                            <Sparkles className="h-3 w-3 mr-1" /> Verzamelfactuur
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant={isLikelyCollective(item) ? "outline" : "default"}
-                          onClick={() => setProcessingItem(item)}
-                          disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" /> Verwerken
-                        </Button>
+                        {(() => {
+                          const collective = isLikelyCollective(item);
+                          return (
+                            <>
+                              <Button
+                                size="sm"
+                                variant={collective ? "default" : "outline"}
+                                className={collective ? "bg-amber-600 hover:bg-amber-700" : ""}
+                                onClick={() =>
+                                  setCollectiveItem({
+                                    item,
+                                    partnerId: guessPartnerId(item) || "rederij",
+                                  })
+                                }
+                                disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
+                                title="Splits deze factuur per project (verzamelfactuur)"
+                              >
+                                <Sparkles className="h-3 w-3 mr-1" /> Verzamelfactuur
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={collective ? "outline" : "default"}
+                                onClick={() => setProcessingItem(item)}
+                                disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" /> Verwerken
+                              </Button>
+                            </>
+                          );
+                        })()}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -273,11 +279,12 @@ function isLikelyCollective(item: PurchaseInvoiceInboxItem): boolean {
   const supplier = (item.scan_result?.supplier_name || "").toLowerCase();
   const from = `${item.from_email || ""} ${item.from_name || ""}`.toLowerCase();
   const text = `${supplier} ${from} ${item.subject || ""}`.toLowerCase();
-  return /doeksen|rederij/.test(text);
+  return /doeksen|rederij|isla|bagage/.test(text);
 }
 
 function guessPartnerId(item: PurchaseInvoiceInboxItem): string | null {
-  const text = `${item.scan_result?.supplier_name || ""} ${item.from_email || ""}`.toLowerCase();
+  const text = `${item.scan_result?.supplier_name || ""} ${item.from_email || ""} ${item.from_name || ""} ${item.subject || ""}`.toLowerCase();
+  if (/isla|bagage/.test(text)) return "bagagevervoer-vlieland";
   if (/doeksen|rederij/.test(text)) return "rederij";
   return null;
 }

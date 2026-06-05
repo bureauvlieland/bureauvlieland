@@ -30,6 +30,7 @@ interface Booking {
   departure_dates: string[];
   routes: string[];
   reference: string | null;
+  description?: string;
   amount_excl_vat: number;
   vat_amount: number;
   amount_incl_vat: number;
@@ -39,9 +40,11 @@ interface Booking {
   item_id: string | null;
   candidates: Candidate[];
   project: { request_id: string; reference_number: string | null; customer_label: string } | null;
+  suggested_projects?: { request_id: string; reference_number: string | null; customer_label: string; similarity?: number }[];
 }
 
 interface ParseResponse {
+  supplier_type?: "doeksen" | "isla";
   invoice: {
     invoice_number: string;
     invoice_date: string;
@@ -60,7 +63,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   inboxItem: PurchaseInvoiceInboxItem | null;
-  partnerId: string; // e.g. "rederij"
+  partnerId: string; // e.g. "rederij" of "bagagevervoer-vlieland"
 }
 
 const EUR = (n: number) =>
@@ -100,9 +103,11 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     if (!inboxItem) return;
     setLoading(true);
     try {
+      const supplier_type: "doeksen" | "isla" =
+        partnerId === "bagagevervoer-vlieland" ? "isla" : "doeksen";
       const { data: resp, error } = await supabase.functions.invoke<ParseResponse>(
         "parse-collective-invoice",
-        { body: { inbox_id: inboxItem.id } },
+        { body: { inbox_id: inboxItem.id, supplier_type } },
       );
       if (error || !resp || (resp as any).error) {
         throw new Error((resp as any)?.error || error?.message || "Parse mislukt");
@@ -115,6 +120,10 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
       setLoading(false);
     }
   }
+
+  const supplierType: "doeksen" | "isla" =
+    data?.supplier_type ?? (partnerId === "bagagevervoer-vlieland" ? "isla" : "doeksen");
+  const supplierLabel = supplierType === "isla" ? "Isla Vlieland B.V." : "Rederij Doeksen";
 
   const sumIncl = useMemo(
     () => bookings.reduce((s, b) => s + (b.amount_incl_vat || 0), 0),
@@ -135,6 +144,16 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     const b = bookings[idx];
     const cand = b.candidates.find((c) => c.item_id === candidateItemId);
     if (!cand) return;
+    // For Isla rows candidate.item_id is "project:<uuid>" — these candidates do not
+    // map to an existing program_request_item, so route via "book as extra cost".
+    if (candidateItemId.startsWith("project:")) {
+      bookAsExtraOnProject(idx, {
+        request_id: cand.request_id,
+        reference_number: cand.reference_number,
+        customer_label: cand.customer_label,
+      });
+      return;
+    }
     updateBooking(idx, {
       item_id: candidateItemId,
       match_status: "manual",
@@ -171,8 +190,13 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
       ? Math.round((b.vat_amount / b.amount_excl_vat) * 100)
       : 9;
     const datesLabel = (b.departure_dates || []).join(" / ");
-    const description = `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
-    const notes = `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
+    const isIsla = supplierType === "isla";
+    const description = isIsla
+      ? (b.description || `Bagagevervoer Isla Vlieland${datesLabel ? ` — ${datesLabel}` : ""}`)
+      : `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
+    const notes = isIsla
+      ? `Verzamelfactuur Isla Vlieland${b.customer_name ? ` · ${b.customer_name}` : ""}${datesLabel ? ` · ${datesLabel}` : ""}`
+      : `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
     setExtraCostTarget({
       idx,
       project,
@@ -181,7 +205,7 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
         amount: b.amount_incl_vat,
         vatRate,
         notes,
-        providerName: "Rederij Doeksen",
+        providerName: isIsla ? "Isla Vlieland B.V." : "Rederij Doeksen",
         bookingReference: b.resnr,
       },
     });
@@ -238,7 +262,9 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     <Sheet open={open} onOpenChange={(v) => !v && !forwarding && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Verzamelfactuur verwerken</SheetTitle>
+          <SheetTitle>
+            Verzamelfactuur verwerken{data ? ` — ${supplierLabel}` : ""}
+          </SheetTitle>
           <SheetDescription>
             Eén factuur, meerdere klantboekingen. Controleer de matches en stuur in één keer door.
           </SheetDescription>
@@ -269,9 +295,11 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                   <div className="text-xl font-bold font-mono">
                     {EUR(data.invoice.total_incl_vat)}
                   </div>
-                  <div className="text-xs text-emerald-700">
-                    Commissie BV: {EUR(data.invoice.total_supplier_commission)}
-                  </div>
+                  {supplierType === "doeksen" && data.invoice.total_supplier_commission > 0 && (
+                    <div className="text-xs text-emerald-700">
+                      Commissie BV: {EUR(data.invoice.total_supplier_commission)}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -282,7 +310,9 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                 <BookingRow
                   key={b.resnr + idx}
                   booking={b}
+                  supplierType={supplierType}
                   usedItemIds={bookings.map((x) => x.item_id).filter((x): x is string => !!x)}
+                  partnerId={partnerId}
                   onChooseCandidate={(id) => chooseCandidate(idx, id)}
                   onMarkInternal={() => markInternal(idx)}
                   onLinkManual={(cand) => linkManual(idx, cand)}
@@ -370,19 +400,25 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
 
 function BookingRow({
   booking,
+  supplierType,
   usedItemIds,
+  partnerId,
   onChooseCandidate,
   onMarkInternal,
   onLinkManual,
   onBookOnProject,
 }: {
   booking: Booking;
+  supplierType: "doeksen" | "isla";
   usedItemIds: string[];
+  partnerId: string;
   onChooseCandidate: (itemId: string) => void;
   onMarkInternal: () => void;
   onLinkManual: (cand: Candidate) => void;
   onBookOnProject: (project: { request_id: string; reference_number: string | null; customer_label: string }) => void | Promise<void>;
 }) {
+  const isIsla = supplierType === "isla";
+
   const icon = {
     matched: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
     manual: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
@@ -406,18 +442,26 @@ function BookingRow({
           {icon}
           <div className="min-w-0">
             <div className="font-medium truncate">
-              <span className="font-mono text-xs text-muted-foreground mr-2">{booking.resnr}</span>
-              {booking.customer_name}
+              {!isIsla && (
+                <span className="font-mono text-xs text-muted-foreground mr-2">{booking.resnr}</span>
+              )}
+              {booking.customer_name || <span className="italic text-muted-foreground">— (geen klantnaam)</span>}
             </div>
             <div className="text-xs text-muted-foreground">
-              {booking.departure_dates?.join(" → ")} {booking.routes?.length ? `· ${booking.routes.join("/")}` : ""}
-              {booking.tourist_tax > 0 && ` · TB ${EUR(booking.tourist_tax)}`}
+              {isIsla
+                ? [booking.description, booking.departure_dates?.join(" → ")].filter(Boolean).join(" · ")
+                : (
+                  <>
+                    {booking.departure_dates?.join(" → ")} {booking.routes?.length ? `· ${booking.routes.join("/")}` : ""}
+                    {booking.tourist_tax > 0 && ` · TB ${EUR(booking.tourist_tax)}`}
+                  </>
+                )}
             </div>
           </div>
         </div>
         <div className="text-right shrink-0">
           <div className="font-mono font-semibold">{EUR(booking.amount_incl_vat)}</div>
-          {booking.supplier_commission > 0 && (
+          {!isIsla && booking.supplier_commission > 0 && (
             <div className="text-xs text-emerald-700">−{EUR(booking.supplier_commission)} comm.</div>
           )}
         </div>
@@ -437,11 +481,12 @@ function BookingRow({
               {booking.project.reference_number || booking.project.customer_label}
               <ExternalLink className="h-3 w-3" />
             </a>
-            {booking.match_status === "manual" && (
+            {booking.match_status === "manual" && !isIsla && (
               <ManualLinkPopover
                 defaultQuery={booking.customer_name}
                 usedItemIds={usedItemIds}
                 triggerLabel="Wijzig…"
+                providerId={partnerId}
                 onPick={onLinkManual}
               />
             )}
@@ -450,39 +495,80 @@ function BookingRow({
 
         {booking.match_status === "ambiguous" && (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-muted-foreground">Meerdere kandidaten:</span>
-            <Select onValueChange={onChooseCandidate}>
-              <SelectTrigger className="h-7 w-[280px] text-xs">
-                <SelectValue placeholder="Kies project…" />
-              </SelectTrigger>
-              <SelectContent>
-                {booking.candidates.map((c) => (
-                  <SelectItem key={c.item_id} value={c.item_id}>
-                    {c.reference_number || "—"} · {c.customer_label} · {c.block_name}
-                  </SelectItem>
+            <span className="text-muted-foreground">
+              {isIsla ? "Suggesties op klantnaam:" : "Meerdere kandidaten:"}
+            </span>
+            {isIsla ? (
+              <>
+                {(booking.suggested_projects || []).map((sp) => (
+                  <Button
+                    key={sp.request_id}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => onBookOnProject({
+                      request_id: sp.request_id,
+                      reference_number: sp.reference_number,
+                      customer_label: sp.customer_label,
+                    })}
+                  >
+                    <Link2 className="h-3 w-3 mr-1" />
+                    {sp.reference_number || sp.customer_label}
+                    {typeof sp.similarity === "number" && (
+                      <span className="ml-1 text-muted-foreground">({Math.round(sp.similarity * 100)}%)</span>
+                    )}
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
-            <ManualLinkPopover
-              defaultQuery={booking.customer_name}
-              usedItemIds={usedItemIds}
-              triggerLabel="Anders zoeken…"
-              onPick={onLinkManual}
-            />
+                <ProjectPickerPopover
+                  defaultQuery={booking.customer_name}
+                  onPick={onBookOnProject}
+                />
+              </>
+            ) : (
+              <>
+                <Select onValueChange={onChooseCandidate}>
+                  <SelectTrigger className="h-7 w-[280px] text-xs">
+                    <SelectValue placeholder="Kies project…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {booking.candidates.map((c) => (
+                      <SelectItem key={c.item_id} value={c.item_id}>
+                        {c.reference_number || "—"} · {c.customer_label} · {c.block_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <ManualLinkPopover
+                  defaultQuery={booking.customer_name}
+                  usedItemIds={usedItemIds}
+                  triggerLabel="Anders zoeken…"
+                  providerId={partnerId}
+                  onPick={onLinkManual}
+                />
+              </>
+            )}
+            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={onMarkInternal}>
+              Markeer als intern
+            </Button>
           </div>
         )}
 
         {booking.match_status === "unmatched" && (
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="text-red-700 border-red-300">
-              Geen ticket gevonden voor Resnr {booking.resnr}
+              {isIsla
+                ? `Geen project gevonden voor "${booking.customer_name || "—"}"`
+                : `Geen ticket gevonden voor Resnr ${booking.resnr}`}
             </Badge>
-            <ManualLinkPopover
-              defaultQuery={booking.customer_name}
-              usedItemIds={usedItemIds}
-              triggerLabel="Koppel handmatig…"
-              onPick={onLinkManual}
-            />
+            {!isIsla && (
+              <ManualLinkPopover
+                defaultQuery={booking.customer_name}
+                usedItemIds={usedItemIds}
+                triggerLabel="Koppel handmatig…"
+                providerId={partnerId}
+                onPick={onLinkManual}
+              />
+            )}
             <ProjectPickerPopover
               defaultQuery={booking.customer_name}
               onPick={onBookOnProject}
@@ -505,11 +591,13 @@ function ManualLinkPopover({
   defaultQuery,
   usedItemIds,
   triggerLabel,
+  providerId,
   onPick,
 }: {
   defaultQuery: string;
   usedItemIds: string[];
   triggerLabel: string;
+  providerId?: string;
   onPick: (cand: Candidate) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -533,7 +621,7 @@ function ManualLinkPopover({
           id, request_id, block_name, booking_reference,
           program_requests!inner(id, reference_number, customer_name, customer_company, status, selected_dates)
         `)
-        .eq("provider_id", "rederij")
+        .eq("provider_id", providerId || "rederij")
         .not("program_requests.status", "in", "(cancelled,deleted)")
         .order("created_at", { ascending: false })
         .limit(40);
