@@ -930,6 +930,21 @@ export function AddPurchaseInvoiceDialog({
                       </span>
                     </div>
                   )}
+                  {((allocations.length === 1 && parseFloat(allocations[0].amount_excl_vat) > 0) || (allocations.length === 0 && itemId)) && (
+                    <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
+                      <Checkbox
+                        checked={copyToBillingLines}
+                        onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
+                        <span className="block text-muted-foreground">
+                          Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
+                        </span>
+                      </span>
+                    </label>
+                  )}
                 </div>
               );
             })()}
