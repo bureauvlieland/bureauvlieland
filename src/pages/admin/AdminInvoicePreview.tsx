@@ -1265,12 +1265,15 @@ const AdminInvoicePreview = () => {
                               Gelieve het totaalbedrag van <span className="font-semibold">{formatCurrency(netDue)}</span> over
                               te maken vóór {format(dueDate, "d MMMM yyyy", { locale: nl })} naar:
                             </p>
-                        <div className="mt-1.5">
-                          <p>IBAN: <span className="font-mono font-semibold">{iban}</span></p>
-                          <p>T.n.v.: {companyName}</p>
-                          <p>O.v.v.: {invoiceNumber}</p>
-                        </div>
-                      </div>
+                            <div className="mt-1.5">
+                              <p>IBAN: <span className="font-mono font-semibold">{iban}</span></p>
+                              <p>T.n.v.: {companyName}</p>
+                              <p>O.v.v.: {invoiceNumber}</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
 
                       {/* Notes */}
                       {notes && (
