@@ -233,12 +233,14 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     setIsSubmitting(true);
     try {
       let filePath: string | undefined;
-      const uploaded = await uploadFile(firstItem);
-      if (!uploaded) {
-        setErrors({ file: "Upload van PDF is mislukt" });
-        return;
+      if (selectedFile) {
+        const uploaded = await uploadFile(firstItem);
+        if (!uploaded) {
+          setErrors({ file: "Upload van PDF is mislukt" });
+          return;
+        }
+        filePath = uploaded;
       }
-      filePath = uploaded;
       const emailNoteSuffix = `Factuur verzonden via e-mail naar ${INKOOP_INBOX}`;
       const combinedNotes = isEmailMode
         ? [notes?.trim(), emailNoteSuffix].filter(Boolean).join(" — ")
