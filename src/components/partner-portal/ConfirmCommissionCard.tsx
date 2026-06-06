@@ -58,12 +58,14 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
       if (confirmationType === "confirm") {
         success = await onConfirm(item.id, item.type);
       } else {
-        const amount = parseFloat(deviationAmount);
-        if (isNaN(amount) || amount <= 0) {
+        const amountIncl = parseFloat(deviationAmount.replace(",", "."));
+        if (isNaN(amountIncl) || amountIncl <= 0) {
           return;
         }
+        const rate = Number(item.vatRate) || 0;
+        const amountExcl = rate > 0 ? +(amountIncl / (1 + rate / 100)).toFixed(2) : amountIncl;
         success = await onConfirm(item.id, item.type, {
-          actualAmount: amount,
+          actualAmount: amountExcl,
           reason: deviationReason,
         });
       }
