@@ -20,6 +20,7 @@ import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
 
 interface BillingDetails {
   billing_company_name?: string | null;
@@ -79,27 +80,39 @@ export const InvoiceRegistrationDialog = ({
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
-      // Prefill bedrag met geoffreerde prijs (partner past alleen aan als
-      // werkelijke factuur afwijkt, bv. bij schatting o.b.v. aantal personen).
-      const prefill = item?.quoted_price && item.quoted_price > 0
-        ? String(item.quoted_price).replace(".", ",")
-        : "";
-      setAmount(prefill);
+      // Prefill bedrag met geoffreerde prijs (omgerekend naar incl. BTW, want
+      // dit veld vraagt het bedrag incl. BTW — partner past aan als de
+      // werkelijke factuur afwijkt).
+      const quoted = item?.quoted_price && item.quoted_price > 0 ? item.quoted_price : 0;
+      const blockRate = item?.block_id ? (getItemVatRate({ block_id: item.block_id }) ?? 21) : 21;
+      const prefillIncl = quoted > 0 ? Math.round(quoted * (1 + blockRate / 100) * 100) / 100 : 0;
+      setAmount(prefillIncl > 0 ? String(prefillIncl).replace(".", ",") : "");
       setInvoiceNumber("");
       setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
       setNotes("");
       setErrors({});
       setSelectedFile(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, item?.id, item?.quoted_price]);
 
-  const parsedAmount = parseFloat(amount.replace(",", ".")) || 0;
-  const commissionAmount = (parsedAmount * commissionPercentage) / 100;
+  // Partner voert bedrag IN incl. BTW (huisregel). We leiden het excl-bedrag af
+  // op basis van het BTW-tarief van het bouwblok zodat downstream (commissie,
+  // boekhouding) klopt.
+  const { getItemVatRate } = useItemVatRates(item ? [{ block_id: item.block_id }] : []);
+  const vatRate = item ? getItemVatRate({ block_id: item.block_id }) : 21;
+  const parsedAmountIncl = parseFloat(amount.replace(",", ".")) || 0;
+  const parsedAmountExcl = vatRate > 0
+    ? Math.round((parsedAmountIncl / (1 + vatRate / 100)) * 100) / 100
+    : parsedAmountIncl;
+  const vatAmount = Math.round((parsedAmountIncl - parsedAmountExcl) * 100) / 100;
+  // Commissie wordt berekend over het bedrag EXCL. BTW (huisregel).
+  const commissionAmount = (parsedAmountExcl * commissionPercentage) / 100;
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!amount || parsedAmount <= 0) {
+    if (!amount || parsedAmountIncl <= 0) {
       newErrors.amount = "Voer een geldig bedrag in";
     }
 
@@ -176,7 +189,8 @@ export const InvoiceRegistrationDialog = ({
         }
       }
 
-      const result = await onSubmit(parsedAmount, invoiceNumber.trim(), invoiceDate, notes || undefined, filePath);
+      // Backend verwacht het bedrag EXCL. BTW; berekent BTW en commissie zelf.
+      const result = await onSubmit(parsedAmountExcl, invoiceNumber.trim(), invoiceDate, notes || undefined, filePath);
       if (!result.success) {
         setErrors({ submit: "Er is een fout opgetreden bij het registreren van de factuur" });
       }
@@ -369,7 +383,7 @@ export const InvoiceRegistrationDialog = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Bedrag excl. BTW *</Label>
+              <Label htmlFor="amount">Bedrag incl. BTW *</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   €
@@ -384,6 +398,11 @@ export const InvoiceRegistrationDialog = ({
                   className={`pl-7 ${errors.amount ? "border-destructive" : ""}`}
                 />
               </div>
+              {parsedAmountIncl > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Excl. BTW: €{parsedAmountExcl.toFixed(2)} · BTW {vatRate}%: €{vatAmount.toFixed(2)}
+                </p>
+              )}
               {errors.amount && (
                 <p className="text-sm text-destructive">{errors.amount}</p>
               )}
@@ -404,13 +423,13 @@ export const InvoiceRegistrationDialog = ({
             </div>
           </div>
 
-          {commissionPercentage > 0 && parsedAmount > 0 && (
+          {commissionPercentage > 0 && parsedAmountIncl > 0 && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-1">
                   <p>
-                    <strong>Commissie Bureau Vlieland ({commissionPercentage}%):</strong>{" "}
+                    <strong>Commissie Bureau Vlieland ({commissionPercentage}% over €{parsedAmountExcl.toFixed(2)} excl. BTW):</strong>{" "}
                     €{commissionAmount.toFixed(2)}
                   </p>
                   <p className="text-muted-foreground text-sm">
