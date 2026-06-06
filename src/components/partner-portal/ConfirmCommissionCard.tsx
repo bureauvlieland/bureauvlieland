@@ -146,19 +146,19 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Geoffreerd incl. BTW:</span>
+                    <span className="text-muted-foreground">Geoffreerde prijs incl. BTW:</span>
                   </div>
                   <div className="text-right font-medium">
                     €{item.quotedAmountInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Bedrag excl. BTW:</span>
+                    <span className="text-muted-foreground">Bedrag incl. BTW:</span>
                   </div>
                   <div className="text-right">
-                    €{item.proformaAmountExclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                    €{(item.proformaAmountExclVat * (1 + (Number(item.vatRate) || 0) / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Commissie ({item.commissionPercentage}%):</span>
+                    <span className="text-muted-foreground">Commissie ({item.commissionPercentage}% over excl. BTW):</span>
                   </div>
                   <div className="text-right font-semibold text-primary">
                     €{item.proformaCommission.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
