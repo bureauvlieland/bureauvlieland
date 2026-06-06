@@ -1119,21 +1119,36 @@ export function AddPurchaseInvoiceDialog({
                       </span>
                     </div>
                   )}
-                  {((allocations.length === 1 && parseFloat(allocations[0].amount_excl_vat) > 0) || (allocations.length === 0 && itemId)) && (
-                    <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
-                      <Checkbox
-                        checked={copyToBillingLines}
-                        onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
-                        className="mt-0.5"
-                      />
-                      <span>
-                        <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
-                        <span className="block text-muted-foreground">
-                          Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
-                        </span>
-                      </span>
-                    </label>
-                  )}
+                  {(() => {
+                    const filledAllocs = allocations.filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0);
+                    const canCopy = (filledAllocs.length === 1) || (filledAllocs.length === 0 && !!itemId);
+                    const hasMulti = filledAllocs.length > 1;
+                    if (canCopy) {
+                      return (
+                        <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
+                          <Checkbox
+                            checked={copyToBillingLines}
+                            onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
+                            <span className="block text-muted-foreground">
+                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    }
+                    if (hasMulti) {
+                      return (
+                        <div className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md p-2">
+                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               );
             })()}
