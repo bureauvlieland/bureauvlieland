@@ -169,6 +169,15 @@ export default function AdminPurchaseInvoiceInbox() {
                     </div>
                   )}
 
+                  {item.status === "new" && item.scan_status === "scanned" && (
+                    <MatchedRegistrationBanner
+                      item={item}
+                      onLinked={async (invoiceId) => {
+                        await markProcessed.mutateAsync({ id: item.id, invoiceId });
+                      }}
+                    />
+                  )}
+
                   {item.scan_status === "failed" && item.scan_error && (
                     <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
                       {item.scan_error}
