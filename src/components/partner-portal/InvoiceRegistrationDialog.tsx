@@ -381,7 +381,7 @@ export const InvoiceRegistrationDialog = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Bedrag excl. BTW *</Label>
+              <Label htmlFor="amount">Bedrag incl. BTW *</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   €
@@ -396,6 +396,11 @@ export const InvoiceRegistrationDialog = ({
                   className={`pl-7 ${errors.amount ? "border-destructive" : ""}`}
                 />
               </div>
+              {parsedAmountIncl > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Excl. BTW: €{parsedAmountExcl.toFixed(2)} · BTW {vatRate}%: €{vatAmount.toFixed(2)}
+                </p>
+              )}
               {errors.amount && (
                 <p className="text-sm text-destructive">{errors.amount}</p>
               )}
@@ -416,13 +421,13 @@ export const InvoiceRegistrationDialog = ({
             </div>
           </div>
 
-          {commissionPercentage > 0 && parsedAmount > 0 && (
+          {commissionPercentage > 0 && parsedAmountIncl > 0 && (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-1">
                   <p>
-                    <strong>Commissie Bureau Vlieland ({commissionPercentage}%):</strong>{" "}
+                    <strong>Commissie Bureau Vlieland ({commissionPercentage}% over €{parsedAmountExcl.toFixed(2)} excl. BTW):</strong>{" "}
                     €{commissionAmount.toFixed(2)}
                   </p>
                   <p className="text-muted-foreground text-sm">
