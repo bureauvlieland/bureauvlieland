@@ -219,7 +219,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     }
     if (!invoiceNumber.trim()) e.invoiceNumber = "Factuurnummer is verplicht";
     if (!invoiceDate) e.invoiceDate = "Factuurdatum is verplicht";
-    if (!selectedFile) e.file = "PDF van de factuur is verplicht";
+    // In e-mailmodus is de PDF optioneel — partner mailt 'm naar de inkoop-inbox.
+    if (!isEmailMode && !selectedFile) e.file = "PDF van de factuur is verplicht";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -232,12 +233,14 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     setIsSubmitting(true);
     try {
       let filePath: string | undefined;
-      const uploaded = await uploadFile(firstItem);
-      if (!uploaded) {
-        setErrors({ file: "Upload van PDF is mislukt" });
-        return;
+      if (selectedFile) {
+        const uploaded = await uploadFile(firstItem);
+        if (!uploaded) {
+          setErrors({ file: "Upload van PDF is mislukt" });
+          return;
+        }
+        filePath = uploaded;
       }
-      filePath = uploaded;
       const emailNoteSuffix = `Factuur verzonden via e-mail naar ${INKOOP_INBOX}`;
       const combinedNotes = isEmailMode
         ? [notes?.trim(), emailNoteSuffix].filter(Boolean).join(" — ")
@@ -422,13 +425,13 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                   <a href={`mailto:${INKOOP_INBOX}`} className="underline font-medium">{INKOOP_INBOX}</a>.
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Upload hieronder ook de PDF zodat de factuur direct aan dit project gekoppeld is.
+                  De PDF hoeft hieronder niet nog een keer geüpload te worden — wij koppelen 'm automatisch vanuit de inkoop-inbox aan deze registratie.
                 </div>
               </AlertDescription>
             </Alert>
           )}
           <div className="space-y-2">
-            <Label>PDF van de factuur *</Label>
+            <Label>PDF van de factuur {isEmailMode ? "(optioneel)" : "*"}</Label>
             <input
               ref={fileInputRef}
               type="file"
@@ -448,7 +451,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
               </div>
             ) : (
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" /> PDF uploaden (verplicht)
+                <Upload className="h-4 w-4 mr-2" />
+                {isEmailMode ? "PDF uploaden (optioneel)" : "PDF uploaden (verplicht)"}
               </Button>
             )}
             {errors.file && <p className="text-sm text-destructive">{errors.file}</p>}

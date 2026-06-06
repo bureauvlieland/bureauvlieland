@@ -25,12 +25,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { CollectiveInvoiceSheet } from "@/components/admin/purchase-invoices/CollectiveInvoiceSheet";
+import { MatchedRegistrationBanner } from "@/components/admin/purchase-invoices/MatchedRegistrationBanner";
 import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
 export default function AdminPurchaseInvoiceInbox() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<InboxStatus | "all">("new");
-  const { items, isLoading, discard, rescan } = usePurchaseInvoiceInbox(tab);
+  const { items, isLoading, discard, rescan, markProcessed } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
   const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
 
@@ -166,6 +167,15 @@ export default function AdminPurchaseInvoiceInbox() {
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  {item.status === "new" && item.scan_status === "scanned" && (
+                    <MatchedRegistrationBanner
+                      item={item}
+                      onLinked={async (invoiceId) => {
+                        await markProcessed.mutateAsync({ id: item.id, invoiceId });
+                      }}
+                    />
                   )}
 
                   {item.scan_status === "failed" && item.scan_error && (

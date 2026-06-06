@@ -1,49 +1,44 @@
-## Doel
+# Plan: PDF-upload optioneel maken + duplicaat-matching in inkoop-inbox
 
-Huisregel vastleggen: **alle invoervelden en primaire bedragweergaven tonen incl. BTW**. Excl. BTW mag alleen als secundaire afleiding (bv. "Excl. BTW: €x · BTW 9%: €y") of op formele factuur-PDF's.
+## 1. `RegisterCollectivePartnerInvoiceDialog.tsx` — PDF optioneel in e-mailmodus
 
-## Concrete fixes (partner-facing)
+- `validate()`: foutmelding "PDF is verplicht" alleen tonen als `!isEmailMode && !selectedFile`.
+- `handleSubmit`: in e-mailmodus zonder bestand → geen upload, geen `filePath` meegeven aan de edge function.
+- Upload-blok UI:
+  - Normale modus: label blijft "PDF inkoopfactuur (verplicht)".
+  - E-mailmodus: label wordt "PDF inkoopfactuur (optioneel)" met hint *"Heb je de factuur al gemaild naar de inkoop-inbox? Dan kun je dit overslaan — wij koppelen de PDF aan jouw registratie."*
+- Amber-alert tekst aanpassen: maak duidelijk dat de PDF later vanuit de inkoop-inbox aan deze registratie wordt gekoppeld.
 
-1. **`PartnerItemSheet.tsx` (i-popover bij programma-onderdeel) — regel 825-855**
-   - Label "Bedrag:" → "Bedrag incl. BTW:" en waarde tonen als `invoiced_amount × (1 + vat_rate/100)`.
-   - Eronder kleine grijze regel: `Excl. BTW: €x · BTW {vat_rate}%: €y` zodat onderbouwing zichtbaar blijft.
-   - Commissieregel ongewijzigd (blijft over excl., gelabeld "Commissie ({pct}% over excl. BTW)").
+De edge function `register-accommodation-invoice` voegt al `[via e-mail]` toe aan de beschrijving — geen wijziging nodig.
 
-2. **`AccommodationInvoiceDialog.tsx` (logies-partner registreert factuur)**
-   - Label "Factuurbedrag (excl. BTW)" → "Factuurbedrag incl. BTW *".
-   - Prefill = `priceTotal` (offerte is al incl.) — blijft correct.
-   - Onder veld: live afgeleide regel `Excl. BTW: €x · BTW {rate}%: €y`.
-   - Commissie berekend over **excl. BTW** in plaats van over invoer.
-   - Convert client-side naar excl. en stuur excl-bedrag naar edge function (edge function blijft ongewijzigd, slaat `invoiced_amount` excl. op zoals nu).
-   - Nieuwe props: `vatRate`, `priceIncludesVat` doorgeven vanuit `PartnerAccommodationQuoteSheet.tsx` (regel 1121-1133).
+## 2. `AdminPurchaseInvoices.tsx` — zichtbaar label voor "via e-mail"
 
-## Audit — al correct, geen wijziging
+- Detecteer beschrijvingen die met `[via e-mail]` beginnen.
+- Toon een kleine `Mail`-badge naast het factuurnummer met tooltip: *"Geregistreerd via e-mail — PDF wordt verwacht in inkoop-inbox"*.
+- Strip de `[via e-mail]`-prefix uit de zichtbare beschrijving (blijft wel in DB staan).
+- De bestaande amber upload-knop (`setUploadPdfTarget`) blijft beschikbaar zodat admin alsnog handmatig een PDF kan koppelen.
 
-- `InvoiceRegistrationDialog` (programma-partner) — al "Bedrag incl. BTW *".
-- `RegisterCollectivePartnerInvoiceDialog` — al incl. invoer, excl. als breakdown.
-- `ConfirmCommissionCard` — vorige beurt al omgezet.
-- Customer-portal `PriceSummaryCard`, `Mobile/DesktopProgramView` — tonen primair incl., excl. enkel als secundaire toelichting → blijft.
+## 3. `AdminPurchaseInvoiceInbox.tsx` — match-detectie & 1-klik PDF koppelen
 
-## Admin — buiten scope voor deze beurt, ter discussie
+Wanneer een inbox-item gescand is en er bestaat al een `partner_purchase_invoices`-rij met dezelfde `(partner_id, invoice_number)`:
 
-Onderstaande admin-flows tonen/vragen nog primair excl. BTW. Strikt genomen valt dit ook onder "applicatiebreed", maar ze raken boekhoudkundige uitvoerdocumenten waar excl./BTW/incl. allebei zichtbaar móéten zijn (NL factuurplicht). Voorstel: laat invoer ook hier incl. worden, met automatische excl-splitsing per BTW-tarief.
+- Toon een blauwe match-banner:
+  *"Deze factuur is al door {partner} geregistreerd op {datum} voor project {ref}."*
+- Twee acties:
+  1. **"PDF koppelen aan bestaande registratie"** (primair) — zet `file_path` op de bestaande rij, markeert het inbox-item als `processed`, maakt géén nieuwe rij.
+  2. **"Toch als nieuwe inkoopfactuur opslaan"** (secundair) — bestaande override, blijft werken.
 
-- `RegisterBureauInvoiceDialog` — input "Bedrag excl. BTW *" + "BTW bedrag *" (handmatige split).
-- `AddPurchaseInvoiceDialog` — toast "Bedrag excl. BTW is verplicht" (label zelf staat elders al op incl.); ook check op extra projectsplits (€-grens).
-- `AdminCommissionInvoiceCreate` — labels "Grondslag (excl. BTW)" en "Commissie excl. BTW" op de inputregels.
-- `ForwardToAccountingDialog` / `ForwardBureauInvoiceDialog` — "Bedrag excl:" als secundaire regel naast incl./BTW — feitelijk al breakdown, label kan blijven.
-- `AdminInvoicePreview` / `FinancialOverviewCard` — invoice-PDF subtotalen "Subtotaal excl. BTW" → blijven (wettelijk).
-- `AdminFinancialDashboard` — KPI "Omzet excl. BTW" → behouden, want financiële rapportage werkt standaard ex-BTW.
+Hiermee is de flow sluitend:
+- Partner registreert via e-mailmodus (zonder PDF) → factuur staat in admin met `Mail`-badge.
+- E-mail met PDF arriveert in inkoop-inbox → admin ziet match → 1-klik PDF aan bestaande registratie koppelen → géén dubbele inkoopfactuur.
 
-Wil je dat ik ook de admin-invoervelden (RegisterBureauInvoiceDialog, AdminCommissionInvoiceCreate, AddPurchaseInvoiceDialog-toast) meeneem in dezelfde slag?
+## Out of scope
 
-## Memory-update
+- Volledig automatisch matchen zonder admin-interventie.
+- Database-wijzigingen (signaal `[via e-mail]` zit al in `description`; `file_path` kolom bestaat al).
 
-Voeg toe aan `mem://index.md` Core:
-> Alle invoer en primaire weergave van bedragen is incl. BTW. Excl. BTW alleen als afgeleide breakdown of op formele factuur-PDF.
+## Geraakte files
 
-## Technische details
-
-- `PartnerItemSheet`: helper `inclFromExcl(excl, rate) = excl * (1 + rate/100)` lokaal; vat_rate is al beschikbaar op `item` (kolom bestaat).
-- `AccommodationInvoiceDialog`: gebruik bestaande `calculateFromInclVat` uit `src/lib/vatCalculation.ts`. Stuur `amountExclVat` naar edge function; commissie = `amountExclVat × pct/100`.
-- Geen DB-migratie nodig; alleen UI/conversie.
+- `src/components/partner-portal/RegisterCollectivePartnerInvoiceDialog.tsx`
+- `src/components/admin/AdminPurchaseInvoices.tsx`
+- `src/components/admin/AdminPurchaseInvoiceInbox.tsx`
