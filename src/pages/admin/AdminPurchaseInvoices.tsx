@@ -364,7 +364,19 @@ export default function AdminPurchaseInvoices() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div>
-                          {invoice.invoice_number}
+                          <div className="flex items-center gap-1.5">
+                            <span>{invoice.invoice_number}</span>
+                            {(invoice.description || "").startsWith("[via e-mail]") && (
+                              <Badge
+                                variant="outline"
+                                className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0 h-5"
+                                title="Geregistreerd via e-mail — PDF wordt verwacht in inkoop-inbox"
+                              >
+                                <Mail className="h-2.5 w-2.5 mr-1" />
+                                via e-mail
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {format(new Date(invoice.invoice_date), "EEE d MMM yyyy", { locale: nl })}
                           </div>
@@ -383,7 +395,7 @@ export default function AdminPurchaseInvoices() {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">
-                        {invoice.description || invoice.program_request_item?.block_name || "-"}
+                        {(invoice.description || "").replace(/^\[via e-mail\]\s*/, "") || invoice.program_request_item?.block_name || "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         €{Number(invoice.amount_incl_vat ?? (Number(invoice.amount_excl_vat || 0) + Number(invoice.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
