@@ -94,8 +94,18 @@ export const InvoiceRegistrationDialog = ({
     }
   }, [isOpen, item?.id, item?.quoted_price]);
 
-  const parsedAmount = parseFloat(amount.replace(",", ".")) || 0;
-  const commissionAmount = (parsedAmount * commissionPercentage) / 100;
+  // Partner voert bedrag IN incl. BTW (huisregel). We leiden het excl-bedrag af
+  // op basis van het BTW-tarief van het bouwblok zodat downstream (commissie,
+  // boekhouding) klopt.
+  const { getItemVatRate } = useItemVatRates(item ? [{ block_id: item.block_id }] : []);
+  const vatRate = item ? getItemVatRate({ block_id: item.block_id }) : 21;
+  const parsedAmountIncl = parseFloat(amount.replace(",", ".")) || 0;
+  const parsedAmountExcl = vatRate > 0
+    ? Math.round((parsedAmountIncl / (1 + vatRate / 100)) * 100) / 100
+    : parsedAmountIncl;
+  const vatAmount = Math.round((parsedAmountIncl - parsedAmountExcl) * 100) / 100;
+  // Commissie wordt berekend over het bedrag EXCL. BTW (huisregel).
+  const commissionAmount = (parsedAmountExcl * commissionPercentage) / 100;
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
