@@ -58,12 +58,14 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
       if (confirmationType === "confirm") {
         success = await onConfirm(item.id, item.type);
       } else {
-        const amount = parseFloat(deviationAmount);
-        if (isNaN(amount) || amount <= 0) {
+        const amountIncl = parseFloat(deviationAmount.replace(",", "."));
+        if (isNaN(amountIncl) || amountIncl <= 0) {
           return;
         }
+        const rate = Number(item.vatRate) || 0;
+        const amountExcl = rate > 0 ? +(amountIncl / (1 + rate / 100)).toFixed(2) : amountIncl;
         success = await onConfirm(item.id, item.type, {
-          actualAmount: amount,
+          actualAmount: amountExcl,
           reason: deviationReason,
         });
       }
@@ -144,19 +146,19 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
               <div className="mt-4 p-3 bg-muted/50 rounded-lg">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Geoffreerd incl. BTW:</span>
+                    <span className="text-muted-foreground">Geoffreerde prijs incl. BTW:</span>
                   </div>
                   <div className="text-right font-medium">
                     €{item.quotedAmountInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Bedrag excl. BTW:</span>
+                    <span className="text-muted-foreground">Bedrag incl. BTW:</span>
                   </div>
                   <div className="text-right">
-                    €{item.proformaAmountExclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                    €{(item.proformaAmountExclVat * (1 + (Number(item.vatRate) || 0) / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Commissie ({item.commissionPercentage}%):</span>
+                    <span className="text-muted-foreground">Commissie ({item.commissionPercentage}% over excl. BTW):</span>
                   </div>
                   <div className="text-right font-semibold text-primary">
                     €{item.proformaCommission.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
@@ -209,7 +211,7 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
                   {confirmationType === "deviation" && (
                     <div className="space-y-3 pl-6">
                       <div>
-                        <Label htmlFor={`amount-${item.id}`}>Bedrag excl. BTW</Label>
+                        <Label htmlFor={`amount-${item.id}`}>Werkelijk gefactureerd bedrag incl. BTW</Label>
                         <div className="relative mt-1">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
                           <Input
@@ -223,6 +225,11 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
                             className="pl-7"
                           />
                         </div>
+                        {deviationAmount && !isNaN(parseFloat(deviationAmount.replace(",", "."))) && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Excl. BTW: €{((parseFloat(deviationAmount.replace(",", ".")) || 0) / (1 + (Number(item.vatRate) || 0) / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW {item.vatRate}%
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor={`reason-${item.id}`}>Toelichting</Label>
