@@ -219,7 +219,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     }
     if (!invoiceNumber.trim()) e.invoiceNumber = "Factuurnummer is verplicht";
     if (!invoiceDate) e.invoiceDate = "Factuurdatum is verplicht";
-    if (!isEmailMode && !selectedFile) e.file = "PDF van de factuur is verplicht";
+    if (!selectedFile) e.file = "PDF van de factuur is verplicht";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -232,14 +232,12 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     setIsSubmitting(true);
     try {
       let filePath: string | undefined;
-      if (!isEmailMode) {
-        const uploaded = await uploadFile(firstItem);
-        if (!uploaded) {
-          setErrors({ file: "Upload van PDF is mislukt" });
-          return;
-        }
-        filePath = uploaded;
+      const uploaded = await uploadFile(firstItem);
+      if (!uploaded) {
+        setErrors({ file: "Upload van PDF is mislukt" });
+        return;
       }
+      filePath = uploaded;
       const emailNoteSuffix = `Factuur verzonden via e-mail naar ${INKOOP_INBOX}`;
       const combinedNotes = isEmailMode
         ? [notes?.trim(), emailNoteSuffix].filter(Boolean).join(" — ")
@@ -415,7 +413,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             </Alert>
           )}
 
-          {isEmailMode ? (
+          {isEmailMode && (
             <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
               <Mail className="h-4 w-4" />
               <AlertDescription className="space-y-1">
@@ -424,38 +422,37 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                   <a href={`mailto:${INKOOP_INBOX}`} className="underline font-medium">{INKOOP_INBOX}</a>.
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Bureau Vlieland koppelt de PDF automatisch zodra de e-mail binnenkomt. De onderdelen worden direct als gefactureerd geregistreerd.
+                  Upload hieronder ook de PDF zodat de factuur direct aan dit project gekoppeld is.
                 </div>
               </AlertDescription>
             </Alert>
-          ) : (
-            <div className="space-y-2">
-              <Label>PDF van de factuur *</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              {selectedFile ? (
-                <div className="flex items-center justify-between gap-2 rounded-md border p-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm truncate">{selectedFile.name}</span>
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="h-4 w-4 mr-2" /> PDF uploaden (verplicht)
-                </Button>
-              )}
-              {errors.file && <p className="text-sm text-destructive">{errors.file}</p>}
-            </div>
           )}
+          <div className="space-y-2">
+            <Label>PDF van de factuur *</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            {selectedFile ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border p-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm truncate">{selectedFile.name}</span>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" /> PDF uploaden (verplicht)
+              </Button>
+            )}
+            {errors.file && <p className="text-sm text-destructive">{errors.file}</p>}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Opmerkingen (optioneel)</Label>
