@@ -1,39 +1,49 @@
 ## Doel
 
-1. **Verzamelfactuur** terugzetten zoals voor de Isla-uitbreiding: alleen Doeksen, knop alleen prominent bij Doeksen-suppliers.
-2. **Verwerken-dialog** uitbreiden zodat één inkoopfactuur over **meerdere projecten** verdeeld kan worden, elk met optioneel één of meer **onderdelen**.
+Huisregel vastleggen: **alle invoervelden en primaire bedragweergaven tonen incl. BTW**. Excl. BTW mag alleen als secundaire afleiding (bv. "Excl. BTW: €x · BTW 9%: €y") of op formele factuur-PDF's.
 
-## 1. Verzamelfactuur revert
+## Concrete fixes (partner-facing)
 
-- `supabase/functions/parse-collective-invoice/index.ts`: terug naar Doeksen-only (`extract_doeksen_invoice` prompt, Resnr-matching). `supplier_type` parameter en Isla-prompt verwijderen.
-- `src/components/admin/purchase-invoices/CollectiveInvoiceSheet.tsx`: Isla-specifieke kolommen/logica/`providerId`-prop en `bookAsExtraOnProject`-Isla-prefill terug. Alleen Doeksen-kolommen tonen.
-- `src/pages/admin/AdminPurchaseInvoiceInbox.tsx`: `isLikelyCollective` regex terug naar `doeksen|rederij` (geen `isla|bagage`). Knop blijft altijd zichtbaar (zoals huidige UX), maar is alleen primair amber bij Doeksen.
-- Memory `mem://features/isla-vlieland-collective-invoice` verwijderen uit index.
+1. **`PartnerItemSheet.tsx` (i-popover bij programma-onderdeel) — regel 825-855**
+   - Label "Bedrag:" → "Bedrag incl. BTW:" en waarde tonen als `invoiced_amount × (1 + vat_rate/100)`.
+   - Eronder kleine grijze regel: `Excl. BTW: €x · BTW {vat_rate}%: €y` zodat onderbouwing zichtbaar blijft.
+   - Commissieregel ongewijzigd (blijft over excl., gelabeld "Commissie ({pct}% over excl. BTW)").
 
-## 2. Multi-project Verwerken-dialog
+2. **`AccommodationInvoiceDialog.tsx` (logies-partner registreert factuur)**
+   - Label "Factuurbedrag (excl. BTW)" → "Factuurbedrag incl. BTW *".
+   - Prefill = `priceTotal` (offerte is al incl.) — blijft correct.
+   - Onder veld: live afgeleide regel `Excl. BTW: €x · BTW {rate}%: €y`.
+   - Commissie berekend over **excl. BTW** in plaats van over invoer.
+   - Convert client-side naar excl. en stuur excl-bedrag naar edge function (edge function blijft ongewijzigd, slaat `invoiced_amount` excl. op zoals nu).
+   - Nieuwe props: `vatRate`, `priceIncludesVat` doorgeven vanuit `PartnerAccommodationQuoteSheet.tsx` (regel 1121-1133).
 
-Huidige situatie: één `request_id` (project) + optioneel verdeling over `allocations` binnen dat project.
+## Audit — al correct, geen wijziging
 
-Nieuw: **"Projecten" blok** met N project-cards. Per project:
-- Project-zoekselector (zoals nu)
-- Bedrag (excl. BTW) — handmatig in te vullen, optellings-check tegen factuurtotaal
-- Optioneel: één of meerdere onderdelen binnen dat project (zelfde allocations-UI als nu)
-- Verwijder-knop
+- `InvoiceRegistrationDialog` (programma-partner) — al "Bedrag incl. BTW *".
+- `RegisterCollectivePartnerInvoiceDialog` — al incl. invoer, excl. als breakdown.
+- `ConfirmCommissionCard` — vorige beurt al omgezet.
+- Customer-portal `PriceSummaryCard`, `Mobile/DesktopProgramView` — tonen primair incl., excl. enkel als secundaire toelichting → blijft.
 
-UI:
-- Eerste project verplicht; "+ Project toevoegen" knop daaronder.
-- Live waarschuwing als som projectbedragen ≠ factuurbedrag excl. BTW.
-- Bij submit: één `partner_purchase_invoices` rij **per project** aanmaken (zelfde patroon als CollectiveInvoiceSheet), met gedeelde metadata (factuurnummer, datum, leverancier, file_path) en eigen `request_id`, `amount_excl_vat`, BTW-bedrag, allocations. BTW herberekend pro-rata op tariefniveau, of overgenomen uit allocations als die alle bedragen dekken.
-- Bij één project: gedrag blijft 1-op-1 hetzelfde als nu (geen breaking change).
+## Admin — buiten scope voor deze beurt, ter discussie
 
-### Technische details
+Onderstaande admin-flows tonen/vragen nog primair excl. BTW. Strikt genomen valt dit ook onder "applicatiebreed", maar ze raken boekhoudkundige uitvoerdocumenten waar excl./BTW/incl. allebei zichtbaar móéten zijn (NL factuurplicht). Voorstel: laat invoer ook hier incl. worden, met automatische excl-splitsing per BTW-tarief.
 
-- State refactor: `requestId`/`itemId`/`allocations` → `projectSplits: Array<{ requestId, amountExcl, allocations[] }>`.
-- `inboxItem` markeren als `processed` met de **eerste** aangemaakte invoice-id (zelfde patroon als CollectiveInvoiceSheet).
-- Duplicate-check (`useDuplicatePurchaseInvoiceCheck`) ongewijzigd: per partner + factuurnummer.
-- Bestand: `partner-invoices/{partner_id}/{first_request_id}/{...}.pdf`, gedeeld `file_path` op alle rijen.
+- `RegisterBureauInvoiceDialog` — input "Bedrag excl. BTW *" + "BTW bedrag *" (handmatige split).
+- `AddPurchaseInvoiceDialog` — toast "Bedrag excl. BTW is verplicht" (label zelf staat elders al op incl.); ook check op extra projectsplits (€-grens).
+- `AdminCommissionInvoiceCreate` — labels "Grondslag (excl. BTW)" en "Commissie excl. BTW" op de inputregels.
+- `ForwardToAccountingDialog` / `ForwardBureauInvoiceDialog` — "Bedrag excl:" als secundaire regel naast incl./BTW — feitelijk al breakdown, label kan blijven.
+- `AdminInvoicePreview` / `FinancialOverviewCard` — invoice-PDF subtotalen "Subtotaal excl. BTW" → blijven (wettelijk).
+- `AdminFinancialDashboard` — KPI "Omzet excl. BTW" → behouden, want financiële rapportage werkt standaard ex-BTW.
 
-## Risico's
+Wil je dat ik ook de admin-invoervelden (RegisterBureauInvoiceDialog, AdminCommissionInvoiceCreate, AddPurchaseInvoiceDialog-toast) meeneem in dezelfde slag?
 
-- Veel state in één component; we splitsen niet (te grote refactor). We voegen alleen array-state toe naast bestaande velden.
-- Bestaande callers (`defaultRequestId`) blijven werken: bij prefill wordt 1 project gevuld.
+## Memory-update
+
+Voeg toe aan `mem://index.md` Core:
+> Alle invoer en primaire weergave van bedragen is incl. BTW. Excl. BTW alleen als afgeleide breakdown of op formele factuur-PDF.
+
+## Technische details
+
+- `PartnerItemSheet`: helper `inclFromExcl(excl, rate) = excl * (1 + rate/100)` lokaal; vat_rate is al beschikbaar op `item` (kolom bestaat).
+- `AccommodationInvoiceDialog`: gebruik bestaande `calculateFromInclVat` uit `src/lib/vatCalculation.ts`. Stuur `amountExclVat` naar edge function; commissie = `amountExclVat × pct/100`.
+- Geen DB-migratie nodig; alleen UI/conversie.
