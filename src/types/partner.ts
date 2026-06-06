@@ -81,6 +81,7 @@ export interface PartnerItem {
   }[];
   // Invoice fields
   invoiced_amount: number | null;
+  vat_rate: number | null;
   invoiced_number: string | null;
   invoiced_date: string | null;
   invoiced_file_path: string | null;

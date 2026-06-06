@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,8 @@ interface AccommodationInvoiceDialogProps {
   partnerToken: string;
   accommodationName: string;
   priceTotal: number;
+  priceIncludesVat: boolean;
+  vatRate: number;
   commissionPercentage: number;
   onSuccess: () => void;
 }
@@ -33,19 +35,30 @@ export const AccommodationInvoiceDialog = ({
   partnerToken,
   accommodationName,
   priceTotal,
+  priceIncludesVat,
+  vatRate,
   commissionPercentage,
   onSuccess,
 }: AccommodationInvoiceDialogProps) => {
-  const [invoicedAmount, setInvoicedAmount] = useState(priceTotal.toString());
+  // priceTotal kan in oude data excl. zijn — converteer naar incl. voor de prefill.
+  const initialIncl = useMemo(() => {
+    const v = Number(priceTotal) || 0;
+    return priceIncludesVat ? v : Math.round(v * (1 + (vatRate || 0) / 100) * 100) / 100;
+  }, [priceTotal, priceIncludesVat, vatRate]);
+
+  const [invoicedAmountIncl, setInvoicedAmountIncl] = useState(initialIncl.toString());
   const [invoicedNumber, setInvoicedNumber] = useState("");
   const [invoicedDate, setInvoicedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const calculatedCommission = (parseFloat(invoicedAmount) || 0) * (commissionPercentage / 100);
+  const parsedIncl = parseFloat(invoicedAmountIncl) || 0;
+  const rate = Number(vatRate) || 0;
+  const parsedExcl = rate > 0 ? Math.round((parsedIncl / (1 + rate / 100)) * 100) / 100 : parsedIncl;
+  const vatAmount = Math.round((parsedIncl - parsedExcl) * 100) / 100;
+  const calculatedCommission = Math.round(parsedExcl * (commissionPercentage / 100) * 100) / 100;
 
   const handleSubmit = async () => {
-    const amount = parseFloat(invoicedAmount);
     if (!invoicedNumber.trim()) {
       toast({
         title: "Factuurnummer vereist",
@@ -55,7 +68,7 @@ export const AccommodationInvoiceDialog = ({
       return;
     }
 
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(parsedIncl) || parsedIncl <= 0) {
       toast({
         title: "Ongeldig bedrag",
         description: "Vul een geldig factuurbedrag in",
@@ -67,11 +80,12 @@ export const AccommodationInvoiceDialog = ({
     setIsSubmitting(true);
 
     try {
+      // Edge function slaat invoicedAmount op als excl. BTW (zoals quoted_price excl.).
       const { data, error } = await supabase.functions.invoke("register-accommodation-invoice", {
         body: {
           quoteId,
           partnerToken,
-          invoicedAmount: amount,
+          invoicedAmount: parsedExcl,
           invoicedNumber: invoicedNumber.trim(),
           invoicedDate,
         },
@@ -104,13 +118,13 @@ export const AccommodationInvoiceDialog = ({
         <DialogHeader>
           <DialogTitle>Factuur registreren</DialogTitle>
           <DialogDescription>
-            Registreer uw factuur voor {accommodationName}
+            Registreer je factuur voor {accommodationName}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="invoicedAmount">Factuurbedrag (excl. BTW)</Label>
+            <Label htmlFor="invoicedAmount">Factuurbedrag incl. BTW *</Label>
             <div className="relative">
               <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -118,14 +132,19 @@ export const AccommodationInvoiceDialog = ({
                 type="number"
                 step="0.01"
                 min="0"
-                value={invoicedAmount}
-                onChange={(e) => setInvoicedAmount(e.target.value)}
+                value={invoicedAmountIncl}
+                onChange={(e) => setInvoicedAmountIncl(e.target.value)}
                 className="pl-10"
                 placeholder="0.00"
               />
             </div>
+            {parsedIncl > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Excl. BTW: €{parsedExcl.toFixed(2)} · BTW {rate}%: €{vatAmount.toFixed(2)}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              Oorspronkelijk offertebedrag: €{priceTotal.toFixed(2)}
+              Oorspronkelijk offertebedrag incl. BTW: €{initialIncl.toFixed(2)}
             </p>
           </div>
 
@@ -160,7 +179,9 @@ export const AccommodationInvoiceDialog = ({
 
           <div className="bg-muted/50 p-3 rounded-lg text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Commissie ({commissionPercentage}%):</span>
+              <span className="text-muted-foreground">
+                Commissie ({commissionPercentage}% over excl. BTW):
+              </span>
               <span className="font-medium">€{calculatedCommission.toFixed(2)}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
