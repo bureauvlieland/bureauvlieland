@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { CollectiveInvoiceSheet } from "@/components/admin/purchase-invoices/CollectiveInvoiceSheet";
+import { MatchedRegistrationBanner } from "@/components/admin/purchase-invoices/MatchedRegistrationBanner";
 import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
 export default function AdminPurchaseInvoiceInbox() {
