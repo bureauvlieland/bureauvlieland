@@ -187,7 +187,8 @@ export const InvoiceRegistrationDialog = ({
         }
       }
 
-      const result = await onSubmit(parsedAmount, invoiceNumber.trim(), invoiceDate, notes || undefined, filePath);
+      // Backend verwacht het bedrag EXCL. BTW; berekent BTW en commissie zelf.
+      const result = await onSubmit(parsedAmountExcl, invoiceNumber.trim(), invoiceDate, notes || undefined, filePath);
       if (!result.success) {
         setErrors({ submit: "Er is een fout opgetreden bij het registreren van de factuur" });
       }
