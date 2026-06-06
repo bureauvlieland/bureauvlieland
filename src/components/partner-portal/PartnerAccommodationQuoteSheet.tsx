@@ -1125,6 +1125,8 @@ export const PartnerAccommodationQuoteSheet = ({
           partnerToken={partnerToken}
           accommodationName={existingQuote.accommodation_name}
           priceTotal={existingQuote.price_total}
+          priceIncludesVat={existingQuote.price_includes_vat ?? true}
+          vatRate={Number(existingQuote.vat_rate ?? 9)}
           commissionPercentage={existingQuote.commission_percentage || 10}
           onSuccess={() => {
             setShowInvoiceDialog(false);
