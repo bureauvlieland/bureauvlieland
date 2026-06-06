@@ -1,44 +1,40 @@
-# Plan: PDF-upload optioneel maken + duplicaat-matching in inkoop-inbox
+## Probleem
 
-## 1. `RegisterCollectivePartnerInvoiceDialog.tsx` — PDF optioneel in e-mailmodus
+Bij verwerken van een verzamelfactuur over meerdere projecten in `AddPurchaseInvoiceDialog`:
 
-- `validate()`: foutmelding "PDF is verplicht" alleen tonen als `!isEmailMode && !selectedFile`.
-- `handleSubmit`: in e-mailmodus zonder bestand → geen upload, geen `filePath` meegeven aan de edge function.
-- Upload-blok UI:
-  - Normale modus: label blijft "PDF inkoopfactuur (verplicht)".
-  - E-mailmodus: label wordt "PDF inkoopfactuur (optioneel)" met hint *"Heb je de factuur al gemaild naar de inkoop-inbox? Dan kun je dit overslaan — wij koppelen de PDF aan jouw registratie."*
-- Amber-alert tekst aanpassen: maak duidelijk dat de PDF later vanuit de inkoop-inbox aan deze registratie wordt gekoppeld.
+1. **Verdeling klopt-niet bij splits.** Validatie vergelijkt `validAllocations` (toewijzingen primair project) met `headerIncl − extrasInclSum` op €0.01 nauwkeurig. Omdat `extrasInclSum` per regel ongerond wordt opgeteld (`aExcl + aExcl*rate/100`) en `validAllocations` apart wordt afgerond, lopen centen-verschillen op (€0.24 in de screenshot). Resultaat: opslaan blijft onmogelijk zonder handmatig sleutelen.
 
-De edge function `register-accommodation-invoice` voegt al `[via e-mail]` toe aan de beschrijving — geen wijziging nodig.
+2. **"Overschrijven als factuurregels"-optie ontbreekt bij splits.** De checkbox `Direct overnemen als factuurregels` toont alleen wanneer er precies één allocatie is óf geen allocatie + één `itemId`. Bij split-scenario's met meerdere allocaties op het primaire project (en/of extra projecten) is hij nooit zichtbaar.
 
-## 2. `AdminPurchaseInvoices.tsx` — zichtbaar label voor "via e-mail"
+## Plan
 
-- Detecteer beschrijvingen die met `[via e-mail]` beginnen.
-- Toon een kleine `Mail`-badge naast het factuurnummer met tooltip: *"Geregistreerd via e-mail — PDF wordt verwacht in inkoop-inbox"*.
-- Strip de `[via e-mail]`-prefix uit de zichtbare beschrijving (blijft wel in DB staan).
-- De bestaande amber upload-knop (`setUploadPdfTarget`) blijft beschikbaar zodat admin alsnog handmatig een PDF kan koppelen.
+### 1. Verdeling-validatie robuust maken (AddPurchaseInvoiceDialog.tsx, regels 602-648)
 
-## 3. `AdminPurchaseInvoiceInbox.tsx` — match-detectie & 1-klik PDF koppelen
+- **Rond extra-project totalen** op 2 decimalen (gebruik `calculateVatAmounts` uit `src/lib/vatCalculation.ts`) bij het opbouwen van `validExtras` en hun allocaties — zelfde regel als primaire kant.
+- **Verruim tolerantie** in `Math.abs(... ) > 0.01` naar `0.01 * max(1, aantalRegels)` zodat opgetelde 1-cent afrondingen niet blokkeren; cap op €0.05.
+- **Auto-rebalance** het kleine restverschil naar de laatste allocatie i.p.v. te weigeren (zoals al gebruikelijk in factuur-tools). Toon enkel een toast-waarschuwing als het verschil > tolerantie blijft.
+- Pas dezelfde aanpak toe op de extra-project interne allocatie-check (regel 638-648).
+- Foutmelding verfijnen zodat hij benoemt om welk project en bedrag het gaat én hoeveel er afwijkt.
 
-Wanneer een inbox-item gescand is en er bestaat al een `partner_purchase_invoices`-rij met dezelfde `(partner_id, invoice_number)`:
+### 2. Overschrijven-optie tonen bij splits
 
-- Toon een blauwe match-banner:
-  *"Deze factuur is al door {partner} geregistreerd op {datum} voor project {ref}."*
-- Twee acties:
-  1. **"PDF koppelen aan bestaande registratie"** (primair) — zet `file_path` op de bestaande rij, markeert het inbox-item als `processed`, maakt géén nieuwe rij.
-  2. **"Toch als nieuwe inkoopfactuur opslaan"** (secundair) — bestaande override, blijft werken.
+Voorwaarde voor `copyToBillingLines`-checkbox uitbreiden:
+- Tonen zodra elk item dat een allocatie krijgt (zowel primair als per extra project) uniek is — d.w.z. zodra duidelijk is naar welk `item_id` de regels overgenomen kunnen worden.
+- Bij splits: per project één klikkbare regel "Vervang factuurregels op programma-onderdeel X" (alleen voor projecten met precies één item-allocatie). Voor projecten met meerdere allocaties: optie verbergen + tooltip "Niet beschikbaar — meerdere onderdelen geraakt".
+- Submit-flow uitbreiden zodat na elke `createInvoice.mutateAsync` (primair én extra) dezelfde `program_item_billing_lines` wipe-en-insert wordt uitgevoerd voor de gekozen items, met de bijbehorende lines.
 
-Hiermee is de flow sluitend:
-- Partner registreert via e-mailmodus (zonder PDF) → factuur staat in admin met `Mail`-badge.
-- E-mail met PDF arriveert in inkoop-inbox → admin ziet match → 1-klik PDF aan bestaande registratie koppelen → géén dubbele inkoopfactuur.
+### 3. Visuele verduidelijking
 
-## Out of scope
+- Bovenaan splits-blok een live status: per project subtotaal incl. BTW + ✓/✗ icoon en kleur. Maakt direct zichtbaar waar de €0.24 zit voordat de gebruiker op opslaan klikt.
 
-- Volledig automatisch matchen zonder admin-interventie.
-- Database-wijzigingen (signaal `[via e-mail]` zit al in `description`; `file_path` kolom bestaat al).
+## Technische details
 
-## Geraakte files
+- Bestand: `src/components/admin/AddPurchaseInvoiceDialog.tsx`
+- Helper: `calculateVatAmounts` uit `src/lib/vatCalculation.ts` overal toepassen bij split-berekeningen om dezelfde 2-decimalen rounding te garanderen.
+- Geen DB-wijzigingen.
+- Geen wijziging in `CollectiveInvoiceSheet` (apart pad voor Doeksen/Isla bagage).
 
-- `src/components/partner-portal/RegisterCollectivePartnerInvoiceDialog.tsx`
-- `src/components/admin/AdminPurchaseInvoices.tsx`
-- `src/components/admin/AdminPurchaseInvoiceInbox.tsx`
+## Buiten scope
+
+- Wijzigingen aan inbox-matching/MatchedRegistrationBanner.
+- Verzamelfactuur-sheet (`CollectiveInvoiceSheet`) — dat pad heeft eigen splitlogica per regel en kent dit probleem niet.

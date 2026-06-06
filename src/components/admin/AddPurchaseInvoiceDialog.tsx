@@ -551,7 +551,30 @@ export function AddPurchaseInvoiceDialog({
         headerIncl = calc.amountInclVat;
       }
 
-      // Validate extra project splits
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      // Tolerance scales with line count: 1ct per regel, cap €0.10
+      const toleranceFor = (count: number) => Math.min(0.1, Math.max(0.01, 0.01 * count));
+      // Rebalance last allocation to absorb sub-cent rounding so totals match exactly
+      const rebalance = <T extends { amount_excl_vat: number; amount_incl_vat: number; vat_amount: number; vat_rate: number }>(
+        rows: T[],
+        targetIncl: number,
+      ) => {
+        if (rows.length === 0) return;
+        const sum = rows.reduce((s, r) => s + r.amount_incl_vat, 0);
+        const diff = round2(targetIncl - sum);
+        if (Math.abs(diff) < 0.005) return;
+        const last = rows[rows.length - 1];
+        last.amount_incl_vat = round2(last.amount_incl_vat + diff);
+        // recompute excl + vat for the adjusted row keeping its rate
+        const rate = last.vat_rate || 0;
+        const recalc = rate > 0
+          ? { excl: round2(last.amount_incl_vat / (1 + rate / 100)) }
+          : { excl: last.amount_incl_vat };
+        last.amount_excl_vat = recalc.excl;
+        last.vat_amount = round2(last.amount_incl_vat - last.amount_excl_vat);
+      };
+
+      // Validate extra project splits — alle bedragen op 2 decimalen geronden
       const validExtras = extraProjects
         .filter((e) => {
           if (!e.requestId) return false;
@@ -567,28 +590,39 @@ export function AddPurchaseInvoiceDialog({
             .map((a, idx) => {
               const aExcl = parseFloat(a.amount_excl_vat) || 0;
               const aRate = parseFloat(a.vat_rate) || 0;
-              const aVat = aExcl * (aRate / 100);
+              const calc = calculateVatAmounts(aExcl, aRate);
               return {
                 item_id: a.item_id,
-                amount_excl_vat: aExcl,
-                vat_rate: aRate,
-                vat_amount: aVat,
-                amount_incl_vat: aExcl + aVat,
+                amount_excl_vat: calc.amountExclVat,
+                vat_rate: calc.vatRate,
+                vat_amount: calc.vatAmount,
+                amount_incl_vat: calc.amountInclVat,
                 notes: a.notes || null,
                 sort_order: idx,
               };
             });
-          // Als hoofdbedrag leeg is, leid af uit de onderdelen
           const headerExclInput = parseFloat(e.amountExclVat);
           const useDerived = !(headerExclInput > 0) && eAllocs.length > 0;
-          const eExcl = useDerived
-            ? eAllocs.reduce((s, a) => s + a.amount_excl_vat, 0)
-            : headerExclInput || 0;
-          const eIncl = useDerived
-            ? eAllocs.reduce((s, a) => s + a.amount_incl_vat, 0)
-            : eExcl * (1 + (parseFloat(e.vatRate) || 0) / 100);
-          const eVat = eIncl - eExcl;
-          const eRate = useDerived ? 0 : parseFloat(e.vatRate) || 0;
+          let eExcl: number;
+          let eIncl: number;
+          let eRate: number;
+          let eVat: number;
+          if (useDerived) {
+            eExcl = round2(eAllocs.reduce((s, a) => s + a.amount_excl_vat, 0));
+            eIncl = round2(eAllocs.reduce((s, a) => s + a.amount_incl_vat, 0));
+            eVat = round2(eIncl - eExcl);
+            eRate = 0;
+          } else {
+            const calc = calculateVatAmounts(headerExclInput || 0, parseFloat(e.vatRate) || 0);
+            eExcl = calc.amountExclVat;
+            eIncl = calc.amountInclVat;
+            eVat = calc.vatAmount;
+            eRate = calc.vatRate;
+            // Auto-rebalance interne allocaties zodat ze exact optellen tot eIncl
+            if (eAllocs.length > 0) {
+              rebalance(eAllocs, eIncl);
+            }
+          }
           return {
             requestId: e.requestId,
             amount_excl_vat: eExcl,
@@ -600,8 +634,8 @@ export function AddPurchaseInvoiceDialog({
         });
 
       // Compute primary share when extras exist
-      const extrasExclSum = validExtras.reduce((s, e) => s + e.amount_excl_vat, 0);
-      const extrasInclSum = validExtras.reduce((s, e) => s + e.amount_incl_vat, 0);
+      const extrasExclSum = round2(validExtras.reduce((s, e) => s + e.amount_excl_vat, 0));
+      const extrasInclSum = round2(validExtras.reduce((s, e) => s + e.amount_incl_vat, 0));
       if (validExtras.length > 0) {
         if (extrasExclSum > headerExcl + 0.01) {
           setIsSubmitting(false);
@@ -609,10 +643,9 @@ export function AddPurchaseInvoiceDialog({
             `Som van extra projecten (€${extrasExclSum.toFixed(2)}) is hoger dan factuurtotaal excl. BTW (€${headerExcl.toFixed(2)})`,
           );
         }
-        // adjust primary header to remaining share
-        const primaryExcl = headerExcl - extrasExclSum;
-        const primaryIncl = headerIncl - extrasInclSum;
-        const primaryVat = primaryIncl - primaryExcl;
+        const primaryExcl = round2(headerExcl - extrasExclSum);
+        const primaryIncl = round2(headerIncl - extrasInclSum);
+        const primaryVat = round2(primaryIncl - primaryExcl);
         if (primaryExcl <= 0.01) {
           setIsSubmitting(false);
           return toast.error("Het hoofdproject heeft geen restbedrag — verwijder een extra project of pas het bedrag aan.");
@@ -620,29 +653,38 @@ export function AddPurchaseInvoiceDialog({
         headerExcl = primaryExcl;
         headerIncl = primaryIncl;
         headerVat = primaryVat;
-        // when splitting, lines belong to whole invoice — drop them on primary to avoid mismatch
       }
 
-      // Validate primary allocations match adjusted primary header
+      // Validate primary allocations match adjusted primary header — met tolerantie + auto-rebalance
       if (validAllocations.length > 0) {
-        const allocSum = validAllocations.reduce((s, a) => s + a.amount_incl_vat, 0);
-        if (Math.abs(allocSum - headerIncl) > 0.01) {
+        const allocSum = round2(validAllocations.reduce((s, a) => s + a.amount_incl_vat, 0));
+        const diff = Math.abs(allocSum - headerIncl);
+        const tol = toleranceFor(validAllocations.length);
+        if (diff > tol) {
           setIsSubmitting(false);
           return toast.error(
-            `Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${headerIncl.toFixed(2)} ${validExtras.length > 0 ? "(hoofdproject)" : "factuurtotaal"}`,
+            `Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${headerIncl.toFixed(2)} ${validExtras.length > 0 ? "(hoofdproject)" : "factuurtotaal"} — verschil €${diff.toFixed(2)}`,
           );
+        }
+        if (diff > 0.005) {
+          rebalance(validAllocations as any, headerIncl);
         }
       }
 
-      // Validate each extra's internal allocations
+      // Validate each extra's internal allocations — zelfde aanpak
       for (const e of validExtras) {
         if (e.allocations.length > 0) {
-          const s = e.allocations.reduce((sum, a) => sum + a.amount_incl_vat, 0);
-          if (Math.abs(s - e.amount_incl_vat) > 0.01) {
+          const s = round2(e.allocations.reduce((sum, a) => sum + a.amount_incl_vat, 0));
+          const diff = Math.abs(s - e.amount_incl_vat);
+          const tol = toleranceFor(e.allocations.length);
+          if (diff > tol) {
             setIsSubmitting(false);
             return toast.error(
-              `Onderdeel-verdeling extra project klopt niet: €${s.toFixed(2)} vs €${e.amount_incl_vat.toFixed(2)}`,
+              `Onderdeel-verdeling extra project klopt niet: €${s.toFixed(2)} vs €${e.amount_incl_vat.toFixed(2)} — verschil €${diff.toFixed(2)}`,
             );
+          }
+          if (diff > 0.005) {
+            rebalance(e.allocations as any, e.amount_incl_vat);
           }
         }
       }
@@ -1077,21 +1119,36 @@ export function AddPurchaseInvoiceDialog({
                       </span>
                     </div>
                   )}
-                  {((allocations.length === 1 && parseFloat(allocations[0].amount_excl_vat) > 0) || (allocations.length === 0 && itemId)) && (
-                    <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
-                      <Checkbox
-                        checked={copyToBillingLines}
-                        onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
-                        className="mt-0.5"
-                      />
-                      <span>
-                        <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
-                        <span className="block text-muted-foreground">
-                          Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
-                        </span>
-                      </span>
-                    </label>
-                  )}
+                  {(() => {
+                    const filledAllocs = allocations.filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0);
+                    const canCopy = (filledAllocs.length === 1) || (filledAllocs.length === 0 && !!itemId);
+                    const hasMulti = filledAllocs.length > 1;
+                    if (canCopy) {
+                      return (
+                        <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
+                          <Checkbox
+                            checked={copyToBillingLines}
+                            onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
+                            <span className="block text-muted-foreground">
+                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    }
+                    if (hasMulti) {
+                      return (
+                        <div className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md p-2">
+                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               );
             })()}
