@@ -80,18 +80,20 @@ export const InvoiceRegistrationDialog = ({
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
-      // Prefill bedrag met geoffreerde prijs (partner past alleen aan als
-      // werkelijke factuur afwijkt, bv. bij schatting o.b.v. aantal personen).
-      const prefill = item?.quoted_price && item.quoted_price > 0
-        ? String(item.quoted_price).replace(".", ",")
-        : "";
-      setAmount(prefill);
+      // Prefill bedrag met geoffreerde prijs (omgerekend naar incl. BTW, want
+      // dit veld vraagt het bedrag incl. BTW — partner past aan als de
+      // werkelijke factuur afwijkt).
+      const quoted = item?.quoted_price && item.quoted_price > 0 ? item.quoted_price : 0;
+      const blockRate = item?.block_id ? (getItemVatRate({ block_id: item.block_id }) ?? 21) : 21;
+      const prefillIncl = quoted > 0 ? Math.round(quoted * (1 + blockRate / 100) * 100) / 100 : 0;
+      setAmount(prefillIncl > 0 ? String(prefillIncl).replace(".", ",") : "");
       setInvoiceNumber("");
       setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
       setNotes("");
       setErrors({});
       setSelectedFile(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, item?.id, item?.quoted_price]);
 
   // Partner voert bedrag IN incl. BTW (huisregel). We leiden het excl-bedrag af
