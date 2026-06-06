@@ -31,7 +31,7 @@ import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvo
 export default function AdminPurchaseInvoiceInbox() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<InboxStatus | "all">("new");
-  const { items, isLoading, discard, rescan } = usePurchaseInvoiceInbox(tab);
+  const { items, isLoading, discard, rescan, markProcessed } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
   const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
 
