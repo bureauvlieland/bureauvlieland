@@ -211,7 +211,7 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
                   {confirmationType === "deviation" && (
                     <div className="space-y-3 pl-6">
                       <div>
-                        <Label htmlFor={`amount-${item.id}`}>Bedrag excl. BTW</Label>
+                        <Label htmlFor={`amount-${item.id}`}>Werkelijk gefactureerd bedrag incl. BTW</Label>
                         <div className="relative mt-1">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
                           <Input
@@ -225,6 +225,11 @@ export const ConfirmCommissionCard = ({ items, onConfirm }: ConfirmCommissionCar
                             className="pl-7"
                           />
                         </div>
+                        {deviationAmount && !isNaN(parseFloat(deviationAmount.replace(",", "."))) && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Excl. BTW: €{((parseFloat(deviationAmount.replace(",", ".")) || 0) / (1 + (Number(item.vatRate) || 0) / 100)).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW {item.vatRate}%
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor={`reason-${item.id}`}>Toelichting</Label>
