@@ -20,6 +20,7 @@ import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
 
 interface BillingDetails {
   billing_company_name?: string | null;
