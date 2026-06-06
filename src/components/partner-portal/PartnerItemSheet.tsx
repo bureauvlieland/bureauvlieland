@@ -828,30 +828,42 @@ export const PartnerItemSheet = ({
               <Separator />
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Factuur</h3>
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Factuurnummer:</span>
-                    <span className="font-medium">{item.invoiced_number}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bedrag:</span>
-                    <span className="font-medium">€{item.invoiced_amount?.toFixed(2)}</span>
-                  </div>
-                  {item.invoiced_date && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Datum:</span>
-                      <span>{format(parseISO(item.invoiced_date), "d MMM yyyy", { locale: nl })}</span>
-                    </div>
-                  )}
-                  {item.commission_amount && item.commission_amount > 0 && (
-                    <div className="pt-2 border-t">
+                {(() => {
+                  const vatRate = Number(item.vat_rate ?? 0);
+                  const exclVat = Number(item.invoiced_amount ?? 0);
+                  const vatAmount = Math.round(exclVat * (vatRate / 100) * 100) / 100;
+                  const inclVat = Math.round((exclVat + vatAmount) * 100) / 100;
+                  return (
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Commissie ({item.commission_percentage}%):</span>
-                        <span className="font-medium">€{item.commission_amount.toFixed(2)}</span>
+                        <span className="text-muted-foreground">Factuurnummer:</span>
+                        <span className="font-medium">{item.invoiced_number}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bedrag incl. BTW:</span>
+                        <span className="font-medium">€{inclVat.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Excl. BTW · BTW {vatRate}%:</span>
+                        <span>€{exclVat.toFixed(2)} · €{vatAmount.toFixed(2)}</span>
+                      </div>
+                      {item.invoiced_date && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Datum:</span>
+                          <span>{format(parseISO(item.invoiced_date), "d MMM yyyy", { locale: nl })}</span>
+                        </div>
+                      )}
+                      {item.commission_amount && item.commission_amount > 0 && (
+                        <div className="pt-2 border-t">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Commissie ({item.commission_percentage}% over excl. BTW):</span>
+                            <span className="font-medium">€{item.commission_amount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             </>
           )}
