@@ -110,7 +110,7 @@ export const InvoiceRegistrationDialog = ({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!amount || parsedAmount <= 0) {
+    if (!amount || parsedAmountIncl <= 0) {
       newErrors.amount = "Voer een geldig bedrag in";
     }
 
