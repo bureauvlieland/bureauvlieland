@@ -1401,16 +1401,22 @@ export function AddPurchaseInvoiceDialog({
               </div>
               <div className="space-y-1.5">
                 <Label>BTW %</Label>
-                <Select value={vatRate} onValueChange={setVatRate} disabled={hasLines}>
-                  <SelectTrigger className={hasLines ? "bg-muted" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">{lineTotals?.isMixed ? "Gemengd" : "0%"}</SelectItem>
-                    <SelectItem value="9">9%</SelectItem>
-                    <SelectItem value="21">21%</SelectItem>
-                  </SelectContent>
-                </Select>
+                {lineTotals?.isMixed ? (
+                  <div className="h-10 px-3 flex items-center rounded-md border bg-muted text-sm text-muted-foreground">
+                    Gemengd
+                  </div>
+                ) : (
+                  <Select value={vatRate} onValueChange={setVatRate} disabled={hasLines}>
+                    <SelectTrigger className={hasLines ? "bg-muted" : ""}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0%</SelectItem>
+                      <SelectItem value="9">9%</SelectItem>
+                      <SelectItem value="21">21%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>BTW bedrag</Label>
@@ -1421,6 +1427,19 @@ export function AddPurchaseInvoiceDialog({
                 <Input value={amountIncl} readOnly className="bg-muted font-semibold" />
               </div>
             </div>
+            {lineTotals?.isMixed && (
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs space-y-1">
+                <div className="font-medium text-foreground">BTW-specificatie (gemengd tarief)</div>
+                {Array.from(lineTotals.byRate.entries())
+                  .sort((a, b) => a[0] - b[0])
+                  .map(([rate, v]) => (
+                    <div key={rate} className="flex justify-between text-muted-foreground">
+                      <span>BTW {rate}% over €{v.excl.toFixed(2)}</span>
+                      <span className="font-mono">€{v.vat.toFixed(2)}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
             {hasLines && (
               <p className="text-xs text-muted-foreground -mt-2">
                 Totalen worden berekend uit de orderregels. Verwijder alle regels om handmatig in te vullen.
