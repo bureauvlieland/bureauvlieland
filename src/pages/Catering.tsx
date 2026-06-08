@@ -49,17 +49,87 @@ const Catering = () => {
   return (
     <>
       <Helmet>
-        <title>Catering op Vlieland – Bureau Vlieland & Zuiver Traiteur</title>
-        <meta 
-          name="description" 
-          content="Bureau Vlieland en Zuiver Traiteur verzorgen de volledige catering voor zakelijke evenementen op Vlieland. Van lunch tot strand-BBQ." 
+        <title>Catering Vlieland – lunch, BBQ, borrel & diner | Bureau Vlieland</title>
+        <meta
+          name="description"
+          content="Catering op Vlieland voor zakelijke groepen: lunch, borrel, strand-BBQ en diner. Eén aanvraag, één factuur. Indicatieve prijs direct, offerte binnen 2 werkdagen."
+        />
+        <meta
+          name="keywords"
+          content="catering Vlieland, lunch Vlieland, BBQ Vlieland, strand BBQ Vlieland, borrel Vlieland, diner Vlieland, zakelijke catering Vlieland, Zuiver Traiteur"
         />
         <link rel="canonical" href="https://bureauvlieland.nl/catering" />
-        <meta property="og:title" content="Catering op Vlieland – Bureau Vlieland & Zuiver Traiteur" />
-        <meta property="og:description" content="Bureau Vlieland en Zuiver Traiteur verzorgen de volledige catering voor zakelijke evenementen op Vlieland. Van lunch tot strand-BBQ." />
+        <meta property="og:title" content="Catering op Vlieland – lunch, BBQ, borrel & diner" />
+        <meta property="og:description" content="Bureau Vlieland & Zuiver Traiteur verzorgen complete catering voor zakelijke groepen op Vlieland. Indicatieve prijs direct, offerte binnen 2 werkdagen." />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
         <meta property="og:url" content="https://bureauvlieland.nl/catering" />
         <meta property="og:type" content="website" />
+        <meta property="og:locale" content="nl_NL" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Service",
+          name: "Catering op Vlieland",
+          serviceType: "Catering",
+          provider: {
+            "@type": "Organization",
+            name: "Bureau Vlieland",
+            url: "https://bureauvlieland.nl",
+            telephone: "+31562700208",
+            email: "info@bureauvlieland.nl",
+          },
+          areaServed: { "@type": "Place", name: "Vlieland" },
+          url: "https://bureauvlieland.nl/catering",
+          description:
+            "Complete catering voor zakelijke groepen op Vlieland: lunch, borrel, strand-BBQ en diner. Eén aanspreekpunt, één factuur.",
+          hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            name: "Catering-arrangementen",
+            itemListElement: [
+              { "@type": "Offer", itemOffered: { "@type": "Service", name: "Lunch arrangement" } },
+              { "@type": "Offer", itemOffered: { "@type": "Service", name: "Borrel & receptie" } },
+              { "@type": "Offer", itemOffered: { "@type": "Service", name: "Strand BBQ" } },
+              { "@type": "Offer", itemOffered: { "@type": "Service", name: "Diner arrangement" } },
+            ],
+          },
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Hoe snel ontvang ik een offerte voor catering op Vlieland?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Na uw aanvraag ontvangt u binnen 2 werkdagen een definitieve offerte. Een indicatieve totaalprijs incl. BTW is direct zichtbaar in de wizard.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Wat is de minimale groepsgrootte voor catering?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Onze arrangementen zijn bedoeld voor zakelijke groepen vanaf 8 personen. Voor kleinere groepen of maatwerk neemt u contact op via 0562 700 208.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Verzorgen jullie ook catering op het strand?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Ja, samen met Zuiver Traiteur verzorgen wij complete strand-BBQ's inclusief strandpaviljoen, verse lokale producten en alle benodigde verzorging.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Krijg ik één factuur voor de catering?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Ja. Bureau Vlieland factureert alles centraal — u heeft één aanspreekpunt en ontvangt één overzichtelijke factuur, ook bij meerdere leveranciers.",
+              },
+            },
+          ],
+        })}</script>
       </Helmet>
       <div className="min-h-screen">
         <Navigation />
