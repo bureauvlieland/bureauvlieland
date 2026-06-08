@@ -18,6 +18,7 @@ import {
   ARCHIVE_STATUSES,
   type PartnerRowKind,
 } from "@/lib/getPartnerProjectsOverview";
+import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 
 type TabKey = "projecten" | "werkbank";
 
