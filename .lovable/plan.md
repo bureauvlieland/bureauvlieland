@@ -244,16 +244,14 @@ luxe-lunch / ontbijt-op-locatie:
 
 ---
 
----
-
 ## 10. Open punten om in vervolgsessie af te tikken
 
-- Definitieve prijzen vanaf-bedragen per arrangement (komen van Zuiver Traiteur)
-- Foto's: bestaande catering-assets hergebruiken of nieuwe shoot?
-- Tiers drankpakket: exact wat zit erin per niveau?
-- Drempels schaalregels: bij hoeveel gasten extra bediening / grotere BBQ?
-- Lead-time soft-warning: tekst exact uitschrijven
-- SEO: keywords voor /catering ("catering vlieland", "bbq strand vlieland", "bedrijfscatering vlieland"...)
+- **Ontbrekende bouwstenen toevoegen**: `bbq-huur-set` (verplicht bij BBQ), statafels/krukken/tent, servies/bestek/glaswerk-set, en 3 drank-tier-bouwstenen (basis / uitgebreid / premium) met vaste vanaf-prijs i.p.v. enkel nacalculatie.
+- **Concept-status doorlopen**: alle `[concept]` Doeksen-items met Doeksen afstemmen en op `active`/`published` zetten waar gewenst voor wizard-zichtbaarheid.
+- **Foto's per arrangement**: bestaande items hebben deels geen `image_url`/`image_asset`. Wizard wordt veel sterker met consistente beeldtaal — bestaande assets matchen of nieuwe shoot inplannen.
+- **Drempels schaalregels** definitief: bij hoeveel pax extra bediening, grotere BBQ-set, tweede grillmaster?
+- **Lead-time soft-warning**: exacte tekst en standaard (7 dagen? 14 voor BBQ/diner?).
+- **SEO**: keywords voor `/catering` ("catering vlieland", "bbq strand vlieland", "bedrijfscatering vlieland", "ontbijt op locatie vlieland"...).
 
 ---
 
