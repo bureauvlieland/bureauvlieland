@@ -307,16 +307,31 @@ export default function AdminPurchaseInvoices() {
                   Verwijderen ({selectedInvoices.length})
                 </Button>
                 <Button
-                  onClick={() => {
-                    const pendingInvoices = invoices?.filter(i => selectedInvoices.includes(i.id) && i.status === "pending");
-                    if (pendingInvoices && pendingInvoices.length > 0) {
-                      toast.info(`${pendingInvoices.length} facturen geselecteerd voor doorsturen`);
-                      pendingInvoices.forEach(async (invoice) => {
-                        await markAsForwarded.mutateAsync(invoice.id);
-                      });
-                      toast.success("Facturen doorgestuurd naar boekhouding");
-                      setSelectedInvoices([]);
+                  onClick={async () => {
+                    const targets = invoices?.filter(i => selectedInvoices.includes(i.id) && (i.status === "pending" || i.status === "forwarded")) || [];
+                    if (targets.length === 0) {
+                      toast.info("Geen verzendbare facturen geselecteerd");
+                      return;
                     }
+                    toast.info(`Bezig met versturen van ${targets.length} factuur/facturen…`);
+                    let ok = 0;
+                    let failed = 0;
+                    for (const invoice of targets) {
+                      try {
+                        const { error: fnError } = await supabase.functions.invoke("forward-purchase-invoice", {
+                          body: { invoiceId: invoice.id, includePdf: !!invoice.file_path, origin: window.location.origin },
+                        });
+                        if (fnError) throw fnError;
+                        await markAsForwarded.mutateAsync(invoice.id);
+                        ok++;
+                      } catch (err) {
+                        console.error("Bulk forward failed for", invoice.id, err);
+                        failed++;
+                      }
+                    }
+                    if (ok > 0) toast.success(`${ok} factuur/facturen verstuurd naar boekhouding`);
+                    if (failed > 0) toast.error(`${failed} factuur/facturen mislukt — zie console`);
+                    setSelectedInvoices([]);
                   }}
                 >
                   <Mail className="h-4 w-4 mr-2" />
