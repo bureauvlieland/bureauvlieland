@@ -2,7 +2,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Check, Sandwich, GlassWater, Flame, UtensilsCrossed, Sparkles, ArrowRight } from "lucide-react";
 import { Helmet } from "react-helmet";
 import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
 import strandBbqImage from "@/assets/strand-bbq.jpg";
