@@ -93,12 +93,17 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
     (mainBlock?.scaling_rules as any[] | undefined)?.forEach((r) => {
       if (r?.min_guests && sel.guests >= r.min_guests && r?.suggest) ids.add(r.suggest);
     });
-    // Diner zonder horeca op locatie → suggesteer servies/meubilair/bediening
+    // Diner zonder horeca op locatie → suggesteer servies/meubilair/bediening + drank-tiers
     if (sel.type === "diner" && sel.hasHorecaOnSite === false) {
-      ["servies-bestek-glaswerk-set", "bediening-diner", "meubilair-tent", "drank-pm-nacalculatie", "bezorging-catering"].forEach((id) => ids.add(id));
+      ["servies-bestek-glaswerk-set", "bediening-diner", "meubilair-tent", "bezorging-catering",
+        "drank-arrangement-basis", "drank-arrangement-uitgebreid", "drank-arrangement-premium"
+      ].forEach((id) => ids.add(id));
     }
-    // Borrel: drank altijd suggesteren
-    if (sel.type === "borrel") ids.add("drank-pm-nacalculatie");
+    // Borrel: drank-arrangementen altijd suggesteren (3 tiers)
+    if (sel.type === "borrel") {
+      ["drank-arrangement-basis", "drank-arrangement-uitgebreid", "drank-arrangement-premium"]
+        .forEach((id) => ids.add(id));
+    }
     return Array.from(ids)
       .map((id) => blocks.find((b) => b.id === id))
       .filter((b): b is BuildingBlock => !!b && b.id !== mainBlock?.id);

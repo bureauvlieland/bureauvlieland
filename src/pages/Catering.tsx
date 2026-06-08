@@ -183,7 +183,7 @@ const Catering = () => {
                 Wat voor catering zoekt u?
               </h2>
               <p className="text-muted-foreground">
-                Kies een type om direct in de 5-stappen wizard te starten. Indicatieve totaalprijs incl. BTW altijd zichtbaar; definitieve offerte binnen 5 werkdagen.
+                Kies een type om direct in de 5-stappen wizard te starten. Indicatieve totaalprijs incl. BTW altijd zichtbaar; definitieve offerte binnen 2 werkdagen. <span className="font-medium text-foreground">Aanvragen graag minimaal 7 dagen vóór de gewenste datum.</span>
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -380,7 +380,7 @@ const Catering = () => {
               </h2>
               <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
                 Stel in 5 minuten uw eigen programma samen inclusief catering. 
-                Kies uw onderdelen en ontvang binnen 5 werkdagen bevestiging.
+                Kies uw onderdelen en ontvang binnen 2 werkdagen een definitieve offerte. Aanvragen graag minimaal 7 dagen vóór uw datum.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
