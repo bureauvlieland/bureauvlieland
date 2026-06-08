@@ -355,7 +355,7 @@ export function ExtraProjectSplitBlock({
             </Select>
           )}
 
-          {split.allocations.length > 0 && (
+          {hasHeader && split.allocations.length > 0 && (
             <div
               className={cn(
                 "text-xs px-2 py-1 rounded-md",
@@ -364,8 +364,8 @@ export function ExtraProjectSplitBlock({
                   : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
               )}
             >
-              Toegewezen: <strong>€{allocSumIncl.toFixed(2)}</strong> van €{incl.toFixed(2)}
-              {allocMatches ? " ✓" : ` (verschil €${(incl - allocSumIncl).toFixed(2)})`}
+              Toegewezen: <strong>{fmt(allocSumIncl)}</strong> van {fmt(headerIncl)}
+              {allocMatches ? " ✓" : ` (verschil ${fmt(headerIncl - allocSumIncl)})`}
             </div>
           )}
         </div>
