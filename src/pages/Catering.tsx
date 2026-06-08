@@ -97,13 +97,61 @@ const Catering = () => {
             </p>
             <Button 
               size="lg" 
-              onClick={() => scrollToSection("opties")}
+              onClick={() => scrollToSection("kies-type")}
               className="bg-primary hover:bg-primary/90"
             >
-              Bekijk onze opties
+              Start uw aanvraag
             </Button>
           </div>
         </section>
+
+        {/* Wizard entry — 4 type tiles + maatwerk */}
+        <section id="kies-type" className="py-16 bg-background">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-3 text-foreground">
+                Wat voor catering zoekt u?
+              </h2>
+              <p className="text-muted-foreground">
+                Kies een type om direct in de 5-stappen wizard te starten. Indicatieve totaalprijs incl. BTW altijd zichtbaar; definitieve offerte binnen 5 werkdagen.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { key: "lunch", label: "Lunch", icon: Sandwich, desc: "Broodjes, soep, salade — vanaf 8 personen" },
+                { key: "borrel", label: "Borrel & receptie", icon: GlassWater, desc: "Hapjes + drankpakket" },
+                { key: "bbq", label: "BBQ", icon: Flame, desc: "Op het strand of op locatie" },
+                { key: "diner", label: "Diner", icon: UtensilsCrossed, desc: "3-gangen, buffet of walking dinner" },
+              ].map((t) => {
+                const Icon = t.icon;
+                return (
+                  <Link
+                    key={t.key}
+                    to={`/catering-aanvragen?type=${t.key}`}
+                    className="group rounded-xl border-2 border-border p-6 bg-card hover:border-primary hover:shadow-lg transition-all"
+                  >
+                    <Icon className="h-8 w-8 mb-4 text-primary" />
+                    <div className="font-display text-xl font-semibold mb-1">{t.label}</div>
+                    <p className="text-sm text-muted-foreground mb-4">{t.desc}</p>
+                    <span className="inline-flex items-center text-sm font-medium text-primary group-hover:gap-2 gap-1 transition-all">
+                      Start aanvraag <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="mt-6 text-center">
+              <Link
+                to="/catering-aanvragen?type=maatwerk"
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Sparkles className="h-4 w-4" />
+                Iets anders? Start een maatwerk-aanvraag
+              </Link>
+            </div>
+          </div>
+        </section>
+
 
         {/* Introduction */}
         <section className="py-16 bg-background">
