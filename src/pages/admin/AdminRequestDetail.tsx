@@ -1514,6 +1514,45 @@ const AdminRequestDetail = () => {
             </Alert>
           )}
 
+          {/* Catering-only meta card */}
+          {request.origin === "catering_only" && (
+            <div className="rounded-lg border-2 border-amber-200 bg-amber-50/60 p-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-600 hover:bg-amber-600 text-white">Cateringaanvraag</Badge>
+                  <span className="text-sm text-amber-900">
+                    Standalone catering — geen meerdaags programma, één blok met datum en locatie.
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-amber-800/70 font-medium">Datum</p>
+                  <p className="font-medium text-slate-900">
+                    {(request.selected_dates as string[])[0]
+                      ? format(new Date((request.selected_dates as string[])[0]), "EEE d MMM yyyy", { locale: nl })
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-amber-800/70 font-medium">Starttijd</p>
+                  <p className="font-medium text-slate-900">{request.catering_start_time || "—"}</p>
+                </div>
+                <div className="col-span-2 lg:col-span-1">
+                  <p className="text-[10px] uppercase tracking-wide text-amber-800/70 font-medium">Locatie</p>
+                  <p className="font-medium text-slate-900">{request.catering_location_text || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-amber-800/70 font-medium">Horeca op locatie</p>
+                  <p className="font-medium text-slate-900">
+                    {request.has_horeca_on_site == null ? "—" : request.has_horeca_on_site ? "Ja" : "Nee"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+
           {/* === Snel-overzicht: 4 compacte kaarten met popovers === */}
           {(() => {
             const datesArr = request.selected_dates as string[];
