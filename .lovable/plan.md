@@ -153,33 +153,96 @@ Fase 5 — Admin
 
 ---
 
-## 9. Inhoudelijke voorstellen (om mee verder te puzzelen)
+## 9. Inhoudelijke invulling — bestaande bouwstenen als startset
 
-Concrete arrangementen die ik wil voorstellen als startset (definitieve namen + prijzen vul je in):
+Hieronder de **echte** items uit `building_blocks` (`category = 'catering'`), gegroepeerd per wizard-type. `[concept]` = nog niet gepubliceerd; `[pub]` = gepubliceerd; `[act]` = active. Alle prijzen p.p. tenzij anders vermeld, incl. BTW.
 
-**Lunch**
-- *Vlielandse lunch standaard* — broodjes, soep, fruit, koffie/thee
-- *Lunch luxe* — uitgebreid buffet met warme component
+### Lunch (`catering_type = 'lunch'`)
+**Hoofd-arrangementen**
+- `luxe-lunch` — Luxe Lunchbuffet — Zuiver — € 32,00 p.p. — 15–80 pax — [pub]
+- `lunch-strand` — Lunch op locatie — Zuiver — € 25,00 p.p. — [pub]
+- `ontbijt-op-locatie` — Ontbijt op locatie — Zuiver — € 28,00 p.p. — vanaf 8 pax — [pub] *(sub-type ontbijt)*
+- `lunch-aan-boord-bij-rederij-doeksen` — Lunch aan boord — Rederij Doeksen — € 14,95 p.p. — [pub]
+- `doeksen-plate-nasi-kopie` — Plateservice aan boord — Rederij Doeksen — vanaf € 14,95 p.p. — [pub]
+- `doeksen-lunchbuffet` — Lunchbuffet aan boord — € 22,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-lunchpakket` — Lunchpakket (to-go) aan boord — € 14,95 p.p. — vanaf 10 pax — [concept]
+- `doeksen-brunchbuffet` — Brunchbuffet aan boord — € 34,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-ontbijt` — Ontbijt aan boord — € 15,50 p.p. — vanaf 10 pax — [concept]
+- `doeksen-ontbijtbuffet` — Ontbijtbuffet aan boord — € 17,50 p.p. — vanaf 25 pax — [concept]
+- `doeksen-lunch-vuurduin` — Vuurduin lunch — € 14,95 p.p. — vanaf 10 pax — [concept]
+- `doeksen-lunch-wadloper` — Vega Wadloper lunch — € 14,95 p.p. — vanaf 10 pax — [concept]
+- `doeksen-lunch-strandjutter` — Strandjutter lunch — € 16,95 p.p. — vanaf 10 pax — [concept]
 
-**Borrel**
-- *Borrel basis* — hapjes + bier/wijn/fris
-- *Borrel uitgebreid* — warme + koude hapjes + premium drankpakket
-- *Walking dinner borrel* — 5 hapjesrondes als mini-diner
+### Borrel / Receptie (`catering_type = 'borrel'`)
+**Hoofd-arrangementen**
+- `borrel` — Borrel & Hapjes — Zuiver — vanaf € 45,00 p.p. — 15–150 pax, 2,5u — [pub]
+- `borrelplank` — Borrelplank — Bureau — € 7,75 p.p. — [act] *(als hapjes-add-on bij eigen borrel)*
+- `koffie-gebak-boot` — Koffie & Gebak aan boord — € 7,75 p.p. — [pub] *(versnapering)*
 
-**BBQ**
-- *Strand-BBQ klassiek* — vlees/vis/vega, salades, brood (verplicht: BBQ-huur)
-- *BBQ luxe* — uitgebreid + dessert
-- Add-ons: grillmaster, statafels, krukken, tent
+**Verplicht te kiezen drankpakket-tier** (nu nog individuele losse items — voorstel: 3 nieuwe `tier`-bouwstenen 'Drank basis/uitgebreid/premium' bouwen die intern verwijzen naar onderstaande als nacalculatie):
+- `drank-stelpost-avond` — Drank stelpost 18:00–23:00 — Bureau — € 8.000 totaal (nacalculatie) — [act]
+- `drankafkoop-avond` — Drankafkoop — Bureau — € 8.076,75 totaal — [act]
+- Losse drank: `bubbels-fles` € 23,50 · `wijn-wit-fles` € 16,75 · `bier-heineken` € 2,75 · `bier-fortuna-bries` € 4,25 · `frisdrank-groot` € 7,50 · `water-chaudfontaine` € 5,00 — [act]
+- `taart-pp` — Taart per persoon — € 4,00 — [act]
 
-**Diner**
-- *3-gangen Vlielands* — lokale producten
-- *Buffet* — koud/warm
-- *Walking dinner*
-- Add-ons (bij geen horeca): servies, bestek, glaswerk, bediening
+### BBQ (`catering_type = 'bbq'`)
+**Hoofd-arrangementen**
+- `strand-bbq` — Outdoor Cooking (strand) — Zuiver — € 35,00 p.p. — 20–100 pax, 3u — [pub]
+- `catering-burger-festival` — Build Your Own Burger Festival — Zuiver — € 12.507,75 totaal — [act]
 
-**Vergader / koffie**
-- *Koffie-arrangement* — koffie/thee + zoet
-- *Vergaderlunch* — broodjes + soep + water
+**Verplichte / suggested add-ons** (`required_with` / `suggested_addons`)
+- `grillmaster-zuiver-traiteur` — Grillmaster Zuiver — € 195,00 voor 3u — [pub] *(suggested)*
+- ⚠️ Een expliciet "BBQ-huur" bouwsteen ontbreekt nog in de database — **moet toegevoegd worden** (bv. `bbq-huur-set`) en aan `strand-bbq.required_with` gekoppeld.
+- Statafels / krukken / tent: ontbreken in `category='catering'` — wellicht onder `category='locaties'` of nieuw aanmaken.
+
+### Diner (`catering_type = 'diner'`)
+**Hoofd-arrangementen**
+- `diner-zeezicht` — Diner Restaurant Zeezicht — € 39,50 p.p. — [pub]
+- `italian-shared-dining` — Italiaanse shared dining @ Oliva — € 44,50 p.p. — vanaf 10 pax — [pub]
+- `regina-andrea-prive-terug` — Privévaart Regina Andrea incl. warm buffet — Op aanvraag — vanaf 30 pax — [pub] *(category=vervoer, eventueel cross-listen)*
+- `catering-3-gangen-diner` — Zuiver Traiteur 3-gangen diner — € 14.633,25 totaal — [pub]
+- `3-gangen-diner` — 3 gangen diner (stelpost) — € 40,00 p.p. — [act]
+- `sunset-dinner` — Sunset Dinner — Zuiver — € 65,00 p.p. — 20–50 pax, 2,5u — [concept]
+- `doeksen-buffet-doeksen` — Doeksen buffet — € 37,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-buffet-italiaans` — Italiaans buffet — € 29,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-buffet-sate` — Saté buffet — € 27,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-buffet-captains` — Captain's dinner buffet — € 24,95 p.p. — vanaf 25 pax — [concept]
+- Doekies plates (vanaf 10 pax, [concept]): `doeksen-plate-hamburger` € 14,95 · `doeksen-plate-nasi` € 16,95 · `doeksen-plate-pasta` € 16,95 · `doeksen-plate-spareribs` € 16,95 · `doeksen-plate-curry` € 16,95
+- Snacks: `doeksen-frites-groot` € 8,50 · `doeksen-frites-middel` € 7,50 — [concept]
+
+**Suggested add-ons bij diner op externe locatie / geen horeca**
+- `bediening-diner` — Bediening diner (stelpost) — € 2.420 totaal — [act, category=services]
+- (Servies/bestek/glaswerk-bouwstenen ontbreken nog — voorstel toevoegen of als tekstuele optie aanvinken.)
+
+### Overige / cross-cutting
+- `koffiebar-omzetgarantie` — Koffiebar omzetgarantie — € 907,50 totaal — [act] *(extra optie bij dagprogramma)*
+
+---
+
+## 9b. Eerste regels voor `required_with` / `suggested_addons`
+
+```text
+strand-bbq:
+  required_with:    [<nieuw: bbq-huur-set>]
+  suggested_addons: [grillmaster-zuiver-traiteur, borrelplank]
+  scaling_rules:    [{ "min_guests": 40, "suggest": "grillmaster-zuiver-traiteur" }]
+
+borrel:
+  required_with:    []   (drank-tier verplicht via wizard-radio, niet via required_with)
+  suggested_addons: [borrelplank, taart-pp, bubbels-fles]
+
+diner-zeezicht / italian-shared-dining / sunset-dinner:
+  suggested_addons: [] (horeca op locatie)
+
+catering-3-gangen-diner / 3-gangen-diner / doeksen-buffet-*:
+  suggested_addons: [bediening-diner]
+  scaling_rules:    [{ "min_guests": 60, "suggest": "bediening-diner" }]
+
+luxe-lunch / ontbijt-op-locatie:
+  suggested_addons: [koffiebar-omzetgarantie]
+```
+
+---
 
 ---
 
