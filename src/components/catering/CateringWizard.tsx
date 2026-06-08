@@ -203,7 +203,62 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
         new_value: { items_count: items.length, kind: "catering_only" },
       });
 
-      toast({ title: "Aanvraag verzonden!", description: "We nemen binnen 2 werkdagen contact met u op." });
+      // Fetch reference number assigned by DB trigger
+      const { data: refRow } = await supabase
+        .from("program_requests")
+        .select("reference_number")
+        .eq("id", requestId)
+        .maybeSingle();
+
+      const { total, hasIndicative } = calculateTotal(sel, blocks);
+
+      const itemsPayload = ids.map((id) => {
+        const b = blocks.find((x) => x.id === id);
+        if (!b) return null;
+        const isMain = id === sel.mainBlockId;
+        const priceLabel = b.price_adult != null
+          ? `${new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(b.price_adult)}${b.price_type === "per_person" || b.price_type === "per_person_per_day" ? " p.p." : b.price_type === "total" ? " totaal" : ""}`
+          : (b.price_display_override || "Op aanvraag");
+        return {
+          name: b.name,
+          role: isMain ? "hoofd" : ((b as any).catering_role || null),
+          provider: b.provider?.name || "Bureau Vlieland",
+          priceIndication: priceLabel,
+        };
+      }).filter(Boolean);
+
+      // Fire-and-await emails; surface error but don't roll back the saved request
+      try {
+        const { error: mailErr } = await supabase.functions.invoke("send-catering-request", {
+          body: {
+            requestId,
+            referenceNumber: refRow?.reference_number || null,
+            customerToken: token,
+            cateringType: sel.type || "maatwerk",
+            date: isoDate,
+            startTime: sel.startTime || null,
+            locationText: sel.locationText,
+            hasHorecaOnSite: sel.hasHorecaOnSite,
+            guests: sel.guests,
+            contact: {
+              name: contact.name,
+              company: contact.company || "",
+              email: contact.email,
+              phone: contact.phone,
+              notes: contact.notes || "",
+              dietary: contact.dietary || "",
+            },
+            items: itemsPayload,
+            indicativeTotal: hasIndicative ? null : total,
+            origin: "catering_only",
+          },
+        });
+        if (mailErr) console.error("send-catering-request invoke error", mailErr);
+      } catch (mailEx) {
+        console.error("send-catering-request exception", mailEx);
+      }
+
+      toast({ title: "Aanvraag verzonden!", description: "U ontvangt direct een bevestiging per e-mail. We nemen binnen 2 werkdagen contact met u op." });
       navigate(`/?catering_submitted=1`);
     } catch (e: any) {
       console.error("Catering submit error", e);
