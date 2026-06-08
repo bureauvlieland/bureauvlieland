@@ -311,12 +311,13 @@ export function ExtraProjectSplitBlock({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Splits BTW"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        title="Voeg een extra BTW-regel toe voor hetzelfde onderdeel"
                         onClick={() => splitAlloc(idx)}
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        BTW-regel
                       </Button>
                       <Button
                         type="button"

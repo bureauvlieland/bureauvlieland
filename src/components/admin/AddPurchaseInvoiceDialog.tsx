@@ -730,36 +730,53 @@ export function AddPurchaseInvoiceDialog({
 
       // Optional: copy invoice lines into program_item_billing_lines (sales lines) for the linked item
       if (copyToBillingLines && created?.id) {
-        const targetItemId = validAllocations.length === 1
-          ? validAllocations[0].item_id
+        const uniqueAllocItems = Array.from(new Set(validAllocations.map((a) => a.item_id)));
+        const targetItemId = uniqueAllocItems.length === 1
+          ? uniqueAllocItems[0]
           : (validAllocations.length === 0 && itemId ? itemId : null);
         if (targetItemId) {
           try {
             // Wipe existing
             await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
-            const rowsToInsert = validLines.length > 0
-              ? validLines.map((l, idx) => ({
-                  item_id: targetItemId,
-                  description: l.description,
-                  quantity: l.quantity,
-                  unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
-                  vat_rate: l.vat_rate,
-                  vat_amount: l.vat_amount,
-                  amount_excl_vat: l.amount_excl_vat,
-                  amount_incl_vat: l.amount_incl_vat,
-                  sort_order: idx,
-                }))
-              : [{
-                  item_id: targetItemId,
-                  description: description || `Factuur ${invoiceNumber}`,
-                  quantity: 1,
-                  unit_price_excl_vat: headerExcl,
-                  vat_rate: headerVatRate,
-                  vat_amount: headerVat,
-                  amount_excl_vat: headerExcl,
-                  amount_incl_vat: headerIncl,
-                  sort_order: 0,
-                }];
+            let rowsToInsert: any[];
+            if (validAllocations.length > 1 && uniqueAllocItems.length === 1) {
+              // Meerdere BTW-regels op hetzelfde onderdeel → één billing-line per allocatie
+              rowsToInsert = validAllocations.map((a, idx) => ({
+                item_id: targetItemId,
+                description: a.notes || `${description || `Factuur ${invoiceNumber}`} (BTW ${a.vat_rate}%)`,
+                quantity: 1,
+                unit_price_excl_vat: a.amount_excl_vat,
+                vat_rate: a.vat_rate,
+                vat_amount: a.vat_amount,
+                amount_excl_vat: a.amount_excl_vat,
+                amount_incl_vat: a.amount_incl_vat,
+                sort_order: idx,
+              }));
+            } else if (validLines.length > 0) {
+              rowsToInsert = validLines.map((l, idx) => ({
+                item_id: targetItemId,
+                description: l.description,
+                quantity: l.quantity,
+                unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
+                vat_rate: l.vat_rate,
+                vat_amount: l.vat_amount,
+                amount_excl_vat: l.amount_excl_vat,
+                amount_incl_vat: l.amount_incl_vat,
+                sort_order: idx,
+              }));
+            } else {
+              rowsToInsert = [{
+                item_id: targetItemId,
+                description: description || `Factuur ${invoiceNumber}`,
+                quantity: 1,
+                unit_price_excl_vat: headerExcl,
+                vat_rate: headerVatRate,
+                vat_amount: headerVat,
+                amount_excl_vat: headerExcl,
+                amount_incl_vat: headerIncl,
+                sort_order: 0,
+              }];
+            }
             await supabase.from("program_item_billing_lines").insert(rowsToInsert);
             await supabase
               .from("program_request_items")
@@ -1092,8 +1109,16 @@ export function AddPurchaseInvoiceDialog({
                               €{incl.toFixed(2)}
                             </div>
                             <div className="col-span-2 flex justify-end gap-1">
-                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Splits BTW" onClick={() => splitAllocation(idx)}>
-                                <Plus className="h-4 w-4" />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-xs"
+                                title="Voeg een extra BTW-regel toe voor hetzelfde onderdeel"
+                                onClick={() => splitAllocation(idx)}
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                BTW-regel
                               </Button>
                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeAllocation(idx)}>
                                 <Trash2 className="h-4 w-4" />
@@ -1135,8 +1160,11 @@ export function AddPurchaseInvoiceDialog({
                   )}
                   {(() => {
                     const filledAllocs = allocations.filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0);
-                    const canCopy = (filledAllocs.length === 1) || (filledAllocs.length === 0 && !!itemId);
-                    const hasMulti = filledAllocs.length > 1;
+                    const uniqueItems = new Set(filledAllocs.map((a) => a.item_id));
+                    const canCopy =
+                      (filledAllocs.length >= 1 && uniqueItems.size === 1) ||
+                      (filledAllocs.length === 0 && !!itemId);
+                    const hasMultiItems = uniqueItems.size > 1;
                     if (canCopy) {
                       return (
                         <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
@@ -1148,16 +1176,16 @@ export function AddPurchaseInvoiceDialog({
                           <span>
                             <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
                             <span className="block text-muted-foreground">
-                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
+                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Bij meerdere BTW-regels op hetzelfde onderdeel worden ze allemaal overgenomen.
                             </span>
                           </span>
                         </label>
                       );
                     }
-                    if (hasMulti) {
+                    if (hasMultiItems) {
                       return (
                         <div className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md p-2">
-                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
+                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere programma-onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
                         </div>
                       );
                     }
