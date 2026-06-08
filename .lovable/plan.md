@@ -1,40 +1,56 @@
-## Probleem
+## Wat er nu mis gaat
 
-Bij verwerken van een verzamelfactuur over meerdere projecten in `AddPurchaseInvoiceDialog`:
+Vergelijking PDF ↔ screenshot:
 
-1. **Verdeling klopt-niet bij splits.** Validatie vergelijkt `validAllocations` (toewijzingen primair project) met `headerIncl − extrasInclSum` op €0.01 nauwkeurig. Omdat `extrasInclSum` per regel ongerond wordt opgeteld (`aExcl + aExcl*rate/100`) en `validAllocations` apart wordt afgerond, lopen centen-verschillen op (€0.24 in de screenshot). Resultaat: opslaan blijft onmogelijk zonder handmatig sleutelen.
+| Onderdeel PDF | Bedrag | Hoort bij |
+|---|---|---|
+| Nr 7214 (21-05) | €1.883,10 incl — 9% €1.480,50 excl + 21% €222,60 excl | Project 1 (Salure, dag 1) |
+| Nr 7141 (20-05) | €660,55 incl — **9% €546,15 excl + 21% €53,93 excl** | Project 2 (Artcadia, dag 2) |
+| Totaal | €2.543,65 incl / €2.303,18 excl | — |
 
-2. **"Overschrijven als factuurregels"-optie ontbreekt bij splits.** De checkbox `Direct overnemen als factuurregels` toont alleen wanneer er precies één allocatie is óf geen allocatie + één `itemId`. Bij split-scenario's met meerdere allocaties op het primaire project (en/of extra projecten) is hij nooit zichtbaar.
+In het scherm vul je voor **Extra project 1 (Artcadia)** in: hoofdbedrag €546,15 @9% (incl €595,30) + één onderdeel €53,93 @21% (incl €65,26). Daar zit het probleem:
 
-## Plan
+1. **Een "Extra project" ondersteunt maar één BTW-tarief op headerniveau.** De "Onderdelen"-rijen worden door de code geïnterpreteerd als een opsplitsing **van** dat headerbedrag (moeten samen oplopen tot €595,30), niet als losse extra BTW-tarieven binnen hetzelfde project. Vandaar de gele melding "Toegewezen €65,26 van €595,30 (verschil €530,05)" — die is in jouw geval onzinnig.
+2. **De groene melding onderaan is misleidend.** De check rekent puur in *excl. BTW*: hoofdproject €1.756,82 excl + extra €546,15 excl = €2.302,97 excl, gelijk aan factuur-excl → "Klopt". Maar de €53,93 (21%-deel van bonnetje 7141) wordt zo stilletjes bij het **hoofdproject** geteld in plaats van bij Artcadia. Daarom voelt het verkeerd.
+3. **Daarom kun je niet opslaan.** Bij submit wordt het hoofdproject-aandeel berekend als `factuur-incl − extras-incl = 2.543,40 − 595,30 = 1.948,10` incl. Maar je hoofdproject-allocaties tellen op tot €1.883,09 → verschil €65,01 → toast "Verdeling klopt niet". Dat €65,01 is exact het ontbrekende 21%-deel van Artcadia (€65,26 minus afrondingsruis op orderregels).
 
-### 1. Verdeling-validatie robuust maken (AddPurchaseInvoiceDialog.tsx, regels 602-648)
+## Wat ik ga aanpassen
 
-- **Rond extra-project totalen** op 2 decimalen (gebruik `calculateVatAmounts` uit `src/lib/vatCalculation.ts`) bij het opbouwen van `validExtras` en hun allocaties — zelfde regel als primaire kant.
-- **Verruim tolerantie** in `Math.abs(... ) > 0.01` naar `0.01 * max(1, aantalRegels)` zodat opgetelde 1-cent afrondingen niet blokkeren; cap op €0.05.
-- **Auto-rebalance** het kleine restverschil naar de laatste allocatie i.p.v. te weigeren (zoals al gebruikelijk in factuur-tools). Toon enkel een toast-waarschuwing als het verschil > tolerantie blijft.
-- Pas dezelfde aanpak toe op de extra-project interne allocatie-check (regel 638-648).
-- Foutmelding verfijnen zodat hij benoemt om welk project en bedrag het gaat én hoeveel er afwijkt.
+### 1. Extra project ondersteunt nu echt gemengde BTW
+`src/components/admin/purchase-invoices/ExtraProjectSplitBlock.tsx`:
+- Twee duidelijke modi binnen één blok:
+  - **Eén tarief**: blijf header-bedrag + BTW% invullen (huidige flow, voor simpele gevallen).
+  - **Gemengd / per onderdeel**: laat header-bedrag leeg en voeg meerdere onderdeel-regels toe (elk met eigen BTW). Het project-totaal wordt dan afgeleid uit de som van de onderdelen (`useDerived`-pad bestaat al in submit).
+- Toon onder het blok altijd een mini BTW-specificatie per tarief + totaal incl/excl, zodat je ziet "9% €546,15 excl · 21% €53,93 excl · totaal €660,56 incl".
+- De "Toegewezen … van …"-balans toon ik alleen als header-bedrag is ingevuld. Anders verdwijnt de verwarrende €530,05-melding.
+- Voor jouw factuur betekent dit: bij Artcadia laat je het header-bedrag leeg en voeg je **twee** onderdeel-regels toe op dag 2 (één @9% €546,15 + één @21% €53,93). Het blok berekent zelf €660,56 incl.
 
-### 2. Overschrijven-optie tonen bij splits
+### 2. Hoofdproject-balans rekent met aandeel, niet met factuurtotaal
+In `AddPurchaseInvoiceDialog.tsx` (rond regel 980–1120):
+- Bereken `primaryIncl = factuurIncl − somExtrasIncl` en `primaryExcl = factuurExcl − somExtrasExcl` ook in de **UI-vergelijking**, niet alleen in submit.
+- Toon "Toegewezen €X van €Y (hoofdproject-aandeel)" met Y = `primaryIncl` zodra er extras zijn. Dan zie je live of je hoofdproject-allocaties kloppen met het juiste deelbedrag.
+- Pas `matches` aan op dezelfde manier.
 
-Voorwaarde voor `copyToBillingLines`-checkbox uitbreiden:
-- Tonen zodra elk item dat een allocatie krijgt (zowel primair als per extra project) uniek is — d.w.z. zodra duidelijk is naar welk `item_id` de regels overgenomen kunnen worden.
-- Bij splits: per project één klikkbare regel "Vervang factuurregels op programma-onderdeel X" (alleen voor projecten met precies één item-allocatie). Voor projecten met meerdere allocaties: optie verbergen + tooltip "Niet beschikbaar — meerdere onderdelen geraakt".
-- Submit-flow uitbreiden zodat na elke `createInvoice.mutateAsync` (primair én extra) dezelfde `program_item_billing_lines` wipe-en-insert wordt uitgevoerd voor de gekozen items, met de bijbehorende lines.
+### 3. Balans-melding onderaan extras informatiever
+Vervang de excl-only "Klopt"-melding door een blok dat zowel **excl als incl** toont, plus een mini-BTW-specificatie:
+- Regel 1: "Hoofdproject: €1.756,82 excl / €1.948,10 incl"
+- Regel 2: "Extra project 1 (Artcadia): €600,08 excl / €660,56 incl (9% + 21%)"
+- Regel 3: "Som = factuurtotaal €2.303,18 excl / €2.543,65 incl ✓"
 
-### 3. Visuele verduidelijking
+Groen alleen als zowel excl- als incl-totalen kloppen.
 
-- Bovenaan splits-blok een live status: per project subtotaal incl. BTW + ✓/✗ icoon en kleur. Maakt direct zichtbaar waar de €0.24 zit voordat de gebruiker op opslaan klikt.
+### 4. Submit-validatie blijft, maar foutmeldingen worden helderder
+- Foutmelding bij verschil benoemt expliciet of het over hoofdproject-aandeel of extra project gaat, en in incl. BTW.
+- Kleine extra: als `useDerived` actief is op een extra project, geef `vat_rate = 0` door naar de backend met `vat_amount` correct gevuld (bestaat al, alleen testen dat het via de nieuwe UI ook zo binnenkomt).
 
-## Technische details
+## Geen wijzigingen aan
+- Database/RLS/edge functions.
+- Het Orderregels-blok en BTW-specificatie helemaal onderaan.
+- De `Direct overnemen als factuurregels`-checkbox en blauwe hint.
 
-- Bestand: `src/components/admin/AddPurchaseInvoiceDialog.tsx`
-- Helper: `calculateVatAmounts` uit `src/lib/vatCalculation.ts` overal toepassen bij split-berekeningen om dezelfde 2-decimalen rounding te garanderen.
-- Geen DB-wijzigingen.
-- Geen wijziging in `CollectiveInvoiceSheet` (apart pad voor Doeksen/Isla bagage).
-
-## Buiten scope
-
-- Wijzigingen aan inbox-matching/MatchedRegistrationBanner.
-- Verzamelfactuur-sheet (`CollectiveInvoiceSheet`) — dat pad heeft eigen splitlogica per regel en kent dit probleem niet.
+## Resultaat
+Na de wijziging kun je deze Isla Vlieland-factuur zo verwerken:
+- **Project Salure (hoofd)**: 2 allocaties op dag 1 — 1.480,50 @9% + 222,60 @21%.
+- **Extra project Artcadia**: header leeg laten, 2 onderdeel-allocaties op dag 2 — 546,15 @9% + 53,93 @21%.
+- Onderaan zie je groen "klopt" met excl én incl die exact aansluiten op €2.303,18 / €2.543,65.
+- Opslaan werkt; er worden 2 inkoopfacturen aangemaakt (één per project) met de juiste mixed-VAT bedragen.

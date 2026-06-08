@@ -79,9 +79,10 @@ export function ExtraProjectSplitBlock({
     (it) => !partnerId || !it.provider_id || it.provider_id === partnerId,
   );
 
-  const excl = parseFloat(split.amountExclVat) || 0;
-  const rate = parseFloat(split.vatRate) || 0;
-  const incl = excl * (1 + rate / 100);
+  const headerExclInput = parseFloat(split.amountExclVat);
+  const hasHeader = headerExclInput > 0;
+  const headerRate = parseFloat(split.vatRate) || 0;
+  const headerIncl = hasHeader ? headerExclInput * (1 + headerRate / 100) : 0;
 
   const updateAlloc = (idx: number, patch: Partial<ExtraAllocationRow>) => {
     onChange({
@@ -95,7 +96,7 @@ export function ExtraProjectSplitBlock({
     onChange({
       allocations: [
         ...split.allocations,
-        { item_id, amount_excl_vat: "", vat_rate: split.vatRate || "21", notes: "" },
+        { item_id, amount_excl_vat: "", vat_rate: hasHeader ? (split.vatRate || "21") : "21", notes: "" },
       ],
     });
   };
@@ -109,12 +110,31 @@ export function ExtraProjectSplitBlock({
     onChange({ allocations: copy });
   };
 
-  const allocSumIncl = split.allocations.reduce((s, a) => {
+  // Per-tarief breakdown van onderdelen
+  const allocsByRate = new Map<number, { excl: number; incl: number }>();
+  let allocSumExcl = 0;
+  let allocSumIncl = 0;
+  split.allocations.forEach((a) => {
     const e = parseFloat(a.amount_excl_vat) || 0;
+    if (e <= 0) return;
     const r = parseFloat(a.vat_rate) || 0;
-    return s + e * (1 + r / 100);
-  }, 0);
-  const allocMatches = split.allocations.length === 0 || Math.abs(allocSumIncl - incl) < 0.01;
+    const inc = e * (1 + r / 100);
+    const cur = allocsByRate.get(r) || { excl: 0, incl: 0 };
+    cur.excl += e;
+    cur.incl += inc;
+    allocsByRate.set(r, cur);
+    allocSumExcl += e;
+    allocSumIncl += inc;
+  });
+  const mixed = allocsByRate.size > 1;
+
+  // Modus: derived (geen header) → onderdelen zijn waarheid (mixed-VAT mogelijk)
+  // Modus: header → onderdelen moeten optellen tot header-incl
+  const useDerived = !hasHeader && split.allocations.length > 0;
+  const projectIncl = useDerived ? allocSumIncl : headerIncl;
+  const projectExcl = useDerived ? allocSumExcl : headerExclInput || 0;
+  const allocMatches = !hasHeader || split.allocations.length === 0 || Math.abs(allocSumIncl - headerIncl) < 0.01;
+  const fmt = (n: number) => `€${n.toFixed(2)}`;
 
   return (
     <div className="space-y-2 rounded-md border border-border p-3 bg-background">
