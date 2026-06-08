@@ -88,37 +88,29 @@ Tussen alle stappen rechts een **sticky samenvatting** (zoals huidige programma-
 
 ---
 
-## 6. Datamodel
+## 6. Datamodel — hergebruik `building_blocks`
 
-Nieuwe tabel **`catering_packages`** (aparte tabel, los van `building_blocks` zodat catering eigen velden en logica heeft):
+Op basis van de huidige database (zie sectie 9) blijkt dat er al een rijke set bouwstenen in `building_blocks` staat met `category = 'catering'` (deels `published`, deels `concept`/`active`). We maken **geen aparte `catering_packages`-tabel**, maar breiden `building_blocks` minimaal uit zodat de wizard-logica werkt:
 
 ```text
-catering_packages
-  id                  uuid
-  type                enum (lunch | borrel | bbq | diner | maatwerk | addon)
-  role                enum (hoofd | huur | personeel | meubilair | drank | servies)
-  name                text
-  short_description   text
-  long_description    text
-  image_url           text
-  unit                enum (per_person | per_group | per_hour | fixed)
-  base_price_incl_vat numeric  (vanaf-prijs incl. BTW)
-  vat_rate            numeric
-  min_guests          int
-  max_guests          int
-  required_with       jsonb    (lijst package-ids die auto-toegevoegd worden bij hoofdkeuze)
-  suggested_addons    jsonb    (lijst package-ids als suggestie)
-  scaling_rules       jsonb    (bv. [{ "min_guests": 40, "suggest": "extra_bediening" }])
-  is_published        boolean
-  sort_order          int
+building_blocks  (uitbreiding)
+  catering_type     text  (lunch | borrel | bbq | diner | ontbijt | drank | versnapering | addon)  NULL
+  catering_role     text  (hoofd | huur | personeel | meubilair | drank | servies | versnapering)  NULL
+  required_with     jsonb  (lijst block-ids die auto-toegevoegd worden bij hoofdkeuze)
+  suggested_addons  jsonb  (lijst block-ids als suggestie)
+  scaling_rules     jsonb  (bv. [{ "min_guests": 40, "suggest": "bediening-diner" }])
 ```
 
-**Aanvragen** worden opgeslagen via uitbreiding van `program_requests` met:
+Filtering in de wizard:
+- Stap 2 (hoofdarrangement): `category = 'catering'` AND `catering_role = 'hoofd'` AND `catering_type = <gekozen>` AND `status IN ('active','published')` (concept zichtbaar in admin-preview).
+- Stap 3 (add-ons): items met `catering_role IN ('huur','personeel','meubilair','drank','servies','versnapering')`, voorgesorteerd op `required_with`/`suggested_addons` van de gekozen hoofdkeuze + vrije catalogus eronder.
+
+**Aanvragen** opslag via uitbreiding van `program_requests`:
 - `request_type` krijgt nieuwe waarde `catering_only`
-- Reuse van `program_request_items` met `day_index = 0` voor alle catering-regels
+- Hergebruik `program_request_items` met `day_index = 0` voor alle catering-regels
 - Nieuwe optionele kolommen op `program_requests`: `catering_location_text`, `catering_start_time`, `has_horeca_on_site`
 
-**Voordeel**: alle bestaande admin-tooling (projecten-overzicht, communicatie-dossier, partneroffertes, facturatie) werkt direct mee.
+**Voordeel**: alle bestaande admin-tooling (projecten-overzicht, communicatie-dossier, partneroffertes, facturatie, partner-portal, ticket-/inkoopkoppeling) werkt direct mee, en bouwstenen blijven óók beschikbaar in de programma-configurator.
 
 ---
 
