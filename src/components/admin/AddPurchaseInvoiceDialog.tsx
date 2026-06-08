@@ -532,13 +532,55 @@ export function AddPurchaseInvoiceDialog({
           };
         });
 
-      // Header values: from lines if present, otherwise manual
+      // Header values priority:
+      //   a) Top split-blocks (primary BTW-splits + extras) — leidend wanneer ingevuld
+      //   b) Manueel ingevuld amountExcl + vatRate
+      //   c) Fallback: orderregels-totaal
       let headerExcl: number;
       let headerVatRate: number;
       let headerVat: number;
       let headerIncl: number;
 
-      if (validLines.length > 0 && lineTotals) {
+      const round2pre = (n: number) => Math.round(n * 100) / 100;
+
+      const primarySplitExclSum = allocations
+        .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
+        .reduce((s, a) => s + (parseFloat(a.amount_excl_vat) || 0), 0);
+      const primarySplitInclSum = allocations
+        .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
+        .reduce((s, a) => {
+          const c = calculateVatAmounts(parseFloat(a.amount_excl_vat) || 0, parseFloat(a.vat_rate) || 0);
+          return s + c.amountInclVat;
+        }, 0);
+
+      const extrasExclTop = extraProjects.reduce((sum, e) => {
+        if (!e.requestId) return sum;
+        const headerEx = parseFloat(e.amountExclVat);
+        if (headerEx > 0) return sum + headerEx;
+        return sum + e.allocations.reduce((s, a) => s + (parseFloat(a.amount_excl_vat) || 0), 0);
+      }, 0);
+      const extrasInclTop = extraProjects.reduce((sum, e) => {
+        if (!e.requestId) return sum;
+        const headerEx = parseFloat(e.amountExclVat);
+        if (headerEx > 0) {
+          const c = calculateVatAmounts(headerEx, parseFloat(e.vatRate) || 0);
+          return sum + c.amountInclVat;
+        }
+        return sum + e.allocations.reduce((s, a) => {
+          const c = calculateVatAmounts(parseFloat(a.amount_excl_vat) || 0, parseFloat(a.vat_rate) || 0);
+          return s + c.amountInclVat;
+        }, 0);
+      }, 0);
+
+      const topInputExcl = primarySplitExclSum + extrasExclTop;
+      const topInputIncl = primarySplitInclSum + extrasInclTop;
+
+      if (topInputExcl > 0) {
+        headerExcl = round2pre(topInputExcl);
+        headerIncl = round2pre(topInputIncl);
+        headerVat = round2pre(headerIncl - headerExcl);
+        headerVatRate = 0;
+      } else if (validLines.length > 0 && lineTotals) {
         headerExcl = lineTotals.totalExcl;
         headerVat = lineTotals.totalVat;
         headerIncl = lineTotals.totalIncl;
