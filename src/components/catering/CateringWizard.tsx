@@ -204,7 +204,7 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
       });
 
       toast({ title: "Aanvraag verzonden!", description: "We nemen binnen 2 werkdagen contact met u op." });
-      navigate(`/catering-aanvragen/bedankt?token=${token}`);
+      navigate(`/?catering_submitted=1`);
     } catch (e: any) {
       console.error("Catering submit error", e);
       toast({
