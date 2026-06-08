@@ -120,6 +120,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         id: program?.id ?? acc.id,
         reference: acc.reference_number,
         kind: program ? "combi" : "logies",
+        origin: (program as any)?.origin ?? null,
         customerName: acc.customer_name,
         customerCompany: acc.customer_company,
         numberOfPeople: acc.number_of_guests,
