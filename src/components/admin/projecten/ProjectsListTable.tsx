@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Activity, Hotel, FolderKanban, Circle } from "lucide-react";
+import { Activity, Hotel, FolderKanban, Circle, UtensilsCrossed } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -28,6 +28,7 @@ const KIND_META: Record<RowKind, { label: string; icon: React.ReactNode }> = {
   programma: { label: "Programma", icon: <Activity className="h-3 w-3" /> },
   logies: { label: "Logies", icon: <Hotel className="h-3 w-3" /> },
   combi: { label: "Combi", icon: <FolderKanban className="h-3 w-3" /> },
+  catering: { label: "Catering", icon: <UtensilsCrossed className="h-3 w-3" /> },
 };
 
 const BUCKET_ORDER: TimeBucket[] = ["overdue", "this_week", "this_month", "later", "no_date"];

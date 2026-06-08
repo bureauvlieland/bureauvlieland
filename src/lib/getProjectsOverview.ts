@@ -1,12 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getDerivedStatus, type DerivedStatus } from "@/lib/projectStatus";
 
-export type RowKind = "programma" | "logies" | "combi";
+export type RowKind = "programma" | "logies" | "combi" | "catering";
 
 export interface OverviewRow {
   id: string;                      // navigation id (program_id when present, else accommodation_id)
   reference: string | null;
   kind: RowKind;
+  origin: string | null;
   customerName: string;
   customerCompany: string | null;
   numberOfPeople: number;
@@ -54,7 +55,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       .select(`
         id, reference_number, customer_name, customer_company, number_of_people,
         selected_dates, status, terms_accepted_at, linked_accommodation_id,
-        quote_status, completion_status, created_at
+        quote_status, completion_status, created_at, origin
       `)
       .neq("status", "deleted"),
     supabase
@@ -119,6 +120,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         id: program?.id ?? acc.id,
         reference: acc.reference_number,
         kind: program ? "combi" : "logies",
+        origin: (program as any)?.origin ?? null,
         customerName: acc.customer_name,
         customerCompany: acc.customer_company,
         numberOfPeople: acc.number_of_guests,
@@ -181,7 +183,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
     rows.push({
       id: prog.id,
       reference: prog.reference_number,
-      kind: linkedAcc ? "combi" : "programma",
+      kind: (prog as any).origin === "catering_only" ? "catering" : (linkedAcc ? "combi" : "programma"),
+      origin: (prog as any).origin ?? null,
       customerName: prog.customer_name,
       customerCompany: prog.customer_company,
       numberOfPeople: prog.number_of_people,
@@ -221,6 +224,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       id: acc.id,
       reference: acc.reference_number,
       kind: "logies",
+      origin: null,
       customerName: acc.customer_name,
       customerCompany: acc.customer_company,
       numberOfPeople: acc.number_of_guests,

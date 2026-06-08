@@ -110,6 +110,7 @@ export default function AdminProjectsOverview() {
                         { id: "programma", label: "Programma" },
                         { id: "logies", label: "Logies" },
                         { id: "combi", label: "Combi" },
+                        { id: "catering", label: "Catering" },
                       ] as const).map(k => (
                         <button
                           key={k.id}
