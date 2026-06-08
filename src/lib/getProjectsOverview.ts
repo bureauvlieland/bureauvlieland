@@ -1,12 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getDerivedStatus, type DerivedStatus } from "@/lib/projectStatus";
 
-export type RowKind = "programma" | "logies" | "combi";
+export type RowKind = "programma" | "logies" | "combi" | "catering";
 
 export interface OverviewRow {
   id: string;                      // navigation id (program_id when present, else accommodation_id)
   reference: string | null;
   kind: RowKind;
+  origin: string | null;
   customerName: string;
   customerCompany: string | null;
   numberOfPeople: number;
