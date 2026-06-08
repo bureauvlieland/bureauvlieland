@@ -1306,19 +1306,28 @@ export function AddPurchaseInvoiceDialog({
                             : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
                         )}
                       >
+                        <div className="opacity-80 mb-1">
+                          Controle: zo wordt deze inkoopfactuur over projecten verdeeld.
+                        </div>
                         <div className="flex justify-between">
-                          <span>Hoofdproject-aandeel</span>
+                          <span>Hoofdproject (rest van factuurtotaal)</span>
                           <span className="tabular-nums">€{primaryShareExcl.toFixed(2)} excl · €{primaryShareIncl.toFixed(2)} incl</span>
                         </div>
-                        {extraRows.map((r, i) => (
-                          <div key={i} className="flex justify-between">
-                            <span>Extra project {i + 1}{r.mixed ? " (gemengd BTW)" : ""}</span>
-                            <span className="tabular-nums">€{r.excl.toFixed(2)} excl · €{r.incl.toFixed(2)} incl</span>
-                          </div>
-                        ))}
+                        {extraRows.map((r, i) => {
+                          const p = (projects as any || []).find((pp: any) => pp.id === extraProjects[i]?.requestId);
+                          const label = p
+                            ? `${p.reference_number || "Geen ref"} — ${p.customer_company || p.customer_name}`
+                            : `Extra project ${i + 1}`;
+                          return (
+                            <div key={i} className="flex justify-between">
+                              <span>Extra project {i + 1}: {label}{r.mixed ? " (gemengd BTW)" : ""}</span>
+                              <span className="tabular-nums">€{r.excl.toFixed(2)} excl · €{r.incl.toFixed(2)} incl</span>
+                            </div>
+                          );
+                        })}
                         <div className="flex justify-between border-t border-current/20 pt-0.5 font-medium">
-                          <span>{balanced ? "✓ Klopt — sluit aan op factuurtotaal" : primaryShareExcl < -0.01 || primaryShareIncl < -0.01 ? "⚠ Extras > factuurtotaal" : "⚠ Verschil"}</span>
-                          <span className="tabular-nums">€{headerExclNum.toFixed(2)} excl · €{headerInclNum.toFixed(2)} incl</span>
+                          <span>{balanced ? "✓ Klopt — sluit aan op factuurtotaal" : primaryShareExcl < -0.01 || primaryShareIncl < -0.01 ? "⚠ Extras > factuurtotaal" : "⚠ Verschil met factuurtotaal"}</span>
+                          <span className="tabular-nums">Factuurtotaal: €{headerExclNum.toFixed(2)} excl · €{headerInclNum.toFixed(2)} incl</span>
                         </div>
                       </div>
                     </>
