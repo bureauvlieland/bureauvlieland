@@ -211,16 +211,16 @@ export function ExtraProjectSplitBlock({
           <Input
             type="number"
             step="0.01"
-            placeholder="Excl. €"
+            placeholder="Excl. € (leeg = mixed)"
             value={split.amountExclVat}
             onChange={(e) => onChange({ amountExclVat: e.target.value })}
             className="h-9 text-right"
           />
         </div>
         <div className="col-span-2">
-          <Select value={split.vatRate} onValueChange={(v) => onChange({ vatRate: v })}>
+          <Select value={split.vatRate} onValueChange={(v) => onChange({ vatRate: v })} disabled={!hasHeader}>
             <SelectTrigger className="h-9">
-              <SelectValue />
+              <SelectValue placeholder="—" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="0">0%</SelectItem>
@@ -230,7 +230,31 @@ export function ExtraProjectSplitBlock({
           </Select>
         </div>
       </div>
-      <div className="text-xs text-right text-muted-foreground">Incl. BTW: €{incl.toFixed(2)}</div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          {useDerived
+            ? "Modus: afgeleid uit onderdelen (mixed BTW mogelijk)"
+            : hasHeader
+            ? "Modus: één tarief op projectniveau"
+            : "Vul header-bedrag in, óf laat leeg en voeg onderdelen toe per BTW-tarief"}
+        </span>
+        <span className="tabular-nums">
+          {projectIncl > 0 && (
+            <>Totaal: {fmt(projectExcl)} excl · {fmt(projectIncl)} incl{mixed ? " (gemengd)" : ""}</>
+          )}
+        </span>
+      </div>
+      {useDerived && allocsByRate.size > 0 && (
+        <div className="text-[11px] text-muted-foreground bg-muted/40 rounded p-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+          {[...allocsByRate.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([r, v]) => (
+              <span key={r} className="tabular-nums">
+                BTW {r}%: {fmt(v.excl)} excl · {fmt(v.incl)} incl
+              </span>
+            ))}
+        </div>
+      )}
 
       {split.requestId && (
         <div className="space-y-1.5 pt-1">
