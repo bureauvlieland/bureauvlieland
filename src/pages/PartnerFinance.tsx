@@ -802,7 +802,7 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                    className="border-destructive text-destructive hover:bg-destructive/10"
                     onClick={onUploadPdf}
                   >
                     <Upload className="h-4 w-4 mr-2" />
@@ -814,7 +814,11 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                     <FileText className="h-3 w-3" />
                     <span>{item.invoiced_number}</span>
                     {!item.invoiced_file_path && (
-                      <Badge variant="outline" className="text-xs border-amber-500 text-amber-700">
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-destructive text-destructive"
+                        title="Niet in behandeling — voeg PDF toe"
+                      >
                         PDF ontbreekt
                       </Badge>
                     )}
@@ -827,6 +831,7 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                   )}
                 </div>
               </div>
+
             )}
           </div>
         </div>
