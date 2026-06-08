@@ -380,7 +380,7 @@ const Catering = () => {
               </h2>
               <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
                 Stel in 5 minuten uw eigen programma samen inclusief catering. 
-                Kies uw onderdelen en ontvang binnen 5 werkdagen bevestiging.
+                Kies uw onderdelen en ontvang binnen 2 werkdagen een definitieve offerte. Aanvragen graag minimaal 7 dagen vóór uw datum.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
