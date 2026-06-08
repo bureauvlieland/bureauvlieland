@@ -383,7 +383,7 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
                 <Label htmlFor="location" className="mb-2 block">Locatie</Label>
                 <Input
                   id="location"
-                  placeholder="bijv. Strand paal 7, Posthuys, eigen accommodatie…"
+                  placeholder="bijv. eigen accommodatie, strandlocatie…"
                   value={sel.locationText}
                   onChange={(e) => setSel({ ...sel, locationText: e.target.value })}
                 />
