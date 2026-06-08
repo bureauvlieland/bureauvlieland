@@ -224,6 +224,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       id: acc.id,
       reference: acc.reference_number,
       kind: "logies",
+      origin: null,
       customerName: acc.customer_name,
       customerCompany: acc.customer_company,
       numberOfPeople: acc.number_of_guests,
