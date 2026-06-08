@@ -710,7 +710,7 @@ export function AddPurchaseInvoiceDialog({
 
       // Create one purchase invoice per extra project (shared invoice_number + file_path)
       for (const e of validExtras) {
-        await createInvoice.mutateAsync({
+        const createdExtra = await createInvoice.mutateAsync({
           request_id: e.requestId,
           item_id: null,
           partner_id: partnerId,
@@ -726,6 +726,37 @@ export function AddPurchaseInvoiceDialog({
           allocations: e.allocations.length > 0 ? e.allocations : undefined,
           allowDuplicate: true,
         });
+
+        // Optional: copy invoice allocations into program_item_billing_lines for the extra project
+        if (e.copyToBillingLines && createdExtra?.id && e.allocations.length > 0) {
+          const uniqueExtraItems = Array.from(new Set(e.allocations.map((a) => a.item_id)));
+          if (uniqueExtraItems.length === 1) {
+            const targetItemId = uniqueExtraItems[0];
+            try {
+              await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
+              const rowsToInsert = e.allocations.map((a, idx) => ({
+                item_id: targetItemId,
+                description: a.notes || `${description || `Factuur ${invoiceNumber}`} (BTW ${a.vat_rate}%)`,
+                quantity: 1,
+                unit_price_excl_vat: a.amount_excl_vat,
+                vat_rate: a.vat_rate,
+                vat_amount: a.vat_amount,
+                amount_excl_vat: a.amount_excl_vat,
+                amount_incl_vat: a.amount_incl_vat,
+                sort_order: idx,
+              }));
+              await supabase.from("program_item_billing_lines").insert(rowsToInsert);
+              await supabase
+                .from("program_request_items")
+                .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
+                .eq("id", targetItemId);
+              toast.success("Factuurregels overgenomen op programma-onderdeel (extra project)");
+            } catch (err) {
+              console.error("copyToBillingLines (extra) failed", err);
+              toast.error("Overnemen naar factuurregels (extra project) mislukt");
+            }
+          }
+        }
       }
 
 
