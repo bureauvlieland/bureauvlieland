@@ -875,6 +875,8 @@ export type Database = {
         Row: {
           block_type: Database["public"]["Enums"]["building_block_type"]
           category: Database["public"]["Enums"]["building_block_category"]
+          catering_role: string | null
+          catering_type: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -908,10 +910,13 @@ export type Database = {
             | Database["public"]["Enums"]["building_block_price_type"]
             | null
           provider_id: string | null
+          required_with: Json
+          scaling_rules: Json
           seasonal_notes: string | null
           short_description: string | null
           sort_order: number | null
           status: string
+          suggested_addons: Json
           tags: string[] | null
           updated_at: string | null
           vat_rate: number | null
@@ -919,6 +924,8 @@ export type Database = {
         Insert: {
           block_type?: Database["public"]["Enums"]["building_block_type"]
           category: Database["public"]["Enums"]["building_block_category"]
+          catering_role?: string | null
+          catering_type?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -952,10 +959,13 @@ export type Database = {
             | Database["public"]["Enums"]["building_block_price_type"]
             | null
           provider_id?: string | null
+          required_with?: Json
+          scaling_rules?: Json
           seasonal_notes?: string | null
           short_description?: string | null
           sort_order?: number | null
           status?: string
+          suggested_addons?: Json
           tags?: string[] | null
           updated_at?: string | null
           vat_rate?: number | null
@@ -963,6 +973,8 @@ export type Database = {
         Update: {
           block_type?: Database["public"]["Enums"]["building_block_type"]
           category?: Database["public"]["Enums"]["building_block_category"]
+          catering_role?: string | null
+          catering_type?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -996,10 +1008,13 @@ export type Database = {
             | Database["public"]["Enums"]["building_block_price_type"]
             | null
           provider_id?: string | null
+          required_with?: Json
+          scaling_rules?: Json
           seasonal_notes?: string | null
           short_description?: string | null
           sort_order?: number | null
           status?: string
+          suggested_addons?: Json
           tags?: string[] | null
           updated_at?: string | null
           vat_rate?: number | null
@@ -2878,6 +2893,8 @@ export type Database = {
           billing_vat_number: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          catering_location_text: string | null
+          catering_start_time: string | null
           completed_at: string | null
           completed_by: string | null
           completion_status: string | null
@@ -2893,6 +2910,7 @@ export type Database = {
           general_notes: string | null
           guest_details_updated_at: string | null
           guest_names: string | null
+          has_horeca_on_site: boolean | null
           id: string
           invoicing_mode: string
           last_published_at: string | null
@@ -2933,6 +2951,8 @@ export type Database = {
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          catering_location_text?: string | null
+          catering_start_time?: string | null
           completed_at?: string | null
           completed_by?: string | null
           completion_status?: string | null
@@ -2948,6 +2968,7 @@ export type Database = {
           general_notes?: string | null
           guest_details_updated_at?: string | null
           guest_names?: string | null
+          has_horeca_on_site?: boolean | null
           id?: string
           invoicing_mode?: string
           last_published_at?: string | null
@@ -2988,6 +3009,8 @@ export type Database = {
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          catering_location_text?: string | null
+          catering_start_time?: string | null
           completed_at?: string | null
           completed_by?: string | null
           completion_status?: string | null
@@ -3003,6 +3026,7 @@ export type Database = {
           general_notes?: string | null
           guest_details_updated_at?: string | null
           guest_names?: string | null
+          has_horeca_on_site?: boolean | null
           id?: string
           invoicing_mode?: string
           last_published_at?: string | null
