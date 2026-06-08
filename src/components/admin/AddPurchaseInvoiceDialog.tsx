@@ -1092,8 +1092,16 @@ export function AddPurchaseInvoiceDialog({
                               €{incl.toFixed(2)}
                             </div>
                             <div className="col-span-2 flex justify-end gap-1">
-                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" title="Splits BTW" onClick={() => splitAllocation(idx)}>
-                                <Plus className="h-4 w-4" />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-xs"
+                                title="Voeg een extra BTW-regel toe voor hetzelfde onderdeel"
+                                onClick={() => splitAllocation(idx)}
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                BTW-regel
                               </Button>
                               <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeAllocation(idx)}>
                                 <Trash2 className="h-4 w-4" />
