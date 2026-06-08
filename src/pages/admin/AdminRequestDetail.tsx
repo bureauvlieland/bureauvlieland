@@ -194,6 +194,10 @@ interface ProgramRequest {
   billing_company_name: string | null;
   // Aftersales
   aftersales_sent_at: string | null;
+  // Catering-only fields (origin = catering_only)
+  catering_location_text?: string | null;
+  catering_start_time?: string | null;
+  has_horeca_on_site?: boolean | null;
 }
 
 interface LinkedAccommodation {
