@@ -980,7 +980,21 @@ export function AddPurchaseInvoiceDialog({
 
             {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
             {requestId && items && items.length > 0 && (() => {
-              const totalIncl = parseFloat(amountIncl) || 0;
+              const invoiceIncl = parseFloat(amountIncl) || 0;
+              const invoiceExcl = parseFloat(amountExcl) || 0;
+              // Subtract extras (per-project shares) so primary-project allocaties tegen het juiste deelbedrag worden geijkt
+              const extrasInclSum = extraProjects.reduce((s, e) => {
+                const eh = parseFloat(e.amountExclVat);
+                const er = parseFloat(e.vatRate) || 0;
+                if (eh > 0) return s + eh * (1 + er / 100);
+                return s + e.allocations.reduce((ss, a) => {
+                  const ae = parseFloat(a.amount_excl_vat) || 0;
+                  const ar = parseFloat(a.vat_rate) || 0;
+                  return ss + ae * (1 + ar / 100);
+                }, 0);
+              }, 0);
+              const totalIncl = Math.max(0, invoiceIncl - extrasInclSum);
+              const hasExtras = extrasInclSum > 0.005;
               const allocTotalIncl = allocations.reduce((sum, a) => {
                 const excl = parseFloat(a.amount_excl_vat) || 0;
                 const rate = parseFloat(a.vat_rate) || 0;
@@ -1112,7 +1126,7 @@ export function AddPurchaseInvoiceDialog({
                       matches ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
                     )}>
                       <span>
-                        Toegewezen: <strong>€{allocTotalIncl.toFixed(2)}</strong> van €{totalIncl.toFixed(2)} (incl. BTW)
+                        Toegewezen: <strong>€{allocTotalIncl.toFixed(2)}</strong> van €{totalIncl.toFixed(2)} (incl. BTW){hasExtras ? " — hoofdproject-aandeel" : ""}
                       </span>
                       <span>
                         {matches ? "✓ Klopt" : `Verschil: €${diff.toFixed(2)}`}
@@ -1156,17 +1170,34 @@ export function AddPurchaseInvoiceDialog({
             {/* Extra projecten: splits factuur naar meerdere projecten */}
             {requestId && (() => {
               const headerExclNum = parseFloat(amountExcl) || 0;
-              const extrasExcl = extraProjects.reduce((s, e) => {
-                const headerVal = parseFloat(e.amountExclVat);
-                if (headerVal > 0) return s + headerVal;
-                const allocSum = e.allocations.reduce(
-                  (ss, a) => ss + (parseFloat(a.amount_excl_vat) || 0),
-                  0,
-                );
-                return s + allocSum;
-              }, 0);
+              const headerInclNum = parseFloat(amountIncl) || 0;
+              // Per project: excl + incl (header-modus óf afgeleid uit onderdelen)
+              const extraRows = extraProjects.map((e) => {
+                const eh = parseFloat(e.amountExclVat);
+                const er = parseFloat(e.vatRate) || 0;
+                if (eh > 0) {
+                  return { excl: eh, incl: eh * (1 + er / 100), mixed: false };
+                }
+                let excl = 0;
+                let incl = 0;
+                const rates = new Set<number>();
+                e.allocations.forEach((a) => {
+                  const ae = parseFloat(a.amount_excl_vat) || 0;
+                  if (ae <= 0) return;
+                  const ar = parseFloat(a.vat_rate) || 0;
+                  excl += ae;
+                  incl += ae * (1 + ar / 100);
+                  rates.add(ar);
+                });
+                return { excl, incl, mixed: rates.size > 1 };
+              });
+              const extrasExcl = extraRows.reduce((s, r) => s + r.excl, 0);
+              const extrasIncl = extraRows.reduce((s, r) => s + r.incl, 0);
               const primaryShareExcl = headerExclNum - extrasExcl;
-              const balanced = Math.abs(primaryShareExcl - 0) >= -0.01 && extrasExcl <= headerExclNum + 0.01;
+              const primaryShareIncl = headerInclNum - extrasIncl;
+              const balancedExcl = extrasExcl <= headerExclNum + 0.01 && primaryShareExcl >= -0.01;
+              const balancedIncl = extrasIncl <= headerInclNum + 0.01 && primaryShareIncl >= -0.01;
+              const balanced = balancedExcl && balancedIncl;
               const addExtra = () => {
                 setExtraProjects((prev) => [
                   ...prev,
@@ -1179,7 +1210,7 @@ export function AddPurchaseInvoiceDialog({
                     <div>
                       <Label className="text-sm">Extra projecten (splits factuur)</Label>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Heeft deze factuur posten voor meerdere projecten? Voeg er hier extra toe — er wordt dan per project een aparte inkoopfactuur aangemaakt.
+                        Heeft deze factuur posten voor meerdere projecten? Voeg er hier extra toe — er wordt dan per project een aparte inkoopfactuur aangemaakt. Voor mixed BTW: laat header-bedrag leeg en voeg onderdelen toe per tarief.
                       </p>
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={addExtra}>
@@ -1209,22 +1240,26 @@ export function AddPurchaseInvoiceDialog({
                       </div>
                       <div
                         className={cn(
-                          "flex items-center justify-between text-xs px-2 py-1.5 rounded-md",
+                          "text-xs px-2 py-1.5 rounded-md space-y-0.5",
                           balanced
                             ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300"
                             : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
                         )}
                       >
-                        <span>
-                          Hoofdproject: <strong>€{primaryShareExcl.toFixed(2)}</strong> excl. + extra projecten <strong>€{extrasExcl.toFixed(2)}</strong> = €{headerExclNum.toFixed(2)}
-                        </span>
-                        <span>
-                          {primaryShareExcl < -0.01
-                            ? `⚠ Extras > totaal`
-                            : balanced
-                            ? "✓ Klopt"
-                            : ""}
-                        </span>
+                        <div className="flex justify-between">
+                          <span>Hoofdproject-aandeel</span>
+                          <span className="tabular-nums">€{primaryShareExcl.toFixed(2)} excl · €{primaryShareIncl.toFixed(2)} incl</span>
+                        </div>
+                        {extraRows.map((r, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span>Extra project {i + 1}{r.mixed ? " (gemengd BTW)" : ""}</span>
+                            <span className="tabular-nums">€{r.excl.toFixed(2)} excl · €{r.incl.toFixed(2)} incl</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between border-t border-current/20 pt-0.5 font-medium">
+                          <span>{balanced ? "✓ Klopt — sluit aan op factuurtotaal" : primaryShareExcl < -0.01 || primaryShareIncl < -0.01 ? "⚠ Extras > factuurtotaal" : "⚠ Verschil"}</span>
+                          <span className="tabular-nums">€{headerExclNum.toFixed(2)} excl · €{headerInclNum.toFixed(2)} incl</span>
+                        </div>
                       </div>
                     </>
                   )}

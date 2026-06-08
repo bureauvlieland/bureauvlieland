@@ -79,9 +79,10 @@ export function ExtraProjectSplitBlock({
     (it) => !partnerId || !it.provider_id || it.provider_id === partnerId,
   );
 
-  const excl = parseFloat(split.amountExclVat) || 0;
-  const rate = parseFloat(split.vatRate) || 0;
-  const incl = excl * (1 + rate / 100);
+  const headerExclInput = parseFloat(split.amountExclVat);
+  const hasHeader = headerExclInput > 0;
+  const headerRate = parseFloat(split.vatRate) || 0;
+  const headerIncl = hasHeader ? headerExclInput * (1 + headerRate / 100) : 0;
 
   const updateAlloc = (idx: number, patch: Partial<ExtraAllocationRow>) => {
     onChange({
@@ -95,7 +96,7 @@ export function ExtraProjectSplitBlock({
     onChange({
       allocations: [
         ...split.allocations,
-        { item_id, amount_excl_vat: "", vat_rate: split.vatRate || "21", notes: "" },
+        { item_id, amount_excl_vat: "", vat_rate: hasHeader ? (split.vatRate || "21") : "21", notes: "" },
       ],
     });
   };
@@ -109,12 +110,31 @@ export function ExtraProjectSplitBlock({
     onChange({ allocations: copy });
   };
 
-  const allocSumIncl = split.allocations.reduce((s, a) => {
+  // Per-tarief breakdown van onderdelen
+  const allocsByRate = new Map<number, { excl: number; incl: number }>();
+  let allocSumExcl = 0;
+  let allocSumIncl = 0;
+  split.allocations.forEach((a) => {
     const e = parseFloat(a.amount_excl_vat) || 0;
+    if (e <= 0) return;
     const r = parseFloat(a.vat_rate) || 0;
-    return s + e * (1 + r / 100);
-  }, 0);
-  const allocMatches = split.allocations.length === 0 || Math.abs(allocSumIncl - incl) < 0.01;
+    const inc = e * (1 + r / 100);
+    const cur = allocsByRate.get(r) || { excl: 0, incl: 0 };
+    cur.excl += e;
+    cur.incl += inc;
+    allocsByRate.set(r, cur);
+    allocSumExcl += e;
+    allocSumIncl += inc;
+  });
+  const mixed = allocsByRate.size > 1;
+
+  // Modus: derived (geen header) → onderdelen zijn waarheid (mixed-VAT mogelijk)
+  // Modus: header → onderdelen moeten optellen tot header-incl
+  const useDerived = !hasHeader && split.allocations.length > 0;
+  const projectIncl = useDerived ? allocSumIncl : headerIncl;
+  const projectExcl = useDerived ? allocSumExcl : headerExclInput || 0;
+  const allocMatches = !hasHeader || split.allocations.length === 0 || Math.abs(allocSumIncl - headerIncl) < 0.01;
+  const fmt = (n: number) => `€${n.toFixed(2)}`;
 
   return (
     <div className="space-y-2 rounded-md border border-border p-3 bg-background">
@@ -191,16 +211,16 @@ export function ExtraProjectSplitBlock({
           <Input
             type="number"
             step="0.01"
-            placeholder="Excl. €"
+            placeholder="Excl. € (leeg = mixed)"
             value={split.amountExclVat}
             onChange={(e) => onChange({ amountExclVat: e.target.value })}
             className="h-9 text-right"
           />
         </div>
         <div className="col-span-2">
-          <Select value={split.vatRate} onValueChange={(v) => onChange({ vatRate: v })}>
+          <Select value={split.vatRate} onValueChange={(v) => onChange({ vatRate: v })} disabled={!hasHeader}>
             <SelectTrigger className="h-9">
-              <SelectValue />
+              <SelectValue placeholder="—" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="0">0%</SelectItem>
@@ -210,7 +230,31 @@ export function ExtraProjectSplitBlock({
           </Select>
         </div>
       </div>
-      <div className="text-xs text-right text-muted-foreground">Incl. BTW: €{incl.toFixed(2)}</div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          {useDerived
+            ? "Modus: afgeleid uit onderdelen (mixed BTW mogelijk)"
+            : hasHeader
+            ? "Modus: één tarief op projectniveau"
+            : "Vul header-bedrag in, óf laat leeg en voeg onderdelen toe per BTW-tarief"}
+        </span>
+        <span className="tabular-nums">
+          {projectIncl > 0 && (
+            <>Totaal: {fmt(projectExcl)} excl · {fmt(projectIncl)} incl{mixed ? " (gemengd)" : ""}</>
+          )}
+        </span>
+      </div>
+      {useDerived && allocsByRate.size > 0 && (
+        <div className="text-[11px] text-muted-foreground bg-muted/40 rounded p-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+          {[...allocsByRate.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([r, v]) => (
+              <span key={r} className="tabular-nums">
+                BTW {r}%: {fmt(v.excl)} excl · {fmt(v.incl)} incl
+              </span>
+            ))}
+        </div>
+      )}
 
       {split.requestId && (
         <div className="space-y-1.5 pt-1">
@@ -311,7 +355,7 @@ export function ExtraProjectSplitBlock({
             </Select>
           )}
 
-          {split.allocations.length > 0 && (
+          {hasHeader && split.allocations.length > 0 && (
             <div
               className={cn(
                 "text-xs px-2 py-1 rounded-md",
@@ -320,8 +364,8 @@ export function ExtraProjectSplitBlock({
                   : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
               )}
             >
-              Toegewezen: <strong>€{allocSumIncl.toFixed(2)}</strong> van €{incl.toFixed(2)}
-              {allocMatches ? " ✓" : ` (verschil €${(incl - allocSumIncl).toFixed(2)})`}
+              Toegewezen: <strong>{fmt(allocSumIncl)}</strong> van {fmt(headerIncl)}
+              {allocMatches ? " ✓" : ` (verschil ${fmt(headerIncl - allocSumIncl)})`}
             </div>
           )}
         </div>
