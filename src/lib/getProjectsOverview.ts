@@ -183,7 +183,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
     rows.push({
       id: prog.id,
       reference: prog.reference_number,
-      kind: linkedAcc ? "combi" : "programma",
+      kind: (prog as any).origin === "catering_only" ? "catering" : (linkedAcc ? "combi" : "programma"),
+      origin: (prog as any).origin ?? null,
       customerName: prog.customer_name,
       customerCompany: prog.customer_company,
       numberOfPeople: prog.number_of_people,
