@@ -730,36 +730,53 @@ export function AddPurchaseInvoiceDialog({
 
       // Optional: copy invoice lines into program_item_billing_lines (sales lines) for the linked item
       if (copyToBillingLines && created?.id) {
-        const targetItemId = validAllocations.length === 1
-          ? validAllocations[0].item_id
+        const uniqueAllocItems = Array.from(new Set(validAllocations.map((a) => a.item_id)));
+        const targetItemId = uniqueAllocItems.length === 1
+          ? uniqueAllocItems[0]
           : (validAllocations.length === 0 && itemId ? itemId : null);
         if (targetItemId) {
           try {
             // Wipe existing
             await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
-            const rowsToInsert = validLines.length > 0
-              ? validLines.map((l, idx) => ({
-                  item_id: targetItemId,
-                  description: l.description,
-                  quantity: l.quantity,
-                  unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
-                  vat_rate: l.vat_rate,
-                  vat_amount: l.vat_amount,
-                  amount_excl_vat: l.amount_excl_vat,
-                  amount_incl_vat: l.amount_incl_vat,
-                  sort_order: idx,
-                }))
-              : [{
-                  item_id: targetItemId,
-                  description: description || `Factuur ${invoiceNumber}`,
-                  quantity: 1,
-                  unit_price_excl_vat: headerExcl,
-                  vat_rate: headerVatRate,
-                  vat_amount: headerVat,
-                  amount_excl_vat: headerExcl,
-                  amount_incl_vat: headerIncl,
-                  sort_order: 0,
-                }];
+            let rowsToInsert: any[];
+            if (validAllocations.length > 1 && uniqueAllocItems.length === 1) {
+              // Meerdere BTW-regels op hetzelfde onderdeel → één billing-line per allocatie
+              rowsToInsert = validAllocations.map((a, idx) => ({
+                item_id: targetItemId,
+                description: a.notes || `${description || `Factuur ${invoiceNumber}`} (BTW ${a.vat_rate}%)`,
+                quantity: 1,
+                unit_price_excl_vat: a.amount_excl_vat,
+                vat_rate: a.vat_rate,
+                vat_amount: a.vat_amount,
+                amount_excl_vat: a.amount_excl_vat,
+                amount_incl_vat: a.amount_incl_vat,
+                sort_order: idx,
+              }));
+            } else if (validLines.length > 0) {
+              rowsToInsert = validLines.map((l, idx) => ({
+                item_id: targetItemId,
+                description: l.description,
+                quantity: l.quantity,
+                unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
+                vat_rate: l.vat_rate,
+                vat_amount: l.vat_amount,
+                amount_excl_vat: l.amount_excl_vat,
+                amount_incl_vat: l.amount_incl_vat,
+                sort_order: idx,
+              }));
+            } else {
+              rowsToInsert = [{
+                item_id: targetItemId,
+                description: description || `Factuur ${invoiceNumber}`,
+                quantity: 1,
+                unit_price_excl_vat: headerExcl,
+                vat_rate: headerVatRate,
+                vat_amount: headerVat,
+                amount_excl_vat: headerExcl,
+                amount_incl_vat: headerIncl,
+                sort_order: 0,
+              }];
+            }
             await supabase.from("program_item_billing_lines").insert(rowsToInsert);
             await supabase
               .from("program_request_items")
