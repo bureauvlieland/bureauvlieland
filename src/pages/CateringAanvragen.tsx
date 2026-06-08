@@ -14,7 +14,7 @@ const CateringAanvragen = () => {
         <title>Catering aanvragen op Vlieland – Bureau Vlieland</title>
         <meta
           name="description"
-          content="Vraag in 5 stappen catering aan voor uw groep op Vlieland: lunch, borrel, BBQ of diner. Indicatieve prijs direct in beeld, definitieve offerte binnen 5 werkdagen."
+          content="Vraag in 5 stappen catering aan voor uw groep op Vlieland: lunch, borrel, BBQ of diner. Indicatieve prijs direct in beeld, definitieve offerte binnen 2 werkdagen. Aanvragen graag minimaal 7 dagen vóór de gewenste datum."
         />
         <link rel="canonical" href="https://bureauvlieland.nl/catering-aanvragen" />
       </Helmet>
