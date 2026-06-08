@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { RegisterCollectivePartnerInvoiceDialog, type CollectiveInvoiceSubmitPayload } from "@/components/partner-portal/RegisterCollectivePartnerInvoiceDialog";
 import { UploadInvoicePdfPartnerDialog } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
+import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { toast } from "sonner";
 import { 
   AlertCircle, 
@@ -400,6 +401,19 @@ const PartnerFinanceContent = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Facturatie Overzicht</h1>
+
+      {/* Banner voor ontbrekende PDF's */}
+      {(() => {
+        const missing =
+          invoicedItems.filter((i) => !i.invoiced_file_path).length +
+          invoicedAccommodations.filter((q) => !q.invoiced_file_path).length;
+        return missing > 0 ? (
+          <div className="mb-6">
+            <MissingPdfBanner count={missing} showCta={false} />
+          </div>
+        ) : null;
+      })()}
+
 
       {/* Financial Summary Cards */}
       <div className="grid sm:grid-cols-3 gap-4 mb-8">
@@ -788,7 +802,7 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                    className="border-destructive text-destructive hover:bg-destructive/10"
                     onClick={onUploadPdf}
                   >
                     <Upload className="h-4 w-4 mr-2" />
@@ -800,7 +814,11 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                     <FileText className="h-3 w-3" />
                     <span>{item.invoiced_number}</span>
                     {!item.invoiced_file_path && (
-                      <Badge variant="outline" className="text-xs border-amber-500 text-amber-700">
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-destructive text-destructive"
+                        title="Niet in behandeling — voeg PDF toe"
+                      >
                         PDF ontbreekt
                       </Badge>
                     )}
@@ -813,6 +831,7 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                   )}
                 </div>
               </div>
+
             )}
           </div>
         </div>

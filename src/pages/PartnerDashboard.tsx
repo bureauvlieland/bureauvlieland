@@ -18,6 +18,7 @@ import {
   ARCHIVE_STATUSES,
   type PartnerRowKind,
 } from "@/lib/getPartnerProjectsOverview";
+import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 
 type TabKey = "projecten" | "werkbank";
 
@@ -174,6 +175,17 @@ const PartnerDashboardContent = () => {
           Vernieuwen
         </Button>
       </div>
+
+      <MissingPdfBanner
+        count={
+          (data.items?.filter((i) => i.invoiced_number && !i.invoiced_file_path).length ?? 0) +
+          ((data.accommodationQuotes ?? []).filter(
+            (q: any) => q.invoiced_number && !q.invoiced_file_path,
+          ).length)
+        }
+      />
+
+
 
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
         <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
