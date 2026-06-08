@@ -74,6 +74,13 @@ export interface BuildingBlock {
   tags: string[] | null;
   seasonal_notes: string | null;
   
+  // Catering metadata (catering wizard)
+  catering_type?: string | null;
+  catering_role?: string | null;
+  required_with?: string[] | null;
+  suggested_addons?: string[] | null;
+  scaling_rules?: Array<{ min_guests?: number; suggest?: string }> | null;
+
   // Audit
   created_by: string | null;
   created_at: string;

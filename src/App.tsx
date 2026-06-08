@@ -23,6 +23,7 @@ import Contact from "./pages/Contact";
 
 // Lazy-loaded public pages
 const Catering = lazy(() => import("./pages/Catering"));
+const CateringAanvragen = lazy(() => import("./pages/CateringAanvragen"));
 const Voorbeeldprogrammas = lazy(() => import("./pages/Voorbeeldprogrammas"));
 const VoorbeeldprogrammaOverzicht = lazy(() => import("./pages/VoorbeeldprogrammaOverzicht"));
 const VoorbeeldprogrammaDetail = lazy(() => import("./pages/VoorbeeldprogrammaDetail"));
@@ -137,6 +138,7 @@ const App = () => {
             <Route path="/voorbeeldprogrammas/:slug" element={<VoorbeeldprogrammaDetail />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/catering" element={<Catering />} />
+            <Route path="/catering-aanvragen" element={<CateringAanvragen />} />
             <Route path="/over-ons" element={<OverOns />} />
             <Route path="/evenementen" element={<Evenementen />} />
             <Route path="/contact" element={<Contact />} />
