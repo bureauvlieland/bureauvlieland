@@ -544,22 +544,22 @@ export function AddPurchaseInvoiceDialog({
       const round2pre = (n: number) => Math.round(n * 100) / 100;
 
       const primarySplitExclSum = allocations
-        .filter((a) => a.itemId && parseFloat(a.amountExclVat) > 0)
-        .reduce((s, a) => s + (parseFloat(a.amountExclVat) || 0), 0);
+        .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
+        .reduce((s, a) => s + (parseFloat(a.amount_excl_vat) || 0), 0);
       const primarySplitInclSum = allocations
-        .filter((a) => a.itemId && parseFloat(a.amountExclVat) > 0)
+        .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
         .reduce((s, a) => {
-          const c = calculateVatAmounts(parseFloat(a.amountExclVat) || 0, parseFloat(a.vatRate) || 0);
+          const c = calculateVatAmounts(parseFloat(a.amount_excl_vat) || 0, parseFloat(a.vat_rate) || 0);
           return s + c.amountInclVat;
         }, 0);
 
-      const extrasExclTop = extras.reduce((sum, e) => {
+      const extrasExclTop = extraProjects.reduce((sum, e) => {
         if (!e.requestId) return sum;
         const headerEx = parseFloat(e.amountExclVat);
         if (headerEx > 0) return sum + headerEx;
-        return sum + e.allocations.reduce((s, a) => s + (parseFloat(a.amountExclVat) || 0), 0);
+        return sum + e.allocations.reduce((s, a) => s + (parseFloat(a.amount_excl_vat) || 0), 0);
       }, 0);
-      const extrasInclTop = extras.reduce((sum, e) => {
+      const extrasInclTop = extraProjects.reduce((sum, e) => {
         if (!e.requestId) return sum;
         const headerEx = parseFloat(e.amountExclVat);
         if (headerEx > 0) {
@@ -567,7 +567,7 @@ export function AddPurchaseInvoiceDialog({
           return sum + c.amountInclVat;
         }
         return sum + e.allocations.reduce((s, a) => {
-          const c = calculateVatAmounts(parseFloat(a.amountExclVat) || 0, parseFloat(a.vatRate) || 0);
+          const c = calculateVatAmounts(parseFloat(a.amount_excl_vat) || 0, parseFloat(a.vat_rate) || 0);
           return s + c.amountInclVat;
         }, 0);
       }, 0);
