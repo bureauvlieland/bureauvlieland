@@ -402,6 +402,19 @@ const PartnerFinanceContent = () => {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Facturatie Overzicht</h1>
 
+      {/* Banner voor ontbrekende PDF's */}
+      {(() => {
+        const missing =
+          invoicedItems.filter((i) => !i.invoiced_file_path).length +
+          invoicedAccommodations.filter((q) => !q.invoiced_file_path).length;
+        return missing > 0 ? (
+          <div className="mb-6">
+            <MissingPdfBanner count={missing} showCta={false} />
+          </div>
+        ) : null;
+      })()}
+
+
       {/* Financial Summary Cards */}
       <div className="grid sm:grid-cols-3 gap-4 mb-8">
         <Card>
