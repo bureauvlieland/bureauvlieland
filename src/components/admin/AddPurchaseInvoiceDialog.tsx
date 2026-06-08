@@ -980,7 +980,21 @@ export function AddPurchaseInvoiceDialog({
 
             {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
             {requestId && items && items.length > 0 && (() => {
-              const totalIncl = parseFloat(amountIncl) || 0;
+              const invoiceIncl = parseFloat(amountIncl) || 0;
+              const invoiceExcl = parseFloat(amountExcl) || 0;
+              // Subtract extras (per-project shares) so primary-project allocaties tegen het juiste deelbedrag worden geijkt
+              const extrasInclSum = extraProjects.reduce((s, e) => {
+                const eh = parseFloat(e.amountExclVat);
+                const er = parseFloat(e.vatRate) || 0;
+                if (eh > 0) return s + eh * (1 + er / 100);
+                return s + e.allocations.reduce((ss, a) => {
+                  const ae = parseFloat(a.amount_excl_vat) || 0;
+                  const ar = parseFloat(a.vat_rate) || 0;
+                  return ss + ae * (1 + ar / 100);
+                }, 0);
+              }, 0);
+              const totalIncl = Math.max(0, invoiceIncl - extrasInclSum);
+              const hasExtras = extrasInclSum > 0.005;
               const allocTotalIncl = allocations.reduce((sum, a) => {
                 const excl = parseFloat(a.amount_excl_vat) || 0;
                 const rate = parseFloat(a.vat_rate) || 0;
