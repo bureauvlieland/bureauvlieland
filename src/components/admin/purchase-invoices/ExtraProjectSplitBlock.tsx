@@ -35,6 +35,7 @@ export interface ExtraProjectSplit {
   amountExclVat: string;
   vatRate: string;
   allocations: ExtraAllocationRow[];
+  copyToBillingLines?: boolean;
 }
 
 interface ProjectOption {
