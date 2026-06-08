@@ -630,6 +630,7 @@ export function AddPurchaseInvoiceDialog({
             vat_amount: eVat,
             amount_incl_vat: eIncl,
             allocations: eAllocs,
+            copyToBillingLines: !!e.copyToBillingLines,
           };
         });
 
@@ -709,7 +710,7 @@ export function AddPurchaseInvoiceDialog({
 
       // Create one purchase invoice per extra project (shared invoice_number + file_path)
       for (const e of validExtras) {
-        await createInvoice.mutateAsync({
+        const createdExtra = await createInvoice.mutateAsync({
           request_id: e.requestId,
           item_id: null,
           partner_id: partnerId,
@@ -725,6 +726,37 @@ export function AddPurchaseInvoiceDialog({
           allocations: e.allocations.length > 0 ? e.allocations : undefined,
           allowDuplicate: true,
         });
+
+        // Optional: copy invoice allocations into program_item_billing_lines for the extra project
+        if (e.copyToBillingLines && createdExtra?.id && e.allocations.length > 0) {
+          const uniqueExtraItems = Array.from(new Set(e.allocations.map((a) => a.item_id)));
+          if (uniqueExtraItems.length === 1) {
+            const targetItemId = uniqueExtraItems[0];
+            try {
+              await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
+              const rowsToInsert = e.allocations.map((a, idx) => ({
+                item_id: targetItemId,
+                description: a.notes || `${description || `Factuur ${invoiceNumber}`} (BTW ${a.vat_rate}%)`,
+                quantity: 1,
+                unit_price_excl_vat: a.amount_excl_vat,
+                vat_rate: a.vat_rate,
+                vat_amount: a.vat_amount,
+                amount_excl_vat: a.amount_excl_vat,
+                amount_incl_vat: a.amount_incl_vat,
+                sort_order: idx,
+              }));
+              await supabase.from("program_item_billing_lines").insert(rowsToInsert);
+              await supabase
+                .from("program_request_items")
+                .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
+                .eq("id", targetItemId);
+              toast.success("Factuurregels overgenomen op programma-onderdeel (extra project)");
+            } catch (err) {
+              console.error("copyToBillingLines (extra) failed", err);
+              toast.error("Overnemen naar factuurregels (extra project) mislukt");
+            }
+          }
+        }
       }
 
 
@@ -1274,19 +1306,28 @@ export function AddPurchaseInvoiceDialog({
                             : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
                         )}
                       >
+                        <div className="opacity-80 mb-1">
+                          Controle: zo wordt deze inkoopfactuur over projecten verdeeld.
+                        </div>
                         <div className="flex justify-between">
-                          <span>Hoofdproject-aandeel</span>
+                          <span>Hoofdproject (rest van factuurtotaal)</span>
                           <span className="tabular-nums">€{primaryShareExcl.toFixed(2)} excl · €{primaryShareIncl.toFixed(2)} incl</span>
                         </div>
-                        {extraRows.map((r, i) => (
-                          <div key={i} className="flex justify-between">
-                            <span>Extra project {i + 1}{r.mixed ? " (gemengd BTW)" : ""}</span>
-                            <span className="tabular-nums">€{r.excl.toFixed(2)} excl · €{r.incl.toFixed(2)} incl</span>
-                          </div>
-                        ))}
+                        {extraRows.map((r, i) => {
+                          const p = (projects as any || []).find((pp: any) => pp.id === extraProjects[i]?.requestId);
+                          const label = p
+                            ? `${p.reference_number || "Geen ref"} — ${p.customer_company || p.customer_name}`
+                            : `Extra project ${i + 1}`;
+                          return (
+                            <div key={i} className="flex justify-between">
+                              <span>Extra project {i + 1}: {label}{r.mixed ? " (gemengd BTW)" : ""}</span>
+                              <span className="tabular-nums">€{r.excl.toFixed(2)} excl · €{r.incl.toFixed(2)} incl</span>
+                            </div>
+                          );
+                        })}
                         <div className="flex justify-between border-t border-current/20 pt-0.5 font-medium">
-                          <span>{balanced ? "✓ Klopt — sluit aan op factuurtotaal" : primaryShareExcl < -0.01 || primaryShareIncl < -0.01 ? "⚠ Extras > factuurtotaal" : "⚠ Verschil"}</span>
-                          <span className="tabular-nums">€{headerExclNum.toFixed(2)} excl · €{headerInclNum.toFixed(2)} incl</span>
+                          <span>{balanced ? "✓ Klopt — sluit aan op factuurtotaal" : primaryShareExcl < -0.01 || primaryShareIncl < -0.01 ? "⚠ Extras > factuurtotaal" : "⚠ Verschil met factuurtotaal"}</span>
+                          <span className="tabular-nums">Factuurtotaal: €{headerExclNum.toFixed(2)} excl · €{headerInclNum.toFixed(2)} incl</span>
                         </div>
                       </div>
                     </>

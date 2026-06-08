@@ -21,6 +21,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export interface ExtraAllocationRow {
@@ -35,6 +36,7 @@ export interface ExtraProjectSplit {
   amountExclVat: string;
   vatRate: string;
   allocations: ExtraAllocationRow[];
+  copyToBillingLines?: boolean;
 }
 
 interface ProjectOption {
@@ -369,6 +371,38 @@ export function ExtraProjectSplitBlock({
               {allocMatches ? " ✓" : ` (verschil ${fmt(headerIncl - allocSumIncl)})`}
             </div>
           )}
+
+          {(() => {
+            const filled = split.allocations.filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0);
+            const uniqueItems = new Set(filled.map((a) => a.item_id));
+            const canCopy = filled.length >= 1 && uniqueItems.size === 1;
+            const hasMulti = uniqueItems.size > 1;
+            if (canCopy) {
+              return (
+                <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer mt-1">
+                  <Checkbox
+                    checked={!!split.copyToBillingLines}
+                    onCheckedChange={(c) => onChange({ copyToBillingLines: Boolean(c) })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel van dit project
+                    <span className="block text-muted-foreground">
+                      Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Bij meerdere BTW-regels op hetzelfde onderdeel worden ze allemaal overgenomen.
+                    </span>
+                  </span>
+                </label>
+              );
+            }
+            if (hasMulti) {
+              return (
+                <div className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md p-2 mt-1">
+                  <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere programma-onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
       )}
     </div>
