@@ -192,11 +192,15 @@ export default function AdminPurchaseInvoices() {
               Facturen van partners aan Bureau Vlieland
             </p>
           </div>
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Inkoopfactuur toevoegen
-          </Button>
+          <div className="flex items-center gap-2">
+            <MissingPdfReminderButton invoices={invoices ?? []} />
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Inkoopfactuur toevoegen
+            </Button>
+          </div>
         </div>
+
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
