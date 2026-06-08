@@ -88,37 +88,29 @@ Tussen alle stappen rechts een **sticky samenvatting** (zoals huidige programma-
 
 ---
 
-## 6. Datamodel
+## 6. Datamodel — hergebruik `building_blocks`
 
-Nieuwe tabel **`catering_packages`** (aparte tabel, los van `building_blocks` zodat catering eigen velden en logica heeft):
+Op basis van de huidige database (zie sectie 9) blijkt dat er al een rijke set bouwstenen in `building_blocks` staat met `category = 'catering'` (deels `published`, deels `concept`/`active`). We maken **geen aparte `catering_packages`-tabel**, maar breiden `building_blocks` minimaal uit zodat de wizard-logica werkt:
 
 ```text
-catering_packages
-  id                  uuid
-  type                enum (lunch | borrel | bbq | diner | maatwerk | addon)
-  role                enum (hoofd | huur | personeel | meubilair | drank | servies)
-  name                text
-  short_description   text
-  long_description    text
-  image_url           text
-  unit                enum (per_person | per_group | per_hour | fixed)
-  base_price_incl_vat numeric  (vanaf-prijs incl. BTW)
-  vat_rate            numeric
-  min_guests          int
-  max_guests          int
-  required_with       jsonb    (lijst package-ids die auto-toegevoegd worden bij hoofdkeuze)
-  suggested_addons    jsonb    (lijst package-ids als suggestie)
-  scaling_rules       jsonb    (bv. [{ "min_guests": 40, "suggest": "extra_bediening" }])
-  is_published        boolean
-  sort_order          int
+building_blocks  (uitbreiding)
+  catering_type     text  (lunch | borrel | bbq | diner | ontbijt | drank | versnapering | addon)  NULL
+  catering_role     text  (hoofd | huur | personeel | meubilair | drank | servies | versnapering)  NULL
+  required_with     jsonb  (lijst block-ids die auto-toegevoegd worden bij hoofdkeuze)
+  suggested_addons  jsonb  (lijst block-ids als suggestie)
+  scaling_rules     jsonb  (bv. [{ "min_guests": 40, "suggest": "bediening-diner" }])
 ```
 
-**Aanvragen** worden opgeslagen via uitbreiding van `program_requests` met:
+Filtering in de wizard:
+- Stap 2 (hoofdarrangement): `category = 'catering'` AND `catering_role = 'hoofd'` AND `catering_type = <gekozen>` AND `status IN ('active','published')` (concept zichtbaar in admin-preview).
+- Stap 3 (add-ons): items met `catering_role IN ('huur','personeel','meubilair','drank','servies','versnapering')`, voorgesorteerd op `required_with`/`suggested_addons` van de gekozen hoofdkeuze + vrije catalogus eronder.
+
+**Aanvragen** opslag via uitbreiding van `program_requests`:
 - `request_type` krijgt nieuwe waarde `catering_only`
-- Reuse van `program_request_items` met `day_index = 0` voor alle catering-regels
+- Hergebruik `program_request_items` met `day_index = 0` voor alle catering-regels
 - Nieuwe optionele kolommen op `program_requests`: `catering_location_text`, `catering_start_time`, `has_horeca_on_site`
 
-**Voordeel**: alle bestaande admin-tooling (projecten-overzicht, communicatie-dossier, partneroffertes, facturatie) werkt direct mee.
+**Voordeel**: alle bestaande admin-tooling (projecten-overzicht, communicatie-dossier, partneroffertes, facturatie, partner-portal, ticket-/inkoopkoppeling) werkt direct mee, en bouwstenen blijven óók beschikbaar in de programma-configurator.
 
 ---
 
@@ -161,44 +153,105 @@ Fase 5 — Admin
 
 ---
 
-## 9. Inhoudelijke voorstellen (om mee verder te puzzelen)
+## 9. Inhoudelijke invulling — bestaande bouwstenen als startset
 
-Concrete arrangementen die ik wil voorstellen als startset (definitieve namen + prijzen vul je in):
+Hieronder de **echte** items uit `building_blocks` (`category = 'catering'`), gegroepeerd per wizard-type. `[concept]` = nog niet gepubliceerd; `[pub]` = gepubliceerd; `[act]` = active. Alle prijzen p.p. tenzij anders vermeld, incl. BTW.
 
-**Lunch**
-- *Vlielandse lunch standaard* — broodjes, soep, fruit, koffie/thee
-- *Lunch luxe* — uitgebreid buffet met warme component
+### Lunch (`catering_type = 'lunch'`)
+**Hoofd-arrangementen**
+- `luxe-lunch` — Luxe Lunchbuffet — Zuiver — € 32,00 p.p. — 15–80 pax — [pub]
+- `lunch-strand` — Lunch op locatie — Zuiver — € 25,00 p.p. — [pub]
+- `ontbijt-op-locatie` — Ontbijt op locatie — Zuiver — € 28,00 p.p. — vanaf 8 pax — [pub] *(sub-type ontbijt)*
+- `lunch-aan-boord-bij-rederij-doeksen` — Lunch aan boord — Rederij Doeksen — € 14,95 p.p. — [pub]
+- `doeksen-plate-nasi-kopie` — Plateservice aan boord — Rederij Doeksen — vanaf € 14,95 p.p. — [pub]
+- `doeksen-lunchbuffet` — Lunchbuffet aan boord — € 22,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-lunchpakket` — Lunchpakket (to-go) aan boord — € 14,95 p.p. — vanaf 10 pax — [concept]
+- `doeksen-brunchbuffet` — Brunchbuffet aan boord — € 34,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-ontbijt` — Ontbijt aan boord — € 15,50 p.p. — vanaf 10 pax — [concept]
+- `doeksen-ontbijtbuffet` — Ontbijtbuffet aan boord — € 17,50 p.p. — vanaf 25 pax — [concept]
+- `doeksen-lunch-vuurduin` — Vuurduin lunch — € 14,95 p.p. — vanaf 10 pax — [concept]
+- `doeksen-lunch-wadloper` — Vega Wadloper lunch — € 14,95 p.p. — vanaf 10 pax — [concept]
+- `doeksen-lunch-strandjutter` — Strandjutter lunch — € 16,95 p.p. — vanaf 10 pax — [concept]
 
-**Borrel**
-- *Borrel basis* — hapjes + bier/wijn/fris
-- *Borrel uitgebreid* — warme + koude hapjes + premium drankpakket
-- *Walking dinner borrel* — 5 hapjesrondes als mini-diner
+### Borrel / Receptie (`catering_type = 'borrel'`)
+**Hoofd-arrangementen**
+- `borrel` — Borrel & Hapjes — Zuiver — vanaf € 45,00 p.p. — 15–150 pax, 2,5u — [pub]
+- `borrelplank` — Borrelplank — Bureau — € 7,75 p.p. — [act] *(als hapjes-add-on bij eigen borrel)*
+- `koffie-gebak-boot` — Koffie & Gebak aan boord — € 7,75 p.p. — [pub] *(versnapering)*
 
-**BBQ**
-- *Strand-BBQ klassiek* — vlees/vis/vega, salades, brood (verplicht: BBQ-huur)
-- *BBQ luxe* — uitgebreid + dessert
-- Add-ons: grillmaster, statafels, krukken, tent
+**Verplicht te kiezen drankpakket-tier** (nu nog individuele losse items — voorstel: 3 nieuwe `tier`-bouwstenen 'Drank basis/uitgebreid/premium' bouwen die intern verwijzen naar onderstaande als nacalculatie):
+- `drank-stelpost-avond` — Drank stelpost 18:00–23:00 — Bureau — € 8.000 totaal (nacalculatie) — [act]
+- `drankafkoop-avond` — Drankafkoop — Bureau — € 8.076,75 totaal — [act]
+- Losse drank: `bubbels-fles` € 23,50 · `wijn-wit-fles` € 16,75 · `bier-heineken` € 2,75 · `bier-fortuna-bries` € 4,25 · `frisdrank-groot` € 7,50 · `water-chaudfontaine` € 5,00 — [act]
+- `taart-pp` — Taart per persoon — € 4,00 — [act]
 
-**Diner**
-- *3-gangen Vlielands* — lokale producten
-- *Buffet* — koud/warm
-- *Walking dinner*
-- Add-ons (bij geen horeca): servies, bestek, glaswerk, bediening
+### BBQ (`catering_type = 'bbq'`)
+**Hoofd-arrangementen**
+- `strand-bbq` — Outdoor Cooking (strand) — Zuiver — € 35,00 p.p. — 20–100 pax, 3u — [pub]
+- `catering-burger-festival` — Build Your Own Burger Festival — Zuiver — € 12.507,75 totaal — [act]
 
-**Vergader / koffie**
-- *Koffie-arrangement* — koffie/thee + zoet
-- *Vergaderlunch* — broodjes + soep + water
+**Verplichte / suggested add-ons** (`required_with` / `suggested_addons`)
+- `grillmaster-zuiver-traiteur` — Grillmaster Zuiver — € 195,00 voor 3u — [pub] *(suggested)*
+- ⚠️ Een expliciet "BBQ-huur" bouwsteen ontbreekt nog in de database — **moet toegevoegd worden** (bv. `bbq-huur-set`) en aan `strand-bbq.required_with` gekoppeld.
+- Statafels / krukken / tent: ontbreken in `category='catering'` — wellicht onder `category='locaties'` of nieuw aanmaken.
+
+### Diner (`catering_type = 'diner'`)
+**Hoofd-arrangementen**
+- `diner-zeezicht` — Diner Restaurant Zeezicht — € 39,50 p.p. — [pub]
+- `italian-shared-dining` — Italiaanse shared dining @ Oliva — € 44,50 p.p. — vanaf 10 pax — [pub]
+- `regina-andrea-prive-terug` — Privévaart Regina Andrea incl. warm buffet — Op aanvraag — vanaf 30 pax — [pub] *(category=vervoer, eventueel cross-listen)*
+- `catering-3-gangen-diner` — Zuiver Traiteur 3-gangen diner — € 14.633,25 totaal — [pub]
+- `3-gangen-diner` — 3 gangen diner (stelpost) — € 40,00 p.p. — [act]
+- `sunset-dinner` — Sunset Dinner — Zuiver — € 65,00 p.p. — 20–50 pax, 2,5u — [concept]
+- `doeksen-buffet-doeksen` — Doeksen buffet — € 37,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-buffet-italiaans` — Italiaans buffet — € 29,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-buffet-sate` — Saté buffet — € 27,95 p.p. — vanaf 25 pax — [concept]
+- `doeksen-buffet-captains` — Captain's dinner buffet — € 24,95 p.p. — vanaf 25 pax — [concept]
+- Doekies plates (vanaf 10 pax, [concept]): `doeksen-plate-hamburger` € 14,95 · `doeksen-plate-nasi` € 16,95 · `doeksen-plate-pasta` € 16,95 · `doeksen-plate-spareribs` € 16,95 · `doeksen-plate-curry` € 16,95
+- Snacks: `doeksen-frites-groot` € 8,50 · `doeksen-frites-middel` € 7,50 — [concept]
+
+**Suggested add-ons bij diner op externe locatie / geen horeca**
+- `bediening-diner` — Bediening diner (stelpost) — € 2.420 totaal — [act, category=services]
+- (Servies/bestek/glaswerk-bouwstenen ontbreken nog — voorstel toevoegen of als tekstuele optie aanvinken.)
+
+### Overige / cross-cutting
+- `koffiebar-omzetgarantie` — Koffiebar omzetgarantie — € 907,50 totaal — [act] *(extra optie bij dagprogramma)*
+
+---
+
+## 9b. Eerste regels voor `required_with` / `suggested_addons`
+
+```text
+strand-bbq:
+  required_with:    [<nieuw: bbq-huur-set>]
+  suggested_addons: [grillmaster-zuiver-traiteur, borrelplank]
+  scaling_rules:    [{ "min_guests": 40, "suggest": "grillmaster-zuiver-traiteur" }]
+
+borrel:
+  required_with:    []   (drank-tier verplicht via wizard-radio, niet via required_with)
+  suggested_addons: [borrelplank, taart-pp, bubbels-fles]
+
+diner-zeezicht / italian-shared-dining / sunset-dinner:
+  suggested_addons: [] (horeca op locatie)
+
+catering-3-gangen-diner / 3-gangen-diner / doeksen-buffet-*:
+  suggested_addons: [bediening-diner]
+  scaling_rules:    [{ "min_guests": 60, "suggest": "bediening-diner" }]
+
+luxe-lunch / ontbijt-op-locatie:
+  suggested_addons: [koffiebar-omzetgarantie]
+```
 
 ---
 
 ## 10. Open punten om in vervolgsessie af te tikken
 
-- Definitieve prijzen vanaf-bedragen per arrangement (komen van Zuiver Traiteur)
-- Foto's: bestaande catering-assets hergebruiken of nieuwe shoot?
-- Tiers drankpakket: exact wat zit erin per niveau?
-- Drempels schaalregels: bij hoeveel gasten extra bediening / grotere BBQ?
-- Lead-time soft-warning: tekst exact uitschrijven
-- SEO: keywords voor /catering ("catering vlieland", "bbq strand vlieland", "bedrijfscatering vlieland"...)
+- **Ontbrekende bouwstenen toevoegen**: `bbq-huur-set` (verplicht bij BBQ), statafels/krukken/tent, servies/bestek/glaswerk-set, en 3 drank-tier-bouwstenen (basis / uitgebreid / premium) met vaste vanaf-prijs i.p.v. enkel nacalculatie.
+- **Concept-status doorlopen**: alle `[concept]` Doeksen-items met Doeksen afstemmen en op `active`/`published` zetten waar gewenst voor wizard-zichtbaarheid.
+- **Foto's per arrangement**: bestaande items hebben deels geen `image_url`/`image_asset`. Wizard wordt veel sterker met consistente beeldtaal — bestaande assets matchen of nieuwe shoot inplannen.
+- **Drempels schaalregels** definitief: bij hoeveel pax extra bediening, grotere BBQ-set, tweede grillmaster?
+- **Lead-time soft-warning**: exacte tekst en standaard (7 dagen? 14 voor BBQ/diner?).
+- **SEO**: keywords voor `/catering` ("catering vlieland", "bbq strand vlieland", "bedrijfscatering vlieland", "ontbijt op locatie vlieland"...).
 
 ---
 
