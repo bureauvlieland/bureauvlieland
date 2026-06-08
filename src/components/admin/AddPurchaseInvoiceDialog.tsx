@@ -1143,8 +1143,11 @@ export function AddPurchaseInvoiceDialog({
                   )}
                   {(() => {
                     const filledAllocs = allocations.filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0);
-                    const canCopy = (filledAllocs.length === 1) || (filledAllocs.length === 0 && !!itemId);
-                    const hasMulti = filledAllocs.length > 1;
+                    const uniqueItems = new Set(filledAllocs.map((a) => a.item_id));
+                    const canCopy =
+                      (filledAllocs.length >= 1 && uniqueItems.size === 1) ||
+                      (filledAllocs.length === 0 && !!itemId);
+                    const hasMultiItems = uniqueItems.size > 1;
                     if (canCopy) {
                       return (
                         <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
@@ -1156,16 +1159,16 @@ export function AddPurchaseInvoiceDialog({
                           <span>
                             <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
                             <span className="block text-muted-foreground">
-                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Aan te raden bij vaste inkoopposten waar inkoop = verkoop.
+                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Bij meerdere BTW-regels op hetzelfde onderdeel worden ze allemaal overgenomen.
                             </span>
                           </span>
                         </label>
                       );
                     }
-                    if (hasMulti) {
+                    if (hasMultiItems) {
                       return (
                         <div className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md p-2">
-                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
+                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere programma-onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
                         </div>
                       );
                     }
