@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { RegisterCollectivePartnerInvoiceDialog, type CollectiveInvoiceSubmitPayload } from "@/components/partner-portal/RegisterCollectivePartnerInvoiceDialog";
 import { UploadInvoicePdfPartnerDialog } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
+import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { toast } from "sonner";
 import { 
   AlertCircle, 
