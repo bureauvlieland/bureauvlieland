@@ -209,14 +209,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    emailMessage.TrackClicks = "disabled";
+    emailMessage.TrackOpens = "disabled";
+
     const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
       },
-      emailMessage.TrackClicks = "disabled";
-      emailMessage.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [emailMessage] }),
     });
 
@@ -229,6 +230,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Extract MessageID from Mailjet response for tracing
+    let mailjetMessageId: string | undefined;
+    try {
+      const mjJson = await mailjetResponse.json();
+      const msg = mjJson?.Messages?.[0];
+      const to = msg?.To?.[0];
+      if (to?.MessageID) mailjetMessageId = String(to.MessageID);
+      else if (to?.MessageUUID) mailjetMessageId = String(to.MessageUUID);
+    } catch (e) {
+      console.warn("Could not parse Mailjet response for MessageID:", e);
+    }
+
     // Log email (centralized helper — validates template_name + actor)
     await logEmail({
       email_type: "purchase_invoice_forward",
@@ -236,6 +249,7 @@ Deno.serve(async (req) => {
       recipient_name: "Boekhouding",
       subject: emailSubject,
       status: "sent",
+      mailjet_message_id: mailjetMessageId,
       sent_by: user.id,
       related_request_id: invoice.request_id,
       related_partner_id: invoice.partner_id,
