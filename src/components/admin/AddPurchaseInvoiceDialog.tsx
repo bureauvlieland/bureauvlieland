@@ -630,6 +630,7 @@ export function AddPurchaseInvoiceDialog({
             vat_amount: eVat,
             amount_incl_vat: eIncl,
             allocations: eAllocs,
+            copyToBillingLines: !!e.copyToBillingLines,
           };
         });
 
