@@ -1126,7 +1126,7 @@ export function AddPurchaseInvoiceDialog({
                       matches ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
                     )}>
                       <span>
-                        Toegewezen: <strong>€{allocTotalIncl.toFixed(2)}</strong> van €{totalIncl.toFixed(2)} (incl. BTW)
+                        Toegewezen: <strong>€{allocTotalIncl.toFixed(2)}</strong> van €{totalIncl.toFixed(2)} (incl. BTW){hasExtras ? " — hoofdproject-aandeel" : ""}
                       </span>
                       <span>
                         {matches ? "✓ Klopt" : `Verschil: €${diff.toFixed(2)}`}
