@@ -63,9 +63,50 @@ export const CheckoutContactForm = ({
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // Client-side dedup-hash op email + dates + cart. Voorkomt dat een dubbele
+  // klik (of refresh + opnieuw verzenden) zelfs maar de DB-check bereikt.
+  const buildSubmitHash = () => {
+    const dateKey = selectedDates.map((d) => d.toISOString().split("T")[0]).sort().join(",");
+    const cartKey = cartItems
+      .map((i) => `${i.blockId}@${i.dayIndex ?? 0}`)
+      .sort()
+      .join("|");
+    return `bv:submit:${formData.email.trim().toLowerCase()}:${dateKey}:${cartKey}`;
+  };
+
+  const checkClientDedup = (): { blocked: boolean; reason?: "in_flight" | "recent" } => {
+    try {
+      const key = buildSubmitHash();
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return { blocked: false };
+      const { ts, state } = JSON.parse(raw) as { ts: number; state: "in_flight" | "success" };
+      const ageMs = Date.now() - ts;
+      if (state === "in_flight" && ageMs < 60_000) return { blocked: true, reason: "in_flight" };
+      if (state === "success" && ageMs < 60 * 60_000) return { blocked: true, reason: "recent" };
+    } catch { /* sessionStorage unavailable: skip */ }
+    return { blocked: false };
+  };
+
+  const markSubmit = (state: "in_flight" | "success") => {
+    try {
+      sessionStorage.setItem(buildSubmitHash(), JSON.stringify({ ts: Date.now(), state }));
+    } catch { /* no-op */ }
+  };
+
   const checkForDuplicateAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return; // belt-and-braces against double submit
+
+    const dedup = checkClientDedup();
+    if (dedup.blocked) {
+      setSubmitError(
+        dedup.reason === "in_flight"
+          ? "Uw aanvraag wordt zojuist verstuurd. Een moment geduld — u krijgt binnen enkele seconden bevestiging."
+          : "Deze aanvraag is zojuist al verstuurd. Controleer uw inbox en spam-folder. Bel ons gerust op 0562 700 208 als u geen bevestiging heeft ontvangen."
+      );
+      return;
+    }
+
 
     const fiveMinutesAgo = subHours(new Date(), 0.0833).toISOString(); // 5 min
     const twentyFourHoursAgo = subHours(new Date(), 24).toISOString();
