@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "./MultiDatePicker";
-import { ArrowRight, Users, Calendar } from "lucide-react";
+import { ArrowRight, Users, Calendar, Eye } from "lucide-react";
+import { addDays } from "date-fns";
 
 export interface BasicsFormData {
   numberOfPeople: number;
