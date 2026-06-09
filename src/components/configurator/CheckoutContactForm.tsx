@@ -431,16 +431,21 @@ export const CheckoutContactForm = ({
       <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mogelijke dubbele aanvraag</AlertDialogTitle>
+            <AlertDialogTitle>U heeft al een aanvraag lopen</AlertDialogTitle>
             <AlertDialogDescription>
-              Er is in de afgelopen 24 uur al een aanvraag ingediend met dit e-mailadres.
-              Weet u zeker dat u een nieuwe aanvraag wilt versturen?
+              Met dit e-mailadres is in de afgelopen 24 uur al een aanvraag ingediend
+              {existingReference ? ` (referentie ${existingReference})` : ""}.
+              Wij nemen daar op werkdagen binnen 1 dag contact over op.
+              <br /><br />
+              <strong>Wilt u die aanvraag aanpassen?</strong> Reageer dan op uw bevestigingsmail
+              of bel ons op 0562 700 208. Alleen als dit een écht nieuwe aanvraag is voor een
+              andere groep of datum, klik dan op "Nieuwe aanvraag versturen".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction onClick={() => executeSubmit()}>
-              Toch versturen
+              Nieuwe aanvraag versturen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
