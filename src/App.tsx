@@ -54,6 +54,7 @@ const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
 const AccommodationQuotes = lazy(() => import("./pages/AccommodationQuotes"));
 const ActiviteitenBoeken = lazy(() => import("./pages/ActiviteitenBoeken"));
 const Sitemap = lazy(() => import("./pages/Sitemap"));
+const ConceptRecover = lazy(() => import("./pages/ConceptRecover"));
 
 // Lazy-loaded partner pages
 const PartnerPortal = lazy(() => import("./pages/PartnerPortal"));
