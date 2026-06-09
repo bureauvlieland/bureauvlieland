@@ -301,6 +301,7 @@ const SnelAanvragen = () => {
       </main>
 
       <Footer />
+      <ExitIntentDraftDialog />
     </div>
   );
 };
