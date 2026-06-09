@@ -1,63 +1,82 @@
-## Plan
 
-Ik pak dit in twee lagen aan: eerst de oorzaak structureel oplossen, daarna factuur 6 herstellen.
+# Mailtemplates fixen, tone opschonen, sales + AI-follow-ups
 
-### 1. Oorzaak vastleggen
-De huidige fout komt door drie dingen die samen misgaan:
+## Wat er nu mis gaat
 
-- De verwerking gebeurt nu in losse stappen vanuit de UI: eerst een inkoopfactuur opslaan, daarna extra projecten, daarna verkoopfactuurregels, daarna inbox op verwerkt zetten. Als stap 2/3/4 faalt, blijft er halve data achter.
-- Een gesplitste factuur wordt nu deels als meerdere inkoopfacturen behandeld, terwijl het boekhoudkundig één leveranciersfactuur is.
-- Kosten die alleen als inkoop-allocatie zijn opgeslagen verschijnen niet automatisch op verkoopfacturen; daarvoor moeten `program_item_billing_lines` worden aangemaakt en moet het programma-onderdeel op werkelijke kosten worden gezet.
+Uit het project (template `reminder_customer_request` + `render-email-template`):
+- Template gebruikt `{{days_ago}}` en `{{portal_link}}`, maar de renderer vult `days_since` en `portal_url` in → resultaat: lege variabelen ("staat al **leeg** dagen open") en kale link.
+- "Beste Dap Noord West Friesland" komt uit `customer_company`, niet uit de contactpersoon. Voor klantmails moet de aanhef op de contactpersoon staan.
+- Bij conversie naar plaintext in `render-email-template` worden `<a href="…">` linkteksten gestript zónder URL erachter te zetten → de knop "Ga naar uw programma →" heeft geen klikbare URL meer in de textarea.
+- Variabelen die wél in de template staan maar nergens worden aangevuld (bv. `quote_count`, `days_open`) blijven leeg.
 
-### 2. Nieuwe verwerking: één factuurheader, meerdere projectkoppelingen
-Ik verander de verwerking zodat één leveranciersfactuur ook echt één inkoopfactuur blijft.
+Daarnaast: tone of voice in een aantal klant-mails is droog/zakelijk ("er is actie nodig om uw boeking voort te zetten"), past niet bij de Bureau Vlieland-stem (lokale specialist, warm, persoonlijk).
 
-- Eén rij in `partner_purchase_invoices` voor het volledige factuurtotaal.
-- Project-/onderdeelverdeling via `partner_purchase_invoice_allocations`.
-- Gekoppelde projecten worden afgeleid uit de allocaties.
-- Doorsturen naar Snelstart gebruikt de volledige factuur-PDF en het volledige factuurbedrag.
-- In de Snelstart-mail komt een korte markering met de gekoppelde projectreferenties en bedragen.
+---
 
-### 3. Atomisch opslaan: geen halve verwerking meer
-Ik verplaats de definitieve registratie naar één databasefunctie die alles in één transactie doet:
+## Ronde 1 — Fixes + tone (deze sprint)
 
-- inkoopfactuur aanmaken of bijwerken;
-- allocaties opslaan;
-- optioneel verkoopfactuurregels per gekoppeld programma-onderdeel vervangen;
-- `use_actual_costs` inschakelen voor onderdelen waar de factuurregels leidend zijn;
-- inbox-item op verwerkt zetten;
-- bij fout: alles terugdraaien, zodat er geen halve factuur meer in de inbox/inkooplijst achterblijft.
+### A. Variabele-mismatch oplossen
+1. **Inventariseer alle `email_templates`-rijen** (er staan ~20+ in DB). Per template:
+   - lijst alle `{{var}}`-tokens uit `subject` + `body_html`,
+   - vergelijk met wat `render-email-template`, `send-program-request-reminder`, `send-quote-reminder` en `send-project-email` aanleveren.
+2. **Eén bron van waarheid** voor variabelen: bouw `supabase/functions/_shared/template-variables.ts` met een functie `buildTemplateVariables({ requestId, accommodationId, partnerId, recipientType })` die alles ophaalt en consistent levert (`customer_name`, `customer_contact_name`, `customer_company`, `reference_number`, `portal_url`, `days_since_request`, `days_since_quote`, `quote_count`, `event_date`, `partner_name`, etc.).
+3. Laat zowel `render-email-template` als de geautomatiseerde reminders (`send-program-request-reminder`, `send-quote-reminder`) deze functie gebruiken. Geen duplicate enrichment meer.
+4. Migratie die de bestaande templates **normaliseert** naar de canonieke variabelnamen (bv. `{{days_ago}}` → `{{days_since_request}}`, `{{portal_link}}` → `{{portal_url}}`).
 
-### 4. UI aanpassen voor gesplitste facturen
-In de invoer/verwerkingsdialoog pas ik de tekst en logica aan:
+### C. Aanhef-regel
+Centrale helper `getCustomerSalutation(request)` met fallback-ladder:
+1. `customer_contact_name` (bv. "Janneke de Vries") → "Beste Janneke,"
+2. Anders "Beste heer/mevrouw,"
+Bedrijfsnaam wordt nooit als aanhef gebruikt. Wordt op alle klant-templates toegepast. (Memory-rule `formal-communication-tone` blijft staan: 'u' voor klant.)
 
-- “Extra projecten” wordt “Gekoppelde projecten / projectverdeling”.
-- Er worden geen losse extra inkoopfacturen meer aangemaakt voor dezelfde PDF.
-- Bij meerdere projecten toont de inkoopfactuurlijst “Meerdere projecten” met de betrokken referenties.
-- Bij het kopiëren naar verkoopfactuurregels worden alle geselecteerde projectonderdelen verwerkt, niet alleen één hoofdproject.
+### D. Plaintext-conversie in composer
+In `render-email-template`: vervang `<a href="X">tekst</a>` door `tekst (X)` zodat de admin in de textarea de URL ziet en kan controleren. HTML-versie blijft visueel mooi via `wrapEmailHtml`.
 
-### 5. Doorsturen naar Snelstart geschikt maken voor meerdere projecten
-Ik pas de boekhouding-forwarding aan zodat die ook werkt als de factuur geen enkelvoudig `request_id` heeft.
+### E. Tone-of-voice review
+Klant-templates één voor één herschrijven, warmer en helderder. Voorbeeldlijn voor herinnering aanvraag:
+> "Beste Janneke, een vriendelijke herinnering — uw aanvraag voor Vlieland staat sinds {{days_since_request}} dagen bij ons open. Heeft u nog vragen of twijfels? Bel of mail gerust, dan denken we met u mee. Wilt u doorpakken? Via onderstaande knop opent u uw eigen pagina waar u uw programma kunt afronden."
+Templates in scope: `reminder_customer_request`, `reminder_customer_quote`, `customer_program_*`, `accommodation_quote_*` naar klant.
 
-- Geen harde afhankelijkheid meer van één project.
-- Projectinformatie wordt uit allocaties opgehaald.
-- De e-mail noemt bijvoorbeeld: `BV-2603-0003 Salure`, `BV-2602-0002 Artcadia / Katalys`.
+### F. QA
+- Per gewijzigde template: render via `render-email-template` met testdata (gebruik bestaande `EmailTemplatePreviewDialog`) en vergelijk subject + body + HTML.
+- Daadwerkelijke testmail (preview-mode reroute, conform memory) naar admin-adres.
 
-### 6. Factuur 6 herstellen
-Na de structurele fix corrigeer ik de bestaande data van factuur 6:
+---
 
-- De bestaande inkoopfactuur wordt opgehoogd naar het volledige factuurtotaal uit de scan: €2.543,65 incl. BTW.
-- De bestaande Salure-verdeling blijft gekoppeld aan BV-2603-0003.
-- Ik voeg de ontbrekende Artcadia/Katalys-verdeling toe aan BV-2602-0002.
-- Voor beide projectonderdelen maak ik verkoopfactuurregels aan op basis van de toegewezen kosten.
-- Beide onderdelen krijgen `werkelijke kosten leidend`.
-- Het inbox-item wordt gekoppeld aan de inkoopfactuur en op verwerkt gezet.
+## Ronde 2 — Sales-templates + AI-follow-ups (volgende sprint, hier alleen kort)
 
-### 7. Controle
-Ik controleer daarna concreet:
+Niet bouwen in deze ronde, maar wel benoemd zodat we weten wat eraan komt:
 
-- factuur 6 staat niet meer als nieuw in de inbox;
-- factuur 6 staat één keer als volledige inkoopfactuur in de lijst;
-- Salure én Artcadia/Katalys staan als gekoppelde projecten bij die factuur;
-- de verkoopfactuurvoorbereiding van beide projecten neemt de juiste regels mee;
-- Snelstart-forwarding blijft de volledige PDF/factuur doorsturen.
+1. **Nieuwe sales-templates** (4 stuks), inclusief reminder-cadens in `automated-reminder-system`:
+   - `sales_followup_offer_3d` — 3 dagen na verzonden offerte: warme check-in.
+   - `sales_followup_offer_7d` — 7 dagen: laatste herinnering + belaanbod.
+   - `sales_pre_signing` — na klant-akkoord op voorstel, vóór ondertekening voorwaarden.
+   - `sales_post_signing_welcome` — na ondertekening: bedankt + wat gebeurt er nu.
+
+2. **AI-follow-up-assistent (vervangt vaste sales-templates voor follow-ups)**
+   - Edge function `compose-followup-email` (Lovable AI, model `google/gemini-3-flash-preview`).
+   - Input: `requestId`, `recipientEmail`, optionele instructie. Verzamelt: project-status, verstuurde mails (uit `email_log` + `project_communications`), offerte-bedrag, dagen sinds laatste contact, partnerstatussen.
+   - Output: `{ subject, body }` in formele 'u'-stem, met BV-tone-of-voice, NL, max ±180 woorden, klant-portal-URL waar logisch.
+   - UI: nieuwe knop "AI-suggestie" in `SendProjectEmailSheet` naast de template-keuze; vult subject + body en blijft bewerkbaar. Geen template-onderhoud voor sales-follow-ups meer.
+   - Guardrail: AI mag geen bedragen, datums of partners verzinnen — system prompt instrueert om uitsluitend uit aangeleverde context te putten en bij ontbrekende data neutraal te formuleren.
+
+---
+
+## Technische details Ronde 1
+
+- **Bestanden te wijzigen:**
+  - `supabase/functions/_shared/template-variables.ts` (nieuw)
+  - `supabase/functions/_shared/email-templates.ts` (gebruik nieuwe helper)
+  - `supabase/functions/render-email-template/index.ts` (variabelen + plaintext anker-URL behoud)
+  - `supabase/functions/send-program-request-reminder/index.ts`, `send-quote-reminder/index.ts` (gebruik helper)
+  - Nieuwe SQL-migratie `…_normalize_email_template_vars.sql` voor variabelnaam-normalisatie + tone-rewrite van klant-templates.
+- **Geen breaking changes** in `email_templates`-schema; alleen rijen worden bijgewerkt.
+- **Tests:** uitbreiding van bestaande lib-tests met een snapshot per herschreven template (subject + plaintext body) om regressie te vangen.
+- **Deploy:** edge functions `render-email-template`, `send-program-request-reminder`, `send-quote-reminder` opnieuw deployen.
+
+## Acceptatie Ronde 1
+- Geen lege `{{...}}`-tokens of "al  dagen open"-zinnen meer in de composer of in verstuurde mail.
+- "Beste {contactpersoon}" — nooit meer bedrijfsnaam als aanhef.
+- Linkknoppen in plaintext-textarea tonen tekst + URL.
+- Bestaande automatische reminders sturen identieke inhoud als de composer-preview.
+- Tone-of-voice klant-templates gereviewd en herschreven (warm, persoonlijk, formele 'u').
