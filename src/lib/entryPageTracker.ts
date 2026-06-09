@@ -84,7 +84,7 @@ export const inferEventTypeFromPath = (path: string): string | null => {
  * (program_requests.attribution / accommodation_requests.attribution).
  * Returns null if no entry data is available.
  */
-export const buildAttribution = (): Record<string, unknown> | null => {
+export const buildAttribution = (): Record<string, string | null> | null => {
   const data = getEntryPage();
   if (!data) return null;
   return {
@@ -97,4 +97,5 @@ export const buildAttribution = (): Record<string, unknown> | null => {
     captured_at: new Date().toISOString(),
   };
 };
+
 
