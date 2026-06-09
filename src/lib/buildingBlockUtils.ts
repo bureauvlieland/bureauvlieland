@@ -38,14 +38,17 @@ const assetMap: Record<string, string> = {
  * Priority: image_url (storage) > image_asset (local) > placeholder
  */
 export const getBlockImage = (block: BuildingBlock): string => {
-  // 1. Try storage URL
-  if (block.image_url) return block.image_url;
-  
+  // 1. Try storage URL — but ignore stale Vite build-hash paths like "/assets/foo-XYZ.jpg"
+  //    (these are leftover from older deploys and no longer resolve).
+  if (block.image_url && !/^\/assets\/.+-[A-Za-z0-9_]{6,}\.[a-z]+$/i.test(block.image_url)) {
+    return block.image_url;
+  }
+
   // 2. Fallback to local asset
   if (block.image_asset && assetMap[block.image_asset]) {
     return assetMap[block.image_asset];
   }
-  
+
   // 3. Placeholder
   return "/placeholder.svg";
 };
