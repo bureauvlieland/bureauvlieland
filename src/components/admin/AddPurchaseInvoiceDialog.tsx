@@ -204,7 +204,9 @@ export function AddPurchaseInvoiceDialog({
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptDuplicate, setAcceptDuplicate] = useState(false);
-  const [copyToBillingLines, setCopyToBillingLines] = useState(false);
+  // Default ON: kosten van inkoopfactuur worden direct overgenomen als
+  // verkoopfactuurregels, zodat ze gegarandeerd op de klantfactuur landen.
+  const [copyToBillingLines, setCopyToBillingLines] = useState(true);
 
   // Duplicate check (same partner + invoice number)
   const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
