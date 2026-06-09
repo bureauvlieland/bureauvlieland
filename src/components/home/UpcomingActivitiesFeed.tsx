@@ -44,7 +44,7 @@ export const UpcomingActivitiesFeed = () => {
   if (!isLoading && upcoming.length === 0) return null;
 
   return (
-    <section className="py-20 md:py-28 bg-muted/30">
+    <section className="py-20 md:py-28 bg-muted border-y border-border">
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
           <div className="max-w-2xl">
