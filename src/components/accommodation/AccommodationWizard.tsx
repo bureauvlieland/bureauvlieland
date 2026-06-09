@@ -261,6 +261,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
           special_requests: formData.special_requests.trim() || null,
           wants_activities: formData.wants_activities || (cartHandoff && cartHandoff.cartItems.length > 0),
           status: "submitted",
+          attribution: buildAttribution(),
         })
         .select("id, customer_token")
         .single();
