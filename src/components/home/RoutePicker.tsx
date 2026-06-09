@@ -46,7 +46,16 @@ const routes: Route[] = [
     bestFor: "Maatwerk, advies vooraf",
     icon: MessageSquareHeart,
   },
+  {
+    title: "Logies aanvragen",
+    href: "/logies-aanvragen",
+    duration: "± 3 min",
+    description: "Overnachten op Vlieland — wij benaderen de juiste hotels en groepsaccommodaties.",
+    bestFor: "Alleen overnachting",
+    icon: BedDouble,
+  },
 ];
+
 
 export const RoutePicker = () => {
   return (
