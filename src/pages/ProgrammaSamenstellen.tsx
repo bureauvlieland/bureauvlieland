@@ -10,6 +10,7 @@ import { CheckoutStepIndicator, type ConfigPhase } from "@/components/configurat
 import { CheckoutContactForm } from "@/components/configurator/CheckoutContactForm";
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
+import { ExitIntentDraftDialog } from "@/components/configurator/ExitIntentDraftDialog";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
@@ -273,6 +274,8 @@ const ProgrammaSamenstellen = () => {
           savedAt={new Date(pendingDraft.savedAt)}
         />
       )}
+
+      <ExitIntentDraftDialog />
     </div>
   );
 };
