@@ -73,7 +73,7 @@ Logies-handoff (2)  ← grootste lek
 
 ### Track B — Funnel-friction (1–2 weken)
 - **B1.** ✅ BasicsForm: datum optioneel via "Ik weet de datum nog niet — laat me eerst rondkijken". Submit met placeholder-datum (+30d); gebruiker past later aan via edit-dialog.
-- **B2.** Homepage: één primaire CTA in plaats van twee parallelle. Tweede pad als subtiele tekstlink.
+- **B2.** ✅ Homepage hero: één primaire CTA "Stel uw programma samen". "Programma op maat" gedegradeerd naar subtiele tekstlink eronder ("Liever volledig op maat? Vraag aan").
 - **B3.** Snel-aanvragen vs. samensteller: hero-blok met 2 duidelijke routes en doorlooptijd ("3 min" vs "10 min").
 - **B4.** **Duplicate-submit guard** op `CheckoutContactForm`: disable knop + spinner tijdens submit, en client-side dedup-hash op `email + dates + cart` in `sessionStorage` (1u TTL). Voorkomt Jannie-scenario.
 
