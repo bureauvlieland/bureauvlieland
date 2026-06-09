@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Send, Users, X } from "lucide-react";
+import { Loader2, Send, Sparkles, Users, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -68,6 +68,9 @@ export function SendProjectEmailSheet({
 }: SendProjectEmailSheetProps) {
   const [isSending, setIsSending] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  const [isComposingAi, setIsComposingAi] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [showAiInstruction, setShowAiInstruction] = useState(false);
 
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [customEmail, setCustomEmail] = useState("");
@@ -118,7 +121,43 @@ export function SendProjectEmailSheet({
     setSubject(defaultSubject || "");
     setBody(defaultBody || "");
     setSelectedTemplate("");
+    setAiInstruction("");
+    setShowAiInstruction(false);
   }, [open, defaultSubject, defaultBody]);
+
+  const handleAiCompose = async () => {
+    if (!requestId && !accommodationId) {
+      toast.error("Geen project gekoppeld");
+      return;
+    }
+    const firstRecipient =
+      recipients.find((r) => selectedEmails.has(r.email.toLowerCase())) ||
+      recipients.find((r) => r.type === "customer") ||
+      recipients[0];
+
+    setIsComposingAi(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("compose-followup-email", {
+        body: {
+          requestId,
+          accommodationId,
+          recipientEmail: firstRecipient?.email,
+          recipientName: firstRecipient?.name,
+          instruction: aiInstruction.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.subject) setSubject(data.subject);
+      if (data?.body) setBody(data.body);
+      toast.success("AI-suggestie ingeladen — controleer voor verzending");
+    } catch (err: any) {
+      console.error("AI compose error", err);
+      toast.error(err?.message || "AI-suggestie mislukt");
+    } finally {
+      setIsComposingAi(false);
+    }
+  };
 
   const toggleRecipient = (email: string) => {
     setSelectedEmails((prev) => {
@@ -375,6 +414,55 @@ export function SendProjectEmailSheet({
               </p>
             </div>
           )}
+
+          {/* AI follow-up suggestion */}
+          {(requestId || accommodationId) && (
+            <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  AI-suggestie voor opvolging
+                </Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowAiInstruction((v) => !v)}
+                >
+                  {showAiInstruction ? "Verberg instructie" : "+ Extra instructie"}
+                </Button>
+              </div>
+              {showAiInstruction && (
+                <Textarea
+                  placeholder="Optioneel: stuur de AI bij, bijv. 'noem dat we morgen telefonisch contact opnemen'"
+                  value={aiInstruction}
+                  onChange={(e) => setAiInstruction(e.target.value)}
+                  className="min-h-[60px] text-sm"
+                />
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAiCompose}
+                disabled={isComposingAi}
+                className="w-full"
+              >
+                {isComposingAi ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                AI-suggestie genereren
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Op basis van projectstatus en reeds verstuurde mails. Onderwerp en bericht worden ingevuld; controleer altijd voor verzending.
+              </p>
+            </div>
+          )}
+
+
 
           {/* Subject */}
           <div className="space-y-2">
