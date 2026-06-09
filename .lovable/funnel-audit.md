@@ -43,11 +43,15 @@ Logies-handoff (2)  ← grootste lek
 1. **Bounce-spike laatste 7 dagen (86–90%)**
    Bot-verkeer (CN 291, Unknown 358) drukt het gemiddelde. Echte gebruikers waarschijnlijk minder slecht, maar moet bevestigd worden door bot-filter in GA4.
 
-2. **52% cancellations binnen 25 aanvragen**
-   Onbekend of dit testdata is of echte twijfelaars. Eerst classificeren voor we conclusies trekken.
+2. **52% cancellations binnen 25 aanvragen — geclassificeerd 9 jun**
+   - **3 echte tests** (Erwin "test", Smoke + Smoke Final op `@example.com`)
+   - **6× Jannie Bruggeman** (zelfde mail, 2 pers, in 4 dagen) — **duplicate-submit bug**: gebruiker drukt meermaals op verzenden. Eerste cancel had reden "Datum klopt niet", daarna 5 herhaalde submits. **Dit is het #1 funnel-lek.**
+   - **2× van der Velden Interieur** — dubbele aanvraag, één handmatig opgeschoond.
+   - **2× legitieme afhaak** (Houtmolen, Amy Jellema) — bureau-side no-response.
+   → Echte conversie is **22 - 3 tests - 5 duplicates = 14 unieke aanvragen** op 22 self-service. Beter dan gedacht, maar duplicate-bug moet weg.
 
 3. **Logies-handoff lekt vrijwel volledig (22 → 2)**
-   `LogiesSuggestionBanner` bestaat maar wordt mogelijk te laat / te subtiel getoond. CART_HANDOFF werkt technisch maar wordt niet gebruikt.
+   `LogiesSuggestionBanner` op 9 jun prominenter gemaakt (primary kleur, "één partij, één factuur" copy). Effect meten over 2 weken.
 
 4. **BasicsForm vraagt datum + aantal personen vóór inspiratie**
    Klassieke drop-off: bezoeker wil eerst zien wat er kan, niet eerst committen aan datum.
