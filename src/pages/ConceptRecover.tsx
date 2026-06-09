@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "react-helmet";
+
 
 const STORAGE_KEY = "bureauvlieland_program_draft";
 
@@ -19,14 +19,11 @@ const ConceptRecover = () => {
     }
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("get-program-draft", {
-          method: "GET",
-          // @ts-expect-error - functions.invoke supports query via path in some versions; fallback to fetch
-        });
-        let payload: any = data?.payload;
+        let payload: any = null;
 
-        // Fallback: direct fetch with query param if invoke didn't carry it through
-        if (!payload && !error) {
+
+
+        {
           const url = `https://blhspuifehausilnzwio.supabase.co/functions/v1/get-program-draft?token=${encodeURIComponent(token)}`;
           const r = await fetch(url, {
             headers: {
