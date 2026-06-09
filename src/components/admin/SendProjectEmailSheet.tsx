@@ -68,6 +68,9 @@ export function SendProjectEmailSheet({
 }: SendProjectEmailSheetProps) {
   const [isSending, setIsSending] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  const [isComposingAi, setIsComposingAi] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [showAiInstruction, setShowAiInstruction] = useState(false);
 
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [customEmail, setCustomEmail] = useState("");
