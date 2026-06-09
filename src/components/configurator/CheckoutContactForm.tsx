@@ -46,6 +46,7 @@ export const CheckoutContactForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
+  const [existingReference, setExistingReference] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -64,27 +65,46 @@ export const CheckoutContactForm = ({
 
   const checkForDuplicateAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // belt-and-braces against double submit
 
-    const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+    const fiveMinutesAgo = subHours(new Date(), 0.0833).toISOString(); // 5 min
     const twentyFourHoursAgo = subHours(new Date(), 24).toISOString();
 
     try {
-      const { data: existing } = await supabase
+      // Hard block: same email + non-cancelled aanvraag in laatste 5 min
+      const { data: recent } = await supabase
         .from("program_requests")
-        .select("id")
+        .select("id, reference_number, created_at")
         .eq("customer_email", formData.email)
-        .gte("created_at", twentyFourHoursAgo)
+        .neq("status", "cancelled")
+        .gte("created_at", fiveMinutesAgo)
+        .order("created_at", { ascending: false })
         .limit(1);
 
-      // Also check if dates overlap
-      const hasDuplicate = (existing || []).length > 0;
+      if (recent && recent.length > 0) {
+        setSubmitError(
+          `Uw aanvraag is zojuist al verstuurd (referentie ${recent[0].reference_number ?? "wordt aangemaakt"}). U ontvangt binnen enkele minuten een bevestiging per e-mail. Controleer uw inbox en spam-folder voordat u opnieuw verstuurt.`
+        );
+        return;
+      }
 
-      if (hasDuplicate) {
+      // Soft warning: zelfde email in laatste 24u (niet cancelled)
+      const { data: existing } = await supabase
+        .from("program_requests")
+        .select("id, reference_number")
+        .eq("customer_email", formData.email)
+        .neq("status", "cancelled")
+        .gte("created_at", twentyFourHoursAgo)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        setExistingReference(existing[0].reference_number ?? null);
         setDuplicateWarningOpen(true);
         return;
       }
     } catch {
-      // If the check fails, proceed anyway — don't block the user
+      // Bij een check-fail laten we de submit gewoon doorgaan
     }
 
     await executeSubmit();
@@ -411,16 +431,21 @@ export const CheckoutContactForm = ({
       <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mogelijke dubbele aanvraag</AlertDialogTitle>
+            <AlertDialogTitle>U heeft al een aanvraag lopen</AlertDialogTitle>
             <AlertDialogDescription>
-              Er is in de afgelopen 24 uur al een aanvraag ingediend met dit e-mailadres.
-              Weet u zeker dat u een nieuwe aanvraag wilt versturen?
+              Met dit e-mailadres is in de afgelopen 24 uur al een aanvraag ingediend
+              {existingReference ? ` (referentie ${existingReference})` : ""}.
+              Wij nemen daar op werkdagen binnen 1 dag contact over op.
+              <br /><br />
+              <strong>Wilt u die aanvraag aanpassen?</strong> Reageer dan op uw bevestigingsmail
+              of bel ons op 0562 700 208. Alleen als dit een écht nieuwe aanvraag is voor een
+              andere groep of datum, klik dan op "Nieuwe aanvraag versturen".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction onClick={() => executeSubmit()}>
-              Toch versturen
+              Nieuwe aanvraag versturen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
