@@ -155,6 +155,8 @@ export const CheckoutContactForm = ({
     setDuplicateWarningOpen(false);
     setSubmitError(null);
     setIsSubmitting(true);
+    markSubmit("in_flight");
+
 
     try {
       const token = generateCustomerToken();
