@@ -78,3 +78,23 @@ export const inferEventTypeFromPath = (path: string): string | null => {
   
   return null;
 };
+
+/**
+ * Build a normalized attribution object for persisting on a request row
+ * (program_requests.attribution / accommodation_requests.attribution).
+ * Returns null if no entry data is available.
+ */
+export const buildAttribution = (): Record<string, unknown> | null => {
+  const data = getEntryPage();
+  if (!data) return null;
+  return {
+    entry_path: data.path,
+    referrer: data.referrer,
+    utm_source: data.utm_source,
+    utm_medium: data.utm_medium,
+    utm_campaign: data.utm_campaign,
+    landed_at: data.timestamp,
+    captured_at: new Date().toISOString(),
+  };
+};
+
