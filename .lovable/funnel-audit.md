@@ -72,7 +72,7 @@ Logies-handoff (2)  ← grootste lek
 - **A3.** ✅ `LogiesSuggestionBanner` prominenter (primary kleur, sterkere copy + button).
 
 ### Track B — Funnel-friction (1–2 weken)
-- **B1.** BasicsForm: maak datum optioneel ("Ik weet de datum nog niet — laat me eerst kijken"). Variant zonder datum laadt configurator met placeholder-dagen.
+- **B1.** ✅ BasicsForm: datum optioneel via "Ik weet de datum nog niet — laat me eerst rondkijken". Submit met placeholder-datum (+30d); gebruiker past later aan via edit-dialog.
 - **B2.** Homepage: één primaire CTA in plaats van twee parallelle. Tweede pad als subtiele tekstlink.
 - **B3.** Snel-aanvragen vs. samensteller: hero-blok met 2 duidelijke routes en doorlooptijd ("3 min" vs "10 min").
 - **B4.** **Duplicate-submit guard** op `CheckoutContactForm`: disable knop + spinner tijdens submit, en client-side dedup-hash op `email + dates + cart` in `sessionStorage` (1u TTL). Voorkomt Jannie-scenario.

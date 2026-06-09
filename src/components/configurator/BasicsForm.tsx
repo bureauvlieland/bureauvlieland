@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "./MultiDatePicker";
-import { ArrowRight, Users, Calendar } from "lucide-react";
+import { ArrowRight, Users, Calendar, Eye } from "lucide-react";
+import { addDays } from "date-fns";
 
 export interface BasicsFormData {
   numberOfPeople: number;
@@ -33,11 +34,18 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
   };
 
   const isValid = selectedDates.length > 0 && numberOfPeople >= 1;
+  const canSkipDate = numberOfPeople >= 1 && selectedDates.length === 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
     onSubmit({ numberOfPeople, selectedDates });
+  };
+
+  const handleSkipDate = () => {
+    // Placeholder date: 30 days from now. User can adjust later via "Programma details bewerken".
+    const placeholder = addDays(new Date(), 30);
+    onSubmit({ numberOfPeople, selectedDates: [placeholder] });
   };
 
   return (
@@ -83,7 +91,7 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
           Datum(s)
         </Label>
         <p className="text-xs text-muted-foreground">
-          Selecteer één of meerdere aaneensluitende dagen.
+          Selecteer één of meerdere aaneensluitende dagen — of sla over en kijk eerst rond.
         </p>
         <MultiDatePicker
           selectedDates={selectedDates}
@@ -102,6 +110,18 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
         Stel uw programma samen
         <ArrowRight className="h-5 w-5" />
       </Button>
+
+      {/* Skip-date escape hatch */}
+      {canSkipDate && !templateName && (
+        <button
+          type="button"
+          onClick={handleSkipDate}
+          className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+        >
+          <Eye className="h-4 w-4" />
+          Ik weet de datum nog niet — laat me eerst rondkijken
+        </button>
+      )}
     </form>
   );
 };
