@@ -91,7 +91,7 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                 <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">Totaal:</span>
                   <span className="font-medium">
-                    €{stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                    €{stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
