@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, ArrowRight, Clock, Sparkles } from "lucide-react";
+import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, BedDouble, ArrowRight, Clock, Sparkles } from "lucide-react";
 
 
 interface Route {
