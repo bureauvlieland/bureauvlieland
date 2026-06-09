@@ -40,7 +40,7 @@ const routes: Route[] = [
   {
     title: "Programma op maat",
     href: "/programma-op-maat",
-    duration: "Wij bellen u",
+    duration: "Wij stellen samen",
     description: "U vertelt wat u zoekt, wij stellen het voor u samen.",
     bestFor: "Maatwerk, advies vooraf",
     icon: MessageSquareHeart,
