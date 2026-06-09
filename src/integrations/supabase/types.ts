@@ -2471,6 +2471,48 @@ export type Database = {
         }
         Relationships: []
       }
+      program_drafts: {
+        Row: {
+          created_at: string
+          email: string
+          email_send_count: number
+          expires_at: string
+          id: string
+          last_email_sent_at: string | null
+          payload: Json
+          recovered_at: string | null
+          source: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          email_send_count?: number
+          expires_at?: string
+          id?: string
+          last_email_sent_at?: string | null
+          payload: Json
+          recovered_at?: string | null
+          source?: string | null
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          email_send_count?: number
+          expires_at?: string
+          id?: string
+          last_email_sent_at?: string | null
+          payload?: Json
+          recovered_at?: string | null
+          source?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       program_item_billing_lines: {
         Row: {
           amount_excl_vat: number
