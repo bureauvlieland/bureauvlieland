@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, ArrowRight, Clock, Sparkles } from "lucide-react";
+import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, BedDouble, ArrowRight, Clock, Sparkles } from "lucide-react";
 
 
 interface Route {
@@ -46,7 +46,16 @@ const routes: Route[] = [
     bestFor: "Maatwerk, advies vooraf",
     icon: MessageSquareHeart,
   },
+  {
+    title: "Logies aanvragen",
+    href: "/logies-aanvragen",
+    duration: "± 3 min",
+    description: "Overnachten op Vlieland — wij benaderen de juiste hotels en groepsaccommodaties.",
+    bestFor: "Alleen overnachting",
+    icon: BedDouble,
+  },
 ];
+
 
 export const RoutePicker = () => {
   return (
@@ -57,8 +66,9 @@ export const RoutePicker = () => {
             Welke route past bij u?
           </p>
           <h2 className="font-display text-3xl lg:text-4xl font-light text-foreground leading-tight">
-            Vier manieren om bij ons aan te kloppen.
+            Vijf manieren om bij ons aan te kloppen.
           </h2>
+
           <p className="text-muted-foreground mt-3">
             Eén klein onderdeel, een compleet programma dat u zelf samenstelt, of volledig maatwerk — kies wat het beste past.
           </p>
@@ -76,7 +86,7 @@ export const RoutePicker = () => {
         </div>
 
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-4">
           {routes.map((route) => {
             const Icon = route.icon;
             return (
