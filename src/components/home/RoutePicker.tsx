@@ -24,7 +24,7 @@ const routes: Route[] = [
     title: "Catering aanvragen",
     href: "/catering-aanvragen",
     duration: "± 3 min",
-    description: "Lunch, borrel, BBQ of diner — wij vragen het bij onze koks aan.",
+    description: "Lunch, borrel, BBQ of diner — wij zijn dé cateraar op Vlieland.",
     bestFor: "Alleen eten & drinken",
     icon: UtensilsCrossed,
   },
