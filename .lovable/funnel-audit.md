@@ -75,7 +75,9 @@ Logies-handoff (2)  ← grootste lek
 - **B1.** ✅ BasicsForm: datum optioneel via "Ik weet de datum nog niet — laat me eerst rondkijken". Submit met placeholder-datum (+30d); gebruiker past later aan via edit-dialog.
 - **B2.** ✅ Homepage hero: één primaire CTA "Stel uw programma samen". "Programma op maat" gedegradeerd naar subtiele tekstlink eronder ("Liever volledig op maat? Vraag aan").
 - **B3.** ✅ Homepage: nieuwe `RoutePicker`-sectie direct onder hero met 3 duidelijke routes (Losse activiteit ±3 min · Programma samenstellen ±10 min · Op maat). "Meest gekozen" badge op samensteller. Helpt bezoekers zelf het juiste pad kiezen.
-- **B4.** **Duplicate-submit guard** op `CheckoutContactForm`: disable knop + spinner tijdens submit, en client-side dedup-hash op `email + dates + cart` in `sessionStorage` (1u TTL). Voorkomt Jannie-scenario.
+- **B4.** ✅ **Duplicate-submit guard** op `CheckoutContactForm`: knop disable + spinner tijdens submit (al aanwezig), aangevuld met client-side dedup-hash in `sessionStorage` op `email + dates + cart` (60s in-flight lock, 1u success-lock). Korte vriendelijke melding bij dubbele klik i.p.v. nieuwe DB-roundtrip. Server-side blijft als vangnet (5min hard / 24u soft).
+- **B5.** Logies-spoor expliciet maken in funnel: vijfde gelijkwaardige kaart in `RoutePicker` (✅ gedaan) + inline "Logies erbij?"-vraag in `CheckoutContactForm` *vóór* submit, zodat de 22→2 logies-handoff niet pas op de klantpagina aan bod komt.
+
 
 ### Track C — Structureel (langer)
 - **C1.** Logies als optionele wizard-stap in plaats van losse flow.
