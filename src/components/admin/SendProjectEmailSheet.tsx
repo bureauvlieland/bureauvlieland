@@ -415,6 +415,55 @@ export function SendProjectEmailSheet({
             </div>
           )}
 
+          {/* AI follow-up suggestion */}
+          {(requestId || accommodationId) && (
+            <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  AI-suggestie voor opvolging
+                </Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowAiInstruction((v) => !v)}
+                >
+                  {showAiInstruction ? "Verberg instructie" : "+ Extra instructie"}
+                </Button>
+              </div>
+              {showAiInstruction && (
+                <Textarea
+                  placeholder="Optioneel: stuur de AI bij, bijv. 'noem dat we morgen telefonisch contact opnemen'"
+                  value={aiInstruction}
+                  onChange={(e) => setAiInstruction(e.target.value)}
+                  className="min-h-[60px] text-sm"
+                />
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAiCompose}
+                disabled={isComposingAi}
+                className="w-full"
+              >
+                {isComposingAi ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                AI-suggestie genereren
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Op basis van projectstatus en reeds verstuurde mails. Onderwerp en bericht worden ingevuld; controleer altijd voor verzending.
+              </p>
+            </div>
+          )}
+
+
+
           {/* Subject */}
           <div className="space-y-2">
             <Label>Onderwerp</Label>
