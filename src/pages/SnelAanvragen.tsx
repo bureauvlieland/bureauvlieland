@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/contexts/CartContext";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
+import { ExitIntentDraftDialog } from "@/components/configurator/ExitIntentDraftDialog";
 import { CheckoutContactForm } from "@/components/configurator/CheckoutContactForm";
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { categoryLabels } from "@/types/buildingBlock";
@@ -300,6 +301,7 @@ const SnelAanvragen = () => {
       </main>
 
       <Footer />
+      <ExitIntentDraftDialog />
     </div>
   );
 };
