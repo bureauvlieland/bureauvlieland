@@ -69,20 +69,22 @@ export const LogiesSuggestionBanner = ({
   };
 
   return (
-    <div className="bg-accent/50 border border-accent rounded-lg p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
       <div className="flex items-start gap-3">
-        <Bed className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+        <div className="bg-primary/15 rounded-full p-2 shrink-0">
+          <Bed className="h-5 w-5 text-primary" />
+        </div>
         <div>
-          <p className="font-medium text-foreground text-sm">
-            Meerdaags verblijf geselecteerd
+          <p className="font-semibold text-foreground">
+            Wij regelen ook uw verblijf — één partij, één factuur
           </p>
-          <p className="text-sm text-muted-foreground">
-            Wilt u dat wij ook passende logies voor uw groep regelen?
+          <p className="text-sm text-muted-foreground mt-0.5">
+            U heeft meerdere dagen geselecteerd. Laat ons passende logies voor uw groep zoeken; uw programma nemen we automatisch mee.
           </p>
         </div>
       </div>
-      <Button variant="outline" size="sm" onClick={handleClick}>
-        Logies laten regelen
+      <Button variant="default" size="default" onClick={handleClick} className="shrink-0 whitespace-nowrap">
+        Logies erbij regelen
       </Button>
     </div>
   );
