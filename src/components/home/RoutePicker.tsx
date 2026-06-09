@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LayoutGrid, Zap, MessageSquareHeart, ArrowRight, Clock } from "lucide-react";
+import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, ArrowRight, Clock } from "lucide-react";
 
 interface Route {
   title: string;
@@ -13,12 +13,20 @@ interface Route {
 
 const routes: Route[] = [
   {
-    title: "Losse activiteit",
+    title: "Losse activiteit(en)",
     href: "/snel-aanvragen",
     duration: "± 3 min",
-    description: "U weet wat u wilt en heeft alleen één onderdeel nodig.",
-    bestFor: "Eén activiteit of catering",
+    description: "U weet wat u wilt en heeft één of een paar losse onderdelen nodig.",
+    bestFor: "Eén of meerdere activiteiten",
     icon: Zap,
+  },
+  {
+    title: "Catering aanvragen",
+    href: "/catering-aanvragen",
+    duration: "± 3 min",
+    description: "Lunch, borrel, BBQ of diner — wij vragen het bij onze koks aan.",
+    bestFor: "Alleen eten & drinken",
+    icon: UtensilsCrossed,
   },
   {
     title: "Stel uw programma samen",
@@ -48,14 +56,14 @@ export const RoutePicker = () => {
             Welke route past bij u?
           </p>
           <h2 className="font-display text-3xl lg:text-4xl font-light text-foreground leading-tight">
-            Drie manieren om bij ons aan te kloppen.
+            Vier manieren om bij ons aan te kloppen.
           </h2>
           <p className="text-muted-foreground mt-3">
             Eén klein onderdeel, een compleet programma dat u zelf samenstelt, of volledig maatwerk — kies wat het beste past.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
           {routes.map((route) => {
             const Icon = route.icon;
             return (
