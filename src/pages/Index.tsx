@@ -10,6 +10,7 @@ import { UpcomingActivitiesFeed } from "@/components/home/UpcomingActivitiesFeed
 import { ProgramTemplatesPreview } from "@/components/home/ProgramTemplatesPreview";
 import { ErwinManifesto } from "@/components/home/ErwinManifesto";
 import { FinalCTA } from "@/components/home/FinalCTA";
+import { RoutePicker } from "@/components/home/RoutePicker";
 
 const Index = () => {
   return (
