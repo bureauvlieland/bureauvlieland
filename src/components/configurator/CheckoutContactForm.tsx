@@ -288,7 +288,9 @@ export const CheckoutContactForm = ({
         description: "Check je inbox voor de bevestigingsmail.",
       });
 
+      markSubmit("success");
       onSuccess(token);
+
     } catch (error: any) {
       console.error("Error sending program request:", error);
       trackSubmitFailed({
