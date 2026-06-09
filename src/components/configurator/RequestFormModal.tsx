@@ -31,7 +31,7 @@ import { CheckCircle, Loader2, Building2, Info, AlertCircle, ExternalLink, Messa
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
-import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+import { getEntryPage, inferEventTypeFromPath, buildAttribution } from "@/lib/entryPageTracker";
 
 // Event type options for the dropdown
 const EVENT_TYPE_OPTIONS = [
@@ -153,6 +153,7 @@ export const RequestFormModal = ({
           origin: 'self_service',
           program_description: finalEventType,
           quote_status: 'concept',
+          attribution: buildAttribution(),
         });
 
       if (insertError) throw insertError;

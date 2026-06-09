@@ -169,6 +169,7 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
         catering_location_text: sel.locationText,
         catering_start_time: sel.startTime || null,
         has_horeca_on_site: sel.hasHorecaOnSite,
+        attribution: buildAttribution(),
       } as any);
       if (insErr) throw insErr;
 

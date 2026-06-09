@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
-import { getEntryPage } from "@/lib/entryPageTracker";
+import { getEntryPage, buildAttribution } from "@/lib/entryPageTracker";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -111,6 +111,7 @@ export const MaatwerkIntakeForm = ({
           origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: programDescription,
           invoicing_mode: "bureau_central",
+          attribution: buildAttribution(),
         });
 
       if (insertError) throw insertError;
