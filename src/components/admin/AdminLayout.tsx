@@ -140,6 +140,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       label: "Financiën",
       items: [
         { title: "Financieel", url: "/admin/financieel", icon: BarChart3 },
+        { title: "Attributie", url: "/admin/attributie", icon: BarChart3 },
         { title: "Facturatie", url: "/admin/facturatie", icon: Euro, badge: invoicingCount },
         { title: "Inkoopfacturen", url: "/admin/inkoopfacturen", icon: Receipt },
         { title: "Inkoop-inbox", url: "/admin/inkoopfacturen/inbox", icon: Inbox, badge: inboxCount },
@@ -422,6 +423,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/werkbank/, title: "Werkbank" },
   { match: /^\/admin\/tickets/, title: "Tickets" },
+  { match: /^\/admin\/attributie/, title: "Attributie & Concepten" },
   { match: /^\/admin\/projecten\/[^/]+\/offerte-preview/, title: "Offerte preview" },
   { match: /^\/admin\/(aanvragen|projecten)\/[^/]+\/factuur/, title: "Factuur maken" },
   { match: /^\/admin\/(aanvragen|projecten)\/[^/]+/, title: "Projectdetail" },
