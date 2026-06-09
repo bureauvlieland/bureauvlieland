@@ -121,7 +121,43 @@ export function SendProjectEmailSheet({
     setSubject(defaultSubject || "");
     setBody(defaultBody || "");
     setSelectedTemplate("");
+    setAiInstruction("");
+    setShowAiInstruction(false);
   }, [open, defaultSubject, defaultBody]);
+
+  const handleAiCompose = async () => {
+    if (!requestId && !accommodationId) {
+      toast.error("Geen project gekoppeld");
+      return;
+    }
+    const firstRecipient =
+      recipients.find((r) => selectedEmails.has(r.email.toLowerCase())) ||
+      recipients.find((r) => r.type === "customer") ||
+      recipients[0];
+
+    setIsComposingAi(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("compose-followup-email", {
+        body: {
+          requestId,
+          accommodationId,
+          recipientEmail: firstRecipient?.email,
+          recipientName: firstRecipient?.name,
+          instruction: aiInstruction.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.subject) setSubject(data.subject);
+      if (data?.body) setBody(data.body);
+      toast.success("AI-suggestie ingeladen — controleer voor verzending");
+    } catch (err: any) {
+      console.error("AI compose error", err);
+      toast.error(err?.message || "AI-suggestie mislukt");
+    } finally {
+      setIsComposingAi(false);
+    }
+  };
 
   const toggleRecipient = (email: string) => {
     setSelectedEmails((prev) => {
