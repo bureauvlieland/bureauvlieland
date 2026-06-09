@@ -1305,7 +1305,7 @@ export function AddPurchaseInvoiceDialog({
               const addExtra = () => {
                 setExtraProjects((prev) => [
                   ...prev,
-                  { requestId: "", amountExclVat: "", vatRate: vatRate || "21", allocations: [] },
+                  { requestId: "", amountExclVat: "", vatRate: vatRate || "21", allocations: [], copyToBillingLines: true },
                 ]);
               };
               return (
