@@ -194,6 +194,7 @@ const App = () => {
                 <ParticipantProgram />
               </FeatureGate>
             } />
+            <Route path="/concept/:token" element={<ConceptRecover />} />
             <Route path="/mijn-logies/:token" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <AccommodationQuotes />
