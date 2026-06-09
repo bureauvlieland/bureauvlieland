@@ -91,7 +91,7 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
           Datum(s)
         </Label>
         <p className="text-xs text-muted-foreground">
-          Selecteer één of meerdere aaneensluitende dagen.
+          Selecteer één of meerdere aaneensluitende dagen — of sla over en kijk eerst rond.
         </p>
         <MultiDatePicker
           selectedDates={selectedDates}
@@ -110,6 +110,18 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
         Stel uw programma samen
         <ArrowRight className="h-5 w-5" />
       </Button>
+
+      {/* Skip-date escape hatch */}
+      {canSkipDate && !templateName && (
+        <button
+          type="button"
+          onClick={handleSkipDate}
+          className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+        >
+          <Eye className="h-4 w-4" />
+          Ik weet de datum nog niet — laat me eerst rondkijken
+        </button>
+      )}
     </form>
   );
 };
