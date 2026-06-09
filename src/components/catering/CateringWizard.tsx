@@ -15,6 +15,7 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { CalendarIcon, Check, ChevronLeft, ChevronRight, Sandwich, GlassWater, Flame, UtensilsCrossed, Sparkles, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { buildAttribution } from "@/lib/entryPageTracker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";

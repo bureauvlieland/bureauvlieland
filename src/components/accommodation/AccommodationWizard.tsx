@@ -12,6 +12,7 @@ import { StepContact } from "./steps/StepContact";
 import { WizardSummary } from "./WizardSummary";
 import type { AccommodationWizardData } from "@/types/accommodation";
 import { supabase } from "@/integrations/supabase/client";
+import { buildAttribution } from "@/lib/entryPageTracker";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CART_HANDOFF_KEY, type CartHandoffData } from "@/components/configurator/LogiesSuggestionBanner";
@@ -200,6 +201,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
             wants_activities: true, // Already has activities
             linked_program_id: linkedProgramId, // Link to existing program
             status: "submitted",
+            attribution: buildAttribution(),
           })
           .select("id, customer_token")
           .single();
