@@ -66,15 +66,16 @@ Logies-handoff (2)  ← grootste lek
 
 ## 3. Prioriteit & aanpak
 
-### Track A — Quick wins (deze week)
-- **A1.** Bot-filter in GA4 instellen / Cloudflare-rules; bounce-rate opnieuw meten zonder ruis.
-- **A2.** 13 cancellations classificeren in admin: tests vs. echte gebruikers. Tag in DB.
-- **A3.** `LogiesSuggestionBanner` zichtbaarder: hoger in scroll, sterker contrast, expliciete copy ("Wij regelen ook uw verblijf — één factuur").
+### Track A — Quick wins (status 9 jun)
+- **A1.** ✅ Bot-filter aanbeveling: GA4 Admin → Data Streams → Configure tag settings → "List unwanted referrals"; sluit `country = CN` + `(not set)` uit; activeer Cloudflare Bot Fight Mode op `bureauvlieland.nl`. *Geen code-wijziging, jij doet dit in de dashboards.*
+- **A2.** ✅ Cancellations geclassificeerd (zie sectie 2.2). Geen DB-tag nodig bij 13 records.
+- **A3.** ✅ `LogiesSuggestionBanner` prominenter (primary kleur, sterkere copy + button).
 
 ### Track B — Funnel-friction (1–2 weken)
 - **B1.** BasicsForm: maak datum optioneel ("Ik weet de datum nog niet — laat me eerst kijken"). Variant zonder datum laadt configurator met placeholder-dagen.
 - **B2.** Homepage: één primaire CTA in plaats van twee parallelle. Tweede pad als subtiele tekstlink.
 - **B3.** Snel-aanvragen vs. samensteller: hero-blok met 2 duidelijke routes en doorlooptijd ("3 min" vs "10 min").
+- **B4.** **Duplicate-submit guard** op `CheckoutContactForm`: disable knop + spinner tijdens submit, en client-side dedup-hash op `email + dates + cart` in `sessionStorage` (1u TTL). Voorkomt Jannie-scenario.
 
 ### Track C — Structureel (langer)
 - **C1.** Logies als optionele wizard-stap in plaats van losse flow.
