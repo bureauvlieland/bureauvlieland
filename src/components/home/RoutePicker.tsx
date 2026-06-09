@@ -62,7 +62,19 @@ export const RoutePicker = () => {
           <p className="text-muted-foreground mt-3">
             Eén klein onderdeel, een compleet programma dat u zelf samenstelt, of volledig maatwerk — kies wat het beste past.
           </p>
+          <div className="mt-5 inline-flex items-center gap-2 text-sm">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">Geen idee waar te beginnen?</span>
+            <Link
+              to="/voorbeeldprogrammas"
+              className="font-medium text-primary hover:underline underline-offset-4"
+            >
+              Bekijk onze voorbeeldprogramma's
+              <ArrowRight className="inline h-3.5 w-3.5 ml-1 -mt-0.5" />
+            </Link>
+          </div>
         </div>
+
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
           {routes.map((route) => {
