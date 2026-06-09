@@ -34,11 +34,18 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
   };
 
   const isValid = selectedDates.length > 0 && numberOfPeople >= 1;
+  const canSkipDate = numberOfPeople >= 1 && selectedDates.length === 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
     onSubmit({ numberOfPeople, selectedDates });
+  };
+
+  const handleSkipDate = () => {
+    // Placeholder date: 30 days from now. User can adjust later via "Programma details bewerken".
+    const placeholder = addDays(new Date(), 30);
+    onSubmit({ numberOfPeople, selectedDates: [placeholder] });
   };
 
   return (
