@@ -86,7 +86,7 @@ export const RoutePicker = () => {
         </div>
 
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-4">
           {routes.map((route) => {
             const Icon = route.icon;
             return (
