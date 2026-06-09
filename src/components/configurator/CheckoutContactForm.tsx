@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
-import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+import { getEntryPage, inferEventTypeFromPath, buildAttribution } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 import {
   AlertDialog,
@@ -201,6 +201,7 @@ export const CheckoutContactForm = ({
           origin: "self_service",
           program_description: finalEventType,
           quote_status: "concept",
+          attribution: buildAttribution(),
         });
 
       if (insertError) throw insertError;

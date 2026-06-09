@@ -356,6 +356,7 @@ export type Database = {
           accommodation_type: string
           admin_notes: string | null
           arrival_date: string
+          attribution: Json | null
           budget_range: string | null
           completed_at: string | null
           completed_by: string | null
@@ -391,6 +392,7 @@ export type Database = {
           accommodation_type?: string
           admin_notes?: string | null
           arrival_date: string
+          attribution?: Json | null
           budget_range?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -426,6 +428,7 @@ export type Database = {
           accommodation_type?: string
           admin_notes?: string | null
           arrival_date?: string
+          attribution?: Json | null
           budget_range?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -2924,6 +2927,7 @@ export type Database = {
         Row: {
           admin_created_by: string | null
           aftersales_sent_at: string | null
+          attribution: Json | null
           billing_address_city: string | null
           billing_address_postal: string | null
           billing_address_street: string | null
@@ -2982,6 +2986,7 @@ export type Database = {
         Insert: {
           admin_created_by?: string | null
           aftersales_sent_at?: string | null
+          attribution?: Json | null
           billing_address_city?: string | null
           billing_address_postal?: string | null
           billing_address_street?: string | null
@@ -3040,6 +3045,7 @@ export type Database = {
         Update: {
           admin_created_by?: string | null
           aftersales_sent_at?: string | null
+          attribution?: Json | null
           billing_address_city?: string | null
           billing_address_postal?: string | null
           billing_address_street?: string | null
