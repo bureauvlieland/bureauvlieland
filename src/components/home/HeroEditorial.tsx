@@ -86,7 +86,7 @@ export const HeroEditorial = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.7 }}
-            className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col sm:flex-row gap-3 lg:items-end"
+            className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col gap-4 lg:items-end"
           >
             <Link to="/programma-samenstellen" className="group">
               <Button
@@ -98,15 +98,15 @@ export const HeroEditorial = () => {
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Link to="/programma-op-maat">
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-transparent border-sand/40 text-sand hover:bg-sand/10 hover:text-primary-foreground text-base px-8 h-14 rounded-sm backdrop-blur-sm"
+            <p className="text-sm text-sand/80 lg:text-right">
+              Liever volledig op maat?{" "}
+              <Link
+                to="/programma-op-maat"
+                className="text-sand underline underline-offset-4 decoration-sand/40 hover:text-primary-foreground hover:decoration-sand transition-colors"
               >
-                Programma op maat
-              </Button>
-            </Link>
+                Vraag een programma op maat aan
+              </Link>
+            </p>
           </motion.div>
         </div>
 
