@@ -107,6 +107,7 @@ const AdminFinancialDashboard = lazy(() => import("./pages/admin/AdminFinancialD
 const AdminProjectsOverview = lazy(() => import("./pages/admin/AdminProjectsOverview"));
 const AdminWerkbank = lazy(() => import("./pages/admin/AdminWerkbank"));
 const AdminTickets = lazy(() => import("./pages/admin/AdminTickets"));
+const AdminAttribution = lazy(() => import("./pages/admin/AdminAttribution"));
 
 const queryClient = new QueryClient();
 
@@ -224,6 +225,7 @@ const App = () => {
             <Route path="/admin/dashboard" element={<Navigate to="/admin/werkbank" replace />} />
             <Route path="/admin/projecten" element={<AdminProjectsOverview />} />
             <Route path="/admin/tickets" element={<AdminTickets />} />
+            <Route path="/admin/attributie" element={<AdminAttribution />} />
             <Route path="/admin/logies-aanvragen" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />
             <Route path="/admin/programma-nieuw" element={<AdminProgramNew />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
