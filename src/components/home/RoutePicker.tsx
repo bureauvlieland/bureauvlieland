@@ -13,12 +13,20 @@ interface Route {
 
 const routes: Route[] = [
   {
-    title: "Losse activiteit",
+    title: "Losse activiteit(en)",
     href: "/snel-aanvragen",
     duration: "± 3 min",
-    description: "U weet wat u wilt en heeft alleen één onderdeel nodig.",
-    bestFor: "Eén activiteit of catering",
+    description: "U weet wat u wilt en heeft één of een paar losse onderdelen nodig.",
+    bestFor: "Eén of meerdere activiteiten",
     icon: Zap,
+  },
+  {
+    title: "Catering aanvragen",
+    href: "/catering-aanvragen",
+    duration: "± 3 min",
+    description: "Lunch, borrel, BBQ of diner — wij vragen het bij onze koks aan.",
+    bestFor: "Alleen eten & drinken",
+    icon: UtensilsCrossed,
   },
   {
     title: "Stel uw programma samen",
