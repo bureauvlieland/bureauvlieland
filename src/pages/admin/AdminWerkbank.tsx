@@ -23,6 +23,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ClaudiaChatPanel } from "@/components/admin/werkbank/ClaudiaChatPanel";
 import { ClaudiaRecommendationsCard } from "@/components/admin/werkbank/ClaudiaRecommendationsCard";
+import { AttributionWidget } from "@/components/admin/AttributionWidget";
+import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 
