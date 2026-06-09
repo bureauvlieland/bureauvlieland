@@ -293,6 +293,9 @@ export const CheckoutContactForm = ({
 
     } catch (error: any) {
       console.error("Error sending program request:", error);
+      // Clear in-flight lock zodat de gebruiker opnieuw kan proberen
+      try { sessionStorage.removeItem(buildSubmitHash()); } catch { /* no-op */ }
+
       trackSubmitFailed({
         formType: 'program_request',
         error,
