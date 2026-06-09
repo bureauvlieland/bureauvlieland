@@ -56,7 +56,7 @@ export const RoutePicker = () => {
             Welke route past bij u?
           </p>
           <h2 className="font-display text-3xl lg:text-4xl font-light text-foreground leading-tight">
-            Drie manieren om bij ons aan te kloppen.
+            Vier manieren om bij ons aan te kloppen.
           </h2>
           <p className="text-muted-foreground mt-3">
             Eén klein onderdeel, een compleet programma dat u zelf samenstelt, of volledig maatwerk — kies wat het beste past.
