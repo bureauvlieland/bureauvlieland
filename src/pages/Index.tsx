@@ -32,6 +32,7 @@ const Index = () => {
       <Navigation />
       <main id="main-content">
         <HeroEditorial />
+        <RoutePicker />
         <UpcomingActivitiesFeed />
         <ActivitiesShowcase />
         <ProgramTemplatesPreview />
