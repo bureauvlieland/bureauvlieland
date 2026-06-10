@@ -448,6 +448,18 @@ export function AddPurchaseInvoiceDialog({
     }
   }, [lineTotals]);
 
+  // Houd lodgingAllocations qua lengte synchroon met lines
+  useEffect(() => {
+    setLodgingAllocations((prev) => {
+      if (prev.length === lines.length) return prev;
+      const next: LodgingLineAllocation[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        next.push(prev[i] || { target: "skip" });
+      }
+      return next;
+    });
+  }, [lines.length]);
+
   // When NO lines, recalc header vat amount from excl + rate
   useEffect(() => {
     if (lines.length > 0) return;
