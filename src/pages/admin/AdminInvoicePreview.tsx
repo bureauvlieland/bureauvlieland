@@ -100,6 +100,17 @@ interface AccommodationExtraData {
   vat_rate: number;
 }
 
+interface BundledExtra {
+  name: string;
+  description: string | null;
+  quantity: number;
+  unit_price: number;
+  pricing_type: string;
+  vat_rate: number;
+  count: number;
+  total: number;
+}
+
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
 
@@ -329,6 +340,32 @@ const AdminInvoicePreview = () => {
     if (extra.pricing_type === "fixed") return extra.unit_price;
     return extra.unit_price * extra.quantity;
   };
+
+  // Bundel extras met identieke omschrijving + prijs + BTW tot één factuurregel
+  const bundledExtras: BundledExtra[] = (() => {
+    const groups = new Map<string, BundledExtra>();
+    for (const extra of accommodationExtras) {
+      const key = `${extra.name}|${extra.description ?? ""}|${extra.unit_price}|${extra.vat_rate}|${extra.pricing_type}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += 1;
+        existing.quantity += extra.quantity;
+        existing.total += getExtraTotal(extra);
+      } else {
+        groups.set(key, {
+          name: extra.name,
+          description: extra.description,
+          quantity: extra.quantity,
+          unit_price: extra.unit_price,
+          pricing_type: extra.pricing_type,
+          vat_rate: extra.vat_rate,
+          count: 1,
+          total: getExtraTotal(extra),
+        });
+      }
+    }
+    return Array.from(groups.values());
+  })();
 
   // Group items by category
   const groupedByCategory = items.reduce((acc, item) => {
