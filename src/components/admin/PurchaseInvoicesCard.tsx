@@ -171,17 +171,19 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                             <Upload className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        {invoice.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setForwardDialogInvoice(invoice)}
-                            title="Doorsturen naar Snelstart"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openForward(invoice, "outlook")}
+                          title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
+                        <InvoiceForwardHistoryPopover
+                          invoiceId={invoice.id}
+                          onResend={(m) => openForward(invoice, m)}
+                        />
                         {invoice.status !== "paid" && (
                           <Button
                             variant="ghost"
@@ -205,6 +207,7 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
 
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
+        defaultMethod={forwardMethod}
         onClose={() => setForwardDialogInvoice(null)}
       />
 
