@@ -94,6 +94,9 @@ export interface ProjectSummary {
   hasProgram: boolean;
   hasLodging: boolean;
 
+  /** Concrete actie-hints wanneer comm = "bij_bureau". Leeg array anders. */
+  bureauActionHints: string[];
+
   updatedAt: string;
 }
 
