@@ -267,6 +267,58 @@ const AdminInvoicing = () => {
     [requests],
   );
   const { linesByItem } = useItemBillingLinesBatch(allItemIds);
+  const allItems = useMemo(() => requests.flatMap((request) => request.items), [requests]);
+  const { getItemVatRate } = useItemVatRates(allItems);
+
+  const calculateInvoiceVatSuggestion = (request: ProgramRequestWithItems): InvoiceVatSuggestion => {
+    const totals = calculateInvoiceTotals(request);
+    const numberOfDays = Math.max(request.selected_dates?.length ?? 0, 1);
+    const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
+    const addToGroup = (rate: number, amountInclVat: number, exclVat?: number, vatAmount?: number) => {
+      if (amountInclVat <= 0 && !exclVat && !vatAmount) return;
+      const key = Number(rate) || 0;
+      if (!vatGroups[key]) vatGroups[key] = { exclVat: 0, vatAmount: 0 };
+      vatGroups[key].exclVat += exclVat ?? calculateExclVat(amountInclVat, key);
+      vatGroups[key].vatAmount += vatAmount ?? calculateVatAmount(amountInclVat, key);
+    };
+    const addItem = (item: ProgramRequestWithItems["items"][number]) => {
+      const itemLines = linesByItem[item.id] ?? [];
+      if (item.use_actual_costs && itemLines.length > 0) {
+        itemLines.forEach((line) => {
+          addToGroup(Number(line.vat_rate), Number(line.amount_incl_vat || 0), Number(line.amount_excl_vat || 0), Number(line.vat_amount || 0));
+        });
+        return;
+      }
+      const amountInclVat = centralLineTotal(item as never, request.number_of_people, numberOfDays) ?? 0;
+      addToGroup(getItemVatRate(item), amountInclVat);
+    };
+
+    request.items
+      .filter((item) => item.status !== "cancelled" && item.day_index !== -1)
+      .forEach(addItem);
+    request.items
+      .filter((item) => item.status !== "cancelled" && item.day_index === -1)
+      .forEach(addItem);
+
+    const standardVatRate = getVatRate("standard");
+    addToGroup(standardVatRate, getCoordinationFee(request.number_of_people));
+    addToGroup(standardVatRate, request.invoicing_mode === "bureau_central" ? settings.bureau_central_surcharge_pp * request.number_of_people : 0);
+    addToGroup(0, settings.tourist_tax_pp_per_day * request.number_of_people * numberOfDays + settings.nature_contribution_pp * request.number_of_people);
+    addToGroup(Number(request.selected_accommodation_vat_rate ?? getVatRate("accommodation")), Number(request.selected_accommodation_base_total ?? 0));
+    (request.selected_accommodation_extras ?? []).forEach((extra) => {
+      addToGroup(Number(extra.vat_rate ?? request.selected_accommodation_vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
+    });
+
+    const vatGroupsList = Object.entries(vatGroups)
+      .map(([rate, value]) => ({ rate: Number(rate), exclVat: value.exclVat, vatAmount: value.vatAmount }))
+      .sort((a, b) => a.rate - b.rate);
+    return {
+      totalExclVat: vatGroupsList.reduce((sum, group) => sum + group.exclVat, 0),
+      totalVat: vatGroupsList.reduce((sum, group) => sum + group.vatAmount, 0),
+      grandTotalInclVat: totals.grandTotalInclVat,
+      vatGroups: vatGroupsList,
+    };
+  };
 
   // Standalone logies (accommodation_requests without a linked program)
   const { data: standaloneLodging = [], isLoading: isLoadingLodging } = useQuery({
