@@ -60,8 +60,7 @@ export function InboxList({ selectedProjectId, onSelect, kindFilter = "all" }: I
           item={item}
           selected={selectedProjectId === item.projectId}
           onClick={() => {
-            if (item.project) onSelect(item.projectId);
-            else if (item.todos[0]) navigate("/admin/werkbank?tab=projecten");
+            onSelect(item.projectId);
           }}
         />
       ))}

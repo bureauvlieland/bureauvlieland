@@ -27,6 +27,7 @@ import { AttributionWidget } from "@/components/admin/AttributionWidget";
 import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
+import { OrphanTodoPanel } from "@/components/admin/werkbank/OrphanTodoPanel";
 
 type QuickView =
   | "alles"
@@ -349,7 +350,7 @@ export default function AdminWerkbank() {
 
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
-                <InboxList selectedProjectId={selected?.id ?? null} onSelect={handleSelect} kindFilter={kindFilter} />
+                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (
@@ -378,9 +379,9 @@ export default function AdminWerkbank() {
           {/* Rechter detail */}
           <section className={cn(
             "flex-1 flex-col overflow-y-auto bg-muted/20",
-            selected ? "flex" : "hidden lg:flex",
+            (selected || selectedId?.startsWith("_orphan_")) ? "flex" : "hidden lg:flex",
           )}>
-            {selected && (
+            {(selected || selectedId?.startsWith("_orphan_")) && (
               <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur lg:hidden">
                 <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5">
                   <ArrowLeft className="h-4 w-4" />
@@ -388,14 +389,21 @@ export default function AdminWerkbank() {
                 </Button>
               </div>
             )}
-            {!selected && (
+            {!selected && !selectedId?.startsWith("_orphan_") && (
               <div className="p-4 space-y-4">
                 <ClaudiaRecommendationsCard />
                 <AttributionWidget />
                 <DraftsWidget />
               </div>
             )}
-            <ProjectDetailPanel project={selected} />
+            {selectedId?.startsWith("_orphan_") ? (
+              <OrphanTodoPanel
+                todoId={selectedId.replace(/^_orphan_/, "")}
+                onResolved={handleBack}
+              />
+            ) : (
+              <ProjectDetailPanel project={selected} />
+            )}
           </section>
         </div>
       </div>
