@@ -399,15 +399,33 @@ export const FinancialOverviewCard = ({
                     <span className="font-medium tabular-nums">{formatCurrency(resolvedAccommodationBaseTotal)}</span>
                   </div>
                 )}
-                {accommodationExtras.map((extra) => (
-                  <div key={extra.id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="truncate max-w-[200px]">Logies extra: {extra.name}</span>
+                {(() => {
+                  // Bundel extras met identieke omschrijving + prijs + BTW
+                  const groups = new Map<string, { name: string; count: number; total: number; firstId: string }>();
+                  for (const extra of accommodationExtras) {
+                    const key = `${extra.name}|${extra.unit_price}|${extra.vat_rate}|${extra.pricing_type}`;
+                    const lineTotal = calculateExtraTotal(extra);
+                    const existing = groups.get(key);
+                    if (existing) {
+                      existing.count += 1;
+                      existing.total += lineTotal;
+                    } else {
+                      groups.set(key, { name: extra.name, count: 1, total: lineTotal, firstId: extra.id });
+                    }
+                  }
+                  return Array.from(groups.values()).map((g) => (
+                    <div key={g.firstId} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="truncate max-w-[260px]">
+                          Logies extra: {g.name}
+                          {g.count > 1 && <span className="ml-1 text-xs text-muted-foreground">× {g.count}</span>}
+                        </span>
+                      </div>
+                      <span className="font-medium tabular-nums">{formatCurrency(g.total)}</span>
                     </div>
-                    <span className="font-medium tabular-nums">{formatCurrency(calculateExtraTotal(extra))}</span>
-                  </div>
-                ))}
+                  ));
+                })()}
               </>
             )}
 
