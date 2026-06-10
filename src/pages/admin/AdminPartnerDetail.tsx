@@ -155,6 +155,7 @@ const AdminPartnerDetail = () => {
     is_public: false,
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
+    extras_commission_percentage: null as number | null,
     map_tenant_slug: "",
     map_api_key: "",
   });
