@@ -79,9 +79,15 @@ export const RegisterBureauInvoiceDialog = ({
     },
   });
 
-  // On open, try to suggest amount + VAT breakdown from billing lines of confirmed items
+  // On open: prefill from the outstanding project total. Billing lines are only
+  // shown as an informational VAT breakdown (they often cover slechts een deel
+  // van het project, dus nooit de invulvelden ermee overschrijven).
   useEffect(() => {
     if (!isOpen || !requestId) return;
+    if (suggestedAmount > 0) {
+      form.setValue("amount_excl_vat", Math.round((suggestedAmount / 1.21) * 100) / 100);
+      form.setValue("vat_amount", Math.round((suggestedAmount - suggestedAmount / 1.21) * 100) / 100);
+    }
     (async () => {
       const { data: items } = await supabase
         .from("program_request_items")
@@ -117,11 +123,14 @@ export const RegisterBureauInvoiceDialog = ({
         .sort(([a], [b]) => Number(a) - Number(b))
         .map(([rate, v]) => ({ rate: Number(rate), excl: v.excl, vat: v.vat }));
       setVatBreakdown(breakdown);
-      // Auto-fill form with totals
-      form.setValue("amount_excl_vat", Math.round(totalExcl * 100) / 100);
-      form.setValue("vat_amount", Math.round(totalVat * 100) / 100);
+      // Alleen invullen vanuit factuurregels als er géén projectvoorstel is
+      // (bv. losstaande registratie zonder berekend openstaand bedrag).
+      if (suggestedAmount <= 0) {
+        form.setValue("amount_excl_vat", Math.round(totalExcl * 100) / 100);
+        form.setValue("vat_amount", Math.round(totalVat * 100) / 100);
+      }
     })();
-  }, [isOpen, requestId, form]);
+  }, [isOpen, requestId, suggestedAmount, form]);
 
   const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
   const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
@@ -323,7 +332,7 @@ export const RegisterBureauInvoiceDialog = ({
             <div className="p-3 bg-muted rounded-md space-y-1 text-sm">
               {vatBreakdown.length > 0 && (
                 <>
-                  <p className="text-xs text-muted-foreground font-medium">Voorstel uit factuurregels:</p>
+                  <p className="text-xs text-muted-foreground font-medium">Ter info — werkelijke-kostenregels (alleen items met ingeboekte facturen):</p>
                   {vatBreakdown.map((b) => (
                     <div key={b.rate} className="flex justify-between text-muted-foreground">
                       <span>BTW {b.rate}%</span>
