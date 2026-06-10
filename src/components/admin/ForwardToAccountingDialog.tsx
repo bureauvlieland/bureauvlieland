@@ -144,7 +144,7 @@ export function ForwardToAccountingDialog({ invoice, defaultMethod = "outlook", 
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Totaal:</span>
-            <span className="font-medium">€{Number(invoice.amount_incl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+            <span className="font-medium">€{Number(invoice.amount_incl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Project:</span>
