@@ -350,7 +350,7 @@ export default function AdminWerkbank() {
 
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
-                <InboxList selectedProjectId={selected?.id ?? null} onSelect={handleSelect} kindFilter={kindFilter} />
+                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (
