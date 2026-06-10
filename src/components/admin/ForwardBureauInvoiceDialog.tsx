@@ -146,19 +146,19 @@ export function ForwardBureauInvoiceDialog({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Bedrag excl:</span>
             <span className="font-medium">
-              €{Number(invoice.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+              €{Number(invoice.amount_excl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">BTW:</span>
             <span>
-              €{Number(invoice.vat_amount).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+              €{Number(invoice.vat_amount).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Totaal:</span>
             <span className="font-medium">
-              €{totalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+              €{totalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="flex justify-between">

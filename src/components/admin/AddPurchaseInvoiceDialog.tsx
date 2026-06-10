@@ -78,6 +78,9 @@ interface LineRow {
   quantity: string;
   unit_price: string;
   vat_rate: string;
+  /** Optionele override uit de PDF/scanner zodat we vat niet hoeven te herrekenen. */
+  vat_amount_override?: string;
+  amount_incl_override?: string;
 }
 
 interface AddPurchaseInvoiceDialogProps {
@@ -91,6 +94,7 @@ interface AddPurchaseInvoiceDialogProps {
 type Step = "upload" | "scanning" | "verify";
 
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
+
 
 /**
  * Build prefill LineRows from an AI scan result.
@@ -132,23 +136,64 @@ function buildLinesFromScan(result: ScanResult | null): LineRow[] {
         quantity: "1",
         unit_price: String(b.amount_excl),
         vat_rate: String(b.vat_rate),
+        // Neem de exacte BTW van de PDF mee zodat we niet herrekenen.
+        vat_amount_override: b.vat_amount != null ? String(b.vat_amount) : undefined,
+        amount_incl_override:
+          b.amount_excl != null && b.vat_amount != null
+            ? String(Math.round((b.amount_excl + b.vat_amount) * 100) / 100)
+            : undefined,
       }));
   }
 
   if (items.length > 0) {
-    return items.map((li) => ({
-      description: li.description || "",
-      quantity: li.quantity != null ? String(li.quantity) : "1",
-      unit_price:
-        li.unit_price != null
-          ? String(li.unit_price)
-          : li.total_excl_vat != null && li.quantity
-          ? String(li.total_excl_vat / li.quantity)
+    // Single-rate factuur: als de scanner een totaal-BTW heeft gegeven,
+    // verdelen we die over de rijen op basis van excl-aandeel zodat
+    // herrekening geen afrondingsdrift veroorzaakt.
+    const headerVat = result.vat_amount != null ? Number(result.vat_amount) : null;
+    const headerExcl = result.amount_excl_vat != null ? Number(result.amount_excl_vat) : null;
+    return items.map((li, idx, arr) => {
+      const excl =
+        li.unit_price != null && li.quantity
+          ? Number(li.unit_price) * Number(li.quantity)
           : li.total_excl_vat != null
-          ? String(li.total_excl_vat)
-          : "",
-      vat_rate: String(li.vat_rate ?? result.vat_rate ?? 21),
-    }));
+          ? Number(li.total_excl_vat)
+          : 0;
+      let vatOverride: string | undefined;
+      let inclOverride: string | undefined;
+      if (headerVat != null && headerExcl && headerExcl > 0) {
+        const share =
+          idx === arr.length - 1
+            ? // laatste rij sluitend maken
+              headerVat -
+              arr
+                .slice(0, idx)
+                .reduce((s, x) => {
+                  const e =
+                    x.unit_price != null && x.quantity
+                      ? Number(x.unit_price) * Number(x.quantity)
+                      : Number(x.total_excl_vat || 0);
+                  return s + Math.round((headerVat * (e / headerExcl)) * 100) / 100;
+                }, 0)
+            : Math.round((headerVat * (excl / headerExcl)) * 100) / 100;
+        vatOverride = String(share);
+        inclOverride = String(Math.round((excl + share) * 100) / 100);
+      }
+      return {
+        description: li.description || "",
+        quantity: li.quantity != null ? String(li.quantity) : "1",
+        unit_price:
+          li.unit_price != null
+            ? String(li.unit_price)
+            : li.total_excl_vat != null && li.quantity
+            ? String(li.total_excl_vat / li.quantity)
+            : li.total_excl_vat != null
+            ? String(li.total_excl_vat)
+            : "",
+        vat_rate: String(li.vat_rate ?? result.vat_rate ?? 21),
+        vat_amount_override: vatOverride,
+        amount_incl_override: inclOverride,
+      };
+    });
   }
 
   return [];
@@ -159,14 +204,31 @@ function computeLineTotals(line: LineRow) {
   const unit = parseFloat(line.unit_price) || 0;
   const rate = parseFloat(line.vat_rate) || 0;
   const excl = qty * unit;
-  const vat = excl * (rate / 100);
+  // Als de scanner een exacte BTW van de PDF heeft meegegeven en de
+  // gebruiker excl/qty niet aangepast heeft, gebruik die override
+  // zodat ons totaal exact matcht met de leveranciersfactuur.
+  const overrideVat =
+    line.vat_amount_override != null && line.vat_amount_override !== ""
+      ? parseFloat(line.vat_amount_override)
+      : null;
+  const overrideIncl =
+    line.amount_incl_override != null && line.amount_incl_override !== ""
+      ? parseFloat(line.amount_incl_override)
+      : null;
+  const useOverride =
+    overrideVat != null &&
+    !Number.isNaN(overrideVat) &&
+    Math.abs(excl - (overrideIncl != null ? overrideIncl - overrideVat : excl)) < 0.02;
+  const vat = useOverride ? (overrideVat as number) : excl * (rate / 100);
+  const incl = useOverride && overrideIncl != null ? overrideIncl : excl + vat;
   return {
-    amount_excl_vat: excl,
-    vat_amount: vat,
-    amount_incl_vat: excl + vat,
+    amount_excl_vat: Math.round(excl * 100) / 100,
+    vat_amount: Math.round(vat * 100) / 100,
+    amount_incl_vat: Math.round(incl * 100) / 100,
     vat_rate: rate,
   };
 }
+
 
 export function AddPurchaseInvoiceDialog({
   open,
@@ -476,8 +538,25 @@ export function AddPurchaseInvoiceDialog({
   };
 
   const updateLine = (idx: number, patch: Partial<LineRow>) => {
-    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+    setLines((prev) =>
+      prev.map((l, i) => {
+        if (i !== idx) return l;
+        const next = { ...l, ...patch };
+        // Zodra de gebruiker bedragen/aantal/btw aanpast, vervalt de PDF-override
+        // zodat we niet langer het oude bedrag forceren.
+        const editsTotals =
+          patch.quantity !== undefined ||
+          patch.unit_price !== undefined ||
+          patch.vat_rate !== undefined;
+        if (editsTotals) {
+          next.vat_amount_override = undefined;
+          next.amount_incl_override = undefined;
+        }
+        return next;
+      })
+    );
   };
+
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));

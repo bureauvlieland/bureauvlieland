@@ -41,3 +41,24 @@ export function calculateFromInclVat(inclVat: number, vatRate: number): VatBreak
     amountInclVat: safeIncl,
   };
 }
+
+/**
+ * Neemt de exacte excl. en BTW-bedragen van een factuur over (bv. uit een
+ * gescande inkoopfactuur), zonder de BTW opnieuw te berekenen via excl × rate.
+ * Voorkomt afrondingsverschillen t.o.v. de leveranciers-PDF.
+ */
+export function calculateFromExclAndVat(
+  exclVat: number,
+  vatAmount: number,
+  vatRate: number
+): VatBreakdown {
+  const safeExcl = round2(Number(exclVat) || 0);
+  const safeVat = round2(Number(vatAmount) || 0);
+  const safeRate = Number(vatRate) || 0;
+  return {
+    amountExclVat: safeExcl,
+    vatRate: safeRate,
+    vatAmount: safeVat,
+    amountInclVat: round2(safeExcl + safeVat),
+  };
+}

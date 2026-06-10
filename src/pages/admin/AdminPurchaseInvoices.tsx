@@ -230,7 +230,7 @@ export default function AdminPurchaseInvoices() {
               <CardDescription>Totaal incl. BTW</CardDescription>
               <CardTitle className="text-2xl flex items-center gap-1">
                 <Euro className="h-5 w-5" />
-                {stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                {stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -420,7 +420,7 @@ export default function AdminPurchaseInvoices() {
                         {(invoice.description || "").replace(/^\[via e-mail\]\s*/, "") || invoice.program_request_item?.block_name || "-"}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        €{Number(invoice.amount_incl_vat ?? (Number(invoice.amount_excl_vat || 0) + Number(invoice.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                        €{Number(invoice.amount_incl_vat ?? (Number(invoice.amount_excl_vat || 0) + Number(invoice.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
@@ -522,7 +522,7 @@ export default function AdminPurchaseInvoices() {
                 <>
                   Je staat op het punt om factuur <strong>{deleteTarget.invoice_number || "(zonder nummer)"}</strong>{" "}
                   van <strong>{deleteTarget.partner?.name}</strong> (€
-                  {Number(deleteTarget.amount_incl_vat ?? (Number(deleteTarget.amount_excl_vat || 0) + Number(deleteTarget.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}) te verwijderen.
+                  {Number(deleteTarget.amount_incl_vat ?? (Number(deleteTarget.amount_excl_vat || 0) + Number(deleteTarget.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) te verwijderen.
                   <br /><br />
                   Dit reset ook de factuur- en commissie-status op het bijbehorende programma-onderdeel.
                   Deze actie kan niet ongedaan worden gemaakt.
