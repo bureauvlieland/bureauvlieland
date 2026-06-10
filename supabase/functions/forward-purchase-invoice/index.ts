@@ -256,6 +256,7 @@ Deno.serve(async (req) => {
       metadata: {
         template_name: "purchase_invoice_forward",
         actor: "admin → boekhouding",
+        send_method: "mailjet",
         invoiceId: invoice.id,
         includedPdf: includePdf && !!invoice.file_path,
       },
