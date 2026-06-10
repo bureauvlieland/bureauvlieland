@@ -288,6 +288,27 @@ export async function listProjectsForWerkbank(opts: {
       lodgingComm,
       hasProgram,
       hasLodging,
+      bureauActionHints:
+        comm === "bij_bureau"
+          ? getBureauActionHints({
+              program: {
+                pipeline: programPipeline,
+                quote_status: p.quote_status,
+                last_outbound_at: lastProgramMailAt.get(p.id) ?? p.updated_at,
+                itemsReadyForPartner,
+                itemsAwaitingPartnerResponse,
+              },
+              lodging: lodging
+                ? {
+                    hasRequest: true,
+                    quotesPending: lodgingQuotes.filter((q) => q.status === "pending").length,
+                    quotesAwaitingCustomerChoice: lodgingQuotes.filter((q) => q.status === "submitted").length,
+                    quoteSelected: lodgingQuotes.some((q) => q.status === "selected"),
+                    last_outbound_at: lastLodgingMailAt.get(lodging.id) ?? lodging.updated_at,
+                  }
+                : null,
+            })
+          : [],
       updatedAt: p.updated_at,
     };
   });
