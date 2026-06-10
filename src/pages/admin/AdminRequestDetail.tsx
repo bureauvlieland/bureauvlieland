@@ -98,7 +98,7 @@ import {
 } from "@/types/programRequest";
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 
-import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
+import { FinancialOverviewCard, type InvoiceVatSuggestion } from "@/components/admin/FinancialOverviewCard";
 import { AdminPostChargesSection } from "@/components/admin/AdminPostChargesSection";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 
@@ -309,6 +309,7 @@ const AdminRequestDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
   
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
@@ -2744,7 +2745,10 @@ const AdminRequestDetail = () => {
                   numberOfDays={numberOfDays}
                   items={items}
                   invoices={bureauInvoices}
-                  onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+                  onRegisterInvoice={(vatSuggestion) => {
+                    setInvoiceVatSuggestion(vatSuggestion ?? null);
+                    setInvoiceDialogOpen(true);
+                  }}
                   onForwardInvoice={(inv) =>
                     navigate(
                       `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
@@ -2983,6 +2987,9 @@ const AdminRequestDetail = () => {
         onClose={() => setInvoiceDialogOpen(false)}
         requestId={request?.id || ""}
         suggestedAmount={calculateOutstandingAmount()}
+        suggestedExclVat={invoiceVatSuggestion?.totalExclVat}
+        suggestedVatAmount={invoiceVatSuggestion?.totalVat}
+        suggestedVatGroups={invoiceVatSuggestion?.vatGroups}
         onSuccess={fetchRequestData}
       />
 

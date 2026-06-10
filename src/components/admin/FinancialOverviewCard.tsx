@@ -33,13 +33,23 @@ interface FinancialItem {
   price_type?: string | null;
   override_people?: number | null;
 }
+/** Exacte BTW-uitsplitsing van het projecttotaal, zoals getoond in het
+ *  Financieel Overzicht. Wordt meegegeven aan de registratiedialoog zodat
+ *  de prefill niet hoeft terug te rekenen met een vlakke 21%. */
+export interface InvoiceVatSuggestion {
+  totalExclVat: number;
+  totalVat: number;
+  grandTotalInclVat: number;
+  vatGroups: { rate: number; exclVat: number; vatAmount: number }[];
+}
+
 interface FinancialOverviewCardProps {
   requestId: string;
   numberOfPeople: number;
   numberOfDays?: number;
   items: FinancialItem[];
   invoices: BureauInvoice[];
-  onRegisterInvoice: () => void;
+  onRegisterInvoice: (vatSuggestion?: InvoiceVatSuggestion) => void;
   onForwardInvoice?: (invoice: BureauInvoice) => void;
   isQuoteMode?: boolean;
   touristTax?: number;
@@ -648,7 +658,17 @@ export const FinancialOverviewCard = ({
               <FileText className="h-4 w-4 mr-2" />
               Factuur Maken
             </Button>
-            <Button onClick={onRegisterInvoice} className="flex-1">
+            <Button
+              onClick={() =>
+                onRegisterInvoice({
+                  totalExclVat,
+                  totalVat,
+                  grandTotalInclVat,
+                  vatGroups: sortedVatGroups,
+                })
+              }
+              className="flex-1"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Factuur Registreren
             </Button>
