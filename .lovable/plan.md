@@ -1,80 +1,58 @@
+## Probleem
 
-# Logies-inkoopfacturen 1-op-1 doorzetten + commissie per soort regel + AI-classificatie
+De **Marge Overzicht**-kaart vergelijkt appels met peren:
 
-## Wat verandert
+| Regel | Wat er staat | Wat het werkelijk is |
+|---|---|---|
+| Omzet | €13.535,48 | **incl. BTW** |
+| Inkoopkosten (5 facturen) | €10.071,57 | **excl. BTW** (som van `amount_excl_vat`) |
+| Inkoopfacturen-paneel "Totaal" | €11.669,25 | **incl. BTW** (som van `amount_incl_vat`) |
+| Coördinatiefee | +€250 | wordt **dubbel** geteld (zit al in Omzet én wordt nog eens opgeteld bij netto marge) |
 
-1. **Derde commissiepercentage per partner: "extras"** (F&B, faciliteiten, transport, overig).
-   - Nieuw veld `partners.extras_commission_percentage` (NULL = valt terug op `accommodation_commission_percentage`, anders op 10%).
-   - Zeezicht: 10% / 10% / **10%**. Badhotel Bruin: 10% / 10% / **0%**.
-   - Tonen in `AdminPartners` als "10% / 10% / 0%" met labels act. / logies / extras.
+Zelfde fout voor commissies: die zitten al in de partnerverkoopprijs ⇒ ook in Omzet, en mogen niet er nog eens **bij** worden opgeteld bij de netto marge.
 
-2. **Inkoopfactuur-allocatie naar logies** in `AddPurchaseInvoiceDialog`.
-   - Per factuurregel een doel-keuze: **program-onderdeel | logies-kamer | logies-extra | toeristenbelasting (uitsluiten) | niet doorberekenen**.
-   - Bedragen 1-op-1 overgenomen (geen opslag). Commissie wordt achteraf via aparte commissiefactuur naar hotel verstuurd op basis van het juiste percentage per regel.
-
-3. **AI-classificatie van factuurregels** — nieuw.
-   - Bij het openen van de dialog (zodra een scan beschikbaar is en partner = logies-partner) roepen we een nieuwe edge function `classify-lodging-invoice-lines` aan via Lovable AI (`google/gemini-3-flash-preview`).
-   - Input: factuurregels (description, qty, unit_price, vat_rate), partnernaam, en de geselecteerde quote (kamers, datums, aantal personen).
-   - Output per regel: `suggested_target` ∈ `room | extra | tourist_tax | exclude`, `extra_category` ∈ `fb | facilities | transport | other` (alleen als target=extra), en `confidence` 0-1 + korte `reason`.
-   - **Toeristenbelasting** wordt expliciet herkend ("toeristenbelasting", "tourist tax", "verblijfsbelasting", "city tax") en standaard op `exclude` gezet — die zit al in onze verkoopfactuur (`touristTax` in `adminInvoicingTotals.ts`) en mag dus nooit dubbel mee.
-   - Heuristieken die in de prompt meegaan:
-     - Overnachting / kamer / arrangement / "logies" / room rate → `room`
-     - Ontbijt, lunch, diner, drank, koffie, borrel, F&B → `extra` / `fb`
-     - Parkeren, sauna, wasruimte, conferentiezaal → `extra` / `facilities`
-     - Shuttle, taxi, bagagevervoer → `extra` / `transport`
-     - Toeristenbelasting / verblijfsbelasting / city tax → `exclude` (target=tourist_tax voor labeling)
-     - Onbekend → suggest `extra` / `other` met lage confidence.
-   - UI: per regel toont de suggestie als pre-selectie + badge "AI-suggestie (85%)". Admin kan altijd overrulen. Een "Pas alle AI-suggesties toe"-knop bovenaan; geweigerde suggesties blijven gewoon handmatig instelbaar.
-
-4. **Live commissie-preview** onderin het allocatie-blok:
-   `Kamer €X (10%) + F&B €Y (10%) + Facilities €Z (0%) = commissie €N` zodat de admin direct ziet wat de hotel-commissiefactuur straks wordt.
-
-## Datamodel
+Resultaat: de marge oogt €3.463,91 (25,6%) terwijl een eerlijke berekening incl. ↔ incl. uitkomt op:
 
 ```
-partners.extras_commission_percentage           numeric NULL
-
-accommodation_quotes.purchase_room_cost_incl_vat numeric NULL
-accommodation_quotes.purchase_invoice_id         uuid NULL
-
-accommodation_quote_extras.source                text NULL   -- 'partner_quote' | 'purchase_invoice'
-accommodation_quote_extras.source_invoice_id     uuid NULL
+Omzet incl.     €13.535,48
+Inkoop incl.   −€11.669,25   (5 facturen, panel-totaal)
+─────────────────────────
+Bruto marge     €1.866,23   (≈13,8% incl. BTW)
 ```
 
-Snapshot van de oorspronkelijke offerte `price_total` gaat naar `accommodation_quote_history` voor audit.
+Excl. BTW ↔ excl. BTW geeft een vergelijkbaar beeld (omzet excl. ≈ €12.245,67 − inkoop excl. €10.071,57 = €2.174,10 ≈ 17,8%).
 
-## Commissielogica (1 helper)
+De huidige weergave geeft een te rooskleurig beeld omdat (a) BTW-grondslagen niet matchen en (b) coördinatiefee/commissies dubbel meetellen.
 
-`src/lib/commissionRates.ts`
+## Voorstel
+
+Eén consistente weergave op basis van **incl. BTW** (alles in de UI staat al incl.), met optionele excl.-regel ter info. Coördinatiefee en commissies blijven zichtbaar, maar als *informatieve* sub-regels — niet als extra optelsom.
+
+### Nieuwe kaart-layout
+
 ```
-rateFor(partner, kind):
-  activity  → partner.commission_percentage          ?? 10
-  lodging   → partner.accommodation_commission_percentage ?? 10
-  extras    → partner.extras_commission_percentage
-            ?? partner.accommodation_commission_percentage
-            ?? 10
+Marge Overzicht                                          13,8%
+─────────────────────────────────────────────────────────────
+Omzet (gefactureerd aan klant, incl. BTW)        €13.535,48
+   waarvan coördinatiefee                            €250,00
+   waarvan partner-commissies (ex BTW)              €  xxx,xx
+─────────────────────────────────────────────────────────────
+Inkoopkosten partners (5 facturen, incl. BTW)   −€11.669,25
+─────────────────────────────────────────────────────────────
+Bruto marge (incl. BTW)                          €1.866,23
+   ≈ excl. BTW                                   €2.174,10
 ```
 
-- Kamer-regels → som overschrijft `accommodation_quotes.price_total`, commissie wordt op de quote zelf bewaard met `lodging`-percentage.
-- Extra-regels → één `accommodation_quote_extras`-rij per inkoopregel, `commission_percentage = rateFor(partner, 'extras')` (snapshot), `pricing_type='fixed'`, `quantity=1`, `price_includes_vat=true`.
-- Toeristenbelasting-regels → niets doen (alleen loggen in `project_communications` zodat de admin weet dat ze zijn herkend en weggelaten).
+Bij hover/info-tooltip korte uitleg dat BTW per saldo doorloopt en alleen brutomarge over blijft.
 
-## Te raken bestanden
+### Technische wijzigingen
 
-- **Migratie**: 5 nieuwe kolommen hierboven.
-- `src/types/partner.ts` — `extras_commission_percentage` toevoegen.
-- `src/pages/admin/AdminPartners.tsx` + partner-edit-form — derde commissieveld + kolomweergave 10% / 10% / 0%.
-- `src/lib/commissionRates.ts` — nieuwe helper.
-- **Nieuwe edge function** `supabase/functions/classify-lodging-invoice-lines/index.ts` — Lovable AI Gateway, tool-calling met JSON-schema (zoals scan-purchase-invoice-internal), admin-auth via JWT.
-- `src/components/admin/AddPurchaseInvoiceDialog.tsx` — nieuwe "Doel"-kolom per regel, AI-suggesties laden, "Pas AI-suggesties toe"-knop.
-- Nieuw: `src/components/admin/purchase-invoices/AccommodationAllocationBlock.tsx` — UI-blok per quote met kamer-totaal, extras-lijst (met categorie/VAT-dropdown per regel) en live commissie-preview.
-- `src/hooks/usePurchaseInvoices.ts` — payload uitbreiden met `accommodation_allocations[]` (room rules + extra rules).
-- **Nieuwe edge function** `apply-purchase-invoice-to-lodging` (service role) — snapshot in `accommodation_quote_history`, overschrijf `price_total`, vul `purchase_room_cost_incl_vat` + `purchase_invoice_id`, insert extras met juist `commission_percentage`, log naar `project_communications`.
-- Commissiefactuur-flow (`AdminCommissionInvoices`, `PendingCommissionsCard`): som extras-commissies per quote optellen bij hotel-commissie (kleine query-aanpassing — leest nu alleen commissie op de quote, moet ook quote-extras meenemen waar `source='purchase_invoice'`).
+Alleen `src/components/admin/ProjectProfitSummary.tsx`:
 
-## Out of scope
+1. Vervang `totalPurchaseCosts` op basis van `amount_excl_vat` door `amount_incl_vat` (en houd een excl.-variant voor de info-regel).
+2. Verwijder de `+ coordinationFee` en `+ totalCommissions` uit `netMargin` (die zitten al in `bureauInvoicedAmount`). Toon ze als read-only sub-regels onder Omzet.
+3. Label "Omzet" expliciet "incl. BTW"; label "Inkoopkosten" expliciet "incl. BTW"; voeg afgeleide "≈ excl. BTW" toe onder bruto marge (revenue_excl − costs_excl).
+4. Percentagebadge = bruto marge incl. / omzet incl. × 100.
+5. `expectedPartnerCosts` (fallback als er nog geen inkoopfacturen zijn) interpreteren als incl. BTW (komt uit `quoted_price`, die in onze UI altijd incl. is — kort comment).
 
-- Per-extra commissie overschrijven via UI (admin kan al direct in de quote-extras-rij wijzigen).
-- BTW-herberekening (vorige fix blijft leidend: bedragen 1-op-1 uit PDF).
-- AI-classificatie voor niet-logies-partners (alleen actief als `partner.partner_type='logies'`).
-- Automatisch versturen van commissiefactuur — blijft handmatig in bestaande flow.
+Geen wijzigingen in database, edge functions of berekeningen elders. Puur UI/presentatie zodat de getoonde marge klopt met de getoonde omzet en inkoop.
