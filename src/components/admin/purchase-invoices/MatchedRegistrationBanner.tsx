@@ -145,6 +145,7 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
                   {m.program_request?.customer_company || m.program_request?.customer_name || "—"} · €
                   {Number(m.amount_incl_vat ?? m.amount_excl_vat).toLocaleString("nl-NL", {
                     minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
                   })}
                 </div>
               </div>
