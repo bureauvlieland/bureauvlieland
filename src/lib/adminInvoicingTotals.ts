@@ -122,7 +122,7 @@ export function calculateAdminInvoicingTotals(
   return {
     programItemsTotal,
     extraCostsTotal,
-    coordinationFee: settings.coordinationFee,
+    coordinationFee,
     touristTax,
     natureContribution,
     centralSurcharge,
