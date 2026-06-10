@@ -7,6 +7,7 @@ import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload 
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
+import { InvoiceForwardHistoryPopover } from "@/components/admin/InvoiceForwardHistoryPopover";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
@@ -15,10 +16,18 @@ interface PurchaseInvoicesCardProps {
   requestId: string;
 }
 
+type SendMethod = "outlook" | "mailjet";
+
 export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
   const { invoices, isLoading, stats, markAsPaid, getDownloadUrl } = usePurchaseInvoicesByRequest(requestId);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [forwardMethod, setForwardMethod] = useState<SendMethod>("outlook");
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
+
+  const openForward = (invoice: PurchaseInvoiceWithRelations, method: SendMethod = "outlook") => {
+    setForwardMethod(method);
+    setForwardDialogInvoice(invoice);
+  };
 
   const handleDownloadPdf = async (filePath: string) => {
     const url = await getDownloadUrl(filePath);
