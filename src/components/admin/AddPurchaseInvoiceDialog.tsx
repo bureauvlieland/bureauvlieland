@@ -386,6 +386,9 @@ export function AddPurchaseInvoiceDialog({
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
       setExtraProjects([]);
+      setLodgingEnabled(false);
+      setLodgingQuoteId(null);
+      setLodgingAllocations([]);
     } else {
       setStep("upload");
       setFile(null);
@@ -404,6 +407,9 @@ export function AddPurchaseInvoiceDialog({
       setDescription("");
       setLines([]);
       setExtraProjects([]);
+      setLodgingEnabled(false);
+      setLodgingQuoteId(null);
+      setLodgingAllocations([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
