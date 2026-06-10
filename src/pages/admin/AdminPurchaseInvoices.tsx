@@ -496,6 +496,7 @@ export default function AdminPurchaseInvoices() {
       {/* Forward to Accounting Dialog */}
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
+        defaultMethod={forwardMethod}
         onClose={() => setForwardDialogInvoice(null)}
       />
 
