@@ -174,6 +174,22 @@ export const RequestCompletionStatus = ({
             </span>
           </div>
         )}
+
+        {/* Admin shortcut: handmatig naar facturatie */}
+        {requestId
+          && effectiveStatus === "in_progress"
+          && status !== "cancelled" && (
+          <div className="pt-2 border-t mt-2">
+            <MarkReadyForInvoiceButton
+              programId={requestId}
+              onDone={onRefresh}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Shortcut: zet het project op "Facturatie", ook als de klant de
+              AV nog niet via de portal heeft geaccepteerd.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
