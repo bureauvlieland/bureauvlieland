@@ -1,20 +1,32 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Receipt, Percent, Package, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Package, AlertTriangle, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PurchaseInvoice } from "@/types/purchaseInvoice";
 
 interface ProjectProfitSummaryProps {
   purchaseInvoices: PurchaseInvoice[];
-  /** Total revenue incl. BTW (program items + coordination fee + extra costs) */
+  /** Totaal-omzet aan klant — INCL. BTW (komt uit financieel overzicht) */
   bureauInvoicedAmount: number;
+  /** Coördinatiefee incl. BTW (zit al in bureauInvoicedAmount; alleen ter info) */
   coordinationFee: number;
+  /** Partner-commissies (ex BTW) die in de omzet zitten — alleen ter info */
   totalCommissions?: number;
-  /** Expected partner costs (from item prices) when no purchase invoices exist */
+  /** Verwachte inkoopkosten incl. BTW (afgeleid uit quoted_price) als er nog geen
+   *  inkoopfacturen zijn geboekt. quoted_price wordt in onze UI altijd incl. BTW
+   *  ingevoerd, dus deze waarde is incl. BTW. */
   expectedPartnerCosts?: number;
   className?: string;
 }
 
+/**
+ * Marge-berekening uitsluitend op incl. BTW basis — de hele UI (offerte,
+ * inkoopfacturen-paneel, financieel overzicht) staat incl. BTW. Eerder
+ * werd `amount_excl_vat` afgetrokken van een incl.-omzet, wat de marge
+ * structureel te rooskleurig maakte. Coördinatiefee en commissies zitten
+ * al in de omzet en worden hier NIET nogmaals opgeteld.
+ */
 export const ProjectProfitSummary = ({
   purchaseInvoices,
   bureauInvoicedAmount,
@@ -24,147 +36,151 @@ export const ProjectProfitSummary = ({
   className,
 }: ProjectProfitSummaryProps) => {
   const summary = useMemo(() => {
-    // Revenue excl. BTW (assume 21% weighted average — items already incl. BTW)
-    // For a more precise calc we'd need per-item VAT, but this is a good approximation
-    const totalRevenueInclVat = bureauInvoicedAmount;
+    const revenueInclVat = bureauInvoicedAmount;
 
-    // Total purchase costs excl. BTW — count ALL invoices regardless of status
-    const totalPurchaseCosts = purchaseInvoices.reduce(
-      (sum, inv) => sum + inv.amount_excl_vat,
+    const totalPurchaseInclVat = purchaseInvoices.reduce(
+      (sum, inv) => sum + Number(inv.amount_incl_vat ?? 0),
+      0,
+    );
+    const totalPurchaseExclVat = purchaseInvoices.reduce(
+      (sum, inv) => sum + Number(inv.amount_excl_vat ?? 0),
       0,
     );
 
-    // Use expected costs when no purchase invoices registered yet
     const hasInvoices = purchaseInvoices.length > 0;
-    const effectiveCosts = hasInvoices ? totalPurchaseCosts : expectedPartnerCosts;
+    const effectiveCostsIncl = hasInvoices ? totalPurchaseInclVat : expectedPartnerCosts;
+    const effectiveCostsExcl = hasInvoices ? totalPurchaseExclVat : expectedPartnerCosts; // bij benadering
     const costsAreEstimated = !hasInvoices && expectedPartnerCosts > 0;
 
-    // Gross margin = Revenue - Purchase costs (both incl. BTW for consistency)
-    const grossMargin = totalRevenueInclVat - effectiveCosts;
+    const grossMarginIncl = revenueInclVat - effectiveCostsIncl;
+    // Indicatieve excl.-marge: omzet excl. (≈ /1.09 of /1.21 gemengd) is lastig zonder
+    // per-regel BTW. We tonen daarom alleen de inkoop-zijde als info en de incl.-marge
+    // als hoofdgetal. De afgeleide "≈ excl."-regel is omzet incl. − BTW-deel inkoop:
+    // dat is geen exacte excl.-marge maar geeft het juiste ordegrootte-verschil.
+    const purchaseVatPortion = effectiveCostsIncl - effectiveCostsExcl;
+    const grossMarginExclApprox = grossMarginIncl - purchaseVatPortion;
 
-    // Net margin includes coordination fee (already in revenue) and commissions
-    const netMargin = grossMargin + totalCommissions;
-
-    // Margin percentage
-    const marginPercentage =
-      totalRevenueInclVat > 0 ? (netMargin / totalRevenueInclVat) * 100 : 0;
+    const marginPercentage = revenueInclVat > 0 ? (grossMarginIncl / revenueInclVat) * 100 : 0;
 
     return {
-      totalRevenueInclVat,
-      totalPurchaseCosts: effectiveCosts,
+      revenueInclVat,
+      effectiveCostsIncl,
+      effectiveCostsExcl,
       costsAreEstimated,
-      totalCommissions,
       coordinationFee,
-      grossMargin,
-      netMargin,
+      totalCommissions,
+      grossMarginIncl,
+      grossMarginExclApprox,
       marginPercentage,
       invoiceCount: purchaseInvoices.length,
     };
   }, [purchaseInvoices, bureauInvoicedAmount, coordinationFee, totalCommissions, expectedPartnerCosts]);
 
-  const formatPrice = (amount: number) => {
-    return amount.toLocaleString("nl-NL", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
+  const formatPrice = (amount: number) =>
+    amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const isProfit = summary.netMargin >= 0;
+  const isProfit = summary.grossMarginIncl >= 0;
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Marge Overzicht
-          <Badge variant={isProfit ? "default" : "destructive"} className="ml-auto">
-            {summary.marginPercentage.toFixed(1)}%
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Revenue Section */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Omzet (gefactureerd aan klant)</span>
-            <span className="font-medium text-primary">€{formatPrice(summary.totalRevenueInclVat)}</span>
+    <TooltipProvider>
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Marge Overzicht
+            <Badge variant={isProfit ? "default" : "destructive"} className="ml-auto">
+              {summary.marginPercentage.toFixed(1)}%
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Omzet */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Omzet (gefactureerd aan klant, incl. BTW)</span>
+              <span className="font-medium text-primary">€{formatPrice(summary.revenueInclVat)}</span>
+            </div>
+            {summary.coordinationFee > 0 && (
+              <div className="flex items-center justify-between text-xs pl-4 text-muted-foreground">
+                <span>· waarvan coördinatiefee</span>
+                <span>€{formatPrice(summary.coordinationFee)}</span>
+              </div>
+            )}
+            {summary.totalCommissions > 0 && (
+              <div className="flex items-center justify-between text-xs pl-4 text-muted-foreground">
+                <span>· waarvan partner-commissies (ex BTW)</span>
+                <span>€{formatPrice(summary.totalCommissions)}</span>
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Costs Section */}
-        <div className="space-y-2 pt-2 border-t">
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Package className="h-3 w-3" />
-              {summary.costsAreEstimated ? (
-                <>
-                  <AlertTriangle className="h-3 w-3 text-amber-500" />
-                  Verwachte inkoopkosten
-                </>
-              ) : (
-                <>Inkoopkosten ({summary.invoiceCount} facturen)</>
-              )}
-            </span>
-            <span className="font-medium text-destructive">-€{formatPrice(summary.totalPurchaseCosts)}</span>
-          </div>
-          {summary.costsAreEstimated && (
-            <p className="text-xs text-muted-foreground ml-5">
-              Op basis van programma-items — nog geen inkoopfacturen geregistreerd
-            </p>
-          )}
-        </div>
-
-        {/* Gross Margin */}
-        <div className="flex items-center justify-between text-sm pt-2 border-t">
-          <span className="text-muted-foreground">Bruto marge</span>
-          <span className={`font-medium ${summary.grossMargin >= 0 ? "text-primary" : "text-destructive"}`}>
-            €{formatPrice(summary.grossMargin)}
-          </span>
-        </div>
-
-        {/* Additional Income */}
-        <div className="space-y-2 pt-2 border-t">
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Receipt className="h-3 w-3" />
-              Coördinatiefee
-            </span>
-            <span className="font-medium text-primary">€{formatPrice(summary.coordinationFee)}</span>
-          </div>
-          {summary.totalCommissions > 0 && (
+          {/* Inkoopkosten */}
+          <div className="space-y-1 pt-2 border-t">
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 text-muted-foreground">
-                <Percent className="h-3 w-3" />
-                Partner commissies
+                <Package className="h-3 w-3" />
+                {summary.costsAreEstimated ? (
+                  <>
+                    <AlertTriangle className="h-3 w-3 text-amber-500" />
+                    Verwachte inkoopkosten (incl. BTW)
+                  </>
+                ) : (
+                  <>Inkoopkosten partners ({summary.invoiceCount} facturen, incl. BTW)</>
+                )}
               </span>
-              <span className="font-medium text-primary">+€{formatPrice(summary.totalCommissions)}</span>
+              <span className="font-medium text-destructive">−€{formatPrice(summary.effectiveCostsIncl)}</span>
             </div>
-          )}
-        </div>
-
-        {/* Net Margin */}
-        <div className="flex items-center justify-between pt-3 border-t-2">
-          <span className="font-semibold flex items-center gap-2">
-            {isProfit ? (
-              <TrendingUp className="h-4 w-4 text-primary" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-destructive" />
+            {!summary.costsAreEstimated && summary.effectiveCostsExcl > 0 && (
+              <div className="flex items-center justify-between text-xs pl-5 text-muted-foreground">
+                <span>· waarvan excl. BTW</span>
+                <span>€{formatPrice(summary.effectiveCostsExcl)}</span>
+              </div>
             )}
-            Netto marge{summary.costsAreEstimated ? " (indicatief)" : ""}
-          </span>
-          <div className="text-right">
-            <span className={`text-xl font-bold ${isProfit ? "text-primary" : "text-destructive"}`}>
-              €{formatPrice(summary.netMargin)}
-            </span>
+            {summary.costsAreEstimated && (
+              <p className="text-xs text-muted-foreground ml-5">
+                Op basis van programma-items — nog geen inkoopfacturen geregistreerd
+              </p>
+            )}
           </div>
-        </div>
 
-        {!isProfit && (
-          <p className="text-xs text-destructive mt-2">
-            ⚠️ Dit project heeft een negatieve marge. Controleer de inkoopprijzen en verkoopprijzen.
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          {/* Bruto marge */}
+          <div className="pt-3 border-t-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold flex items-center gap-2">
+                {isProfit ? (
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-destructive" />
+                )}
+                Bruto marge (incl. BTW){summary.costsAreEstimated ? " (indicatief)" : ""}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Omzet incl. BTW minus inkoopkosten incl. BTW. BTW loopt fiscaal door
+                    (afdracht − vooraftrek), dus deze marge benadert de werkelijke winst
+                    vóór algemene kosten. Coördinatiefee en commissies zitten al in de omzet.
+                  </TooltipContent>
+                </Tooltip>
+              </span>
+              <span className={`text-xl font-bold ${isProfit ? "text-primary" : "text-destructive"}`}>
+                €{formatPrice(summary.grossMarginIncl)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs pl-6 text-muted-foreground mt-1">
+              <span>≈ excl. BTW</span>
+              <span>€{formatPrice(summary.grossMarginExclApprox)}</span>
+            </div>
+          </div>
+
+          {!isProfit && (
+            <p className="text-xs text-destructive mt-2">
+              ⚠️ Dit project heeft een negatieve marge. Controleer de inkoop- en verkoopprijzen.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
