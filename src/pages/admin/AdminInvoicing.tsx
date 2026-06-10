@@ -30,6 +30,15 @@ import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { CheckCircle2, Mail, Hotel } from "lucide-react";
 import { CompletionActions } from "@/components/admin/CompletionActions";
 
+interface AccommodationExtraForInvoicing {
+  id: string;
+  quote_id: string;
+  quantity: number;
+  unit_price: number;
+  pricing_type: string | null;
+  vat_rate: number | null;
+}
+
 interface ProgramRequestWithItems {
   id: string;
   reference_number: string | null;
@@ -72,14 +81,7 @@ interface ProgramRequestWithItems {
   }[];
   selected_accommodation_base_total?: number | null;
   selected_accommodation_vat_rate?: number | null;
-  selected_accommodation_extras?: {
-    id: string;
-    quote_id: string;
-    quantity: number;
-    unit_price: number;
-    pricing_type: string | null;
-    vat_rate: number | null;
-  }[];
+  selected_accommodation_extras?: AccommodationExtraForInvoicing[];
 }
 
 interface InvoiceVatSuggestion {
