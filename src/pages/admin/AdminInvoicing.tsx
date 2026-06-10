@@ -142,13 +142,18 @@ const AdminInvoicing = () => {
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ["admin-invoicing-requests"],
     queryFn: async () => {
-      // Get requests with completion_status
+      // Get requests with completion_status.
+      // Include projects where the AV is accepted OR where the admin has
+      // manually advanced the completion status (e.g. "klaar voor facturatie"
+      // without portal acceptance).
       const { data: requestsData, error: requestsError } = await supabase
         .from("program_requests")
         .select("*")
         .eq("status", "active")
-        .not("terms_accepted_at", "is", null)
-        .order("terms_accepted_at", { ascending: false });
+        .or(
+          "terms_accepted_at.not.is.null,completion_status.in.(ready_for_invoice,partially_invoiced,fully_invoiced)",
+        )
+        .order("terms_accepted_at", { ascending: false, nullsFirst: true });
 
       if (requestsError) throw requestsError;
 
