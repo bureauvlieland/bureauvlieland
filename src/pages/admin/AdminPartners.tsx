@@ -77,6 +77,7 @@ interface Partner {
   is_active: boolean;
   commission_percentage: number;
   accommodation_commission_percentage: number | null;
+  extras_commission_percentage: number | null;
   auth_user_id: string | null;
   partner_token: string;
   created_at: string;
