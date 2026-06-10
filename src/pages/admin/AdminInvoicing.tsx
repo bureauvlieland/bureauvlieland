@@ -109,14 +109,13 @@ const formatCurrency = (amount: number) =>
 
 const AdminInvoicing = () => {
   const queryClient = useQueryClient();
-  const { getCoordinationFee, settings } = useAppSettings();
+  const { getCoordinationFee, getVatRate, settings } = useAppSettings();
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const navigate = useNavigate();
-  const { getVatRate } = useAppSettings();
 
-  const getAccommodationExtraTotal = (extra: ProgramRequestWithItems["selected_accommodation_extras"][number]) => {
+  const getAccommodationExtraTotal = (extra: AccommodationExtraForInvoicing) => {
     if (extra.pricing_type === "fixed") return Number(extra.unit_price ?? 0);
     return Number(extra.unit_price ?? 0) * Number(extra.quantity ?? 0);
   };
