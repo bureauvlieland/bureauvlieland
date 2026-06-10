@@ -371,6 +371,18 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
               </ul>
             </div>
           ) : null}
+          {(project.programPipeline === "akkoord_ontvangen"
+            || project.programPipeline === "av_getekend") && (
+            <div className="rounded-md border bg-card p-3">
+              <MarkReadyForInvoiceButton
+                programId={project.id}
+                onDone={() => queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Project verschuift naar Facturatie, ook zonder AV-acceptatie via de portal.
+              </p>
+            </div>
+          )}
           <ProjectActionsCard requestId={project.id} />
           <div className="grid gap-3 md:grid-cols-2">
             <Card>
