@@ -220,6 +220,7 @@ function ProjectActionsCard({ requestId }: { requestId: string }) {
 
 export function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [chatOpen, setChatOpen] = useState(false);
 
   const { data: detail, isLoading, error } = useQuery<DetailData>({
