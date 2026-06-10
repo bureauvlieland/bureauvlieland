@@ -1044,6 +1044,24 @@ export function AddPurchaseInvoiceDialog({
   const selectedProject = projects?.find((p) => p.id === requestId);
   const hasLines = lines.length > 0;
 
+  // IBAN uit de gescande factuur registreren bij de geselecteerde partner
+  const registerIban = useRegisterPartnerIban();
+  const scannedIban = useMemo(() => {
+    const raw = (scanResult?.supplier_iban || "").replace(/\s/g, "").toUpperCase();
+    // Basis-validatie: landcode + 2 cijfers + 11-30 alfanumeriek, plus mod-97 check
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(raw)) return null;
+    const rearranged = raw.slice(4) + raw.slice(0, 4);
+    const digits = rearranged.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+    let rem = 0;
+    for (let i = 0; i < digits.length; i += 7) {
+      rem = Number(String(rem) + digits.slice(i, i + 7)) % 97;
+    }
+    return rem === 1 ? raw : null;
+  }, [scanResult?.supplier_iban]);
+  const partnerIban = (selectedPartner?.iban || "").replace(/\s/g, "").toUpperCase();
+  const showIbanSuggestion = !!scannedIban && !!selectedPartner && !partnerIban;
+  const ibanMismatch = !!scannedIban && !!partnerIban && scannedIban !== partnerIban;
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
