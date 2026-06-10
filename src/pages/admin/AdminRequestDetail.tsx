@@ -537,6 +537,14 @@ const AdminRequestDetail = () => {
   const centralSurcharge = request?.invoicing_mode === "bureau_central"
     ? appSettings.bureau_central_surcharge_pp * numberOfPeople
     : 0;
+  // Per-project uitgesloten automatische kostenposten (excluded_fees) tellen
+  // niet mee in totaal/openstaand — zelfde gedrag als FinancialOverviewCard.
+  const excludedFeesList: string[] = ((request as any)?.excluded_fees ?? []) as string[];
+  const feeExcluded = (key: string) => excludedFeesList.includes(key);
+  const effectiveCoordinationFee = feeExcluded("coordination_fee") ? 0 : coordinationFeeForProfit;
+  const effectiveTouristTax = feeExcluded("tourist_tax") ? 0 : touristTax;
+  const effectiveNatureContribution = feeExcluded("nature_contribution") ? 0 : natureContribution;
+  const effectiveCentralSurcharge = feeExcluded("central_surcharge") ? 0 : centralSurcharge;
   const accommodationBaseTotal = selectedAccommodationQuote?.price_total ?? 0;
   const accommodationExtrasTotal = calculateExtrasTotal(accommodationExtras);
   const accommodationTotal = accommodationBaseTotal + accommodationExtrasTotal;
@@ -545,10 +553,10 @@ const AdminRequestDetail = () => {
     items,
     numberOfPeople: request.number_of_people,
     numberOfDays,
-    coordinationFee: coordinationFeeForProfit,
-    touristTax,
-    natureContribution,
-    centralSurcharge,
+    coordinationFee: effectiveCoordinationFee,
+    touristTax: effectiveTouristTax,
+    natureContribution: effectiveNatureContribution,
+    centralSurcharge: effectiveCentralSurcharge,
     accommodationTotal,
     linesByItem: billingLinesByItem,
   }) : 0;
@@ -968,10 +976,10 @@ const AdminRequestDetail = () => {
       invoices: bureauInvoices,
       numberOfPeople: request?.number_of_people ?? 0,
       numberOfDays,
-      coordinationFee: calcCoordFee(request?.number_of_people ?? 0),
-      touristTax,
-      natureContribution,
-      centralSurcharge,
+      coordinationFee: effectiveCoordinationFee,
+      touristTax: effectiveTouristTax,
+      natureContribution: effectiveNatureContribution,
+      centralSurcharge: effectiveCentralSurcharge,
       accommodationTotal,
       linesByItem: billingLinesByItem,
     });
