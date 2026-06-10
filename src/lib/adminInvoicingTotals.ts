@@ -28,6 +28,8 @@ export interface AdminInvoicingRequestLike {
   selected_dates: string[];
   invoicing_mode?: string | null;
   selected_accommodation_total?: number | null;
+  /** Per-project uitgesloten automatische kostenposten (excluded_fees kolom). */
+  excluded_fees?: string[] | null;
   items: AdminInvoicingItemLike[];
   invoices: AdminInvoicingInvoiceLike[];
 }
