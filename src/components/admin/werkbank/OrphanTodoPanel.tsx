@@ -36,7 +36,7 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admin_todos")
-        .select("id, title, description, priority, due_date, auto_type, related_partner_id, related_request_id, related_accommodation_request_id, created_at")
+        .select("id, title, description, priority, due_date, auto_type, related_partner_id, related_request_id, created_at")
         .eq("id", todoId)
         .maybeSingle();
       if (error) throw error;
