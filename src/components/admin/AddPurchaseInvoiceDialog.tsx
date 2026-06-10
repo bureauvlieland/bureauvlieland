@@ -45,6 +45,7 @@ import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
 import { useDuplicatePurchaseInvoiceCheck } from "@/lib/purchaseInvoiceDuplicateCheck";
+import { useRegisterPartnerIban } from "@/hooks/usePartnerIbanSuggestions";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ExtraProjectSplitBlock,
@@ -69,6 +70,7 @@ interface ScanResult {
   invoice_number: string | null;
   invoice_date: string | null;
   supplier_name: string | null;
+  supplier_iban?: string | null;
   amount_excl_vat: number | null;
   vat_rate: number | null;
   vat_amount: number | null;
@@ -298,7 +300,7 @@ export function AddPurchaseInvoiceDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name")
+        .select("id, name, iban")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
