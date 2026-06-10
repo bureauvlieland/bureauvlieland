@@ -597,18 +597,17 @@ const AdminInvoicePreview = () => {
       categories.push({ label: "Logies", rows });
     }
 
-    // Logies-extra's
-    if (accommodationExtras.length > 0) {
-      const rows: InvoiceLineRow[] = accommodationExtras.map((extra) => {
-        const extraTotal = getExtraTotal(extra);
+    // Logies-extra's (gebundeld op identieke omschrijving + prijs + BTW)
+    if (bundledExtras.length > 0) {
+      const rows: InvoiceLineRow[] = bundledExtras.map((extra) => {
         const isFixed = extra.pricing_type === "fixed";
         return {
           description: extra.name,
           subDescription: extra.description ?? undefined,
-          qty: isFixed ? "1" : String(extra.quantity),
+          qty: isFixed ? String(extra.count) : String(extra.quantity),
           unitPrice: fmt(extra.unit_price),
           unitPriceSuffix: isFixed ? "" : "p.p.",
-          amount: fmt(extraTotal),
+          amount: fmt(extra.total),
         };
       });
       categories.push({ label: "Extra's bij logies", rows });
@@ -770,7 +769,7 @@ const AdminInvoicePreview = () => {
     [request.billing_address_postal, request.billing_address_city].filter(Boolean).join(" "),
   ].filter(Boolean);
 
-  const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + accommodationExtras.length;
+  const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + bundledExtras.length;
 
   return (
     <>
@@ -1144,8 +1143,7 @@ const AdminInvoicePreview = () => {
                                   Extra's bij logies
                                 </td>
                               </tr>
-                              {accommodationExtras.map((extra, idx) => {
-                                const extraTotal = getExtraTotal(extra);
+                              {bundledExtras.map((extra, idx) => {
                                 const isFixed = extra.pricing_type === "fixed";
 
                                 return (
@@ -1157,7 +1155,7 @@ const AdminInvoicePreview = () => {
                                       )}
                                     </td>
                                     <td className="py-1.5 px-2 text-right">
-                                      {isFixed ? 1 : extra.quantity}
+                                      {isFixed ? extra.count : extra.quantity}
                                     </td>
                                     <td className="py-1.5 px-2 text-right">
                                       {formatCurrency(extra.unit_price)}
@@ -1166,7 +1164,7 @@ const AdminInvoicePreview = () => {
                                       )}
                                     </td>
                                     <td className="py-1.5 px-2 text-right font-medium">
-                                      {formatCurrency(extraTotal)}
+                                      {formatCurrency(extra.total)}
                                     </td>
                                   </tr>
                                 );
