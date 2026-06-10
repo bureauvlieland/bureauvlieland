@@ -22,6 +22,7 @@ import {
   type BankStatement,
   type BankStatementLine,
 } from "@/hooks/useBankStatements";
+import { PartnerIbanSuggestionsCard } from "@/components/admin/PartnerIbanSuggestionsCard";
 
 const fmtEur = (n: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
@@ -219,6 +220,8 @@ export default function AdminBankStatements() {
             </Button>
           </div>
         </div>
+
+        <PartnerIbanSuggestionsCard />
 
         <Tabs defaultValue="pending">
           <TabsList>
