@@ -131,3 +131,38 @@ export function combineCommunicationStates(
   }
   return "klaar";
 }
+
+/**
+ * Concrete actie-hints voor wanneer een dossier "bij_bureau" (Aan zet) staat.
+ * Vertelt de admin wát er moet gebeuren, niet alleen dát er iets moet.
+ */
+export function getBureauActionHints(args: {
+  program?: ProgramTrackInput | null;
+  lodging?: LodgingTrackInput | null;
+}): string[] {
+  const hints: string[] = [];
+  const p = args.program;
+  if (p && p.pipeline !== "geannuleerd" && p.pipeline !== "afgerond") {
+    const n = p.itemsReadyForPartner ?? 0;
+    if (n > 0) {
+      hints.push(`Stuur ${n} item${n === 1 ? "" : "s"} naar partner${n === 1 ? "" : "s"}`);
+    } else if (p.pipeline === "facturatie") {
+      hints.push("Maak factuur op");
+    } else if (p.quote_status === "akkoord_ontvangen") {
+      hints.push("Verstuur AV / plan uitvoering");
+    } else if (!p.quote_status || p.quote_status === "concept") {
+      hints.push("Werk concept uit / stel offerte op voor klant");
+    } else {
+      hints.push("Volg programma op");
+    }
+  }
+  const l = args.lodging;
+  if (l && l.hasRequest && !l.quoteSelected) {
+    const pending = l.quotesPending ?? 0;
+    const awaiting = l.quotesAwaitingCustomerChoice ?? 0;
+    if (pending === 0 && awaiting === 0) {
+      hints.push("Zet logies-aanvraag uit naar partners");
+    }
+  }
+  return hints;
+}
