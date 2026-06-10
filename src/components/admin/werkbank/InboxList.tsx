@@ -138,6 +138,14 @@ function InboxRow({
         })}
       </div>
 
+      {item.reasons.includes("bij_bureau") && project?.bureauActionHints?.length ? (
+        <ul className="mt-1 space-y-0.5 text-xs text-blue-700 dark:text-blue-300">
+          {project.bureauActionHints.map((h, i) => (
+            <li key={i} className="truncate">→ {h}</li>
+          ))}
+        </ul>
+      ) : null}
+
       {item.todos.length > 0 && (
         <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
           {item.todos.slice(0, 2).map((t) => (
