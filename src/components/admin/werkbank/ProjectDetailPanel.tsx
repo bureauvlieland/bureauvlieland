@@ -15,6 +15,7 @@ import {
   type ProjectCommunicationState,
 } from "@/lib/projectCommunication";
 import type { ProjectSummary } from "@/lib/getProject";
+import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
 import { cn } from "@/lib/utils";
 
 type ItemRow = Pick<
