@@ -142,6 +142,12 @@ export const CustomerProgramItem = ({
                 )}
                 {isSelfArranged ? (
                   <MicroPill tone="amber">Zelf te regelen</MicroPill>
+                ) : item.provider_id === "bureau" ? (
+                  // Bureau-onderdelen (veerboot, fiets, vrije tijd) worden door
+                  // het bureau zelf geregeld. Geen Pending-pill aan de klant tonen.
+                  item.booking_reference || item.status === "confirmed" || item.status === "executed" ? (
+                    <MicroPill tone="emerald">Bevestigd</MicroPill>
+                  ) : null
                 ) : item.status === "pending" ? (
                   <MicroPill tone="amber">Pending</MicroPill>
                 ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
