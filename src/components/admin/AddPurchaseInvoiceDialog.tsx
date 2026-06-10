@@ -267,6 +267,11 @@ export function AddPurchaseInvoiceDialog({
   const [lines, setLines] = useState<LineRow[]>([]);
   const [extraProjects, setExtraProjects] = useState<ExtraProjectSplit[]>([]);
 
+  // Logies-allocatie (1-op-1 doorzetten naar accommodation_quote)
+  const [lodgingEnabled, setLodgingEnabled] = useState(false);
+  const [lodgingQuoteId, setLodgingQuoteId] = useState<string | null>(null);
+  const [lodgingAllocations, setLodgingAllocations] = useState<LodgingLineAllocation[]>([]);
+
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
