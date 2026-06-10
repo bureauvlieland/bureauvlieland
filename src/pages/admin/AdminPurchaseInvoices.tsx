@@ -66,6 +66,7 @@ export default function AdminPurchaseInvoices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [forwardMethod, setForwardMethod] = useState<"outlook" | "mailjet">("outlook");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
