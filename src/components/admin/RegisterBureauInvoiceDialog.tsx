@@ -150,7 +150,7 @@ export const RegisterBureauInvoiceDialog = ({
         form.setValue("vat_amount", Math.round(totalVat * 100) / 100);
       }
     })();
-  }, [isOpen, requestId, suggestedAmount, form]);
+  }, [isOpen, requestId, suggestedAmount, suggestedExclVat, suggestedVatAmount, form]);
 
   const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
   const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
