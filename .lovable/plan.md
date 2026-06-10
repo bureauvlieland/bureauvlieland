@@ -1,61 +1,60 @@
-# Plan — Project naar facturatie + pending-status overrulen
 
-## Wat ik ga bouwen
+## Probleem
 
-### 1. Admin-knop "Markeer als klaar voor facturatie"
+Op de Doeksen-PDF staat:
+- Excl. BTW: € 246,61
+- BTW laag: € 22,14
+- **Totaal: € 268,75**
 
-Plek: project-detailpaneel in de Werkbank (en op de bestaande `AdminRequestDetail`-header naast de andere status-acties).
+In de portal staat € 268,805 en in de mail € 268,80. Dat komt door twee bugs:
 
-Gedrag, identiek aan wat de klant-flow nu al doet in `update-customer-program`:
-- Zet `program_requests.completion_status = 'ready_for_invoice'`.
-- Maakt (als die nog niet bestaat) de auto-todo `invoicing_ready` aan met titel "Facturatie: {klant}".
-- Logt in `program_request_history` ("admin handmatig op facturatie gezet, reden optioneel").
-- Resolved openstaande `terms_reminder`-todo's (analoog).
+1. **VAT wordt herrekend i.p.v. overgenomen uit PDF.**
+   In `src/components/admin/AddPurchaseInvoiceDialog.tsx` (`computeLineTotals`, regel ±160) en bij de scanner-prefill (`buildLinesFromScan`) gebruiken we alleen `amount_excl_vat` en `vat_rate`, en berekenen daaruit `vat = excl × rate`. Voor deze factuur wordt dat 246,61 × 9% = 22,1949 → totaal 268,8049. De leverancier rondt z'n BTW zelf af op € 22,14 (totaal € 268,75), dus onze waarde wijkt af van de échte factuur.
 
-Voorwaarden om de knop te tonen:
-- `completion_status` is `in_progress` (niet al ready/partially/fully).
-- Project niet `cancelled`.
-- Zichtbare confirm-dialog: "Weet je zeker? Hiermee verschuift het project naar Facturatie, ook zonder dat de klant de AV heeft geaccepteerd." + optioneel reden-veld dat in de history-regel terechtkomt.
+2. **Weergave-formattering toont 3 decimalen.**
+   Op meerdere plekken (`AdminPurchaseInvoices.tsx` regel 423/525, `PurchaseInvoicesCard.tsx` regel 141, `usePurchaseInvoices.ts` regel 78, `MatchedRegistrationBanner.tsx` regel 146, …) staat `toLocaleString("nl-NL", { minimumFractionDigits: 2 })` zónder `maximumFractionDigits: 2`. Het opgeslagen getal 268,8049 verschijnt dan als "268,805" (portal) of "268,80" (mail, die wel afgekapt is).
 
-Technisch: nieuwe edge function `set-project-ready-for-invoice` (kort, service-role; doet bovenstaande 3 updates atomisch). Front-end-knop in een nieuw klein component `MarkReadyForInvoiceButton`, hergebruikt op werkbank-detail én `AdminRequestDetail`.
+## Oplossing
 
-### 2. Pending-status van bureau-items niet meer aan klant tonen
+### A. PDF-totalen als waarheid gebruiken
 
-Bureau-managed onderdelen (`provider_id = 'bureau'`: veerboot, fiets, vrije tijd) worden nooit door een externe partner bevestigd — die regelt het bureau zelf. Toch staan ze nu op `status = 'pending'` zolang er geen handmatige flip is, waardoor de klantportal "Pending" + "Wachten op aanbieders 1/6 bevestigd" laat zien en de klant blokkeert op het laatste akkoord-/AV-scherm.
+In `buildLinesFromScan` en de submit-flow van `AddPurchaseInvoiceDialog`:
 
-Twee samenhangende fixes:
+- Als de scanner een `amount_incl_vat`, `vat_amount` of `vat_breakdown[*].vat_amount` aanlevert: gebruik die letterlijk en bereken `excl = incl − vat` (i.p.v. `vat = excl × rate`).
+- Voor `vat_breakdown`-rijen: gebruik de échte `vat_amount` per rate, niet `amount_excl × rate`.
+- Voor de header-totalen die naar `partner_purchase_invoices` worden weggeschreven: prefer de gescande `amount_incl_vat` van de PDF; valt die weg, dan pas `excl + vat` (waarbij vat ook uit de PDF komt, niet herrekend).
 
-**a. Display-fix in de klantportal (geen DB-wijziging nodig):**
-In `CustomerProgramItem.tsx` (regel ~145) en in `StatusSummary`/`ProgramOverviewCard` tellen we bureau-items niet meer mee als "pending". Voor bureau-items met `booking_reference` tonen we `Bevestigd` (groen). Voor bureau-items zónder booking_reference tonen we geen status-pill (intern; klant hoeft hier niet op te wachten). Hetzelfde geldt voor `statusSummary.pending` — bureau-items uitsluiten zodat de sidebar correct "Alle onderdelen bevestigd" toont.
+In `src/lib/vatCalculation.ts` een nieuwe helper toevoegen:
 
-**b. Admin-override knop "Markeer als bevestigd" per item:**
-Op de admin item-rij (in `AdminRequestDetail` en in het werkbank-detail) één knop toevoegen voor items met `status = 'pending'` en `provider_id !== 'bureau'` (bv. de "Koffie & Gebak" van Rederij Doeksen) waarmee de admin de partner-status kan overrulen. Effect:
-- `program_request_items.status = 'confirmed'`
-- `item_quote_status = 'bevestigd'`
-- Audit-log naar `program_request_history` met "admin override pending → confirmed (reden: …)".
-- Geen mail naar partner (overrule is intern).
-- Bestaande Send-Items-todo wordt up-to-date gezet zoals nu.
+```ts
+calculateFromExclAndVat(excl: number, vat: number, rate: number): VatBreakdown
+```
 
-Voor bureau-items is deze knop niet nodig (de display-fix lost ze al op), maar voor netheid: bestaand "Ticket koppelen"-pad zet straks bij succesvolle koppeling het item meteen op `status='confirmed'` (kleine uitbreiding in `ticket-documents`-pad / ticket-koppel-mutator) — zodat bureau-items met booking_reference ook in de DB de juiste status hebben en niet alleen in de display.
+die `excl`, `vat`, en `incl = excl + vat` 1-op-1 overneemt en op 2 decimalen rondt. Deze gebruiken in de inkoopfactuur-flow.
 
-## Technische details
+### B. Bestaande factuur in DB corrigeren (BV-2605-0001)
 
-- Nieuwe edge function: `supabase/functions/set-project-ready-for-invoice/index.ts` — body `{ program_id, reason? }`, service-role, drie sequential updates + history-insert.
-- Nieuw component: `src/components/admin/MarkReadyForInvoiceButton.tsx` (gebruikt `AlertDialog` met reden-veld).
-- Inhang-punten:
-  - `src/pages/admin/AdminRequestDetail.tsx` — naast bestaande status-acties.
-  - `src/components/admin/werkbank/ProjectDetailPanel.tsx` — onder de Aan zet-hint, zichtbaar als pipeline = `akkoord_ontvangen` of `av_getekend`.
-- `src/components/customer-portal/CustomerProgramItem.tsx` — bureau-items renderen geen "Pending"-pill; met `booking_reference` tonen ze "Bevestigd".
-- `src/components/customer-portal/StatusSummary.tsx` (+ `useCustomerPortal`/wherever `pending` count vandaan komt) — bureau-items uitsluiten uit pending-count.
-- Nieuw component `OverridePendingButton` (klein) op admin-itemrij voor niet-bureau partners; roept een tweede edge function `override-item-status` aan (of een bestaande item-update-mutator als die service-role draait — checken bij implementatie).
-- Ticket-koppel-flow: bij succesvolle koppeling `status='confirmed'` zetten voor bureau-items (een-regel-uitbreiding).
+Eenmalige update: voor de Doeksen-regel `amount_excl_vat = 246.61`, `vat_amount = 22.14`, `amount_incl_vat = 268.75`, zodat portal/mail/PDF gelijklopen.
 
-## Wat ik bewust niét doe
+### C. Weergave hard op 2 decimalen
 
-- Geen nieuwe DB-kolommen of RLS-wijzigingen — dit gebruikt allemaal bestaande velden.
-- Geen wijziging aan de bestaande klant-AV-flow; die blijft de "nette" weg. De admin-knop is puur een shortcut voor uitzonderingen.
-- Geen wijziging aan partner-portal, e-mailtemplates of facturatielogica zelf.
+In alle bedragweergaves voor inkoopfacturen `maximumFractionDigits: 2` toevoegen:
+- `src/pages/admin/AdminPurchaseInvoices.tsx`
+- `src/components/admin/PurchaseInvoicesCard.tsx`
+- `src/components/admin/purchase-invoices/MatchedRegistrationBanner.tsx`
+- `src/hooks/usePurchaseInvoices.ts` (duplicate-melding)
+- en e-mail-template voor de doorstuurmail (Mailjet body in edge function).
 
-## Open vraag
+Zo zien we nooit meer 3 decimalen, ook niet als er nog historische records met afwijkende precisie in de DB staan.
 
-Wil je de admin-override op niet-bureau partner-items (zoals "Koffie & Gebak" van Rederij Doeksen in dit project) óók nu meebouwen, of voorlopig alleen de bureau-display-fix + facturatie-knop? Voor dit specifieke project zou alleen de display-fix al genoeg zijn om de klant door te laten gaan, behalve voor die ene koffie-regel.
+## Wat ik NIET aanpas
+
+- De Bureau-Vlieland verkoopfactuur-flow (PDF/mail naar klant) — daar zit het verschil niet en de math klopt al.
+- VAT-logica op verkoopzijde (`portalPricing`, `invoiceTotals`).
+- Bestaande tests buiten inkoopfactuur-scope.
+
+## Verificatie
+
+1. Doeksen-factuur opnieuw bekijken in `/admin/purchase-invoices` → totaal moet € 268,75 zijn, geen 3 decimalen.
+2. Doorstuurmail (Outlook/Mailjet) preview → € 268,75.
+3. Een nieuwe scan met een PDF met "vreemde" BTW-afronding (bv. catering 9%) testen: bedrag moet exact gelijk zijn aan de PDF, niet herrekend.
