@@ -6,6 +6,7 @@ import {
   completionStatusColors,
   type CompletionStatus,
 } from "@/types/bureauInvoice";
+import { MarkReadyForInvoiceButton } from "./MarkReadyForInvoiceButton";
 
 interface ProgramRequestItem {
   id: string;
@@ -17,21 +18,25 @@ interface ProgramRequestItem {
 }
 
 interface RequestCompletionStatusProps {
+  requestId?: string;
   status: string;
   completionStatus: CompletionStatus | null;
   termsAcceptedAt: string | null;
   items: ProgramRequestItem[];
   outstandingAmount: number;
   quoteStatus?: string | null;
+  onRefresh?: () => void;
 }
 
 export const RequestCompletionStatus = ({
+  requestId,
   status,
   completionStatus,
   termsAcceptedAt,
   items,
   outstandingAmount,
   quoteStatus,
+  onRefresh,
 }: RequestCompletionStatusProps) => {
   const termsAccepted = !!termsAcceptedAt;
 
