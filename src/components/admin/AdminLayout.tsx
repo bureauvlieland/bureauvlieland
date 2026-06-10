@@ -54,6 +54,7 @@ import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
+import { InboxBell } from "@/components/admin/InboxBell";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -407,6 +408,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             </SidebarTrigger>
             <span className="font-semibold text-slate-900">Admin</span>
             <div className="ml-auto flex items-center gap-2">
+              <InboxBell />
               <ClaudiaBadge />
             </div>
           </header>
