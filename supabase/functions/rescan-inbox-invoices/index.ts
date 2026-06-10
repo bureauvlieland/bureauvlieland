@@ -47,17 +47,21 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const limit = Math.min(Math.max(Number(body?.limit) || 30, 1), 50);
 
-    // Items that were scanned before supplier_iban existed (key absent in scan_result)
+    // Items that were scanned before supplier_iban existed (key absent in scan_result),
+    // plus stale 'scanning'/'failed' items that need a retry.
     const { data: items, error: selErr } = await service
       .from("purchase_invoice_inbox")
-      .select("id, attachment_path, scan_result")
+      .select("id, attachment_path, scan_result, scan_status")
       .not("attachment_path", "is", null)
-      .eq("scan_status", "scanned")
+      .in("scan_status", ["scanned", "scanning", "failed"])
       .order("created_at", { ascending: true });
     if (selErr) throw selErr;
 
     const pending = (items || []).filter(
-      (i) => i.scan_result && !Object.prototype.hasOwnProperty.call(i.scan_result, "supplier_iban"),
+      (i) =>
+        i.scan_status !== "scanned" ||
+        !i.scan_result ||
+        !Object.prototype.hasOwnProperty.call(i.scan_result, "supplier_iban"),
     );
     const batch = pending.slice(0, limit);
 
