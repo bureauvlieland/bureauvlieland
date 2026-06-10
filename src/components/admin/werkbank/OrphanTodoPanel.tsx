@@ -17,7 +17,6 @@ interface TodoRow {
   auto_type: string | null;
   related_partner_id: string | null;
   related_request_id: string | null;
-  related_accommodation_request_id: string | null;
   created_at: string;
 }
 
