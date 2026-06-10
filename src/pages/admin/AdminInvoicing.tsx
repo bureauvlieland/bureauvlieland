@@ -27,6 +27,7 @@ import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
+import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
 import { CheckCircle2, Mail, Hotel } from "lucide-react";
 import { CompletionActions } from "@/components/admin/CompletionActions";
 
