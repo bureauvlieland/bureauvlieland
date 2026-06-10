@@ -1178,6 +1178,31 @@ export function AddPurchaseInvoiceDialog({
               </Popover>
             </div>
 
+            {/* Logies-allocatie (1-op-1 doorzetten naar accommodation_quote) */}
+            {requestId && partnerId && (
+              <LodgingAllocationBlock
+                programRequestId={requestId}
+                partnerId={partnerId}
+                lines={lines.map((l) => {
+                  const t = computeLineTotals(l);
+                  return {
+                    description: l.description,
+                    amount_incl_vat: t.amount_incl_vat,
+                    amount_excl_vat: t.amount_excl_vat,
+                    vat_rate: t.vat_rate,
+                  };
+                })}
+                quoteId={lodgingQuoteId}
+                onQuoteIdChange={setLodgingQuoteId}
+                allocations={lodgingAllocations}
+                onAllocationsChange={setLodgingAllocations}
+                enabled={lodgingEnabled}
+                onEnabledChange={setLodgingEnabled}
+              />
+            )}
+
+
+
             {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
             {requestId && items && items.length > 0 && (() => {
               const invoiceIncl = parseFloat(amountIncl) || 0;
