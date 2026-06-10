@@ -24,9 +24,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
+import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
+import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
 import { CheckCircle2, Mail, Hotel } from "lucide-react";
 import { CompletionActions } from "@/components/admin/CompletionActions";
+
+interface AccommodationExtraForInvoicing {
+  id: string;
+  quote_id: string;
+  quantity: number;
+  unit_price: number;
+  pricing_type: string | null;
+  vat_rate: number | null;
+}
 
 interface ProgramRequestWithItems {
   id: string;
@@ -44,6 +56,7 @@ interface ProgramRequestWithItems {
   created_at: string;
   items: {
     id: string;
+    block_id: string | null;
     day_index: number;
     block_name: string;
     block_type: string;
@@ -53,6 +66,7 @@ interface ProgramRequestWithItems {
     admin_price_override?: number | null;
     price_type?: string | null;
     override_people?: number | null;
+    use_actual_costs?: boolean | null;
   }[];
   invoices: {
     id: string;
@@ -66,6 +80,16 @@ interface ProgramRequestWithItems {
     status: string | null;
     forwarded_to_accounting_at: string | null;
   }[];
+  selected_accommodation_base_total?: number | null;
+  selected_accommodation_vat_rate?: number | null;
+  selected_accommodation_extras?: AccommodationExtraForInvoicing[];
+}
+
+interface InvoiceVatSuggestion {
+  totalExclVat: number;
+  totalVat: number;
+  grandTotalInclVat: number;
+  vatGroups: { rate: number; exclVat: number; vatAmount: number }[];
 }
 
 interface InvoiceTotals {
@@ -86,11 +110,16 @@ const formatCurrency = (amount: number) =>
 
 const AdminInvoicing = () => {
   const queryClient = useQueryClient();
-  const { getCoordinationFee, settings } = useAppSettings();
+  const { getCoordinationFee, getVatRate, settings } = useAppSettings();
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const navigate = useNavigate();
+
+  const getAccommodationExtraTotal = (extra: AccommodationExtraForInvoicing) => {
+    if (extra.pricing_type === "fixed") return Number(extra.unit_price ?? 0);
+    return Number(extra.unit_price ?? 0) * Number(extra.quantity ?? 0);
+  };
 
   // Calculate invoice totals using the same full project logic as the admin financial overview
   const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
@@ -162,7 +191,7 @@ const AdminInvoicing = () => {
       
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select("id, request_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people")
+        .select("id, request_id, block_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people, use_actual_costs")
         .in("request_id", requestIds);
 
       if (itemsError) throw itemsError;
@@ -175,32 +204,62 @@ const AdminInvoicing = () => {
 
       if (invoicesError) throw invoicesError;
 
-      const accommodationTotals = new Map<string, number>();
+      const accommodationByRequestId = new Map<string, {
+        id: string;
+        price_total: number | null;
+        vat_rate: number | null;
+      }>();
+      const accommodationExtrasByQuoteId = new Map<string, AccommodationExtraForInvoicing[]>();
 
       if (linkedAccommodationIds.length > 0) {
         const { data: accommodationQuotes, error: accommodationError } = await supabase
           .from("accommodation_quotes")
-          .select("request_id, price_total")
+          .select("id, request_id, price_total, vat_rate")
           .eq("status", "selected")
           .in("request_id", linkedAccommodationIds);
 
         if (accommodationError) throw accommodationError;
 
         accommodationQuotes?.forEach((quote) => {
-          accommodationTotals.set(quote.request_id, quote.price_total ?? 0);
+          accommodationByRequestId.set(quote.request_id, quote);
         });
+
+        const quoteIds = (accommodationQuotes ?? []).map((quote) => quote.id);
+        if (quoteIds.length > 0) {
+          const { data: accommodationExtras, error: extrasError } = await supabase
+            .from("accommodation_quote_extras")
+            .select("id, quote_id, quantity, unit_price, pricing_type, vat_rate")
+            .in("quote_id", quoteIds);
+          if (extrasError) throw extrasError;
+          accommodationExtras?.forEach((extra) => {
+            const existing = accommodationExtrasByQuoteId.get(extra.quote_id) ?? [];
+            existing.push(extra as AccommodationExtraForInvoicing);
+            accommodationExtrasByQuoteId.set(extra.quote_id, existing);
+          });
+        }
       }
 
       // Combine data
       return requestsData.map((request) => ({
         ...request,
         selected_dates: request.selected_dates as string[],
+        selected_accommodation_base_total: request.linked_accommodation_id
+          ? accommodationByRequestId.get(request.linked_accommodation_id)?.price_total ?? null
+          : null,
+        selected_accommodation_vat_rate: request.linked_accommodation_id
+          ? accommodationByRequestId.get(request.linked_accommodation_id)?.vat_rate ?? null
+          : null,
+        selected_accommodation_extras: request.linked_accommodation_id
+          ? accommodationExtrasByQuoteId.get(accommodationByRequestId.get(request.linked_accommodation_id)?.id ?? "") ?? []
+          : [],
         selected_accommodation_total: request.linked_accommodation_id
-          ? accommodationTotals.get(request.linked_accommodation_id) ?? null
+          ? Number(accommodationByRequestId.get(request.linked_accommodation_id)?.price_total ?? 0) +
+            (accommodationExtrasByQuoteId.get(accommodationByRequestId.get(request.linked_accommodation_id)?.id ?? "") ?? [])
+              .reduce((sum, extra) => sum + getAccommodationExtraTotal(extra), 0)
           : null,
         items: itemsData.filter((item) => item.request_id === request.id),
         invoices: invoicesData.filter((inv) => inv.request_id === request.id),
-      })) as ProgramRequestWithItems[];
+      })) as unknown as ProgramRequestWithItems[];
     },
   });
 
@@ -209,6 +268,58 @@ const AdminInvoicing = () => {
     [requests],
   );
   const { linesByItem } = useItemBillingLinesBatch(allItemIds);
+  const allItems = useMemo(() => requests.flatMap((request) => request.items), [requests]);
+  const { getItemVatRate } = useItemVatRates(allItems);
+
+  const calculateInvoiceVatSuggestion = (request: ProgramRequestWithItems): InvoiceVatSuggestion => {
+    const totals = calculateInvoiceTotals(request);
+    const numberOfDays = Math.max(request.selected_dates?.length ?? 0, 1);
+    const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
+    const addToGroup = (rate: number, amountInclVat: number, exclVat?: number, vatAmount?: number) => {
+      if (amountInclVat <= 0 && !exclVat && !vatAmount) return;
+      const key = Number(rate) || 0;
+      if (!vatGroups[key]) vatGroups[key] = { exclVat: 0, vatAmount: 0 };
+      vatGroups[key].exclVat += exclVat ?? calculateExclVat(amountInclVat, key);
+      vatGroups[key].vatAmount += vatAmount ?? calculateVatAmount(amountInclVat, key);
+    };
+    const addItem = (item: ProgramRequestWithItems["items"][number]) => {
+      const itemLines = linesByItem[item.id] ?? [];
+      if (item.use_actual_costs && itemLines.length > 0) {
+        itemLines.forEach((line) => {
+          addToGroup(Number(line.vat_rate), Number(line.amount_incl_vat || 0), Number(line.amount_excl_vat || 0), Number(line.vat_amount || 0));
+        });
+        return;
+      }
+      const amountInclVat = centralLineTotal(item as never, request.number_of_people, numberOfDays) ?? 0;
+      addToGroup(getItemVatRate(item), amountInclVat);
+    };
+
+    request.items
+      .filter((item) => item.status !== "cancelled" && item.day_index !== -1)
+      .forEach(addItem);
+    request.items
+      .filter((item) => item.status !== "cancelled" && item.day_index === -1)
+      .forEach(addItem);
+
+    const standardVatRate = getVatRate("standard");
+    addToGroup(standardVatRate, getCoordinationFee(request.number_of_people));
+    addToGroup(standardVatRate, request.invoicing_mode === "bureau_central" ? settings.bureau_central_surcharge_pp * request.number_of_people : 0);
+    addToGroup(0, settings.tourist_tax_pp_per_day * request.number_of_people * numberOfDays + settings.nature_contribution_pp * request.number_of_people);
+    addToGroup(getVatRate("accommodation"), Number(request.selected_accommodation_base_total ?? 0));
+    (request.selected_accommodation_extras ?? []).forEach((extra) => {
+      addToGroup(Number(extra.vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
+    });
+
+    const vatGroupsList = Object.entries(vatGroups)
+      .map(([rate, value]) => ({ rate: Number(rate), exclVat: value.exclVat, vatAmount: value.vatAmount }))
+      .sort((a, b) => a.rate - b.rate);
+    return {
+      totalExclVat: vatGroupsList.reduce((sum, group) => sum + group.exclVat, 0),
+      totalVat: vatGroupsList.reduce((sum, group) => sum + group.vatAmount, 0),
+      grandTotalInclVat: totals.grandTotalInclVat,
+      vatGroups: vatGroupsList,
+    };
+  };
 
   // Standalone logies (accommodation_requests without a linked program)
   const { data: standaloneLodging = [], isLoading: isLoadingLodging } = useQuery({
@@ -782,6 +893,9 @@ const AdminInvoicing = () => {
           onClose={() => setIsInvoiceDialogOpen(false)}
           requestId={selectedRequest.id}
           suggestedAmount={calculateInvoiceTotals(selectedRequest).outstanding}
+          suggestedExclVat={calculateInvoiceVatSuggestion(selectedRequest).totalExclVat}
+          suggestedVatAmount={calculateInvoiceVatSuggestion(selectedRequest).totalVat}
+          suggestedVatGroups={calculateInvoiceVatSuggestion(selectedRequest).vatGroups}
           onSuccess={handleInvoiceSuccess}
         />
       )}
