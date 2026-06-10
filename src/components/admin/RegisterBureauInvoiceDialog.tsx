@@ -54,6 +54,12 @@ interface RegisterBureauInvoiceDialogProps {
   onClose: () => void;
   requestId: string;
   suggestedAmount?: number;
+  /** Exacte excl./BTW-uitsplitsing van het projecttotaal (uit het Financieel
+   *  Overzicht). Indien meegegeven wordt de prefill hierop gebaseerd in plaats
+   *  van een vlakke 21%-terugrekening. */
+  suggestedExclVat?: number;
+  suggestedVatAmount?: number;
+  suggestedVatGroups?: { rate: number; exclVat: number; vatAmount: number }[];
   onSuccess: () => void;
 }
 
@@ -62,6 +68,9 @@ export const RegisterBureauInvoiceDialog = ({
   onClose,
   requestId,
   suggestedAmount = 0,
+  suggestedExclVat,
+  suggestedVatAmount,
+  suggestedVatGroups = [],
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,8 +94,19 @@ export const RegisterBureauInvoiceDialog = ({
   useEffect(() => {
     if (!isOpen || !requestId) return;
     if (suggestedAmount > 0) {
-      form.setValue("amount_excl_vat", Math.round((suggestedAmount / 1.21) * 100) / 100);
-      form.setValue("vat_amount", Math.round((suggestedAmount - suggestedAmount / 1.21) * 100) / 100);
+      const baseTotal = (suggestedExclVat ?? 0) + (suggestedVatAmount ?? 0);
+      if (suggestedExclVat != null && suggestedVatAmount != null && baseTotal > 0) {
+        // Exacte uitsplitsing uit het Financieel Overzicht (gemengd 9%/21%).
+        // Schaal proportioneel mee als er al deels gefactureerd is
+        // (openstaand < projecttotaal).
+        const factor = suggestedAmount / baseTotal;
+        const excl = Math.round(suggestedExclVat * factor * 100) / 100;
+        form.setValue("amount_excl_vat", excl);
+        form.setValue("vat_amount", Math.round((suggestedAmount - excl) * 100) / 100);
+      } else {
+        form.setValue("amount_excl_vat", Math.round((suggestedAmount / 1.21) * 100) / 100);
+        form.setValue("vat_amount", Math.round((suggestedAmount - suggestedAmount / 1.21) * 100) / 100);
+      }
     }
     (async () => {
       const { data: items } = await supabase
@@ -330,6 +350,20 @@ export const RegisterBureauInvoiceDialog = ({
             </div>
 
             <div className="p-3 bg-muted rounded-md space-y-1 text-sm">
+              {suggestedVatGroups.length > 0 && (
+                <>
+                  <p className="text-xs text-muted-foreground font-medium">BTW-uitsplitsing projecttotaal:</p>
+                  {suggestedVatGroups.map((g) => (
+                    <div key={g.rate} className="flex justify-between text-muted-foreground">
+                      <span>BTW {g.rate}%</span>
+                      <span className="tabular-nums">
+                        excl. €{g.exclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW €{g.vatAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="border-t my-1" />
+                </>
+              )}
               {vatBreakdown.length > 0 && (
                 <>
                   <p className="text-xs text-muted-foreground font-medium">Ter info — werkelijke-kostenregels (alleen items met ingeboekte facturen):</p>
