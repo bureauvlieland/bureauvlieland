@@ -305,9 +305,9 @@ const AdminInvoicing = () => {
     addToGroup(standardVatRate, getCoordinationFee(request.number_of_people));
     addToGroup(standardVatRate, request.invoicing_mode === "bureau_central" ? settings.bureau_central_surcharge_pp * request.number_of_people : 0);
     addToGroup(0, settings.tourist_tax_pp_per_day * request.number_of_people * numberOfDays + settings.nature_contribution_pp * request.number_of_people);
-    addToGroup(Number(request.selected_accommodation_vat_rate ?? getVatRate("accommodation")), Number(request.selected_accommodation_base_total ?? 0));
+    addToGroup(getVatRate("accommodation"), Number(request.selected_accommodation_base_total ?? 0));
     (request.selected_accommodation_extras ?? []).forEach((extra) => {
-      addToGroup(Number(extra.vat_rate ?? request.selected_accommodation_vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
+      addToGroup(Number(extra.vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
     });
 
     const vatGroupsList = Object.entries(vatGroups)
