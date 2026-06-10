@@ -78,6 +78,9 @@ interface LineRow {
   quantity: string;
   unit_price: string;
   vat_rate: string;
+  /** Optionele override uit de PDF/scanner zodat we vat niet hoeven te herrekenen. */
+  vat_amount_override?: string;
+  amount_incl_override?: string;
 }
 
 interface AddPurchaseInvoiceDialogProps {
@@ -91,6 +94,7 @@ interface AddPurchaseInvoiceDialogProps {
 type Step = "upload" | "scanning" | "verify";
 
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
+
 
 /**
  * Build prefill LineRows from an AI scan result.
