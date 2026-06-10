@@ -82,9 +82,17 @@ export function calculateAdminInvoicingTotals(
     .filter((item) => item.status !== "cancelled" && item.day_index === -1)
     .reduce((sum, item) => sum + getEffectiveItemTotal(item), 0);
 
-  const touristTax = settings.touristTaxPerPersonPerDay * request.number_of_people * numberOfDays;
-  const natureContribution = settings.natureContributionPerPerson * request.number_of_people;
-  const centralSurcharge = request.invoicing_mode === "bureau_central"
+  const isExcluded = (key: string) =>
+    Array.isArray(request.excluded_fees) && request.excluded_fees.includes(key);
+
+  const coordinationFee = isExcluded("coordination_fee") ? 0 : settings.coordinationFee;
+  const touristTax = isExcluded("tourist_tax")
+    ? 0
+    : settings.touristTaxPerPersonPerDay * request.number_of_people * numberOfDays;
+  const natureContribution = isExcluded("nature_contribution")
+    ? 0
+    : settings.natureContributionPerPerson * request.number_of_people;
+  const centralSurcharge = request.invoicing_mode === "bureau_central" && !isExcluded("central_surcharge")
     ? settings.bureauCentralSurchargePerPerson * request.number_of_people
     : 0;
   const accommodationTotal = Number(request.selected_accommodation_total ?? 0);
@@ -92,7 +100,7 @@ export function calculateAdminInvoicingTotals(
   const grandTotalInclVat =
     programItemsTotal +
     extraCostsTotal +
-    settings.coordinationFee +
+    coordinationFee +
     touristTax +
     natureContribution +
     centralSurcharge +
