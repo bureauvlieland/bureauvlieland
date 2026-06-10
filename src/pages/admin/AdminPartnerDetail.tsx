@@ -311,7 +311,7 @@ const AdminPartnerDetail = () => {
     }
   };
 
-  const handleChange = (field: string, value: string | number | boolean) => {
+  const handleChange = (field: string, value: string | number | boolean | null) => {
     setFormData((prev) => {
       const newData = { ...prev, [field]: value };
       // Auto-generate ID from name for new partners
