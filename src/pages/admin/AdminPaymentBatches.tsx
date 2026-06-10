@@ -391,7 +391,7 @@ export default function AdminPaymentBatches() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-end gap-1">
                               {b.xml_file_path && (
                                 <Button
@@ -416,6 +416,14 @@ export default function AdminPaymentBatches() {
                             </div>
                           </TableCell>
                         </TableRow>
+                        {expandedBatch === b.id && (
+                          <TableRow key={`${b.id}-detail`} className="hover:bg-transparent">
+                            <TableCell colSpan={8} className="p-2">
+                              <BatchTransactions batchId={b.id} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </Fragment>
                       ))}
                     </TableBody>
                   </Table>
