@@ -584,8 +584,10 @@ export const AdminPartnersContent = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <span className="font-medium">{partner.commission_percentage}% / {partner.accommodation_commission_percentage ?? 10}%</span>
-                        <p className="text-xs text-muted-foreground">act. / logies</p>
+                        <span className="font-medium">
+                          {partner.commission_percentage}% / {partner.accommodation_commission_percentage ?? 10}% / {partner.extras_commission_percentage ?? partner.accommodation_commission_percentage ?? 10}%
+                        </span>
+                        <p className="text-xs text-muted-foreground">act. / logies / extras</p>
                       </div>
                     </TableCell>
                     <TableCell>
