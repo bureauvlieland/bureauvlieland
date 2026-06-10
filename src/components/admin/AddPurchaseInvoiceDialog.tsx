@@ -538,8 +538,25 @@ export function AddPurchaseInvoiceDialog({
   };
 
   const updateLine = (idx: number, patch: Partial<LineRow>) => {
-    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+    setLines((prev) =>
+      prev.map((l, i) => {
+        if (i !== idx) return l;
+        const next = { ...l, ...patch };
+        // Zodra de gebruiker bedragen/aantal/btw aanpast, vervalt de PDF-override
+        // zodat we niet langer het oude bedrag forceren.
+        const editsTotals =
+          patch.quantity !== undefined ||
+          patch.unit_price !== undefined ||
+          patch.vat_rate !== undefined;
+        if (editsTotals) {
+          next.vat_amount_override = undefined;
+          next.amount_incl_override = undefined;
+        }
+        return next;
+      })
+    );
   };
+
 
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
