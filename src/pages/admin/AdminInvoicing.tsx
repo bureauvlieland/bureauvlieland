@@ -190,7 +190,7 @@ const AdminInvoicing = () => {
       
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select("id, request_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people")
+        .select("id, request_id, block_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people, use_actual_costs")
         .in("request_id", requestIds);
 
       if (itemsError) throw itemsError;
@@ -203,32 +203,62 @@ const AdminInvoicing = () => {
 
       if (invoicesError) throw invoicesError;
 
-      const accommodationTotals = new Map<string, number>();
+      const accommodationByRequestId = new Map<string, {
+        id: string;
+        price_total: number | null;
+        vat_rate: number | null;
+      }>();
+      const accommodationExtrasByQuoteId = new Map<string, AccommodationExtraForInvoicing[]>();
 
       if (linkedAccommodationIds.length > 0) {
         const { data: accommodationQuotes, error: accommodationError } = await supabase
           .from("accommodation_quotes")
-          .select("request_id, price_total")
+          .select("id, request_id, price_total, vat_rate")
           .eq("status", "selected")
           .in("request_id", linkedAccommodationIds);
 
         if (accommodationError) throw accommodationError;
 
         accommodationQuotes?.forEach((quote) => {
-          accommodationTotals.set(quote.request_id, quote.price_total ?? 0);
+          accommodationByRequestId.set(quote.request_id, quote);
         });
+
+        const quoteIds = (accommodationQuotes ?? []).map((quote) => quote.id);
+        if (quoteIds.length > 0) {
+          const { data: accommodationExtras, error: extrasError } = await supabase
+            .from("accommodation_quote_extras")
+            .select("id, quote_id, quantity, unit_price, pricing_type, vat_rate")
+            .in("quote_id", quoteIds);
+          if (extrasError) throw extrasError;
+          accommodationExtras?.forEach((extra) => {
+            const existing = accommodationExtrasByQuoteId.get(extra.quote_id) ?? [];
+            existing.push(extra as AccommodationExtraForInvoicing);
+            accommodationExtrasByQuoteId.set(extra.quote_id, existing);
+          });
+        }
       }
 
       // Combine data
       return requestsData.map((request) => ({
         ...request,
         selected_dates: request.selected_dates as string[],
+        selected_accommodation_base_total: request.linked_accommodation_id
+          ? accommodationByRequestId.get(request.linked_accommodation_id)?.price_total ?? null
+          : null,
+        selected_accommodation_vat_rate: request.linked_accommodation_id
+          ? accommodationByRequestId.get(request.linked_accommodation_id)?.vat_rate ?? null
+          : null,
+        selected_accommodation_extras: request.linked_accommodation_id
+          ? accommodationExtrasByQuoteId.get(accommodationByRequestId.get(request.linked_accommodation_id)?.id ?? "") ?? []
+          : [],
         selected_accommodation_total: request.linked_accommodation_id
-          ? accommodationTotals.get(request.linked_accommodation_id) ?? null
+          ? Number(accommodationByRequestId.get(request.linked_accommodation_id)?.price_total ?? 0) +
+            (accommodationExtrasByQuoteId.get(accommodationByRequestId.get(request.linked_accommodation_id)?.id ?? "") ?? [])
+              .reduce((sum, extra) => sum + getAccommodationExtraTotal(extra), 0)
           : null,
         items: itemsData.filter((item) => item.request_id === request.id),
         invoices: invoicesData.filter((inv) => inv.request_id === request.id),
-      })) as ProgramRequestWithItems[];
+      })) as unknown as ProgramRequestWithItems[];
     },
   });
 
