@@ -15,6 +15,7 @@ import {
 } from "./projectWorkflow";
 import {
   combineCommunicationStates,
+  getBureauActionHints,
   getLodgingCommunicationState,
   getProgramCommunicationState,
   type ProjectCommunicationState,
