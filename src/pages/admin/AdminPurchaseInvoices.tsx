@@ -42,6 +42,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
+import { InvoiceForwardHistoryPopover } from "@/components/admin/InvoiceForwardHistoryPopover";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
@@ -65,6 +66,7 @@ export default function AdminPurchaseInvoices() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [forwardMethod, setForwardMethod] = useState<"outlook" | "mailjet">("outlook");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -443,16 +445,24 @@ export default function AdminPurchaseInvoices() {
                               <Upload className="h-4 w-4" />
                             </Button>
                           )}
-                          {invoice.status === "pending" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setForwardDialogInvoice(invoice)}
-                              title="Doorsturen naar Snelstart"
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setForwardMethod("outlook");
+                              setForwardDialogInvoice(invoice);
+                            }}
+                            title={invoice.status === "pending" ? "Doorsturen naar Snelstart (Outlook)" : "Opnieuw doorsturen via Outlook"}
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                          <InvoiceForwardHistoryPopover
+                            invoiceId={invoice.id}
+                            onResend={(m) => {
+                              setForwardMethod(m);
+                              setForwardDialogInvoice(invoice);
+                            }}
+                          />
                           {invoice.status !== "paid" && (
                             <Button
                               variant="ghost"
@@ -486,6 +496,7 @@ export default function AdminPurchaseInvoices() {
       {/* Forward to Accounting Dialog */}
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
+        defaultMethod={forwardMethod}
         onClose={() => setForwardDialogInvoice(null)}
       />
 
