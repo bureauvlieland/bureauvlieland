@@ -893,6 +893,9 @@ const AdminInvoicing = () => {
           onClose={() => setIsInvoiceDialogOpen(false)}
           requestId={selectedRequest.id}
           suggestedAmount={calculateInvoiceTotals(selectedRequest).outstanding}
+          suggestedExclVat={calculateInvoiceVatSuggestion(selectedRequest).totalExclVat}
+          suggestedVatAmount={calculateInvoiceVatSuggestion(selectedRequest).totalVat}
+          suggestedVatGroups={calculateInvoiceVatSuggestion(selectedRequest).vatGroups}
           onSuccess={handleInvoiceSuccess}
         />
       )}
