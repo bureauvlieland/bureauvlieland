@@ -124,6 +124,7 @@ export function useRegisterPartnerIban() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["partner-iban-suggestions"] });
       qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: ["partners-active-list"] });
       qc.invalidateQueries({ queryKey: ["payment-batch-candidates"] });
       toast.success(`IBAN ${vars.iban} geregistreerd bij partner`);
     },
