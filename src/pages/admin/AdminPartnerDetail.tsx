@@ -213,6 +213,7 @@ const AdminPartnerDetail = () => {
         is_public: (data as any).is_public ?? false,
         partner_type: data.partner_type || "activity_provider",
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
+        extras_commission_percentage: (data as any).extras_commission_percentage ?? null,
         map_tenant_slug: (data as any).map_tenant_slug || "",
         map_api_key: (data as any).map_api_key || "",
       });
