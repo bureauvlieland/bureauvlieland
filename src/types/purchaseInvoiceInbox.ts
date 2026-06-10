@@ -5,6 +5,7 @@ export interface InboxScanResult {
   invoice_number: string | null;
   invoice_date: string | null;
   supplier_name: string | null;
+  supplier_iban?: string | null;
   amount_excl_vat: number | null;
   vat_rate: number | null;
   vat_amount: number | null;

@@ -45,6 +45,7 @@ import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
 import { useDuplicatePurchaseInvoiceCheck } from "@/lib/purchaseInvoiceDuplicateCheck";
+import { useRegisterPartnerIban } from "@/hooks/usePartnerIbanSuggestions";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   ExtraProjectSplitBlock,
@@ -69,6 +70,7 @@ interface ScanResult {
   invoice_number: string | null;
   invoice_date: string | null;
   supplier_name: string | null;
+  supplier_iban?: string | null;
   amount_excl_vat: number | null;
   vat_rate: number | null;
   vat_amount: number | null;
@@ -298,7 +300,7 @@ export function AddPurchaseInvoiceDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name")
+        .select("id, name, iban")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -1042,6 +1044,24 @@ export function AddPurchaseInvoiceDialog({
   const selectedProject = projects?.find((p) => p.id === requestId);
   const hasLines = lines.length > 0;
 
+  // IBAN uit de gescande factuur registreren bij de geselecteerde partner
+  const registerIban = useRegisterPartnerIban();
+  const scannedIban = useMemo(() => {
+    const raw = (scanResult?.supplier_iban || "").replace(/\s/g, "").toUpperCase();
+    // Basis-validatie: landcode + 2 cijfers + 11-30 alfanumeriek, plus mod-97 check
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(raw)) return null;
+    const rearranged = raw.slice(4) + raw.slice(0, 4);
+    const digits = rearranged.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+    let rem = 0;
+    for (let i = 0; i < digits.length; i += 7) {
+      rem = Number(String(rem) + digits.slice(i, i + 7)) % 97;
+    }
+    return rem === 1 ? raw : null;
+  }, [scanResult?.supplier_iban]);
+  const partnerIban = (selectedPartner?.iban || "").replace(/\s/g, "").toUpperCase();
+  const showIbanSuggestion = !!scannedIban && !!selectedPartner && !partnerIban;
+  const ibanMismatch = !!scannedIban && !!partnerIban && scannedIban !== partnerIban;
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1166,6 +1186,31 @@ export function AddPurchaseInvoiceDialog({
                   <Sparkles className="h-3 w-3" />
                   AI-suggestie: {partners?.find((p) => p.id === suggestedPartnerId)?.name}
                 </button>
+              )}
+              {showIbanSuggestion && (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs text-blue-800">
+                  <span className="truncate">
+                    IBAN op factuur: <span className="font-mono font-medium">{scannedIban}</span> — nog niet geregistreerd bij {selectedPartner?.name}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs shrink-0 bg-white"
+                    disabled={registerIban.isPending}
+                    onClick={() => registerIban.mutate({ partnerId, iban: scannedIban! })}
+                  >
+                    {registerIban.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Registreren"}
+                  </Button>
+                </div>
+              )}
+              {ibanMismatch && (
+                <div className="flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    IBAN op factuur (<span className="font-mono">{scannedIban}</span>) wijkt af van geregistreerd IBAN (<span className="font-mono">{partnerIban}</span>)
+                  </span>
+                </div>
               )}
             </div>
 

@@ -13,6 +13,7 @@ Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regel
 - Datums in formaat YYYY-MM-DD.
 - BTW-percentage als getal (0, 9 of 21 — geen %-teken).
 - supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").
+- supplier_iban = het IBAN-rekeningnummer van de LEVERANCIER zoals vermeld op de factuur (vaak in de voettekst of bij betaalinstructies). Schrijf zonder spaties (bv. NL12RABO0123456789). NOOIT het IBAN van Bureau Vlieland (de geadresseerde) invullen. Geen IBAN zichtbaar → null.
 - Als een veld niet zichtbaar is, gebruik null.
 
 VAT BREAKDOWN (KRITIEK):
@@ -178,6 +179,7 @@ Deno.serve(async (req) => {
                   invoice_number: { type: ["string", "null"] },
                   invoice_date: { type: ["string", "null"], description: "YYYY-MM-DD" },
                   supplier_name: { type: ["string", "null"] },
+                  supplier_iban: { type: ["string", "null"], description: "IBAN van de leverancier zoals op de factuur, zonder spaties. NIET het IBAN van Bureau Vlieland." },
                   amount_excl_vat: { type: ["number", "null"] },
                   vat_rate: { type: ["number", "null"], description: "0, 9 of 21 (hoofdtarief)" },
                   vat_amount: { type: ["number", "null"] },
@@ -222,6 +224,7 @@ Deno.serve(async (req) => {
                   "invoice_number",
                   "invoice_date",
                   "supplier_name",
+                  "supplier_iban",
                   "amount_excl_vat",
                   "vat_rate",
                   "vat_amount",
