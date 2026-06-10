@@ -361,6 +361,16 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsList>
 
         <TabsContent value="overzicht" className="space-y-3">
+          {project.comm === "bij_bureau" && project.bureauActionHints?.length ? (
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/60 dark:bg-blue-950/40">
+              <div className="font-medium text-blue-900 dark:text-blue-200">🟢 Aan zet — Bureau Vlieland</div>
+              <ul className="mt-1 space-y-0.5 text-blue-800 dark:text-blue-300">
+                {project.bureauActionHints.map((h, i) => (
+                  <li key={i}>→ {h}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <ProjectActionsCard requestId={project.id} />
           <div className="grid gap-3 md:grid-cols-2">
             <Card>
