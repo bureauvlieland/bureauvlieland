@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Banknote, Download, AlertTriangle, Loader2, FileDown } from "lucide-react";
+import { Banknote, Download, AlertTriangle, Loader2, FileDown, ChevronDown, ChevronRight } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,11 +34,82 @@ function triggerDownload(filename: string, base64: string) {
   URL.revokeObjectURL(url);
 }
 
+function BatchTransactions({ batchId }: { batchId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["payment-batch-transactions", batchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_purchase_invoices")
+        .select(`
+          id, invoice_number, invoice_date, amount_incl_vat, description,
+          partners(id, name, iban),
+          program_requests(reference_number)
+        `)
+        .eq("payment_batch_id", batchId)
+        .order("invoice_date", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (isLoading) {
+    return <div className="py-4 text-sm text-muted-foreground">Transacties laden…</div>;
+  }
+  if (!data || data.length === 0) {
+    return <div className="py-4 text-sm text-muted-foreground">Geen gekoppelde transacties gevonden.</div>;
+  }
+  const total = data.reduce((s, r: any) => s + Number(r.amount_incl_vat || 0), 0);
+  return (
+    <div className="rounded-md border bg-muted/30 my-2">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Factuur</TableHead>
+            <TableHead>Partner</TableHead>
+            <TableHead>IBAN</TableHead>
+            <TableHead>Project</TableHead>
+            <TableHead className="text-right">Bedrag</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((r: any) => (
+            <TableRow key={r.id}>
+              <TableCell className="font-medium">
+                {r.invoice_number}
+                <div className="text-xs text-muted-foreground">
+                  {format(new Date(r.invoice_date), "d MMM yyyy", { locale: nl })}
+                </div>
+              </TableCell>
+              <TableCell>{r.partners?.name || "-"}</TableCell>
+              <TableCell className="font-mono text-xs">{r.partners?.iban || "-"}</TableCell>
+              <TableCell className="text-xs text-muted-foreground">
+                {r.program_requests?.reference_number || "-"}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                €{Number(r.amount_incl_vat).toFixed(2)}
+              </TableCell>
+            </TableRow>
+          ))}
+          <TableRow>
+            <TableCell colSpan={4} className="text-right text-sm font-medium">
+              Totaal ({data.length} transacties)
+            </TableCell>
+            <TableCell className="text-right font-mono font-bold">
+              €{total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export default function AdminPaymentBatches() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
   const [executionDate, setExecutionDate] = useState<string>(nextWorkingDay());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [expandedBatch, setExpandedBatch] = useState<string | null>(null);
 
   const { data: candidates, isLoading } = useQuery({
     queryKey: ["payment-batch-candidates"],
@@ -275,6 +346,7 @@ export default function AdminPaymentBatches() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-8" />
                         <TableHead>Referentie</TableHead>
                         <TableHead>Aangemaakt</TableHead>
                         <TableHead>Uitvoeringsdatum</TableHead>
@@ -286,7 +358,18 @@ export default function AdminPaymentBatches() {
                     </TableHeader>
                     <TableBody>
                       {(batches || []).map((b: any) => (
-                        <TableRow key={b.id}>
+                        <Fragment key={b.id}>
+                        <TableRow
+                          className="cursor-pointer"
+                          onClick={() => setExpandedBatch(expandedBatch === b.id ? null : b.id)}
+                        >
+                          <TableCell className="w-8">
+                            {expandedBatch === b.id ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{b.batch_reference}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {format(new Date(b.created_at), "d MMM yyyy HH:mm", { locale: nl })}
@@ -307,7 +390,7 @@ export default function AdminPaymentBatches() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-end gap-1">
                               {b.xml_file_path && (
                                 <Button
@@ -332,6 +415,14 @@ export default function AdminPaymentBatches() {
                             </div>
                           </TableCell>
                         </TableRow>
+                        {expandedBatch === b.id && (
+                          <TableRow key={`${b.id}-detail`} className="hover:bg-transparent">
+                            <TableCell colSpan={8} className="p-2">
+                              <BatchTransactions batchId={b.id} />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </Fragment>
                       ))}
                     </TableBody>
                   </Table>
