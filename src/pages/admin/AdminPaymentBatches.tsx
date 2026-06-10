@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -358,9 +358,8 @@ export default function AdminPaymentBatches() {
                     </TableHeader>
                     <TableBody>
                       {(batches || []).map((b: any) => (
-                        <>
+                        <Fragment key={b.id}>
                         <TableRow
-                          key={b.id}
                           className="cursor-pointer"
                           onClick={() => setExpandedBatch(expandedBatch === b.id ? null : b.id)}
                         >
