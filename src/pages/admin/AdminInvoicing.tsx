@@ -24,7 +24,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
+import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
+import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { CheckCircle2, Mail, Hotel } from "lucide-react";
 import { CompletionActions } from "@/components/admin/CompletionActions";
 
@@ -44,6 +46,7 @@ interface ProgramRequestWithItems {
   created_at: string;
   items: {
     id: string;
+    block_id: string | null;
     day_index: number;
     block_name: string;
     block_type: string;
@@ -53,6 +56,7 @@ interface ProgramRequestWithItems {
     admin_price_override?: number | null;
     price_type?: string | null;
     override_people?: number | null;
+    use_actual_costs?: boolean | null;
   }[];
   invoices: {
     id: string;
@@ -66,6 +70,23 @@ interface ProgramRequestWithItems {
     status: string | null;
     forwarded_to_accounting_at: string | null;
   }[];
+  selected_accommodation_base_total?: number | null;
+  selected_accommodation_vat_rate?: number | null;
+  selected_accommodation_extras?: {
+    id: string;
+    quote_id: string;
+    quantity: number;
+    unit_price: number;
+    pricing_type: string | null;
+    vat_rate: number | null;
+  }[];
+}
+
+interface InvoiceVatSuggestion {
+  totalExclVat: number;
+  totalVat: number;
+  grandTotalInclVat: number;
+  vatGroups: { rate: number; exclVat: number; vatAmount: number }[];
 }
 
 interface InvoiceTotals {
