@@ -77,6 +77,7 @@ interface Partner {
   is_active: boolean;
   commission_percentage: number;
   accommodation_commission_percentage: number | null;
+  extras_commission_percentage: number | null;
   auth_user_id: string | null;
   partner_token: string;
   created_at: string;
@@ -583,8 +584,10 @@ export const AdminPartnersContent = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <span className="font-medium">{partner.commission_percentage}% / {partner.accommodation_commission_percentage ?? 10}%</span>
-                        <p className="text-xs text-muted-foreground">act. / logies</p>
+                        <span className="font-medium">
+                          {partner.commission_percentage}% / {partner.accommodation_commission_percentage ?? 10}% / {partner.extras_commission_percentage ?? partner.accommodation_commission_percentage ?? 10}%
+                        </span>
+                        <p className="text-xs text-muted-foreground">act. / logies / extras</p>
                       </div>
                     </TableCell>
                     <TableCell>

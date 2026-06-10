@@ -155,6 +155,7 @@ const AdminPartnerDetail = () => {
     is_public: false,
     partner_type: "activity_provider",
     accommodation_commission_percentage: 10,
+    extras_commission_percentage: null as number | null,
     map_tenant_slug: "",
     map_api_key: "",
   });
@@ -212,6 +213,7 @@ const AdminPartnerDetail = () => {
         is_public: (data as any).is_public ?? false,
         partner_type: data.partner_type || "activity_provider",
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
+        extras_commission_percentage: (data as any).extras_commission_percentage ?? null,
         map_tenant_slug: (data as any).map_tenant_slug || "",
         map_api_key: (data as any).map_api_key || "",
       });
@@ -309,7 +311,7 @@ const AdminPartnerDetail = () => {
     }
   };
 
-  const handleChange = (field: string, value: string | number | boolean) => {
+  const handleChange = (field: string, value: string | number | boolean | null) => {
     setFormData((prev) => {
       const newData = { ...prev, [field]: value };
       // Auto-generate ID from name for new partners
@@ -369,6 +371,10 @@ const AdminPartnerDetail = () => {
             formData.partner_type === "accommodation" || formData.partner_type === "both"
               ? formData.accommodation_commission_percentage
               : null,
+          extras_commission_percentage:
+            formData.partner_type === "accommodation" || formData.partner_type === "both"
+              ? formData.extras_commission_percentage
+              : null,
            map_tenant_slug: formData.map_tenant_slug || null,
            map_api_key: formData.map_api_key || null,
         });
@@ -422,6 +428,10 @@ const AdminPartnerDetail = () => {
             accommodation_commission_percentage:
               formData.partner_type === "accommodation" || formData.partner_type === "both"
                 ? formData.accommodation_commission_percentage
+                : null,
+            extras_commission_percentage:
+              formData.partner_type === "accommodation" || formData.partner_type === "both"
+                ? formData.extras_commission_percentage
                 : null,
             map_tenant_slug: formData.map_tenant_slug || null,
             map_api_key: formData.map_api_key || null,
@@ -807,6 +817,36 @@ const AdminPartnerDetail = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* Extras commission (F&B / faciliteiten / transport) - conditional */}
+                  {(formData.partner_type === "accommodation" || formData.partner_type === "both") && (
+                    <div className="space-y-2">
+                      <Label htmlFor="extras_commission">Commissie hotel-extras (F&B / faciliteiten / transport)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="extras_commission"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                          value={formData.extras_commission_percentage ?? ""}
+                          onChange={(e) =>
+                            handleChange(
+                              "extras_commission_percentage",
+                              e.target.value === "" ? null : parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          placeholder={String(formData.accommodation_commission_percentage ?? 10)}
+                          className="w-24"
+                        />
+                        <span className="text-slate-500">%</span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Commissie over extras die het hotel apart factureert (F&B, faciliteiten, transport, overig). Leeg = zelfde als logies-commissie.
+                      </p>
+                    </div>
+                  )}
+
 
                   {/* MAP Koppeling */}
                   <div className="space-y-2">

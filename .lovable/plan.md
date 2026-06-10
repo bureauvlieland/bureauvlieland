@@ -1,60 +1,80 @@
 
-## Probleem
+# Logies-inkoopfacturen 1-op-1 doorzetten + commissie per soort regel + AI-classificatie
 
-Op de Doeksen-PDF staat:
-- Excl. BTW: € 246,61
-- BTW laag: € 22,14
-- **Totaal: € 268,75**
+## Wat verandert
 
-In de portal staat € 268,805 en in de mail € 268,80. Dat komt door twee bugs:
+1. **Derde commissiepercentage per partner: "extras"** (F&B, faciliteiten, transport, overig).
+   - Nieuw veld `partners.extras_commission_percentage` (NULL = valt terug op `accommodation_commission_percentage`, anders op 10%).
+   - Zeezicht: 10% / 10% / **10%**. Badhotel Bruin: 10% / 10% / **0%**.
+   - Tonen in `AdminPartners` als "10% / 10% / 0%" met labels act. / logies / extras.
 
-1. **VAT wordt herrekend i.p.v. overgenomen uit PDF.**
-   In `src/components/admin/AddPurchaseInvoiceDialog.tsx` (`computeLineTotals`, regel ±160) en bij de scanner-prefill (`buildLinesFromScan`) gebruiken we alleen `amount_excl_vat` en `vat_rate`, en berekenen daaruit `vat = excl × rate`. Voor deze factuur wordt dat 246,61 × 9% = 22,1949 → totaal 268,8049. De leverancier rondt z'n BTW zelf af op € 22,14 (totaal € 268,75), dus onze waarde wijkt af van de échte factuur.
+2. **Inkoopfactuur-allocatie naar logies** in `AddPurchaseInvoiceDialog`.
+   - Per factuurregel een doel-keuze: **program-onderdeel | logies-kamer | logies-extra | toeristenbelasting (uitsluiten) | niet doorberekenen**.
+   - Bedragen 1-op-1 overgenomen (geen opslag). Commissie wordt achteraf via aparte commissiefactuur naar hotel verstuurd op basis van het juiste percentage per regel.
 
-2. **Weergave-formattering toont 3 decimalen.**
-   Op meerdere plekken (`AdminPurchaseInvoices.tsx` regel 423/525, `PurchaseInvoicesCard.tsx` regel 141, `usePurchaseInvoices.ts` regel 78, `MatchedRegistrationBanner.tsx` regel 146, …) staat `toLocaleString("nl-NL", { minimumFractionDigits: 2 })` zónder `maximumFractionDigits: 2`. Het opgeslagen getal 268,8049 verschijnt dan als "268,805" (portal) of "268,80" (mail, die wel afgekapt is).
+3. **AI-classificatie van factuurregels** — nieuw.
+   - Bij het openen van de dialog (zodra een scan beschikbaar is en partner = logies-partner) roepen we een nieuwe edge function `classify-lodging-invoice-lines` aan via Lovable AI (`google/gemini-3-flash-preview`).
+   - Input: factuurregels (description, qty, unit_price, vat_rate), partnernaam, en de geselecteerde quote (kamers, datums, aantal personen).
+   - Output per regel: `suggested_target` ∈ `room | extra | tourist_tax | exclude`, `extra_category` ∈ `fb | facilities | transport | other` (alleen als target=extra), en `confidence` 0-1 + korte `reason`.
+   - **Toeristenbelasting** wordt expliciet herkend ("toeristenbelasting", "tourist tax", "verblijfsbelasting", "city tax") en standaard op `exclude` gezet — die zit al in onze verkoopfactuur (`touristTax` in `adminInvoicingTotals.ts`) en mag dus nooit dubbel mee.
+   - Heuristieken die in de prompt meegaan:
+     - Overnachting / kamer / arrangement / "logies" / room rate → `room`
+     - Ontbijt, lunch, diner, drank, koffie, borrel, F&B → `extra` / `fb`
+     - Parkeren, sauna, wasruimte, conferentiezaal → `extra` / `facilities`
+     - Shuttle, taxi, bagagevervoer → `extra` / `transport`
+     - Toeristenbelasting / verblijfsbelasting / city tax → `exclude` (target=tourist_tax voor labeling)
+     - Onbekend → suggest `extra` / `other` met lage confidence.
+   - UI: per regel toont de suggestie als pre-selectie + badge "AI-suggestie (85%)". Admin kan altijd overrulen. Een "Pas alle AI-suggesties toe"-knop bovenaan; geweigerde suggesties blijven gewoon handmatig instelbaar.
 
-## Oplossing
+4. **Live commissie-preview** onderin het allocatie-blok:
+   `Kamer €X (10%) + F&B €Y (10%) + Facilities €Z (0%) = commissie €N` zodat de admin direct ziet wat de hotel-commissiefactuur straks wordt.
 
-### A. PDF-totalen als waarheid gebruiken
+## Datamodel
 
-In `buildLinesFromScan` en de submit-flow van `AddPurchaseInvoiceDialog`:
+```
+partners.extras_commission_percentage           numeric NULL
 
-- Als de scanner een `amount_incl_vat`, `vat_amount` of `vat_breakdown[*].vat_amount` aanlevert: gebruik die letterlijk en bereken `excl = incl − vat` (i.p.v. `vat = excl × rate`).
-- Voor `vat_breakdown`-rijen: gebruik de échte `vat_amount` per rate, niet `amount_excl × rate`.
-- Voor de header-totalen die naar `partner_purchase_invoices` worden weggeschreven: prefer de gescande `amount_incl_vat` van de PDF; valt die weg, dan pas `excl + vat` (waarbij vat ook uit de PDF komt, niet herrekend).
+accommodation_quotes.purchase_room_cost_incl_vat numeric NULL
+accommodation_quotes.purchase_invoice_id         uuid NULL
 
-In `src/lib/vatCalculation.ts` een nieuwe helper toevoegen:
-
-```ts
-calculateFromExclAndVat(excl: number, vat: number, rate: number): VatBreakdown
+accommodation_quote_extras.source                text NULL   -- 'partner_quote' | 'purchase_invoice'
+accommodation_quote_extras.source_invoice_id     uuid NULL
 ```
 
-die `excl`, `vat`, en `incl = excl + vat` 1-op-1 overneemt en op 2 decimalen rondt. Deze gebruiken in de inkoopfactuur-flow.
+Snapshot van de oorspronkelijke offerte `price_total` gaat naar `accommodation_quote_history` voor audit.
 
-### B. Bestaande factuur in DB corrigeren (BV-2605-0001)
+## Commissielogica (1 helper)
 
-Eenmalige update: voor de Doeksen-regel `amount_excl_vat = 246.61`, `vat_amount = 22.14`, `amount_incl_vat = 268.75`, zodat portal/mail/PDF gelijklopen.
+`src/lib/commissionRates.ts`
+```
+rateFor(partner, kind):
+  activity  → partner.commission_percentage          ?? 10
+  lodging   → partner.accommodation_commission_percentage ?? 10
+  extras    → partner.extras_commission_percentage
+            ?? partner.accommodation_commission_percentage
+            ?? 10
+```
 
-### C. Weergave hard op 2 decimalen
+- Kamer-regels → som overschrijft `accommodation_quotes.price_total`, commissie wordt op de quote zelf bewaard met `lodging`-percentage.
+- Extra-regels → één `accommodation_quote_extras`-rij per inkoopregel, `commission_percentage = rateFor(partner, 'extras')` (snapshot), `pricing_type='fixed'`, `quantity=1`, `price_includes_vat=true`.
+- Toeristenbelasting-regels → niets doen (alleen loggen in `project_communications` zodat de admin weet dat ze zijn herkend en weggelaten).
 
-In alle bedragweergaves voor inkoopfacturen `maximumFractionDigits: 2` toevoegen:
-- `src/pages/admin/AdminPurchaseInvoices.tsx`
-- `src/components/admin/PurchaseInvoicesCard.tsx`
-- `src/components/admin/purchase-invoices/MatchedRegistrationBanner.tsx`
-- `src/hooks/usePurchaseInvoices.ts` (duplicate-melding)
-- en e-mail-template voor de doorstuurmail (Mailjet body in edge function).
+## Te raken bestanden
 
-Zo zien we nooit meer 3 decimalen, ook niet als er nog historische records met afwijkende precisie in de DB staan.
+- **Migratie**: 5 nieuwe kolommen hierboven.
+- `src/types/partner.ts` — `extras_commission_percentage` toevoegen.
+- `src/pages/admin/AdminPartners.tsx` + partner-edit-form — derde commissieveld + kolomweergave 10% / 10% / 0%.
+- `src/lib/commissionRates.ts` — nieuwe helper.
+- **Nieuwe edge function** `supabase/functions/classify-lodging-invoice-lines/index.ts` — Lovable AI Gateway, tool-calling met JSON-schema (zoals scan-purchase-invoice-internal), admin-auth via JWT.
+- `src/components/admin/AddPurchaseInvoiceDialog.tsx` — nieuwe "Doel"-kolom per regel, AI-suggesties laden, "Pas AI-suggesties toe"-knop.
+- Nieuw: `src/components/admin/purchase-invoices/AccommodationAllocationBlock.tsx` — UI-blok per quote met kamer-totaal, extras-lijst (met categorie/VAT-dropdown per regel) en live commissie-preview.
+- `src/hooks/usePurchaseInvoices.ts` — payload uitbreiden met `accommodation_allocations[]` (room rules + extra rules).
+- **Nieuwe edge function** `apply-purchase-invoice-to-lodging` (service role) — snapshot in `accommodation_quote_history`, overschrijf `price_total`, vul `purchase_room_cost_incl_vat` + `purchase_invoice_id`, insert extras met juist `commission_percentage`, log naar `project_communications`.
+- Commissiefactuur-flow (`AdminCommissionInvoices`, `PendingCommissionsCard`): som extras-commissies per quote optellen bij hotel-commissie (kleine query-aanpassing — leest nu alleen commissie op de quote, moet ook quote-extras meenemen waar `source='purchase_invoice'`).
 
-## Wat ik NIET aanpas
+## Out of scope
 
-- De Bureau-Vlieland verkoopfactuur-flow (PDF/mail naar klant) — daar zit het verschil niet en de math klopt al.
-- VAT-logica op verkoopzijde (`portalPricing`, `invoiceTotals`).
-- Bestaande tests buiten inkoopfactuur-scope.
-
-## Verificatie
-
-1. Doeksen-factuur opnieuw bekijken in `/admin/purchase-invoices` → totaal moet € 268,75 zijn, geen 3 decimalen.
-2. Doorstuurmail (Outlook/Mailjet) preview → € 268,75.
-3. Een nieuwe scan met een PDF met "vreemde" BTW-afronding (bv. catering 9%) testen: bedrag moet exact gelijk zijn aan de PDF, niet herrekend.
+- Per-extra commissie overschrijven via UI (admin kan al direct in de quote-extras-rij wijzigen).
+- BTW-herberekening (vorige fix blijft leidend: bedragen 1-op-1 uit PDF).
+- AI-classificatie voor niet-logies-partners (alleen actief als `partner.partner_type='logies'`).
+- Automatisch versturen van commissiefactuur — blijft handmatig in bestaande flow.

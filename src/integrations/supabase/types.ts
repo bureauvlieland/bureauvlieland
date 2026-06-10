@@ -74,6 +74,8 @@ export type Database = {
           service_date: string | null
           service_time: string | null
           sort_order: number | null
+          source: string | null
+          source_invoice_id: string | null
           unit_price: number
           updated_at: string | null
           vat_rate: number | null
@@ -93,6 +95,8 @@ export type Database = {
           service_date?: string | null
           service_time?: string | null
           sort_order?: number | null
+          source?: string | null
+          source_invoice_id?: string | null
           unit_price: number
           updated_at?: string | null
           vat_rate?: number | null
@@ -112,6 +116,8 @@ export type Database = {
           service_date?: string | null
           service_time?: string | null
           sort_order?: number | null
+          source?: string | null
+          source_invoice_id?: string | null
           unit_price?: number
           updated_at?: string | null
           vat_rate?: number | null
@@ -224,6 +230,8 @@ export type Database = {
           proforma_sent_at: string | null
           proposed_arrival_date: string | null
           proposed_departure_date: string | null
+          purchase_invoice_id: string | null
+          purchase_room_cost_incl_vat: number | null
           quote_attachment_filename: string | null
           quote_attachment_path: string | null
           quote_external_url: string | null
@@ -269,6 +277,8 @@ export type Database = {
           proforma_sent_at?: string | null
           proposed_arrival_date?: string | null
           proposed_departure_date?: string | null
+          purchase_invoice_id?: string | null
+          purchase_room_cost_incl_vat?: number | null
           quote_attachment_filename?: string | null
           quote_attachment_path?: string | null
           quote_external_url?: string | null
@@ -314,6 +324,8 @@ export type Database = {
           proforma_sent_at?: string | null
           proposed_arrival_date?: string | null
           proposed_departure_date?: string | null
+          purchase_invoice_id?: string | null
+          purchase_room_cost_incl_vat?: number | null
           quote_attachment_filename?: string | null
           quote_attachment_path?: string | null
           quote_external_url?: string | null
@@ -2258,6 +2270,7 @@ export type Database = {
           contact_email: string | null
           created_at: string
           email: string
+          extras_commission_percentage: number | null
           gallery_images: Json | null
           highlight_features: Json | null
           iban: string | null
@@ -2305,6 +2318,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           email: string
+          extras_commission_percentage?: number | null
           gallery_images?: Json | null
           highlight_features?: Json | null
           iban?: string | null
@@ -2352,6 +2366,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           email?: string
+          extras_commission_percentage?: number | null
           gallery_images?: Json | null
           highlight_features?: Json | null
           iban?: string | null

@@ -50,6 +50,11 @@ import {
   ExtraProjectSplitBlock,
   type ExtraProjectSplit,
 } from "@/components/admin/purchase-invoices/ExtraProjectSplitBlock";
+import {
+  LodgingAllocationBlock,
+  type LodgingLineAllocation,
+} from "@/components/admin/purchase-invoices/LodgingAllocationBlock";
+
 
 
 interface ScanLineItem {
@@ -262,6 +267,11 @@ export function AddPurchaseInvoiceDialog({
   const [lines, setLines] = useState<LineRow[]>([]);
   const [extraProjects, setExtraProjects] = useState<ExtraProjectSplit[]>([]);
 
+  // Logies-allocatie (1-op-1 doorzetten naar accommodation_quote)
+  const [lodgingEnabled, setLodgingEnabled] = useState(false);
+  const [lodgingQuoteId, setLodgingQuoteId] = useState<string | null>(null);
+  const [lodgingAllocations, setLodgingAllocations] = useState<LodgingLineAllocation[]>([]);
+
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -376,6 +386,9 @@ export function AddPurchaseInvoiceDialog({
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
       setExtraProjects([]);
+      setLodgingEnabled(false);
+      setLodgingQuoteId(null);
+      setLodgingAllocations([]);
     } else {
       setStep("upload");
       setFile(null);
@@ -394,6 +407,9 @@ export function AddPurchaseInvoiceDialog({
       setDescription("");
       setLines([]);
       setExtraProjects([]);
+      setLodgingEnabled(false);
+      setLodgingQuoteId(null);
+      setLodgingAllocations([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
@@ -431,6 +447,18 @@ export function AddPurchaseInvoiceDialog({
       setVatRate(String(lineTotals.dominantRate));
     }
   }, [lineTotals]);
+
+  // Houd lodgingAllocations qua lengte synchroon met lines
+  useEffect(() => {
+    setLodgingAllocations((prev) => {
+      if (prev.length === lines.length) return prev;
+      const next: LodgingLineAllocation[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        next.push(prev[i] || { target: "skip" });
+      }
+      return next;
+    });
+  }, [lines.length]);
 
   // When NO lines, recalc header vat amount from excl + rate
   useEffect(() => {
@@ -945,6 +973,59 @@ export function AddPurchaseInvoiceDialog({
         }
       }
 
+      // Logies-allocatie: pas inkoopfactuur 1-op-1 toe op accommodation_quote
+      if (lodgingEnabled && lodgingQuoteId && created?.id && lines.length > 0) {
+        const roomLines = lines
+          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
+          .filter((x) => x.a?.target === "room")
+          .map((x) => {
+            const t = computeLineTotals(x.l);
+            return {
+              amount_incl_vat: t.amount_incl_vat,
+              amount_excl_vat: t.amount_excl_vat,
+              vat_rate: t.vat_rate,
+              description: x.l.description,
+            };
+          });
+        const extraLines = lines
+          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
+          .filter((x) => x.a?.target === "extra")
+          .map((x) => {
+            const t = computeLineTotals(x.l);
+            return {
+              category: x.a!.category || "other",
+              description: x.l.description,
+              amount_incl_vat: t.amount_incl_vat,
+              vat_rate: t.vat_rate,
+            };
+          });
+        const taxExcluded = lines
+          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
+          .filter((x) => x.a?.target === "tourist_tax")
+          .reduce((s, x) => s + computeLineTotals(x.l).amount_incl_vat, 0);
+
+        if (roomLines.length > 0 || extraLines.length > 0) {
+          try {
+            const { error: applyErr } = await supabase.functions.invoke("apply-purchase-invoice-to-lodging", {
+              body: {
+                quote_id: lodgingQuoteId,
+                purchase_invoice_id: created.id,
+                partner_id: partnerId,
+                invoice_number: invoiceNumber,
+                room_lines: roomLines,
+                extra_lines: extraLines,
+                tourist_tax_total_excluded: taxExcluded,
+              },
+            });
+            if (applyErr) throw applyErr;
+            toast.success("Inkoopfactuur toegepast op logies-offerte");
+          } catch (e: any) {
+            console.error("apply-purchase-invoice-to-lodging failed", e);
+            toast.error(e.message || "Toepassen op logies-offerte mislukt");
+          }
+        }
+      }
+
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
       }
@@ -1149,6 +1230,31 @@ export function AddPurchaseInvoiceDialog({
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* Logies-allocatie (1-op-1 doorzetten naar accommodation_quote) */}
+            {requestId && partnerId && (
+              <LodgingAllocationBlock
+                programRequestId={requestId}
+                partnerId={partnerId}
+                lines={lines.map((l) => {
+                  const t = computeLineTotals(l);
+                  return {
+                    description: l.description,
+                    amount_incl_vat: t.amount_incl_vat,
+                    amount_excl_vat: t.amount_excl_vat,
+                    vat_rate: t.vat_rate,
+                  };
+                })}
+                quoteId={lodgingQuoteId}
+                onQuoteIdChange={setLodgingQuoteId}
+                allocations={lodgingAllocations}
+                onAllocationsChange={setLodgingAllocations}
+                enabled={lodgingEnabled}
+                onEnabledChange={setLodgingEnabled}
+              />
+            )}
+
+
 
             {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
             {requestId && items && items.length > 0 && (() => {
