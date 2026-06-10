@@ -2160,9 +2160,17 @@ const AdminRequestDetail = () => {
                                                       Verstuurd
                                                     </span>
                                                     {item.status === "pending" && (
-                                                      <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
-                                                        Partner: pending
-                                                      </span>
+                                                      <div className="flex items-center gap-1 flex-wrap">
+                                                        <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                                                          Partner: pending
+                                                        </span>
+                                                        <OverrideItemStatusButton
+                                                          itemId={item.id}
+                                                          blockName={item.block_name}
+                                                          providerName={item.provider_name}
+                                                          onDone={() => fetchRequestData({ silent: true })}
+                                                        />
+                                                      </div>
                                                     )}
                                                     {item.status === "confirmed" && (
                                                       <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400">
