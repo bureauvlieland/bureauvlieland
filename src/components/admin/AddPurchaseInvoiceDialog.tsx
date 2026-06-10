@@ -973,6 +973,59 @@ export function AddPurchaseInvoiceDialog({
         }
       }
 
+      // Logies-allocatie: pas inkoopfactuur 1-op-1 toe op accommodation_quote
+      if (lodgingEnabled && lodgingQuoteId && created?.id && lines.length > 0) {
+        const roomLines = lines
+          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
+          .filter((x) => x.a?.target === "room")
+          .map((x) => {
+            const t = computeLineTotals(x.l);
+            return {
+              amount_incl_vat: t.amount_incl_vat,
+              amount_excl_vat: t.amount_excl_vat,
+              vat_rate: t.vat_rate,
+              description: x.l.description,
+            };
+          });
+        const extraLines = lines
+          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
+          .filter((x) => x.a?.target === "extra")
+          .map((x) => {
+            const t = computeLineTotals(x.l);
+            return {
+              category: x.a!.category || "other",
+              description: x.l.description,
+              amount_incl_vat: t.amount_incl_vat,
+              vat_rate: t.vat_rate,
+            };
+          });
+        const taxExcluded = lines
+          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
+          .filter((x) => x.a?.target === "tourist_tax")
+          .reduce((s, x) => s + computeLineTotals(x.l).amount_incl_vat, 0);
+
+        if (roomLines.length > 0 || extraLines.length > 0) {
+          try {
+            const { error: applyErr } = await supabase.functions.invoke("apply-purchase-invoice-to-lodging", {
+              body: {
+                quote_id: lodgingQuoteId,
+                purchase_invoice_id: created.id,
+                partner_id: partnerId,
+                invoice_number: invoiceNumber,
+                room_lines: roomLines,
+                extra_lines: extraLines,
+                tourist_tax_total_excluded: taxExcluded,
+              },
+            });
+            if (applyErr) throw applyErr;
+            toast.success("Inkoopfactuur toegepast op logies-offerte");
+          } catch (e: any) {
+            console.error("apply-purchase-invoice-to-lodging failed", e);
+            toast.error(e.message || "Toepassen op logies-offerte mislukt");
+          }
+        }
+      }
+
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
       }
