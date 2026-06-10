@@ -15,6 +15,7 @@ import {
   type ProjectCommunicationState,
 } from "@/lib/projectCommunication";
 import type { ProjectSummary } from "@/lib/getProject";
+import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
 import { cn } from "@/lib/utils";
 
 type ItemRow = Pick<
@@ -220,6 +221,7 @@ function ProjectActionsCard({ requestId }: { requestId: string }) {
 
 export function ProjectDetailPanel({ project }: { project: ProjectSummary | null }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [chatOpen, setChatOpen] = useState(false);
 
   const { data: detail, isLoading, error } = useQuery<DetailData>({
@@ -371,6 +373,18 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
               </ul>
             </div>
           ) : null}
+          {(project.programPipeline === "akkoord_ontvangen"
+            || project.programPipeline === "av_getekend") && (
+            <div className="rounded-md border bg-card p-3">
+              <MarkReadyForInvoiceButton
+                programId={project.id}
+                onDone={() => queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Project verschuift naar Facturatie, ook zonder AV-acceptatie via de portal.
+              </p>
+            </div>
+          )}
           <ProjectActionsCard requestId={project.id} />
           <div className="grid gap-3 md:grid-cols-2">
             <Card>

@@ -331,7 +331,16 @@ export interface ProgramRequestWithItems extends ProgramRequest {
 // naar de partner verstuurd is (skip_partner_notification=false), of wanneer
 // de offertestatus expliciet op 'bevestigd' staat. Dit voorkomt misleidende
 // "Bevestigd"-meldingen voor items die nog in concept staan.
+// Bureau-onderdelen (provider_id='bureau' zoals veerboten en fietsen) worden
+// door het bureau zelf geregeld en gelden altijd als bevestigd zodra ze een
+// booking_reference hebben of al op status confirmed/executed staan — er is
+// geen externe partner die nog moet reageren.
 const isItemTrulyConfirmed = (i: ProgramRequestItem): boolean => {
+  if (i.provider_id === "bureau") {
+    return !!i.booking_reference
+      || i.status === "confirmed"
+      || i.status === "executed";
+  }
   if (i.status !== "confirmed" && i.status !== "alternative") return false;
   if (i.item_quote_status === "bevestigd") return true;
   return i.skip_partner_notification === false;
@@ -342,7 +351,9 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
   const relevantItems = items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled");
   const total = relevantItems.length;
   const confirmed = relevantItems.filter(isItemTrulyConfirmed).length;
-  const pending = items.filter(i => i.status === "pending").length;
+  // Bureau-onderdelen tellen we niet als "pending" — die regelt het bureau zelf
+  // en zouden de klant onnodig laten "wachten op aanbieders".
+  const pending = items.filter(i => i.status === "pending" && i.provider_id !== "bureau").length;
   const alternative = items.filter(i => i.status === "alternative" && !isItemTrulyConfirmed(i)).length;
   const unavailable = items.filter(i => i.status === "unavailable").length;
   const cancelled = items.filter(i => i.status === "cancelled").length;

@@ -103,6 +103,7 @@ import { AdminPostChargesSection } from "@/components/admin/AdminPostChargesSect
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 
 import { RequestCompletionStatus } from "@/components/admin/RequestCompletionStatus";
+import { OverrideItemStatusButton } from "@/components/admin/OverrideItemStatusButton";
 import { CompletionActions } from "@/components/admin/CompletionActions";
 import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConflictBanner";
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
@@ -2160,9 +2161,17 @@ const AdminRequestDetail = () => {
                                                       Verstuurd
                                                     </span>
                                                     {item.status === "pending" && (
-                                                      <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
-                                                        Partner: pending
-                                                      </span>
+                                                      <div className="flex items-center gap-1 flex-wrap">
+                                                        <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                                                          Partner: pending
+                                                        </span>
+                                                        <OverrideItemStatusButton
+                                                          itemId={item.id}
+                                                          blockName={item.block_name}
+                                                          providerName={item.provider_name}
+                                                          onDone={() => fetchRequestData({ silent: true })}
+                                                        />
+                                                      </div>
                                                     )}
                                                     {item.status === "confirmed" && (
                                                       <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400">
@@ -2719,13 +2728,16 @@ const AdminRequestDetail = () => {
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <RequestCompletionStatus
+                  requestId={request.id}
                   status={request.status}
                   completionStatus={request.completion_status}
                   termsAcceptedAt={request.terms_accepted_at}
                   items={items}
                   outstandingAmount={calculateOutstandingAmount()}
                   quoteStatus={request.quote_status}
+                  onRefresh={() => fetchRequestData({ silent: true })}
                 />
+
                 <FinancialOverviewCard
                   requestId={request.id}
                   numberOfPeople={request.number_of_people}

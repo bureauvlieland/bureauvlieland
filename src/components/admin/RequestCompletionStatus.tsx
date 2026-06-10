@@ -6,6 +6,7 @@ import {
   completionStatusColors,
   type CompletionStatus,
 } from "@/types/bureauInvoice";
+import { MarkReadyForInvoiceButton } from "./MarkReadyForInvoiceButton";
 
 interface ProgramRequestItem {
   id: string;
@@ -17,21 +18,25 @@ interface ProgramRequestItem {
 }
 
 interface RequestCompletionStatusProps {
+  requestId?: string;
   status: string;
   completionStatus: CompletionStatus | null;
   termsAcceptedAt: string | null;
   items: ProgramRequestItem[];
   outstandingAmount: number;
   quoteStatus?: string | null;
+  onRefresh?: () => void;
 }
 
 export const RequestCompletionStatus = ({
+  requestId,
   status,
   completionStatus,
   termsAcceptedAt,
   items,
   outstandingAmount,
   quoteStatus,
+  onRefresh,
 }: RequestCompletionStatusProps) => {
   const termsAccepted = !!termsAcceptedAt;
 
@@ -167,6 +172,22 @@ export const RequestCompletionStatus = ({
                 ? "Volledig gefactureerd"
                 : `Nog te factureren: €${outstandingAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`}
             </span>
+          </div>
+        )}
+
+        {/* Admin shortcut: handmatig naar facturatie */}
+        {requestId
+          && effectiveStatus === "in_progress"
+          && status !== "cancelled" && (
+          <div className="pt-2 border-t mt-2">
+            <MarkReadyForInvoiceButton
+              programId={requestId}
+              onDone={onRefresh}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Shortcut: zet het project op "Facturatie", ook als de klant de
+              AV nog niet via de portal heeft geaccepteerd.
+            </p>
           </div>
         )}
       </CardContent>
