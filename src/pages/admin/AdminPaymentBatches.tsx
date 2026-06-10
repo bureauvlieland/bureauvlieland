@@ -47,10 +47,11 @@ export default function AdminPaymentBatches() {
         .from("partner_purchase_invoices")
         .select(`
           id, invoice_number, invoice_date, amount_incl_vat, description, status, payment_batch_id,
-          partners!inner(id, name, iban),
+          partners!inner(id, name, iban, pays_by_direct_debit),
           program_requests!inner(reference_number)
         `)
         .eq("status", "forwarded")
+        .eq("partners.pays_by_direct_debit", false)
         .is("payment_batch_id", null)
         .order("invoice_date", { ascending: true });
       if (error) throw error;

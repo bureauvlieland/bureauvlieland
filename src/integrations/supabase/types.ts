@@ -2291,6 +2291,7 @@ export type Database = {
           partner_token: string
           partner_type: string | null
           password_set_at: string | null
+          pays_by_direct_debit: boolean
           phone: string | null
           reference_number: string | null
           terms_pdf_path: string | null
@@ -2339,6 +2340,7 @@ export type Database = {
           partner_token?: string
           partner_type?: string | null
           password_set_at?: string | null
+          pays_by_direct_debit?: boolean
           phone?: string | null
           reference_number?: string | null
           terms_pdf_path?: string | null
@@ -2387,6 +2389,7 @@ export type Database = {
           partner_token?: string
           partner_type?: string | null
           password_set_at?: string | null
+          pays_by_direct_debit?: boolean
           phone?: string | null
           reference_number?: string | null
           terms_pdf_path?: string | null
