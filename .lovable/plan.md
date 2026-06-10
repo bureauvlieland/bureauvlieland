@@ -1,70 +1,54 @@
-# Inbox-belletje in admin topbar
+## Doel
+Als een project in de Werkbank-inbox op "Aan zet" staat, moet je in één oogopslag kunnen zien **wát** je concreet moet doen — niet alleen dát je aan zet bent.
 
-Een belletje (Bell-icon) naast de Claudia-knop in de admin topbar dat aandacht vraagt voor nieuwe inkomende communicatie, zodat mails als die van vanmorgen niet meer langs je heen gaan.
+## Aanpak
 
-## Wat telt mee in het belletje
+We leiden in `getProject.ts` per project een **concrete actie-hint** af (bv. "Stuur 3 items naar partners", "Offerte opstellen", "Vraag logies-quotes uit"), en tonen die:
+1. als extra regel onder de "Aan zet"-chip in de inbox-rij,
+2. als tooltip op de chip,
+3. bovenaan het detailpaneel als een actie-banner.
 
-Het belletje aggregeert drie bronnen — alles van de laatste 14 dagen dat nog niet "gezien" is:
+Geen nieuwe queries of DB-werk — we hebben de signalen al (items, quote_status, lodgingQuotes).
 
-1. **Inkomende e-mails** — `project_communications` waar `direction = 'inbound'` (Mailjet Parse replies op projecten/logies).
-2. **Klant/partner chat** — `chat_messages` (logies + project chat) van sender_type ≠ admin, met `read_at IS NULL`.
-3. **Live chat-widget** — `chat_conversations` met onbeantwoorde bezoekersberichten (dezelfde logica als `useAdminChat`).
+### Regels voor de actie-hint (programma-spoor)
 
-Totaalbadge = som van alle drie. Rood puntje als > 0, met getal in een Badge (zoals Claudia nu).
+| Situatie (al aanwezig in code) | Hint |
+|---|---|
+| `itemsReadyForPartner > 0` | "Stuur N item(s) naar partner(s)" |
+| `quote_status` leeg en items aanwezig | "Stel offerte op voor klant" |
+| `quote_status = akkoord_ontvangen` zonder items klaar | "Verstuur AV / start uitvoering" |
+| `pipeline = facturatie` | "Maak factuur op" |
+| anders (concept zonder items) | "Werk concept uit" |
 
-## UI
+### Regels voor de actie-hint (logies-spoor)
 
-Knop links van de Claudia-chip, zelfde stijl (rounded-full, border, kleine badge). Bell-icoon (`lucide-react`).
+| Situatie | Hint |
+|---|---|
+| `hasRequest` en geen quotes uitgezet | "Zet logies-aanvraag uit naar partners" |
+| `quoteSelected` maar niet bevestigd richting klant | "Bevestig logies aan klant" |
 
-Klikken opent een **Popover** (shadcn) met drie secties:
+Bij combi-projecten tonen we beide hints (max 2 regels).
 
-```text
-┌─ Inbox ─────────────────────────────┐
-│  📧 Inkomende e-mails (3)           │
-│   • Re: Update logiesaanvraag…      │
-│     Klant Jansen · 06:55            │
-│   • …                               │
-│                                      │
-│  💬 Berichten (2)                   │
-│   • Partner Stortemelk — "We…"      │
-│                                      │
-│  🟢 Live chat (1)                   │
-│   • Bezoeker — "Hoi, vraag over…"   │
-│                                      │
-│  ─────────────────────────────────  │
-│  Bekijk alles → /admin/messages     │
-└─────────────────────────────────────┘
-```
+### Wijzigingen
 
-Per regel: klik = direct naar de bron:
-- E-mail → projectdetail tab "Communicatie" (`/admin/projecten/:id?tab=communicatie`) of logiesdetail.
-- Chat-bericht → projectdetail chat-sheet of `/admin/accommodatie/:id`.
-- Live chat → `/admin/chat?conversation=…`.
+**`src/lib/projectCommunication.ts`**
+- Nieuwe helper `getBureauActionHint(input)` die een korte string teruggeeft op basis van bovenstaande regels.
 
-"Bekijk alles" linkt naar `/admin/messages` (bestaat al — `AdminMessages.tsx`).
+**`src/lib/getProject.ts`**
+- `ProjectSummary` krijgt veld `bureauActionHint: string | null`.
+- Vul dit alleen als `comm === "bij_bureau"`.
 
-## "Gezien" logica
+**`src/components/admin/werkbank/InboxList.tsx`**
+- Onder de "Aan zet"-chip: kleine grijze regel met `→ {bureauActionHint}`.
+- Tooltip op de chip met dezelfde tekst + uitleg "Bureau Vlieland moet hier actie ondernemen".
 
-Geen DB-migratie nodig in v1. We gebruiken een **`localStorage` watermark**: `admin_inbox_seen_at` = ISO timestamp van laatste keer dat popover geopend werd. Items met `created_at > seen_at` tellen als "nieuw" voor de badge. De popover laat altijd de laatste ~10 items per categorie zien, ongeacht gezien-status, met een visueel "nieuw"-stipje voor ongeleezen.
+**`src/components/admin/werkbank/ProjectDetailPanel.tsx`**
+- Bovenaan (of in bestaande `ProjectActionsCard`) een opvallende banner: "🟢 Aan zet: {hint}" met indien mogelijk een directe knop (bv. "Open offerte", "Open partner-uitzetting") — knoppen koppelen we aan bestaande routes/dialogen die al elders in het project gebruikt worden.
 
-Voordeel: snel te bouwen, geen schema-wijziging, werkt per device (wat oké is — meestal één admin).
+### Geen wijziging aan
+- Logica van `getProgramCommunicationState` / `getLodgingCommunicationState` zelf.
+- DB-schema, RLS, edge functions.
+- Status-chips elders in de app (bv. projectenoverzicht).
 
-Als je later cross-device wilt: dan een kolom `last_inbox_seen_at` op `user_roles` of een nieuwe `admin_settings` tabel. Niet in deze iteratie.
-
-## Realtime
-
-Supabase Realtime channels op `project_communications`, `chat_messages` en `chat_conversations` om de badge live te updaten (net als `ClaudiaBadge`). React Query invalidatie + polling fallback elke 60s.
-
-## Bestanden (technisch)
-
-- **Nieuw**: `src/components/admin/InboxBell.tsx` — knop + popover + lijstrenderers.
-- **Nieuw**: `src/hooks/useAdminInbox.ts` — query/realtime, retourneert `{ emails, chats, liveChats, totalUnread }`.
-- **Edit**: `src/components/admin/AdminLayout.tsx` — render `<InboxBell />` direct vóór `<ClaudiaBadge />` (regel ~410).
-
-Geen backend changes. Geen RLS changes (admin heeft al volledige toegang tot deze tabellen).
-
-## Out of scope (voor deze iteratie)
-
-- Mark-as-read per item (komt later als je het wilt).
-- Browser/desktop push notificaties.
-- Filteren per project of categorie binnen de popover (we tonen alleen "laatste 10 per type").
+## Open vraag
+Wil je dat de banner in het detailpaneel ook direct **doorklik-knoppen** krijgt (bv. "Open offerte-editor"), of voor nu alleen een tekstuele hint? Doorklikken kost iets meer routerwerk, maar maakt het écht actiegericht.
