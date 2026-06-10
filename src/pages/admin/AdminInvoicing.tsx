@@ -112,6 +112,12 @@ const AdminInvoicing = () => {
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const { getVatRate } = useAppSettings();
+
+  const getAccommodationExtraTotal = (extra: ProgramRequestWithItems["selected_accommodation_extras"][number]) => {
+    if (extra.pricing_type === "fixed") return Number(extra.unit_price ?? 0);
+    return Number(extra.unit_price ?? 0) * Number(extra.quantity ?? 0);
+  };
 
   // Calculate invoice totals using the same full project logic as the admin financial overview
   const calculateInvoiceTotals = (request: ProgramRequestWithItems): InvoiceTotals => {
