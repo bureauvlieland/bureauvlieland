@@ -154,3 +154,9 @@ verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.classify-lodging-invoice-lines]
+verify_jwt = false
+
+[functions.apply-purchase-invoice-to-lodging]
+verify_jwt = false
