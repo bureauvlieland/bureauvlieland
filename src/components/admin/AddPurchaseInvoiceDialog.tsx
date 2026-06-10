@@ -1187,6 +1187,31 @@ export function AddPurchaseInvoiceDialog({
                   AI-suggestie: {partners?.find((p) => p.id === suggestedPartnerId)?.name}
                 </button>
               )}
+              {showIbanSuggestion && (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs text-blue-800">
+                  <span className="truncate">
+                    IBAN op factuur: <span className="font-mono font-medium">{scannedIban}</span> — nog niet geregistreerd bij {selectedPartner?.name}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs shrink-0 bg-white"
+                    disabled={registerIban.isPending}
+                    onClick={() => registerIban.mutate({ partnerId, iban: scannedIban! })}
+                  >
+                    {registerIban.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Registreren"}
+                  </Button>
+                </div>
+              )}
+              {ibanMismatch && (
+                <div className="flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    IBAN op factuur (<span className="font-mono">{scannedIban}</span>) wijkt af van geregistreerd IBAN (<span className="font-mono">{partnerIban}</span>)
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Project */}
