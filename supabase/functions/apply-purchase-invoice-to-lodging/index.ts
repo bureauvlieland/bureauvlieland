@@ -152,6 +152,7 @@ Deno.serve(async (req) => {
     if (payload.extra_lines && payload.extra_lines.length > 0) {
       const rows = payload.extra_lines.map((e) => ({
         quote_id: quote.id,
+        name: (e.description || "Extra").slice(0, 200),
         category: e.category,
         description: e.description,
         quantity: 1,
