@@ -2719,13 +2719,16 @@ const AdminRequestDetail = () => {
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <RequestCompletionStatus
+                  requestId={request.id}
                   status={request.status}
                   completionStatus={request.completion_status}
                   termsAcceptedAt={request.terms_accepted_at}
                   items={items}
                   outstandingAmount={calculateOutstandingAmount()}
                   quoteStatus={request.quote_status}
+                  onRefresh={() => fetchRequestData({ silent: true })}
                 />
+
                 <FinancialOverviewCard
                   requestId={request.id}
                   numberOfPeople={request.number_of_people}
