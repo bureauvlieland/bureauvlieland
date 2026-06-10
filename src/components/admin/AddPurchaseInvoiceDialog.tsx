@@ -50,6 +50,11 @@ import {
   ExtraProjectSplitBlock,
   type ExtraProjectSplit,
 } from "@/components/admin/purchase-invoices/ExtraProjectSplitBlock";
+import {
+  LodgingAllocationBlock,
+  type LodgingLineAllocation,
+} from "@/components/admin/purchase-invoices/LodgingAllocationBlock";
+
 
 
 interface ScanLineItem {
