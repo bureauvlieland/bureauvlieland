@@ -346,6 +346,7 @@ export default function AdminPaymentBatches() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-8" />
                         <TableHead>Referentie</TableHead>
                         <TableHead>Aangemaakt</TableHead>
                         <TableHead>Uitvoeringsdatum</TableHead>
@@ -357,7 +358,19 @@ export default function AdminPaymentBatches() {
                     </TableHeader>
                     <TableBody>
                       {(batches || []).map((b: any) => (
-                        <TableRow key={b.id}>
+                        <>
+                        <TableRow
+                          key={b.id}
+                          className="cursor-pointer"
+                          onClick={() => setExpandedBatch(expandedBatch === b.id ? null : b.id)}
+                        >
+                          <TableCell className="w-8">
+                            {expandedBatch === b.id ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{b.batch_reference}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {format(new Date(b.created_at), "d MMM yyyy HH:mm", { locale: nl })}
