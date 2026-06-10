@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       .from("partner_purchase_invoices")
       .select(`
         id, invoice_number, invoice_date, amount_incl_vat, description, payment_batch_id, status,
-        partners!inner(id, name, iban, bic),
+        partners!inner(id, name, iban, bic, pays_by_direct_debit),
         program_requests!inner(reference_number)
       `)
       .in("id", invoiceIds);
@@ -158,6 +158,9 @@ Deno.serve(async (req) => {
     for (const inv of invoices as any[]) {
       if (inv.payment_batch_id) {
         errors.push(`Factuur ${inv.invoice_number} zit al in een batch`);
+      }
+      if (inv.partners?.pays_by_direct_debit) {
+        errors.push(`Partner ${inv.partners?.name} betaalt via automatische incasso en hoort niet in een betaalbatch`);
       }
       const ibanRaw = (inv.partners?.iban || "").replace(/\s/g, "").toUpperCase();
       if (!ibanRaw) errors.push(`Partner ${inv.partners?.name} heeft geen IBAN`);
