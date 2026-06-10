@@ -818,6 +818,36 @@ const AdminPartnerDetail = () => {
                     </div>
                   )}
 
+                  {/* Extras commission (F&B / faciliteiten / transport) - conditional */}
+                  {(formData.partner_type === "accommodation" || formData.partner_type === "both") && (
+                    <div className="space-y-2">
+                      <Label htmlFor="extras_commission">Commissie hotel-extras (F&B / faciliteiten / transport)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="extras_commission"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                          value={formData.extras_commission_percentage ?? ""}
+                          onChange={(e) =>
+                            handleChange(
+                              "extras_commission_percentage",
+                              e.target.value === "" ? null : parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          placeholder={String(formData.accommodation_commission_percentage ?? 10)}
+                          className="w-24"
+                        />
+                        <span className="text-slate-500">%</span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Commissie over extras die het hotel apart factureert (F&B, faciliteiten, transport, overig). Leeg = zelfde als logies-commissie.
+                      </p>
+                    </div>
+                  )}
+
+
                   {/* MAP Koppeling */}
                   <div className="space-y-2">
                     <Label htmlFor="map_tenant_slug">MijnActiviteitenPlanner slug</Label>
