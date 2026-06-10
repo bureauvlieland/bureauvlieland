@@ -42,6 +42,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
+import { InvoiceForwardHistoryPopover } from "@/components/admin/InvoiceForwardHistoryPopover";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
