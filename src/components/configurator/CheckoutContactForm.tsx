@@ -44,9 +44,15 @@ export const CheckoutContactForm = ({
   
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResendingLink, setIsResendingLink] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
-  const [existingReference, setExistingReference] = useState<string | null>(null);
+  const [existingRequest, setExistingRequest] = useState<{
+    id: string;
+    reference: string | null;
+    quoteStatus: string | null;
+    createdAt: string;
+  } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
