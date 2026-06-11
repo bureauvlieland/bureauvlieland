@@ -173,6 +173,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // selected lodging quotes per accommodation request (for customer_inputs_missing)
+    const selectedLodging = new Set<string>();
+    {
+      const accIds = [...requestMap.values()]
+        .map((r: any) => r.linked_accommodation_id)
+        .filter((id: any) => isUuid(id));
+      if (accIds.length) {
+        const { data: sel } = await supabase
+          .from("accommodation_quotes")
+          .select("request_id")
+          .eq("status", "selected")
+          .in("request_id", accIds);
+        for (const row of (sel ?? []) as { request_id: string }[]) {
+          selectedLodging.add(row.request_id);
+        }
+      }
+    }
+
+
+
     for (const t of list) {
       const type = t.auto_type ?? "";
       const eid = t.auto_entity_id;
