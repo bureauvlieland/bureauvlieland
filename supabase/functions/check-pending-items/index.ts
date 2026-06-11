@@ -220,6 +220,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${pendingItems?.length || 0} pending activity items older than ${partnerActivityDays} days`);
 
       for (const item of pendingItems || []) {
+        if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
