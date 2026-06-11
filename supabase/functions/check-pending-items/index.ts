@@ -1169,6 +1169,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${expiringPrograms?.length || 0} quotes expiring within 3 days`);
 
       for (const prog of expiringPrograms || []) {
+        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
