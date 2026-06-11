@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,11 @@ import {
   Send,
   RotateCcw,
   Settings,
+  Inbox,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
+import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
 
 interface EmailLog {
   id: string;
@@ -86,11 +89,28 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; label
 };
 
 const AdminMessages = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "verzonden" ? "verzonden" : "inbox";
+  const highlightedInboxId = searchParams.get("inbox");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
+
+  const { data: unansweredCount = 0 } = useQuery({
+    queryKey: ["inbox-unanswered-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("project_communications")
+        .select("id", { count: "exact", head: true })
+        .eq("direction", "inbound")
+        .is("answered_at", null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 60_000,
+  });
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
@@ -186,7 +206,7 @@ const AdminMessages = () => {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Berichtencentrum</h1>
               <p className="text-slate-500 mt-1">
-                Overzicht van alle verzonden transactionele emails
+                Inkomende e-mails beantwoorden en verzonden e-mails inzien
               </p>
             </div>
             <div className="flex gap-2">
@@ -207,6 +227,39 @@ const AdminMessages = () => {
             </div>
           </div>
 
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              const next = new URLSearchParams(searchParams);
+              next.set("tab", v);
+              if (v !== "inbox") next.delete("inbox");
+              setSearchParams(next, { replace: true });
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="inbox" className="gap-2">
+                <Inbox className="h-4 w-4" />
+                Te beantwoorden
+                {unansweredCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
+                  >
+                    {unansweredCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="verzonden" className="gap-2">
+                <Send className="h-4 w-4" />
+                Verzonden e-mails
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="inbox" className="mt-4">
+              <InboxToAnswer initialOpenId={highlightedInboxId} />
+            </TabsContent>
+
+            <TabsContent value="verzonden" className="mt-4 space-y-6">
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
@@ -449,6 +502,8 @@ const AdminMessages = () => {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         <ResendEmailDialog

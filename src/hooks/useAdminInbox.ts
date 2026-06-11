@@ -61,6 +61,7 @@ async function fetchInbox(): Promise<InboxData> {
       .from("project_communications")
       .select("id, subject, contact_name, contact_email, content, communication_date, request_id, accommodation_id, direction")
       .eq("direction", "inbound")
+      .is("answered_at", null)
       .gte("communication_date", sinceIso)
       .order("communication_date", { ascending: false })
       .limit(20),

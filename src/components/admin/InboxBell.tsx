@@ -32,9 +32,7 @@ export const InboxBell = () => {
   const hasAny = emails.length + chats.length + liveChats.length > 0;
 
   const goToEmail = (e: InboxEmail) => {
-    if (e.request_id) navigate(`/admin/projecten/${e.request_id}?tab=communicatie`);
-    else if (e.accommodation_id) navigate(`/admin/projecten/${e.accommodation_id}?tab=communicatie`);
-    else navigate(`/admin/berichten`);
+    navigate(`/admin/berichten?tab=inbox&inbox=${e.id}`);
   };
 
   const goToChat = (c: InboxChatMessage) => {
