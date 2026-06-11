@@ -118,8 +118,10 @@ export interface ProjectSummary {
 export async function listProjectsForWerkbank(opts: {
   includeFinished?: boolean;
   archiveOnly?: boolean;
+  /** Standaard worden gesnoozede projecten verborgen uit de werklijst. */
+  includeSnoozed?: boolean;
 } = {}): Promise<ProjectSummary[]> {
-  const { includeFinished = false, archiveOnly = false } = opts;
+  const { includeFinished = false, archiveOnly = false, includeSnoozed = false } = opts;
 
   let query = supabase
     .from("program_requests")
@@ -127,6 +129,7 @@ export async function listProjectsForWerkbank(opts: {
       id, reference_number, customer_name, customer_email, customer_phone, customer_company,
       number_of_people, selected_dates, status, quote_status, terms_accepted_at,
       completion_status, cancelled_at, updated_at, linked_accommodation_id,
+      snoozed_until, snoozed_reason, snoozed_at,
       program_request_items(id, status, skip_partner_notification, customer_approved_at, provider_id, block_type, day_index, item_quote_status, updated_at)
     `)
     .order("updated_at", { ascending: false })
