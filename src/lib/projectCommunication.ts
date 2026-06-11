@@ -86,6 +86,9 @@ export function getProgramCommunicationState(
   // Items klaar voor partner-uitzetting → bureau-actie
   if ((input.itemsReadyForPartner ?? 0) > 0) return "bij_bureau";
 
+  // AV getekend en geen open items → programma loopt, niets te doen
+  if (input.pipeline === "av_getekend") return "klaar";
+
   // Concept zonder verdere acties → bureau
   return "bij_bureau";
 }
