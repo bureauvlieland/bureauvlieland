@@ -1289,6 +1289,21 @@ const AdminRequestDetail = () => {
             </div>
           )}
 
+          {request.snoozed_until && new Date(request.snoozed_until).getTime() > Date.now() && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              💤 Dit project is <strong>gesnoozed</strong> tot{" "}
+              <strong>
+                {new Date(request.snoozed_until).toLocaleDateString("nl-NL", {
+                  weekday: "long", day: "numeric", month: "long", year: "numeric",
+                })}
+              </strong>
+              {request.snoozed_reason ? ` — ${request.snoozed_reason}` : ""}.
+              Tot die datum krijgt u geen automatische taken of herinneringen. Open en handmatige acties werken gewoon.
+            </div>
+          )}
+
+
+
           {/* === Sticky top-bar === */}
           {(() => {
             const datesArr = request.selected_dates as string[];
