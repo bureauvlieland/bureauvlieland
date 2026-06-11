@@ -366,6 +366,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Snooze sweep: sluit alle open auto-todos waarvan het project nu gesnoozed is.
+    {
+      const candidateRequestIds = new Set<string>();
+      for (const t of list) {
+        if (t.related_request_id && isUuid(t.related_request_id)) {
+          candidateRequestIds.add(t.related_request_id);
+        }
+        if (t.auto_entity_id && isUuid(t.auto_entity_id)) {
+          candidateRequestIds.add(t.auto_entity_id);
+        }
+      }
+      if (candidateRequestIds.size > 0) {
+        const { data: snoozedRows } = await supabase
+          .from("program_requests")
+          .select("id")
+          .in("id", [...candidateRequestIds])
+          .gt("snoozed_until", new Date().toISOString());
+        const snoozedSet = new Set<string>((snoozedRows ?? []).map((r: any) => r.id));
+        if (snoozedSet.size > 0) {
+          for (const t of list) {
+            const projectId =
+              t.related_request_id && isUuid(t.related_request_id)
+                ? t.related_request_id
+                : t.auto_entity_id && isUuid(t.auto_entity_id)
+                ? t.auto_entity_id
+                : null;
+            if (projectId && snoozedSet.has(projectId)) {
+              markClosed(t.id, "snoozed");
+            }
+          }
+        }
+      }
+    }
+
+
     let closed = 0;
     if (closedIds.size) {
       const ids = [...closedIds];
