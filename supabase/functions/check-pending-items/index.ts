@@ -1429,6 +1429,7 @@ Deno.serve(async (req) => {
       console.error("Error fetching near-event programs:", nearEventError);
     } else {
       for (const prog of nearEventPrograms || []) {
+        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
         const dates = Array.isArray(prog.selected_dates)
           ? (prog.selected_dates as string[])
           : [];
