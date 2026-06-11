@@ -1407,6 +1407,12 @@ const AdminRequestDetail = () => {
                     )}
 
 
+                    <SnoozeProjectButton
+                      requestId={request.id}
+                      snoozedUntil={request.snoozed_until}
+                      snoozedReason={request.snoozed_reason}
+                      variant="compact"
+                    />
                     <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
                       <MessageSquare className="h-4 w-4 mr-2" /> Chat
                     </Button>
