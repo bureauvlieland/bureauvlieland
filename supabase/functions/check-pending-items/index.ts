@@ -794,6 +794,7 @@ Deno.serve(async (req) => {
           : "n.t.b.";
 
       for (const item of executedItems) {
+        if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
         const req = execReqMap.get(item.request_id) as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const referenceNumber = req?.reference_number || "—";
