@@ -56,6 +56,9 @@ type ProgramRow = Pick<
   | "cancelled_at"
   | "updated_at"
   | "linked_accommodation_id"
+  | "snoozed_until"
+  | "snoozed_reason"
+  | "snoozed_at"
 > & {
   program_request_items: ProgramItemRow[] | null;
 };
