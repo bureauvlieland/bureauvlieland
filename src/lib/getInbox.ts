@@ -39,7 +39,7 @@ export interface InboxItem {
   score: number;
 }
 
-export async function loadInbox(): Promise<InboxItem[]> {
+export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promise<InboxItem[]> {
   const today = new Date().toISOString().slice(0, 10);
 
   const [{ data: todos, error: todoErr }, projects] = await Promise.all([
@@ -51,7 +51,7 @@ export async function loadInbox(): Promise<InboxItem[]> {
       .order("priority", { ascending: false })
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(300),
-    listProjectsForWerkbank(),
+    listProjectsForWerkbank({ includeSnoozed: opts.includeSnoozed }),
   ]);
   if (todoErr) throw todoErr;
 
