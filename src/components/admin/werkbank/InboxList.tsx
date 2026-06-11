@@ -18,13 +18,14 @@ interface InboxListProps {
   selectedProjectId: string | null;
   onSelect: (projectId: string) => void;
   kindFilter?: ProjectKind | "all";
+  showSnoozed?: boolean;
 }
 
-export function InboxList({ selectedProjectId, onSelect, kindFilter = "all" }: InboxListProps) {
+export function InboxList({ selectedProjectId, onSelect, kindFilter = "all", showSnoozed = false }: InboxListProps) {
   const navigate = useNavigate();
   const { data, isLoading } = useQuery({
-    queryKey: ["werkbank-inbox"],
-    queryFn: () => loadInbox(),
+    queryKey: ["werkbank-inbox", showSnoozed ? "with-snoozed" : "no-snoozed"],
+    queryFn: () => loadInbox({ includeSnoozed: showSnoozed }),
     refetchInterval: 60_000,
   });
 
