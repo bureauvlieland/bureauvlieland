@@ -321,12 +321,20 @@ export async function listProjectsForWerkbank(opts: {
                 : null,
             })
           : [],
+      snoozedUntil: p.snoozed_until ?? null,
+      snoozedReason: p.snoozed_reason ?? null,
+      snoozedAt: p.snoozed_at ?? null,
+      isSnoozed: !!p.snoozed_until && new Date(p.snoozed_until).getTime() > Date.now(),
       updatedAt: p.updated_at,
     };
   });
 
-  if (archiveOnly) return summaries;
-  if (includeFinished) return summaries;
-  // Werklijst: geannuleerde én volledig afgeronde projecten horen in het archief.
-  return summaries.filter((s) => s.pipeline !== "geannuleerd" && s.pipeline !== "afgerond");
+  const filtered = archiveOnly || includeFinished
+    ? summaries
+    // Werklijst: geannuleerde én volledig afgeronde projecten horen in het archief.
+    : summaries.filter((s) => s.pipeline !== "geannuleerd" && s.pipeline !== "afgerond");
+
+  if (includeSnoozed || archiveOnly) return filtered;
+  // Standaard: verberg gesnoozede projecten uit de werklijst.
+  return filtered.filter((s) => !s.isSnoozed);
 }
