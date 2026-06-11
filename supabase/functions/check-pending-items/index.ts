@@ -28,6 +28,19 @@ Deno.serve(async (req) => {
 
     console.log("Starting check-pending-items job...");
 
+    // Pre-fetch alle projecten die nu gesnoozed zijn. Tijdens snooze pauzeren we
+    // alle automatische todos én reminder-mails voor het project, en sluiten we
+    // bestaande open auto-todos via reconcile-admin-todos.
+    const nowIso = new Date().toISOString();
+    const { data: snoozedRows } = await supabase
+      .from("program_requests")
+      .select("id")
+      .gt("snoozed_until", nowIso);
+    const snoozedRequestIds = new Set<string>((snoozedRows || []).map((r: any) => r.id));
+    const isSnoozed = (id?: string | null): boolean => !!id && snoozedRequestIds.has(id);
+    console.log(`Snoozed projects skipped this run: ${snoozedRequestIds.size}`);
+
+
     // Fetch configurable settings
     const { data: settingsRows } = await supabase
       .from("app_settings")
@@ -207,6 +220,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${pendingItems?.length || 0} pending activity items older than ${partnerActivityDays} days`);
 
       for (const item of pendingItems || []) {
+        if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -312,7 +326,8 @@ Deno.serve(async (req) => {
           departure_date,
           number_of_guests,
           status,
-          expires_at
+          expires_at,
+          linked_program_id
         )
       `)
       .eq("status", "pending")
@@ -329,6 +344,8 @@ Deno.serve(async (req) => {
       console.log(`Found ${activeQuotes.length} pending accommodation quotes older than ${partnerQuoteDays} days`);
 
       for (const quote of activeQuotes) {
+        const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
+        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -436,6 +453,8 @@ Deno.serve(async (req) => {
       console.log(`Found ${activeForwarded.length} forwarded quotes without customer selection older than ${customerQuoteDays} days`);
 
       for (const quote of activeForwarded) {
+        const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
+        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -488,6 +507,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${inactiveRequests?.length || 0} inactive program requests older than ${customerRequestDays} days`);
 
       for (const req of inactiveRequests || []) {
+        if (isSnoozed(req.id)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -588,6 +608,8 @@ Deno.serve(async (req) => {
       console.log(`Found ${activeExpired.length} expired accommodation quotes`);
 
       for (const quote of activeExpired) {
+        const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
+        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
         // Update status to expired
         const { error: updateError } = await supabase
           .from("accommodation_quotes")
@@ -772,6 +794,7 @@ Deno.serve(async (req) => {
           : "n.t.b.";
 
       for (const item of executedItems) {
+        if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
         const req = execReqMap.get(item.request_id) as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const referenceNumber = req?.reference_number || "—";
@@ -968,6 +991,7 @@ Deno.serve(async (req) => {
           .in("id", eligibleRequestIds);
 
         for (const reqRow of eligibleRequests || []) {
+          if (isSnoozed(reqRow.id)) { totalSkipped++; continue; }
           if (!reqRow.customer_email) continue;
           if (reqRow.aftersales_sent_at) continue;
           if (reqRow.cancelled_at || reqRow.status === "cancelled") continue;
@@ -1042,6 +1066,7 @@ Deno.serve(async (req) => {
         new Date(s).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
       for (const item of upcomingItems || []) {
+        if (isSnoozed(item.request_id)) continue;
         const reqRow: any = Array.isArray(item.program_requests)
           ? item.program_requests[0]
           : item.program_requests;
@@ -1144,6 +1169,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${expiringPrograms?.length || 0} quotes expiring within 3 days`);
 
       for (const prog of expiringPrograms || []) {
+        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -1229,6 +1255,7 @@ Deno.serve(async (req) => {
       }
 
       for (const prog of phaseBPrograms || []) {
+        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
         const items = (prog.items as any[]) || [];
         const anyApproved = items.some(
           (i) => i.customer_approved_at || i.customer_accepted_at,
@@ -1317,6 +1344,7 @@ Deno.serve(async (req) => {
       console.error("Error fetching phase C programs:", phaseCError);
     } else {
       for (const prog of phaseCPrograms || []) {
+        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
         const items = (prog.items as any[]) || [];
         // Phase C = at least one approved item that was/should be sent to a partner,
         // and at least one item is still pending (not yet confirmed)
@@ -1401,6 +1429,7 @@ Deno.serve(async (req) => {
       console.error("Error fetching near-event programs:", nearEventError);
     } else {
       for (const prog of nearEventPrograms || []) {
+        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
         const dates = Array.isArray(prog.selected_dates)
           ? (prog.selected_dates as string[])
           : [];

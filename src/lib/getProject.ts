@@ -56,6 +56,9 @@ type ProgramRow = Pick<
   | "cancelled_at"
   | "updated_at"
   | "linked_accommodation_id"
+  | "snoozed_until"
+  | "snoozed_reason"
+  | "snoozed_at"
 > & {
   program_request_items: ProgramItemRow[] | null;
 };
@@ -99,6 +102,12 @@ export interface ProjectSummary {
   /** Concrete actie-hints wanneer comm = "bij_bureau". Leeg array anders. */
   bureauActionHints: string[];
 
+  /** Snooze: zolang `snoozedUntil` > now() is, worden auto-todos & reminders gepauzeerd. */
+  snoozedUntil: string | null;
+  snoozedReason: string | null;
+  snoozedAt: string | null;
+  isSnoozed: boolean;
+
   updatedAt: string;
 }
 
@@ -109,8 +118,10 @@ export interface ProjectSummary {
 export async function listProjectsForWerkbank(opts: {
   includeFinished?: boolean;
   archiveOnly?: boolean;
+  /** Standaard worden gesnoozede projecten verborgen uit de werklijst. */
+  includeSnoozed?: boolean;
 } = {}): Promise<ProjectSummary[]> {
-  const { includeFinished = false, archiveOnly = false } = opts;
+  const { includeFinished = false, archiveOnly = false, includeSnoozed = false } = opts;
 
   let query = supabase
     .from("program_requests")
@@ -118,6 +129,7 @@ export async function listProjectsForWerkbank(opts: {
       id, reference_number, customer_name, customer_email, customer_phone, customer_company,
       number_of_people, selected_dates, status, quote_status, terms_accepted_at,
       completion_status, cancelled_at, updated_at, linked_accommodation_id,
+      snoozed_until, snoozed_reason, snoozed_at,
       program_request_items(id, status, skip_partner_notification, customer_approved_at, provider_id, block_type, day_index, item_quote_status, updated_at)
     `)
     .order("updated_at", { ascending: false })
@@ -309,12 +321,20 @@ export async function listProjectsForWerkbank(opts: {
                 : null,
             })
           : [],
+      snoozedUntil: p.snoozed_until ?? null,
+      snoozedReason: p.snoozed_reason ?? null,
+      snoozedAt: p.snoozed_at ?? null,
+      isSnoozed: !!p.snoozed_until && new Date(p.snoozed_until).getTime() > Date.now(),
       updatedAt: p.updated_at,
     };
   });
 
-  if (archiveOnly) return summaries;
-  if (includeFinished) return summaries;
-  // Werklijst: geannuleerde én volledig afgeronde projecten horen in het archief.
-  return summaries.filter((s) => s.pipeline !== "geannuleerd" && s.pipeline !== "afgerond");
+  const filtered = archiveOnly || includeFinished
+    ? summaries
+    // Werklijst: geannuleerde én volledig afgeronde projecten horen in het archief.
+    : summaries.filter((s) => s.pipeline !== "geannuleerd" && s.pipeline !== "afgerond");
+
+  if (includeSnoozed || archiveOnly) return filtered;
+  // Standaard: verberg gesnoozede projecten uit de werklijst.
+  return filtered.filter((s) => !s.isSnoozed);
 }

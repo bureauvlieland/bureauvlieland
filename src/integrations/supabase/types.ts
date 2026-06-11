@@ -2996,6 +2996,10 @@ export type Database = {
           signature_ip: string | null
           signature_name: string | null
           signature_user_agent: string | null
+          snoozed_at: string | null
+          snoozed_by: string | null
+          snoozed_reason: string | null
+          snoozed_until: string | null
           status: string
           terms_accepted_at: string | null
           terms_version: string | null
@@ -3055,6 +3059,10 @@ export type Database = {
           signature_ip?: string | null
           signature_name?: string | null
           signature_user_agent?: string | null
+          snoozed_at?: string | null
+          snoozed_by?: string | null
+          snoozed_reason?: string | null
+          snoozed_until?: string | null
           status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null
@@ -3114,6 +3122,10 @@ export type Database = {
           signature_ip?: string | null
           signature_name?: string | null
           signature_user_agent?: string | null
+          snoozed_at?: string | null
+          snoozed_by?: string | null
+          snoozed_reason?: string | null
+          snoozed_until?: string | null
           status?: string
           terms_accepted_at?: string | null
           terms_version?: string | null

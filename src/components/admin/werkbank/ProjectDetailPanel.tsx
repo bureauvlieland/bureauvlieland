@@ -16,6 +16,7 @@ import {
 } from "@/lib/projectCommunication";
 import type { ProjectSummary } from "@/lib/getProject";
 import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
+import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { cn } from "@/lib/utils";
 
 type ItemRow = Pick<
@@ -316,7 +317,13 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <SnoozeProjectButton
+            requestId={project.id}
+            snoozedUntil={project.snoozedUntil}
+            snoozedReason={project.snoozedReason}
+            variant="compact"
+          />
           <Button
             size="sm"
             variant="outline"
@@ -338,6 +345,19 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
           </Button>
         </div>
       </div>
+
+      {project.isSnoozed && project.snoozedUntil && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          💤 Gesnoozed tot{" "}
+          <strong>
+            {new Date(project.snoozedUntil).toLocaleDateString("nl-NL", {
+              weekday: "long", day: "numeric", month: "long", year: "numeric",
+            })}
+          </strong>
+          {project.snoozedReason ? ` — ${project.snoozedReason}` : ""}.
+          Tot die datum krijgt u geen automatische taken of herinneringen voor dit project.
+        </div>
+      )}
 
       <ProjectChatSheet
         open={chatOpen}

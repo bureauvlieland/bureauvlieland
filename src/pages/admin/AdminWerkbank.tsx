@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw, ArrowLeft } from "lucide-react";
+import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw, ArrowLeft, Moon } from "lucide-react";
 import { useReconcileTodos } from "@/hooks/useReconcileTodos";
 import {
   listProjectsForWerkbank,
@@ -101,7 +101,14 @@ function ProjectListRow({
           {project.numberOfPeople} pers.
           {project.dates[0] && ` · ${project.dates[0]}`}
         </span>
-        <CommBadge state={project.comm} />
+        <div className="flex items-center gap-1.5">
+          {project.isSnoozed && project.snoozedUntil && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800">
+              💤 {new Date(project.snoozedUntil).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+            </span>
+          )}
+          <CommBadge state={project.comm} />
+        </div>
       </div>
     </button>
   );
@@ -124,6 +131,14 @@ export default function AdminWerkbank() {
       ? initialKind
       : "all",
   );
+  const [showSnoozed, setShowSnoozed] = useState<boolean>(params.get("snoozed") === "1");
+
+  const toggleShowSnoozed = (next: boolean) => {
+    setShowSnoozed(next);
+    const p = new URLSearchParams(params);
+    if (next) p.set("snoozed", "1"); else p.delete("snoozed");
+    setParams(p, { replace: true });
+  };
 
   // Keep selection in sync with URL param so the Claudia badge (which clears
   // ?id=) actually returns to the recommendations overview.
@@ -134,7 +149,7 @@ export default function AdminWerkbank() {
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
-    queryFn: () => listProjectsForWerkbank({ archiveOnly: archive }),
+    queryFn: () => listProjectsForWerkbank({ archiveOnly: archive, includeSnoozed: true }),
     refetchInterval: 60_000,
   });
 
@@ -152,8 +167,14 @@ export default function AdminWerkbank() {
     setParams(p, { replace: true });
   };
 
+  const snoozedCount = useMemo(
+    () => (projects ?? []).filter((p) => p.isSnoozed).length,
+    [projects],
+  );
+
   const filtered = useMemo(() => {
     let list = projects ?? [];
+    if (!showSnoozed) list = list.filter((p) => !p.isSnoozed);
     if (kindFilter !== "all") list = list.filter((p) => p.kind === kindFilter);
     const qv = QUICK_VIEWS.find((v) => v.id === view);
     if (qv?.match) list = list.filter((p) => qv.match!.includes(p.comm));
@@ -168,7 +189,7 @@ export default function AdminWerkbank() {
       );
     }
     return list;
-  }, [projects, view, search, kindFilter]);
+  }, [projects, view, search, kindFilter, showSnoozed]);
 
   const selected = filtered.find((p) => p.id === selectedId)
     ?? projects?.find((p) => p.id === selectedId)
@@ -332,9 +353,26 @@ export default function AdminWerkbank() {
                     );
                   })}
                   <button
-                    onClick={() => toggleArchive(!archive)}
+                    onClick={() => toggleShowSnoozed(!showSnoozed)}
                     className={cn(
                       "ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors",
+                      showSnoozed
+                        ? "border-amber-400 bg-amber-100 text-amber-900"
+                        : "hover:bg-muted",
+                    )}
+                    title={showSnoozed ? "Verberg gesnoozede projecten" : "Toon gesnoozede projecten"}
+                  >
+                    <Moon className="h-3 w-3" />
+                    Gesnoozed
+                    <span className={cn(
+                      "rounded-full bg-muted px-1.5 text-[10px]",
+                      showSnoozed && "bg-amber-200/70",
+                    )}>{snoozedCount}</span>
+                  </button>
+                  <button
+                    onClick={() => toggleArchive(!archive)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors",
                       archive
                         ? "border-primary bg-primary text-primary-foreground"
                         : "hover:bg-muted",
@@ -350,7 +388,7 @@ export default function AdminWerkbank() {
 
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
-                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} />
+                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} showSnoozed={showSnoozed} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (

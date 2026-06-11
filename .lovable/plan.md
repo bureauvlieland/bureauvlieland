@@ -1,47 +1,55 @@
-## Probleem
+## Wat we bouwen
 
-In `CheckoutContactForm.tsx` checken we nu of er in de **laatste 24 uur** al een aanvraag is op hetzelfde e-mailadres. Daarna is die check uit en kan dezelfde klant moeiteloos een tweede (derde, vierde…) parallelle aanvraag indienen. In de sales-fase betekent dat: dubbele dossiers, verwarring over welke offerte "de echte" is, en partners die meerdere keren benaderd worden.
+Een admin kan een project (program_request) **snoozen tot een datum**. Tijdens snooze:
+- Geen nieuwe interne auto-todo's voor dit project
+- Bestaande open auto-todo's voor dit project worden direct gesloten met reden `snoozed`
+- Geen automatische reminder-mails (naar partner of klant) voor dit project
+- Project verdwijnt uit de Werkbank-actielijst — apart filter "Toon gesnoozede" maakt 'm terugvindbaar
+- Op de wek-datum komt het project automatisch terug; bestaande crons maken weer todos aan zodra de criteria opnieuw geldig zijn
 
-De huidige dialog biedt ook geen weg terug — alleen "Annuleren" of "Nieuwe aanvraag versturen". De klant wéét niet meer hoe hij bij zijn eerdere programma komt.
+Niets dat snooze NIET blokkeert: klant/partner-portalen blijven werken, ad-hoc admin-acties (offerte versturen, mail typen) werken gewoon, inkomende chat/e-mail wordt nog vastgelegd.
 
-## Voorgestelde oplossing
+## UX
 
-### 1. Dedup-venster: actieve aanvragen, onbeperkt in tijd
+**Projectdetail (admin)** — nieuwe knop **"Snooze"** in de header. Dialog:
+- Datumpicker (verplicht, default vandaag + 7 dagen, min morgen, max 12 maanden)
+- Quick-presets: +3 dagen, +1 week, +2 weken, +1 maand
+- Reden (optioneel, bv. "Klant overlegt intern tot 20 juni")
+- Bevestigingsknop: "Snooze tot {datum}"
 
-Vervang de harde 24-uurs grens door een check op **alle actieve aanvragen** van hetzelfde e-mailadres — geen tijdslimiet. "Actief" = `status != 'cancelled'` én `completion_status` niet `fully_invoiced`. Zolang er ergens een lopend dossier is op dat e-mailadres, krijgt de klant de dialog te zien.
+Als al gesnoozed: subtiele gele banner bovenaan met "💤 Gesnoozed tot {datum} — {reden}" en knoppen **"Wakker maken"** + "Datum aanpassen".
 
-De bestaande 5-minuten hard-block (dubbele klik / refresh-resubmit) blijft staan zoals hij is.
-
-### 2. Dialog ombouwen naar "ga verder met bestaande aanvraag"
-
-In plaats van de huidige tekst + knop "Nieuwe aanvraag versturen", krijgt de dialog drie acties:
-
-- **Primair:** "Stuur mij de link naar mijn lopende aanvraag" → roept nieuwe edge function `resend-customer-link` aan die het bestaande `customer_token` per mail (Mailjet) verstuurt naar `customer_email`. Geen nieuw dossier.
-- **Secundair:** "Bel ons (0562 700 208)" — telefoon-link.
-- **Tertiair (klein, onderaan):** "Dit is écht een nieuwe aanvraag voor een andere groep/datum" → bestaande `executeSubmit`-flow.
-
-Copy maakt duidelijk: uw eerdere wensen staan klaar, wij sturen u de link zodat u kunt aanpassen of aanvullen — geen nieuw traject opstarten. Formele 'u'-toon conform stijl.
-
-### Wat we NIET doen
-
-- Geen schema-wijziging aan `program_requests`.
-- Geen samenvoegen/migreren van carts (klant zit in lokale `CartContext`; bestaand dossier kan al door bureau bewerkt zijn).
-- Geen auto-cancel van de nieuwe aanvraag als de klant tóch doorklikt — admin behoudt overzicht via Werkbank.
+**Werkbank** — gesnoozede projecten standaard verborgen. Schakelaar onderaan filters: **"Toon gesnoozede (n)"**. Snoozede projecten krijgen 💤-badge met wek-datum.
 
 ## Technisch
 
-**Frontend** — `src/components/configurator/CheckoutContactForm.tsx`
-- `checkForDuplicateAndSubmit`: vervang 24u-window door query op actieve `program_requests` (filter: `customer_email = …`, `status != 'cancelled'`, `completion_status` niet `fully_invoiced`). Selecteer `id, reference_number, customer_token, created_at, quote_status`. Order op `created_at desc`, limit 1.
-- State uitbreiden met `existingRequestId`, `existingToken`, `existingQuoteStatus`, `existingCreatedAt`.
-- `AlertDialog` herontwerpen met drie acties (zie boven). Tekst onderscheidt "uw aanvraag wordt verwerkt" (quote_status concept / in_afstemming) vs "uw offerte staat klaar" (offerte_verstuurd / akkoord_ontvangen).
-- Nieuwe handler `handleResendLink()` → `supabase.functions.invoke("resend-customer-link", { body: { request_id } })`, daarna toast + sluit dialog. Bij fout: fallback-bericht met telefoonnummer.
+**1. Migratie** — kolommen op `public.program_requests`:
+- `snoozed_until timestamptz NULL`
+- `snoozed_at timestamptz NULL`
+- `snoozed_by uuid NULL`
+- `snoozed_reason text NULL`
+- Index `program_requests_snoozed_until_idx` op `snoozed_until` (partial: WHERE snoozed_until IS NOT NULL).
 
-**Backend** — nieuwe edge function `supabase/functions/resend-customer-link/index.ts`
-- Public (geen JWT), accepteert `{ request_id: string }` (Zod-validatie).
-- Service role: haalt `program_requests` op (customer_email, customer_name, customer_token, reference_number).
-- Verstuurt via bestaande Mailjet-helper een korte mail: "Uw aanvraag {reference_number} staat klaar" met URL `${PUBLIC_SITE_URL}/mijn-programma/${customer_token}` (URL-resolution conform `mem://infrastructure/edge-function-url-resolution`).
-- Logt naar `email_log` met `template_name: "customer_link_resend"` en `metadata.actor: "customer_self_service"` (conform email-logging-contract).
-- Logt naar `program_request_history` (`action: "link_resent"`, `actor: "customer"`).
-- Rate-limit: weiger als laatste `customer_link_resend` op deze `request_id` < 5 min geleden was (check `email_log`).
+Op `public.admin_todos` (al bestaand) wordt `closed_reason='snoozed'` een toegestane waarde — geen schema-wijziging als kolom al text-vrij is.
 
-**Documentatie** — `mem://features/configurator-deduplication-logic.md` bijwerken: venster verruimd naar "alle actieve aanvragen, onbeperkt"; dialog stuurt klant terug naar bestaand dossier via resend-link.
+**2. Edge functions**
+- `check-pending-items/index.ts`: aan elke query op `program_requests` filter toevoegen `(snoozed_until IS NULL OR snoozed_until <= now())`. Voor item-gebaseerde checks: join + filter op het bovenliggende project. Ook voor de uitgaande reminder-mails (3-dagen request-reminder, 5-dagen offerte-reminder) hetzelfde filter — daarmee pauzeert ook de uitgaande mail-stroom.
+- `reconcile-admin-todos/index.ts`: nieuwe pass aan het begin die alle open `admin_todos` waarvan `related_request_id` verwijst naar een project met `snoozed_until > now()` direct sluit (`status='done'`, `closed_reason='snoozed'`, `closed_by='system'`).
+- Eventueel een `cleanup-stale-todos`-pass-through gebruikt al `program_requests` — daar dezelfde filter toevoegen.
+
+**3. Frontend**
+- Nieuw: `src/components/admin/SnoozeProjectButton.tsx` — dialog met datumpicker, presets, reden, formele 'u'-toon. Bij submit:
+  - `supabase.from("program_requests").update({ snoozed_until, snoozed_reason, snoozed_at: now(), snoozed_by: user.id })`
+  - Direct lokaal `admin_todos` voor dit project sluiten (`status='done'`, `closed_reason='snoozed'`) zodat de UI niet hoeft te wachten op de cron
+  - Insert in `program_request_history` (`action='snoozed'`, `new_value={until, reason}`)
+- Nieuw: `SnoozedProjectBanner` — gele banner bovenaan projectdetail met "Wakker maken" (clear snooze + log `action='unsnoozed'`) en "Datum aanpassen" (heropent dialog).
+- Plaatsen in:
+  - `src/pages/admin/AdminRequestDetail.tsx` (header)
+  - `src/components/admin/werkbank/ProjectDetailPanel.tsx` (header rechterpaneel)
+- `src/lib/getInbox.ts` (of waar de Werkbank-query staat): standaard filter `snoozed_until IS NULL OR snoozed_until <= now()`. Nieuwe prop `showSnoozed` haalt filter weg. Badge in lijstitem als gesnoozed.
+
+**4. Logging & memory**
+- `program_request_history` krijgt entries voor `snoozed` / `unsnoozed`.
+- Nieuw memory-bestand `mem://features/project-snooze` met: kolommen, gedrag van crons, UX-conventies en uitzonderingen (klant/partner-portalen blijven werken; chat/inkomende mail wordt niet onderdrukt).
+
+**RLS** — geen wijziging nodig; bestaande policies op `program_requests` (admin = full access) dekken `UPDATE` van de nieuwe kolommen.

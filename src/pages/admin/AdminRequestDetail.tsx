@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -196,6 +197,10 @@ interface ProgramRequest {
   billing_company_name: string | null;
   // Aftersales
   aftersales_sent_at: string | null;
+  // Snooze
+  snoozed_until: string | null;
+  snoozed_reason: string | null;
+  snoozed_at: string | null;
   // Catering-only fields (origin = catering_only)
   catering_location_text?: string | null;
   catering_start_time?: string | null;
@@ -1284,6 +1289,21 @@ const AdminRequestDetail = () => {
             </div>
           )}
 
+          {request.snoozed_until && new Date(request.snoozed_until).getTime() > Date.now() && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              💤 Dit project is <strong>gesnoozed</strong> tot{" "}
+              <strong>
+                {new Date(request.snoozed_until).toLocaleDateString("nl-NL", {
+                  weekday: "long", day: "numeric", month: "long", year: "numeric",
+                })}
+              </strong>
+              {request.snoozed_reason ? ` — ${request.snoozed_reason}` : ""}.
+              Tot die datum krijgt u geen automatische taken of herinneringen. Open en handmatige acties werken gewoon.
+            </div>
+          )}
+
+
+
           {/* === Sticky top-bar === */}
           {(() => {
             const datesArr = request.selected_dates as string[];
@@ -1402,6 +1422,12 @@ const AdminRequestDetail = () => {
                     )}
 
 
+                    <SnoozeProjectButton
+                      requestId={request.id}
+                      snoozedUntil={request.snoozed_until}
+                      snoozedReason={request.snoozed_reason}
+                      variant="compact"
+                    />
                     <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
                       <MessageSquare className="h-4 w-4 mr-2" /> Chat
                     </Button>
