@@ -279,7 +279,19 @@ Deno.serve(async (req) => {
           }
           break;
         }
-        case "request_no_response":
+        case "request_no_response": {
+          // Mirror creation criteria (check-pending-items): created while
+          // status=active AND completion_status=in_progress AND not expired.
+          if (
+            req &&
+            (req.status !== "active" ||
+              req.completion_status !== "in_progress" ||
+              (req.expires_at && new Date(req.expires_at) <= new Date()))
+          ) {
+            markClosed(t.id, type);
+          }
+          break;
+        }
         case "new_request_received":
         case "new_program_request": {
           if (
@@ -294,11 +306,14 @@ Deno.serve(async (req) => {
           break;
         }
         case "customer_inputs_missing": {
+          // Mirror creation criteria: closed when voorwaarden + facturatie-
+          // gegevens binnen zijn en (indien gekoppeld) logies is gekozen.
           if (
             req &&
-            (req.number_of_people ?? 0) > 0 &&
-            Array.isArray(req.selected_dates) &&
-            req.selected_dates.length > 0
+            req.terms_accepted_at &&
+            req.billing_company_name &&
+            (!req.linked_accommodation_id ||
+              selectedLodging.has(req.linked_accommodation_id))
           ) {
             markClosed(t.id, type);
           }
