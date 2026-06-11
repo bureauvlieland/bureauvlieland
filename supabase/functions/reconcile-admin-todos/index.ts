@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, completion_status, customer_approved_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
@@ -137,6 +137,14 @@ Deno.serve(async (req) => {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
+    // CRITICAL: if any lookup failed, abort instead of treating rows as
+    // missing — otherwise valid todos get closed as "project_deleted".
+    if (reqs.error) throw new Error(`program_requests lookup failed: ${reqs.error.message}`);
+    if (items.error) throw new Error(`program_request_items lookup failed: ${items.error.message}`);
+    if (quotes.error) throw new Error(`accommodation_quotes lookup failed: ${quotes.error.message}`);
+    if (pInvoices.error) throw new Error(`partner_purchase_invoices lookup failed: ${pInvoices.error.message}`);
+    if (batches.error) throw new Error(`payment_batches lookup failed: ${batches.error.message}`);
+
     const requestMap = new Map<string, any>(
       ((reqs.data ?? []) as any[]).map((r) => [r.id, r]),
     );
@@ -164,6 +172,26 @@ Deno.serve(async (req) => {
         salesByRequest.set(row.request_id, (salesByRequest.get(row.request_id) ?? 0) + 1);
       }
     }
+
+    // selected lodging quotes per accommodation request (for customer_inputs_missing)
+    const selectedLodging = new Set<string>();
+    {
+      const accIds = [...requestMap.values()]
+        .map((r: any) => r.linked_accommodation_id)
+        .filter((id: any) => isUuid(id));
+      if (accIds.length) {
+        const { data: sel } = await supabase
+          .from("accommodation_quotes")
+          .select("request_id")
+          .eq("status", "selected")
+          .in("request_id", accIds);
+        for (const row of (sel ?? []) as { request_id: string }[]) {
+          selectedLodging.add(row.request_id);
+        }
+      }
+    }
+
+
 
     for (const t of list) {
       const type = t.auto_type ?? "";
@@ -243,7 +271,7 @@ Deno.serve(async (req) => {
         case "quote_pending_customer": {
           if (
             req &&
-            (req.customer_approved_at ||
+            (req.terms_accepted_at ||
               req.quote_status === "akkoord_ontvangen" ||
               req.quote_status === "definitief_bevestigd")
           ) {
@@ -251,7 +279,19 @@ Deno.serve(async (req) => {
           }
           break;
         }
-        case "request_no_response":
+        case "request_no_response": {
+          // Mirror creation criteria (check-pending-items): created while
+          // status=active AND completion_status=in_progress AND not expired.
+          if (
+            req &&
+            (req.status !== "active" ||
+              req.completion_status !== "in_progress" ||
+              (req.expires_at && new Date(req.expires_at) <= new Date()))
+          ) {
+            markClosed(t.id, type);
+          }
+          break;
+        }
         case "new_request_received":
         case "new_program_request": {
           if (
@@ -266,11 +306,14 @@ Deno.serve(async (req) => {
           break;
         }
         case "customer_inputs_missing": {
+          // Mirror creation criteria: closed when voorwaarden + facturatie-
+          // gegevens binnen zijn en (indien gekoppeld) logies is gekozen.
           if (
             req &&
-            (req.number_of_people ?? 0) > 0 &&
-            Array.isArray(req.selected_dates) &&
-            req.selected_dates.length > 0
+            req.terms_accepted_at &&
+            req.billing_company_name &&
+            (!req.linked_accommodation_id ||
+              selectedLodging.has(req.linked_accommodation_id))
           ) {
             markClosed(t.id, type);
           }
