@@ -1066,6 +1066,7 @@ Deno.serve(async (req) => {
         new Date(s).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
       for (const item of upcomingItems || []) {
+        if (isSnoozed(item.request_id)) continue;
         const reqRow: any = Array.isArray(item.program_requests)
           ? item.program_requests[0]
           : item.program_requests;
