@@ -453,6 +453,8 @@ Deno.serve(async (req) => {
       console.log(`Found ${activeForwarded.length} forwarded quotes without customer selection older than ${customerQuoteDays} days`);
 
       for (const quote of activeForwarded) {
+        const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
+        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
