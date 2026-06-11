@@ -25,7 +25,7 @@ export function MissingPdfBanner({ count, showCta = true }: MissingPdfBannerProp
           <p className="text-sm text-foreground/80">
             We kunnen je factu{count === 1 ? "ur" : "ren"} niet in behandeling nemen en
             niet doorsturen naar onze boekhouding zolang de PDF-bijlage ontbreekt.
-            Voeg de PDF{count === 1 ? "" : "'s"} nu toe via Financieel → Gefactureerd.
+            Voeg de PDF{count === 1 ? "" : "'s"} nu toe via Facturatie → Gefactureerd.
           </p>
         </div>
       </div>
