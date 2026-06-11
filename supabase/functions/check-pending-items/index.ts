@@ -1183,27 +1183,50 @@ Deno.serve(async (req) => {
     // CHECK 10: Customer status email — Phase B
     // (offerte_verstuurd > N dagen, geen klant-akkoord)
     // =============================================
-    const customerStatusCutoff = new Date();
-    customerStatusCutoff.setDate(customerStatusCutoff.getDate() - customerStatusEmailPendingDays);
-
+    // Anker = laatste klantcontact (offerte verstuurd óf laatste uitgaande mail
+    // naar de klant), niet alleen quote_sent_at. Zo komt de taak niet direct
+    // terug nadat de admin zojuist een opvolgmail heeft gestuurd.
+    // Termijn schaalt mee met hoe ver het event in de toekomst ligt (sales-fase).
     const { data: phaseBPrograms, error: phaseBError } = await supabase
       .from("program_requests")
       .select(`
-        id, customer_name, customer_company, quote_status, quote_sent_at,
-        cancelled_at, completion_status,
+        id, customer_name, customer_company, customer_email, quote_status, quote_sent_at,
+        selected_dates, cancelled_at, completion_status,
         items:program_request_items(id, customer_approved_at, customer_accepted_at)
       `)
       .eq("status", "active")
       .eq("quote_status", "offerte_verstuurd")
       .is("cancelled_at", null)
       .neq("completion_status", "completed")
-      .not("quote_sent_at", "is", null)
-      .lt("quote_sent_at", customerStatusCutoff.toISOString());
+      .not("quote_sent_at", "is", null);
 
     if (phaseBError) {
       console.error("Error fetching phase B programs:", phaseBError);
     } else {
-      console.log(`Found ${phaseBPrograms?.length || 0} phase-B programs for status email todos`);
+      console.log(`Found ${phaseBPrograms?.length || 0} phase-B candidates for status email todos`);
+
+      // Laatste uitgaande mail naar de klant per request (één batch-query).
+      const phaseBIds = (phaseBPrograms || []).map((p: any) => p.id);
+      const customerEmailByReq = new Map<string, string>(
+        (phaseBPrograms || []).map((p: any) => [p.id, (p.customer_email || "").toLowerCase()]),
+      );
+      const lastCustomerMailByReq = new Map<string, string>();
+      if (phaseBIds.length) {
+        const { data: custMails } = await supabase
+          .from("email_log")
+          .select("related_request_id, recipient_email, created_at")
+          .in("related_request_id", phaseBIds)
+          .order("created_at", { ascending: false })
+          .limit(2000);
+        for (const m of custMails || []) {
+          const reqId = (m as any).related_request_id;
+          if (!reqId || lastCustomerMailByReq.has(reqId)) continue;
+          const custEmail = customerEmailByReq.get(reqId);
+          if (custEmail && ((m as any).recipient_email || "").toLowerCase() === custEmail) {
+            lastCustomerMailByReq.set(reqId, (m as any).created_at);
+          }
+        }
+      }
 
       for (const prog of phaseBPrograms || []) {
         const items = (prog.items as any[]) || [];
@@ -1211,6 +1234,31 @@ Deno.serve(async (req) => {
           (i) => i.customer_approved_at || i.customer_accepted_at,
         );
         if (anyApproved) continue;
+
+        // Laatste klantcontact: max(quote_sent_at, laatste mail aan klant)
+        const quoteSentTs = new Date(prog.quote_sent_at!).getTime();
+        const lastMail = lastCustomerMailByReq.get(prog.id);
+        const lastContactTs = Math.max(
+          quoteSentTs,
+          lastMail ? new Date(lastMail).getTime() : 0,
+        );
+
+        // Termijn versoepelen als de startdatum ver in de toekomst ligt:
+        // >= 90 dagen vooruit → 3x termijn, >= 30 dagen → 2x, anders standaard.
+        const dates = Array.isArray(prog.selected_dates)
+          ? (prog.selected_dates as unknown[]).map(String).sort()
+          : [];
+        const firstDate = dates[0] ? new Date(dates[0]) : null;
+        const daysUntilEvent = firstDate
+          ? Math.ceil((firstDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : 0;
+        const leadFactor = daysUntilEvent >= 90 ? 3 : daysUntilEvent >= 30 ? 2 : 1;
+        const effectivePendingDays = customerStatusEmailPendingDays * leadFactor;
+
+        const daysSinceContact = Math.floor(
+          (Date.now() - lastContactTs) / (1000 * 60 * 60 * 24),
+        );
+        if (daysSinceContact < effectivePendingDays) continue;
 
         const { data: existingTodo } = await supabase
           .from("admin_todos")
@@ -1226,16 +1274,16 @@ Deno.serve(async (req) => {
         }
 
         const customerLabel = prog.customer_company || prog.customer_name;
-        const daysSince = Math.floor(
-          (Date.now() - new Date(prog.quote_sent_at!).getTime()) / (1000 * 60 * 60 * 24),
-        );
+        const contactLabel = lastMail && new Date(lastMail).getTime() > quoteSentTs
+          ? `laatste mail aan klant ${daysSinceContact} dagen geleden`
+          : `offerte ${daysSinceContact} dagen geleden verstuurd zonder reactie`;
 
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
             title: `${customerLabel} heeft nog geen akkoord op offerte`,
-            description: `Stand bij aanmaken: offerte ${daysSince} dagen geleden verstuurd zonder reactie. Overweeg een status-mail om de klant te herinneren aan akkoord, voorwaarden en facturatiegegevens.`,
-            priority: daysSince > customerStatusEmailPendingDays * 2 ? "high" : "normal",
+            description: `Stand bij aanmaken: ${contactLabel}. Overweeg een status-mail om de klant te herinneren aan akkoord, voorwaarden en facturatiegegevens.${leadFactor > 1 ? ` (Ruimere termijn toegepast: event over ${daysUntilEvent} dagen.)` : ""}`,
+            priority: daysSinceContact > effectivePendingDays * 2 ? "high" : "normal",
             status: "todo",
             related_request_id: prog.id,
             auto_type: "customer_status_email_due",

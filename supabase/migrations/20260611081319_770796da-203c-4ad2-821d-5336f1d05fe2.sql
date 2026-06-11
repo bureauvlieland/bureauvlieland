@@ -1,0 +1,1 @@
+UPDATE admin_todos SET status='done', completed_at=now() WHERE id='61cd8cdd-9ba1-4245-8b50-af3493f80f2b' AND status <> 'done';
