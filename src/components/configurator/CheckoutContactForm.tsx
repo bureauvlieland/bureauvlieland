@@ -114,8 +114,6 @@ export const CheckoutContactForm = ({
     }
 
 
-    const fiveMinutesAgo = subHours(new Date(), 0.0833).toISOString(); // 5 min
-    const twentyFourHoursAgo = subHours(new Date(), 24).toISOString();
 
     try {
       // Hard block: same email + non-cancelled aanvraag in laatste 5 min
@@ -135,18 +133,25 @@ export const CheckoutContactForm = ({
         return;
       }
 
-      // Soft warning: zelfde email in laatste 24u (niet cancelled)
+      // Soft warning: actieve aanvraag op dit e-mailadres (geen tijdslimiet).
+      // We willen voorkomen dat klanten parallelle dossiers aanmaken in plaats
+      // van door te gaan met hun bestaande, lopende aanvraag.
       const { data: existing } = await supabase
         .from("program_requests")
-        .select("id, reference_number")
+        .select("id, reference_number, quote_status, created_at, completion_status")
         .eq("customer_email", formData.email)
         .neq("status", "cancelled")
-        .gte("created_at", twentyFourHoursAgo)
+        .neq("completion_status", "fully_invoiced")
         .order("created_at", { ascending: false })
         .limit(1);
 
       if (existing && existing.length > 0) {
-        setExistingReference(existing[0].reference_number ?? null);
+        setExistingRequest({
+          id: existing[0].id,
+          reference: existing[0].reference_number ?? null,
+          quoteStatus: existing[0].quote_status ?? null,
+          createdAt: existing[0].created_at,
+        });
         setDuplicateWarningOpen(true);
         return;
       }
@@ -155,6 +160,36 @@ export const CheckoutContactForm = ({
     }
 
     await executeSubmit();
+  };
+
+  const handleResendLink = async () => {
+    if (!existingRequest) return;
+    setIsResendingLink(true);
+    try {
+      const { error } = await supabase.functions.invoke("resend-customer-link", {
+        body: {
+          request_id: existingRequest.id,
+          origin: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      toast({
+        title: "Link verstuurd",
+        description: `Wij hebben de link naar uw aanvraag zojuist gemaild naar ${formData.email}. Controleer ook uw spam-folder.`,
+      });
+      setDuplicateWarningOpen(false);
+      setExistingRequest(null);
+    } catch (err: any) {
+      console.error("resend-customer-link error:", err);
+      toast({
+        title: "Versturen mislukt",
+        description:
+          "Wij konden de link niet versturen. Bel ons gerust op 0562 700 208 — dan helpen wij u meteen verder.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResendingLink(false);
+    }
   };
 
   const executeSubmit = async () => {
