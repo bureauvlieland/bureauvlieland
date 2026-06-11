@@ -10,6 +10,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import {
+  getItemSendCounts,
   getProjectPipelineStage,
   type ProjectPipelineStage,
 } from "./projectWorkflow";
@@ -212,15 +213,14 @@ export async function listProjectsForWerkbank(opts: {
         })
       : null;
 
-    // Communicatie-status (vereenvoudigd voor lijst-view)
-    const itemsReadyForPartner = items.filter(
-      (i) =>
-        i.skip_partner_notification === true &&
-        i.status !== "cancelled" &&
-        (p.quote_status === "akkoord_ontvangen" || !!i.customer_approved_at),
-    ).length;
+    // Communicatie-status — zelfde canonieke logica als de projectdetailpagina
+    // (getItemSendCounts sluit o.a. bureau-items en geannuleerde items uit).
+    const itemsReadyForPartner = getItemSendCounts(items, {
+      quote_status: p.quote_status,
+    }).readyForPartner;
     const itemsAwaitingPartnerResponse = items.filter(
       (i) =>
+        i.provider_id !== "bureau" &&
         i.skip_partner_notification === false &&
         i.status !== "cancelled" &&
         i.item_quote_status !== "bevestigd",
