@@ -196,6 +196,10 @@ interface ProgramRequest {
   billing_company_name: string | null;
   // Aftersales
   aftersales_sent_at: string | null;
+  // Snooze
+  snoozed_until: string | null;
+  snoozed_reason: string | null;
+  snoozed_at: string | null;
   // Catering-only fields (origin = catering_only)
   catering_location_text?: string | null;
   catering_start_time?: string | null;
