@@ -92,12 +92,17 @@ function InboxRow({
         <div className="min-w-0">
           {project ? (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-xs text-muted-foreground">{project.reference}</span>
                 {project.kind !== "programma_only" && (
                   <Badge variant="outline" className="gap-1 text-[10px]">
                     <Hotel className="h-3 w-3" />
                     {project.kind === "logies_only" ? "logies-only" : "+ logies"}
+                  </Badge>
+                )}
+                {project.isSnoozed && project.snoozedUntil && (
+                  <Badge variant="outline" className="gap-1 text-[10px] border-amber-300 bg-amber-50 text-amber-800">
+                    💤 tot {new Date(project.snoozedUntil).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
                   </Badge>
                 )}
               </div>
