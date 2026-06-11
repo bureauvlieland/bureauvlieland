@@ -101,7 +101,14 @@ function ProjectListRow({
           {project.numberOfPeople} pers.
           {project.dates[0] && ` · ${project.dates[0]}`}
         </span>
-        <CommBadge state={project.comm} />
+        <div className="flex items-center gap-1.5">
+          {project.isSnoozed && project.snoozedUntil && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800">
+              💤 {new Date(project.snoozedUntil).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+            </span>
+          )}
+          <CommBadge state={project.comm} />
+        </div>
       </div>
     </button>
   );
