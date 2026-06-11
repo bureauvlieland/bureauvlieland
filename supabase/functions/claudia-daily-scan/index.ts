@@ -96,6 +96,7 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
     .from("accommodation_quotes")
     .select("id, request_id, accommodation_name, submitted_at, status, price_total, accommodation_requests:request_id(reference_number, customer_name, status, program_requests:linked_program_id(status))")
     .eq("status", "submitted")
+    .is("forwarded_at", null)
     .lte("submitted_at", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
     .limit(15);
 
