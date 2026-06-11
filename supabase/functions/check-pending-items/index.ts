@@ -991,6 +991,7 @@ Deno.serve(async (req) => {
           .in("id", eligibleRequestIds);
 
         for (const reqRow of eligibleRequests || []) {
+          if (isSnoozed(reqRow.id)) { totalSkipped++; continue; }
           if (!reqRow.customer_email) continue;
           if (reqRow.aftersales_sent_at) continue;
           if (reqRow.cancelled_at || reqRow.status === "cancelled") continue;
