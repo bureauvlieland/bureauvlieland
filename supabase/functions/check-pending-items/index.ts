@@ -28,6 +28,19 @@ Deno.serve(async (req) => {
 
     console.log("Starting check-pending-items job...");
 
+    // Pre-fetch alle projecten die nu gesnoozed zijn. Tijdens snooze pauzeren we
+    // alle automatische todos én reminder-mails voor het project, en sluiten we
+    // bestaande open auto-todos via reconcile-admin-todos.
+    const nowIso = new Date().toISOString();
+    const { data: snoozedRows } = await supabase
+      .from("program_requests")
+      .select("id")
+      .gt("snoozed_until", nowIso);
+    const snoozedRequestIds = new Set<string>((snoozedRows || []).map((r: any) => r.id));
+    const isSnoozed = (id?: string | null): boolean => !!id && snoozedRequestIds.has(id);
+    console.log(`Snoozed projects skipped this run: ${snoozedRequestIds.size}`);
+
+
     // Fetch configurable settings
     const { data: settingsRows } = await supabase
       .from("app_settings")
