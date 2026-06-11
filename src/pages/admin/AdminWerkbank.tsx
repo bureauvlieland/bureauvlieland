@@ -131,6 +131,14 @@ export default function AdminWerkbank() {
       ? initialKind
       : "all",
   );
+  const [showSnoozed, setShowSnoozed] = useState<boolean>(params.get("snoozed") === "1");
+
+  const toggleShowSnoozed = (next: boolean) => {
+    setShowSnoozed(next);
+    const p = new URLSearchParams(params);
+    if (next) p.set("snoozed", "1"); else p.delete("snoozed");
+    setParams(p, { replace: true });
+  };
 
   // Keep selection in sync with URL param so the Claudia badge (which clears
   // ?id=) actually returns to the recommendations overview.
