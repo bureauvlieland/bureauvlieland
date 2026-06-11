@@ -50,6 +50,7 @@ import {
   Clock,
   History,
   FileText,
+  Receipt,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -1339,6 +1340,23 @@ const AdminRequestDetail = () => {
                           outstanding={calculateOutstandingAmount()}
                           variant="compact"
                         />
+                        {(() => {
+                          const realInvoices = bureauInvoices.filter((inv) => inv.invoice_type !== "credit");
+                          if (realInvoices.length === 0) return null;
+                          const hasFinal = realInvoices.some((inv) => inv.invoice_type === "final");
+                          const latest = realInvoices[0];
+                          return (
+                            <Badge
+                              variant="outline"
+                              onClick={() => handleTabChange("financien")}
+                              title={realInvoices.map((inv) => `${inv.invoice_number} · ${format(new Date(inv.invoice_date), "d MMM yyyy", { locale: nl })}`).join("\n")}
+                              className={`gap-1 text-xs cursor-pointer ${hasFinal ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"}`}
+                            >
+                              <Receipt className="h-3 w-3" />
+                              {hasFinal ? "Gefactureerd" : "Deels gefactureerd"} · {format(new Date(latest.invoice_date), "d MMM yyyy", { locale: nl })}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
                         Aangevraagd {format(new Date(request.created_at), "d MMM yyyy", { locale: nl })}
