@@ -149,7 +149,7 @@ export default function AdminWerkbank() {
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["werkbank-projects", archive ? "archief" : "actief"],
-    queryFn: () => listProjectsForWerkbank({ archiveOnly: archive }),
+    queryFn: () => listProjectsForWerkbank({ archiveOnly: archive, includeSnoozed: true }),
     refetchInterval: 60_000,
   });
 
