@@ -521,22 +521,55 @@ export const CheckoutContactForm = ({
       <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>U heeft al een aanvraag lopen</AlertDialogTitle>
-            <AlertDialogDescription>
-              Met dit e-mailadres is in de afgelopen 24 uur al een aanvraag ingediend
-              {existingReference ? ` (referentie ${existingReference})` : ""}.
-              Wij nemen daar op werkdagen binnen 1 dag contact over op.
-              <br /><br />
-              <strong>Wilt u die aanvraag aanpassen?</strong> Reageer dan op uw bevestigingsmail
-              of bel ons op 0562 700 208. Alleen als dit een écht nieuwe aanvraag is voor een
-              andere groep of datum, klik dan op "Nieuwe aanvraag versturen".
+            <AlertDialogTitle>U heeft al een aanvraag lopen bij ons</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Met dit e-mailadres staat er al een aanvraag bij Bureau Vlieland
+                  {existingRequest?.reference ? ` (referentie ${existingRequest.reference})` : ""}.
+                  Uw eerdere wensen, datums en eventuele offerte staan daar al klaar.
+                </p>
+                <p>
+                  Wij raden u aan om verder te gaan met die lopende aanvraag in plaats van
+                  een tweede traject op te starten. Wij sturen u graag de link toe zodat u
+                  uw programma kunt bekijken, aanvullen of aanpassen.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-            <AlertDialogAction onClick={() => executeSubmit()}>
-              Nieuwe aanvraag versturen
-            </AlertDialogAction>
+          <AlertDialogFooter className="flex flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button
+              type="button"
+              onClick={handleResendLink}
+              disabled={isResendingLink}
+              className="w-full"
+            >
+              {isResendingLink ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Versturen...
+                </>
+              ) : (
+                "Stuur mij de link naar mijn lopende aanvraag"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="w-full"
+            >
+              <a href="tel:+31562700208">Bel ons: 0562 700 208</a>
+            </Button>
+            <button
+              type="button"
+              onClick={() => executeSubmit()}
+              className="text-xs text-muted-foreground underline hover:text-foreground mt-2 self-center"
+              disabled={isResendingLink}
+            >
+              Dit is écht een nieuwe aanvraag voor een andere groep of datum
+            </button>
+            <AlertDialogCancel className="mt-1">Annuleren</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
