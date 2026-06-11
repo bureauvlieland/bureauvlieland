@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, completion_status, terms_accepted_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
