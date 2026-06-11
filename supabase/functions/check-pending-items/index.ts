@@ -608,6 +608,8 @@ Deno.serve(async (req) => {
       console.log(`Found ${activeExpired.length} expired accommodation quotes`);
 
       for (const quote of activeExpired) {
+        const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
+        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
         // Update status to expired
         const { error: updateError } = await supabase
           .from("accommodation_quotes")
