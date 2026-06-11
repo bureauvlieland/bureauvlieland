@@ -283,7 +283,11 @@ export const AdminEditActivitySheet = ({
           provider_email: newProviderEmail,
         };
 
-        if (isBureauInvoiced && item.status === "pending") {
+        // Auto-akkoord enkel voor échte live bureau-posten (vrije tijd, ferry,
+        // kostenpost). Voor nog niet gepubliceerde drafts (pending_added) heeft
+        // de klant het onderdeel nooit gezien — dan géén klant-akkoord stempelen.
+        // De normale workflow loopt dan via "Publiceer & notificeer".
+        if (isBureauInvoiced && item.status === "pending" && !item.pending_added) {
           const nowIso = new Date().toISOString();
           updateData.status = "confirmed";
           updateData.item_quote_status = "bevestigd";
