@@ -507,6 +507,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${inactiveRequests?.length || 0} inactive program requests older than ${customerRequestDays} days`);
 
       for (const req of inactiveRequests || []) {
+        if (isSnoozed(req.id)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
