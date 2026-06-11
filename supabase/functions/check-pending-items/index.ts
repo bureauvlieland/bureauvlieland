@@ -344,6 +344,8 @@ Deno.serve(async (req) => {
       console.log(`Found ${activeQuotes.length} pending accommodation quotes older than ${partnerQuoteDays} days`);
 
       for (const quote of activeQuotes) {
+        const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
+        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
