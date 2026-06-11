@@ -353,9 +353,26 @@ export default function AdminWerkbank() {
                     );
                   })}
                   <button
-                    onClick={() => toggleArchive(!archive)}
+                    onClick={() => toggleShowSnoozed(!showSnoozed)}
                     className={cn(
                       "ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors",
+                      showSnoozed
+                        ? "border-amber-400 bg-amber-100 text-amber-900"
+                        : "hover:bg-muted",
+                    )}
+                    title={showSnoozed ? "Verberg gesnoozede projecten" : "Toon gesnoozede projecten"}
+                  >
+                    <Moon className="h-3 w-3" />
+                    Gesnoozed
+                    <span className={cn(
+                      "rounded-full bg-muted px-1.5 text-[10px]",
+                      showSnoozed && "bg-amber-200/70",
+                    )}>{snoozedCount}</span>
+                  </button>
+                  <button
+                    onClick={() => toggleArchive(!archive)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors",
                       archive
                         ? "border-primary bg-primary text-primary-foreground"
                         : "hover:bg-muted",
@@ -371,7 +388,7 @@ export default function AdminWerkbank() {
 
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
-                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} />
+                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} showSnoozed={showSnoozed} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (
