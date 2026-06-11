@@ -326,7 +326,8 @@ Deno.serve(async (req) => {
           departure_date,
           number_of_guests,
           status,
-          expires_at
+          expires_at,
+          linked_program_id
         )
       `)
       .eq("status", "pending")
