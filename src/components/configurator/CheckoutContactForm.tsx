@@ -44,9 +44,15 @@ export const CheckoutContactForm = ({
   
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResendingLink, setIsResendingLink] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
-  const [existingReference, setExistingReference] = useState<string | null>(null);
+  const [existingRequest, setExistingRequest] = useState<{
+    id: string;
+    reference: string | null;
+    quoteStatus: string | null;
+    createdAt: string;
+  } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -107,9 +113,7 @@ export const CheckoutContactForm = ({
       return;
     }
 
-
     const fiveMinutesAgo = subHours(new Date(), 0.0833).toISOString(); // 5 min
-    const twentyFourHoursAgo = subHours(new Date(), 24).toISOString();
 
     try {
       // Hard block: same email + non-cancelled aanvraag in laatste 5 min
@@ -129,18 +133,25 @@ export const CheckoutContactForm = ({
         return;
       }
 
-      // Soft warning: zelfde email in laatste 24u (niet cancelled)
+      // Soft warning: actieve aanvraag op dit e-mailadres (geen tijdslimiet).
+      // We willen voorkomen dat klanten parallelle dossiers aanmaken in plaats
+      // van door te gaan met hun bestaande, lopende aanvraag.
       const { data: existing } = await supabase
         .from("program_requests")
-        .select("id, reference_number")
+        .select("id, reference_number, quote_status, created_at, completion_status")
         .eq("customer_email", formData.email)
         .neq("status", "cancelled")
-        .gte("created_at", twentyFourHoursAgo)
+        .neq("completion_status", "fully_invoiced")
         .order("created_at", { ascending: false })
         .limit(1);
 
       if (existing && existing.length > 0) {
-        setExistingReference(existing[0].reference_number ?? null);
+        setExistingRequest({
+          id: existing[0].id,
+          reference: existing[0].reference_number ?? null,
+          quoteStatus: existing[0].quote_status ?? null,
+          createdAt: existing[0].created_at,
+        });
         setDuplicateWarningOpen(true);
         return;
       }
@@ -149,6 +160,36 @@ export const CheckoutContactForm = ({
     }
 
     await executeSubmit();
+  };
+
+  const handleResendLink = async () => {
+    if (!existingRequest) return;
+    setIsResendingLink(true);
+    try {
+      const { error } = await supabase.functions.invoke("resend-customer-link", {
+        body: {
+          request_id: existingRequest.id,
+          origin: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      toast({
+        title: "Link verstuurd",
+        description: `Wij hebben de link naar uw aanvraag zojuist gemaild naar ${formData.email}. Controleer ook uw spam-folder.`,
+      });
+      setDuplicateWarningOpen(false);
+      setExistingRequest(null);
+    } catch (err: any) {
+      console.error("resend-customer-link error:", err);
+      toast({
+        title: "Versturen mislukt",
+        description:
+          "Wij konden de link niet versturen. Bel ons gerust op 0562 700 208 — dan helpen wij u meteen verder.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResendingLink(false);
+    }
   };
 
   const executeSubmit = async () => {
@@ -480,22 +521,55 @@ export const CheckoutContactForm = ({
       <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>U heeft al een aanvraag lopen</AlertDialogTitle>
-            <AlertDialogDescription>
-              Met dit e-mailadres is in de afgelopen 24 uur al een aanvraag ingediend
-              {existingReference ? ` (referentie ${existingReference})` : ""}.
-              Wij nemen daar op werkdagen binnen 1 dag contact over op.
-              <br /><br />
-              <strong>Wilt u die aanvraag aanpassen?</strong> Reageer dan op uw bevestigingsmail
-              of bel ons op 0562 700 208. Alleen als dit een écht nieuwe aanvraag is voor een
-              andere groep of datum, klik dan op "Nieuwe aanvraag versturen".
+            <AlertDialogTitle>U heeft al een aanvraag lopen bij ons</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  Met dit e-mailadres staat er al een aanvraag bij Bureau Vlieland
+                  {existingRequest?.reference ? ` (referentie ${existingRequest.reference})` : ""}.
+                  Uw eerdere wensen, datums en eventuele offerte staan daar al klaar.
+                </p>
+                <p>
+                  Wij raden u aan om verder te gaan met die lopende aanvraag in plaats van
+                  een tweede traject op te starten. Wij sturen u graag de link toe zodat u
+                  uw programma kunt bekijken, aanvullen of aanpassen.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-            <AlertDialogAction onClick={() => executeSubmit()}>
-              Nieuwe aanvraag versturen
-            </AlertDialogAction>
+          <AlertDialogFooter className="flex flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button
+              type="button"
+              onClick={handleResendLink}
+              disabled={isResendingLink}
+              className="w-full"
+            >
+              {isResendingLink ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Versturen...
+                </>
+              ) : (
+                "Stuur mij de link naar mijn lopende aanvraag"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="w-full"
+            >
+              <a href="tel:+31562700208">Bel ons: 0562 700 208</a>
+            </Button>
+            <button
+              type="button"
+              onClick={() => executeSubmit()}
+              className="text-xs text-muted-foreground underline hover:text-foreground mt-2 self-center"
+              disabled={isResendingLink}
+            >
+              Dit is écht een nieuwe aanvraag voor een andere groep of datum
+            </button>
+            <AlertDialogCancel className="mt-1">Annuleren</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

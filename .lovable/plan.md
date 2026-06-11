@@ -1,32 +1,47 @@
-# Berichtencentrum: aparte "Te beantwoorden" inbox met antwoordfunctie
+## Probleem
 
-## Wat er verandert
+In `CheckoutContactForm.tsx` checken we nu of er in de **laatste 24 uur** al een aanvraag is op hetzelfde e-mailadres. Daarna is die check uit en kan dezelfde klant moeiteloos een tweede (derde, vierde…) parallelle aanvraag indienen. In de sales-fase betekent dat: dubbele dossiers, verwarring over welke offerte "de echte" is, en partners die meerdere keren benaderd worden.
 
-Het Berichtencentrum (`/admin/berichten`) krijgt twee tabbladen:
+De huidige dialog biedt ook geen weg terug — alleen "Annuleren" of "Nieuwe aanvraag versturen". De klant wéét niet meer hoe hij bij zijn eerdere programma komt.
 
-1. **Te beantwoorden** (nieuw, standaard geopend) — alle inkomende e-mails die nog niet beantwoord zijn
-2. **Verzonden e-mails** — de huidige tabel met uitgaande transactionele mails (blijft zoals het is)
+## Voorgestelde oplossing
 
-## Tabblad "Te beantwoorden"
+### 1. Dedup-venster: actieve aanvragen, onbeperkt in tijd
 
-- Lijst van inkomende e-mails (uit het communicatiedossier, richting "inbound"), nieuwste bovenaan, met teller-badge op het tabblad.
-- Elke rij toont: afzender (naam + e-mail), onderwerp, datum, projectlink en een leesbare preview. Klikken klapt de rij uit zodat je de **volledige tekst** leest — geen afgebroken weergave meer.
-- Per bericht drie acties:
-  - **Beantwoorden** — opent het bestaande e-mailvenster (SendProjectEmailSheet), voorgevuld met de afzender als ontvanger, onderwerp "Re: …" en het originele bericht als citaat eronder. AI-suggestie en templates blijven beschikbaar. Na verzenden wordt het bericht **automatisch gemarkeerd als beantwoord**.
-  - **Naar project** — doorklikken naar het projectdossier (communicatie-tab).
-  - **Markeer als beantwoord** — handmatig afvinken (bijv. als je telefonisch hebt gereageerd), met ongedaan-maken-optie.
-- Schakelaar "Toon beantwoord" om afgehandelde berichten terug te zien (met wie/wanneer beantwoord).
+Vervang de harde 24-uurs grens door een check op **alle actieve aanvragen** van hetzelfde e-mailadres — geen tijdslimiet. "Actief" = `status != 'cancelled'` én `completion_status` niet `fully_invoiced`. Zolang er ergens een lopend dossier is op dat e-mailadres, krijgt de klant de dialog te zien.
 
-## Inbox-bel rechtsboven
+De bestaande 5-minuten hard-block (dubbele klik / refresh-resubmit) blijft staan zoals hij is.
 
-- De bel toont voortaan alleen **onbeantwoorde** inkomende e-mails — beantwoorden ruimt dus direct de inbox op.
-- Klikken op een e-mail in de bel gaat naar het tabblad "Te beantwoorden" met dat bericht direct uitgeklapt en gemarkeerd, zodat je niet meer hoeft te zoeken.
+### 2. Dialog ombouwen naar "ga verder met bestaande aanvraag"
 
-## Technische details
+In plaats van de huidige tekst + knop "Nieuwe aanvraag versturen", krijgt de dialog drie acties:
 
-- **Database**: twee kolommen op `project_communications`: `answered_at` (timestamp) en `answered_by` (admin-gebruiker). Geen nieuwe tabel nodig.
-- **Frontend**: 
-  - `AdminMessages.tsx` krijgt tabs; nieuwe component `InboxToAnswer.tsx` voor het inbox-tabblad.
-  - Hergebruik van `SendProjectEmailSheet` met voorgevulde ontvanger/onderwerp/citaat; bij succes wordt `answered_at` gezet via de bestaande `onEmailSent`-callback.
-  - `useAdminInbox.ts` (bel-popover) filtert op `answered_at IS NULL`; navigatie wijst naar `/admin/berichten?inbox=<id>`.
-- Realtime updates blijven werken (bestaande Supabase-realtime kanalen op `project_communications`).
+- **Primair:** "Stuur mij de link naar mijn lopende aanvraag" → roept nieuwe edge function `resend-customer-link` aan die het bestaande `customer_token` per mail (Mailjet) verstuurt naar `customer_email`. Geen nieuw dossier.
+- **Secundair:** "Bel ons (0562 700 208)" — telefoon-link.
+- **Tertiair (klein, onderaan):** "Dit is écht een nieuwe aanvraag voor een andere groep/datum" → bestaande `executeSubmit`-flow.
+
+Copy maakt duidelijk: uw eerdere wensen staan klaar, wij sturen u de link zodat u kunt aanpassen of aanvullen — geen nieuw traject opstarten. Formele 'u'-toon conform stijl.
+
+### Wat we NIET doen
+
+- Geen schema-wijziging aan `program_requests`.
+- Geen samenvoegen/migreren van carts (klant zit in lokale `CartContext`; bestaand dossier kan al door bureau bewerkt zijn).
+- Geen auto-cancel van de nieuwe aanvraag als de klant tóch doorklikt — admin behoudt overzicht via Werkbank.
+
+## Technisch
+
+**Frontend** — `src/components/configurator/CheckoutContactForm.tsx`
+- `checkForDuplicateAndSubmit`: vervang 24u-window door query op actieve `program_requests` (filter: `customer_email = …`, `status != 'cancelled'`, `completion_status` niet `fully_invoiced`). Selecteer `id, reference_number, customer_token, created_at, quote_status`. Order op `created_at desc`, limit 1.
+- State uitbreiden met `existingRequestId`, `existingToken`, `existingQuoteStatus`, `existingCreatedAt`.
+- `AlertDialog` herontwerpen met drie acties (zie boven). Tekst onderscheidt "uw aanvraag wordt verwerkt" (quote_status concept / in_afstemming) vs "uw offerte staat klaar" (offerte_verstuurd / akkoord_ontvangen).
+- Nieuwe handler `handleResendLink()` → `supabase.functions.invoke("resend-customer-link", { body: { request_id } })`, daarna toast + sluit dialog. Bij fout: fallback-bericht met telefoonnummer.
+
+**Backend** — nieuwe edge function `supabase/functions/resend-customer-link/index.ts`
+- Public (geen JWT), accepteert `{ request_id: string }` (Zod-validatie).
+- Service role: haalt `program_requests` op (customer_email, customer_name, customer_token, reference_number).
+- Verstuurt via bestaande Mailjet-helper een korte mail: "Uw aanvraag {reference_number} staat klaar" met URL `${PUBLIC_SITE_URL}/mijn-programma/${customer_token}` (URL-resolution conform `mem://infrastructure/edge-function-url-resolution`).
+- Logt naar `email_log` met `template_name: "customer_link_resend"` en `metadata.actor: "customer_self_service"` (conform email-logging-contract).
+- Logt naar `program_request_history` (`action: "link_resent"`, `actor: "customer"`).
+- Rate-limit: weiger als laatste `customer_link_resend` op deze `request_id` < 5 min geleden was (check `email_log`).
+
+**Documentatie** — `mem://features/configurator-deduplication-logic.md` bijwerken: venster verruimd naar "alle actieve aanvragen, onbeperkt"; dialog stuurt klant terug naar bestaand dossier via resend-link.
