@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, completion_status, customer_approved_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, completion_status, terms_accepted_at, cancelled_at, number_of_people, selected_dates",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
@@ -136,6 +136,14 @@ Deno.serve(async (req) => {
             .in("id", [...batchIds])
         : Promise.resolve({ data: [], error: null }),
     ]);
+
+    // CRITICAL: if any lookup failed, abort instead of treating rows as
+    // missing — otherwise valid todos get closed as "project_deleted".
+    if (reqs.error) throw new Error(`program_requests lookup failed: ${reqs.error.message}`);
+    if (items.error) throw new Error(`program_request_items lookup failed: ${items.error.message}`);
+    if (quotes.error) throw new Error(`accommodation_quotes lookup failed: ${quotes.error.message}`);
+    if (pInvoices.error) throw new Error(`partner_purchase_invoices lookup failed: ${pInvoices.error.message}`);
+    if (batches.error) throw new Error(`payment_batches lookup failed: ${batches.error.message}`);
 
     const requestMap = new Map<string, any>(
       ((reqs.data ?? []) as any[]).map((r) => [r.id, r]),
@@ -243,7 +251,7 @@ Deno.serve(async (req) => {
         case "quote_pending_customer": {
           if (
             req &&
-            (req.customer_approved_at ||
+            (req.terms_accepted_at ||
               req.quote_status === "akkoord_ontvangen" ||
               req.quote_status === "definitief_bevestigd")
           ) {

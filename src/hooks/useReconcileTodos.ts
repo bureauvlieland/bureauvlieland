@@ -21,6 +21,9 @@ export function useReconcileTodos() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["werkbank-projects"] });
+      qc.invalidateQueries({ queryKey: ["werkbank-detail-todos"] });
+      qc.invalidateQueries({ queryKey: ["werkbank-detail"] });
+      qc.invalidateQueries({ queryKey: ["werkbank-inbox"] });
       qc.invalidateQueries({ queryKey: ["admin-todos"] });
       qc.invalidateQueries({ queryKey: ["admin-todo-count"] });
       qc.invalidateQueries({ queryKey: ["claudia-recommendations-count"] });
