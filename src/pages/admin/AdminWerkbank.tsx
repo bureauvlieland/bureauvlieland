@@ -167,8 +167,14 @@ export default function AdminWerkbank() {
     setParams(p, { replace: true });
   };
 
+  const snoozedCount = useMemo(
+    () => (projects ?? []).filter((p) => p.isSnoozed).length,
+    [projects],
+  );
+
   const filtered = useMemo(() => {
     let list = projects ?? [];
+    if (!showSnoozed) list = list.filter((p) => !p.isSnoozed);
     if (kindFilter !== "all") list = list.filter((p) => p.kind === kindFilter);
     const qv = QUICK_VIEWS.find((v) => v.id === view);
     if (qv?.match) list = list.filter((p) => qv.match!.includes(p.comm));
@@ -183,7 +189,7 @@ export default function AdminWerkbank() {
       );
     }
     return list;
-  }, [projects, view, search, kindFilter]);
+  }, [projects, view, search, kindFilter, showSnoozed]);
 
   const selected = filtered.find((p) => p.id === selectedId)
     ?? projects?.find((p) => p.id === selectedId)
