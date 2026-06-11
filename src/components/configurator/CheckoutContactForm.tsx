@@ -113,7 +113,7 @@ export const CheckoutContactForm = ({
       return;
     }
 
-
+    const fiveMinutesAgo = subHours(new Date(), 0.0833).toISOString(); // 5 min
 
     try {
       // Hard block: same email + non-cancelled aanvraag in laatste 5 min
