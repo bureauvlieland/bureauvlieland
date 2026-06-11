@@ -102,6 +102,12 @@ export interface ProjectSummary {
   /** Concrete actie-hints wanneer comm = "bij_bureau". Leeg array anders. */
   bureauActionHints: string[];
 
+  /** Snooze: zolang `snoozedUntil` > now() is, worden auto-todos & reminders gepauzeerd. */
+  snoozedUntil: string | null;
+  snoozedReason: string | null;
+  snoozedAt: string | null;
+  isSnoozed: boolean;
+
   updatedAt: string;
 }
 
