@@ -472,7 +472,7 @@ Deno.serve(async (req) => {
         .from("email_log")
         .select("related_request_id, created_at")
         .in("related_request_id", reqIds)
-        .in("email_type", ["project_status_update", "project_email"])
+        .in("email_type", ["project_status_update", "project_email", "admin_project_email"])
         .order("created_at", { ascending: false });
       const latestMailByReq = new Map<string, string>();
       for (const m of statusMails || []) {
