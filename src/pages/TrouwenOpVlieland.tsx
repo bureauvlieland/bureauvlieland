@@ -125,15 +125,15 @@ const TrouwenOpVlieland = () => {
               <p className="text-lg text-muted-foreground leading-relaxed mb-8">
                 Willen jullie de volledige organisatie, planning en regie van jullie bruiloft uit handen geven? Dan verwijzen we jullie met een gerust hart door naar onze partners op het eiland. Zij zijn gespecialiseerd in het organiseren van complete bruiloften op Vlieland — van eerste idee tot laatste dans.
               </p>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
                 <a
-                  href="https://www.paal5.nl"
+                  href="https://www.paal50.nl"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-center justify-between p-5 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <div className="text-left">
-                    <div className="font-display font-bold text-foreground">Paal5</div>
+                    <div className="font-display font-bold text-foreground">Paal50</div>
                     <div className="text-sm text-muted-foreground">Bruiloften op Vlieland</div>
                   </div>
                   <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -151,6 +151,17 @@ const TrouwenOpVlieland = () => {
                   <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </a>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Een breed overzicht van trouwlocaties en leveranciers op het eiland vind je op{" "}
+                <a
+                  href="https://www.vlieland.nl/trouwen-op-vlieland"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2 hover:no-underline"
+                >
+                  vlieland.nl/trouwen-op-vlieland
+                </a>.
+              </p>
             </div>
           </div>
         </section>
