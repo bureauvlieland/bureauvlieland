@@ -17,21 +17,21 @@ const TrouwenOpVlieland = () => {
   return (
     <>
       <Helmet>
-        <title>Trouwen op Vlieland – Materialen en Logistiek | Bureau Vlieland</title>
+        <title>Trouwen op Vlieland – Materialen & Logistiek | Bureau Vlieland</title>
         <meta 
           name="description" 
-          content="Bureau Vlieland verzorgt verhuur van materialen en logistiek voor bruiloften op Vlieland. Tenten, meubilair, transport en op- en afbouw. Geen weddingplanning." 
+          content="Bureau Vlieland helpt weddingplanners en bruidsparen op Vlieland met verhuur van materialen en logistiek: tenten, meubilair, transport en op- en afbouw." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/trouwen-op-vlieland" />
-        <meta property="og:title" content="Trouwen op Vlieland – Materialen en Logistiek | Bureau Vlieland" />
-        <meta property="og:description" content="Verhuur van materialen en logistieke ondersteuning voor bruiloften op Vlieland. Transport, op- en afbouw op het eiland." />
+        <meta property="og:title" content="Trouwen op Vlieland – Materialen & Logistiek | Bureau Vlieland" />
+        <meta property="og:description" content="Wij helpen weddingplanners en bruidsparen op Vlieland met materialen, transport en op- en afbouw." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bureauvlieland.nl/trouwen-op-vlieland" />
-        <meta name="keywords" content="trouwen Vlieland, bruiloft materialen Vlieland, tent huren bruiloft, verhuur Waddeneiland, logistiek bruiloft eiland" />
+        <meta name="keywords" content="trouwen Vlieland, bruiloft Vlieland, tent huren bruiloft, verhuur Waddeneiland, weddingplanner Vlieland" />
       </Helmet>
       <LandingPageStructuredData
-        serviceName="Trouwen op Vlieland – Materialen en Logistiek"
-        serviceDescription="Bureau Vlieland verzorgt verhuur van materialen en logistieke ondersteuning voor bruiloften op Vlieland. Wij organiseren of coördineren geen bruiloften."
+        serviceName="Trouwen op Vlieland – Materialen & Logistiek"
+        serviceDescription="Bureau Vlieland helpt weddingplanners en bruidsparen op Vlieland met verhuur van materialen en logistieke ondersteuning."
         canonicalUrl="https://bureauvlieland.nl/trouwen-op-vlieland"
         breadcrumbItems={[
           { name: "Home", url: "https://bureauvlieland.nl" },
@@ -63,10 +63,10 @@ const TrouwenOpVlieland = () => {
 
           <div className="relative z-10 container mx-auto px-4 py-20 text-center text-primary-foreground">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight">
-              Trouwen op Vlieland – Materialen en Logistiek
+              Trouwen op Vlieland
             </h1>
             <p className="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed opacity-95">
-              Bureau Vlieland faciliteert bruiloften op Vlieland, maar organiseert of coördineert deze niet.
+              Wij helpen weddingplanners en bruidsparen met materialen en logistiek voor jullie mooiste dag op het eiland.
             </p>
           </div>
         </section>
@@ -74,101 +74,83 @@ const TrouwenOpVlieland = () => {
         {/* Introductie */}
         <section className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Wij verzorgen uitsluitend de verhuur van materialen en de bijbehorende logistiek, zoals transport, op- en afbouw. De inhoudelijke organisatie, planning en regie liggen volledig bij het bruidspaar of een externe weddingplanner.
+                Een bruiloft op Vlieland is bijzonder — en logistiek net even anders dan op de wal. Als lokale specialist zorgen wij ervoor dat alle materialen op de juiste plek staan, op het juiste moment. Of je nu zelf jullie dag organiseert of samenwerkt met een weddingplanner: wij regelen graag de praktische kant, zodat jullie je kunnen richten op het feest.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Wat we wel / niet doen */}
+        {/* Waar wij mee helpen */}
         <section className="py-16 md:py-24 bg-muted/50">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-12 text-center">
-                Onze rol bij bruiloften
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4 text-center">
+                Waar wij jullie mee helpen
               </h2>
+              <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+                Van tent tot transport — wij zorgen voor de praktische basis van jullie bruiloft op Vlieland.
+              </p>
 
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Wat we wél doen */}
-                <div className="bg-background rounded-2xl p-8 shadow-lg border border-border/50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                      <Check className="w-6 h-6 text-green-600" />
+              <div className="grid md:grid-cols-2 gap-6">
+                {[
+                  { title: "Materialen & meubilair", text: "Tenten, stoelen, tafels, aankleding, verlichting en geluid — een ruim verhuurassortiment speciaal voor het eiland." },
+                  { title: "Transport op Vlieland", text: "Wij brengen alles ter plekke naar de locatie, of dat nu in het dorp, de duinen of op het strand is." },
+                  { title: "Op- en afbouw", text: "Een ervaren team bouwt op vooraf afgesproken tijden alles netjes op en weer af." },
+                  { title: "Heldere offerte", text: "Een duidelijke offerte en opdrachtbevestiging, zodat jullie precies weten waar je aan toe bent." },
+                ].map((item) => (
+                  <div key={item.title} className="bg-background rounded-2xl p-6 shadow-sm border border-border/50 flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Check className="w-5 h-5 text-primary" />
                     </div>
-                    <h3 className="text-xl font-display font-bold text-foreground">
-                      Wat we wél doen
-                    </h3>
-                  </div>
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Verhuur van materialen (tenten, meubilair, aankleding, verlichting)</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Transport van materialen op Vlieland</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Op- en afbouw op vooraf afgesproken tijden</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Levering op basis van een duidelijke offerte en opdracht</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Wat we níet doen */}
-                <div className="bg-background rounded-2xl p-8 shadow-lg border border-border/50">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                      <X className="w-6 h-6 text-red-600" />
+                    <div>
+                      <h3 className="font-display font-bold text-foreground mb-1">{item.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">{item.text}</p>
                     </div>
-                    <h3 className="text-xl font-display font-bold text-foreground">
-                      Wat we níet doen
-                    </h3>
                   </div>
-                  <ul className="space-y-4">
-                    <li className="flex items-start gap-3">
-                      <X className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Geen projectmanagement of regierol</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <X className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Geen planning of draaiboeken</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <X className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Geen afstemming met locaties, cateraars of andere leveranciers</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <X className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Geen back-up scenario's bij slecht weer</span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <X className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground">Geen aanspreekpunt of begeleiding op de dag zelf</span>
-                    </li>
-                  </ul>
-                </div>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* Verantwoordelijkheid */}
+        {/* Liever alles uit handen */}
         <section className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Verantwoordelijkheid en organisatie
+                Liever alles uit handen geven?
               </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                De volledige verantwoordelijkheid voor de organisatie van de bruiloft ligt bij het bruidspaar of een door hen ingeschakelde weddingplanner. Bureau Vlieland levert uitsluitend de overeengekomen materialen en logistieke ondersteuning en is niet betrokken bij de inhoudelijke uitvoering van het evenement.
+              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+                Willen jullie de volledige organisatie, planning en regie van jullie bruiloft uit handen geven? Dan verwijzen we jullie met een gerust hart door naar onze partners op het eiland. Zij zijn gespecialiseerd in het organiseren van complete bruiloften op Vlieland — van eerste idee tot laatste dans.
               </p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <a
+                  href="https://www.paal5.nl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-between p-5 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="text-left">
+                    <div className="font-display font-bold text-foreground">Paal5</div>
+                    <div className="text-sm text-muted-foreground">Bruiloften op Vlieland</div>
+                  </div>
+                  <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </a>
+                <a
+                  href="https://www.islandevents.nl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center justify-between p-5 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="text-left">
+                    <div className="font-display font-bold text-foreground">Island Events</div>
+                    <div className="text-sm text-muted-foreground">Volledige bruiloftsorganisatie</div>
+                  </div>
+                  <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </a>
+              </div>
             </div>
           </div>
         </section>
