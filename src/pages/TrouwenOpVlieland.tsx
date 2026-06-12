@@ -5,7 +5,7 @@ import { LandingPageStructuredData } from "@/components/LandingPageStructuredDat
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink, Package, Truck, Check, X } from "lucide-react";
+import { ArrowRight, ExternalLink, Package, Truck, Check } from "lucide-react";
 import heroImage from "@/assets/wedding-outdoor-dinner.jpg";
 import ceremonyOceanImage from "@/assets/wedding-ceremony-ocean.jpg";
 import forestArchImage from "@/assets/wedding-forest-arch.jpg";
