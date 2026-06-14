@@ -75,25 +75,25 @@ Deno.serve(async (req) => {
     if (requestId) {
       const { data: pr } = await supabase
         .from("program_requests")
-        .select("reference_number, customer_name, portal_token")
+        .select("reference_number, customer_name, customer_token")
         .eq("id", requestId)
         .maybeSingle();
       referenceNumber = pr?.reference_number || null;
       customerName = pr?.customer_name || null;
-      if (pr?.portal_token) {
-        portalUrl = `${origin}/programma/${pr.portal_token}`;
+      if (pr?.customer_token) {
+        portalUrl = `${origin}/programma/${pr.customer_token}`;
       }
     }
     if (!referenceNumber && accommodationId) {
       const { data: ar } = await supabase
         .from("accommodation_requests")
-        .select("reference_number, customer_name, portal_token")
+        .select("reference_number, customer_name, customer_token")
         .eq("id", accommodationId)
         .maybeSingle();
       referenceNumber = ar?.reference_number || null;
       customerName = customerName || ar?.customer_name || null;
-      if (!portalUrl && ar?.portal_token) {
-        portalUrl = `${origin}/mijn-logies/${ar.portal_token}`;
+      if (!portalUrl && ar?.customer_token) {
+        portalUrl = `${origin}/mijn-logies/${ar.customer_token}`;
       }
     }
 
