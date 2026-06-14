@@ -144,7 +144,7 @@ const Catering = () => {
               name: "Wat is de minimale groepsgrootte voor catering?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Onze arrangementen zijn bedoeld voor zakelijke groepen vanaf 8 personen. Voor maatwerk of grote partijen (50+) kijkt u op onze pagina 'Grote partijen' of belt u 0562 700 208.",
+                text: "Onze catering is bedoeld voor zakelijke groepen vanaf 8 personen. Voor maatwerk of grote partijen belt u 0562 700 208 of stuurt u een aanvraag.",
               },
             },
             {
@@ -260,18 +260,11 @@ const Catering = () => {
                     zich aanpast aan uw locatie — niet andersom.
                   </p>
                   <p className="text-lg text-muted-foreground mb-8">
-                    Voor groepen vanaf 8 personen voor lunch en borrel, vanaf 20 voor diner.
-                    Voor evenementen van 50+ personen kijkt u op onze pagina Grote partijen.
+                    Voor groepen vanaf 8 personen voor lunch en borrel, vanaf 20 voor diner. Ook grotere evenementen verzorgen we volledig — neem contact op voor maatwerk.
                   </p>
                   <blockquote className="border-l-4 border-primary pl-5 py-1 italic text-foreground/80 mb-8">
                     "Of het nu een walking dinner is voor 80 of een chef's table voor 12 — het niveau blijft hetzelfde."
                   </blockquote>
-                  <Link
-                    to="/grote-partijen-vlieland"
-                    className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
-                  >
-                    Bekijk onze aanpak voor grote partijen <ArrowRight className="h-4 w-4" />
-                  </Link>
                 </div>
               </div>
             </div>
@@ -457,30 +450,6 @@ const Catering = () => {
             </div>
           </section>
 
-          {/* Banner naar Grote partijen */}
-          <section className="relative py-20 md:py-28 overflow-hidden bg-foreground">
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-40"
-              style={{ backgroundImage: `url(${lexence6})` }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
-            <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-background">
-              <div className="max-w-2xl">
-                <div className="text-sm uppercase tracking-[0.2em] opacity-80 mb-4">Vanaf 50 personen</div>
-                <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 leading-tight">
-                  Een evenement voor 50+ personen?
-                </h2>
-                <p className="text-lg opacity-90 mb-8">
-                  Bekijk hoe wij high-end diner op locatie verzorgen voor grote groepen — inclusief productie, materiaal en logistiek.
-                </p>
-                <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90">
-                  <Link to="/grote-partijen-vlieland">
-                    Naar grote partijen <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </section>
 
           {/* CTA */}
           <section className="py-16 md:py-24 bg-primary text-primary-foreground">
