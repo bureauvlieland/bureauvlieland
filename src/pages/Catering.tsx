@@ -334,7 +334,7 @@ const Catering = () => {
                 <div className="flex items-center gap-2 text-sm uppercase tracking-[0.15em] text-primary mb-3">
                   <MapPin className="h-4 w-4" /> Locaties op Vlieland
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground leading-tight">
                   Wij koken waar u wilt.
                 </h2>
                 <p className="text-muted-foreground mt-4 text-lg">
