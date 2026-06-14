@@ -235,7 +235,7 @@ const Catering = () => {
                       <img src={lexence2} alt="Chef aan het plateren op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence5} alt="Amuse uit eigen keuken" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence5} alt="Dessert uit eigen keuken" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                   <div className="space-y-4 pt-12">
