@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, ChefHat } from "lucide-react";
-import lexence1 from "@/assets/lexence-1.jpg";
-import lexence3 from "@/assets/lexence-3.jpg";
-import strandBbqImage from "@/assets/strand-bbq.jpg";
+import lexenceTablesettingAsset from "@/assets/lexence/lexence-tablesetting.jpg.asset.json";
+import lexenceAmusesRowAsset from "@/assets/lexence/lexence-amuses-row.jpg.asset.json";
+import lexenceChefPlatingAsset from "@/assets/lexence/lexence-chef-plating.jpg.asset.json";
+
+const lexence1 = lexenceTablesettingAsset.url;
+const lexence3 = lexenceAmusesRowAsset.url;
+const lexenceChefPlating = lexenceChefPlatingAsset.url;
 
 export const CateringHighlight = () => {
   return (
