@@ -213,18 +213,18 @@ const Catering = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={amuseTourImage} alt="Amuse op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence1} alt="Plating door chefs op Vlieland" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={foodPlattersImage} alt="Gerechten op locatie" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence2} alt="Gerecht uit de keuken" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                   <div className="space-y-4 pt-12">
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={cateringFoodImage} alt="Plating op locatie" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence3} alt="Mise-en-place op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={sunsetDinnerImage} alt="Diner-setting" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence4} alt="Diner-setting Lexence" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                 </div>
