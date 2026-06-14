@@ -186,7 +186,7 @@ const Catering = () => {
                 <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-6 opacity-90">
                   <ChefHat className="h-3.5 w-3.5" /> Catering · Vlieland
                 </span>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-[1.02] tracking-tight">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-[1.05] tracking-tight">
                   Koken op locatie.
                   <span className="block italic font-normal opacity-85">Op Vlieland.</span>
                 </h1>
