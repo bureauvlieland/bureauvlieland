@@ -66,25 +66,59 @@ Deno.serve(async (req) => {
       partnerId,
     } = await req.json();
 
-    // Lookup reference number for Reply-To
+    // Lookup reference number + extra placeholder data
     let referenceNumber: string | null = null;
+    let customerName: string | null = null;
+    let portalUrl: string | null = null;
+    const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
+
     if (requestId) {
       const { data: pr } = await supabase
         .from("program_requests")
-        .select("reference_number")
+        .select("reference_number, customer_name, customer_token")
         .eq("id", requestId)
         .maybeSingle();
       referenceNumber = pr?.reference_number || null;
+      customerName = pr?.customer_name || null;
+      if (pr?.customer_token) {
+        portalUrl = `${origin}/programma/${pr.customer_token}`;
+      }
     }
     if (!referenceNumber && accommodationId) {
       const { data: ar } = await supabase
         .from("accommodation_requests")
-        .select("reference_number")
+        .select("reference_number, customer_name, customer_token")
         .eq("id", accommodationId)
         .maybeSingle();
       referenceNumber = ar?.reference_number || null;
+      customerName = customerName || ar?.customer_name || null;
+      if (!portalUrl && ar?.customer_token) {
+        portalUrl = `${origin}/mijn-logies/${ar.customer_token}`;
+      }
     }
+
+    const partnerPortalUrl = partnerId ? `${origin}/partner` : null;
     const replyTo = buildReplyTo(referenceNumber);
+
+    // Vervang placeholders in subject + body zodat ad-hoc projectmails geen
+    // letterlijke {{portal_url}} / {{customer_name}} / {{reference_number}}
+    // meer bevatten (zoals bv. de Vliehors-mail van 11 juni 2026).
+    const substitutions: Record<string, string> = {
+      "{{portal_url}}": partnerPortalUrl || portalUrl || origin,
+      "{{customer_name}}": customerName || "",
+      "{{reference_number}}": referenceNumber || "",
+      "{{recipient_name}}": recipientName || "",
+    };
+    const applySubstitutions = (text: string) => {
+      let out = text;
+      for (const [key, value] of Object.entries(substitutions)) {
+        out = out.split(key).join(value);
+      }
+      return out;
+    };
+    const substitutedSubject = applySubstitutions(subject || "");
+    const substitutedBody = applySubstitutions(body || "");
+
 
     if (!recipientEmail || !subject || !body) {
       return new Response(
@@ -100,7 +134,7 @@ Deno.serve(async (req) => {
           <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
         </div>
         <div style="padding: 24px; line-height: 1.6; color: #333;">
-          ${body.replace(/\n/g, "<br>")}
+          ${substitutedBody.replace(/\n/g, "<br>")}
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <div style="padding: 0 24px 24px; color: #666; font-size: 14px;">
@@ -126,7 +160,7 @@ Deno.serve(async (req) => {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: getRecipientEmail(recipientEmail, req.headers.get("origin") || undefined), Name: recipientName || recipientEmail }],
             ...(replyTo ? { ReplyTo: replyTo } : {}),
-            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
+            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${substitutedSubject}`,
             HTMLPart: htmlBody,
           },
         ],
@@ -142,7 +176,7 @@ Deno.serve(async (req) => {
     // Log email
     await logEmail({
       email_type: "admin_project_email",
-      subject,
+      subject: substitutedSubject,
       recipient_email: recipientEmail,
       recipient_name: recipientName || undefined,
       related_request_id: requestId || undefined,
@@ -153,7 +187,7 @@ Deno.serve(async (req) => {
       metadata: {
         template_name: "admin_project_email",
         actor: "admin → ad-hoc projectmail",
-        body_preview: body.substring(0, 200),
+        body_preview: substitutedBody.substring(0, 200),
       },
     });
 
@@ -164,8 +198,8 @@ Deno.serve(async (req) => {
         accommodation_id: accommodationId || null,
         communication_type: "email_out",
         direction: "outbound",
-        subject,
-        content: body,
+        subject: substitutedSubject,
+        content: substitutedBody,
         contact_name: recipientName || null,
         contact_email: recipientEmail,
         logged_by: user.id,
