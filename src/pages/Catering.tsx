@@ -184,25 +184,24 @@ const Catering = () => {
                     <span className="block italic font-normal opacity-80">Op Vlieland.</span>
                   </h1>
                   <p className="text-lg md:text-xl max-w-xl mb-10 opacity-85 leading-relaxed">
-                    Van lunch tot high-end diner — door eigen chefs Robert Buurma en Roland Bakker.
-                    Eén aanspreekpunt, één factuur.
+                    Met een <strong className="font-semibold opacity-100">eigen productiekeuken</strong> op het eiland, eigen chefs
+                    en compleet materiaal koken wij van lunch tot high-end diner — op vrijwel elke locatie.
+                    De enige partij op Vlieland die dit op dit niveau levert.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 mb-10">
                     <Button size="lg" onClick={() => scrollToSection("aanvraag")} className="bg-background text-foreground hover:bg-background/90">
                       Start uw aanvraag
                     </Button>
-                    <Button asChild size="lg" variant="outline" className="border-background/40 text-background bg-transparent hover:bg-background/10 hover:text-background">
-                      <Link to="/grote-partijen-vlieland">
-                        Voor 50+ personen <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
+                    <Button size="lg" variant="outline" onClick={() => scrollToSection("momenten")} className="border-background/40 text-background bg-transparent hover:bg-background/10 hover:text-background">
+                      Bekijk de mogelijkheden <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex items-center gap-6 text-sm opacity-70 border-t border-background/15 pt-6">
-                    <span>Eigen chefs</span>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm opacity-70 border-t border-background/15 pt-6">
+                    <span>Eigen productiekeuken</span>
                     <span className="h-1 w-1 rounded-full bg-background/40" />
-                    <span>Vanaf 8 personen</span>
+                    <span>Eigen chefs &amp; materiaal</span>
                     <span className="h-1 w-1 rounded-full bg-background/40" />
-                    <span>Offerte &lt; 2 werkdagen</span>
+                    <span>Lunch tot high-end diner</span>
                   </div>
                 </div>
 
@@ -307,7 +306,7 @@ const Catering = () => {
           </section>
 
           {/* Voor welk moment */}
-          <section className="py-16 md:py-24 bg-background">
+          <section id="momenten" className="py-16 md:py-24 bg-background scroll-mt-20">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
                 <div>
