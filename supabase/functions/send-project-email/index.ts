@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
     // Log email
     await logEmail({
       email_type: "admin_project_email",
-      subject,
+      subject: substitutedSubject,
       recipient_email: recipientEmail,
       recipient_name: recipientName || undefined,
       related_request_id: requestId || undefined,
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
       metadata: {
         template_name: "admin_project_email",
         actor: "admin → ad-hoc projectmail",
-        body_preview: body.substring(0, 200),
+        body_preview: substitutedBody.substring(0, 200),
       },
     });
 
