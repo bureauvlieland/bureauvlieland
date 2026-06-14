@@ -288,7 +288,7 @@ const Catering = () => {
                   </h2>
                 </div>
                 <p className="text-muted-foreground max-w-md">
-                  Kies een format om direct aan te vragen. Indicatieve prijs incl. BTW direct zichtbaar.
+                  Kies een format om direct aan te vragen. Vrijblijvend voorstel op maat binnen 2 werkdagen.
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -418,8 +418,7 @@ const Catering = () => {
                   Start uw aanvraag
                 </h2>
                 <p className="text-muted-foreground">
-                  Kies een type om de 5-stappen wizard te starten. Indicatieve totaalprijs incl. BTW direct zichtbaar;
-                  definitieve offerte binnen 2 werkdagen. <span className="font-medium text-foreground">Aanvragen graag minimaal 7 dagen vóór de gewenste datum.</span>
+                  Kies een type om uw aanvraag te starten. Wij komen binnen 2 werkdagen met een voorstel op maat. <span className="font-medium text-foreground">Aanvragen graag minimaal 7 dagen vóór de gewenste datum.</span>
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
