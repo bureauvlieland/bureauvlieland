@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
           <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
         </div>
         <div style="padding: 24px; line-height: 1.6; color: #333;">
-          ${body.replace(/\n/g, "<br>")}
+          ${substitutedBody.replace(/\n/g, "<br>")}
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <div style="padding: 0 24px 24px; color: #666; font-size: 14px;">
