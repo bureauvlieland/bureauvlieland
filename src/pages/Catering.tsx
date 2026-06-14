@@ -13,7 +13,12 @@ import foodPlattersImage from "@/assets/food-platters.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
 import lunchBuffetImage from "@/assets/lunch-buffet.jpg";
 import cateringFoodImage from "@/assets/catering-food.jpg";
-import amuseTourImage from "@/assets/amuse-tour.jpg";
+import lexence1 from "@/assets/lexence-1.jpg";
+import lexence2 from "@/assets/lexence-2.jpg";
+import lexence3 from "@/assets/lexence-3.jpg";
+import lexence4 from "@/assets/lexence-4.jpg";
+import lexence5 from "@/assets/lexence-5.jpg";
+import lexence6 from "@/assets/lexence-6.jpg";
 
 const moments = [
   {
@@ -38,7 +43,7 @@ const moments = [
     key: "diner",
     label: "High-end diner",
     desc: "3-gangen, walking dinner of geplate gangen door eigen chefs.",
-    image: sunsetDinnerImage,
+    image: lexence5,
   },
 ];
 
@@ -160,7 +165,7 @@ const Catering = () => {
           <section className="relative h-[72vh] min-h-[520px] flex items-end overflow-hidden bg-foreground">
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${sunsetDinnerImage})`, ...kenBurns }}
+              style={{ backgroundImage: `url(${lexence6})`, ...kenBurns }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/70 to-foreground/30" />
             </div>
@@ -208,18 +213,18 @@ const Catering = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={amuseTourImage} alt="Amuse op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence1} alt="Plating door chefs op Vlieland" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={foodPlattersImage} alt="Gerechten op locatie" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence2} alt="Gerecht uit de keuken" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                   <div className="space-y-4 pt-12">
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={cateringFoodImage} alt="Plating op locatie" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence3} alt="Mise-en-place op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={sunsetDinnerImage} alt="Diner-setting" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence4} alt="Diner-setting Lexence" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                 </div>
@@ -438,7 +443,7 @@ const Catering = () => {
           <section className="relative py-20 md:py-28 overflow-hidden bg-foreground">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-40"
-              style={{ backgroundImage: `url(${sunsetDinnerImage})` }}
+              style={{ backgroundImage: `url(${lexence2})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
             <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-background">
