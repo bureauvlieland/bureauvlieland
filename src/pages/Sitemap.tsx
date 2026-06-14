@@ -50,7 +50,6 @@ const sections: SitemapSection[] = [
   {
     title: "Voor privé",
     links: [
-      { label: "Trouwen op Vlieland", href: "/trouwen-op-vlieland" },
       { label: "Groepsweekend", href: "/groepsweekend-vlieland" },
       { label: "Jubileum vieren", href: "/jubileum-vlieland" },
       { label: "Familieweekend", href: "/familieweekend-vlieland" },

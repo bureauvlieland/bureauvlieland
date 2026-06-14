@@ -111,7 +111,7 @@ export const Footer = () => {
               <li><Link to="/zakelijk-evenement-vlieland" className="hover:text-primary transition-colors">Zakelijk evenement</Link></li>
               <li><Link to="/incentive-reis-vlieland" className="hover:text-primary transition-colors">Incentive reis</Link></li>
               <li><Link to="/bedrijfsuitje-ideeen-vlieland" className="hover:text-primary transition-colors">Bedrijfsuitje ideeën</Link></li>
-              <li><Link to="/trouwen-op-vlieland" className="hover:text-primary transition-colors">Trouwen op Vlieland</Link></li>
+              
               <li><Link to="/groepsweekend-vlieland" className="hover:text-primary transition-colors">Groepsweekend</Link></li>
               <li><Link to="/jubileum-vlieland" className="hover:text-primary transition-colors">Jubileum vieren</Link></li>
               <li><Link to="/familieweekend-vlieland" className="hover:text-primary transition-colors">Familieweekend</Link></li>
