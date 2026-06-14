@@ -232,10 +232,10 @@ const Catering = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence1} alt="Plating door chefs op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence2} alt="Chef aan het plateren op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence2} alt="Gerecht uit de keuken" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence5} alt="Amuse uit eigen keuken" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                   <div className="space-y-4 pt-12">
@@ -243,7 +243,7 @@ const Catering = () => {
                       <img src={lexence3} alt="Mise-en-place op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence4} alt="Diner-setting Lexence" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence4} alt="Diner-setting op Vlieland" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                 </div>
@@ -251,7 +251,7 @@ const Catering = () => {
                   <div className="flex items-center gap-2 text-sm uppercase tracking-[0.15em] text-primary mb-4">
                     <ChefHat className="h-4 w-4" /> Chefs & keuken
                   </div>
-                  <h2 className="text-4xl md:text-5xl font-display font-bold mb-6 text-foreground leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground leading-tight">
                     High-end koken op locatie. Op Vlieland uniek.
                   </h2>
                   <p className="text-lg text-muted-foreground mb-4">
@@ -270,7 +270,7 @@ const Catering = () => {
                     to="/grote-partijen-vlieland"
                     className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
                   >
-                    Bekijk hoe we dit voor Lexence deden <ArrowRight className="h-4 w-4" />
+                    Bekijk onze aanpak voor grote partijen <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
