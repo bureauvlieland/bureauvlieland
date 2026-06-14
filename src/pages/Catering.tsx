@@ -381,7 +381,7 @@ const Catering = () => {
                   <div className="text-sm uppercase tracking-[0.15em] text-primary mb-3 flex items-center gap-2">
                     <Flame className="h-4 w-4" /> Signature
                   </div>
-                  <h2 className="text-4xl md:text-5xl font-display font-bold mb-6 text-foreground leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground leading-tight">
                     Beach Grill experience
                   </h2>
                   <p className="text-lg text-muted-foreground mb-6">
