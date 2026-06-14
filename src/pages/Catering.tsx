@@ -283,7 +283,7 @@ const Catering = () => {
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
                 <div>
                   <div className="text-sm uppercase tracking-[0.15em] text-primary mb-3">Voor welk moment</div>
-                  <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground leading-tight">
                     Vier formats. Eén keuken.
                   </h2>
                 </div>
