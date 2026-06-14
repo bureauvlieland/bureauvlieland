@@ -158,25 +158,48 @@ export const CopyFromProgramDialog = ({
     setIsApplying(true);
 
     try {
-      const rowsToInsert = selectedItems.map((item) => ({
-        request_id: requestId,
-        block_id: item.block_id,
-        block_name: item.block_name,
-        block_category: item.block_category,
-        block_type: item.block_type,
-        provider_id: item.provider_id,
-        provider_name: item.provider_name,
-        provider_email: item.provider_email,
-        day_index: item.day_index,
-        preferred_time: item.preferred_time,
-        status: "pending",
-        item_quote_status: "concept",
-        skip_partner_notification: true,
-        admin_price_override: item.admin_price_override,
-        price_type: item.price_type,
-        duration: item.duration,
-        admin_price_notes: item.admin_price_notes,
-      }));
+      // Bureau-provider ids: items met deze providers worden door Bureau
+      // Vlieland zelf afgehandeld (ferry, fiets, bagage etc.) en hebben terecht
+      // block_type "bureau". Voor andere providers (echte partners) mag het
+      // gekopieerde item NOOIT als bureau-item doorgaan — anders auto-confirmt
+      // send-items-to-partners het zonder partner-aanvraag.
+      const BUREAU_PROVIDER_IDS = new Set([
+        "bureau",
+        "bureau-vlieland",
+        "rederij",
+        "fietsverhuur",
+        "bagagevervoer-vlieland",
+      ]);
+
+      const rowsToInsert = selectedItems.map((item) => {
+        const isExternalPartner =
+          item.provider_id && !BUREAU_PROVIDER_IDS.has(item.provider_id);
+        // Forceer block_type 'partner' voor externe partners, ook al stond het
+        // bron-item per ongeluk op 'bureau'.
+        const safeBlockType = isExternalPartner ? "partner" : item.block_type;
+        return {
+          request_id: requestId,
+          block_id: item.block_id,
+          block_name: item.block_name,
+          block_category: item.block_category,
+          block_type: safeBlockType,
+          provider_id: item.provider_id,
+          provider_name: item.provider_name,
+          provider_email: item.provider_email,
+          day_index: item.day_index,
+          preferred_time: item.preferred_time,
+          status: "pending",
+          item_quote_status: "concept",
+          skip_partner_notification: true,
+          // Markeer als nog-niet-gepubliceerd zodat klant/partner het pas zien
+          // na expliciet "Publiceer & notificeer" vanuit de project-detail.
+          pending_added: true,
+          admin_price_override: item.admin_price_override,
+          price_type: item.price_type,
+          duration: item.duration,
+          admin_price_notes: item.admin_price_notes,
+        };
+      });
 
       const { error: insertError } = await supabase
         .from("program_request_items")
