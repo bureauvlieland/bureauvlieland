@@ -60,7 +60,7 @@ const locations = [
   {
     name: "Brouwerij Fortuna",
     desc: "Proeflokaal en brouwerij-setting — sfeervol en lokaal.",
-    image: foodPlattersImage,
+    image: lexenceVenueCrowd,
   },
   {
     name: "Kampeerterrein De Lange Paal",
@@ -70,7 +70,7 @@ const locations = [
   {
     name: "De Bolder",
     desc: "Zaal met podium en grote bar op kampeerterrein Stortemelk.",
-    image: lexenceVenueCrowd,
+    image: lexence6,
   },
 ];
 
