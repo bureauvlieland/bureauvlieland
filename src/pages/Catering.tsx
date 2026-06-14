@@ -144,7 +144,7 @@ const Catering = () => {
               name: "Wat is de minimale groepsgrootte voor catering?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Onze arrangementen zijn bedoeld voor zakelijke groepen vanaf 8 personen. Voor maatwerk of grote partijen (50+) kijkt u op onze pagina 'Grote partijen' of belt u 0562 700 208.",
+                text: "Onze catering is bedoeld voor zakelijke groepen vanaf 8 personen. Voor maatwerk of grote partijen belt u 0562 700 208 of stuurt u een aanvraag.",
               },
             },
             {
