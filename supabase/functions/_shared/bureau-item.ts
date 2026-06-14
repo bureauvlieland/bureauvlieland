@@ -43,3 +43,10 @@ export function isBureauItem(item: BureauItemLike | null | undefined): boolean {
   if (providerId === "bureau") return true;
   return false;
 }
+
+/**
+ * Filter helper: geeft alleen items terug die NIET bureau-managed zijn.
+ */
+export function excludeBureauItems<T extends BureauItemLike>(items: T[]): T[] {
+  return items.filter((i) => !isBureauItem(i));
+}
