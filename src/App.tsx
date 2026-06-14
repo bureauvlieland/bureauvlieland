@@ -39,7 +39,10 @@ const HeisessieVlieland = lazy(() => import("./pages/HeisessieVlieland"));
 const BedrijfsuitjeIdeeenVlieland = lazy(() => import("./pages/BedrijfsuitjeIdeeenVlieland"));
 const IncentiveReisVlieland = lazy(() => import("./pages/IncentiveReisVlieland"));
 const ZakelijkEvenementVlieland = lazy(() => import("./pages/ZakelijkEvenementVlieland"));
-const TrouwenOpVlieland = lazy(() => import("./pages/TrouwenOpVlieland"));
+const ExternalRedirect = ({ to }: { to: string }) => {
+  if (typeof window !== "undefined") window.location.replace(to);
+  return null;
+};
 const GroepsweekendVlieland = lazy(() => import("./pages/GroepsweekendVlieland"));
 const JubileumVlieland = lazy(() => import("./pages/JubileumVlieland"));
 const FamilieweekendVlieland = lazy(() => import("./pages/FamilieweekendVlieland"));
@@ -154,7 +157,7 @@ const App = () => {
             <Route path="/bedrijfsuitje-ideeen-vlieland" element={<BedrijfsuitjeIdeeenVlieland />} />
             <Route path="/incentive-reis-vlieland" element={<IncentiveReisVlieland />} />
             <Route path="/zakelijk-evenement-vlieland" element={<ZakelijkEvenementVlieland />} />
-            <Route path="/trouwen-op-vlieland" element={<TrouwenOpVlieland />} />
+            <Route path="/trouwen-op-vlieland" element={<ExternalRedirect to="https://www.vlieland.nl/trouwen-op-vlieland" />} />
             <Route path="/groepsweekend-vlieland" element={<GroepsweekendVlieland />} />
             <Route path="/jubileum-vlieland" element={<JubileumVlieland />} />
             <Route path="/familieweekend-vlieland" element={<FamilieweekendVlieland />} />

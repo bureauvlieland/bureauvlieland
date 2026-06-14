@@ -33,7 +33,7 @@ const getRedirectDestination = (pathname: string): string | null => {
   if (path === '/incentive-op-vlieland-2') return '/incentive-reis-vlieland';
   if (path === '/vergaderen-op-vlieland-2') return '/heisessie-vlieland';
   if (path === '/teambuilding-op-vlieland') return '/teamuitje-vlieland';
-  if (path === '/trouwen-op-vlieland-2') return '/trouwen-op-vlieland';
+  
   if (path === '/schoolreis-naar-vlieland') return '/voor-wie';
 
   // Team/Over ons

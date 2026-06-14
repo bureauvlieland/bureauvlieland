@@ -57,7 +57,7 @@ const voorBedrijvenItems: NavItem[] = [
 ];
 
 const voorPriveItems: NavItem[] = [
-  { label: "Trouwen op Vlieland", href: "/trouwen-op-vlieland" },
+  
   { label: "Groepsweekend", href: "/groepsweekend-vlieland" },
   { label: "Jubileum vieren", href: "/jubileum-vlieland" },
   { label: "Familieweekend", href: "/familieweekend-vlieland" },
