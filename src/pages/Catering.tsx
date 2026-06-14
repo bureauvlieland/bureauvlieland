@@ -19,10 +19,7 @@ import lexenceAmusesRowAsset from "@/assets/lexence/lexence-amuses-row.jpg.asset
 import lexenceTablesettingAsset from "@/assets/lexence/lexence-tablesetting.jpg.asset.json";
 import lexenceAmuseBowlAsset from "@/assets/lexence/lexence-amuse-bowl.jpg.asset.json";
 import lexenceMarqueeSetupAsset from "@/assets/lexence/lexence-marquee-setup.jpg.asset.json";
-import lexenceChefSauceAsset from "@/assets/lexence/lexence-chef-sauce.jpg.asset.json";
 import lexenceVenueCrowdAsset from "@/assets/lexence/lexence-venue-crowd.jpg.asset.json";
-import lexenceDessertAsset from "@/assets/lexence/lexence-dessert.jpg.asset.json";
-import lexenceTeamAsset from "@/assets/lexence/lexence-team.jpg.asset.json";
 
 const lexence1 = lexenceChefPlatingAsset.url;
 const lexence2 = lexenceChefsPlatingAsset.url;
@@ -30,12 +27,7 @@ const lexence3 = lexenceAmusesRowAsset.url;
 const lexence4 = lexenceTablesettingAsset.url;
 const lexence5 = lexenceAmuseBowlAsset.url;
 const lexence6 = lexenceMarqueeSetupAsset.url;
-// Extra (used in CTA/locations)
-const lexenceChefSauce = lexenceChefSauceAsset.url;
 const lexenceVenueCrowd = lexenceVenueCrowdAsset.url;
-const lexenceDessert = lexenceDessertAsset.url;
-const lexenceTeam = lexenceTeamAsset.url;
-void lexenceChefSauce; void lexenceVenueCrowd; void lexenceDessert; void lexenceTeam;
 
 const moments = [
   {
