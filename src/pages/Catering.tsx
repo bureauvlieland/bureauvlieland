@@ -210,8 +210,8 @@ const Catering = () => {
                   <div className="grid grid-cols-5 grid-rows-6 gap-3 md:gap-4 h-[420px] md:h-[560px]">
                     <div className="col-span-3 row-span-4 rounded-lg overflow-hidden shadow-2xl">
                       <img
-                        src={lexence2}
-                        alt="Chef plating tijdens diner op Vlieland"
+                        src={lexence1}
+                        alt="Chefs aan het plateren in onze keuken op Vlieland"
                         className="w-full h-full object-cover"
                       />
                     </div>
