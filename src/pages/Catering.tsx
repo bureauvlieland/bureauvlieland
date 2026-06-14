@@ -260,18 +260,11 @@ const Catering = () => {
                     zich aanpast aan uw locatie — niet andersom.
                   </p>
                   <p className="text-lg text-muted-foreground mb-8">
-                    Voor groepen vanaf 8 personen voor lunch en borrel, vanaf 20 voor diner.
-                    Voor evenementen van 50+ personen kijkt u op onze pagina Grote partijen.
+                    Voor groepen vanaf 8 personen voor lunch en borrel, vanaf 20 voor diner. Ook grotere evenementen verzorgen we volledig — neem contact op voor maatwerk.
                   </p>
                   <blockquote className="border-l-4 border-primary pl-5 py-1 italic text-foreground/80 mb-8">
                     "Of het nu een walking dinner is voor 80 of een chef's table voor 12 — het niveau blijft hetzelfde."
                   </blockquote>
-                  <Link
-                    to="/grote-partijen-vlieland"
-                    className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
-                  >
-                    Bekijk onze aanpak voor grote partijen <ArrowRight className="h-4 w-4" />
-                  </Link>
                 </div>
               </div>
             </div>
