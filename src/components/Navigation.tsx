@@ -121,6 +121,10 @@ export const Navigation = () => {
                 Overnachten
               </Link>
 
+              <Link to="/catering" className={cateringClass}>
+                Catering
+              </Link>
+
               {renderDropdown("voorwie", "Voor wie", voorWieClass, VoorWieMega)}
 
               {renderDropdown("overons", "Over ons", overOnsClass, OverOnsDropdown)}
