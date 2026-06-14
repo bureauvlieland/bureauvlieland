@@ -52,7 +52,7 @@ const moments = [
     key: "diner",
     label: "High-end diner",
     desc: "3-gangen, walking dinner of geplate gangen door eigen chefs.",
-    image: lexence5,
+    image: sunsetDinnerImage,
   },
 ];
 
@@ -186,7 +186,7 @@ const Catering = () => {
                 <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-6 opacity-90">
                   <ChefHat className="h-3.5 w-3.5" /> Catering · Vlieland
                 </span>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-[1.02] tracking-tight">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-[1.05] tracking-tight">
                   Koken op locatie.
                   <span className="block italic font-normal opacity-85">Op Vlieland.</span>
                 </h1>
@@ -232,10 +232,10 @@ const Catering = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence1} alt="Plating door chefs op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence2} alt="Chef aan het plateren op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence2} alt="Gerecht uit de keuken" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence5} alt="Amuse uit eigen keuken" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                   <div className="space-y-4 pt-12">
@@ -243,7 +243,7 @@ const Catering = () => {
                       <img src={lexence3} alt="Mise-en-place op locatie" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                     <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
-                      <img src={lexence4} alt="Diner-setting Lexence" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={lexence4} alt="Diner-setting op Vlieland" className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   </div>
                 </div>
@@ -251,7 +251,7 @@ const Catering = () => {
                   <div className="flex items-center gap-2 text-sm uppercase tracking-[0.15em] text-primary mb-4">
                     <ChefHat className="h-4 w-4" /> Chefs & keuken
                   </div>
-                  <h2 className="text-4xl md:text-5xl font-display font-bold mb-6 text-foreground leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground leading-tight">
                     High-end koken op locatie. Op Vlieland uniek.
                   </h2>
                   <p className="text-lg text-muted-foreground mb-4">
@@ -270,7 +270,7 @@ const Catering = () => {
                     to="/grote-partijen-vlieland"
                     className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
                   >
-                    Bekijk hoe we dit voor Lexence deden <ArrowRight className="h-4 w-4" />
+                    Bekijk onze aanpak voor grote partijen <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
@@ -283,7 +283,7 @@ const Catering = () => {
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
                 <div>
                   <div className="text-sm uppercase tracking-[0.15em] text-primary mb-3">Voor welk moment</div>
-                  <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground leading-tight">
                     Vier formats. Eén keuken.
                   </h2>
                 </div>
@@ -334,7 +334,7 @@ const Catering = () => {
                 <div className="flex items-center gap-2 text-sm uppercase tracking-[0.15em] text-primary mb-3">
                   <MapPin className="h-4 w-4" /> Locaties op Vlieland
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground leading-tight">
                   Wij koken waar u wilt.
                 </h2>
                 <p className="text-muted-foreground mt-4 text-lg">
@@ -381,7 +381,7 @@ const Catering = () => {
                   <div className="text-sm uppercase tracking-[0.15em] text-primary mb-3 flex items-center gap-2">
                     <Flame className="h-4 w-4" /> Signature
                   </div>
-                  <h2 className="text-4xl md:text-5xl font-display font-bold mb-6 text-foreground leading-tight">
+                  <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground leading-tight">
                     Beach Grill experience
                   </h2>
                   <p className="text-lg text-muted-foreground mb-6">
@@ -462,17 +462,17 @@ const Catering = () => {
           <section className="relative py-20 md:py-28 overflow-hidden bg-foreground">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-40"
-              style={{ backgroundImage: `url(${lexence2})` }}
+              style={{ backgroundImage: `url(${lexence6})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
             <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-background">
               <div className="max-w-2xl">
                 <div className="text-sm uppercase tracking-[0.2em] opacity-80 mb-4">Vanaf 50 personen</div>
-                <h2 className="text-3xl md:text-5xl font-display font-bold mb-6 leading-tight">
+                <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 leading-tight">
                   Een evenement voor 50+ personen?
                 </h2>
                 <p className="text-lg opacity-90 mb-8">
-                  Bekijk hoe we high-end diner op locatie verzorgen voor grote groepen — inclusief de case van Lexence.
+                  Bekijk hoe wij high-end diner op locatie verzorgen voor grote groepen — inclusief productie, materiaal en logistiek.
                 </p>
                 <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90">
                   <Link to="/grote-partijen-vlieland">
