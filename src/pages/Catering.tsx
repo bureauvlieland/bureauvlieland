@@ -306,7 +306,7 @@ const Catering = () => {
           </section>
 
           {/* Voor welk moment */}
-          <section className="py-16 md:py-24 bg-background">
+          <section id="momenten" className="py-16 md:py-24 bg-background scroll-mt-20">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
                 <div>
