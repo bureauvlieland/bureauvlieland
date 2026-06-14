@@ -13,7 +13,12 @@ import foodPlattersImage from "@/assets/food-platters.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
 import lunchBuffetImage from "@/assets/lunch-buffet.jpg";
 import cateringFoodImage from "@/assets/catering-food.jpg";
-import amuseTourImage from "@/assets/amuse-tour.jpg";
+import lexence1 from "@/assets/lexence-1.jpg";
+import lexence2 from "@/assets/lexence-2.jpg";
+import lexence3 from "@/assets/lexence-3.jpg";
+import lexence4 from "@/assets/lexence-4.jpg";
+import lexence5 from "@/assets/lexence-5.jpg";
+import lexence6 from "@/assets/lexence-6.jpg";
 
 const moments = [
   {
