@@ -1,50 +1,63 @@
-# Onterechte "Klant akkoord" op gekopieerde items
+# Catering-pagina: editorial herziening
 
-## Wat er gebeurt
-Bij het opslaan van een onderdeel in de admin-edit-sheet wordt — als facturatie op **Bureau Vlieland** staat en `status="pending"` — automatisch `customer_accepted_at` en `customer_approved_at` gezet. Dat is bedoeld voor échte interne posten (vrije tijd, ferry, kostenpost) die geen klant- of partnergoedkeuring nodig hebben.
+Pagina blijft `/catering`. Wizard-tiles en aanvraagflow blijven werken — schuiven naar onderen als secundaire CTA. SEO/Helmet/JSON-LD behouden, "BBQ" hernoemen naar "Beach Grill experience" (consistent met eerdere keuze, ipv outdoor cooking).
 
-Maar bij **gekopieerde onderdelen** (`pending_added=true`, nog niet gepubliceerd) heeft de klant het item nog niet gezien. De stempel is dan onjuist.
+## Nieuwe paginastructuur
 
-Bevestigd in project Klazien Van Den Brink (2V-2022-2295):
-- **Zeehondentocht dag 2** — gemaakt 07:34:04, "klant akkoord" 07:34:26 (22s later)
-- **Fietstocht dag 2** — gemaakt 07:35:21, "klant akkoord" 07:37:28
-Beide hebben `pending_added=true` → klant zag dit nooit.
+1. **Hero** — donker, full-bleed, één Lexence-foto (plating of service). Headline: "Koken op locatie. Op Vlieland." Sub: "Van lunch tot high-end diner — door eigen chefs, één aanspreekpunt, één factuur." CTA's: "Start aanvraag" (scrollt naar wizard) + "Voor 50+ personen → Grote partijen" (link `/grote-partijen-vlieland`).
 
-## Plan
+2. **Intro-statement** — kort editorial blok, één alinea over Bureau Vlieland + Zuiver Traiteur + chefs Robert Buurma & Roland Bakker als één keuken op het eiland.
 
-### 1. Bugfix in `AdminEditActivitySheet.tsx` (regel 286)
-Auto-stempel `customer_accepted_at` / `customer_approved_at` **alleen** voor publieke onderdelen, niet voor drafts:
+3. **Chefs & keuken (B)** — editorial split-screen:
+   - Links: Lexence-beelden (amuses / plating / mise-en-place) — gestapeld.
+   - Rechts: tekst over chefs, niveau, lokale producten, kleine pull-quote.
+   - Link "Bekijk hoe we dit voor Lexence deden →" naar `/grote-partijen-vlieland`.
 
-```ts
-if (isBureauInvoiced && item.status === "pending" && !item.pending_added) {
-  // bestaande gedrag: bureau-item live → meteen confirmed + klant-akkoord
-}
-```
+4. **Voor welk moment (C)** — 4 grote beeld-first kaarten (foto vult kaart, titel + 1 zin overlay onderkant), elke kaart linkt naar `/catering-aanvragen?type=<key>`:
+   - **Lunch op locatie** — `catering-food.jpg` / `lunch-buffet.jpg`
+   - **Borrel & receptie** — `outdoor-drinks.jpg`
+   - **Beach Grill experience** (was: Strand-BBQ / outdoor cooking) — `strand-bbq.jpg`
+   - **High-end diner / walking dinner** — Lexence-foto van geplate gang
+   - Maatwerk-link eronder.
 
-Voor een `pending_added` draft wordt enkel `block_type`, `provider_id` etc. opgeslagen. Bij **Publiceer & notificeer** loopt het item door de normale workflow: klant ziet het en moet akkoord geven (of admin kan via de losse knop "klant-akkoord namens klant" stempelen).
+5. **Locaties (nieuw)** — drie kaarten met beeld + korte tekst, plus 4e maatwerk-tegel:
+   - **Brouwerij Fortuna** — proeflokaal / brouwerij-setting.
+   - **Kampeerterrein De Lange Paal** — buitenlocatie aan het wad.
+   - **De Bolder** — zaal met podium en grote bar op kampeerterrein Stortemelk.
+   - **Andere locatie? Wij regelen het** → `/contact` of maatwerk-aanvraag.
 
-### 2. Opschonen huidige twee items
-Reset op de twee specifieke items in dit project:
-```sql
-UPDATE program_request_items
-SET customer_accepted_at = NULL,
-    customer_approved_at = NULL,
-    status = 'pending'
-WHERE id IN (
-  '753e7a90-476d-4388-8c21-b6f504337fef',  -- Zeehondentocht dag 2
-  '02f0c0ab-ca30-4fb0-98e4-effbc7714912'   -- Fietstocht dag 2
-);
-```
-Logregel in `program_request_history`: `action='admin_correction'`, reden "Onterecht klant-akkoord teruggedraaid — item was nog niet gepubliceerd".
+6. **Beach Grill highlight** — bestaande "Strand BBQ" split (image+tekst) hernoemd naar **Beach Grill experience**, copy aangepast (grill op het strand, lokale producten, chef ter plaatse). Beeld blijft `strand-bbq.jpg`.
 
-### 3. Historische scan (optioneel — vraag aan u)
-Mogelijk zijn er meer projecten waar dit speelde. Ik kan een read-query draaien op alle items met `pending_added=true AND customer_accepted_at IS NOT NULL` om te kijken of er meer "vervuiling" is. Laat weten of u dat wilt.
+7. **Aanvraagblok (secundair)** — huidige "Wat voor catering zoekt u?" wizard-tiles verplaatst naar hieronder, header "Direct uw aanvraag starten" + korte uitleg (5 stappen, indicatieve prijs, offerte ≤2 werkdagen, ≥7 dagen vooraf). Hernoem tile "BBQ" → "Beach Grill". Maatwerk-link eronder.
 
-### 4. Geen wijziging nodig in:
-- `handleDuplicateItem` en `CopyFromProgramDialog` — die strippen `customer_accepted_at` correct.
-- `deriveItemDisplayStatus` — die leest gewoon de waarheid uit de DB.
+8. **Banner naar Grote partijen** — strakke CTA-strook met Lexence-beeld op achtergrond: "Evenement voor 50+ personen? Bekijk onze high-end catering case." → `/grote-partijen-vlieland`.
 
-## Wat verandert er voor u in de UI?
-- Na de fix toont een **vers gekopieerd** item altijd "Wacht op klant-akkoord" (correct), ook als de facturatie op Bureau Vlieland staat.
-- Pas na **Publiceer & notificeer** loopt het normaal mee in de klant-workflow.
-- Bestaande live bureau-onderdelen (vrije tijd, ferry) blijven werken zoals nu — die zijn niet `pending_added`.
+9. **CTA-strook + Footer** — bestaande primary-CTA blok behouden.
+
+## Wat verdwijnt
+
+- **"Catering Mogelijkheden"** card-grid (4 generieke kaarten met bullets) → vervangen door visuele momentkaarten (sectie 4).
+- **"Catering Impressies"** losse foto-galerij → beelden geïntegreerd in chefs-blok, momentkaarten en banner.
+
+## Terminologie
+
+- Overal **Beach Grill experience** ipv Strand-BBQ / outdoor cooking (incl. SEO meta description, FAQ-antwoord, JSON-LD `Offer name`). "BBQ" als zoekterm in `keywords`-meta blijft staan (mensen zoeken er nog op), maar zichtbare copy = Beach Grill.
+
+## Beeldgebruik
+
+- **Lexence-foto's**: hero, chefs-blok, "high-end diner" momentkaart, eind-banner. (Ik upload 3–5 stuks via `lovable-assets` naar `src/assets/lexence-*`. Mag ik dezelfde set gebruiken die voor `/grote-partijen-vlieland` is gepland, of upload jij specifieke beelden?)
+- **Bestaande assets**: catering-food/lunch-buffet, outdoor-drinks, strand-bbq, outdoor-dining, sunset-dinner.
+- **Locatie-foto's**: indien geen specifieke beelden voor Fortuna/Lange Paal/De Bolder beschikbaar → text-card met een neutraal sfeerbeeld of icoon-card. Laat je weten of je beelden aanlevert.
+
+## Tech / scope
+
+- Eén file: `src/pages/Catering.tsx` herschrijven.
+- Helmet/SEO behouden; FAQ-tekst "strand-BBQ" → "Beach Grill experience"; og:image vervangen door Lexence-still.
+- Tailwind + semantic tokens, geen nieuwe deps.
+- Wizard-routes `/catering-aanvragen?type=bbq` blijven werken (param-key ongewijzigd, alleen label wordt "Beach Grill").
+- Geen backend/datamodel-wijzigingen.
+
+## Openstaand vóór bouw
+
+1. Welke Lexence-beelden mag ik gebruiken (zelfde set als Grote partijen, of aparte upload)?
+2. Heb je foto's voor Fortuna / De Lange Paal / De Bolder, of mag ik tekstkaarten zonder beeld doen (subtiel sfeer-icoon)?
