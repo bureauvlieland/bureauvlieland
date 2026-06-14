@@ -66,25 +66,59 @@ Deno.serve(async (req) => {
       partnerId,
     } = await req.json();
 
-    // Lookup reference number for Reply-To
+    // Lookup reference number + extra placeholder data
     let referenceNumber: string | null = null;
+    let customerName: string | null = null;
+    let portalUrl: string | null = null;
+    const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
+
     if (requestId) {
       const { data: pr } = await supabase
         .from("program_requests")
-        .select("reference_number")
+        .select("reference_number, customer_name, portal_token")
         .eq("id", requestId)
         .maybeSingle();
       referenceNumber = pr?.reference_number || null;
+      customerName = pr?.customer_name || null;
+      if (pr?.portal_token) {
+        portalUrl = `${origin}/programma/${pr.portal_token}`;
+      }
     }
     if (!referenceNumber && accommodationId) {
       const { data: ar } = await supabase
         .from("accommodation_requests")
-        .select("reference_number")
+        .select("reference_number, customer_name, portal_token")
         .eq("id", accommodationId)
         .maybeSingle();
       referenceNumber = ar?.reference_number || null;
+      customerName = customerName || ar?.customer_name || null;
+      if (!portalUrl && ar?.portal_token) {
+        portalUrl = `${origin}/mijn-logies/${ar.portal_token}`;
+      }
     }
+
+    const partnerPortalUrl = partnerId ? `${origin}/partner` : null;
     const replyTo = buildReplyTo(referenceNumber);
+
+    // Vervang placeholders in subject + body zodat ad-hoc projectmails geen
+    // letterlijke {{portal_url}} / {{customer_name}} / {{reference_number}}
+    // meer bevatten (zoals bv. de Vliehors-mail van 11 juni 2026).
+    const substitutions: Record<string, string> = {
+      "{{portal_url}}": partnerPortalUrl || portalUrl || origin,
+      "{{customer_name}}": customerName || "",
+      "{{reference_number}}": referenceNumber || "",
+      "{{recipient_name}}": recipientName || "",
+    };
+    const applySubstitutions = (text: string) => {
+      let out = text;
+      for (const [key, value] of Object.entries(substitutions)) {
+        out = out.split(key).join(value);
+      }
+      return out;
+    };
+    const substitutedSubject = applySubstitutions(subject || "");
+    const substitutedBody = applySubstitutions(body || "");
+
 
     if (!recipientEmail || !subject || !body) {
       return new Response(
