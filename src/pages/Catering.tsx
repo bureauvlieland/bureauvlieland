@@ -165,7 +165,7 @@ const Catering = () => {
           <section className="relative h-[72vh] min-h-[520px] flex items-end overflow-hidden bg-foreground">
             <div
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${sunsetDinnerImage})`, ...kenBurns }}
+              style={{ backgroundImage: `url(${lexence6})`, ...kenBurns }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/70 to-foreground/30" />
             </div>
