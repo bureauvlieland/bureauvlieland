@@ -11,6 +11,7 @@ import { ProgramTemplatesPreview } from "@/components/home/ProgramTemplatesPrevi
 import { ErwinManifesto } from "@/components/home/ErwinManifesto";
 import { FinalCTA } from "@/components/home/FinalCTA";
 import { RoutePicker } from "@/components/home/RoutePicker";
+import { CateringHighlight } from "@/components/home/CateringHighlight";
 
 const Index = () => {
   return (
@@ -36,6 +37,7 @@ const Index = () => {
         <UpcomingActivitiesFeed />
         <ActivitiesShowcase />
         <ProgramTemplatesPreview />
+        <CateringHighlight />
         <ErwinManifesto />
         <Testimonials />
         <FinalCTA />

@@ -54,6 +54,7 @@ export const Navigation = () => {
 
   const programmasClass = useNavItemClass(programmasHrefs);
   const overnachtenClass = useSingleNavClass("/logies-vlieland");
+  const cateringClass = useSingleNavClass("/catering");
   const voorWieClass = useNavItemClass(voorWieHrefs);
   const overOnsClass = useNavItemClass(overOnsHrefs);
 
@@ -118,6 +119,10 @@ export const Navigation = () => {
 
               <Link to="/logies-vlieland" className={overnachtenClass}>
                 Overnachten
+              </Link>
+
+              <Link to="/catering" className={cateringClass}>
+                Catering
               </Link>
 
               {renderDropdown("voorwie", "Voor wie", voorWieClass, VoorWieMega)}

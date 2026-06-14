@@ -91,6 +91,15 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
           Overnachten
         </Link>
 
+        {/* Catering */}
+        <Link
+          to="/catering"
+          onClick={onClose}
+          className={`px-2 py-3 ${topLevelClass(isActive("/catering"))}`}
+        >
+          Catering
+        </Link>
+
         {/* Voor wie */}
         <div className="px-2">
           <button
