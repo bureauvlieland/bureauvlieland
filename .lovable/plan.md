@@ -1,63 +1,70 @@
-# Catering-pagina: editorial herziening
+## Doel
 
-Pagina blijft `/catering`. Wizard-tiles en aanvraagflow blijven werken — schuiven naar onderen als secundaire CTA. SEO/Helmet/JSON-LD behouden, "BBQ" hernoemen naar "Beach Grill experience" (consistent met eerdere keuze, ipv outdoor cooking).
+`src/components/home/CateringHighlight.tsx` herschrijven naar de gekozen "Editorial coastal spread"-richting: een 7/5 asymmetrisch grid met fotocompositie links en grote serif-typografie rechts, plus een drijvende ocean-deep "Signature · Beach Grill experience"-kaart als overlay.
 
-## Nieuwe paginastructuur
+## Wijzigingen
 
-1. **Hero** — donker, full-bleed, één Lexence-foto (plating of service). Headline: "Koken op locatie. Op Vlieland." Sub: "Van lunch tot high-end diner — door eigen chefs, één aanspreekpunt, één factuur." CTA's: "Start aanvraag" (scrollt naar wizard) + "Voor 50+ personen → Grote partijen" (link `/grote-partijen-vlieland`).
+**Alleen `src/components/home/CateringHighlight.tsx`.** Geen andere bestanden, geen design-tokens, geen routes.
 
-2. **Intro-statement** — kort editorial blok, één alinea over Bureau Vlieland + Zuiver Traiteur + chefs Robert Buurma & Roland Bakker als één keuken op het eiland.
+### Layout (desktop, lg)
 
-3. **Chefs & keuken (B)** — editorial split-screen:
-   - Links: Lexence-beelden (amuses / plating / mise-en-place) — gestapeld.
-   - Rechts: tekst over chefs, niveau, lokale producten, kleine pull-quote.
-   - Link "Bekijk hoe we dit voor Lexence deden →" naar `/grote-partijen-vlieland`.
+```text
+┌─────────────────────────────────────┬──────────────────────┐
+│  ┌───────────────┐  ┌──────┐         │  H2 (groot serif)    │
+│  │               │  │ amuse│         │  High-end koken      │
+│  │   chef        │  │ sq.  │         │  op locatie.         │
+│  │   plating     │  └──────┘         │  Op Vlieland uniek.  │
+│  │   (4/5)       │  ┌──────┐         │                      │
+│  │               │  │ table│         │  P (chefs, onderlijnd│
+│  └───────────────┘  │ 3/4  │         │   sunset accent)     │
+│                     └──────┘         │  P (sub)             │
+│           ┌──── Signature card ───┐  │                      │
+│           │ ocean-deep overlay    │  │  [Bekijk catering]   │
+│           │ Beach Grill           │  │  [Catering aanvragen]│
+│           └───────────────────────┘  │                      │
+└─────────────────────────────────────┴──────────────────────┘
+```
 
-4. **Voor welk moment (C)** — 4 grote beeld-first kaarten (foto vult kaart, titel + 1 zin overlay onderkant), elke kaart linkt naar `/catering-aanvragen?type=<key>`:
-   - **Lunch op locatie** — `catering-food.jpg` / `lunch-buffet.jpg`
-   - **Borrel & receptie** — `outdoor-drinks.jpg`
-   - **Beach Grill experience** (was: Strand-BBQ / outdoor cooking) — `strand-bbq.jpg`
-   - **High-end diner / walking dinner** — Lexence-foto van geplate gang
-   - Maatwerk-link eronder.
+Mobile: stack — fotocompositie boven, tekst onder. Signature-kaart blijft static binnen het beeldblok.
 
-5. **Locaties (nieuw)** — drie kaarten met beeld + korte tekst, plus 4e maatwerk-tegel:
-   - **Brouwerij Fortuna** — proeflokaal / brouwerij-setting.
-   - **Kampeerterrein De Lange Paal** — buitenlocatie aan het wad.
-   - **De Bolder** — zaal met podium en grote bar op kampeerterrein Stortemelk.
-   - **Andere locatie? Wij regelen het** → `/contact` of maatwerk-aanvraag.
+### Kleuren & typografie (mappen op bestaand systeem)
 
-6. **Beach Grill highlight** — bestaande "Strand BBQ" split (image+tekst) hernoemd naar **Beach Grill experience**, copy aangepast (grill op het strand, lokale producten, chef ter plaatse). Beeld blijft `strand-bbq.jpg`.
+- Achtergrond: `bg-sand/40` (huidige cream blijft).
+- Tekstkleur primair: `text-primary` (ocean-deep).
+- Accent (Signature label, underline op chefnamen, hover-fill primaire knop): `sunset` token.
+- Headline: bestaande `font-display`, `font-light`, `italic` voor "Op Vlieland uniek." — geen nieuwe Google Font; we hergebruiken de site-display zodat het consistent is met Hero en andere h2's.
+- Body: bestaande sans (`font-sans`).
 
-7. **Aanvraagblok (secundair)** — huidige "Wat voor catering zoekt u?" wizard-tiles verplaatst naar hieronder, header "Direct uw aanvraag starten" + korte uitleg (5 stappen, indicatieve prijs, offerte ≤2 werkdagen, ≥7 dagen vooraf). Hernoem tile "BBQ" → "Beach Grill". Maatwerk-link eronder.
+### Beelden (uit `src/assets/lexence/`)
 
-8. **Banner naar Grote partijen** — strakke CTA-strook met Lexence-beeld op achtergrond: "Evenement voor 50+ personen? Bekijk onze high-end catering case." → `/grote-partijen-vlieland`.
+- Groot hero-blok (4/5): `lexence-chef-plating.jpg`.
+- Klein blok 1 (1/1): `lexence-amuses-row.jpg`.
+- Klein blok 2 (3/4): `lexence-tablesetting.jpg`.
+- Signature-overlay heeft geen foto; tekst op `bg-primary` (ocean-deep) met sunset accent en korte regel over Beach Grill.
 
-9. **CTA-strook + Footer** — bestaande primary-CTA blok behouden.
+### Inhoud (verbatim)
 
-## Wat verdwijnt
+- Eyebrow vervalt (signature staat al in de overlay-kaart).
+- H2: `High-end koken op locatie.` + lijnbreek + italic `Op Vlieland uniek.`
+- Lead-paragraaf: "Onze eigen chefs **Robert Buurma** en **Roland Bakker** brengen de haute cuisine naar uw verblijf." — chefnamen krijgen sunset underline.
+- Sub-paragraaf: "Voor zakelijke groepen vanaf 8 personen. Eén keuken, één aanspreekpunt, één factuur. Vrijblijvend voorstel op maat binnen 2 werkdagen." (we houden "2 werkdagen" zoals elders op de site — niet "48 uur" uit het prototype).
+- Signature card: label "Signature", titel "Beach Grill experience", korte regel "Een exclusieve culinaire ervaring op het strand van Vlieland, bereid op open vuur door onze eigen chefs."
+- CTA's ongewijzigd: `Bekijk catering` → `/catering`, `Catering aanvragen` → `/catering-aanvragen`.
 
-- **"Catering Mogelijkheden"** card-grid (4 generieke kaarten met bullets) → vervangen door visuele momentkaarten (sectie 4).
-- **"Catering Impressies"** losse foto-galerij → beelden geïntegreerd in chefs-blok, momentkaarten en banner.
+### Interactie
 
-## Terminologie
+- Primaire knop: ocean-deep met sunset slide-up fill op hover (zoals prototype).
+- Pijl-icoon schuift bij hover 1 px naar rechts.
+- Foto's: subtiele `scale-[1.01]` op hover, 700ms.
+- Geen scroll-pinned animaties, geen Motion-componenten — puur CSS transitions, in lijn met de rest van de homepage.
 
-- Overal **Beach Grill experience** ipv Strand-BBQ / outdoor cooking (incl. SEO meta description, FAQ-antwoord, JSON-LD `Offer name`). "BBQ" als zoekterm in `keywords`-meta blijft staan (mensen zoeken er nog op), maar zichtbare copy = Beach Grill.
+### Verticale ritmiek
 
-## Beeldgebruik
+- Sectiepadding `py-20 md:py-28` blijft, zodat de sectie tussen `UpcomingActivitiesFeed` en `ActivitiesShowcase` ademt zoals nu.
 
-- **Lexence-foto's**: hero, chefs-blok, "high-end diner" momentkaart, eind-banner. (Ik upload 3–5 stuks via `lovable-assets` naar `src/assets/lexence-*`. Mag ik dezelfde set gebruiken die voor `/grote-partijen-vlieland` is gepland, of upload jij specifieke beelden?)
-- **Bestaande assets**: catering-food/lunch-buffet, outdoor-drinks, strand-bbq, outdoor-dining, sunset-dinner.
-- **Locatie-foto's**: indien geen specifieke beelden voor Fortuna/Lange Paal/De Bolder beschikbaar → text-card met een neutraal sfeerbeeld of icoon-card. Laat je weten of je beelden aanlevert.
+## Niet in scope
 
-## Tech / scope
-
-- Eén file: `src/pages/Catering.tsx` herschrijven.
-- Helmet/SEO behouden; FAQ-tekst "strand-BBQ" → "Beach Grill experience"; og:image vervangen door Lexence-still.
-- Tailwind + semantic tokens, geen nieuwe deps.
-- Wizard-routes `/catering-aanvragen?type=bbq` blijven werken (param-key ongewijzigd, alleen label wordt "Beach Grill").
-- Geen backend/datamodel-wijzigingen.
-
-## Openstaand vóór bouw
-
-1. Welke Lexence-beelden mag ik gebruiken (zelfde set als Grote partijen, of aparte upload)?
-2. Heb je foto's voor Fortuna / De Lange Paal / De Bolder, of mag ik tekstkaarten zonder beeld doen (subtiel sfeer-icoon)?
+- Geen nieuwe afbeeldingen genereren of uploaden.
+- Geen wijzigingen aan `Index.tsx`, navigatie, of `/catering` pagina.
+- Geen nieuwe lettertype-imports.
+- Geen aanpassing van Tailwind config of `index.css`.
