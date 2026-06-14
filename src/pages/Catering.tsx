@@ -443,7 +443,7 @@ const Catering = () => {
           <section className="relative py-20 md:py-28 overflow-hidden bg-foreground">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-40"
-              style={{ backgroundImage: `url(${sunsetDinnerImage})` }}
+              style={{ backgroundImage: `url(${lexence2})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
             <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-background">
