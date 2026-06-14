@@ -170,35 +170,74 @@ const Catering = () => {
       <div className="min-h-screen">
         <Navigation />
         <main>
-          {/* Hero */}
-          <section className="relative h-[72vh] min-h-[520px] flex items-end overflow-hidden bg-foreground">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${lexence6})`, ...kenBurns }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/70 to-foreground/30" />
-            </div>
-            <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pb-16 md:pb-24 text-background">
-              <div className="max-w-3xl">
-                <span className="inline-block text-xs uppercase tracking-[0.2em] mb-6 opacity-80">
-                  Catering · Vlieland
-                </span>
-                <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 leading-[1.05]">
-                  Koken op locatie.<br />Op Vlieland.
-                </h1>
-                <p className="text-lg md:text-xl max-w-2xl mb-8 opacity-90">
-                  Van lunch tot high-end diner — door eigen chefs Robert Buurma en Roland Bakker.
-                  Eén aanspreekpunt, één factuur.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button size="lg" onClick={() => scrollToSection("aanvraag")} className="bg-background text-foreground hover:bg-background/90">
-                    Start uw aanvraag
-                  </Button>
-                  <Button asChild size="lg" variant="outline" className="border-background/40 text-background bg-transparent hover:bg-background/10 hover:text-background">
-                    <Link to="/grote-partijen-vlieland">
-                      Voor 50+ personen <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+          {/* Hero — editorial split */}
+          <section className="relative bg-foreground text-background overflow-hidden">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-24 pb-12 md:pb-20">
+              <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-end">
+                {/* Left: copy */}
+                <div className="lg:col-span-6 lg:pb-8">
+                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-8 opacity-80">
+                    <ChefHat className="h-3.5 w-3.5" /> Catering · Vlieland
+                  </span>
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-[1.02] tracking-tight">
+                    Koken op locatie.
+                    <span className="block italic font-normal opacity-80">Op Vlieland.</span>
+                  </h1>
+                  <p className="text-lg md:text-xl max-w-xl mb-10 opacity-85 leading-relaxed">
+                    Van lunch tot high-end diner — door eigen chefs Robert Buurma en Roland Bakker.
+                    Eén aanspreekpunt, één factuur.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 mb-10">
+                    <Button size="lg" onClick={() => scrollToSection("aanvraag")} className="bg-background text-foreground hover:bg-background/90">
+                      Start uw aanvraag
+                    </Button>
+                    <Button asChild size="lg" variant="outline" className="border-background/40 text-background bg-transparent hover:bg-background/10 hover:text-background">
+                      <Link to="/grote-partijen-vlieland">
+                        Voor 50+ personen <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-6 text-sm opacity-70 border-t border-background/15 pt-6">
+                    <span>Eigen chefs</span>
+                    <span className="h-1 w-1 rounded-full bg-background/40" />
+                    <span>Vanaf 8 personen</span>
+                    <span className="h-1 w-1 rounded-full bg-background/40" />
+                    <span>Offerte &lt; 2 werkdagen</span>
+                  </div>
+                </div>
+
+                {/* Right: image collage */}
+                <div className="lg:col-span-6">
+                  <div className="grid grid-cols-5 grid-rows-6 gap-3 md:gap-4 h-[420px] md:h-[560px]">
+                    <div className="col-span-3 row-span-4 rounded-lg overflow-hidden shadow-2xl">
+                      <img
+                        src={lexence2}
+                        alt="Chef plating tijdens diner op Vlieland"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="col-span-2 row-span-3 rounded-lg overflow-hidden shadow-2xl">
+                      <img
+                        src={lexence3}
+                        alt="Amuses op rij"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="col-span-2 row-span-3 rounded-lg overflow-hidden shadow-2xl">
+                      <img
+                        src={lexence4}
+                        alt="Tablesetting Lexence"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="col-span-3 row-span-2 rounded-lg overflow-hidden shadow-2xl">
+                      <img
+                        src={lexence6}
+                        alt="Diner-marquee op locatie"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
