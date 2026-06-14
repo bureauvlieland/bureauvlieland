@@ -78,7 +78,7 @@ const locations = [
   {
     name: "De Bolder",
     desc: "Zaal met podium en grote bar op kampeerterrein Stortemelk.",
-    image: cateringFoodImage,
+    image: lexenceVenueCrowd,
   },
 ];
 
