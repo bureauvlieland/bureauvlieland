@@ -43,7 +43,7 @@ const moments = [
     key: "diner",
     label: "High-end diner",
     desc: "3-gangen, walking dinner of geplate gangen door eigen chefs.",
-    image: sunsetDinnerImage,
+    image: lexence5,
   },
 ];
 
