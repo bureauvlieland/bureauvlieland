@@ -184,7 +184,7 @@ const Catering = () => {
                     <span className="block italic font-normal opacity-80">Op Vlieland.</span>
                   </h1>
                   <p className="text-lg md:text-xl max-w-xl mb-10 opacity-85 leading-relaxed">
-                    Met een <strong className="font-semibold opacity-100">eigen productiekeuken</strong> op het eiland, eigen chefs
+                    Met een <strong className="font-semibold opacity-100">professionele horecakeuken</strong> op het eiland, eigen chefs
                     en compleet materiaal koken wij van lunch tot high-end diner — op vrijwel elke locatie.
                     De enige partij op Vlieland die dit op dit niveau levert.
                   </p>
@@ -197,7 +197,7 @@ const Catering = () => {
                     </Button>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm opacity-70 border-t border-background/15 pt-6">
-                    <span>Eigen productiekeuken</span>
+                    <span>Professionele horecakeuken</span>
                     <span className="h-1 w-1 rounded-full bg-background/40" />
                     <span>Eigen chefs &amp; materiaal</span>
                     <span className="h-1 w-1 rounded-full bg-background/40" />
