@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, ChefHat } from "lucide-react";
-import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
-import foodPlattersImage from "@/assets/food-platters.jpg";
+import lexence1 from "@/assets/lexence-1.jpg";
+import lexence3 from "@/assets/lexence-3.jpg";
 import strandBbqImage from "@/assets/strand-bbq.jpg";
 
 export const CateringHighlight = () => {
