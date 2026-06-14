@@ -27,8 +27,8 @@ export const CateringHighlight = () => {
               lunch en Beach Grill tot geplate gangen.
             </p>
             <p className="text-base opacity-70 mb-8 max-w-xl">
-              Eén keuken, één aanspreekpunt, één factuur. Voor groepen vanaf 8 — en
-              evenementen tot ver boven de 100 gasten.
+              Eén keuken, één aanspreekpunt, één factuur. Voor zakelijke groepen vanaf 8 personen.
+              Vrijblijvend voorstel op maat binnen 2 werkdagen.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
@@ -38,10 +38,10 @@ export const CateringHighlight = () => {
                 Bekijk catering <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                to="/grote-partijen-vlieland"
+                to="/catering-aanvragen"
                 className="inline-flex items-center justify-center gap-2 border border-background/30 px-6 py-3 rounded-md font-medium hover:bg-background/10 transition-colors"
               >
-                Voor 50+ personen
+                Catering aanvragen
               </Link>
             </div>
           </div>

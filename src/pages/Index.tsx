@@ -35,9 +35,9 @@ const Index = () => {
         <HeroEditorial />
         <RoutePicker />
         <UpcomingActivitiesFeed />
+        <CateringHighlight />
         <ActivitiesShowcase />
         <ProgramTemplatesPreview />
-        <CateringHighlight />
         <ErwinManifesto />
         <Testimonials />
         <FinalCTA />
