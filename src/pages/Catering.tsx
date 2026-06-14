@@ -170,73 +170,45 @@ const Catering = () => {
       <div className="min-h-screen">
         <Navigation />
         <main>
-          {/* Hero — editorial split */}
-          <section className="relative bg-foreground text-background overflow-hidden">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-24 pb-12 md:pb-20">
-              <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-end">
-                {/* Left: copy */}
-                <div className="lg:col-span-6 lg:pb-8">
-                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-8 opacity-80">
-                    <ChefHat className="h-3.5 w-3.5" /> Catering · Vlieland
-                  </span>
-                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-[1.02] tracking-tight">
-                    Koken op locatie.
-                    <span className="block italic font-normal opacity-80">Op Vlieland.</span>
-                  </h1>
-                  <p className="text-lg md:text-xl max-w-xl mb-10 opacity-85 leading-relaxed">
-                    Met een <strong className="font-semibold opacity-100">professionele horecakeuken</strong> op het eiland, eigen chefs
-                    en compleet materiaal koken wij van lunch tot high-end diner — op vrijwel elke locatie.
-                    De enige partij op Vlieland die dit op dit niveau levert.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3 mb-10">
-                    <Button size="lg" onClick={() => scrollToSection("aanvraag")} className="bg-background text-foreground hover:bg-background/90">
-                      Start uw aanvraag
-                    </Button>
-                    <Button size="lg" variant="outline" onClick={() => scrollToSection("momenten")} className="border-background/40 text-background bg-transparent hover:bg-background/10 hover:text-background">
-                      Bekijk de mogelijkheden <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm opacity-70 border-t border-background/15 pt-6">
-                    <span>Professionele horecakeuken</span>
-                    <span className="h-1 w-1 rounded-full bg-background/40" />
-                    <span>Eigen chefs &amp; materiaal</span>
-                    <span className="h-1 w-1 rounded-full bg-background/40" />
-                    <span>Lunch tot high-end diner</span>
-                  </div>
-                </div>
+          {/* Hero — full image with overlay */}
+          <section className="relative min-h-[88vh] lg:min-h-[92vh] flex items-end overflow-hidden bg-foreground text-background">
+            <img
+              src={lexence1}
+              alt="Chefs aan het plateren in onze keuken op Vlieland"
+              className="absolute inset-0 w-full h-full object-cover object-center"
+            />
+            {/* Overlays for legibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/75 to-foreground/20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/30 to-transparent" />
 
-                {/* Right: image collage */}
-                <div className="lg:col-span-6">
-                  <div className="grid grid-cols-5 grid-rows-6 gap-3 md:gap-4 h-[420px] md:h-[560px]">
-                    <div className="col-span-3 row-span-4 rounded-lg overflow-hidden shadow-2xl">
-                      <img
-                        src={lexence1}
-                        alt="Chefs aan het plateren in onze keuken op Vlieland"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="col-span-2 row-span-3 rounded-lg overflow-hidden shadow-2xl">
-                      <img
-                        src={lexence3}
-                        alt="Amuses op rij"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="col-span-2 row-span-3 rounded-lg overflow-hidden shadow-2xl">
-                      <img
-                        src={lexence4}
-                        alt="Tablesetting Lexence"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="col-span-3 row-span-2 rounded-lg overflow-hidden shadow-2xl">
-                      <img
-                        src={lexence6}
-                        alt="Diner-marquee op locatie"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
+            <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-14 md:pb-20">
+              <div className="max-w-2xl">
+                <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] mb-6 opacity-90">
+                  <ChefHat className="h-3.5 w-3.5" /> Catering · Vlieland
+                </span>
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-6 leading-[1.02] tracking-tight">
+                  Koken op locatie.
+                  <span className="block italic font-normal opacity-85">Op Vlieland.</span>
+                </h1>
+                <p className="text-lg md:text-xl max-w-xl mb-8 opacity-90 leading-relaxed">
+                  Met een <strong className="font-semibold">professionele horecakeuken</strong> op het eiland, eigen chefs
+                  en compleet materiaal koken wij van lunch tot high-end diner — op vrijwel elke locatie.
+                  De enige partij op Vlieland die dit op dit niveau levert.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                  <Button size="lg" onClick={() => scrollToSection("aanvraag")} className="bg-background text-foreground hover:bg-background/90">
+                    Start uw aanvraag
+                  </Button>
+                  <Button size="lg" variant="outline" onClick={() => scrollToSection("momenten")} className="border-background/40 text-background bg-transparent hover:bg-background/10 hover:text-background">
+                    Bekijk de mogelijkheden <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm opacity-80 border-t border-background/20 pt-5">
+                  <span>Professionele horecakeuken</span>
+                  <span className="h-1 w-1 rounded-full bg-background/40" />
+                  <span>Eigen chefs &amp; materiaal</span>
+                  <span className="h-1 w-1 rounded-full bg-background/40" />
+                  <span>Lunch tot high-end diner</span>
                 </div>
               </div>
             </div>
