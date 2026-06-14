@@ -46,10 +46,10 @@ export const CateringHighlight = () => {
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-3 md:space-y-4">
               <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-2xl">
-                <img src={sunsetDinnerImage} alt="High-end diner op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                <img src={lexence1} alt="High-end diner op Vlieland" className="w-full h-full object-cover" loading="lazy" />
               </div>
               <div className="aspect-square rounded-lg overflow-hidden shadow-2xl">
-                <img src={foodPlattersImage} alt="Gerechten op locatie" className="w-full h-full object-cover" loading="lazy" />
+                <img src={lexence3} alt="Gerechten op locatie" className="w-full h-full object-cover" loading="lazy" />
               </div>
             </div>
             <div className="space-y-3 md:space-y-4 pt-10 md:pt-16">
