@@ -54,6 +54,7 @@ export const Navigation = () => {
 
   const programmasClass = useNavItemClass(programmasHrefs);
   const overnachtenClass = useSingleNavClass("/logies-vlieland");
+  const cateringClass = useSingleNavClass("/catering");
   const voorWieClass = useNavItemClass(voorWieHrefs);
   const overOnsClass = useNavItemClass(overOnsHrefs);
 
