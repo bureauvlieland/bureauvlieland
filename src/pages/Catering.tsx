@@ -462,17 +462,17 @@ const Catering = () => {
           <section className="relative py-20 md:py-28 overflow-hidden bg-foreground">
             <div
               className="absolute inset-0 bg-cover bg-center opacity-40"
-              style={{ backgroundImage: `url(${lexence2})` }}
+              style={{ backgroundImage: `url(${lexence6})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40" />
             <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-background">
               <div className="max-w-2xl">
                 <div className="text-sm uppercase tracking-[0.2em] opacity-80 mb-4">Vanaf 50 personen</div>
-                <h2 className="text-3xl md:text-5xl font-display font-bold mb-6 leading-tight">
+                <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 leading-tight">
                   Een evenement voor 50+ personen?
                 </h2>
                 <p className="text-lg opacity-90 mb-8">
-                  Bekijk hoe we high-end diner op locatie verzorgen voor grote groepen — inclusief de case van Lexence.
+                  Bekijk hoe wij high-end diner op locatie verzorgen voor grote groepen — inclusief productie, materiaal en logistiek.
                 </p>
                 <Button asChild size="lg" className="bg-background text-foreground hover:bg-background/90">
                   <Link to="/grote-partijen-vlieland">
