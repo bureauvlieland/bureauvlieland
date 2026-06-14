@@ -288,7 +288,7 @@ const Catering = () => {
                   </h2>
                 </div>
                 <p className="text-muted-foreground max-w-md">
-                  Kies een format om direct aan te vragen. Indicatieve prijs incl. BTW direct zichtbaar.
+                  Kies een format om direct aan te vragen. Vrijblijvend voorstel op maat binnen 2 werkdagen.
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
