@@ -237,6 +237,10 @@ export function PublishChangesDialog({
           notifyPartnerIds: partnerIds,
           adminNote: adminNote.trim(),
           origin: window.location.origin,
+          approvalScope: {
+            customer: approvalCustomer,
+            partner: approvalPartner,
+          },
         },
       });
       if (error) {
