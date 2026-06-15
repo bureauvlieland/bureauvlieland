@@ -1,89 +1,51 @@
+## Doel
 
-## Probleem
+Wanneer je als admin een programma-onderdeel of losse kostenpost verwijdert, moet dat dezelfde flow volgen als het *toevoegen* of *wijzigen* van een onderdeel: eerst stagen → dan in de **"Wijzigingen publiceren & notificeren"**-dialog bewust kiezen of klant en/of partner een gebundelde mail krijgen, met optionele toelichting en dry-run.
 
-In de klantportaal-statuskaart lopen drie verschillende soorten "akkoord" door elkaar:
+## Huidige situatie
 
-1. **Akkoord op het voorstel** (offerte als geheel) — `quote_status: offerte_verstuurd → akkoord_ontvangen`.
-2. **Goedkeuring per onderdeel** dat een partner heeft bevestigd — `item.customer_approved_at` per regel.
-3. **Akkoord op de algemene voorwaarden** — `terms_accepted_at`, juridisch sluitstuk.
+- **Toevoegen / wijzigen** → schrijft `pending_*` velden (o.a. `pending_added`, `pending_marked_for_removal`, `pending_preferred_time`, …) en verschijnt in `PublishChangesDialog` → admin kiest ontvangers → `publish-program-changes` edge function publiceert + mailt gebundeld.
+- **Verwijderen (prullenbak-icoon)** → roept direct `notify-partner-item-deletion` aan. Dat:
+  - verwijdert het item meteen (hard delete),
+  - stuurt automatisch een annuleringsmail naar de betrokken partner,
+  - stuurt **geen** mail naar de klant,
+  - biedt **geen** keuze, toelichting of dry-run.
 
-De huidige verticale lijst ("Wachten op aanbieders 0/8 bevestigd / Uw akkoord 5 van 8 geaccordeerd / …") suggereert losse parallelle dingen. Klanten en partners ervaren het als onduidelijk.
+Alle benodigde infrastructuur bestaat al:
+- kolom `pending_marked_for_removal` in `program_request_items`,
+- `PublishChangesDialog` toont al `− Geannuleerd` voor zo'n item,
+- `publish-program-changes` verwijdert items waarvoor `pending_marked_for_removal = true` en mailt klant + geselecteerde partners gebundeld.
 
-## Oplossing
+Alleen de delete-knoppen in `AdminRequestDetail.tsx` slaan deze flow over.
 
-Eén **horizontale stepper** bovenaan de klantpagina, met consistente terminologie. Alleen klantkant in deze iteratie; partnerportal volgt later.
+## Wijzigingen
 
-## Stappen (klantkant)
+### 1. Programma-onderdeel verwijderen (`src/pages/admin/AdminRequestDetail.tsx`, ~regel 2422-2441)
 
-```text
-①─────────②──────────③──────────④
-Logies    Aanbieders  Goedkeuren  Gegevens
-kiezen *  bevestigen              & voorwaarden
-```
-\* Stap 1 alleen tonen bij meerdaagse projecten.
+Prullenbak-`onClick` vervangen door:
+- `update program_request_items set pending_marked_for_removal = true where id = item.id`
+- `fetchRequestData()` zodat het item in de UI een "Markering: te verwijderen"-staat krijgt (zelfde gedrag als pending-add/pending-edit).
+- Toast: *"Gemarkeerd voor verwijdering — open 'Publiceer wijzigingen' om door te voeren."*
+- Bij een tweede klik op hetzelfde item: markering ongedaan maken (`pending_marked_for_removal = false`) → toggle-gedrag, consistent met andere pending edits.
 
-| # | Titel                       | "Actief" wanneer                                                                       | "Klaar" wanneer                                                | Wie     |
-|---|-----------------------------|----------------------------------------------------------------------------------------|----------------------------------------------------------------|---------|
-| 1 | **Logies kiezen** *(multi-day)* | logies-aanvraag loopt of offertes binnen                                              | een offerte heeft `status = selected`                          | Klant   |
-| 2 | **Aanbieders bevestigen**   | items op `pending` / `alternative` / `counter_proposed`                                | alle niet-cancelled items zijn `confirmed`                     | Partners|
-| 3 | **Onderdelen goedkeuren**   | er zijn `confirmed` items zonder `customer_approved_at` (telt door: "3 van 8 goedgekeurd") | `customerApprovedCount ≥ customerApprovableCount` én voorstel-akkoord gegeven | **Klant** |
-| 4 | **Gegevens & voorwaarden**  | stap 3 klaar én (`billingComplete` = false óf `terms_accepted_at` = null)              | beide compleet → eindstaat "✓ Klaar — wij gaan het regelen"    | **Klant** |
+De bestaande "Publiceer wijzigingen"-knop bovenaan de pagina (die `pendingItems` telt) pikt het automatisch op; vanuit de dialog wordt het item dan échte hard-deleted door `publish-program-changes` én — afhankelijk van de aangevinkte ontvangers — krijgen klant en/of partner één gebundelde mail.
 
-Stap 1 (voorstel ontvangen) vervalt: zodra de klant op de pagina is, is die per definitie "done", dus voegt visueel niets toe. Stap 4 bundelt facturatiegegevens + voorwaarden tot één laatste klant-actie, omdat ze altijd samen worden afgerond op het ondertekenscherm.
+### 2. Losse kostenpost verwijderen (`extraCosts`, ~regel 2738-2756)
 
-## Terminologie (consistent in UI én e-mails)
+Losse kosten (`block_type = "bureau" / extra_cost`) zijn nooit zichtbaar voor partners en hebben geen klant-portaal-impact — daar is staging overkill. Toch consistent maken:
+- Eenvoudige `confirm()`-bevestiging toevoegen ("Weet je zeker dat je deze kostenpost wilt verwijderen?") en daarna direct `delete from program_request_items where id = item.id` via de client (geen edge function nodig, geen mail).
+- Reden: deze posten staan los van klant/partner-communicatie; ze door de publiceer-dialog jagen zou alleen ruis geven.
 
-| Oud / verwarrend                              | Nieuw                                          |
-|-----------------------------------------------|------------------------------------------------|
-| "Wachten op aanbieders (0/8 bevestigd)"       | Stap 2 — **Aanbieders bevestigen** (0/8)       |
-| "Uw akkoord — 5 van 8 geaccordeerd"           | Stap 3 — **Onderdelen goedkeuren** (5/8)       |
-| "Voorstel akkoord" / "Alle onderdelen geaccordeerd" | één term: **goedgekeurd**                |
-| "Facturatie — gegevens aanleveren"            | Stap 4 — **Gegevens & voorwaarden**            |
-| "Voorwaarden — nog accepteren"                | onderdeel van stap 4                           |
-| Eindstaat                                     | **✓ Klaar — wij gaan het regelen**             |
+### 3. Geen wijzigingen aan
 
-Microcopy-regel: **"bevestigd"** = wat de aanbieder doet (`item.status=confirmed`). **"goedgekeurd"** = wat de klant doet (`customer_approved_at`). Nooit door elkaar gebruiken.
+- `notify-partner-item-deletion` edge function (blijft beschikbaar voor de bestaande legacy-/bulk-paden en projectverwijdering).
+- `PublishChangesDialog` zelf (toont al `− Geannuleerd`).
+- `publish-program-changes` edge function (handelt removal al af).
 
-## Visueel ontwerp
+## UX-detail
 
-**Desktop / tablet (horizontaal):**
-- Stepper full-width in de status-kaart bovenaan.
-- Per stap: bolletje (24px) + korte titel + 1 regel microtekst eronder.
-- Connector-lijn tussen bolletjes vult zich naarmate stap "done" wordt.
-- Drie staten:
-  - **done** — gevuld primary, check-icoon.
-  - **active** — outline primary + ring, evt. zachte pulse; subtitel toont concrete CTA-tekst ("3 van 8 nog goedkeuren").
-  - **upcoming** — outline muted.
-- Eronder één regel + (indien klant aan zet) primaire knop die naar de juiste sectie scrollt.
+In de itemrij van een onderdeel met `pending_marked_for_removal = true` is het handig dat de prullenbak-knop visueel omschakelt naar bijv. een "Herstel"-icoon (undo) met tooltip *"Markering verwijderen ongedaan maken"*. Dat sluit aan bij hoe andere pending-edits al getoond worden in dezelfde tabel.
 
-**Mobiel (compact, scroll-vrij):**
-- Eén regel: `Stap 3 van 4 · Onderdelen goedkeuren`.
-- Daaronder een mini-stripe van 4 bolletjes (alleen visueel, geen labels) als voortgang.
-- Subtitel: actie + voortgangsteller (bijv. "3 van 8 goedgekeurd").
-- Eén primaire CTA-knop naar de actieve sectie.
-- Tikken op de mini-stripe opent een uitklap met alle 4 stappen + labels (zelfde info als desktop), zodat de context behouden blijft zonder horizontaal scrollen.
+## Te raken bestanden
 
-Drie staten gebruiken bestaande design-tokens (primary / muted / border). Geen nieuwe kleuren.
-
-## Scope
-
-- **Alleen klantkant.** Partnerportal in vervolgstap.
-- Geen wijzigingen in database, RLS, edge functions of business-logica — puur presentatie + copy.
-- Bestaande `StatusSummary` `default` en `compact` blijven werken; `checklist`-variant wordt vervangen door de nieuwe stepper en uitgefaseerd.
-
-## Technisch
-
-- Nieuwe component `src/components/customer-portal/ProgramStepper.tsx`.
-- Reine helper `getProgramSteps(props): Step[]` (`{ id, label, sub, state, ctaHref? }`) — unit-testbaar, los van rendering.
-- Inputs gelijk aan huidige `checklist`-variant props (statusSummary, billingComplete, termsAccepted, quoteStatus, customerApproved/ApprovableCount, accommodationStatus, isMultiDay).
-- Mobiele compact-weergave + uitklap in dezelfde component, geschakeld via `useIsMobile()` / Tailwind `sm:`-breakpoint.
-- Callers omzetten (in deze volgorde):
-  1. `DesktopProgramView` + `MobileProgramView` (hoofdgebruik bovenaan portaal).
-  2. `ProgramSidebar` (sticky context — daar tonen we de **compacte** variant zoals op mobiel).
-  3. `CustomerPortalSplash` "Hoe werkt het traject?" — uitlijnen met dezelfde 4 stappen en labels, zodat splash en stepper hetzelfde verhaal vertellen.
-- Mini-glossary tooltip ("?"-icoon naast de kaarttitel) met één zin per akkoord-soort, voor klanten die meer context willen.
-
-## Vervolg (buiten scope nu)
-
-- Partnerportal-stepper (Aangevraagd → Geoffreerd → Goedgekeurd door klant → Uitgevoerd → Gefactureerd).
-- E-mailtemplates herzien op nieuwe terminologie ("bevestigd" vs "goedgekeurd").
+- `src/pages/admin/AdminRequestDetail.tsx` (twee delete-handlers + kleine UI-tweak voor undo-staat van de prullenbak).
