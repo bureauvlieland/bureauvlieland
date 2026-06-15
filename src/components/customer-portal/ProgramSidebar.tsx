@@ -60,6 +60,7 @@ export const ProgramSidebar = ({
   allConfirmed = false,
   onScrollToTerms,
   className,
+  topSlot,
 }: ProgramSidebarProps) => {
   // Determine accommodation status
   const hasAccommodation = !!selectedAccommodationQuote;
