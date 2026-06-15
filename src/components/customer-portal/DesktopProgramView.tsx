@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgramSidebar } from "./ProgramSidebar";
+import { ProgramStepper, type StepId } from "./ProgramStepper";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
