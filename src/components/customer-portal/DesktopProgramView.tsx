@@ -344,13 +344,7 @@ export const DesktopProgramView = ({
         {isMultiDay && initialSection === "accommodation" && (
           <div id="accommodation" className="scroll-mt-20">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BedDouble className="h-5 w-5 text-primary" />
-                  Logies
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <AccommodationSection
                   accommodation={accommodation}
                   quotes={accommodationQuotes}
