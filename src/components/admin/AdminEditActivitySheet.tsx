@@ -41,6 +41,7 @@ import { resolveAutoTodo } from "@/lib/autoTodoCreator";
 import { getPriceTypeSuffix } from "@/lib/portalPricing";
 import { useAutoSaveField } from "@/hooks/useAutoSaveField";
 import { FieldSaveIndicator } from "@/components/admin/FieldSaveIndicator";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 
 interface PartnerOption {
   id: string;
