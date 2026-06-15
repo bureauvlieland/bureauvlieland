@@ -112,6 +112,9 @@ export function EditProjectDetailsDialog({
       toast.success("Evenement details bijgewerkt");
       onOpenChange(false);
       onSuccess();
+      if (people !== initialPeople) {
+        onPeopleChanged?.(initialPeople, people);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Fout bij opslaan");
