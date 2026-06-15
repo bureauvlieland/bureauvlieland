@@ -520,7 +520,7 @@ export const CustomerProgramItem = ({
                 <Label className="text-sm">Gewenste tijd</Label>
                 {readOnly ? (
                   <p className="text-sm mt-1.5">
-                    {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                    {formatTimeHHmm(item.confirmed_time || item.proposed_time || item.preferred_time) || "Flexibel"}
                   </p>
                 ) : isEditingTime ? (
                   item.customer_accepted_at && onCounterProposal ? (
