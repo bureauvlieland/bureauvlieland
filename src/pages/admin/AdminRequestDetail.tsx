@@ -142,6 +142,7 @@ import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksD
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
+import { NotifyHeadcountChangeDialog } from "@/components/admin/NotifyHeadcountChangeDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
@@ -469,6 +470,9 @@ const AdminRequestDetail = () => {
 
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [headcountNotifyState, setHeadcountNotifyState] = useState<
+    { open: boolean; oldPeople: number; newPeople: number } | null
+  >(null);
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
@@ -3269,6 +3273,24 @@ const AdminRequestDetail = () => {
           generalNotes={request.general_notes}
           linkedAccommodationId={request.linked_accommodation_id}
           onSuccess={() => fetchRequestData()}
+          onPeopleChanged={(oldP, newP) =>
+            setHeadcountNotifyState({ open: true, oldPeople: oldP, newPeople: newP })
+          }
+        />
+      )}
+
+      {request && headcountNotifyState && (
+        <NotifyHeadcountChangeDialog
+          open={headcountNotifyState.open}
+          onOpenChange={(o) =>
+            setHeadcountNotifyState((s) => (s ? { ...s, open: o } : null))
+          }
+          requestId={request.id}
+          linkedAccommodationId={request.linked_accommodation_id}
+          customerName={request.customer_name}
+          customerEmail={(request as any).customer_email ?? null}
+          oldPeople={headcountNotifyState.oldPeople}
+          newPeople={headcountNotifyState.newPeople}
         />
       )}
 

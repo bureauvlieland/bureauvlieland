@@ -26,6 +26,7 @@ interface EditProjectDetailsDialogProps {
   generalNotes: string | null;
   linkedAccommodationId: string | null;
   onSuccess: () => void;
+  onPeopleChanged?: (oldPeople: number, newPeople: number) => void;
 }
 
 export function EditProjectDetailsDialog({
@@ -37,6 +38,7 @@ export function EditProjectDetailsDialog({
   generalNotes: initialNotes,
   linkedAccommodationId,
   onSuccess,
+  onPeopleChanged,
 }: EditProjectDetailsDialogProps) {
   const [dates, setDates] = useState<Date[]>([]);
   const [people, setPeople] = useState(initialPeople);
@@ -110,6 +112,9 @@ export function EditProjectDetailsDialog({
       toast.success("Evenement details bijgewerkt");
       onOpenChange(false);
       onSuccess();
+      if (people !== initialPeople) {
+        onPeopleChanged?.(initialPeople, people);
+      }
     } catch (err) {
       console.error(err);
       toast.error("Fout bij opslaan");
