@@ -23,7 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
-import { ACCOMMODATION_TYPES } from "@/types/accommodation";
+import {
+  ACCOMMODATION_TYPES,
+  ROOM_TYPES,
+  ROOM_OCCUPANCY_OPTIONS,
+  LOCATION_PREFERENCES,
+  FACILITIES,
+  BUDGET_RANGES,
+} from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";

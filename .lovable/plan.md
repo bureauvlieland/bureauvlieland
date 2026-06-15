@@ -1,74 +1,39 @@
-
-# Stepper per locatie anders tonen
-
-## Probleem
-
-De `ProgramStepper` staat nu op élke tab boven de hoofdkolom met dezelfde brede horizontale layout. Daardoor lijken alle tabs visueel hetzelfde — alleen de `TabHeader` eronder verschilt, en die valt weg in de visuele zwaarte van de stepper.
-
 ## Doel
 
-- **Overzicht-pagina (`CustomerPortalSplash`)** — stepper blijft zoals hij is: groot, horizontaal, twee tracks naast elkaar, als hoofd-visual van het traject.
-- **Tab-pagina's (Logies, Programma, Praktisch, Facturatie, Akkoord)** — stepper verhuist naar de **rechterkolom** (sidebar), in een **verticale, compacte** weergave. Boven in de hoofdkolom blijft alleen de tab-eigen `TabHeader` staan, zodat de klant direct ziet waar hij is.
+De "Uw Logiesaanvraag"-kaart in de Logies-tab (status *In behandeling*) toont nu enkel datum, gasten, type en aantal kamers. Alle overige door de klant ingegeven voorkeuren (kamerverdeling, kamertypes, locatievoorkeur, faciliteiten, budget, bijzondere wensen) worden verborgen, terwijl ze wel relevant zijn — zowel voor de klant ter controle als om begrip te geven over wat er met partners is gedeeld.
 
-## Aanpak
+## Wijziging
 
-### 1. `ProgramStepper` krijgt een `variant` prop
+Eén bestand: `src/components/customer-portal/AccommodationSection.tsx` (State 4 — "Waiting for quotes", regels ~545–674).
 
-```ts
-variant?: "horizontal" | "vertical"  // default "horizontal"
-```
+Onder het bestaande detail-grid en boven het status-/wacht-blok voegen we een uitklapbaar blok **"Uw wensen"** toe dat alleen wordt getoond als er minstens één extra veld is ingevuld. Default ingeklapt om de kaart compact te houden.
 
-- `horizontal` (huidig) — twee tracks onder elkaar, mini-stappen horizontaal met connectorlijntjes, gebruikt op Overzicht.
-- `vertical` — compacte sidebar-variant:
-  - Smallere kaart (past in 320px sidebar-kolom).
-  - Per track: titel + lijst van stappen **onder elkaar** (icoon links, label rechts, verticale connectorlijn tussen circles).
-  - Statusregel onder elke track blijft, maar compacter (kleinere tekst).
-  - CTA-knop full-width onder de statusregel.
-  - Geen mobile-collapse-toggle (verticaal is altijd al compact).
+### Velden die we tonen (alleen indien gevuld)
 
-Logica voor track-builders (`buildLodgingTrack`, `buildProgramTrack`) en alle props blijven 1-op-1. Alleen `TrackRow` render-helpers krijgen een variant-tak.
+| Veld (DB)                         | Label                | Render                                                            |
+| --------------------------------- | -------------------- | ----------------------------------------------------------------- |
+| `room_occupancy`                  | Kamerbezetting       | Label uit `ROOM_OCCUPANCY_OPTIONS`                                |
+| `room_types[]`                    | Gewenste kamertypes  | Badges uit `ROOM_TYPES`                                           |
+| `location_preference[]`           | Locatievoorkeur      | Badges uit `LOCATION_PREFERENCES` (icoon + label)                 |
+| `facilities_required[]`           | Gewenste faciliteiten| Badges uit `FACILITIES`                                           |
+| `budget_range`                    | Budget               | Label uit `BUDGET_RANGES`                                         |
+| `special_requests`                | Bijzondere wensen    | Multi-line tekst (`whitespace-pre-line`)                          |
 
-### 2. `DesktopProgramView` herindelen
+`admin_notes` blijft volgens uw keuze **niet zichtbaar** voor de klant (blijft intern).
 
-- `ProgramStepper` **verwijderen** uit de hoofdkolom (boven de tab-content).
-- `ProgramSidebar` (rechterkolom, 320px) toont bovenaan `<ProgramStepper variant="vertical" />`, daarboven/daaronder de bestaande sidebar-inhoud.
-- `TabHeader` blijft bovenaan de hoofdkolom — dat is nu visueel de duidelijke "waar ben ik"-marker.
+### UI
 
-### 3. `MobileProgramView`
+- Sectie onder bestaand grid, boven status-banner.
+- Header: kleine titel "Uw wensen" + chevron + "Bewerken"-link (hergebruikt bestaande `onEditAccommodation` indien aanwezig).
+- Default `<details>`/collapsible ingeklapt; bij ≤2 ingevulde velden direct uitgeklapt tonen.
+- Gebruikt bestaande `Badge`/`Card`-tokens — geen nieuwe design tokens.
 
-Mobile heeft geen rechterkolom. Twee opties:
-- **Voorkeur**: stepper helemaal verbergen op de tab-pagina's mobiel (de `TabHeader` + bottom-nav zijn genoeg), en alleen op een nieuwe sectie/sheet "Voortgang" tonen via een knop in de bottom-nav of header.
-- **Alternatief**: stepper boven content laten staan in `variant="vertical"`, ingeklapt achter een "Toon voortgang"-toggle.
+### Niet in scope
 
-Default in dit plan: **alternatief** (verticaal + ingeklapt) — minder ingrijpend, behoudt zichtbaarheid voor wie 'm wil zien.
-
-### 4. `CustomerPortalSplash` — ongewijzigd
-
-Stepper blijft daar `variant="horizontal"` (default), groot in beeld.
-
-### 5. `ProgramSidebar`
-
-Krijgt een nieuwe top-sectie waar de verticale stepper wordt geplaatst, boven de huidige sidebar-content (contact, snel-acties, etc.).
+- State 2 (gekozen offerte) en State 0 (cancelled) blijven ongewijzigd.
+- Geen wijziging in datamodel of edge functions.
+- Geen wijziging in de oude `AccommodationRequestSummary` op `/logies/:token` (legacy pagina).
 
 ## Bestanden
 
-**Aangepast**
-- `src/components/customer-portal/ProgramStepper.tsx` — `variant` prop + verticale render-tak in `TrackRow`/hoofdcomponent.
-- `src/components/customer-portal/DesktopProgramView.tsx` — stepper uit hoofdkolom; doorgeven aan `ProgramSidebar`.
-- `src/components/customer-portal/ProgramSidebar.tsx` — nieuwe prop `stepperSlot?: ReactNode` (of stepper-props doorgeven), bovenaan tonen.
-- `src/components/customer-portal/MobileProgramView.tsx` — stepper omzetten naar `variant="vertical"` + collapsible "Toon voortgang".
-
-**Ongewijzigd**
-- `CustomerPortalSplash.tsx` (overzichts-hero).
-- `TabHeader.tsx` / `tabHeaderConfig.ts` (al goed per tab).
-- Onderliggende statuslogica.
-
-## Buiten scope
-
-- Geen wijziging aan de track-logica zelf (welke stap actief/done is).
-- Geen wijziging aan de Overzicht-pagina.
-- Geen e-mail / DB / edge-function wijzigingen.
-
-## Open keuze (1 vraag)
-
-**Mobile:** stepper op tab-pagina's verbergen (alleen op Overzicht zichtbaar), of compact-ingeklapt boven de content? Default in dit plan: **compact-ingeklapt boven content**.
+- `src/components/customer-portal/AccommodationSection.tsx` — uitbreiding van State 4 met "Uw wensen"-blok.
