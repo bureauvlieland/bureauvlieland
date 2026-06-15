@@ -29,6 +29,7 @@ import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
