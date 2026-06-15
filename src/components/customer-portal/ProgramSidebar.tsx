@@ -82,24 +82,8 @@ export const ProgramSidebar = ({
         className
       )}
     >
-      {/* Status summary - checklist variant */}
-      <StatusSummary
-        total={statusSummary.total}
-        confirmed={statusSummary.confirmed}
-        pending={statusSummary.pending}
-        alternative={statusSummary.alternative}
-        progress={statusSummary.progress}
-        variant="checklist"
-        billingComplete={billingComplete}
-        hasAccommodation={hasAccommodation}
-        accommodationStatus={accommodationStatus}
-        termsAccepted={termsAccepted}
-        isMultiDay={isMultiDay}
-         isPreApproval={isPreApproval}
-         quoteStatus={quoteStatus}
-        customerApprovedCount={statusSummary.counter_proposed !== undefined ? (items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at).length) : 0}
-        customerApprovableCount={items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled").length}
-      />
+      {/* Status checklist verplaatst naar ProgramStepper bovenaan de hoofdkolom. */}
+
 
 
 
