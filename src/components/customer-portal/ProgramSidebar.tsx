@@ -1,4 +1,5 @@
-import { StatusSummary } from "./StatusSummary";
+// StatusSummary is intentionally not rendered here anymore — the new
+// ProgramStepper above the main content is the single source of voortgang.
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
@@ -81,24 +82,8 @@ export const ProgramSidebar = ({
         className
       )}
     >
-      {/* Status summary - checklist variant */}
-      <StatusSummary
-        total={statusSummary.total}
-        confirmed={statusSummary.confirmed}
-        pending={statusSummary.pending}
-        alternative={statusSummary.alternative}
-        progress={statusSummary.progress}
-        variant="checklist"
-        billingComplete={billingComplete}
-        hasAccommodation={hasAccommodation}
-        accommodationStatus={accommodationStatus}
-        termsAccepted={termsAccepted}
-        isMultiDay={isMultiDay}
-         isPreApproval={isPreApproval}
-         quoteStatus={quoteStatus}
-        customerApprovedCount={statusSummary.counter_proposed !== undefined ? (items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at).length) : 0}
-        customerApprovableCount={items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled").length}
-      />
+      {/* Status checklist verplaatst naar ProgramStepper bovenaan de hoofdkolom. */}
+
 
 
 

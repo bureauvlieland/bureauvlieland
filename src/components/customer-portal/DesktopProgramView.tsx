@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgramSidebar } from "./ProgramSidebar";
+import { ProgramStepper, type StepId } from "./ProgramStepper";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
@@ -204,10 +205,47 @@ export const DesktopProgramView = ({
     accommodationSection?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const accommodationStatus: "none" | "requested" | "selected" =
+    accommodationQuotes.some((q) => q.status === "selected")
+      ? "selected"
+      : accommodation
+        ? "requested"
+        : "none";
+  const customerApprovedCount = program.items.filter(
+    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at,
+  ).length;
+  const customerApprovableCount = program.items.filter(
+    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled",
+  ).length;
+
+  const handleStepAction = (stepId: StepId) => {
+    if (stepId === "lodging") {
+      scrollToAccommodation();
+    } else if (stepId === "providers" || stepId === "approve") {
+      document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
+    } else if (stepId === "billing_terms") {
+      if (!billingComplete) onOpenBilling();
+      else scrollToTerms();
+    }
+  };
+
   return (
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
+        {/* Voortgang stepper — bovenaan, vervangt sidebar checklist */}
+        <ProgramStepper
+          statusSummary={statusSummary}
+          billingComplete={billingComplete}
+          termsAccepted={termsAccepted}
+          isMultiDay={isMultiDay}
+          accommodationStatus={accommodationStatus}
+          customerApprovedCount={customerApprovedCount}
+          customerApprovableCount={customerApprovableCount}
+          quoteStatus={program.quote_status}
+          onStepAction={handleStepAction}
+        />
+
         {/* 1. Hero header - compact overview */}
         <ProgramOverviewCard
           selectedDates={selectedDates}
@@ -226,6 +264,7 @@ export const DesktopProgramView = ({
           onEdit={onOpenEdit}
           hasPendingItems={statusSummary.pending > 0}
         />
+
 
         {/* 2. Action required card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}
         {(initialSection === "program" || !initialSection) && (
