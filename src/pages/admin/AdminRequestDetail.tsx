@@ -2529,6 +2529,49 @@ const AdminRequestDetail = () => {
                                                 </TooltipProvider>
                                               );
                                             })()}
+                                            {(() => {
+                                              // Toggle "Wacht op klantgoedkeuring" voor partner-items die nog niet uit zijn.
+                                              if (item.provider_id === "bureau") return null;
+                                              if (!item.skip_partner_notification) return null;
+                                              const isWaitingForCustomer = !!(item as any).awaiting_customer_for_partner_send;
+                                              return (
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={async () => {
+                                                          const next = !isWaitingForCustomer;
+                                                          const { error } = await supabase
+                                                            .from("program_request_items")
+                                                            .update({ awaiting_customer_for_partner_send: next })
+                                                            .eq("id", item.id);
+                                                          if (error) {
+                                                            toast.error("Kon vlag niet bijwerken");
+                                                          } else {
+                                                            toast.success(
+                                                              next
+                                                                ? "Partner-aanvraag wacht op klantgoedkeuring"
+                                                                : "Partner-aanvraag mag nu uitgaan",
+                                                            );
+                                                            fetchRequestData({ silent: true });
+                                                          }
+                                                        }}
+                                                        className={`h-8 w-8 ${isWaitingForCustomer ? "text-amber-700 bg-amber-50 hover:bg-amber-100" : "text-slate-500 hover:text-slate-700"}`}
+                                                      >
+                                                        <Clock className="h-4 w-4" />
+                                                      </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                      {isWaitingForCustomer
+                                                        ? "Wacht op klantgoedkeuring — klik om vlag te verwijderen"
+                                                        : "Markeer: wacht met partner-aanvraag tot klant heeft goedgekeurd"}
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              );
+                                            })()}
                                             <Button
                                               variant="ghost"
                                               size="icon"
