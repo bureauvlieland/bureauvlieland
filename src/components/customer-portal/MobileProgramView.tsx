@@ -486,11 +486,6 @@ export const MobileProgramView = ({
                     )}
                   </CustomerTimeline>
                 </div>
-                {dayItems.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    Geen activiteiten op deze dag
-                  </p>
-                )}
                 {dayPricedItems.length > 0 && (
                   <div className="flex items-center justify-between pt-3 mt-3 border-t text-sm">
                     <span className="text-muted-foreground">Dagtotaal</span>
