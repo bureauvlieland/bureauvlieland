@@ -266,11 +266,13 @@ export const MobileProgramView = ({
         termsAccepted={termsAccepted}
         isMultiDay={isMultiDay}
         accommodationStatus={accommodationStatus}
+        accommodationQuoteReceivedCount={accommodationQuotes.filter((q) => q.status === "submitted").length}
         customerApprovedCount={customerApprovedCount}
         customerApprovableCount={customerApprovableCount}
         quoteStatus={program.quote_status}
         onStepAction={handleStepAction}
       />
+
 
 
       {/* 1. Program Overview Card */}
