@@ -564,7 +564,7 @@ export const CustomerProgramItem = ({
                 ) : (
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-sm">
-                      {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                      {formatTimeHHmm(item.confirmed_time || item.proposed_time || item.preferred_time) || "Flexibel"}
                     </span>
                     <Button
                       size="sm"
