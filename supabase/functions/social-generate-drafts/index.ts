@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     if (sources.partners) {
       const { data: partners } = await supabase
         .from("partners")
-        .select("id, name, short_description, image_url, updated_at")
+        .select("id, name, location_description, image_url, updated_at")
         .eq("is_active", true)
         .gte("updated_at", fourteenDaysAgo)
         .limit(5);
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         candidates.push({
           source_type: "partner",
           source_id: p.id,
-          summary: `Partner "${p.name}": ${p.short_description ?? ""}`.slice(0, 600),
+          summary: `Partner "${p.name}": ${p.location_description ?? ""}`.slice(0, 600),
           image_url: p.image_url ?? null,
           hint: "Stel deze partner kort voor",
         });
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
       // 1 partner spotlight per run (roteert vanzelf door updated_at desc)
       const { data: spot } = await supabase
         .from("partners")
-        .select("id, name, short_description, image_url")
+        .select("id, name, location_description, image_url")
         .eq("is_active", true)
         .eq("is_public", true)
         .order("updated_at", { ascending: true })
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
         candidates.push({
           source_type: "partner_spotlight",
           source_id: spot.id,
-          summary: `Partner in spotlight: ${spot.name}. ${spot.short_description ?? ""}`.slice(0, 600),
+          summary: `Partner in spotlight: ${spot.name}. ${spot.location_description ?? ""}`.slice(0, 600),
           image_url: spot.image_url ?? null,
           hint: "Wekelijkse partner-spotlight, persoonlijk en warm",
         });
