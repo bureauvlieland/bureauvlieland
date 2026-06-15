@@ -405,6 +405,66 @@ export function PublishChangesDialog({
             </div>
           )}
 
+          {liveChangedCount > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Akkoordstatus na deze wijzigingen</Label>
+              <p className="text-xs text-muted-foreground">
+                {liveChangedCount} onderdeel{liveChangedCount !== 1 ? "en" : ""} was al live.
+                Bepaal per kant of het bestaande akkoord blijft staan of opnieuw moet worden bevestigd.
+                Dit staat los van of er een mail uitgaat.
+              </p>
+              <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Klant</div>
+                  <RadioGroup
+                    value={approvalCustomer}
+                    onValueChange={(v) => setApprovalCustomer(v as "reset" | "keep")}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ac-reset" value="reset" className="mt-0.5" />
+                      <Label htmlFor="ac-reset" className="cursor-pointer text-sm font-normal leading-snug">
+                        Klant moet opnieuw akkoord geven
+                        <div className="text-xs text-muted-foreground">"Klant akkoord"-stempel wordt verwijderd.</div>
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ac-keep" value="keep" className="mt-0.5" />
+                      <Label htmlFor="ac-keep" className="cursor-pointer text-sm font-normal leading-snug">
+                        Klant is al akkoord
+                        <div className="text-xs text-muted-foreground">Bestaand akkoord blijft staan.</div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Partner</div>
+                  <RadioGroup
+                    value={approvalPartner}
+                    onValueChange={(v) => setApprovalPartner(v as "reset" | "keep")}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ap-reset" value="reset" className="mt-0.5" />
+                      <Label htmlFor="ap-reset" className="cursor-pointer text-sm font-normal leading-snug">
+                        Partner moet opnieuw bevestigen
+                        <div className="text-xs text-muted-foreground">"Partner bevestigd"-stempel en bevestigde tijd worden verwijderd.</div>
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ap-keep" value="keep" className="mt-0.5" />
+                      <Label htmlFor="ap-keep" className="cursor-pointer text-sm font-normal leading-snug">
+                        Partner heeft al bevestigd
+                        <div className="text-xs text-muted-foreground">Bestaande bevestiging blijft staan.</div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+            </div>
+          )}
+
+
           <div className="space-y-2">
             <Label className="text-sm font-medium">Ontvangers (optioneel)</Label>
             <p className="text-xs text-muted-foreground">
