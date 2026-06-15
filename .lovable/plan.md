@@ -1,99 +1,85 @@
+
+# Klantpagina: duidelijker per tab, één traject-lint
+
 ## Probleem
 
-De huidige "Voortgang"-card mengt twee fundamenteel verschillende klanttrajecten in één lineaire stepper:
+Elke tab (Logies, Programma, Praktisch, Facturatie, Akkoord) opent met dezelfde twee blokken:
+1. `ProgramStepper` — "Uw aanvraag" / "Uw voorstel" voortgang
+2. `ProgramOverviewCard` — datums, personen, referentie, status
 
-1. **Logies** = aparte aanvraag met eigen portaal, eigen offertes van logies-aanbieders, eigen beslismoment.
-2. **Programma** = activiteiten/onderdelen die door aanbieders bevestigd en door de klant goedgekeurd worden, met daarna factuurgegevens + voorwaarden.
+Daardoor lijkt elke tab op elkaar en zie je niet meteen waar je bent. Ook is het traject op de Overzicht-pagina (`CustomerPortalSplash` — kolom met Logies- en Programma-kaartjes) visueel iets totaal anders dan de stepper bovenaan de tabs. Inconsistent.
 
-Concrete pijnpunten op de screenshot:
-- "Logies kiezen" staat als stap 1 vóór "Aanbieders bevestigen" terwijl die twee parallelle sporen zijn, geen volgordelijke. De klant krijgt de indruk dat het programma "wacht" op de logies.
-- **"Offertes bekijken"** is dubbelzinnig: in deze context bedoelt het logies-offertes, maar de klant kent ook een programma/bureau-offerte. De knop scrollt nu blind naar `#accommodation` ook als er nog 0 offertes binnen zijn.
-- "**Nu aan u**: Offertes worden verzameld" is feitelijk onjuist — in deze fase is er níets aan de klant. We jagen de klant met een primaire CTA terwijl het bureau aan zet is.
-- Terminologie wisselt: "offertes" (logies), "offerte" (programma/bureau), "aanbieders" (programma-partners), "logies-aanbieders" — niet consistent.
+## Doel
 
-## Voorgestelde oplossing
+- Elke tab heeft één **tab-eigen header** die direct zegt: "dit is de Logies-tab / Programma-tab / …", met de status van precies dát onderwerp.
+- Eén **traject-lint** dat overal hetzelfde oogt — op de Overzicht-pagina én bovenaan de tabs — zodat de klant zich altijd kan plaatsen ("waar zit ik in het proces?").
+- Geen dubbele "Uw aanvraag/Uw voorstel"-kaarten meer op elke tab.
 
-### 1. Twee parallelle tracks in plaats van één lange stepper
+## Aanpak
 
-Vervang de huidige horizontale 4-staps stepper door een card met **twee duidelijk gescheiden tracks**, gestapeld onder elkaar:
+### 1. Eén `JourneyRibbon` component (nieuw)
 
-```text
-┌─ Uw aanvraag ────────────────────────── Status: in afstemming ─┐
-│                                                                │
-│  LOGIES  (alleen bij meerdaags)                                │
-│  ●━━━━━━●━━━━━━○                                               │
-│  Aanvraag    Offertes      Logies                              │
-│  ingediend   vergelijken   vastgelegd                          │
-│  ▸ "Wij verzamelen logies-offertes — u hoeft nu niets te doen."│
-│                                                                │
-│  ─────────────────────────────────────────────────────────     │
-│                                                                │
-│  PROGRAMMA                                                     │
-│  ●━━━━━━○━━━━━━○                                               │
-│  Aanbieders   Onderdelen    Gegevens &                         │
-│  bevestigen   goedkeuren    voorwaarden                        │
-│  ▸ "0 van 6 onderdelen bevestigd door aanbieders."             │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
-```
+Eén dunne horizontale balk, twee parallelle tracks (Logies + Programma), met huidige stap gemarkeerd. Wordt:
+- **Op Overzicht** groot getoond als hoofdfocus (vervangt de huidige kolom met twee kaartjes als hero, of wordt erboven gezet — zie keuze hieronder).
+- **Op elke tab** in compacte variant (1 regel hoog, sticky onder de tab-balk) — vervangt de huidige `ProgramStepper`.
 
-Beide tracks tonen eigen mini-stappen, eigen sub-tekst en eigen CTA-regel onderaan (alleen wanneer er werkelijk iets aan de klant is). Eéndaagse aanvragen tonen alleen het programma-blok.
+Visueel hetzelfde lint, twee densities (`variant="full" | "compact"`). Klikbaar: een stap aanklikken springt naar de juiste tab/sectie.
 
-### 2. CTA-regels alleen wanneer de klant aan zet is
+### 2. Tab-headers (nieuw, per tab)
 
-Vervang de huidige "Nu aan u"-balk door **per track één regel** die de daadwerkelijke ownership uitspreekt:
+Elke tab krijgt een korte, tab-specifieke header bovenaan de content (ná het lint, in plaats van de generieke `ProgramOverviewCard`):
 
-| Track + status | Tekst | CTA |
-|---|---|---|
-| Logies — aangevraagd, 0 offertes binnen | "Wij verzamelen logies-offertes voor u. U hoeft nu niets te doen." | (geen knop, alleen subtiele link "Status logies") |
-| Logies — ≥1 offerte binnen | "Vergelijk de binnengekomen logies-offertes en kies uw favoriet." | **Logies-offertes vergelijken** → scrollt naar `#accommodation` |
-| Logies — selected | "Logies vastgelegd." | (geen knop, evt. "Logies bekijken") |
-| Programma — aanbieders bezig | "Aanbieders bevestigen uw onderdelen. U hoort van ons zodra u kunt goedkeuren." | (geen knop) |
-| Programma — klaar voor goedkeuren | "U kunt nu uw programma-onderdelen goedkeuren." | **Onderdelen goedkeuren** |
-| Programma — goedgekeurd | "Vul uw factuurgegevens aan en onderteken de voorwaarden." | **Gegevens invullen** / **Ondertekenen** |
+| Tab | Titel | Subregel | Status-badge |
+|---|---|---|---|
+| Logies | "Uw logies" | "Vergelijk offertes en kies waar u slaapt." | aantal offertes / gekozen |
+| Programma | "Uw programma" | "Bekijk de activiteiten en geef per onderdeel akkoord." | X/Y bevestigd |
+| Praktisch | "Praktische info" | "Boot, fietsen, bagage, kaart." | — |
+| Facturatie | "Facturatiegegevens" | "Aan wie sturen we de factuur?" | compleet / onvolledig |
+| Akkoord | "Akkoord & voorwaarden" | "Laatste stap: bevestig en onderteken." | ondertekend / open |
 
-Daarmee verdwijnt de misleidende "Offertes bekijken"-knop in fases waarin er nog niets te bekijken is.
+De `ProgramOverviewCard` (datums, personen, kenmerk) wordt verplaatst naar de **Overzicht-tab** als enige plek (waar hij thuishoort als "samenvatting van de aanvraag"). Op andere tabs verdwijnt hij — datums/personen staan al in het lint en/of de tab-header als chip.
 
-### 3. Consistente terminologie over de hele klantpagina
+### 3. Overzicht-pagina herzien
 
-Vaststellen en overal doorvoeren:
+`CustomerPortalSplash` wordt:
+- Hero-foto (blijft).
+- Welkom + datums + personen + kenmerk (compact, één regel chips).
+- **`JourneyRibbon` variant="full"** — vervangt de twee losse kaartjes "Logies" + "Programma" als primaire visual.
+- Daaronder kort blok "wat is de eerstvolgende stap?" met één CTA (de actuele actie).
+- Contact onderaan.
 
-| Begrip | Vaste term | Wat het niet meer mag heten |
-|---|---|---|
-| Aanbod van een logies-aanbieder | **logies-offerte** | "offerte" (zonder context), "aanbieding" |
-| Aanbod van Bureau Vlieland voor het hele project | **programma-offerte** | "offerte" (zonder context) |
-| Partner die een programma-onderdeel uitvoert | **aanbieder** | "partner", "uitvoerder", "leverancier" |
-| Partner die logies levert | **logies-aanbieder** | "logies-partner", "accommodatie-partner" |
-| Eén regel in het programma | **onderdeel** | "activiteit" (alleen voor sub-types), "item", "blokje" |
-| Klant zegt JA tegen onderdeel | **goedkeuren** | "bevestigen" (= van de aanbieder) |
-| Aanbieder zegt beschikbaar | **bevestigen** | "goedkeuren", "accepteren" |
-| Klant tekent voorwaarden | **ondertekenen** | "akkoord geven", "bevestigen" |
+Zo zien klanten op de Overzicht-pagina precies dezelfde tracks/stappen als wat ze later compact terugzien op elke tab — leerbaar en consistent.
 
-Glossary-tooltip in de card uitbreiden zodat de klant deze drie werkwoorden uit elkaar kan houden ("aanbieder bevestigt", "u keurt goed", "u ondertekent").
+### 4. Stepper opruimen
 
-### 4. Card-titel + sub
+`ProgramStepper.tsx` wordt vervangen door `JourneyRibbon`. De huidige interne logica (`buildLodgingTrack`, `buildProgramTrack`, `accommodationQuoteReceivedCount`, `customerApprovedCount`, enz.) blijft 1-op-1 gehandhaafd in `JourneyRibbon` — alleen de presentatie verandert en er komt een `variant` prop bij.
 
-- Header: **"Uw aanvraag"** met rechtsboven een statusbadge (bv. *"In afstemming"* / *"Klaar voor goedkeuring"* / *"Definitief"*) i.p.v. de huidige "Stap X van 4" — die telling klopt niet meer in twee parallelle tracks.
-- Sub onder header: één zin die het bredere overzicht geeft, bv. "U volgt hier de status van uw logies én uw programma."
+### Terminologie (consistent overal)
 
-## Implementatie
+- "Logies-offertes" (niet "logies-aanbieders")
+- "Programma-onderdelen" (niet "activiteiten" in stappen, wel toegestaan in vloeiende tekst)
+- "Goedkeuren" = klant-actie, "Bevestigen" = aanbieder-actie
+- "Uw aanvraag" verdwijnt als kop op tabs (wordt verwarrend) — komt alleen nog terug op Overzicht.
 
-### Te wijzigen bestanden
+## Bestanden
 
-| Bestand | Wijziging |
-|---|---|
-| `src/components/customer-portal/ProgramStepper.tsx` | Refactor: één component met **twee sub-tracks** (`LodgingTrack`, `ProgramTrack`). Logica voor "wie is aan zet" per track. Mobiele weergave: per track een eigen compacte pill met aparte expand. |
-| `src/components/customer-portal/DesktopProgramView.tsx` | Nieuwe props doorgeven: `accommodationQuoteCount`, behoud van bestaande scroll-handlers. `handleStepAction` uitbreiden voor de twee tracks. |
-| `src/components/customer-portal/MobileProgramView.tsx` | Idem als Desktop. |
-| `src/components/customer-portal/CustomerPortalSplash.tsx` | Terminologie-pass: "offertes" → "logies-offertes" / "programma-offerte" waar nodig. |
-| `src/components/customer-portal/DesktopProgramView.tsx` + `MobileProgramView.tsx` | Verwijder de losse "Logies nog niet geregeld"-banner als de nieuwe track die info al toont; voorkom dubbele meldingen. |
-| `src/components/accommodation-portal/*` | Terminologie-check: "aanbieders" voor logies-aanbieders consequent als "logies-aanbieders" labelen. |
+**Nieuw**
+- `src/components/customer-portal/JourneyRibbon.tsx` — vervanger van `ProgramStepper`, met `variant="full" | "compact"`
+- `src/components/customer-portal/TabHeader.tsx` — herbruikbare tab-eigen header (titel + subregel + status-badge + chips)
 
-### Geen wijzigingen aan
+**Aangepast**
+- `DesktopProgramView.tsx` + `MobileProgramView.tsx` — `ProgramStepper` → `JourneyRibbon variant="compact"`; `ProgramOverviewCard` alleen nog op Overzicht-pad; per-tab een `<TabHeader>` invoegen.
+- `CustomerPortalSplash.tsx` — twee kaartjes-kolom vervangen door `JourneyRibbon variant="full"` + één duidelijke "volgende stap" CTA.
+- `ProgramStepper.tsx` — verwijderd (of dunne re-export naar `JourneyRibbon` voor backward compat).
+- Tab-componenten (`AccommodationSection`, `PracticalView`, `BillingDetailsCard`/`CompactBillingSection`, `AcceptView`) — verwijder eigen koppen waar die nu dubbel komen met `TabHeader`.
 
-- Onderliggende status-logica (`statusSummary`, `accommodation_quotes.status`, etc.) — alleen presentatie.
-- E-mails / edge functions / database — uitsluitend front-end UX.
+## Buiten scope
 
-## Open punt voor de klant (optioneel)
+- Geen wijzigingen aan onderliggende statuslogica, e-mails, DB of edge functions.
+- Geen verandering aan de Overzicht-foto-mozaïek.
+- Geen wijziging aan mobile bottom-nav (`MobileBottomNav` blijft).
 
-Wanneer er **geen logies-track is** (één-daags) gaat de programma-track in zijn eentje over de hele breedte. Wil je dat we in dat geval extra ruimte gebruiken voor grotere icoontjes/labels, of behouden we exact dezelfde compacte hoogte als nu? — Default: compact houden, geen herontwerp per case.
+## Open keuze (1 vraag)
+
+Op de Overzicht-pagina: moet de `JourneyRibbon` (full) **bovenaan vóór de welkomsttekst** komen (proces direct centraal), of **na de welkomsttekst** (eerst persoonlijk, dan proces)?  
+Default voorstel: **ná de welkomsttekst** — sluit aan op de huidige formele toon ("Welkom, …" eerst, dan "zo verloopt het").

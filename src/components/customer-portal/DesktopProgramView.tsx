@@ -20,6 +20,8 @@ import { GuestDetailsCard } from "./GuestDetailsCard";
 import { CompactBillingSection } from "./CompactBillingSection";
 import { PracticalView } from "./PracticalView";
 import { AcceptView } from "./AcceptView";
+import { TabHeader } from "./TabHeader";
+import { buildTabHeader } from "./tabHeaderConfig";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
@@ -39,7 +41,7 @@ import {
   BedDouble,
   MoreHorizontal,
   Download,
-  FileText,
+  
   CalendarPlus,
   Sparkles,
 } from "lucide-react";
@@ -229,11 +231,31 @@ export const DesktopProgramView = ({
     }
   };
 
+  const tabSection = initialSection ?? "program";
+  const tabHeaderConfig = buildTabHeader({
+    section: tabSection,
+    statusSummary,
+    accommodationQuotes,
+    hasAccommodationRequest: !!accommodation,
+    billingComplete,
+    termsAccepted,
+    customerApprovedCount,
+    customerApprovableCount,
+  });
+
   return (
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
-        {/* Voortgang stepper — bovenaan, vervangt sidebar checklist */}
+        {/* Tab-eigen header — vertelt direct WAT deze tab is en de status van dít onderwerp */}
+        <TabHeader
+          {...tabHeaderConfig}
+          selectedDates={selectedDates}
+          numberOfPeople={program.number_of_people}
+          referenceNumber={program.reference_number}
+        />
+
+        {/* Voortgang stepper — overal hetzelfde traject-lint, zodat klant zich kan plaatsen */}
         <ProgramStepper
           statusSummary={statusSummary}
           billingComplete={billingComplete}
@@ -248,29 +270,27 @@ export const DesktopProgramView = ({
         />
 
 
-        {/* 1. Hero header - compact overview */}
-        <ProgramOverviewCard
-          selectedDates={selectedDates}
-          numberOfPeople={program.number_of_people}
-          customerCompany={program.customer_company}
-          accommodation={accommodation}
-          accommodationQuotes={accommodationQuotes}
-          referenceNumber={program.reference_number}
-          accommodationReferenceNumber={accommodation?.reference_number}
-          programType={program.origin as any}
-          origin={program.origin}
-          quoteStatus={program.quote_status as any}
-          quoteValidUntil={program.quote_valid_until}
-          termsAcceptedAt={program.terms_accepted_at}
-          programDescription={program.program_description}
-          onEdit={onOpenEdit}
-          hasPendingItems={statusSummary.pending > 0}
-        />
-
-
-        {/* 2. Action required card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}
+        {/* 2. Action required card + Intro card + programma-samenvatting — alleen op Programma tab */}
         {(initialSection === "program" || !initialSection) && (
           <>
+            <ProgramOverviewCard
+              selectedDates={selectedDates}
+              numberOfPeople={program.number_of_people}
+              customerCompany={program.customer_company}
+              accommodation={accommodation}
+              accommodationQuotes={accommodationQuotes}
+              referenceNumber={program.reference_number}
+              accommodationReferenceNumber={accommodation?.reference_number}
+              programType={program.origin as any}
+              origin={program.origin}
+              quoteStatus={program.quote_status as any}
+              quoteValidUntil={program.quote_valid_until}
+              termsAcceptedAt={program.terms_accepted_at}
+              programDescription={program.program_description}
+              onEdit={onOpenEdit}
+              hasPendingItems={statusSummary.pending > 0}
+            />
+
             <ActionRequiredCard
               statusSummary={statusSummary}
               isMultiDay={isMultiDay}
@@ -324,13 +344,7 @@ export const DesktopProgramView = ({
         {isMultiDay && initialSection === "accommodation" && (
           <div id="accommodation" className="scroll-mt-20">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BedDouble className="h-5 w-5 text-primary" />
-                  Logies
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <AccommodationSection
                   accommodation={accommodation}
                   quotes={accommodationQuotes}
@@ -542,16 +556,6 @@ export const DesktopProgramView = ({
         {/* Billing-only view: just the financial summary */}
         {initialSection === "billing" && (
           <div className="space-y-6">
-            <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
-              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-900 dark:text-blue-100">
-                <p className="font-medium">Wat kunt u hier doen?</p>
-                <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
-                  Hier vindt u het volledige kostenoverzicht en de status van facturen.
-                  Bureau Vlieland factureert centraal — u ontvangt één factuur voor het hele programma.
-                </p>
-              </div>
-            </div>
             <div id="billing" className="scroll-mt-20">
               <CompactBillingSection
                 program={program}
