@@ -526,7 +526,7 @@ export const CustomerProgramItem = ({
                   item.customer_accepted_at && onCounterProposal ? (
                     <div className="mt-1.5 flex items-center gap-2">
                       <span className="text-sm">
-                        {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                        {formatTimeHHmm(item.confirmed_time || item.proposed_time || item.preferred_time) || "Flexibel"}
                       </span>
                       <Button
                         size="sm"
