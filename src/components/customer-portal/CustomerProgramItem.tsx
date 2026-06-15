@@ -208,12 +208,12 @@ export const CustomerProgramItem = ({
             {/* Time - only on mobile (desktop shows it in timeline column) */}
             <span className="flex items-center gap-1 font-semibold text-foreground md:hidden">
               <Clock className="h-3.5 w-3.5" />
-              {item.confirmed_time 
-                ? item.confirmed_time
+              {item.confirmed_time
+                ? formatTimeHHmm(item.confirmed_time)
                 : item.proposed_time && (item.status === "confirmed" || item.status === "alternative")
-                  ? `${item.proposed_time} (voorstel)`
-                  : item.preferred_time 
-                    ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
+                  ? `${formatTimeHHmm(item.proposed_time)} (voorstel)`
+                  : item.preferred_time
+                    ? (item.preferred_time === "flexibel" ? "Flexibel" : formatTimeHHmm(item.preferred_time))
                     : "Flexibel"}
             </span>
             {item.duration && (
