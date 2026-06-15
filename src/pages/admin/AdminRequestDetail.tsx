@@ -142,6 +142,7 @@ import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksD
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
+import { NotifyHeadcountChangeDialog } from "@/components/admin/NotifyHeadcountChangeDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
