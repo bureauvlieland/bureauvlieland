@@ -23,7 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
-import { ACCOMMODATION_TYPES } from "@/types/accommodation";
+import {
+  ACCOMMODATION_TYPES,
+  ROOM_TYPES,
+  ROOM_OCCUPANCY_OPTIONS,
+  LOCATION_PREFERENCES,
+  FACILITIES,
+  BUDGET_RANGES,
+} from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
@@ -598,6 +605,97 @@ export const AccommodationSection = ({
             </div>
           )}
         </div>
+
+        {/* Uw wensen - customer-entered preferences */}
+        {(() => {
+          const occupancyLabel = ROOM_OCCUPANCY_OPTIONS.find((o) => o.value === accommodation.room_occupancy)?.label;
+          const roomTypeLabels = (accommodation.room_types || [])
+            .map((v) => ROOM_TYPES.find((r) => r.value === v)?.label)
+            .filter(Boolean) as string[];
+          const locationLabels = (accommodation.location_preference || [])
+            .map((v) => LOCATION_PREFERENCES.find((l) => l.value === v))
+            .filter((v): v is (typeof LOCATION_PREFERENCES)[number] => !!v);
+          const facilityLabels = (accommodation.facilities_required || [])
+            .map((v) => FACILITIES.find((f) => f.value === v)?.label)
+            .filter(Boolean) as string[];
+          const budgetLabel = BUDGET_RANGES.find((b) => b.value === accommodation.budget_range)?.label;
+
+          const filledCount = [
+            occupancyLabel,
+            roomTypeLabels.length > 0,
+            locationLabels.length > 0,
+            facilityLabels.length > 0,
+            budgetLabel,
+            accommodation.special_requests,
+          ].filter(Boolean).length;
+
+          if (filledCount === 0) return null;
+
+          return (
+            <details className="rounded-lg border bg-card/50 group" open={filledCount <= 2}>
+              <summary className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                  Uw wensen ({filledCount})
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="px-3 pb-3 pt-1 space-y-3 text-sm">
+                {occupancyLabel && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Kamerbezetting</p>
+                    <p>{occupancyLabel}</p>
+                  </div>
+                )}
+                {roomTypeLabels.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Gewenste kamertypes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {roomTypeLabels.map((label, i) => (
+                        <Badge key={i} variant="secondary" className="font-normal">{label}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {locationLabels.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Locatievoorkeur</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {locationLabels.map((loc, i) => (
+                        <Badge key={i} variant="secondary" className="font-normal">
+                          <span className="mr-1">{loc.icon}</span>{loc.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {facilityLabels.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Gewenste faciliteiten</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {facilityLabels.map((label, i) => (
+                        <Badge key={i} variant="secondary" className="font-normal">{label}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {budgetLabel && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Budget</p>
+                    <p>{budgetLabel}</p>
+                  </div>
+                )}
+                {accommodation.special_requests && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Bijzondere wensen</p>
+                    <p className="whitespace-pre-line text-muted-foreground">{accommodation.special_requests}</p>
+                  </div>
+                )}
+              </div>
+            </details>
+          );
+        })()}
+
 
         {/* Status message */}
         {allDeclined ? (
