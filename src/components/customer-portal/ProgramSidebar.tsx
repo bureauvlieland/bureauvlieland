@@ -1,4 +1,5 @@
-import { StatusSummary } from "./StatusSummary";
+// StatusSummary is intentionally not rendered here anymore — the new
+// ProgramStepper above the main content is the single source of voortgang.
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
