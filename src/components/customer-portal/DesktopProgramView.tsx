@@ -231,11 +231,31 @@ export const DesktopProgramView = ({
     }
   };
 
+  const tabSection = initialSection ?? "program";
+  const tabHeaderConfig = buildTabHeader({
+    section: tabSection,
+    statusSummary,
+    accommodationQuotes,
+    hasAccommodationRequest: !!accommodation,
+    billingComplete,
+    termsAccepted,
+    customerApprovedCount,
+    customerApprovableCount,
+  });
+
   return (
     <div className="grid grid-cols-[1fr,320px] gap-8">
       {/* Main content */}
       <div className="space-y-6">
-        {/* Voortgang stepper — bovenaan, vervangt sidebar checklist */}
+        {/* Tab-eigen header — vertelt direct WAT deze tab is en de status van dít onderwerp */}
+        <TabHeader
+          {...tabHeaderConfig}
+          selectedDates={selectedDates}
+          numberOfPeople={program.number_of_people}
+          referenceNumber={program.reference_number}
+        />
+
+        {/* Voortgang stepper — overal hetzelfde traject-lint, zodat klant zich kan plaatsen */}
         <ProgramStepper
           statusSummary={statusSummary}
           billingComplete={billingComplete}
@@ -250,29 +270,27 @@ export const DesktopProgramView = ({
         />
 
 
-        {/* 1. Hero header - compact overview */}
-        <ProgramOverviewCard
-          selectedDates={selectedDates}
-          numberOfPeople={program.number_of_people}
-          customerCompany={program.customer_company}
-          accommodation={accommodation}
-          accommodationQuotes={accommodationQuotes}
-          referenceNumber={program.reference_number}
-          accommodationReferenceNumber={accommodation?.reference_number}
-          programType={program.origin as any}
-          origin={program.origin}
-          quoteStatus={program.quote_status as any}
-          quoteValidUntil={program.quote_valid_until}
-          termsAcceptedAt={program.terms_accepted_at}
-          programDescription={program.program_description}
-          onEdit={onOpenEdit}
-          hasPendingItems={statusSummary.pending > 0}
-        />
-
-
-        {/* 2. Action required card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}
+        {/* 2. Action required card + Intro card + programma-samenvatting — alleen op Programma tab */}
         {(initialSection === "program" || !initialSection) && (
           <>
+            <ProgramOverviewCard
+              selectedDates={selectedDates}
+              numberOfPeople={program.number_of_people}
+              customerCompany={program.customer_company}
+              accommodation={accommodation}
+              accommodationQuotes={accommodationQuotes}
+              referenceNumber={program.reference_number}
+              accommodationReferenceNumber={accommodation?.reference_number}
+              programType={program.origin as any}
+              origin={program.origin}
+              quoteStatus={program.quote_status as any}
+              quoteValidUntil={program.quote_valid_until}
+              termsAcceptedAt={program.terms_accepted_at}
+              programDescription={program.program_description}
+              onEdit={onOpenEdit}
+              hasPendingItems={statusSummary.pending > 0}
+            />
+
             <ActionRequiredCard
               statusSummary={statusSummary}
               isMultiDay={isMultiDay}
