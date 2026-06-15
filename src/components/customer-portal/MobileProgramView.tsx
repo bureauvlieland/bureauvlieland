@@ -252,6 +252,18 @@ export const MobileProgramView = ({
     }
   };
 
+  const tabSection = initialSection ?? "program";
+  const tabHeaderConfig = buildTabHeader({
+    section: tabSection,
+    statusSummary,
+    accommodationQuotes,
+    hasAccommodationRequest: !!accommodation,
+    billingComplete,
+    termsAccepted,
+    customerApprovedCount,
+    customerApprovableCount,
+  });
+
   return (
     <div className="space-y-4">
       {/* Mobile sticky status bar */}
@@ -261,7 +273,15 @@ export const MobileProgramView = ({
         nextAction={getNextAction()}
       />
 
-      {/* Voortgang stepper — bovenaan, mobiele compacte weergave */}
+      {/* Tab-eigen header */}
+      <TabHeader
+        {...tabHeaderConfig}
+        selectedDates={selectedDates}
+        numberOfPeople={program.number_of_people}
+        referenceNumber={program.reference_number}
+      />
+
+      {/* Voortgang stepper — overal hetzelfde traject-lint */}
       <ProgramStepper
         statusSummary={statusSummary}
         billingComplete={billingComplete}
@@ -275,26 +295,26 @@ export const MobileProgramView = ({
         onStepAction={handleStepAction}
       />
 
-
-
-      {/* 1. Program Overview Card */}
-      <ProgramOverviewCard
-        selectedDates={selectedDates}
-        numberOfPeople={program.number_of_people}
-        customerCompany={program.customer_company}
-        accommodation={accommodation}
-        accommodationQuotes={accommodationQuotes}
-        referenceNumber={program.reference_number}
-        accommodationReferenceNumber={accommodation?.reference_number}
-        programType={program.origin as any}
-        origin={program.origin}
-        quoteStatus={program.quote_status as any}
-        quoteValidUntil={program.quote_valid_until}
-        termsAcceptedAt={program.terms_accepted_at}
-        programDescription={program.program_description}
-        onEdit={onOpenEdit}
-        hasPendingItems={statusSummary.pending > 0}
-      />
+      {/* Programma-samenvatting — alleen op Programma tab */}
+      {(initialSection === "program" || !initialSection) && (
+        <ProgramOverviewCard
+          selectedDates={selectedDates}
+          numberOfPeople={program.number_of_people}
+          customerCompany={program.customer_company}
+          accommodation={accommodation}
+          accommodationQuotes={accommodationQuotes}
+          referenceNumber={program.reference_number}
+          accommodationReferenceNumber={accommodation?.reference_number}
+          programType={program.origin as any}
+          origin={program.origin}
+          quoteStatus={program.quote_status as any}
+          quoteValidUntil={program.quote_valid_until}
+          termsAcceptedAt={program.terms_accepted_at}
+          programDescription={program.program_description}
+          onEdit={onOpenEdit}
+          hasPendingItems={statusSummary.pending > 0}
+        />
+      )}
 
       {/* 2. Action Required Card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}
       {(initialSection === "program" || !initialSection) && (
