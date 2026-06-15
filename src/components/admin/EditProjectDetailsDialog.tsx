@@ -26,6 +26,7 @@ interface EditProjectDetailsDialogProps {
   generalNotes: string | null;
   linkedAccommodationId: string | null;
   onSuccess: () => void;
+  onPeopleChanged?: (oldPeople: number, newPeople: number) => void;
 }
 
 export function EditProjectDetailsDialog({
