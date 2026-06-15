@@ -51,6 +51,7 @@ interface UseCustomerProgramReturn {
   submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   acceptQuoteProposal: () => Promise<boolean>;
   approveQuoteItem: (itemId: string) => Promise<boolean>;
+  bulkApproveQuoteItems: () => Promise<{ approved: number; failed: number; autoSentToPartner: number }>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
   // Accommodation data
   accommodation: AccommodationRequest | null;
