@@ -7,7 +7,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Search, Archive } from "lucide-react";
+import { Search, Archive, Plus, BedDouble, CalendarPlus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ProjectsListTable } from "@/components/admin/projecten/ProjectsListTable";
 import { WeekPlanningView } from "@/components/admin/projecten/WeekPlanningView";
 import { fetchProjectsOverview, type RowKind } from "@/lib/getProjectsOverview";
@@ -82,6 +84,28 @@ export default function AdminProjectsOverview() {
                 Operationeel overzicht van alle lopende projecten, gesorteerd op eerstvolgende aankomst.
               </p>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Nieuw project
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/programma-nieuw" className="gap-2">
+                    <CalendarPlus className="h-4 w-4" />
+                    Nieuw programma
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/logies-aanvragen" className="gap-2">
+                    <BedDouble className="h-4 w-4" />
+                    Nieuwe logies-aanvraag
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
