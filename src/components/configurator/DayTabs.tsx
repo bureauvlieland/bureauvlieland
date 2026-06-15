@@ -58,7 +58,7 @@ export const DayTabs = ({
 
       {selectedDates.map((_, index) => (
         <TabsContent key={index} value={String(index)} className="mt-3">
-          {itemCountPerDay[index] === 0 ? (
+          {itemCountPerDay[index] === 0 && (
             <div className="py-6 text-center text-muted-foreground">
               <ShoppingCart className="h-8 w-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Geen activiteiten op deze dag</p>
@@ -66,9 +66,8 @@ export const DayTabs = ({
                 Voeg activiteiten toe of verplaats ze naar deze dag
               </p>
             </div>
-          ) : (
-            children(index)
           )}
+          {children(index)}
         </TabsContent>
       ))}
     </Tabs>
