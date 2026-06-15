@@ -265,7 +265,7 @@ export const AdminEditActivitySheet = ({
                 confirmed_time: time,
                 proposed_time: null,
                 status_note: time
-                  ? `Tijd ${time} ingesteld door admin`
+                  ? `Tijd ${formatTimeHHmm(time)} ingesteld door admin`
                   : "Tijd verwijderd door admin",
                 status_updated_at: new Date().toISOString(),
               }
