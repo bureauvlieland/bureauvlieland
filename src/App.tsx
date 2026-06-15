@@ -231,6 +231,8 @@ const App = () => {
             <Route path="/admin/projecten" element={<AdminProjectsOverview />} />
             <Route path="/admin/tickets" element={<AdminTickets />} />
             <Route path="/admin/attributie" element={<AdminAttribution />} />
+            <Route path="/admin/social" element={<AdminSocial />} />
+            <Route path="/admin/social/instellingen" element={<AdminSocialSettings />} />
             <Route path="/admin/logies-aanvragen" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />
             <Route path="/admin/programma-nieuw" element={<AdminProgramNew />} />
             <Route path="/admin/crm" element={<AdminCRM />} />
