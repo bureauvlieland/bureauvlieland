@@ -180,7 +180,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     //    Als item_ids is meegegeven, beperken we tot die subset (per-item versturen).
     let itemsQuery = supabase
       .from("program_request_items")
-      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, skip_partner_notification, customer_approved_at, status")
+      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, skip_partner_notification, customer_approved_at, status, awaiting_customer_for_partner_send")
       .eq("request_id", request_id)
       .neq("status", "cancelled");
 
@@ -192,6 +192,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (item_ids && item_ids.length > 0) {
       itemsQuery = itemsQuery.in("id", item_ids);
+    } else if (!isForce) {
+      // Bulk auto-uitvraag: sla items over die expliciet wachten op
+      // klantgoedkeuring. Per-item versturen (item_ids meegegeven) of force-mode
+      // overrulen deze vlag bewust — admin kiest dan zelf om eerder te versturen.
+      itemsQuery = itemsQuery.eq("awaiting_customer_for_partner_send", false);
     }
 
     const { data: allItems, error: itemsError } = await itemsQuery;
