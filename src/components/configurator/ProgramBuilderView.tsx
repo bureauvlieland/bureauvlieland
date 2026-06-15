@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen, MessageSquare } from "lucide-react";
+import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen, MessageSquare, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -421,14 +421,56 @@ export const ProgramBuilderView = ({
                                     />
                                   )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                                  onClick={() => onRemoveItem(item.blockId)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {selectedDates.length > 1 && !isFerryBlock && !isBikeBlock && (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                          title="Verplaats naar andere dag"
+                                        >
+                                          <CalendarDays className="h-4 w-4" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-56 p-2" align="end">
+                                        <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                          Verplaats naar dag
+                                        </p>
+                                        <div className="space-y-1">
+                                          {selectedDates.map((date, idx) => {
+                                            const isCurrent = (item.dayIndex ?? 0) === idx;
+                                            return (
+                                              <Button
+                                                key={idx}
+                                                variant={isCurrent ? "secondary" : "ghost"}
+                                                size="sm"
+                                                className="w-full justify-start text-xs h-8"
+                                                disabled={isCurrent}
+                                                onClick={() => {
+                                                  onUpdateItem(item.blockId, { dayIndex: idx });
+                                                  setActiveDay(idx);
+                                                }}
+                                              >
+                                                Dag {idx + 1} ({format(date, "d MMM", { locale: nl })})
+                                                {isCurrent && <span className="ml-auto text-muted-foreground">huidig</span>}
+                                              </Button>
+                                            );
+                                          })}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => onRemoveItem(item.blockId)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </Card>
