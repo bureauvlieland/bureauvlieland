@@ -970,6 +970,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     submitCounterProposal,
     acceptQuoteProposal,
     approveQuoteItem,
+    bulkApproveQuoteItems,
     statusSummary,
     // Accommodation
     accommodation,
