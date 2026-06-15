@@ -113,7 +113,8 @@ export const CustomerItemChangelog = ({ itemId, customerToken }: Props) => {
               </li>
             ))}
           </ul>
-        )}
+          );
+        })()}
       </PopoverContent>
     </Popover>
   );
