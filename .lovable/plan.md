@@ -1,85 +1,74 @@
 
-# Klantpagina: duidelijker per tab, één traject-lint
+# Stepper per locatie anders tonen
 
 ## Probleem
 
-Elke tab (Logies, Programma, Praktisch, Facturatie, Akkoord) opent met dezelfde twee blokken:
-1. `ProgramStepper` — "Uw aanvraag" / "Uw voorstel" voortgang
-2. `ProgramOverviewCard` — datums, personen, referentie, status
-
-Daardoor lijkt elke tab op elkaar en zie je niet meteen waar je bent. Ook is het traject op de Overzicht-pagina (`CustomerPortalSplash` — kolom met Logies- en Programma-kaartjes) visueel iets totaal anders dan de stepper bovenaan de tabs. Inconsistent.
+De `ProgramStepper` staat nu op élke tab boven de hoofdkolom met dezelfde brede horizontale layout. Daardoor lijken alle tabs visueel hetzelfde — alleen de `TabHeader` eronder verschilt, en die valt weg in de visuele zwaarte van de stepper.
 
 ## Doel
 
-- Elke tab heeft één **tab-eigen header** die direct zegt: "dit is de Logies-tab / Programma-tab / …", met de status van precies dát onderwerp.
-- Eén **traject-lint** dat overal hetzelfde oogt — op de Overzicht-pagina én bovenaan de tabs — zodat de klant zich altijd kan plaatsen ("waar zit ik in het proces?").
-- Geen dubbele "Uw aanvraag/Uw voorstel"-kaarten meer op elke tab.
+- **Overzicht-pagina (`CustomerPortalSplash`)** — stepper blijft zoals hij is: groot, horizontaal, twee tracks naast elkaar, als hoofd-visual van het traject.
+- **Tab-pagina's (Logies, Programma, Praktisch, Facturatie, Akkoord)** — stepper verhuist naar de **rechterkolom** (sidebar), in een **verticale, compacte** weergave. Boven in de hoofdkolom blijft alleen de tab-eigen `TabHeader` staan, zodat de klant direct ziet waar hij is.
 
 ## Aanpak
 
-### 1. Eén `JourneyRibbon` component (nieuw)
+### 1. `ProgramStepper` krijgt een `variant` prop
 
-Eén dunne horizontale balk, twee parallelle tracks (Logies + Programma), met huidige stap gemarkeerd. Wordt:
-- **Op Overzicht** groot getoond als hoofdfocus (vervangt de huidige kolom met twee kaartjes als hero, of wordt erboven gezet — zie keuze hieronder).
-- **Op elke tab** in compacte variant (1 regel hoog, sticky onder de tab-balk) — vervangt de huidige `ProgramStepper`.
+```ts
+variant?: "horizontal" | "vertical"  // default "horizontal"
+```
 
-Visueel hetzelfde lint, twee densities (`variant="full" | "compact"`). Klikbaar: een stap aanklikken springt naar de juiste tab/sectie.
+- `horizontal` (huidig) — twee tracks onder elkaar, mini-stappen horizontaal met connectorlijntjes, gebruikt op Overzicht.
+- `vertical` — compacte sidebar-variant:
+  - Smallere kaart (past in 320px sidebar-kolom).
+  - Per track: titel + lijst van stappen **onder elkaar** (icoon links, label rechts, verticale connectorlijn tussen circles).
+  - Statusregel onder elke track blijft, maar compacter (kleinere tekst).
+  - CTA-knop full-width onder de statusregel.
+  - Geen mobile-collapse-toggle (verticaal is altijd al compact).
 
-### 2. Tab-headers (nieuw, per tab)
+Logica voor track-builders (`buildLodgingTrack`, `buildProgramTrack`) en alle props blijven 1-op-1. Alleen `TrackRow` render-helpers krijgen een variant-tak.
 
-Elke tab krijgt een korte, tab-specifieke header bovenaan de content (ná het lint, in plaats van de generieke `ProgramOverviewCard`):
+### 2. `DesktopProgramView` herindelen
 
-| Tab | Titel | Subregel | Status-badge |
-|---|---|---|---|
-| Logies | "Uw logies" | "Vergelijk offertes en kies waar u slaapt." | aantal offertes / gekozen |
-| Programma | "Uw programma" | "Bekijk de activiteiten en geef per onderdeel akkoord." | X/Y bevestigd |
-| Praktisch | "Praktische info" | "Boot, fietsen, bagage, kaart." | — |
-| Facturatie | "Facturatiegegevens" | "Aan wie sturen we de factuur?" | compleet / onvolledig |
-| Akkoord | "Akkoord & voorwaarden" | "Laatste stap: bevestig en onderteken." | ondertekend / open |
+- `ProgramStepper` **verwijderen** uit de hoofdkolom (boven de tab-content).
+- `ProgramSidebar` (rechterkolom, 320px) toont bovenaan `<ProgramStepper variant="vertical" />`, daarboven/daaronder de bestaande sidebar-inhoud.
+- `TabHeader` blijft bovenaan de hoofdkolom — dat is nu visueel de duidelijke "waar ben ik"-marker.
 
-De `ProgramOverviewCard` (datums, personen, kenmerk) wordt verplaatst naar de **Overzicht-tab** als enige plek (waar hij thuishoort als "samenvatting van de aanvraag"). Op andere tabs verdwijnt hij — datums/personen staan al in het lint en/of de tab-header als chip.
+### 3. `MobileProgramView`
 
-### 3. Overzicht-pagina herzien
+Mobile heeft geen rechterkolom. Twee opties:
+- **Voorkeur**: stepper helemaal verbergen op de tab-pagina's mobiel (de `TabHeader` + bottom-nav zijn genoeg), en alleen op een nieuwe sectie/sheet "Voortgang" tonen via een knop in de bottom-nav of header.
+- **Alternatief**: stepper boven content laten staan in `variant="vertical"`, ingeklapt achter een "Toon voortgang"-toggle.
 
-`CustomerPortalSplash` wordt:
-- Hero-foto (blijft).
-- Welkom + datums + personen + kenmerk (compact, één regel chips).
-- **`JourneyRibbon` variant="full"** — vervangt de twee losse kaartjes "Logies" + "Programma" als primaire visual.
-- Daaronder kort blok "wat is de eerstvolgende stap?" met één CTA (de actuele actie).
-- Contact onderaan.
+Default in dit plan: **alternatief** (verticaal + ingeklapt) — minder ingrijpend, behoudt zichtbaarheid voor wie 'm wil zien.
 
-Zo zien klanten op de Overzicht-pagina precies dezelfde tracks/stappen als wat ze later compact terugzien op elke tab — leerbaar en consistent.
+### 4. `CustomerPortalSplash` — ongewijzigd
 
-### 4. Stepper opruimen
+Stepper blijft daar `variant="horizontal"` (default), groot in beeld.
 
-`ProgramStepper.tsx` wordt vervangen door `JourneyRibbon`. De huidige interne logica (`buildLodgingTrack`, `buildProgramTrack`, `accommodationQuoteReceivedCount`, `customerApprovedCount`, enz.) blijft 1-op-1 gehandhaafd in `JourneyRibbon` — alleen de presentatie verandert en er komt een `variant` prop bij.
+### 5. `ProgramSidebar`
 
-### Terminologie (consistent overal)
-
-- "Logies-offertes" (niet "logies-aanbieders")
-- "Programma-onderdelen" (niet "activiteiten" in stappen, wel toegestaan in vloeiende tekst)
-- "Goedkeuren" = klant-actie, "Bevestigen" = aanbieder-actie
-- "Uw aanvraag" verdwijnt als kop op tabs (wordt verwarrend) — komt alleen nog terug op Overzicht.
+Krijgt een nieuwe top-sectie waar de verticale stepper wordt geplaatst, boven de huidige sidebar-content (contact, snel-acties, etc.).
 
 ## Bestanden
 
-**Nieuw**
-- `src/components/customer-portal/JourneyRibbon.tsx` — vervanger van `ProgramStepper`, met `variant="full" | "compact"`
-- `src/components/customer-portal/TabHeader.tsx` — herbruikbare tab-eigen header (titel + subregel + status-badge + chips)
-
 **Aangepast**
-- `DesktopProgramView.tsx` + `MobileProgramView.tsx` — `ProgramStepper` → `JourneyRibbon variant="compact"`; `ProgramOverviewCard` alleen nog op Overzicht-pad; per-tab een `<TabHeader>` invoegen.
-- `CustomerPortalSplash.tsx` — twee kaartjes-kolom vervangen door `JourneyRibbon variant="full"` + één duidelijke "volgende stap" CTA.
-- `ProgramStepper.tsx` — verwijderd (of dunne re-export naar `JourneyRibbon` voor backward compat).
-- Tab-componenten (`AccommodationSection`, `PracticalView`, `BillingDetailsCard`/`CompactBillingSection`, `AcceptView`) — verwijder eigen koppen waar die nu dubbel komen met `TabHeader`.
+- `src/components/customer-portal/ProgramStepper.tsx` — `variant` prop + verticale render-tak in `TrackRow`/hoofdcomponent.
+- `src/components/customer-portal/DesktopProgramView.tsx` — stepper uit hoofdkolom; doorgeven aan `ProgramSidebar`.
+- `src/components/customer-portal/ProgramSidebar.tsx` — nieuwe prop `stepperSlot?: ReactNode` (of stepper-props doorgeven), bovenaan tonen.
+- `src/components/customer-portal/MobileProgramView.tsx` — stepper omzetten naar `variant="vertical"` + collapsible "Toon voortgang".
+
+**Ongewijzigd**
+- `CustomerPortalSplash.tsx` (overzichts-hero).
+- `TabHeader.tsx` / `tabHeaderConfig.ts` (al goed per tab).
+- Onderliggende statuslogica.
 
 ## Buiten scope
 
-- Geen wijzigingen aan onderliggende statuslogica, e-mails, DB of edge functions.
-- Geen verandering aan de Overzicht-foto-mozaïek.
-- Geen wijziging aan mobile bottom-nav (`MobileBottomNav` blijft).
+- Geen wijziging aan de track-logica zelf (welke stap actief/done is).
+- Geen wijziging aan de Overzicht-pagina.
+- Geen e-mail / DB / edge-function wijzigingen.
 
 ## Open keuze (1 vraag)
 
-Op de Overzicht-pagina: moet de `JourneyRibbon` (full) **bovenaan vóór de welkomsttekst** komen (proces direct centraal), of **na de welkomsttekst** (eerst persoonlijk, dan proces)?  
-Default voorstel: **ná de welkomsttekst** — sluit aan op de huidige formele toon ("Welkom, …" eerst, dan "zo verloopt het").
+**Mobile:** stepper op tab-pagina's verbergen (alleen op Overzicht zichtbaar), of compact-ingeklapt boven de content? Default in dit plan: **compact-ingeklapt boven content**.
