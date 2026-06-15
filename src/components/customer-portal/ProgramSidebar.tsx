@@ -37,6 +37,8 @@ interface ProgramSidebarProps {
   allConfirmed?: boolean;
   onScrollToTerms?: () => void;
   className?: string;
+  /** Slot bovenaan de sidebar — gebruikt voor de verticale voortgangs-stepper op tab-pagina's. */
+  topSlot?: React.ReactNode;
 }
 
 export const ProgramSidebar = ({
