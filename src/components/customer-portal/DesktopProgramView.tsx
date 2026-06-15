@@ -41,7 +41,7 @@ import {
   BedDouble,
   MoreHorizontal,
   Download,
-  FileText,
+  
   CalendarPlus,
   Sparkles,
 } from "lucide-react";
