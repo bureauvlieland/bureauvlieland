@@ -44,6 +44,7 @@ import {
   
   CalendarPlus,
   Sparkles,
+  ThumbsUp,
 } from "lucide-react";
 import {
   DropdownMenu,
