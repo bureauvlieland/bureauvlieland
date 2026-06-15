@@ -411,6 +411,18 @@ export const DesktopProgramView = ({
                         </Tooltip>
                       </TooltipProvider>
                       {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
+                      {customerApprovableCount > customerApprovedCount && onBulkApproveQuoteItems && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={async () => {
+                            await onBulkApproveQuoteItems();
+                          }}
+                        >
+                          <ThumbsUp className="h-4 w-4 mr-1" />
+                          Alle onderdelen goedkeuren ({customerApprovableCount - customerApprovedCount})
+                        </Button>
+                      )}
                       {!termsAccepted && isPublished && (
                         <Button
                           size="sm"
