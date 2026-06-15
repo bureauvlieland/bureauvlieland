@@ -2431,7 +2431,7 @@ const AdminRequestDetail = () => {
                                               title={
                                                 item.pending_marked_for_removal
                                                   ? "Markering verwijderen ongedaan maken"
-                                                  : "Markeer voor verwijdering (publiceer daarna via 'Publiceer wijzigingen')"
+                                                  : "Markeer voor verwijdering — er wordt nu geen mail verstuurd. Bij 'Publiceer wijzigingen' kies je of de partner geïnformeerd wordt."
                                               }
                                               onClick={async () => {
                                                 const next = !item.pending_marked_for_removal;
@@ -2445,7 +2445,7 @@ const AdminRequestDetail = () => {
                                                 }
                                                 toast.success(
                                                   next
-                                                    ? "Gemarkeerd voor verwijdering — open 'Publiceer wijzigingen' om door te voeren"
+                                                    ? "Gemarkeerd voor verwijdering — geen mail verstuurd. Kies bij 'Publiceer wijzigingen' of de partner geïnformeerd wordt."
                                                     : "Markering ongedaan gemaakt",
                                                 );
                                                 fetchRequestData();
