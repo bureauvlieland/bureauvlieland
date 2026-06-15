@@ -2422,23 +2422,42 @@ const AdminRequestDetail = () => {
                                             <Button
                                               variant="ghost"
                                               size="icon"
-                                              className="h-8 w-8 text-destructive hover:text-destructive"
+                                              className={cn(
+                                                "h-8 w-8",
+                                                item.pending_marked_for_removal
+                                                  ? "text-amber-600 hover:text-amber-700"
+                                                  : "text-destructive hover:text-destructive",
+                                              )}
+                                              title={
+                                                item.pending_marked_for_removal
+                                                  ? "Markering verwijderen ongedaan maken"
+                                                  : "Markeer voor verwijdering (publiceer daarna via 'Publiceer wijzigingen')"
+                                              }
                                               onClick={async () => {
-                                                const { data, error } = await supabase.functions.invoke(
-                                                  "notify-partner-item-deletion",
-                                                  { body: { request_id: request!.id, item_ids: [item.id], origin: window.location.origin } }
-                                                );
-                                                if (error || (data as any)?.error) {
-                                                  toast.error("Fout bij verwijderen");
-                                                } else {
-                                                  const sent = (data as any)?.emails_sent ?? 0;
-                                                  toast.success(sent > 0 ? `Activiteit verwijderd · ${sent} partner(s) gemaild` : "Activiteit verwijderd");
-                                                  fetchRequestData();
+                                                const next = !item.pending_marked_for_removal;
+                                                const { error } = await supabase
+                                                  .from("program_request_items")
+                                                  .update({ pending_marked_for_removal: next })
+                                                  .eq("id", item.id);
+                                                if (error) {
+                                                  toast.error("Kon markering niet bijwerken");
+                                                  return;
                                                 }
+                                                toast.success(
+                                                  next
+                                                    ? "Gemarkeerd voor verwijdering — open 'Publiceer wijzigingen' om door te voeren"
+                                                    : "Markering ongedaan gemaakt",
+                                                );
+                                                fetchRequestData();
                                               }}
                                             >
-                                              <Trash2 className="h-4 w-4" />
+                                              {item.pending_marked_for_removal ? (
+                                                <Undo2 className="h-4 w-4" />
+                                              ) : (
+                                                <Trash2 className="h-4 w-4" />
+                                              )}
                                             </Button>
+
                                           </div>
                                         </TableCell>
                                       </>
