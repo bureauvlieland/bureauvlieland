@@ -611,13 +611,13 @@ export const AccommodationSection = ({
           const occupancyLabel = ROOM_OCCUPANCY_OPTIONS.find((o) => o.value === accommodation.room_occupancy)?.label;
           const roomTypeLabels = (accommodation.room_types || [])
             .map((v) => ROOM_TYPES.find((r) => r.value === v)?.label)
-            .filter((v): v is string => !!v);
+            .filter(Boolean) as string[];
           const locationLabels = (accommodation.location_preference || [])
             .map((v) => LOCATION_PREFERENCES.find((l) => l.value === v))
             .filter((v): v is (typeof LOCATION_PREFERENCES)[number] => !!v);
           const facilityLabels = (accommodation.facilities_required || [])
             .map((v) => FACILITIES.find((f) => f.value === v)?.label)
-            .filter((v): v is string => !!v);
+            .filter(Boolean) as string[];
           const budgetLabel = BUDGET_RANGES.find((b) => b.value === accommodation.budget_range)?.label;
 
           const filledCount = [
