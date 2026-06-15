@@ -66,6 +66,7 @@ const CustomerProgram = () => {
     submitCounterProposal,
     acceptQuoteProposal,
     approveQuoteItem,
+    bulkApproveQuoteItems,
     statusSummary,
     // Accommodation
     accommodation,
