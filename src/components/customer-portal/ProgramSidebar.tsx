@@ -37,6 +37,8 @@ interface ProgramSidebarProps {
   allConfirmed?: boolean;
   onScrollToTerms?: () => void;
   className?: string;
+  /** Slot bovenaan de sidebar — gebruikt voor de verticale voortgangs-stepper op tab-pagina's. */
+  topSlot?: React.ReactNode;
 }
 
 export const ProgramSidebar = ({
@@ -58,6 +60,7 @@ export const ProgramSidebar = ({
   allConfirmed = false,
   onScrollToTerms,
   className,
+  topSlot,
 }: ProgramSidebarProps) => {
   // Determine accommodation status
   const hasAccommodation = !!selectedAccommodationQuote;
@@ -82,7 +85,8 @@ export const ProgramSidebar = ({
         className
       )}
     >
-      {/* Status checklist verplaatst naar ProgramStepper bovenaan de hoofdkolom. */}
+      {/* Voortgang (verticaal) — alleen op tab-pagina's, ingevuld door parent. */}
+      {topSlot}
 
 
 

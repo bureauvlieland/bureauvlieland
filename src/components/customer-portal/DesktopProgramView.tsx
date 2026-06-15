@@ -255,19 +255,9 @@ export const DesktopProgramView = ({
           referenceNumber={program.reference_number}
         />
 
-        {/* Voortgang stepper — overal hetzelfde traject-lint, zodat klant zich kan plaatsen */}
-        <ProgramStepper
-          statusSummary={statusSummary}
-          billingComplete={billingComplete}
-          termsAccepted={termsAccepted}
-          isMultiDay={isMultiDay}
-          accommodationStatus={accommodationStatus}
-          accommodationQuoteReceivedCount={accommodationQuotes.filter((q) => q.status === "submitted").length}
-          customerApprovedCount={customerApprovedCount}
-          customerApprovableCount={customerApprovableCount}
-          quoteStatus={program.quote_status}
-          onStepAction={handleStepAction}
-        />
+        {/* Voortgang-stepper is verplaatst naar de rechter sidebar (verticaal) — zie ProgramSidebar topSlot. */}
+
+
 
 
         {/* 2. Action required card + Intro card + programma-samenvatting — alleen op Programma tab */}
@@ -631,7 +621,23 @@ export const DesktopProgramView = ({
         totalCost={totalCost}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
+        topSlot={
+          <ProgramStepper
+            variant="vertical"
+            statusSummary={statusSummary}
+            billingComplete={billingComplete}
+            termsAccepted={termsAccepted}
+            isMultiDay={isMultiDay}
+            accommodationStatus={accommodationStatus}
+            accommodationQuoteReceivedCount={accommodationQuotes.filter((q) => q.status === "submitted").length}
+            customerApprovedCount={customerApprovedCount}
+            customerApprovableCount={customerApprovableCount}
+            quoteStatus={program.quote_status}
+            onStepAction={handleStepAction}
+          />
+        }
       />
+
 
       {/* Add Activity Sheet */}
       <AddActivitySheet
