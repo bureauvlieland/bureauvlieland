@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     if (sources.building_blocks) {
       const { data: blocks } = await supabase
         .from("building_blocks")
-        .select("id, name, description, image_url, provider_name, created_at")
+        .select("id, name, description, image_url, provider_id, created_at")
         .eq("status", "published")
         .gte("created_at", fourteenDaysAgo)
         .limit(10);
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         candidates.push({
           source_type: "building_block",
           source_id: b.id,
-          summary: `Bouwsteen "${b.name}" (${b.provider_name ?? "partner"}): ${b.description ?? ""}`.slice(0, 600),
+          summary: `Bouwsteen "${b.name}" (partner ${b.provider_id ?? "intern"}): ${b.description ?? ""}`.slice(0, 600),
           image_url: b.image_url ?? null,
           hint: "Vier een nieuwe bouwsteen in ons aanbod",
         });
