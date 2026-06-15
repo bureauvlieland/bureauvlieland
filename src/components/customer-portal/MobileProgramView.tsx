@@ -22,6 +22,8 @@ import { ActionRequiredCard } from "./ActionRequiredCard";
 import { GuestDetailsCard } from "./GuestDetailsCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
 import { ProgramStepper, type StepId } from "./ProgramStepper";
+import { TabHeader } from "./TabHeader";
+import { buildTabHeader } from "./tabHeaderConfig";
 import { CustomerProgramItem } from "./CustomerProgramItem";
 import { DayTabs } from "@/components/configurator/DayTabs";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
