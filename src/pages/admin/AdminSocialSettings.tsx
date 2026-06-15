@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Link2 } from "lucide-react";
 
 type Settings = {
   id?: string;
@@ -229,35 +229,67 @@ export default function AdminSocialSettings() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-xs text-slate-500">
-              Voor live publicatie: koppel een Facebook Page + Instagram Business-account in Meta Business Suite, maak een
-              App in Meta for Developers en plak hier de Page ID, IG User ID en een long-lived Page Access Token.
-              Tot dan blijft alles in conceptmodus (genereren + plannen + previews, geen daadwerkelijke push).
+              Klik op "Verbind met Meta" om in te loggen met je Facebook-account. We koppelen automatisch de juiste
+              Facebook Page en het bijbehorende Instagram Business-account, en wisselen het token in voor een
+              long-lived Page Token. Tot dat moment blijft alles in conceptmodus.
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Facebook Page ID</Label>
-                <Input
-                  value={settings.meta_page_id ?? ""}
-                  onChange={(e) => setSettings((s) => ({ ...s, meta_page_id: e.target.value }))}
-                />
+
+            {settings.meta_page_id ? (
+              <div className="rounded-md border bg-slate-50 p-3 text-sm space-y-1">
+                <div><span className="text-slate-500">Facebook Page:</span> {settings.meta_page_id}</div>
+                {settings.meta_ig_user_id && (
+                  <div><span className="text-slate-500">Instagram:</span> {settings.meta_ig_user_id}</div>
+                )}
+                {settings.meta_connected_at && (
+                  <div className="text-xs text-slate-500">
+                    Gekoppeld op {new Date(settings.meta_connected_at).toLocaleDateString("nl-NL")}
+                  </div>
+                )}
+                {settings.meta_token_expires_at && (
+                  <div className="text-xs text-slate-500">
+                    Token-anker verloopt: {new Date(settings.meta_token_expires_at).toLocaleDateString("nl-NL")}
+                  </div>
+                )}
               </div>
-              <div>
-                <Label className="text-xs">Instagram User ID (Business)</Label>
-                <Input
-                  value={settings.meta_ig_user_id ?? ""}
-                  onChange={(e) => setSettings((s) => ({ ...s, meta_ig_user_id: e.target.value }))}
-                />
+            ) : (
+              <div className="rounded-md border border-dashed p-3 text-xs text-slate-500">
+                Nog geen Meta-account gekoppeld.
               </div>
-            </div>
-            <div>
-              <Label className="text-xs">Long-lived Page Access Token (plakken vervangt huidige)</Label>
-              <Textarea rows={2} value={token} onChange={(e) => setToken(e.target.value)} placeholder="EAAB..." />
-              {settings.meta_token_expires_at && (
-                <p className="text-xs text-slate-500 mt-1">
-                  Huidige token verloopt: {new Date(settings.meta_token_expires_at).toLocaleDateString("nl-NL")}
-                </p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const { data, error } = await supabase.functions.invoke("social-meta-oauth-start", {
+                    body: { return_url: `${window.location.origin}/admin/social/instellingen` },
+                  });
+                  if (error || !data?.url) {
+                    toast.error(error?.message || "Kon Meta-login niet starten");
+                    return;
+                  }
+                  window.location.href = data.url;
+                }}
+              >
+                <Link2 className="h-4 w-4 mr-2" />
+                {settings.meta_page_id ? "Opnieuw koppelen" : "Verbind met Meta"}
+              </Button>
+              {settings.meta_page_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    const { data, error } = await supabase.functions.invoke("social-refresh-token");
+                    if (error) { toast.error(error.message); return; }
+                    if (!data?.ok) { toast.error(`Token ongeldig: ${data?.reason || "onbekend"}`); return; }
+                    toast.success("Token gecheckt — actief");
+                  }}
+                >
+                  Token testen
+                </Button>
               )}
             </div>
+
             <label className="flex items-center justify-between border-t pt-3">
               <span className="text-sm font-medium">Publicatie naar Meta ingeschakeld</span>
               <Switch
