@@ -84,9 +84,21 @@ export const CustomerItemChangelog = ({ itemId, customerToken }: Props) => {
         {!loading && !error && rows && rows.length === 0 && (
           <div className="text-xs text-muted-foreground">Geen wijzigingen geregistreerd.</div>
         )}
-        {!loading && rows && rows.length > 0 && (
+        {!loading && rows && (() => {
+          // Hide partner-only / internal fields from the customer view
+          const HIDDEN_FIELDS = new Set([
+            "partner_instructions",
+            "admin_notes",
+            "internal_notes",
+            "skip_partner_notification",
+          ]);
+          const visible = rows.filter((r) => !HIDDEN_FIELDS.has(r.field));
+          if (visible.length === 0) {
+            return <div className="text-xs text-muted-foreground">Geen wijzigingen geregistreerd.</div>;
+          }
+          return (
           <ul className="space-y-2 text-xs max-h-72 overflow-y-auto">
-            {rows.map((r, i) => (
+            {visible.map((r, i) => (
               <li key={i} className="border-b pb-2 last:border-0">
                 <div className="text-muted-foreground">
                   {new Date(r.published_at).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
@@ -101,7 +113,8 @@ export const CustomerItemChangelog = ({ itemId, customerToken }: Props) => {
               </li>
             ))}
           </ul>
-        )}
+          );
+        })()}
       </PopoverContent>
     </Popover>
   );
