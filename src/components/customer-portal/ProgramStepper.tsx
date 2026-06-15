@@ -348,6 +348,84 @@ const TrackRow = ({
   </div>
 );
 
+// ─── Vertical (sidebar) track component ──────────────────────────────────────
+
+const TrackRowVertical = ({
+  track,
+  onAction,
+}: {
+  track: TrackViewModel;
+  onAction?: (stepId: StepId) => void;
+}) => (
+  <div>
+    <div className="mb-2 flex items-center gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {track.title}
+      </span>
+      {track.done && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+          <Check className="h-3 w-3" />
+        </span>
+      )}
+    </div>
+
+    <ol className="relative">
+      {track.steps.map((s, i) => {
+        const Icon = s.icon;
+        const isLast = i === track.steps.length - 1;
+        const nextState = !isLast ? track.steps[i + 1].state : "upcoming";
+        const connectorActive = s.state === "done" || nextState !== "upcoming";
+        return (
+          <li key={i} className="relative flex items-start gap-3 pb-3 last:pb-0">
+            {/* Vertical connector */}
+            {!isLast && (
+              <span
+                className={cn(
+                  "absolute left-[15px] top-8 bottom-0 w-0.5 -translate-x-1/2",
+                  connectorActive ? "bg-primary" : "bg-border",
+                )}
+                aria-hidden
+              />
+            )}
+            <div className={cn(stepCircleClasses(s.state), "h-8 w-8")}>
+              {s.state === "done" ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+            </div>
+            <p
+              className={cn(
+                "pt-1.5 text-xs font-medium leading-tight",
+                s.state === "upcoming" ? "text-muted-foreground" : "text-foreground",
+              )}
+            >
+              {s.label}
+            </p>
+          </li>
+        );
+      })}
+    </ol>
+
+    {/* Status line + optional CTA full-width */}
+    <div className="mt-2 space-y-2">
+      <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+        {!track.cta && !track.done && (
+          <Clock className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground/70" />
+        )}
+        <span>{track.statusLine}</span>
+      </p>
+      {track.cta && onAction && (
+        <Button
+          size="sm"
+          variant={track.id === "lodging" ? "outline" : "default"}
+          onClick={() => onAction(track.cta!.stepId)}
+          className="w-full"
+        >
+          {track.cta.label}
+        </Button>
+      )}
+    </div>
+  </div>
+);
+
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export const ProgramStepper = ({
