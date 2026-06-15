@@ -172,6 +172,7 @@ export const DesktopProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onBulkApproveQuoteItems,
   onOpenGuestDetails,
   guestDetails,
   billingLinesByItem,
