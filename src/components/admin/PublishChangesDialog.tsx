@@ -154,6 +154,11 @@ export function PublishChangesDialog({
   const [publishing, setPublishing] = useState(false);
   const [dryRunLoading, setDryRunLoading] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
+  // Akkoordstatus: standaard moeten klant én partner opnieuw bevestigen
+  // wanneer een live onderdeel wijzigt. Admin kan dit per kant overrulen
+  // (bv. wijziging is al telefonisch afgestemd → 'keep').
+  const [approvalCustomer, setApprovalCustomer] = useState<"reset" | "keep">("reset");
+  const [approvalPartner, setApprovalPartner] = useState<"reset" | "keep">("reset");
 
   // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
   // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
