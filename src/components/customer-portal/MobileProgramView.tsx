@@ -168,6 +168,7 @@ export const MobileProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onBulkApproveQuoteItems,
   onOpenGuestDetails,
   guestDetails,
   billingLinesByItem,
