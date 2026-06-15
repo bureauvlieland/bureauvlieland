@@ -621,7 +621,23 @@ export const DesktopProgramView = ({
         totalCost={totalCost}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
+        topSlot={
+          <ProgramStepper
+            variant="vertical"
+            statusSummary={statusSummary}
+            billingComplete={billingComplete}
+            termsAccepted={termsAccepted}
+            isMultiDay={isMultiDay}
+            accommodationStatus={accommodationStatus}
+            accommodationQuoteReceivedCount={accommodationQuotes.filter((q) => q.status === "submitted").length}
+            customerApprovedCount={customerApprovedCount}
+            customerApprovableCount={customerApprovableCount}
+            quoteStatus={program.quote_status}
+            onStepAction={handleStepAction}
+          />
+        }
       />
+
 
       {/* Add Activity Sheet */}
       <AddActivitySheet
