@@ -2759,11 +2759,12 @@ const AdminRequestDetail = () => {
                                       size="icon"
                                       className="h-8 w-8 text-destructive hover:text-destructive"
                                       onClick={async () => {
-                                        const { data, error } = await supabase.functions.invoke(
-                                          "notify-partner-item-deletion",
-                                          { body: { request_id: request!.id, item_ids: [item.id], origin: window.location.origin } }
-                                        );
-                                        if (error || (data as any)?.error) {
+                                        if (!confirm("Weet je zeker dat je deze kostenpost wilt verwijderen?")) return;
+                                        const { error } = await supabase
+                                          .from("program_request_items")
+                                          .delete()
+                                          .eq("id", item.id);
+                                        if (error) {
                                           toast.error("Fout bij verwijderen");
                                         } else {
                                           toast.success("Kosten verwijderd");
@@ -2773,6 +2774,7 @@ const AdminRequestDetail = () => {
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
+
                                   </div>
                                 </TableCell>
                               </TableRow>
