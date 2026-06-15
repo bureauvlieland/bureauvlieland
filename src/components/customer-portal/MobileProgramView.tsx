@@ -226,6 +226,30 @@ export const MobileProgramView = ({
     return undefined;
   };
 
+  const accommodationStatus: "none" | "requested" | "selected" =
+    accommodationQuotes.some((q) => q.status === "selected")
+      ? "selected"
+      : accommodation
+        ? "requested"
+        : "none";
+  const customerApprovedCount = program.items.filter(
+    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at,
+  ).length;
+  const customerApprovableCount = program.items.filter(
+    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled",
+  ).length;
+
+  const handleStepAction = (stepId: StepId) => {
+    if (stepId === "lodging") {
+      document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" });
+    } else if (stepId === "providers" || stepId === "approve") {
+      document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
+    } else if (stepId === "billing_terms") {
+      if (!billingComplete) onOpenBilling();
+      else document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Mobile sticky status bar */}
@@ -234,6 +258,20 @@ export const MobileProgramView = ({
         totalSteps={totalSteps}
         nextAction={getNextAction()}
       />
+
+      {/* Voortgang stepper — bovenaan, mobiele compacte weergave */}
+      <ProgramStepper
+        statusSummary={statusSummary}
+        billingComplete={billingComplete}
+        termsAccepted={termsAccepted}
+        isMultiDay={isMultiDay}
+        accommodationStatus={accommodationStatus}
+        customerApprovedCount={customerApprovedCount}
+        customerApprovableCount={customerApprovableCount}
+        quoteStatus={program.quote_status}
+        onStepAction={handleStepAction}
+      />
+
 
       {/* 1. Program Overview Card */}
       <ProgramOverviewCard
