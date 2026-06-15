@@ -24,6 +24,23 @@ export const getEffectiveTime = (item: ItemWithTimes): string | null => {
 };
 
 /**
+ * Normaliseer een tijdwaarde naar HH:mm.
+ * - "10:00:00" → "10:00"
+ * - "10:00:00+02" → "10:00"
+ * - "10:00" → "10:00"
+ * - "flexibel" / null / "" → ongewijzigd / null
+ */
+export const formatTimeHHmm = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const v = String(value).trim();
+  if (!v) return null;
+  if (v.toLowerCase() === "flexibel") return v;
+  const m = v.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return v;
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+};
+
+/**
  * Parse duration string to minutes
  * Examples: "2 uur" → 120, "1,5 uur" → 90, "30 min" → 30, "1 uur 30 min" → 90
  */
