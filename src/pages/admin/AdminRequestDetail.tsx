@@ -2553,6 +2553,7 @@ const AdminRequestDetail = () => {
                                               variant="ghost"
                                               size="icon"
                                               className="h-8 w-8 text-destructive hover:text-destructive"
+                                              title="Markeer voor verwijdering — er wordt nu geen mail verstuurd. Bij 'Publiceer wijzigingen' kies je of de partner geïnformeerd wordt."
                                               onClick={async () => {
                                                 // pending_added items zijn nooit gepubliceerd → hard delete
                                                 if (item.pending_added) {
@@ -2567,7 +2568,7 @@ const AdminRequestDetail = () => {
                                                   }
                                                   return;
                                                 }
-                                                // Live item → mark for removal, publish-flow verstuurt mail
+                                                // Live item → mark for removal, publish-flow verstuurt mail (opt-in)
                                                 const markRemove = !item.pending_marked_for_removal;
                                                 const { error } = await supabase
                                                   .from("program_request_items")
@@ -2581,7 +2582,7 @@ const AdminRequestDetail = () => {
                                                 } else {
                                                   toast.success(
                                                     markRemove
-                                                      ? "Annulering klaargezet — publiceer om door te voeren"
+                                                      ? "Annulering klaargezet — geen mail verstuurd. Kies bij 'Publiceer wijzigingen' of de partner geïnformeerd wordt."
                                                       : "Annulering ongedaan gemaakt",
                                                   );
                                                   fetchRequestData({ silent: true });
