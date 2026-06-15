@@ -430,7 +430,7 @@ export const AdminEditActivitySheet = ({
           .eq("id", item.id);
         if (error) throw error;
         toast.success(
-          `${item.block_name} gemarkeerd voor annulering — publiceer via de gele balk om door te voeren`,
+          `${item.block_name} gemarkeerd voor annulering — geen mail verstuurd. Kies bij 'Publiceer wijzigingen' of de partner geïnformeerd wordt.`,
         );
       }
 
