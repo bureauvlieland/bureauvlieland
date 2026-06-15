@@ -29,6 +29,7 @@ import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
@@ -207,12 +208,12 @@ export const CustomerProgramItem = ({
             {/* Time - only on mobile (desktop shows it in timeline column) */}
             <span className="flex items-center gap-1 font-semibold text-foreground md:hidden">
               <Clock className="h-3.5 w-3.5" />
-              {item.confirmed_time 
-                ? item.confirmed_time
+              {item.confirmed_time
+                ? formatTimeHHmm(item.confirmed_time)
                 : item.proposed_time && (item.status === "confirmed" || item.status === "alternative")
-                  ? `${item.proposed_time} (voorstel)`
-                  : item.preferred_time 
-                    ? (item.preferred_time === "flexibel" ? "Flexibel" : item.preferred_time)
+                  ? `${formatTimeHHmm(item.proposed_time)} (voorstel)`
+                  : item.preferred_time
+                    ? (item.preferred_time === "flexibel" ? "Flexibel" : formatTimeHHmm(item.preferred_time))
                     : "Flexibel"}
             </span>
             {item.duration && (
@@ -519,13 +520,13 @@ export const CustomerProgramItem = ({
                 <Label className="text-sm">Gewenste tijd</Label>
                 {readOnly ? (
                   <p className="text-sm mt-1.5">
-                    {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                    {formatTimeHHmm(item.confirmed_time || item.proposed_time || item.preferred_time) || "Flexibel"}
                   </p>
                 ) : isEditingTime ? (
                   item.customer_accepted_at && onCounterProposal ? (
                     <div className="mt-1.5 flex items-center gap-2">
                       <span className="text-sm">
-                        {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                        {formatTimeHHmm(item.confirmed_time || item.proposed_time || item.preferred_time) || "Flexibel"}
                       </span>
                       <Button
                         size="sm"
@@ -563,7 +564,7 @@ export const CustomerProgramItem = ({
                 ) : (
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-sm">
-                      {item.confirmed_time || item.proposed_time || item.preferred_time || "Flexibel"}
+                      {formatTimeHHmm(item.confirmed_time || item.proposed_time || item.preferred_time) || "Flexibel"}
                     </span>
                     <Button
                       size="sm"

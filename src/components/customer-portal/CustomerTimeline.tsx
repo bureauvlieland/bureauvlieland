@@ -1,4 +1,5 @@
 import type { ProgramRequestItem } from "@/types/programRequest";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 
 /** Sort items chronologically: confirmed_time > proposed_time > preferred_time */
 export const sortItemsByTime = (items: ProgramRequestItem[]): ProgramRequestItem[] => {
@@ -29,7 +30,8 @@ export const CustomerTimeline = ({ items, showTimeColumn = false, children }: Cu
       <div className={`absolute ${lineLeft} top-0 bottom-0 w-px bg-border`} />
       <div className="space-y-1">
         {sorted.map((item) => {
-          const displayTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+          const rawTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+          const displayTime = formatTimeHHmm(rawTime);
           return (
             <div key={item.id} className={`relative flex items-start ${showTimeColumn ? "gap-4" : "gap-3"} py-2`}>
               {/* Time column - desktop only */}

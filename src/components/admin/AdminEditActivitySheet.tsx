@@ -41,6 +41,7 @@ import { resolveAutoTodo } from "@/lib/autoTodoCreator";
 import { getPriceTypeSuffix } from "@/lib/portalPricing";
 import { useAutoSaveField } from "@/hooks/useAutoSaveField";
 import { FieldSaveIndicator } from "@/components/admin/FieldSaveIndicator";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 
 interface PartnerOption {
   id: string;
@@ -265,7 +266,7 @@ export const AdminEditActivitySheet = ({
                 confirmed_time: time,
                 proposed_time: null,
                 status_note: time
-                  ? `Tijd ${time} ingesteld door admin`
+                  ? `Tijd ${formatTimeHHmm(time)} ingesteld door admin`
                   : "Tijd verwijderd door admin",
                 status_updated_at: new Date().toISOString(),
               }

@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
       adminNote = "",
       origin,
       dryRun = false,
+      approvalScope,
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
@@ -129,6 +130,19 @@ Deno.serve(async (req) => {
       adminNote?: string;
       origin?: string;
       dryRun?: boolean;
+      approvalScope?: { customer?: "reset" | "keep"; partner?: "reset" | "keep" };
+    };
+    // Default: bij ontbreken (oudere clients) doen we 'reset' op beide kanten
+    // — dat spiegelt het nieuwe UI-default en is conservatief (klant/partner
+    // worden niet stilzwijgend als 'akkoord' bestempeld).
+    const resetCustomerApproval = (approvalScope?.customer ?? "reset") === "reset";
+    const resetPartnerApproval = (approvalScope?.partner ?? "reset") === "reset";
+
+    // Hulpfunctie: tijdwaarde naar HH:mm voor status_note.
+    const fmtHHmm = (v: string | null | undefined): string | null => {
+      if (!v) return null;
+      const m = String(v).trim().match(/^(\d{1,2}):(\d{2})/);
+      return m ? `${m[1].padStart(2, "0")}:${m[2]}` : String(v);
     };
 
     if (!requestId) {
@@ -605,6 +619,44 @@ Deno.serve(async (req) => {
       if (it.pending_block_type !== null && it.pending_block_type !== undefined) {
         upd.block_type = it.pending_block_type;
       }
+
+      // Akkoord-reset op basis van de admin-keuze. Alleen voor items die al
+      // live waren (geen nieuwe toevoeging) — bij pending_added is er nog
+      // geen bestaand akkoord om te resetten. Bureau-interne posten (block_type
+      // === 'bureau') doorlopen sowieso geen partner-akkoord-traject.
+      const wasLive = !it.pending_added;
+      const effectiveBlockType = (upd.block_type as string | undefined) ?? it.block_type;
+      if (wasLive && resetCustomerApproval) {
+        upd.customer_approved_at = null;
+        upd.customer_accepted_at = null;
+      }
+      if (wasLive && resetPartnerApproval && effectiveBlockType !== "bureau") {
+        upd.quoted_at = null;
+        upd.item_quote_status = "in_behandeling";
+        upd.confirmed_time = null;
+      }
+
+      // Status_note opruimen wanneer een gepubliceerde wijziging de
+      // bestaande toelichting niet meer dekt (bv. "Tijd 12:30 ingesteld door
+      // admin" terwijl er net naar 10:00 is gepubliceerd). Simpel: zodra
+      // tijd of prijs of beschrijving wijzigt, status_note legen tenzij we
+      // hem hierboven al hebben overschreven met een nieuwe tijd-tekst.
+      const timeChanged =
+        it.pending_preferred_time !== null && it.pending_preferred_time !== undefined;
+      const priceChanged =
+        it.pending_admin_price_override !== null && it.pending_admin_price_override !== undefined;
+      const notesChanged =
+        it.pending_admin_price_notes !== null && it.pending_admin_price_notes !== undefined;
+      if (timeChanged) {
+        // Vervang door nieuwe, geformatteerde toelichting.
+        const newTime = fmtHHmm(it.pending_preferred_time as string);
+        upd.status_note = newTime
+          ? `Tijd ${newTime} ingesteld door Bureau Vlieland`
+          : "Tijd verwijderd door Bureau Vlieland";
+      } else if ((priceChanged || notesChanged) && it.status_note) {
+        upd.status_note = null;
+      }
+
       await supabase.from("program_request_items").update(upd).eq("id", it.id);
     }
 

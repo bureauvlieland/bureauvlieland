@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Send, Loader2, AlertTriangle, Info, Eye, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -153,6 +154,11 @@ export function PublishChangesDialog({
   const [publishing, setPublishing] = useState(false);
   const [dryRunLoading, setDryRunLoading] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
+  // Akkoordstatus: standaard moeten klant én partner opnieuw bevestigen
+  // wanneer een live onderdeel wijzigt. Admin kan dit per kant overrulen
+  // (bv. wijziging is al telefonisch afgestemd → 'keep').
+  const [approvalCustomer, setApprovalCustomer] = useState<"reset" | "keep">("reset");
+  const [approvalPartner, setApprovalPartner] = useState<"reset" | "keep">("reset");
 
   // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
   // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
@@ -200,10 +206,21 @@ export function PublishChangesDialog({
 
   const hasBlocking = warnings.some((w) => w.severity === "blocking");
 
+  // Aantal items dat al live was (geen toevoeging, geen verwijdering) en
+  // waar dus een akkoord-reset relevant is.
+  const liveChangedCount = useMemo(
+    () =>
+      pendingItems.filter((it) => !it.pending_added && !it.pending_marked_for_removal)
+        .length,
+    [pendingItems],
+  );
+
   // Default: geen partners aangevinkt — admin kiest bewust per partner.
   useMemo(() => {
     setNotifyPartners({});
     setNotifyCustomer(false);
+    setApprovalCustomer("reset");
+    setApprovalPartner("reset");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
@@ -220,6 +237,10 @@ export function PublishChangesDialog({
           notifyPartnerIds: partnerIds,
           adminNote: adminNote.trim(),
           origin: window.location.origin,
+          approvalScope: {
+            customer: approvalCustomer,
+            partner: approvalPartner,
+          },
         },
       });
       if (error) {
@@ -383,6 +404,66 @@ export function PublishChangesDialog({
               ))}
             </div>
           )}
+
+          {liveChangedCount > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Akkoordstatus na deze wijzigingen</Label>
+              <p className="text-xs text-muted-foreground">
+                {liveChangedCount} onderdeel{liveChangedCount !== 1 ? "en" : ""} was al live.
+                Bepaal per kant of het bestaande akkoord blijft staan of opnieuw moet worden bevestigd.
+                Dit staat los van of er een mail uitgaat.
+              </p>
+              <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Klant</div>
+                  <RadioGroup
+                    value={approvalCustomer}
+                    onValueChange={(v) => setApprovalCustomer(v as "reset" | "keep")}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ac-reset" value="reset" className="mt-0.5" />
+                      <Label htmlFor="ac-reset" className="cursor-pointer text-sm font-normal leading-snug">
+                        Klant moet opnieuw akkoord geven
+                        <div className="text-xs text-muted-foreground">"Klant akkoord"-stempel wordt verwijderd.</div>
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ac-keep" value="keep" className="mt-0.5" />
+                      <Label htmlFor="ac-keep" className="cursor-pointer text-sm font-normal leading-snug">
+                        Klant is al akkoord
+                        <div className="text-xs text-muted-foreground">Bestaand akkoord blijft staan.</div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Partner</div>
+                  <RadioGroup
+                    value={approvalPartner}
+                    onValueChange={(v) => setApprovalPartner(v as "reset" | "keep")}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ap-reset" value="reset" className="mt-0.5" />
+                      <Label htmlFor="ap-reset" className="cursor-pointer text-sm font-normal leading-snug">
+                        Partner moet opnieuw bevestigen
+                        <div className="text-xs text-muted-foreground">"Partner bevestigd"-stempel en bevestigde tijd worden verwijderd.</div>
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="ap-keep" value="keep" className="mt-0.5" />
+                      <Label htmlFor="ap-keep" className="cursor-pointer text-sm font-normal leading-snug">
+                        Partner heeft al bevestigd
+                        <div className="text-xs text-muted-foreground">Bestaande bevestiging blijft staan.</div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+            </div>
+          )}
+
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Ontvangers (optioneel)</Label>
