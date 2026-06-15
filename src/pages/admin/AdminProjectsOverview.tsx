@@ -84,6 +84,28 @@ export default function AdminProjectsOverview() {
                 Operationeel overzicht van alle lopende projecten, gesorteerd op eerstvolgende aankomst.
               </p>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Nieuw project
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/programma-nieuw" className="gap-2">
+                    <CalendarPlus className="h-4 w-4" />
+                    Nieuw programma
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/logies-aanvragen" className="gap-2">
+                    <BedDouble className="h-4 w-4" />
+                    Nieuwe logies-aanvraag
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
