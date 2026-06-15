@@ -66,6 +66,7 @@ const CustomerProgram = () => {
     submitCounterProposal,
     acceptQuoteProposal,
     approveQuoteItem,
+    bulkApproveQuoteItems,
     statusSummary,
     // Accommodation
     accommodation,
@@ -395,6 +396,7 @@ const CustomerProgram = () => {
     // Quote proposal
     onAcceptQuoteProposal: acceptQuoteProposal,
     onApproveQuoteItem: approveQuoteItem,
+    onBulkApproveQuoteItems: bulkApproveQuoteItems,
     // Pre-resolved server data (lock-down readiness)
     billingLinesByItem,
     blockVatRates,

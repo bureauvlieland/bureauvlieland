@@ -44,6 +44,7 @@ import {
   
   CalendarPlus,
   Sparkles,
+  ThumbsUp,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -126,6 +127,7 @@ interface DesktopProgramViewProps {
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;
+  onBulkApproveQuoteItems?: () => Promise<{ approved: number; failed: number; autoSentToPartner: number }>;
   // Guest details
   onOpenGuestDetails?: () => void;
   guestDetails?: {
@@ -171,6 +173,7 @@ export const DesktopProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onBulkApproveQuoteItems,
   onOpenGuestDetails,
   guestDetails,
   billingLinesByItem,
@@ -409,6 +412,18 @@ export const DesktopProgramView = ({
                         </Tooltip>
                       </TooltipProvider>
                       {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
+                      {customerApprovableCount > customerApprovedCount && onBulkApproveQuoteItems && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={async () => {
+                            await onBulkApproveQuoteItems();
+                          }}
+                        >
+                          <ThumbsUp className="h-4 w-4 mr-1" />
+                          Alle onderdelen goedkeuren ({customerApprovableCount - customerApprovedCount})
+                        </Button>
+                      )}
                       {!termsAccepted && isPublished && (
                         <Button
                           size="sm"

@@ -51,6 +51,7 @@ interface UseCustomerProgramReturn {
   submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   acceptQuoteProposal: () => Promise<boolean>;
   approveQuoteItem: (itemId: string) => Promise<boolean>;
+  bulkApproveQuoteItems: () => Promise<{ approved: number; failed: number; autoSentToPartner: number }>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
   // Accommodation data
   accommodation: AccommodationRequest | null;
@@ -871,6 +872,66 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  // Bulk-approve: alle nog-niet-goedgekeurde quote-items in één klantactie.
+  const bulkApproveQuoteItems = useCallback(async (): Promise<{
+    approved: number;
+    failed: number;
+    autoSentToPartner: number;
+  }> => {
+    if (!program) return { approved: 0, failed: 0, autoSentToPartner: 0 };
+
+    const adminOverride = isAdminImpersonating();
+    const candidates = program.items.filter(
+      (i: any) =>
+        i.status !== "cancelled" &&
+        i.block_type !== "self_arranged" &&
+        !i.customer_approved_at &&
+        ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status || ""),
+    );
+
+    let approved = 0;
+    let failed = 0;
+    let autoSentToPartner = 0;
+
+    for (const item of candidates) {
+      try {
+        const { data, error } = await supabase.functions.invoke("approve-quote-item", {
+          body: {
+            token,
+            item_id: item.id,
+            origin: window.location.origin,
+            ...(adminOverride ? { admin_override: true } : {}),
+          },
+        });
+        if (error || data?.error) {
+          failed++;
+        } else {
+          approved++;
+          if (data?.auto_partner_sent) autoSentToPartner++;
+        }
+      } catch {
+        failed++;
+      }
+    }
+
+    await fetchProgram();
+
+    if (approved > 0 && failed === 0) {
+      toast.success(
+        autoSentToPartner > 0
+          ? `${approved} onderdelen goedgekeurd · ${autoSentToPartner} aanvraag/aanvragen verzonden naar aanbieders`
+          : `${approved} onderdelen goedgekeurd`,
+      );
+    } else if (approved > 0 && failed > 0) {
+      toast.warning(`${approved} goedgekeurd, ${failed} mislukt`);
+    } else if (failed > 0) {
+      toast.error("Goedkeuren mislukt. Probeer het later opnieuw.");
+    }
+
+    return { approved, failed, autoSentToPartner };
+  }, [program, token, fetchProgram]);
+
+
   const statusSummary = program
     ? calculateStatusSummary(program.items)
     : { total: 0, confirmed: 0, pending: 0, alternative: 0, unavailable: 0, cancelled: 0, counter_proposed: 0, customerApproved: 0, awaitingPartnerSend: 0, priceChanged: 0, progress: 0 };
@@ -910,6 +971,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     submitCounterProposal,
     acceptQuoteProposal,
     approveQuoteItem,
+    bulkApproveQuoteItems,
     statusSummary,
     // Accommodation
     accommodation,

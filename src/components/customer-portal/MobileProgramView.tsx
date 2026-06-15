@@ -124,6 +124,7 @@ interface MobileProgramViewProps {
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;
+  onBulkApproveQuoteItems?: () => Promise<{ approved: number; failed: number; autoSentToPartner: number }>;
   onOpenGuestDetails?: () => void;
   guestDetails?: {
     guest_names: string | null;
@@ -167,6 +168,7 @@ export const MobileProgramView = ({
   onSelectAccommodationQuote,
   onAcceptQuoteProposal,
   onApproveQuoteItem,
+  onBulkApproveQuoteItems,
   onOpenGuestDetails,
   guestDetails,
   billingLinesByItem,

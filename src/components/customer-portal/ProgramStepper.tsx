@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 /**
  * StepId is used by the parent to route a CTA click to the right section.
  * - "lodging" → scrollt naar #accommodation
- * - "providers" / "approve" → scrollt naar #program
+ * - "approve" → scrollt naar #program
+ * - "providers" → scrollt naar #program
  * - "billing_terms" → opent billing-dialog of scrollt naar #terms-section
  */
 export type StepId = "lodging" | "providers" | "approve" | "billing_terms";
@@ -20,7 +21,7 @@ interface MiniStep {
 }
 
 interface TrackViewModel {
-  id: "lodging" | "program";
+  id: "lodging" | "program" | "billing";
   title: string;
   steps: MiniStep[];
   /** Korte status-zin onder de track. */
@@ -126,33 +127,34 @@ function buildProgramTrack(
   statusSummary: ProgramStepperProps["statusSummary"],
   customerApprovedCount: number,
   customerApprovableCount: number,
-  billingComplete: boolean,
-  termsAccepted: boolean,
 ): TrackViewModel {
+  const approveDone =
+    customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
   const providersDone =
     statusSummary.total > 0 &&
     statusSummary.pending === 0 &&
     statusSummary.alternative === 0 &&
     (statusSummary.counter_proposed || 0) === 0;
-  const approveDone =
-    customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
-  const billingTermsDone = billingComplete && termsAccepted;
 
+  // Nieuwe volgorde: eerst klant goedkeuren, dan aanbieders bevestigen.
   const steps: MiniStep[] = [
-    {
-      label: "Aanbieders bevestigen",
-      icon: Users,
-      state: providersDone ? "done" : statusSummary.total > 0 ? "active" : "upcoming",
-    },
     {
       label: "Onderdelen goedkeuren",
       icon: ThumbsUp,
-      state: approveDone ? "done" : providersDone ? "active" : "upcoming",
+      state: approveDone
+        ? "done"
+        : customerApprovableCount > 0
+          ? "active"
+          : "upcoming",
     },
     {
-      label: "Gegevens & voorwaarden",
-      icon: FileSignature,
-      state: billingTermsDone ? "done" : approveDone ? "active" : "upcoming",
+      label: "Aanbieders bevestigen",
+      icon: Users,
+      state: providersDone
+        ? "done"
+        : approveDone && statusSummary.total > 0
+          ? "active"
+          : "upcoming",
     },
   ];
 
@@ -162,6 +164,17 @@ function buildProgramTrack(
       title: "Programma",
       steps,
       statusLine: "Wij stellen uw programma samen. U hoort van ons zodra het klaarstaat.",
+      done: false,
+    };
+  }
+  if (!approveDone) {
+    const remaining = Math.max(0, customerApprovableCount - customerApprovedCount);
+    return {
+      id: "program",
+      title: "Programma",
+      steps,
+      statusLine: `Bekijk en keur uw programma-onderdelen goed (${customerApprovedCount} van ${customerApprovableCount}). Wij benaderen aanbieders zodra u akkoord gaat.`,
+      cta: { label: remaining > 1 ? "Onderdelen goedkeuren" : "Onderdeel goedkeuren", stepId: "approve" },
       done: false,
     };
   }
@@ -181,36 +194,57 @@ function buildProgramTrack(
       done: false,
     };
   }
-  if (!approveDone) {
-    return {
-      id: "program",
-      title: "Programma",
-      steps,
-      statusLine: `U kunt nu uw onderdelen goedkeuren (${customerApprovedCount} van ${customerApprovableCount}).`,
-      cta: { label: "Onderdelen goedkeuren", stepId: "approve" },
-      done: false,
-    };
-  }
-  if (!billingTermsDone) {
-    return {
-      id: "program",
-      title: "Programma",
-      steps,
-      statusLine: !billingComplete
-        ? "Vul uw factuurgegevens aan om de boeking definitief te maken."
-        : "Onderteken de voorwaarden om de boeking definitief te maken.",
-      cta: {
-        label: !billingComplete ? "Gegevens invullen" : "Ondertekenen",
-        stepId: "billing_terms",
-      },
-      done: false,
-    };
-  }
   return {
     id: "program",
     title: "Programma",
     steps,
-    statusLine: "Programma definitief — wij gaan ermee aan de slag.",
+    statusLine: "Programma bevestigd door alle aanbieders.",
+    done: true,
+  };
+}
+
+function buildBillingTrack(
+  billingComplete: boolean,
+  termsAccepted: boolean,
+): TrackViewModel {
+  const steps: MiniStep[] = [
+    {
+      label: "Facturatiegegevens",
+      icon: FileSignature,
+      state: billingComplete ? "done" : "active",
+    },
+    {
+      label: "Voorwaarden ondertekenen",
+      icon: Check,
+      state: termsAccepted ? "done" : billingComplete ? "active" : "upcoming",
+    },
+  ];
+
+  if (!billingComplete) {
+    return {
+      id: "billing",
+      title: "Gegevens & voorwaarden",
+      steps,
+      statusLine: "U kunt deze gegevens nu alvast invullen — dat versnelt de boeking.",
+      cta: { label: "Gegevens invullen", stepId: "billing_terms" },
+      done: false,
+    };
+  }
+  if (!termsAccepted) {
+    return {
+      id: "billing",
+      title: "Gegevens & voorwaarden",
+      steps,
+      statusLine: "Onderteken de algemene voorwaarden om de boeking definitief te maken.",
+      cta: { label: "Ondertekenen", stepId: "billing_terms" },
+      done: false,
+    };
+  }
+  return {
+    id: "billing",
+    title: "Gegevens & voorwaarden",
+    steps,
+    statusLine: "Gegevens en voorwaarden compleet.",
     done: true,
   };
 }
@@ -247,13 +281,13 @@ const GlossaryTooltip = () => (
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-xs space-y-1.5 text-xs">
         <p>
+          <strong>U keurt goed</strong> = u accepteert het onderdeel zoals voorgesteld. Wij sturen het daarna pas naar de aanbieder.
+        </p>
+        <p>
           <strong>Aanbieder bevestigt</strong> = de partij die het onderdeel uitvoert, heeft toegezegd.
         </p>
         <p>
-          <strong>U keurt goed</strong> = u accepteert het onderdeel zoals voorgesteld.
-        </p>
-        <p>
-          <strong>U ondertekent</strong> = u accepteert de algemene voorwaarden.
+          <strong>Gegevens & voorwaarden</strong> = facturatiegegevens en akkoord op algemene voorwaarden. U kunt deze ook alvast invullen.
         </p>
         <p>
           <strong>Logies-offerte</strong> = aanbod van een logies-aanbieder (los van de programma-offerte).
@@ -337,7 +371,7 @@ const TrackRow = ({
       {track.cta && onAction && (
         <Button
           size="sm"
-          variant={track.id === "lodging" ? "outline" : "default"}
+          variant={track.id === "program" ? "default" : "outline"}
           onClick={() => onAction(track.cta!.stepId)}
           className="shrink-0"
         >
@@ -414,7 +448,7 @@ const TrackRowVertical = ({
       {track.cta && onAction && (
         <Button
           size="sm"
-          variant={track.id === "lodging" ? "outline" : "default"}
+          variant={track.id === "program" ? "default" : "outline"}
           onClick={() => onAction(track.cta!.stepId)}
           className="w-full"
         >
@@ -454,14 +488,14 @@ export const ProgramStepper = ({
     statusSummary,
     customerApprovedCount,
     customerApprovableCount,
-    billingComplete,
-    termsAccepted,
   );
+  const billingTrack = buildBillingTrack(billingComplete, termsAccepted);
 
-  const allDone = (!lodgingTrack || lodgingTrack.done) && programTrack.done;
+  const allDone =
+    (!lodgingTrack || lodgingTrack.done) && programTrack.done && billingTrack.done;
   const statusBadge = allDone
     ? { label: "Definitief", tone: "bg-primary/10 text-primary" }
-    : programTrack.done
+    : programTrack.done && billingTrack.done
       ? { label: "Bijna klaar", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" }
       : { label: "In afstemming", tone: "bg-amber-500/10 text-amber-700 dark:text-amber-300" };
 
@@ -505,32 +539,12 @@ export const ProgramStepper = ({
         className={cn(
           isVertical ? "space-y-4" : "space-y-5",
           !mobileOpen && "hidden sm:block",
-          !mobileOpen && (isVertical ? "sm:space-y-4" : "sm:space-y-5"),
         )}
       >
-        {lodgingTrack && (
-          <>
-            <Row track={lodgingTrack} onAction={onStepAction} />
-            <div className="border-t" />
-          </>
-        )}
+        {lodgingTrack && <Row track={lodgingTrack} onAction={onStepAction} />}
         <Row track={programTrack} onAction={onStepAction} />
+        <Row track={billingTrack} onAction={onStepAction} />
       </div>
-
-      {allDone && (
-        <div className="mt-4 pt-4 border-t flex items-center gap-2 text-sm">
-          <Check className="h-4 w-4 text-primary" />
-          <span className={cn("font-medium", isVertical && "text-xs")}>
-            {isVertical ? "Alles geregeld." : "Alles geregeld — wij gaan ermee aan de slag."}
-          </span>
-        </div>
-      )}
     </div>
   );
 };
-
-// Backwards-compat export used by other modules (no behavior change here).
-export function getProgramSteps(_: Omit<ProgramStepperProps, "onStepAction" | "className" | "quoteStatus">) {
-  // Deprecated: kept as no-op for any external callers; new UI builds tracks inline.
-  return [] as Array<{ id: StepId; number: number; label: string; sub: string; state: StepState }>;
-}

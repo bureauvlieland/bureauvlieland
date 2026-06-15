@@ -1,68 +1,104 @@
-# Wijzigingen-flow: akkoord-keuze + tijdnotatie
+## Doel
 
-Twee samenhangende problemen:
+De klant kan **Gegevens & voorwaarden** vanaf dag 1 invullen (parallel spoor), en Bureau Vlieland kan per partner-activiteit kiezen of de aanvraag **direct uitgaat** of **wacht op klantgoedkeuring**. Logies-uitvraag blijft ongewijzigd (capaciteitsdruk).
 
-1. Na publiceren van een prijs-/tijdwijziging blijven de oude akkoord-stempels staan ("Klant akkoord", "Partner: bevestigd", "Akkoord partner"), terwijl klant/partner de nieuwe waarde nooit hebben goedgekeurd. De admin moet expliciet kunnen kiezen of een wijziging als al-goedgekeurd geldt of opnieuw bevestigd moet worden.
-2. De `status_note` "Tijd 12:30 ingesteld door admin" wordt niet bijgewerkt of opgeruimd bij een latere wijziging, dus in het klantportaal staat een toelichting die niet meer klopt bij de getoonde tijd.
-3. Tijden worden inconsistent getoond: linker tijd-rail laat `10:00:00` zien, kaart laat `10:00` zien — overal HH:mm aanhouden.
-
-## 1. Publiceer-dialog: keuze "wie heeft akkoord gegeven?"
-
-In `PublishChangesDialog.tsx` één nieuw blok boven "Ontvangers", alleen zichtbaar wanneer er items in de lijst staan die al live waren (geen `pending_added`/`pending_marked_for_removal`):
+## Eindbeeld in de klantportaal-stepper
 
 ```text
-Akkoordstatus van deze wijzigingen
-( ) Beide moeten opnieuw bevestigen   ← default
-( ) Klant heeft al akkoord, partner moet nog bevestigen
-( ) Partner heeft al bevestigd, klant moet nog bevestigen
-( ) Beide hebben al akkoord (interne wijziging — niets resetten)
+┌─────────────────────────────┐  ┌─────────────────────────────┐
+│ LOGIES (bij meerdaags)      │  │ GEGEVENS & VOORWAARDEN      │
+│  • Aanvraag ingediend       │  │  • Bedrijfsgegevens         │
+│  • Offertes vergelijken     │  │  • Voorwaarden ondertekenen │
+│  • Logies vastgelegd        │  │  → altijd actief, eigen CTA │
+└─────────────────────────────┘  └─────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ PROGRAMMA                                                   │
+│  1. Onderdelen goedkeuren     (eerst — klant aan zet)       │
+│  2. Aanbieders bevestigen     (na admin-uitvraag)           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Strikt gescheiden van de mail-checkboxes: deze keuze bepaalt alleen of de bestaande akkoord-stempels gereset worden. De admin vinkt los daarvan aan of er ook een mail uitgaat.
+Definitief = alle drie de sporen 'gereed' (volgorde maakt niet uit).
 
-Selectie wordt meegestuurd als `approvalScope: { customer: 'keep'|'reset', partner: 'keep'|'reset' }` naar `publish-program-changes`.
+---
 
-## 2. Edge function `publish-program-changes`
+## Wijzigingen
 
-Voor elk gepubliceerd item dat al live was, op basis van `approvalScope`:
-- `customer === 'reset'` → `customer_approved_at = null`, `customer_accepted_at = null`.
-- `partner === 'reset'` → `quoted_at = null`, `item_quote_status = 'in_behandeling'`, `confirmed_time = null`, zodat het item terug in de partner-bevestigingsflow valt.
-- `'keep'` → bestaande timestamps en status ongemoeid laten (huidig gedrag).
+### 1. Admin: keuze per item bij uitvraag
 
-Items met alleen `pending_added` of `pending_marked_for_removal` worden niet door `approvalScope` geraakt; daar verandert niets aan de huidige logica.
+In `AdminRequestDetail.tsx` (de "Bekijk & verstuur"-preview en de per-item knop):
 
-Daarnaast bij elke promotie van `pending_preferred_time` naar live:
-- `status_note` overschrijven met de nieuwe tekst ("Tijd {nieuwe tijd} ingesteld door Bureau Vlieland") óf legen, zodat de oude "12:30 ingesteld" tekst verdwijnt.
-- `status_updated_at = now()`.
+- Voeg per partner-item een radio-keuze toe:
+  - **"Nu reserveren"** — partner-aanvraag gaat meteen uit (huidig gedrag)
+  - **"Wachten op klantgoedkeuring"** — `skip_partner_notification` blijft `true`, item krijgt vlag `awaiting_customer_for_partner_send = true`
+- Bij bulk-versturen blijven items met "wachten" achter en gaan niet mee.
+- In de item-lijst (admin) toont een nieuw badge "⏳ Wacht op klant" voor deze items.
 
-Bij andere wijzigingen (prijs, beschrijving) waar de bestaande `status_note` nog naar een oude waarde verwijst die niet meer klopt: `status_note = null` om verwarring te voorkomen. Eenvoudige regel: zodra een item gepubliceerd wordt en de nieuwe waarde niet overeenkomt met wat in `status_note` staat, leegmaken.
+Database-impact: nieuwe kolom `awaiting_customer_for_partner_send boolean default false` op `program_request_items` (puur intentie-vlag voor admin; geen RLS-impact omdat klant deze niet ziet).
 
-## 3. Tijdnotatie overal HH:mm
+### 2. Edge function: auto-versturen bij klantgoedkeuring
 
-Nieuwe util in `src/lib/timeUtils.ts`:
+`approve-quote-item/index.ts` doet al `skip_partner_notification = false` in het admin_override pad. Uitbreiden:
 
-```ts
-formatTimeHHmm(value: string | null | undefined): string | null
-// "10:00:00"     -> "10:00"
-// "10:00"        -> "10:00"
-// "10:00:00+02"  -> "10:00"
-// "flexibel"     -> "flexibel"
-// null/""        -> null
-```
+- Wanneer een klant een item goedkeurt **en** `awaiting_customer_for_partner_send = true` **en** het item heeft een echte `provider_id` (geen `bureau`):
+  - Roep intern `send-items-to-partners` aan met `mode: "force"` voor dit ene item.
+  - Reset de vlag.
+- Bestaand gedrag voor niet-gemarkeerde items blijft hetzelfde (geen automatische verzending; admin houdt regie).
 
-Toepassen op alle plekken die nu een rauwe `preferred_time/confirmed_time/proposed_time` string renderen, o.a.:
-- `customer-portal/CustomerTimeline.tsx` (de "10:00:00" in de linker tijd-rail)
-- `customer-portal/CustomerProgramItem.tsx`
-- `customer-portal/AcceptProposalCard.tsx`
-- `customer-portal/TodayView.tsx`, `ProgramMap.tsx`
-- `partner-portal/PartnerItemSheet`, `PartnerProjectItemRow`, `PartnerItemCard`, `PartnerUpcomingActivities`, `PartnerPlanningCalendar`
-- Admin: `AdminRequestDetail`, `AdminPlanning`, `AdminTickets`, `werkbank/ProjectDetailPanel`
-- `AdminEditActivitySheet.tsx` regel 268 en de equivalente regel in de edge function: gebruik dezelfde formatter zodat de status_note nooit seconden bevat.
+### 3. Bulk-goedkeuren in klantportaal
 
-Sorteer-logica (`localeCompare` op tijdstrings) blijft werken na normalisatie.
+Nieuwe knop **"Alle onderdelen goedkeuren"** boven de programma-lijst in `CustomerProgramItem`-container (`DesktopProgramView` + `MobileProgramView`):
 
-## Buiten scope
+- Roept `approve-quote-item` in lus aan voor alle items waar `needsCustomerAction === true`.
+- Toont één toast met samenvatting ("8 onderdelen goedgekeurd, 2 worden nu naar aanbieders gestuurd").
 
-- Geen aanpassing aan partner-portaal goedkeuring-flow zelf; we zetten alleen timestamps terug zodat het bestaande "nog te bevestigen" gedrag opnieuw triggert.
-- Geen nieuwe e-mailtemplates; bestaande `ITEM_CHANGES_*` mails blijven gekoppeld aan de bestaande aanvink-keuze.
-- Geen database-migratie nodig — alle benodigde kolommen bestaan al.
+### 4. ProgramStepper: nieuwe structuur
+
+`src/components/customer-portal/ProgramStepper.tsx`:
+
+- **Splits "Gegevens & voorwaarden" af** als een derde track (naast Logies + Programma), altijd actief vanaf dag 1.
+- **Wissel volgorde** binnen de Programma-track: eerst "Onderdelen goedkeuren", dan "Aanbieders bevestigen".
+- Stepper-logica:
+  - `approveDone` = alle approvable items hebben `customer_approved_at`.
+  - `providersDone` = alle items hebben definitieve partner-status (geen pending/alternative/counter).
+  - "Aanbieders bevestigen" toont sublabel "Wij benaderen aanbieders zodra u goedkeurt" zolang `approveDone === false` en er ≥1 item is met `awaiting_customer_for_partner_send`.
+
+### 5. Copy-aanpassingen (klanttekst)
+
+- Gegevens-track statusregel: *"U kunt deze gegevens nu alvast invullen — dat versnelt de boeking."*
+- Programma-track als nog niets goedgekeurd: *"Bekijk en keur uw programma-onderdelen goed. Wij benaderen aanbieders zodra u akkoord gaat."*
+- "Definitief"-badge alleen wanneer Logies (indien van toepassing) + Programma + Gegevens & voorwaarden alle drie `done`.
+
+---
+
+## Wat blijft ongewijzigd
+
+- Logies-uitvraag (`send-accommodation-quote-request`) — capaciteit op het eiland; gaat direct uit zodra admin de partners selecteert.
+- Bureau-items (ferries, fietsen, kostenposten) — interne items, geen partner-uitvraag.
+- Bestaande "wijzigingen publiceren"-flow uit eerdere sessie blijft intact.
+- Silence=Agreement na 7 dagen, e-mailtemplates, facturatie.
+
+---
+
+## Bestanden (technisch)
+
+| Bestand | Aard van wijziging |
+|---|---|
+| `supabase/migrations/<new>.sql` | Kolom `awaiting_customer_for_partner_send` op `program_request_items` |
+| `src/pages/admin/AdminRequestDetail.tsx` | Keuze "nu/wachten" in send-preview en per-item menu; nieuwe badge |
+| `supabase/functions/send-items-to-partners/index.ts` | Filter items met `awaiting_customer_for_partner_send = true` uit bulk-flow |
+| `supabase/functions/approve-quote-item/index.ts` | Trigger auto-send naar partner als vlag gezet |
+| `src/components/customer-portal/ProgramStepper.tsx` | Splits gegevens-track af, herorden programma-track |
+| `src/components/customer-portal/DesktopProgramView.tsx` + `MobileProgramView.tsx` | Nieuwe bulk-approve knop; aangepaste props |
+| `src/hooks/useCustomerProgram.ts` | `bulkApproveQuoteItems()` helper |
+| `src/hooks/useProgramStatus.ts` | "allDone"-logica meenemen van losse gegevens-track |
+
+## Risico's
+
+- **Vergeten item-vlag** — als admin per ongeluk alles op "wachten" zet en de klant nooit goedkeurt, gaat er niets uit. Mitigeren met bestaande "stale_pending_change"-todo + extra todo "Items wachten >7d op klantgoedkeuring".
+- **Email-volume bij bulk-approve** — 10 items = 10 partner-mails in korte tijd. Mitigeren door in `approve-quote-item` per provider te groeperen voordat we `send-items-to-partners` aanroepen.
+
+## Niet in deze plan
+
+- Aparte deellevering / aanbetaling-facturen (los traject).
+- Wijziging hoe partners alternatieven voorstellen.
