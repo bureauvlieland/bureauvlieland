@@ -1,4 +1,5 @@
 import type { ProgramRequestItem } from "@/types/programRequest";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 
 /** Sort items chronologically: confirmed_time > proposed_time > preferred_time */
 export const sortItemsByTime = (items: ProgramRequestItem[]): ProgramRequestItem[] => {
