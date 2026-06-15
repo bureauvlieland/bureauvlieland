@@ -221,6 +221,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
       : {};
 
+    // Als admin dit item heeft gemarkeerd als "wacht op klantgoedkeuring",
+    // dan triggert klantakkoord automatisch de partner-uitvraag (en wist de vlag).
+    const triggerPartnerSend = !admin_override
+      && item.awaiting_customer_for_partner_send === true
+      && item.provider_id
+      && item.provider_id !== "bureau"
+      && (item.skip_partner_notification === true || item.skip_partner_notification === null);
+
     const updatePayload = admin_override
       ? {
           customer_approved_at: approvalTimestamp,
@@ -229,6 +237,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           status: "pending",
           status_updated_at: approvalTimestamp,
           updated_at: approvalTimestamp,
+          awaiting_customer_for_partner_send: false,
           ...priceSyncPayload,
         }
       : {
@@ -236,6 +245,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
           customer_accepted_at: approvalTimestamp,
           updated_at: approvalTimestamp,
           ...(isLateConceptItem ? { item_quote_status: "in_afstemming" } : {}),
+          ...(triggerPartnerSend
+            ? { skip_partner_notification: false, awaiting_customer_for_partner_send: false }
+            : {}),
           ...priceSyncPayload,
         };
 
@@ -249,6 +261,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
       throw updateError;
     }
 
+    // Trigger automatische partner-uitvraag wanneer admin had ingesteld "wacht op klant".
+    // Dit gebeurt vóór de history-insert zodat in de tijdlijn de partner-mail meekomt.
+    if (triggerPartnerSend) {
+      try {
+        await supabase.functions.invoke("send-items-to-partners", {
+          body: {
+            request_id: program.id,
+            item_ids: [item_id],
+            mode: "force",
+            origin,
+          },
+        });
+        console.log(`Auto-sent partner request for item ${item.block_name} after customer approval (awaiting flag)`);
+      } catch (autoSendError) {
+        console.error("Non-critical: auto-send to partner failed after approval:", autoSendError);
+      }
+    }
+
     if (!admin_override) {
       await supabase.from("program_request_history").insert({
         request_id: program.id,
@@ -256,7 +286,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         action: "item_approved",
         actor: "customer",
         actor_name: program.customer_name,
-        notes: `Klant heeft "${item.block_name}" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
+        notes: triggerPartnerSend
+          ? `Klant heeft "${item.block_name}" goedgekeurd. Aanvraag is automatisch naar partner ${item.provider_name} verstuurd.`
+          : `Klant heeft "${item.block_name}" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
       });
 
       const { data: allItems } = await supabase
@@ -285,8 +317,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Onderdeel geaccordeerd",
+          message: triggerPartnerSend ? "Onderdeel geaccordeerd en partner geïnformeerd" : "Onderdeel geaccordeerd",
           all_approved: allApproved,
+          auto_partner_sent: triggerPartnerSend,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
