@@ -1185,29 +1185,38 @@ const AdminRequestDetail = () => {
       const previousNotes = currentItem?.admin_price_notes ?? null;
       const previousPriceType = currentItem?.price_type ?? null;
       const hadPartnerQuote = currentItem?.quoted_price != null;
-      const hadCustomerApproval = !!currentItem?.customer_approved_at;
-      const isExternalPartner = currentItem ? currentItem.provider_id !== "bureau" : false;
+      const isPendingAdded = currentItem?.pending_added === true;
 
       const priceChanged = previousOverride !== price;
       const priceTypeChanged = !!newPriceType && previousPriceType !== newPriceType;
       const meaningfulChange = priceChanged || priceTypeChanged;
 
-      const updateData: Record<string, unknown> = {
-        admin_price_override: price,
-        admin_price_notes: notes || null,
-      };
-      if (newPriceType) {
-        updateData.price_type = newPriceType;
-      }
-      if (meaningfulChange) {
-        updateData.admin_price_override_updated_at = new Date().toISOString();
-        // Open opnieuw voor partner-bevestiging — partner moet de nieuwe prijs accorderen
-        updateData.partner_price_change_acknowledged_at = null;
-        // Klant moet opnieuw akkoord geven als er al akkoord was én er een actieve partnerprijs lag
-        if (hadCustomerApproval && hadPartnerQuote) {
-          updateData.customer_approved_at = null;
-          updateData.item_quote_status = "offerte_verstuurd";
+      // Voor reeds gepubliceerde items routen we de prijswijziging via de
+      // pending-kolommen, zodat de admin via "Publiceer wijzigingen" bewust
+      // kiest of klant en/of partner worden geïnformeerd.
+      const updateData: Record<string, unknown> = {};
+
+      if (isPendingAdded || !meaningfulChange) {
+        // Concept item óf alleen toelichting bijgewerkt → direct naar live
+        updateData.admin_price_override = price;
+        updateData.admin_price_notes = notes || null;
+        if (newPriceType) updateData.price_type = newPriceType;
+        if (meaningfulChange) {
+          updateData.admin_price_override_updated_at = new Date().toISOString();
+          updateData.partner_price_change_acknowledged_at = null;
         }
+      } else {
+        // Live item met betekenisvolle prijswijziging → pending
+        const samePrice = (previousOverride ?? null) === (price ?? null);
+        updateData.pending_admin_price_override = samePrice ? null : price;
+        // Toelichting hoort bij de wijziging — schrijf ook als pending zodat
+        // klant/partner straks dezelfde context zien.
+        updateData.pending_admin_price_notes =
+          (notes || null) === (previousNotes ?? null) ? null : (notes || null);
+        if (newPriceType && newPriceType !== previousPriceType) {
+          updateData.pending_price_type = newPriceType;
+        }
+        updateData.pending_changed_at = new Date().toISOString();
       }
 
       const { error } = await supabase
@@ -1228,31 +1237,20 @@ const AdminRequestDetail = () => {
         await supabase.from("program_request_history").insert({
           request_id: request!.id,
           item_id: itemId,
-          action: "admin_changed_price",
+          action: isPendingAdded ? "admin_changed_price" : "admin_changed_price_pending",
           actor: "admin",
           actor_name: "Admin",
           old_value: { admin_price_override: previousOverride, admin_price_notes: previousNotes, price_type: previousPriceType },
           new_value: { admin_price_override: price, admin_price_notes: notes || null, price_type: newPriceType ?? previousPriceType },
-          notes: hadPartnerQuote
-            ? "Prijs aangepast na eerdere partnerbevestiging — partner en klant moeten opnieuw bevestigen."
-            : null,
+          notes: isPendingAdded
+            ? null
+            : "Prijswijziging klaargezet — publiceer via 'Publiceer wijzigingen' om klant/partner te informeren.",
         });
-
-        // Geen automatische mails meer bij prijswijziging — admin
-        // informeert partner en klant handmatig via de mail-knoppen
-        // in het item-detail (popover). Hierdoor voorkomen we ongewenste
-        // notificaties bij interne correcties of bureau-items.
-        if (isExternalPartner && hadPartnerQuote && price !== null) {
-          toast.info("Prijs gewijzigd — informeer de partner handmatig via de mail-knop bij het onderdeel.");
-        }
-        if (hadCustomerApproval && price !== null) {
-          toast.info("Klant moet opnieuw bevestigen — stuur handmatig een melding wanneer gewenst.");
-        }
       }
 
       toast.success(
-        meaningfulChange && hadCustomerApproval && hadPartnerQuote
-          ? "Prijs bijgewerkt — klant en partner moeten opnieuw bevestigen"
+        meaningfulChange && !isPendingAdded
+          ? "Prijswijziging klaargezet — open 'Publiceer wijzigingen' om klant/partner te informeren"
           : "Prijs bijgewerkt"
       );
       fetchRequestData();
