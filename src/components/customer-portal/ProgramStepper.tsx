@@ -50,6 +50,10 @@ export interface ProgramStepperProps {
   quoteStatus?: string | null;
   onStepAction?: (stepId: StepId) => void;
   className?: string;
+  /** "horizontal" (default) = hero/overzicht. "vertical" = compacte sidebar-variant. */
+  variant?: "horizontal" | "vertical";
+  /** Mobile: initieel ingeklapt (standaard true bij vertical, false bij horizontal). */
+  defaultCollapsedOnMobile?: boolean;
 }
 
 // ─── Track-builders ──────────────────────────────────────────────────────────
