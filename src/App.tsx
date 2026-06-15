@@ -111,6 +111,8 @@ const AdminProjectsOverview = lazy(() => import("./pages/admin/AdminProjectsOver
 const AdminWerkbank = lazy(() => import("./pages/admin/AdminWerkbank"));
 const AdminTickets = lazy(() => import("./pages/admin/AdminTickets"));
 const AdminAttribution = lazy(() => import("./pages/admin/AdminAttribution"));
+const AdminSocial = lazy(() => import("./pages/admin/AdminSocial"));
+const AdminSocialSettings = lazy(() => import("./pages/admin/AdminSocialSettings"));
 
 const queryClient = new QueryClient();
 
