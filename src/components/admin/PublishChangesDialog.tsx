@@ -387,9 +387,9 @@ export function PublishChangesDialog({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Ontvangers (optioneel)</Label>
             <p className="text-xs text-muted-foreground">
-              Standaard worden er geen mails verstuurd. Vink hieronder aan
-              wie je nu wilt informeren — of publiceer eerst en mail later
-              handmatig per onderdeel.
+              Standaard worden er geen mails verstuurd — ook niet voor
+              geannuleerde onderdelen. Vink hieronder aan wie je nu wilt
+              informeren, of publiceer eerst en mail later handmatig.
             </p>
             <div className="space-y-2 rounded-md border p-3">
               <div className="flex items-center gap-2">
