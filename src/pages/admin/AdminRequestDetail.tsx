@@ -470,6 +470,9 @@ const AdminRequestDetail = () => {
 
   const [aiProgramOpen, setAiProgramOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [headcountNotifyState, setHeadcountNotifyState] = useState<
+    { open: boolean; oldPeople: number; newPeople: number } | null
+  >(null);
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
