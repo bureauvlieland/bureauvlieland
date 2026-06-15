@@ -3273,6 +3273,24 @@ const AdminRequestDetail = () => {
           generalNotes={request.general_notes}
           linkedAccommodationId={request.linked_accommodation_id}
           onSuccess={() => fetchRequestData()}
+          onPeopleChanged={(oldP, newP) =>
+            setHeadcountNotifyState({ open: true, oldPeople: oldP, newPeople: newP })
+          }
+        />
+      )}
+
+      {request && headcountNotifyState && (
+        <NotifyHeadcountChangeDialog
+          open={headcountNotifyState.open}
+          onOpenChange={(o) =>
+            setHeadcountNotifyState((s) => (s ? { ...s, open: o } : null))
+          }
+          requestId={request.id}
+          linkedAccommodationId={request.linked_accommodation_id}
+          customerName={request.customer_name}
+          customerEmail={(request as any).customer_email ?? null}
+          oldPeople={headcountNotifyState.oldPeople}
+          newPeople={headcountNotifyState.newPeople}
         />
       )}
 
