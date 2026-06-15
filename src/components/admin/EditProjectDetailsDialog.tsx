@@ -38,6 +38,7 @@ export function EditProjectDetailsDialog({
   generalNotes: initialNotes,
   linkedAccommodationId,
   onSuccess,
+  onPeopleChanged,
 }: EditProjectDetailsDialogProps) {
   const [dates, setDates] = useState<Date[]>([]);
   const [people, setPeople] = useState(initialPeople);
