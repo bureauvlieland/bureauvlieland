@@ -152,6 +152,12 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       ],
     },
     {
+      label: "Marketing",
+      items: [
+        { title: "Social media", url: "/admin/social", icon: Megaphone },
+      ],
+    },
+    {
       label: "Systeem",
       items: [
         { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
