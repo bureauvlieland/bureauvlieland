@@ -1,0 +1,280 @@
+import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { ArrowLeft, Loader2 } from "lucide-react";
+
+type Settings = {
+  id?: string;
+  cadence_per_week: number;
+  posting_days: string[];
+  posting_time: string;
+  sources_enabled: Record<string, boolean>;
+  hashtag_sets: Record<string, string[]>;
+  default_ctas: Record<string, string>;
+  tone_of_voice: string;
+  meta_page_id: string | null;
+  meta_ig_user_id: string | null;
+  meta_token_expires_at: string | null;
+  meta_connected_at: string | null;
+  publishing_enabled: boolean;
+};
+
+const DEFAULTS: Settings = {
+  cadence_per_week: 3,
+  posting_days: ["ma", "wo", "vr"],
+  posting_time: "10:00",
+  sources_enabled: { building_blocks: true, partners: true, assets: true, partner_spotlight: true },
+  hashtag_sets: { default: ["#vlieland", "#waddeneilanden", "#bureauvlieland"] },
+  default_ctas: { default: "https://www.bureauvlieland.nl" },
+  tone_of_voice: "warm, eilandelijk, professioneel, niet schreeuwerig",
+  meta_page_id: null,
+  meta_ig_user_id: null,
+  meta_token_expires_at: null,
+  meta_connected_at: null,
+  publishing_enabled: false,
+};
+
+export default function AdminSocialSettings() {
+  const [settings, setSettings] = useState<Settings>(DEFAULTS);
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("social_settings").select("*").limit(1).maybeSingle();
+      if (data) {
+        setSettings({ ...DEFAULTS, ...(data as unknown as Settings) });
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    const payload: Record<string, unknown> = {
+      cadence_per_week: settings.cadence_per_week,
+      posting_days: settings.posting_days,
+      posting_time: settings.posting_time,
+      sources_enabled: settings.sources_enabled,
+      hashtag_sets: settings.hashtag_sets,
+      default_ctas: settings.default_ctas,
+      tone_of_voice: settings.tone_of_voice,
+      meta_page_id: settings.meta_page_id,
+      meta_ig_user_id: settings.meta_ig_user_id,
+      publishing_enabled: settings.publishing_enabled,
+    };
+    if (token.trim()) {
+      payload.meta_token_encrypted = token.trim();
+      payload.meta_connected_at = new Date().toISOString();
+      // Long-lived Page tokens duren ~60 dagen
+      payload.meta_token_expires_at = new Date(Date.now() + 55 * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    let res;
+    if (settings.id) {
+      res = await supabase.from("social_settings").update(payload).eq("id", settings.id);
+    } else {
+      res = await supabase.from("social_settings").insert(payload);
+    }
+    if (res.error) toast.error(res.error.message);
+    else {
+      toast.success("Instellingen bewaard");
+      setToken("");
+    }
+    setSaving(false);
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const toggleSource = (key: string) =>
+    setSettings((s) => ({ ...s, sources_enabled: { ...s.sources_enabled, [key]: !s.sources_enabled[key] } }));
+
+  return (
+    <AdminLayout>
+      <Helmet>
+        <title>Social instellingen | Admin | Bureau Vlieland</title>
+      </Helmet>
+      <div className="p-6 max-w-3xl mx-auto space-y-6">
+        <div>
+          <Button asChild variant="ghost" size="sm" className="mb-2">
+            <Link to="/admin/social">
+              <ArrowLeft className="h-4 w-4 mr-1" /> Terug
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Social media instellingen</h1>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ritme</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Posts per week</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={7}
+                  value={settings.cadence_per_week}
+                  onChange={(e) => setSettings((s) => ({ ...s, cadence_per_week: Number(e.target.value) }))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Standaard tijdstip</Label>
+                <Input
+                  type="time"
+                  value={settings.posting_time}
+                  onChange={(e) => setSettings((s) => ({ ...s, posting_time: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Posting dagen (komma-gescheiden, bv. ma,wo,vr)</Label>
+              <Input
+                value={settings.posting_days.join(",")}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, posting_days: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Bronnen</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { key: "building_blocks", label: "Nieuwe bouwstenen" },
+              { key: "partners", label: "Nieuwe / bijgewerkte partners" },
+              { key: "assets", label: "Projectfoto's (mediabank)" },
+              { key: "partner_spotlight", label: "Partner in spotlight (rotatie)" },
+            ].map((row) => (
+              <label key={row.key} className="flex items-center justify-between border-b py-2 last:border-b-0">
+                <span className="text-sm">{row.label}</span>
+                <Switch checked={!!settings.sources_enabled[row.key]} onCheckedChange={() => toggleSource(row.key)} />
+              </label>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Toon & hashtags</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <Label className="text-xs">Tone-of-voice</Label>
+              <Textarea
+                rows={3}
+                value={settings.tone_of_voice}
+                onChange={(e) => setSettings((s) => ({ ...s, tone_of_voice: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Standaard hashtags (spatie-gescheiden)</Label>
+              <Input
+                value={(settings.hashtag_sets.default ?? []).join(" ")}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    hashtag_sets: { ...s.hashtag_sets, default: e.target.value.split(/\s+/).filter(Boolean) },
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Standaard CTA-link</Label>
+              <Input
+                value={settings.default_ctas.default ?? ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, default_ctas: { ...s.default_ctas, default: e.target.value } }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Meta-koppeling
+              {settings.publishing_enabled ? (
+                <Badge variant="default">live</Badge>
+              ) : (
+                <Badge variant="secondary">conceptmodus</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Voor live publicatie: koppel een Facebook Page + Instagram Business-account in Meta Business Suite, maak een
+              App in Meta for Developers en plak hier de Page ID, IG User ID en een long-lived Page Access Token.
+              Tot dan blijft alles in conceptmodus (genereren + plannen + previews, geen daadwerkelijke push).
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Facebook Page ID</Label>
+                <Input
+                  value={settings.meta_page_id ?? ""}
+                  onChange={(e) => setSettings((s) => ({ ...s, meta_page_id: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Instagram User ID (Business)</Label>
+                <Input
+                  value={settings.meta_ig_user_id ?? ""}
+                  onChange={(e) => setSettings((s) => ({ ...s, meta_ig_user_id: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Long-lived Page Access Token (plakken vervangt huidige)</Label>
+              <Textarea rows={2} value={token} onChange={(e) => setToken(e.target.value)} placeholder="EAAB..." />
+              {settings.meta_token_expires_at && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Huidige token verloopt: {new Date(settings.meta_token_expires_at).toLocaleDateString("nl-NL")}
+                </p>
+              )}
+            </div>
+            <label className="flex items-center justify-between border-t pt-3">
+              <span className="text-sm font-medium">Publicatie naar Meta ingeschakeld</span>
+              <Switch
+                checked={settings.publishing_enabled}
+                onCheckedChange={(v) => setSettings((s) => ({ ...s, publishing_enabled: v }))}
+              />
+            </label>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button onClick={save} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Bewaren
+          </Button>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}

@@ -48,6 +48,7 @@ import {
   MapPin,
   Ticket,
   Landmark,
+  Megaphone,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
@@ -148,6 +149,12 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Betaalbatches", url: "/admin/betaalbatches", icon: Banknote },
         { title: "Bankafschriften", url: "/admin/bankafschriften", icon: Landmark, badge: bankPendingCount },
         { title: "Commissies", url: "/admin/commissies", icon: HandCoins },
+      ],
+    },
+    {
+      label: "Marketing",
+      items: [
+        { title: "Social media", url: "/admin/social", icon: Megaphone },
       ],
     },
     {
@@ -451,6 +458,8 @@ const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/logs/, title: "Activiteitenlog" },
   { match: /^\/admin\/bankafschriften/, title: "Bankafschriften" },
   { match: /^\/admin\/logies\/[^/]+/, title: "Logiesdetail" },
+  { match: /^\/admin\/social\/instellingen/, title: "Social instellingen" },
+  { match: /^\/admin\/social/, title: "Social media" },
   { match: /^\/admin\/dashboard/, title: "Dashboard" },
   { match: /^\/admin\/todos/, title: "Taken" },
 ];
