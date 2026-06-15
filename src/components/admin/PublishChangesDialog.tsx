@@ -206,10 +206,21 @@ export function PublishChangesDialog({
 
   const hasBlocking = warnings.some((w) => w.severity === "blocking");
 
+  // Aantal items dat al live was (geen toevoeging, geen verwijdering) en
+  // waar dus een akkoord-reset relevant is.
+  const liveChangedCount = useMemo(
+    () =>
+      pendingItems.filter((it) => !it.pending_added && !it.pending_marked_for_removal)
+        .length,
+    [pendingItems],
+  );
+
   // Default: geen partners aangevinkt — admin kiest bewust per partner.
   useMemo(() => {
     setNotifyPartners({});
     setNotifyCustomer(false);
+    setApprovalCustomer("reset");
+    setApprovalPartner("reset");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
