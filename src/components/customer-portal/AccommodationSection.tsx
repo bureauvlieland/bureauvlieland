@@ -596,6 +596,14 @@ export const AccommodationSection = ({
             <div className="flex items-center gap-2">
               <span>{accommodationType.icon}</span>
               <span>{accommodationType.label}</span>
+            </div>
+          )}
+          {accommodation.room_count && (
+            <div className="flex items-center gap-2">
+              <BedDouble className="h-4 w-4 text-muted-foreground" />
+              <span>{accommodation.room_count} kamer{accommodation.room_count > 1 ? "s" : ""}</span>
+            </div>
+          )}
         </div>
 
         {/* Uw wensen - customer-entered preferences */}
@@ -688,15 +696,6 @@ export const AccommodationSection = ({
           );
         })()}
 
-
-          )}
-          {accommodation.room_count && (
-            <div className="flex items-center gap-2">
-              <BedDouble className="h-4 w-4 text-muted-foreground" />
-              <span>{accommodation.room_count} kamer{accommodation.room_count > 1 ? "s" : ""}</span>
-            </div>
-          )}
-        </div>
 
         {/* Status message */}
         {allDeclined ? (
