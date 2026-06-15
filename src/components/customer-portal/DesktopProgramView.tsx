@@ -126,6 +126,7 @@ interface DesktopProgramViewProps {
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;
+  onBulkApproveQuoteItems?: () => Promise<{ approved: number; failed: number; autoSentToPartner: number }>;
   // Guest details
   onOpenGuestDetails?: () => void;
   guestDetails?: {
