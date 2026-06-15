@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
       adminNote = "",
       origin,
       dryRun = false,
+      approvalScope,
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
@@ -129,6 +130,19 @@ Deno.serve(async (req) => {
       adminNote?: string;
       origin?: string;
       dryRun?: boolean;
+      approvalScope?: { customer?: "reset" | "keep"; partner?: "reset" | "keep" };
+    };
+    // Default: bij ontbreken (oudere clients) doen we 'reset' op beide kanten
+    // — dat spiegelt het nieuwe UI-default en is conservatief (klant/partner
+    // worden niet stilzwijgend als 'akkoord' bestempeld).
+    const resetCustomerApproval = (approvalScope?.customer ?? "reset") === "reset";
+    const resetPartnerApproval = (approvalScope?.partner ?? "reset") === "reset";
+
+    // Hulpfunctie: tijdwaarde naar HH:mm voor status_note.
+    const fmtHHmm = (v: string | null | undefined): string | null => {
+      if (!v) return null;
+      const m = String(v).trim().match(/^(\d{1,2}):(\d{2})/);
+      return m ? `${m[1].padStart(2, "0")}:${m[2]}` : String(v);
     };
 
     if (!requestId) {
