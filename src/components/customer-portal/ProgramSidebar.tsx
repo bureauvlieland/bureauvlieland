@@ -85,7 +85,8 @@ export const ProgramSidebar = ({
         className
       )}
     >
-      {/* Status checklist verplaatst naar ProgramStepper bovenaan de hoofdkolom. */}
+      {/* Voortgang (verticaal) — alleen op tab-pagina's, ingevuld door parent. */}
+      {topSlot}
 
 
 
