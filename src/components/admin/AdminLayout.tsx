@@ -458,6 +458,8 @@ const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/logs/, title: "Activiteitenlog" },
   { match: /^\/admin\/bankafschriften/, title: "Bankafschriften" },
   { match: /^\/admin\/logies\/[^/]+/, title: "Logiesdetail" },
+  { match: /^\/admin\/social\/instellingen/, title: "Social instellingen" },
+  { match: /^\/admin\/social/, title: "Social media" },
   { match: /^\/admin\/dashboard/, title: "Dashboard" },
   { match: /^\/admin\/todos/, title: "Taken" },
 ];
