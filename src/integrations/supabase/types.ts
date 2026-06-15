@@ -3466,6 +3466,221 @@ export type Database = {
         }
         Relationships: []
       }
+      social_media_assets: {
+        Row: {
+          anonymize_customer: boolean
+          building_block_id: string | null
+          created_at: string
+          id: string
+          last_used_at: string | null
+          note: string | null
+          partner_id: string | null
+          project_id: string | null
+          storage_path: string
+          tags: string[]
+          title: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          anonymize_customer?: boolean
+          building_block_id?: string | null
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          note?: string | null
+          partner_id?: string | null
+          project_id?: string | null
+          storage_path: string
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          anonymize_customer?: boolean
+          building_block_id?: string | null
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          note?: string | null
+          partner_id?: string | null
+          project_id?: string | null
+          storage_path?: string
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_assets_building_block_id_fkey"
+            columns: ["building_block_id"]
+            isOneToOne: false
+            referencedRelation: "building_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_assets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_assets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_media_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          ai_model: string | null
+          ai_raw: Json | null
+          approved_at: string | null
+          approved_by: string | null
+          caption: string
+          channels: string[]
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          external_ids: Json
+          hashtags: string[]
+          id: string
+          media_urls: string[]
+          permalinks: Json
+          published_at: string | null
+          rejected_reason: string | null
+          scheduled_for: string | null
+          source_id: string | null
+          source_summary: string | null
+          source_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_raw?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          caption?: string
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          external_ids?: Json
+          hashtags?: string[]
+          id?: string
+          media_urls?: string[]
+          permalinks?: Json
+          published_at?: string | null
+          rejected_reason?: string | null
+          scheduled_for?: string | null
+          source_id?: string | null
+          source_summary?: string | null
+          source_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_model?: string | null
+          ai_raw?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          caption?: string
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          external_ids?: Json
+          hashtags?: string[]
+          id?: string
+          media_urls?: string[]
+          permalinks?: Json
+          published_at?: string | null
+          rejected_reason?: string | null
+          scheduled_for?: string | null
+          source_id?: string | null
+          source_summary?: string | null
+          source_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      social_settings: {
+        Row: {
+          cadence_per_week: number
+          default_ctas: Json
+          hashtag_sets: Json
+          id: string
+          meta_connected_at: string | null
+          meta_ig_user_id: string | null
+          meta_ig_username: string | null
+          meta_page_id: string | null
+          meta_page_name: string | null
+          meta_page_token: string | null
+          meta_token_expires_at: string | null
+          posting_days: string[]
+          posting_time: string
+          publishing_enabled: boolean
+          sources_enabled: Json
+          tone_of_voice: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cadence_per_week?: number
+          default_ctas?: Json
+          hashtag_sets?: Json
+          id?: string
+          meta_connected_at?: string | null
+          meta_ig_user_id?: string | null
+          meta_ig_username?: string | null
+          meta_page_id?: string | null
+          meta_page_name?: string | null
+          meta_page_token?: string | null
+          meta_token_expires_at?: string | null
+          posting_days?: string[]
+          posting_time?: string
+          publishing_enabled?: boolean
+          sources_enabled?: Json
+          tone_of_voice?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cadence_per_week?: number
+          default_ctas?: Json
+          hashtag_sets?: Json
+          id?: string
+          meta_connected_at?: string | null
+          meta_ig_user_id?: string | null
+          meta_ig_username?: string | null
+          meta_page_id?: string | null
+          meta_page_name?: string | null
+          meta_page_token?: string | null
+          meta_token_expires_at?: string | null
+          posting_days?: string[]
+          posting_time?: string
+          publishing_enabled?: boolean
+          sources_enabled?: Json
+          tone_of_voice?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
