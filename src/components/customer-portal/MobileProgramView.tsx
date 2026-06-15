@@ -281,8 +281,10 @@ export const MobileProgramView = ({
         referenceNumber={program.reference_number}
       />
 
-      {/* Voortgang stepper — overal hetzelfde traject-lint */}
+      {/* Voortgang stepper — verticaal & standaard ingeklapt op tabs (open op Overzicht via Splash) */}
       <ProgramStepper
+        variant="vertical"
+        defaultCollapsedOnMobile
         statusSummary={statusSummary}
         billingComplete={billingComplete}
         termsAccepted={termsAccepted}
@@ -294,6 +296,7 @@ export const MobileProgramView = ({
         quoteStatus={program.quote_status}
         onStepAction={handleStepAction}
       />
+
 
       {/* Programma-samenvatting — alleen op Programma tab */}
       {(initialSection === "program" || !initialSection) && (
