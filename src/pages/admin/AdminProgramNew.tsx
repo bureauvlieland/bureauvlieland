@@ -85,8 +85,6 @@ const AdminProgramNewContent = () => {
     );
   }, [formData.selectedDates, quoteValidUntilTouched]);
 
-  // dummy block to keep diff small; original initializer state above remains the source.
-  const __noop = (() => {
 
   const steps: { id: WizardStep; title: string; icon: React.ReactNode }[] = [
     { id: "type", title: "Type", icon: <FileText className="h-4 w-4" /> },
