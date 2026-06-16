@@ -40,7 +40,10 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { request_id, origin } = (await req.json()) as CancellationRequest;
+    const { request_id, origin, partner_ids, accommodation_partner_ids, skip_item_cancel } = (await req.json()) as CancellationRequest;
+    const partnerFilter = Array.isArray(partner_ids) ? new Set(partner_ids) : null;
+    const accommodationFilter = Array.isArray(accommodation_partner_ids) ? new Set(accommodation_partner_ids) : null;
+
 
     if (!request_id) {
       return new Response(JSON.stringify({ error: "request_id is required" }), {
