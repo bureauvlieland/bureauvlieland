@@ -1,104 +1,82 @@
 ## Doel
 
-De klant kan **Gegevens & voorwaarden** vanaf dag 1 invullen (parallel spoor), en Bureau Vlieland kan per partner-activiteit kiezen of de aanvraag **direct uitgaat** of **wacht op klantgoedkeuring**. Logies-uitvraag blijft ongewijzigd (capaciteitsdruk).
+Partners krijgen exact 3 dagen voor uitvoering een automatische heads-up per e-mail met de laatste stand van zaken van het onderdeel. Dit vangt last-minute wijzigingen op (gastenlijst, dieetwensen, tijd, instructies) en voorkomt verrassingen op de dag zelf.
 
-## Eindbeeld in de klantportaal-stepper
+## Scope (op basis van keuzes)
 
-```text
-┌─────────────────────────────┐  ┌─────────────────────────────┐
-│ LOGIES (bij meerdaags)      │  │ GEGEVENS & VOORWAARDEN      │
-│  • Aanvraag ingediend       │  │  • Bedrijfsgegevens         │
-│  • Offertes vergelijken     │  │  • Voorwaarden ondertekenen │
-│  • Logies vastgelegd        │  │  → altijd actief, eigen CTA │
-└─────────────────────────────┘  └─────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│ PROGRAMMA                                                   │
-│  1. Onderdelen goedkeuren     (eerst — klant aan zet)       │
-│  2. Aanbieders bevestigen     (na admin-uitvraag)           │
-└─────────────────────────────────────────────────────────────┘
-```
+Heads-up wordt verstuurd voor `program_request_items` die voldoen aan ALLE onderstaande:
+- `activity_date` = vandaag + 3 dagen (gebaseerd op `program_requests.selected_dates[day_index]`).
+- `status = 'accepted'` (klant akkoord, partner bevestigd).
+- `block_type ≠ 'self_arranged'` en `block_type ≠ 'bureau'`.
+- `provider_id` is een echte partner (geen `bureau`-provider).
+- Parent `program_requests.status ≠ 'cancelled'` en `cancelled_at is null`.
+- `skip_partner_notification = false` (concept-items overslaan).
+- Nog niet eerder een heads-up gestuurd voor dit item (controle via `email_log`).
 
-Definitief = alle drie de sporen 'gereed' (volgorde maakt niet uit).
+Géén opt-out per partner — operationeel belangrijk.
 
----
+## Mailinhoud
 
-## Wijzigingen
+Per item één mail naar `partner.contact_email` (val terug op `partner.email`). Onderwerp:
+> Over 3 dagen: {block_name} – {datum} ({reference_number})
 
-### 1. Admin: keuze per item bij uitvraag
+Inhoud:
+- Datum, starttijd (`confirmed_time` of `preferred_time`), duur, locatie/adres.
+- Aantal personen (`override_people` of `number_of_people`).
+- Gastenlijst + dieetwensen (alleen voor catering), met "laatst bijgewerkt op …"-stempel.
+- `partner_instructions` en `admin_price_notes` (indien gevuld).
+- Bureau-central facturatie-melding indien `invoicing_mode = 'bureau_central'`.
+- Knop "Bekijk in partnerportaal" → deeplink naar het item in het partnerportaal (met impersonate-veilige token-/route-strategie zoals andere partnermails).
+- Vermelding: "Heeft u nog vragen of zijn er wijzigingen? Reply op deze e-mail." (gebruikt bestaande Reply-To subaddressing zodat antwoord in het projectdossier landt.)
 
-In `AdminRequestDetail.tsx` (de "Bekijk & verstuur"-preview en de per-item knop):
+Toon: informeel ("je"), conform partner-communicatiestijl.
 
-- Voeg per partner-item een radio-keuze toe:
-  - **"Nu reserveren"** — partner-aanvraag gaat meteen uit (huidig gedrag)
-  - **"Wachten op klantgoedkeuring"** — `skip_partner_notification` blijft `true`, item krijgt vlag `awaiting_customer_for_partner_send = true`
-- Bij bulk-versturen blijven items met "wachten" achter en gaan niet mee.
-- In de item-lijst (admin) toont een nieuw badge "⏳ Wacht op klant" voor deze items.
+## Werking
 
-Database-impact: nieuwe kolom `awaiting_customer_for_partner_send boolean default false` op `program_request_items` (puur intentie-vlag voor admin; geen RLS-impact omdat klant deze niet ziet).
+1. Nieuwe edge function `send-partner-headsup-t3`:
+   - Berekent doeldatum = today + 3 (Europe/Amsterdam).
+   - Selecteert kandidaat-items via Supabase service-role query.
+   - Filtert items waarvoor `email_log` al een rij heeft met `metadata.template_name = 'partner-headsup-t3'` en `metadata.item_id = <id>`.
+   - Verstuurt per item via bestaande Mailjet-helper + `logEmail()` (met verplichte `metadata.template_name` en `metadata.actor = 'system'`, plus `item_id`, `partner_id`, `request_id`).
+   - Logt ook een rij in `project_communications` zodat het in het projectdossier zichtbaar is.
+   - Schrijft `program_request_history`-rij (`action: 'partner_headsup_sent'`).
 
-### 2. Edge function: auto-versturen bij klantgoedkeuring
+2. Cron via `pg_cron` + `pg_net`: dagelijks om **08:00 Europe/Amsterdam** (06:00 UTC in winter / 06:00 in zomertijd → we plannen op `0 6 * * *` UTC met opmerking, óf gebruiken `0 7 * * *` UTC zodat hij in NL altijd 08-09 valt; ik gebruik **`0 6 * * *` UTC**).
+   - Idempotent: dubbele runs sturen niets dubbel door de `email_log`-check.
 
-`approve-quote-item/index.ts` doet al `skip_partner_notification = false` in het admin_override pad. Uitbreiden:
+3. Tests / verificatie:
+   - Handmatige `curl_edge_functions` met `?dryRun=true` query → geeft lijst items terug zonder mail te versturen.
+   - Test mode (preview env) reroute blijft werken via bestaande infra.
 
-- Wanneer een klant een item goedkeurt **en** `awaiting_customer_for_partner_send = true` **en** het item heeft een echte `provider_id` (geen `bureau`):
-  - Roep intern `send-items-to-partners` aan met `mode: "force"` voor dit ene item.
-  - Reset de vlag.
-- Bestaand gedrag voor niet-gemarkeerde items blijft hetzelfde (geen automatische verzending; admin houdt regie).
+## Technische details
 
-### 3. Bulk-goedkeuren in klantportaal
+- Cron registratie via `supabase--insert` (bevat env-specifieke URL + anon key) — niet via migration tool.
+- Geen schema-wijzigingen nodig; we hergebruiken `email_log` voor de "al verstuurd"-check (memory: Reminder System gebruikt dezelfde aanpak).
+- Edge function logica:
+  ```
+  - Bepaal target_date (YYYY-MM-DD in Europe/Amsterdam)
+  - SELECT items met status accepted, niet-cancelled, geen self_arranged/bureau
+  - Voor elk item: bereken activity_date uit program_requests.selected_dates[day_index]
+  - Behoud alleen items waar activity_date === target_date
+  - Voor elk overgebleven item:
+      - Skip als email_log bevat (template_name='partner-headsup-t3' AND metadata->>'item_id' = id)
+      - Haal partner + program_request data op
+      - Render mailtemplate (HTML + plain)
+      - Verstuur via Mailjet helper
+      - logEmail(...) + project_communications insert + history insert
+  ```
+- Deeplink: hergebruik bestaande partner-portal item-URL pattern (zoek in code; vermoedelijk `/partner/projecten/{request_id}?item={item_id}`).
 
-Nieuwe knop **"Alle onderdelen goedkeuren"** boven de programma-lijst in `CustomerProgramItem`-container (`DesktopProgramView` + `MobileProgramView`):
+## Out of scope
 
-- Roept `approve-quote-item` in lus aan voor alle items waar `needsCustomerAction === true`.
-- Toont één toast met samenvatting ("8 onderdelen goedgekeurd, 2 worden nu naar aanbieders gestuurd").
+- Geen tweede reminder T-1.
+- Geen heads-up voor onderdelen waarvoor partner nog niet bevestigd heeft (status `pending`/`confirmed`).
+- Geen wijziging aan accommodation_quotes (logies krijgt aparte flow als nodig).
 
-### 4. ProgramStepper: nieuwe structuur
+## Acceptatiecriteria
 
-`src/components/customer-portal/ProgramStepper.tsx`:
-
-- **Splits "Gegevens & voorwaarden" af** als een derde track (naast Logies + Programma), altijd actief vanaf dag 1.
-- **Wissel volgorde** binnen de Programma-track: eerst "Onderdelen goedkeuren", dan "Aanbieders bevestigen".
-- Stepper-logica:
-  - `approveDone` = alle approvable items hebben `customer_approved_at`.
-  - `providersDone` = alle items hebben definitieve partner-status (geen pending/alternative/counter).
-  - "Aanbieders bevestigen" toont sublabel "Wij benaderen aanbieders zodra u goedkeurt" zolang `approveDone === false` en er ≥1 item is met `awaiting_customer_for_partner_send`.
-
-### 5. Copy-aanpassingen (klanttekst)
-
-- Gegevens-track statusregel: *"U kunt deze gegevens nu alvast invullen — dat versnelt de boeking."*
-- Programma-track als nog niets goedgekeurd: *"Bekijk en keur uw programma-onderdelen goed. Wij benaderen aanbieders zodra u akkoord gaat."*
-- "Definitief"-badge alleen wanneer Logies (indien van toepassing) + Programma + Gegevens & voorwaarden alle drie `done`.
-
----
-
-## Wat blijft ongewijzigd
-
-- Logies-uitvraag (`send-accommodation-quote-request`) — capaciteit op het eiland; gaat direct uit zodra admin de partners selecteert.
-- Bureau-items (ferries, fietsen, kostenposten) — interne items, geen partner-uitvraag.
-- Bestaande "wijzigingen publiceren"-flow uit eerdere sessie blijft intact.
-- Silence=Agreement na 7 dagen, e-mailtemplates, facturatie.
-
----
-
-## Bestanden (technisch)
-
-| Bestand | Aard van wijziging |
-|---|---|
-| `supabase/migrations/<new>.sql` | Kolom `awaiting_customer_for_partner_send` op `program_request_items` |
-| `src/pages/admin/AdminRequestDetail.tsx` | Keuze "nu/wachten" in send-preview en per-item menu; nieuwe badge |
-| `supabase/functions/send-items-to-partners/index.ts` | Filter items met `awaiting_customer_for_partner_send = true` uit bulk-flow |
-| `supabase/functions/approve-quote-item/index.ts` | Trigger auto-send naar partner als vlag gezet |
-| `src/components/customer-portal/ProgramStepper.tsx` | Splits gegevens-track af, herorden programma-track |
-| `src/components/customer-portal/DesktopProgramView.tsx` + `MobileProgramView.tsx` | Nieuwe bulk-approve knop; aangepaste props |
-| `src/hooks/useCustomerProgram.ts` | `bulkApproveQuoteItems()` helper |
-| `src/hooks/useProgramStatus.ts` | "allDone"-logica meenemen van losse gegevens-track |
-
-## Risico's
-
-- **Vergeten item-vlag** — als admin per ongeluk alles op "wachten" zet en de klant nooit goedkeurt, gaat er niets uit. Mitigeren met bestaande "stale_pending_change"-todo + extra todo "Items wachten >7d op klantgoedkeuring".
-- **Email-volume bij bulk-approve** — 10 items = 10 partner-mails in korte tijd. Mitigeren door in `approve-quote-item` per provider te groeperen voordat we `send-items-to-partners` aanroepen.
-
-## Niet in deze plan
-
-- Aparte deellevering / aanbetaling-facturen (los traject).
-- Wijziging hoe partners alternatieven voorstellen.
+- Op T-3 (08:00 NL) ontvangt iedere relevante partner één mail per item.
+- Mail bevat actuele gastenlijst + dieetwensen (met laatste update-tijd).
+- Geen duplicate sends bij meerdere cron-runs of handmatige triggers.
+- Verstuurde mail is zichtbaar in projectdossier en `email_log` met juiste metadata.
+- Bureau-items, self-arranged items en geannuleerde projecten worden overgeslagen.
