@@ -24,7 +24,11 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 interface CancellationRequest {
   request_id: string;
   origin?: string;
+  partner_ids?: string[];
+  accommodation_partner_ids?: string[];
+  skip_item_cancel?: boolean;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,7 +40,10 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { request_id, origin } = (await req.json()) as CancellationRequest;
+    const { request_id, origin, partner_ids, accommodation_partner_ids, skip_item_cancel } = (await req.json()) as CancellationRequest;
+    const partnerFilter = Array.isArray(partner_ids) ? new Set(partner_ids) : null;
+    const accommodationFilter = Array.isArray(accommodation_partner_ids) ? new Set(accommodation_partner_ids) : null;
+
 
     if (!request_id) {
       return new Response(JSON.stringify({ error: "request_id is required" }), {
@@ -69,11 +76,14 @@ Deno.serve(async (req) => {
       .in("status", ["pending", "confirmed", "accepted", "counter_proposed"]);
 
     const notifiableItems = (openItems || []).filter(
-      (i: any) => i.block_type !== "self_arranged" && !isBureauItem(i)
+      (i: any) =>
+        i.block_type !== "self_arranged" &&
+        !isBureauItem(i) &&
+        (!partnerFilter || (i.provider_id && partnerFilter.has(i.provider_id)))
     );
 
-    // Cancel items
-    if (notifiableItems.length > 0) {
+    // Cancel items (skipped when caller already cancelled them, e.g. cancel-program-request)
+    if (notifiableItems.length > 0 && !skip_item_cancel) {
       await supabase
         .from("program_request_items")
         .update({ status: "cancelled", status_note: "Project verwijderd door admin" })
@@ -81,6 +91,7 @@ Deno.serve(async (req) => {
         .in("status", ["pending", "confirmed", "accepted", "counter_proposed"])
         .neq("block_type", "self_arranged");
     }
+
 
     // Enrich missing emails
     const missingEmailIds = [
@@ -210,25 +221,34 @@ Deno.serve(async (req) => {
     let accommodationQuotesCancelled = 0;
     let accommodationEmailsSent = 0;
     if (program.linked_accommodation_id) {
+      const quoteStatuses = skip_item_cancel
+        ? ["pending", "submitted", "selected", "accepted", "rejected", "declined"]
+        : ["pending", "submitted", "selected", "accepted"];
       const { data: openQuotes } = await supabase
         .from("accommodation_quotes")
         .select("id, partner_id, accommodation_name, status")
         .eq("request_id", program.linked_accommodation_id)
-        .in("status", ["pending", "submitted", "selected", "accepted"]);
+        .in("status", quoteStatuses);
 
-      if (openQuotes && openQuotes.length > 0) {
+      const filteredQuotes = (openQuotes || []).filter(
+        (q: any) => !accommodationFilter || (q.partner_id && accommodationFilter.has(q.partner_id))
+      );
+
+      if (filteredQuotes.length > 0) {
         // Enrich partner emails
-        const partnerIds = [...new Set(openQuotes.map((q: any) => q.partner_id).filter(Boolean))];
+        const partnerIds = [...new Set(filteredQuotes.map((q: any) => q.partner_id).filter(Boolean))];
         const { data: partners } = await supabase
           .from("partners")
           .select("id, name, email, contact_email")
           .in("id", partnerIds);
         const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
 
-        for (const quote of openQuotes) {
+        for (const quote of filteredQuotes) {
           const partner = partnerMap.get(quote.partner_id);
           const partnerEmail = partner ? (partner.contact_email || partner.email) : null;
           const partnerName = partner?.name || quote.accommodation_name || "partner";
+
+
 
           if (partnerEmail) {
             const wasSelected = quote.status === "selected" || quote.status === "accepted";
@@ -304,11 +324,14 @@ Deno.serve(async (req) => {
             if (mjRes.ok) accommodationEmailsSent++;
           }
 
-          await supabase
-            .from("accommodation_quotes")
-            .update({ status: "rejected" })
-            .eq("id", quote.id);
-          accommodationQuotesCancelled++;
+          if (quote.status !== "rejected" && quote.status !== "declined") {
+            await supabase
+              .from("accommodation_quotes")
+              .update({ status: "rejected" })
+              .eq("id", quote.id);
+            accommodationQuotesCancelled++;
+          }
+
         }
       }
     }

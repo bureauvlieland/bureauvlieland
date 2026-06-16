@@ -1,51 +1,67 @@
+## Doel
+1. De misleidende toast na klantannulering vervangen door een accurate melding.
+2. Direct na de annulering (zowel klant- als admin-trigger vanuit projectdetail) een dialog openen die toont welke activiteiten- en logiespartners betrokken zijn, zodat de admin per partner kan kiezen of er een annuleringsmail uitgaat — vergelijkbaar met de bestaande "wijzigingen publiceren"-flow.
 
-## Probleem
+## Wat er verandert
 
-Bij het annuleren van een project worden logies-partners die een offerte­aanvraag hebben ontvangen niet geïnformeerd. Hun quote wordt stilletjes op `rejected` gezet door `notify-partner-cancellation`, zonder mail. Activiteiten­partners worden alleen gemaild als het item geen `bureau`-item is en niet `skip_partner_notification=true` is — dat klopt (zij hebben dan ook geen aanvraag­mail ontvangen).
+### 1. `cancel-program-request` (edge function)
+- Naast `providersNotified`/`accommodationPartnersNotified` ook teruggeven:
+  - `affected_activity_partners: [{ partner_id, name, email, item_names: [...] }]`
+  - `affected_accommodation_partners: [{ partner_id, name, email, accommodation_name, previous_quote_status }]`
+- De automatische `admin_todo` "informeer X partners handmatig" wordt verwijderd (vervangen door de inline dialog). De interne BCC-mail naar Bureau Vlieland blijft.
 
-## Retro-overzicht Deloitte (BV-2605-0004)
+### 2. `notify-partner-cancellation` (edge function)
+- Optionele filters toevoegen aan de request body:
+  - `partner_ids?: string[]` — alleen activiteitenpartners in deze lijst krijgen mail
+  - `accommodation_partner_ids?: string[]` — idem voor logies
+  - `skip_item_cancel?: boolean` — items zijn al geannuleerd door `cancel-program-request`, dus overslaan
+- Bestaande gedrag (zonder filters) blijft hetzelfde voor admin-projectverwijdering.
 
-Op basis van `email_log` zijn dit de partijen die destijds een aanvraag hebben binnen­gekregen en dus alsnog een annulerings­mail zouden moeten krijgen:
+### 3. `AdminRequestDetail.tsx`
+- Na succesvolle `cancel-program-request` aanroep:
+  - Toast aanpassen naar: *"Aanvraag geannuleerd."* + extra regel als er partners zijn: *"Kies hieronder welke partners je een annuleringsmail wilt sturen."*
+  - Nieuwe state `cancellationPartners` (uit response) + `partnerNotifyDialogOpen`.
+- Nieuwe component `PartnerCancellationNotifyDialog`:
+  - Toont per partner:
+    - naam, e-mailadres, type (activiteit/logies), betrokken onderdeel/accommodatie-naam
+    - checkbox (default aangevinkt voor alle, behalve waar e-mail ontbreekt → disabled met uitleg)
+  - "Alles selecteren / niets selecteren" knop.
+  - Primaire actie: **"Verstuur annuleringsmails (N)"** → roept `notify-partner-cancellation` met de geselecteerde ids.
+  - Secundaire actie: **"Niet versturen / sluiten"** — sluit dialog zonder mails. (Geen automatische todo meer; admin neemt bewuste actie.)
+  - Bij succes: toast met aantal verstuurde mails + opnieuw `fetchRequestData` zodat de communicatie-tijdlijn de mails toont.
 
-- **Badhotel Bruin** — `receptie@badhotelbruin.com` (offerte­aanvraag 02-06-2026)
-- **Hotel Zeezicht Vlieland** — `manager@zeezichtvlieland.nl` (offerte­aanvraag 02-06-2026)
-
-Geen activiteiten­partners: alle 11 programma-onderdelen waren `block_type=bureau` met `skip_partner_notification=true`. Die hebben nooit een aanvraag­mail ontvangen, dus krijgen ook geen annulering (conform jouw regel "die de aanvraag binnen hebben gekregen").
-
-## Wijziging
-
-### 1. Edge function `notify-partner-cancellation` uitbreiden
-
-Vóór het op `rejected` zetten van openstaande logies-offertes: capture de lijst van partners met een quote in `pending` / `submitted` / `selected` / `accepted`. Voor elke partner één mail sturen met:
-
-- Aanhef + referentie­nummer
-- Korte mededeling dat de aanvraag is geannuleerd en de offerte komt te vervallen
-- Eventueel quote-status ("uw offerte was nog in behandeling" / "uw offerte was reeds geselecteerd")
-- Standaard afsluiting
-
-Gebruik bestaande template­infrastructuur (`getRenderedTemplate`) met nieuwe template­naam `cancellation_accommodation_partner` als fallback naar inline HTML, zoals nu voor `cancellation_partner` ook gebeurt. Log per quote één rij in `email_log` (type `cancellation_accommodation_partner`, `related_partner_id`, `related_request_id` = programma-id, plus `metadata.accommodation_request_id` en `quote_id`). Ook één regel in `project_communications` voor het dossier.
-
-Pas daarna pas de `status='rejected'` update toe (huidige gedrag blijft).
-
-### 2. Activiteiten­partners — geen wijziging
-
-Huidige filter (`!isBureauItem` && `block_type !== 'self_arranged'`) blijft. Items met `skip_partner_notification=true` zonder `customer_approved_at` worden ook nu al niet gemaild (correct: nooit verstuurd → geen annulering).
-
-### 3. Retroactief Deloitte
-
-Eenmalig handmatig de uitgebreide edge function aanroepen met `request_id=dec4c24c-…` zodra deze gedeployed is, óf via een eenmalig admin-knopje. **Vraag:** ik stel voor om hiervoor géén losse UI-knop te maken, maar de mails eenmalig te triggeren via een directe `supabase.functions.invoke` (vanuit een test-call) na deploy. Akkoord?
+### 4. (Optioneel binnen dezelfde dialog) Heropen-knop op projectdetail
+- Als de admin de dialog sluit zonder mails te versturen, een kleine "Stuur partners alsnog mail"-knop tonen in de project-header zolang `cancelled_at` recent is én er nog onverstuurde annuleringsmails per partner zijn (basis check: betrokken partner heeft geen `cancellation_partner`/`cancellation_accommodation_partner` mail in `email_log` voor dit project). Zo verlies je de actie niet als de tab sluit.
 
 ## Technische details
 
-- Bestand: `supabase/functions/notify-partner-cancellation/index.ts`
-- Nieuwe sectie vóór de huidige `accommodation_quotes` update, identieke email-loop-structuur als bestaande partner­loop
-- Mail-onderwerp: `Aanvraag {ref} is geannuleerd` (zelfde stijl)
-- Body kort en formeel — geen klant-PII behalve referentie­nummer
-- Reply-To via `buildReplyTo(refNumber)` zodat antwoorden in het dossier landen
-- Logging: `template_name: "cancellation_accommodation_partner"`, `actor: "admin → logies-partner (project geannuleerd)"`
+- Response-shape van `cancel-program-request` (toevoegingen, backwards-compatibel):
+  ```ts
+  {
+    success: true,
+    providersNotified: 0,                // blijft 0 — niet automatisch
+    accommodationPartnersNotified: 0,    // idem
+    affected_activity_partners: Array<{
+      partner_id: string; name: string; email: string | null;
+      item_names: string[];
+    }>,
+    affected_accommodation_partners: Array<{
+      partner_id: string; name: string; email: string | null;
+      accommodation_name: string; previous_quote_status: string;
+    }>,
+  }
+  ```
+- `notify-partner-cancellation` schakelt item-cancel over wanneer `skip_item_cancel === true` (frontend zet dit altijd vanuit de klant-cancel flow).
+- Filters worden vóór de bestaande `partnerGroups`/quote-loop toegepast.
+- Logging blijft via `logEmail` + `project_communications` zoals nu.
+- Geen DB-migratie nodig.
 
-## Uit scope
+## Bestanden
+- `supabase/functions/cancel-program-request/index.ts` — response uitbreiden, todo-insert verwijderen.
+- `supabase/functions/notify-partner-cancellation/index.ts` — optionele filters + `skip_item_cancel`.
+- `src/pages/admin/AdminRequestDetail.tsx` — toast + dialog-state + nieuwe import.
+- `src/components/admin/PartnerCancellationNotifyDialog.tsx` — nieuw.
 
-- Geen wijziging aan de activiteiten-filter
-- Geen wijziging aan klant- of interne-mail
-- Geen nieuwe UI-elementen
+## Buiten scope
+- Wijzigingen aan admin-project-delete flow (`notify-partner-cancellation` blijft daar gewoon "alles versturen").
+- Wijzigingen aan klantportal-cancel UI.

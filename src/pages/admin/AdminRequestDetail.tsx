@@ -7,6 +7,8 @@ import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
+import { PartnerCancellationNotifyDialog } from "@/components/admin/PartnerCancellationNotifyDialog";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -315,6 +317,14 @@ const AdminRequestDetail = () => {
   const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelNotifyOpen, setCancelNotifyOpen] = useState(false);
+  const [cancelNotifyActivity, setCancelNotifyActivity] = useState<
+    import("@/components/admin/PartnerCancellationNotifyDialog").ActivityPartner[]
+  >([]);
+  const [cancelNotifyAccommodation, setCancelNotifyAccommodation] = useState<
+    import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[]
+  >([]);
+
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
   
@@ -873,9 +883,23 @@ const AdminRequestDetail = () => {
         details: { reason: cancellationReason },
       });
 
-      toast.success("Aanvraag geannuleerd; gekoppelde logiespartners zijn verwerkt");
+      const activityPartners = (response.data as any)?.affected_activity_partners ?? [];
+      const accommodationPartners = (response.data as any)?.affected_accommodation_partners ?? [];
+      const partnerCount = activityPartners.length + accommodationPartners.length;
+
       setCancelDialogOpen(false);
+      if (partnerCount > 0) {
+        setCancelNotifyActivity(activityPartners);
+        setCancelNotifyAccommodation(accommodationPartners);
+        setCancelNotifyOpen(true);
+        toast.success(
+          `Aanvraag geannuleerd — kies welke ${partnerCount} partner(s) een annuleringsmail krijgen`,
+        );
+      } else {
+        toast.success("Aanvraag geannuleerd — er waren geen gekoppelde partners");
+      }
       fetchRequestData();
+
     } catch (error) {
       console.error("Error cancelling request:", error);
       toast.error("Fout bij annuleren aanvraag");
@@ -3099,6 +3123,16 @@ const AdminRequestDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PartnerCancellationNotifyDialog
+        open={cancelNotifyOpen}
+        onOpenChange={setCancelNotifyOpen}
+        requestId={request?.id ?? ""}
+        activityPartners={cancelNotifyActivity}
+        accommodationPartners={cancelNotifyAccommodation}
+        onSent={() => fetchRequestData()}
+      />
+
 
       {/* Invoice registration dialog */}
       <RegisterBureauInvoiceDialog
