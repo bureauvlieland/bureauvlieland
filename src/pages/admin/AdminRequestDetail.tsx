@@ -134,8 +134,9 @@ import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBad
 import { MicroPill } from "@/components/shared/MicroPill";
 import { ItemEmailLogPopover } from "@/components/admin/ItemEmailLogPopover";
 import { useAppSettings } from "@/hooks/useAppSettings";
-// Bureau-items herkennen we direct via provider_id (audit-beslissing Fase 4a):
-const isBureauItem = (i: { provider_id?: string | null }) => i.provider_id === "bureau";
+// Bureau-managed item-check via gedeelde helper (provider_id ∈ BUREAU_PROVIDER_IDS).
+// Eén bron van waarheid samen met supabase/functions/_shared/bureau-item.ts.
+import { isBureauItem } from "@/lib/bureauItem";
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
@@ -863,8 +864,7 @@ const AdminRequestDetail = () => {
       const partnerItems = (items || []).filter(
         (i: any) =>
           i.provider_id &&
-          i.provider_id !== "bureau" &&
-          i.block_type !== "bureau" &&
+          !isBureauItem(i) &&
           i.block_type !== "self_arranged",
       );
 
@@ -2328,7 +2328,7 @@ const AdminRequestDetail = () => {
                                               })}
                                             />
                                             {(() => {
-                                              if (item.provider_id === "bureau") return null;
+                                              if (isBureauItem(item)) return null;
                                               if (item.status === "cancelled") return null;
                                               const sendPhase = getItemSendPhase(item, request);
                                               if (sendPhase === "klaar_voor_partner" || sendPhase === "wacht_op_klant") {
@@ -2448,7 +2448,7 @@ const AdminRequestDetail = () => {
                                           <div className="flex items-center gap-1">
                                             {(() => {
                                               if (item.status === "cancelled") return null;
-                                              if (item.provider_id === "bureau") return null;
+                                              if (isBureauItem(item)) return null;
                                               const phase = getItemSendPhase(item, request);
                                               const displayStatus = deriveItemDisplayStatus(item as any, {
                                                 programPeople: request.number_of_people,
@@ -2636,7 +2636,7 @@ const AdminRequestDetail = () => {
                                             {(() => {
                                               const phase = getItemSendPhase(item, request);
                                               if (phase !== "klaar_voor_partner" && phase !== "wacht_op_klant") return null;
-                                              if (item.provider_id === "bureau") return null;
+                                              if (isBureauItem(item)) return null;
                                               const isWaiting = phase === "wacht_op_klant";
                                               return (
                                                 <TooltipProvider>
@@ -2662,7 +2662,7 @@ const AdminRequestDetail = () => {
                                             })()}
                                             {(() => {
                                               // Toggle "Wacht op klantgoedkeuring" voor partner-items die nog niet uit zijn.
-                                              if (item.provider_id === "bureau") return null;
+                                              if (isBureauItem(item)) return null;
                                               if (!item.skip_partner_notification) return null;
                                               const isWaitingForCustomer = !!(item as any).awaiting_customer_for_partner_send;
                                               return (
@@ -3180,10 +3180,10 @@ const AdminRequestDetail = () => {
           new Map(
             items
               .flatMap((i) => [
-                i.provider_id && i.provider_id !== "bureau"
+                i.provider_id && !isBureauItem(i)
                   ? [i.provider_id, { id: i.provider_id, name: i.provider_name, contact_email: i.provider_email, email: i.provider_email }] as const
                   : null,
-                i.pending_provider_id && i.pending_provider_id !== "bureau"
+                i.pending_provider_id && !isBureauItem({ provider_id: i.pending_provider_id, block_type: i.pending_block_type })
                   ? [
                       i.pending_provider_id,
                       {
