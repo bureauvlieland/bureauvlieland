@@ -55,6 +55,110 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+interface StoredAttachment {
+  name: string;
+  size: number;
+  mime: string;
+  path: string;
+}
+
+/**
+ * Extract attachments from a Mailjet Parse payload and upload them to the
+ * `email-attachments` storage bucket. Supports both shapes:
+ *   - JSON: top-level `Attachment1`, `Attachment2`, ... keys with base64 content,
+ *     described by `Parts[*].ContentRef` + `Headers` (Content-Type, Content-Disposition)
+ *   - Legacy: `Attachments` array with `{Filename, Content-Type, content}` (base64)
+ */
+async function extractAndStoreAttachments(
+  payload: Record<string, unknown>,
+  supabase: ReturnType<typeof createClient>,
+  referenceNumber: string,
+): Promise<StoredAttachment[]> {
+  const out: StoredAttachment[] = [];
+  if (!payload || typeof payload !== "object") return out;
+
+  type RawAtt = { filename: string; mime: string; base64: string };
+  const raws: RawAtt[] = [];
+
+  // Shape A: Parts[] + AttachmentN
+  const parts = (payload as any).Parts;
+  if (Array.isArray(parts)) {
+    for (const part of parts) {
+      const ref = part?.ContentRef;
+      if (!ref || typeof ref !== "string") continue;
+      const b64 = (payload as any)[ref];
+      if (typeof b64 !== "string" || !b64) continue;
+      const headers = (part?.Headers || {}) as Record<string, unknown>;
+      const ct = String(headers["Content-Type"] ?? headers["content-type"] ?? "application/octet-stream");
+      const cd = String(headers["Content-Disposition"] ?? headers["content-disposition"] ?? "");
+      const mime = ct.split(";")[0].trim() || "application/octet-stream";
+      const filename = extractFilename(cd) || extractFilenameFromCT(ct) || `bijlage-${raws.length + 1}`;
+      // Skip inline images embedded in HTML (no filename + image/*)
+      if (/inline/i.test(cd) && !filename.includes(".")) continue;
+      raws.push({ filename, mime, base64: b64 });
+    }
+  }
+
+  // Shape B: Attachments[]
+  const legacy = (payload as any).Attachments;
+  if (Array.isArray(legacy)) {
+    for (const a of legacy) {
+      const b64 = a?.content || a?.Content;
+      if (typeof b64 !== "string" || !b64) continue;
+      const mime = String(a?.["Content-Type"] || a?.ContentType || "application/octet-stream").split(";")[0].trim();
+      const filename = String(a?.Filename || a?.filename || `bijlage-${raws.length + 1}`);
+      raws.push({ filename, mime, base64: b64 });
+    }
+  }
+
+  for (const r of raws) {
+    try {
+      const bytes = base64ToBytes(r.base64);
+      // Skip empty / impossibly tiny payloads
+      if (bytes.length === 0) continue;
+      const safeName = r.filename.replace(/[^\w.\-]+/g, "_").slice(0, 120) || "bijlage";
+      const path = `${referenceNumber}/${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage
+        .from("email-attachments")
+        .upload(path, bytes, { contentType: r.mime, upsert: false });
+      if (error) {
+        console.error(`Failed to upload attachment ${r.filename}:`, error.message);
+        continue;
+      }
+      out.push({ name: r.filename, size: bytes.length, mime: r.mime, path });
+      console.log(`Uploaded attachment ${r.filename} (${bytes.length} bytes) to ${path}`);
+    } catch (err) {
+      console.error(`Error processing attachment ${r.filename}:`, err);
+    }
+  }
+
+  return out;
+}
+
+function extractFilename(contentDisposition: string): string | null {
+  if (!contentDisposition) return null;
+  // RFC 5987: filename*=UTF-8''...
+  const ext = contentDisposition.match(/filename\*\s*=\s*[^']*'[^']*'([^;]+)/i);
+  if (ext?.[1]) {
+    try { return decodeURIComponent(ext[1].trim().replace(/^"|"$/g, "")); } catch { /* fall through */ }
+  }
+  const m = contentDisposition.match(/filename\s*=\s*"?([^";]+)"?/i);
+  return m?.[1]?.trim() || null;
+}
+
+function extractFilenameFromCT(contentType: string): string | null {
+  const m = contentType.match(/name\s*=\s*"?([^";]+)"?/i);
+  return m?.[1]?.trim() || null;
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const clean = b64.replace(/\s+/g, "");
+  const bin = atob(clean);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
 /**
  * Trim quoted reply history from an inbound email so we only keep the
  * actual new message the sender typed. Handles Outlook ("Van:"/"From:"),
