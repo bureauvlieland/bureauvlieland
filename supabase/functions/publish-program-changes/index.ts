@@ -535,7 +535,7 @@ Deno.serve(async (req) => {
           would_publish: items.length,
           would_email: previewRecipients,
           test_mode: isTestMode(origin),
-          portal_url_customer: `${portalBase}/programma/${program.customer_token}`,
+          portal_url_customer: `${portalBase}/mijn-programma/${program.customer_token}`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
