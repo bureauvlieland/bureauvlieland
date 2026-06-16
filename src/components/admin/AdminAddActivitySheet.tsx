@@ -255,7 +255,7 @@ export const AdminAddActivitySheet = ({
     setCategoryFilter("all");
     setCustomName("");
     setCustomDescription("");
-    setInvoicedBy("partner");
+    setSelectedProviderId("");
     onOpenChange(false);
   };
 

@@ -290,7 +290,8 @@ export const AdminEditActivitySheet = ({
         // kostenpost). Voor nog niet gepubliceerde drafts (pending_added) heeft
         // de klant het onderdeel nooit gezien — dan géén klant-akkoord stempelen.
         // De normale workflow loopt dan via "Publiceer & notificeer".
-        if (isBureauInvoiced && item.status === "pending" && !item.pending_added) {
+        const isBureauItemNow = newBlockType === "bureau";
+        if (isBureauItemNow && item.status === "pending" && !item.pending_added) {
           const nowIso = new Date().toISOString();
           updateData.status = "confirmed";
           updateData.item_quote_status = "bevestigd";
@@ -306,7 +307,7 @@ export const AdminEditActivitySheet = ({
           .eq("id", item.id);
         if (error) throw error;
 
-        if (isBureauInvoiced) {
+        if (isBureauItemNow) {
           await resolveAutoTodo("bureau_item_pricing", item.id);
         }
       } else {
