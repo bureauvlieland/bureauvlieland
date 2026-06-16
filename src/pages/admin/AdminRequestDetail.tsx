@@ -3124,6 +3124,16 @@ const AdminRequestDetail = () => {
         </DialogContent>
       </Dialog>
 
+      <PartnerCancellationNotifyDialog
+        open={cancelNotifyOpen}
+        onOpenChange={setCancelNotifyOpen}
+        requestId={request?.id ?? ""}
+        activityPartners={cancelNotifyActivity}
+        accommodationPartners={cancelNotifyAccommodation}
+        onSent={() => fetchRequestData()}
+      />
+
+
       {/* Invoice registration dialog */}
       <RegisterBureauInvoiceDialog
         isOpen={invoiceDialogOpen}
