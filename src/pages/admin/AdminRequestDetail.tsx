@@ -881,9 +881,23 @@ const AdminRequestDetail = () => {
         details: { reason: cancellationReason },
       });
 
-      toast.success("Aanvraag geannuleerd; gekoppelde logiespartners zijn verwerkt");
+      const activityPartners = (response.data as any)?.affected_activity_partners ?? [];
+      const accommodationPartners = (response.data as any)?.affected_accommodation_partners ?? [];
+      const partnerCount = activityPartners.length + accommodationPartners.length;
+
       setCancelDialogOpen(false);
+      if (partnerCount > 0) {
+        setCancelNotifyActivity(activityPartners);
+        setCancelNotifyAccommodation(accommodationPartners);
+        setCancelNotifyOpen(true);
+        toast.success(
+          `Aanvraag geannuleerd — kies welke ${partnerCount} partner(s) een annuleringsmail krijgen`,
+        );
+      } else {
+        toast.success("Aanvraag geannuleerd — er waren geen gekoppelde partners");
+      }
       fetchRequestData();
+
     } catch (error) {
       console.error("Error cancelling request:", error);
       toast.error("Fout bij annuleren aanvraag");
