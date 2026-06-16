@@ -315,6 +315,14 @@ const AdminRequestDetail = () => {
   const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelNotifyOpen, setCancelNotifyOpen] = useState(false);
+  const [cancelNotifyActivity, setCancelNotifyActivity] = useState<
+    import("@/components/admin/PartnerCancellationNotifyDialog").ActivityPartner[]
+  >([]);
+  const [cancelNotifyAccommodation, setCancelNotifyAccommodation] = useState<
+    import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[]
+  >([]);
+
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
   
