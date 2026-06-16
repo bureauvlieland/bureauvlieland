@@ -324,11 +324,14 @@ Deno.serve(async (req) => {
             if (mjRes.ok) accommodationEmailsSent++;
           }
 
-          await supabase
-            .from("accommodation_quotes")
-            .update({ status: "rejected" })
-            .eq("id", quote.id);
-          accommodationQuotesCancelled++;
+          if (quote.status !== "rejected" && quote.status !== "declined") {
+            await supabase
+              .from("accommodation_quotes")
+              .update({ status: "rejected" })
+              .eq("id", quote.id);
+            accommodationQuotesCancelled++;
+          }
+
         }
       }
     }
