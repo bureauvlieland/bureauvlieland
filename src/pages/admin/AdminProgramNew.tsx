@@ -499,7 +499,11 @@ const AdminProgramNewContent = () => {
                       <Calendar
                         mode="single"
                         selected={formData.quoteValidUntil}
-                        onSelect={(date) => date && updateFormData("quoteValidUntil", date)}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          setQuoteValidUntilTouched(true);
+                          updateFormData("quoteValidUntil", date);
+                        }}
                         disabled={(date) => date < new Date()}
                         initialFocus
                         className="pointer-events-auto"
