@@ -391,10 +391,30 @@ Deno.serve(async (req) => {
       }
     }
 
+    const affected_activity_partners = Array.from(providers.entries()).map(([partner_id, p]) => ({
+      partner_id,
+      name: p.name,
+      email: p.email || null,
+      item_names: p.items,
+    }));
+    const affected_accommodation_partners = Array.from(accommodationPartners.entries()).map(([partner_id, p]) => ({
+      partner_id,
+      name: p.name,
+      email: p.email || null,
+      accommodation_name: p.accommodationName,
+    }));
+
     return new Response(
-      JSON.stringify({ success: true, providersNotified: providers.size, accommodationPartnersNotified: accommodationPartners.size }),
+      JSON.stringify({
+        success: true,
+        providersNotified: 0,
+        accommodationPartnersNotified: 0,
+        affected_activity_partners,
+        affected_accommodation_partners,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Error cancelling program:", error);
     return new Response(
