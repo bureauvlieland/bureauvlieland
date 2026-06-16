@@ -40,7 +40,9 @@ import {
   MessagesSquare,
   Users,
   User,
+  Paperclip,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
 import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
