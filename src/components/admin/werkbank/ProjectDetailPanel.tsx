@@ -461,7 +461,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
                     <div className="truncate font-medium">{it.block_name}</div>
                     <div className="text-xs text-muted-foreground">
                       {it.day_index === -1 ? "Intern" : `Dag ${it.day_index}`} · {fmtTime(it)} · {it.status}
-                      {it.block_type === "bureau" && " · bureau"}
+                      {it.block_type === "bureau" && " · Bureau Vlieland regelt"}
                       {it.provider_name && it.block_type !== "bureau" && ` · ${it.provider_name}`}
                     </div>
                   </div>

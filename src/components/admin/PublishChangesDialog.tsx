@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Send, Loader2, AlertTriangle, Info, Eye, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isBureauItem } from "@/lib/bureauItem";
 
 export interface PendingChangeItem {
   id: string;
@@ -165,10 +166,12 @@ export function PublishChangesDialog({
   const involvedPartners = useMemo(() => {
     const ids = new Set<string>();
     pendingItems.forEach((i) => {
-      if (i.provider_id && i.block_type !== "bureau") ids.add(i.provider_id);
-      const newType = i.pending_block_type ?? i.block_type;
+      if (i.provider_id && !isBureauItem(i)) ids.add(i.provider_id);
       const newProvider = i.pending_provider_id ?? i.provider_id;
-      if (newProvider && newType !== "bureau") ids.add(newProvider);
+      const newType = i.pending_block_type ?? i.block_type;
+      if (newProvider && !isBureauItem({ provider_id: newProvider, block_type: newType })) {
+        ids.add(newProvider);
+      }
     });
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);

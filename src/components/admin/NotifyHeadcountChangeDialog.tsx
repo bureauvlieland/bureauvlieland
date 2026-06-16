@@ -15,14 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Users } from "lucide-react";
-
-const BUREAU_PROVIDER_IDS = new Set([
-  "bureau",
-  "bureau-vlieland",
-  "rederij",
-  "fietsverhuur",
-  "bagagevervoer-vlieland",
-]);
+import { isBureauItem } from "@/lib/bureauItem";
 
 interface PartnerItem {
   id: string;
@@ -62,13 +55,7 @@ interface Props {
   newPeople: number;
 }
 
-function isBureau(item: PartnerItem): boolean {
-  const pid = item.provider_id;
-  if (pid && !BUREAU_PROVIDER_IDS.has(pid)) return false;
-  if (item.block_type === "bureau") return true;
-  if (pid === "bureau") return true;
-  return false;
-}
+const isBureau = (item: PartnerItem): boolean => isBureauItem(item);
 
 export function NotifyHeadcountChangeDialog({
   open,

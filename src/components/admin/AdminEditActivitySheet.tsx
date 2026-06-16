@@ -109,9 +109,7 @@ export const AdminEditActivitySheet = ({
       ? item.price_type
       : "per_person"
   );
-  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">(
-    item?.block_type === "bureau" ? "bureau" : "partner"
-  );
+  // Facturatie is altijd centraal via Bureau Vlieland; block_type wordt afgeleid van de provider.
   const [notes, setNotes] = useState(item?.customer_notes ?? "");
   const [partnerInstructions, setPartnerInstructions] = useState(
     item?.pending_partner_instructions ?? item?.partner_instructions ?? ""
@@ -189,7 +187,7 @@ export const AdminEditActivitySheet = ({
       setPriceOverride(item.admin_price_override?.toString() || "");
       const pt = (item.price_type as "per_person" | "per_person_per_day" | "total" | null) || "per_person";
       setPriceType(pt === "per_person_per_day" || pt === "total" ? pt : "per_person");
-      setInvoicedBy(item.block_type === "bureau" ? "bureau" : "partner");
+      // invoicedBy is verwijderd — facturatie is altijd centraal.
       setNotes(item.customer_notes || "");
       setPartnerInstructions(item.pending_partner_instructions ?? item.partner_instructions ?? "");
       setSelectedProviderId(item.provider_id || "bureau");
@@ -230,15 +228,14 @@ export const AdminEditActivitySheet = ({
       toast.error("Ongeldig prijstype geselecteerd");
       return;
     }
-    if (invoicedBy === "partner" && (!selectedProviderId || selectedProviderId === "bureau")) {
-      toast.error("Kies een partner als uitvoerder, of zet facturatie op Bureau Vlieland");
+    if (!selectedProviderId) {
+      toast.error("Kies een uitvoerder (Bureau Vlieland of een partner)");
       return;
     }
 
     setIsSubmitting(true);
     try {
       const time = preferredTime === "flexibel" ? null : preferredTime;
-      const isBureauInvoiced = invoicedBy === "bureau";
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
       const newProviderId = selectedProviderId || "bureau";
       const newProviderName = newProviderId === "bureau"
@@ -247,7 +244,12 @@ export const AdminEditActivitySheet = ({
       const newProviderEmail = newProviderId === "bureau"
         ? null
         : (selectedPartner?.email || item.provider_email);
-      const newBlockType = isBureauInvoiced ? "bureau" : "partner";
+      // block_type wordt afgeleid van de provider (facturatie is altijd centraal).
+      const BUREAU_IDS = new Set(["bureau", "bureau-vlieland", "rederij", "fietsverhuur", "bagagevervoer-vlieland"]);
+      const newBlockType: "bureau" | "partner" | "self_arranged" =
+        BUREAU_IDS.has(newProviderId)
+          ? "bureau"
+          : (item.block_type === "self_arranged" ? "self_arranged" : "partner");
 
       // Onderdeel is nog niet gepubliceerd (pending_added) → bewerkingen mogen
       // direct live, want klant/partner zien dit item nog niet.
@@ -288,7 +290,8 @@ export const AdminEditActivitySheet = ({
         // kostenpost). Voor nog niet gepubliceerde drafts (pending_added) heeft
         // de klant het onderdeel nooit gezien — dan géén klant-akkoord stempelen.
         // De normale workflow loopt dan via "Publiceer & notificeer".
-        if (isBureauInvoiced && item.status === "pending" && !item.pending_added) {
+        const isBureauItemNow = newBlockType === "bureau";
+        if (isBureauItemNow && item.status === "pending" && !item.pending_added) {
           const nowIso = new Date().toISOString();
           updateData.status = "confirmed";
           updateData.item_quote_status = "bevestigd";
@@ -304,7 +307,7 @@ export const AdminEditActivitySheet = ({
           .eq("id", item.id);
         if (error) throw error;
 
-        if (isBureauInvoiced) {
+        if (isBureauItemNow) {
           await resolveAutoTodo("bureau_item_pricing", item.id);
         }
       } else {
@@ -471,12 +474,10 @@ export const AdminEditActivitySheet = ({
     const livePT = (item.price_type === "per_person_per_day" || item.price_type === "total")
       ? item.price_type
       : "per_person";
-    const liveInv = item.block_type === "bureau" ? "bureau" : "partner";
     return (
       preferredTime !== liveTime ||
       priceOverride !== livePrice ||
       priceType !== livePT ||
-      invoicedBy !== liveInv ||
       selectedDayIndex !== item.day_index ||
       (selectedProviderId || "bureau") !== (item.provider_id || "bureau") ||
       (locationLat ?? null) !== (item.location_lat ?? null) ||
@@ -561,40 +562,18 @@ export const AdminEditActivitySheet = ({
             </Select>
           </div>
 
-          {/* Invoiced by */}
-          <div className="space-y-3">
-            <Label>Gefactureerd door</Label>
-            <RadioGroup
-              value={invoicedBy}
-              onValueChange={(v) => setInvoicedBy(v as "bureau" | "partner")}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="bureau" id="edit-invoice-bureau" />
-                <Label htmlFor="edit-invoice-bureau" className="font-normal cursor-pointer">
-                  Bureau Vlieland
-                </Label>
+          {/* Facturatie verloopt altijd centraal via Bureau Vlieland */}
+          {selectedProviderId && selectedProviderId !== "bureau" && (
+            <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+              <div className="text-blue-800">
+                <p className="font-medium">Facturatie via Bureau Vlieland</p>
+                <p className="text-blue-700 mt-1">
+                  {selectedProviderName} ontvangt een aanvraag en ziet dit item in hun portaal, maar hoeft geen factuur naar de klant te sturen. Alle facturatie loopt centraal via Bureau Vlieland.
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="partner" id="edit-invoice-partner" />
-                <Label htmlFor="edit-invoice-partner" className="font-normal cursor-pointer">
-                  {selectedProviderName}
-                </Label>
-              </div>
-            </RadioGroup>
-
-            {/* Info when Bureau invoicing is selected but executor is a partner */}
-            {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau" && (
-              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
-                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                <div className="text-blue-800">
-                  <p className="font-medium">Facturatie via Bureau Vlieland</p>
-                  <p className="text-blue-700 mt-1">
-                    {selectedProviderName} ontvangt wel een aanvraag en ziet dit item in hun portaal, maar hoeft geen factuur in te dienen. De facturatie loopt via Bureau Vlieland.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Day selection */}
           {selectedDates.length > 1 && (
