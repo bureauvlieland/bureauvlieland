@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     // Get program request
     const { data: program } = await supabase
       .from("program_requests")
-      .select("id, reference_number, linked_accommodation_id")
+      .select("id, reference_number, linked_accommodation_id, cancellation_reason")
       .eq("id", request_id)
       .single();
 
@@ -67,13 +67,19 @@ Deno.serve(async (req) => {
     }
 
     const refNumber = program.reference_number || "Onbekend";
+    const cancellationReason = (program.cancellation_reason || "").trim();
+    const cancellationReasonHtml = cancellationReason ? sanitizeHtml(cancellationReason) : "";
 
-    // Get open program items
+    // Get program items — wanneer caller items al heeft geannuleerd (skip_item_cancel),
+    // ook 'cancelled' meenemen zodat we de juiste partners kunnen vinden.
+    const itemStatuses = skip_item_cancel
+      ? ["pending", "confirmed", "accepted", "counter_proposed", "cancelled"]
+      : ["pending", "confirmed", "accepted", "counter_proposed"];
     const { data: openItems } = await supabase
       .from("program_request_items")
       .select("id, provider_id, provider_name, provider_email, block_name, block_type, status")
       .eq("request_id", request_id)
-      .in("status", ["pending", "confirmed", "accepted", "counter_proposed"]);
+      .in("status", itemStatuses);
 
     const notifiableItems = (openItems || []).filter(
       (i: any) =>
