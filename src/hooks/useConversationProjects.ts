@@ -23,7 +23,7 @@ export function useConversationProjects(conversations: ChatConversation[]) {
       Array.from(
         new Set(
           conversations
-            .map((c) => c.accommodation_request_id)
+            .flatMap((c) => [c.accommodation_request_id, c.accommodation_id])
             .filter(Boolean) as string[]
         )
       ),
