@@ -371,6 +371,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Extract attachments from Mailjet Parse payload and upload to storage
+    const attachments = await extractAndStoreAttachments(rawPayload, supabase, referenceNumber);
+
     // Save as project communication
     const { error: insertError } = await supabase.from("project_communications").insert({
       request_id: requestId,
@@ -383,6 +386,7 @@ Deno.serve(async (req) => {
       contact_name: contactName || null,
       contact_email: contactEmail || null,
       communication_date: new Date().toISOString(),
+      metadata: attachments.length > 0 ? { attachments } : {},
     });
 
     if (insertError) {
