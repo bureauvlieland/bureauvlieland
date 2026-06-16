@@ -76,11 +76,14 @@ Deno.serve(async (req) => {
       .in("status", ["pending", "confirmed", "accepted", "counter_proposed"]);
 
     const notifiableItems = (openItems || []).filter(
-      (i: any) => i.block_type !== "self_arranged" && !isBureauItem(i)
+      (i: any) =>
+        i.block_type !== "self_arranged" &&
+        !isBureauItem(i) &&
+        (!partnerFilter || (i.provider_id && partnerFilter.has(i.provider_id)))
     );
 
-    // Cancel items
-    if (notifiableItems.length > 0) {
+    // Cancel items (skipped when caller already cancelled them, e.g. cancel-program-request)
+    if (notifiableItems.length > 0 && !skip_item_cancel) {
       await supabase
         .from("program_request_items")
         .update({ status: "cancelled", status_note: "Project verwijderd door admin" })
@@ -88,6 +91,7 @@ Deno.serve(async (req) => {
         .in("status", ["pending", "confirmed", "accepted", "counter_proposed"])
         .neq("block_type", "self_arranged");
     }
+
 
     // Enrich missing emails
     const missingEmailIds = [
