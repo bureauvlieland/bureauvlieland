@@ -85,7 +85,8 @@ export const AdminAddActivitySheet = ({
   const [priceType, setPriceType] = useState<"per_person" | "per_person_per_day" | "total">("per_person");
   const [customName, setCustomName] = useState<string>("");
   const [customDescription, setCustomDescription] = useState<string>("");
-  const [invoicedBy, setInvoicedBy] = useState<"bureau" | "partner">(invoicingMode === "bureau_central" ? "bureau" : "partner");
+  // Facturatie is altijd centraal via Bureau Vlieland — geen UI-keuze meer.
+  // block_type wordt afgeleid van de gekozen provider.
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(null);
   const [locationLng, setLocationLng] = useState<number | null>(null);
@@ -129,7 +130,7 @@ export const AdminAddActivitySheet = ({
     );
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
-    setInvoicedBy(invoicingMode === "bureau_central" ? "bureau" : (block.block_type === "bureau" ? "bureau" : "partner"));
+    // block_type wordt afgeleid van de provider bij submit.
     setSelectedProviderId(block.provider_id || "bureau");
     setLocationLat(block.location_lat ?? null);
     setLocationLng(block.location_lng ?? null);
@@ -149,7 +150,6 @@ export const AdminAddActivitySheet = ({
       const price = priceOverride !== "" ? parseFloat(priceOverride) : null;
       
       // Determine provider based on selected executor
-      const isBureauInvoiced = invoicedBy === "bureau";
       const selectedPartner = partners.find(p => p.id === selectedProviderId);
       const providerId = selectedProviderId || "bureau";
       const providerName = selectedProviderId === "bureau" 
@@ -158,7 +158,14 @@ export const AdminAddActivitySheet = ({
       const providerEmail = selectedProviderId === "bureau" 
         ? null 
         : (selectedPartner?.email || selectedBlock.provider?.email || null);
-      const blockType = isBureauInvoiced ? "bureau" : selectedBlock.block_type;
+      // block_type beschrijft de aard van het blok, niet de facturatie.
+      // Bureau-managed providers (rederij, fietsverhuur, bagagevervoer, bureau) → "bureau";
+      // echte partners → "partner" (tenzij het catalogus-blok als "self_arranged" staat).
+      const BUREAU_IDS = new Set(["bureau", "bureau-vlieland", "rederij", "fietsverhuur", "bagagevervoer-vlieland"]);
+      const blockType: "bureau" | "partner" | "self_arranged" =
+        BUREAU_IDS.has(providerId)
+          ? "bureau"
+          : (selectedBlock.block_type === "self_arranged" ? "self_arranged" : "partner");
       
       // Insert the new item
       const { data: newItem, error } = await supabase
@@ -320,40 +327,18 @@ export const AdminAddActivitySheet = ({
               </Select>
             </div>
 
-            {/* Invoiced by */}
-            <div className="space-y-3">
-              <Label>Gefactureerd door</Label>
-              <RadioGroup
-                value={invoicedBy}
-                onValueChange={(v) => setInvoicedBy(v as "bureau" | "partner")}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="bureau" id="invoice-bureau" />
-                  <Label htmlFor="invoice-bureau" className="font-normal cursor-pointer">
-                    Bureau Vlieland
-                  </Label>
+            {/* Facturatie verloopt altijd centraal via Bureau Vlieland */}
+            {selectedProviderId && selectedProviderId !== "bureau" && (
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-blue-800">
+                  <p className="font-medium">Facturatie via Bureau Vlieland</p>
+                  <p className="text-blue-700 mt-1">
+                    {partners.find(p => p.id === selectedProviderId)?.name || selectedBlock.provider?.name} ontvangt een aanvraag en ziet dit item in hun portaal, maar hoeft geen factuur naar de klant te sturen. Alle facturatie loopt centraal via Bureau Vlieland.
+                  </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="partner" id="invoice-partner" />
-                  <Label htmlFor="invoice-partner" className="font-normal cursor-pointer">
-                    {partners.find(p => p.id === selectedProviderId)?.name || selectedBlock.provider?.name || "Partner"}
-                  </Label>
-                </div>
-              </RadioGroup>
-              
-              {/* Info when Bureau invoicing is selected but executor is a partner */}
-              {invoicedBy === "bureau" && selectedProviderId && selectedProviderId !== "bureau" && (
-                <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm">
-                  <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                  <div className="text-blue-800">
-                    <p className="font-medium">Facturatie via Bureau Vlieland</p>
-                    <p className="text-blue-700 mt-1">
-                      {partners.find(p => p.id === selectedProviderId)?.name || selectedBlock.provider?.name} ontvangt wel een aanvraag en ziet dit item in hun portaal, maar hoeft geen factuur in te dienen. De facturatie loopt via Bureau Vlieland.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Day selection */}
             {selectedDates.length > 1 && (
