@@ -279,16 +279,6 @@ Deno.serve(async (req) => {
 
     if (providers.size > 0 || accommodationPartners.size > 0) {
       try {
-        await supabase.from("admin_todos").insert({
-          title: `Klant heeft project geannuleerd — informeer ${providers.size + accommodationPartners.size} partner(s) handmatig`,
-          description: `${sanitizeHtml(customerLabel)} (${program.reference_number || program.id}) heeft de aanvraag voor ${dates} geannuleerd${reason ? ` met als reden: "${sanitizeHtml(reason)}"` : ""}. Betrokken partners: ${allPartnerNames.join(", ") || "—"}. Informeer hen handmatig vanuit het project.`,
-          priority: "high",
-          status: "todo",
-          related_request_id: program.id,
-          auto_type: "customer_cancellation",
-          auto_entity_id: program.id,
-        });
-
         emails.push({
           From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
           To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
@@ -300,7 +290,7 @@ Deno.serve(async (req) => {
               <p>Datums: ${dates}</p>
               ${reason ? `<p>Reden: ${sanitizeHtml(reason)}</p>` : ""}
               <p>Betrokken partners (${providers.size + accommodationPartners.size}): ${allPartnerNames.map((n) => sanitizeHtml(n)).join(", ") || "—"}</p>
-              <p><em>Informeer partners handmatig vanuit het project-detail in admin.</em></p>
+              <p><em>Open het project in admin om te kiezen welke partners een annuleringsmail krijgen.</em></p>
             </div>
           `,
         });
@@ -322,10 +312,11 @@ Deno.serve(async (req) => {
             },
           },
         });
-      } catch (todoErr) {
-        console.error("Failed to create admin todo for cancellation:", todoErr);
+      } catch (notifErr) {
+        console.error("Failed to queue internal cancellation notice:", notifErr);
       }
     }
+
 
 
     // Customer confirmation email
