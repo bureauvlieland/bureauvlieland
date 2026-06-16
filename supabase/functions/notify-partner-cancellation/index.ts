@@ -267,10 +267,14 @@ Deno.serve(async (req) => {
               : `Uw offerte was nog in behandeling bij de klant. Met deze annulering komt de offerteaanvraag te vervallen — een reactie is niet meer nodig.`;
 
             const subject = `${getSubjectPrefix(origin)}Logies-aanvraag ${refNumber} is geannuleerd`;
+            const reasonBlock = cancellationReasonHtml
+              ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
+              : "";
             const body = `
               <p>Beste ${sanitizeHtml(partnerName)},</p>
               <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
               <p>${statusLine}</p>
+              ${reasonBlock}
               <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             `;
