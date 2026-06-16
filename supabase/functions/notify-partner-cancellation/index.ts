@@ -147,15 +147,19 @@ Deno.serve(async (req) => {
         customer_name: "",
         reference_number: sanitizeHtml(refNumber),
         cancelled_items: itemsList,
-        cancellation_reason: "",
+        cancellation_reason: cancellationReasonHtml,
       });
 
       const subject = `${getSubjectPrefix(origin)}Aanvraag ${refNumber} is geannuleerd`;
+      const reasonBlock = cancellationReasonHtml
+        ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
+        : "";
       const body = templateResult?.body || `
         <p>Beste ${sanitizeHtml(group.name)},</p>
         <p>Hierbij laten we je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
         <p>De volgende onderdelen komen daarmee te vervallen:</p>
         <p>${itemsList}</p>
+        ${reasonBlock}
         <p>Heb je vragen, mail of bel ons gerust.</p>
       `;
 
