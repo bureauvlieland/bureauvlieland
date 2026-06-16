@@ -672,7 +672,7 @@ Deno.serve(async (req) => {
     const pendingLogs: Array<{ idx: number; payload: any }> = [];
 
     const portalBase = getPortalBaseUrl(origin);
-    const customerPortalUrl = `${portalBase}/programma/${program.customer_token}`;
+    const customerPortalUrl = `${portalBase}/mijn-programma/${program.customer_token}`;
     const refShort = program.reference_number ? ` ${program.reference_number}` : "";
     const dates =
       Array.isArray(program.selected_dates) && program.selected_dates.length > 0
