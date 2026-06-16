@@ -23,7 +23,7 @@ export function useConversationProjects(conversations: ChatConversation[]) {
       Array.from(
         new Set(
           conversations
-            .map((c) => c.accommodation_request_id)
+            .flatMap((c) => [c.accommodation_request_id, c.accommodation_id])
             .filter(Boolean) as string[]
         )
       ),
@@ -65,10 +65,11 @@ export function useConversationProjects(conversations: ChatConversation[]) {
         if (c.request_id && progMap.has(c.request_id)) {
           entry.program = { id: c.request_id, reference: progMap.get(c.request_id)! };
         }
-        if (c.accommodation_request_id && accMap.has(c.accommodation_request_id)) {
+        const accId = c.accommodation_request_id || c.accommodation_id;
+        if (accId && accMap.has(accId)) {
           entry.accommodation = {
-            id: c.accommodation_request_id,
-            label: accMap.get(c.accommodation_request_id)!,
+            id: accId,
+            label: accMap.get(accId)!,
           };
         }
         if (entry.program || entry.accommodation) next[c.id] = entry;
