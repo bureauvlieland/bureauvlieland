@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { format, addDays, differenceInCalendarDays } from "date-fns";
+import { format, addDays, subDays, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -156,6 +156,16 @@ const AdminQuotePreview = () => {
       // Set existing values if present
       if (requestData.quote_valid_until) {
         setValidUntil(new Date(requestData.quote_valid_until));
+      } else {
+        // Default: 2 weken vóór de eerste programma-datum. Valt terug op
+        // vandaag+14 als die datum in het verleden zou liggen.
+        const firstDateStr = (requestData.selected_dates as string[] | null)?.[0];
+        if (firstDateStr) {
+          const firstDate = new Date(firstDateStr + "T00:00:00");
+          const tomorrow = addDays(new Date(), 1);
+          const twoWeeksBefore = subDays(firstDate, 14);
+          setValidUntil(twoWeeksBefore > tomorrow ? twoWeeksBefore : tomorrow);
+        }
       }
       if (requestData.quote_personal_message) {
         setPersonalMessage(requestData.quote_personal_message);
