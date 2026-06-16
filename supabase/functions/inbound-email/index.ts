@@ -514,8 +514,10 @@ Deno.serve(async (req) => {
       auto_entity_id: referenceNumber,
     });
 
-    // Notify customer about the partner reply
-    if (requestId) {
+    // Notify customer ONLY when this inbound reply belongs to an existing
+    // customer ↔ partner thread. Default admin-only inbound mail (partner → bureau)
+    // must NEVER be forwarded to the customer.
+    if (requestId && audience === "customer_partner") {
       await notifyCustomer(
         supabase,
         requestId,
