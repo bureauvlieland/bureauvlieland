@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Send, Loader2, AlertTriangle, Info, Eye, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isBureauItem } from "@/lib/bureauItem";
 
 export interface PendingChangeItem {
   id: string;
