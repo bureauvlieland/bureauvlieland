@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
-import { buildReplyTo, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
+import { buildReplyTo, getSubjectPrefix, getRecipientEmail, getPortalBaseUrl } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
     let customerName: string | null = null;
     let portalUrl: string | null = null;
     const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
+    const portalBase = getPortalBaseUrl(origin);
 
     if (requestId) {
       const { data: pr } = await supabase
@@ -81,7 +82,7 @@ Deno.serve(async (req) => {
       referenceNumber = pr?.reference_number || null;
       customerName = pr?.customer_name || null;
       if (pr?.customer_token) {
-        portalUrl = `${origin}/programma/${pr.customer_token}`;
+        portalUrl = `${portalBase}/mijn-programma/${pr.customer_token}`;
       }
     }
     if (!referenceNumber && accommodationId) {
@@ -93,18 +94,20 @@ Deno.serve(async (req) => {
       referenceNumber = ar?.reference_number || null;
       customerName = customerName || ar?.customer_name || null;
       if (!portalUrl && ar?.customer_token) {
-        portalUrl = `${origin}/mijn-logies/${ar.customer_token}`;
+        portalUrl = `${portalBase}/mijn-logies/${ar.customer_token}`;
       }
     }
 
-    const partnerPortalUrl = partnerId ? `${origin}/partner` : null;
+    const partnerPortalUrl = partnerId ? `${portalBase}/partner` : null;
     const replyTo = buildReplyTo(referenceNumber);
 
     // Vervang placeholders in subject + body zodat ad-hoc projectmails geen
     // letterlijke {{portal_url}} / {{customer_name}} / {{reference_number}}
-    // meer bevatten (zoals bv. de Vliehors-mail van 11 juni 2026).
+    // meer bevatten.
+    const portalReplacement = partnerPortalUrl || portalUrl || portalBase;
     const substitutions: Record<string, string> = {
-      "{{portal_url}}": partnerPortalUrl || portalUrl || origin,
+      "{{portal_url}}": portalReplacement,
+      "{{portal_link}}": portalReplacement,
       "{{customer_name}}": customerName || "",
       "{{reference_number}}": referenceNumber || "",
       "{{recipient_name}}": recipientName || "",
@@ -116,9 +119,13 @@ Deno.serve(async (req) => {
       }
       return out;
     };
-    const substitutedSubject = applySubstitutions(subject || "");
-    const substitutedBody = applySubstitutions(body || "");
+    let substitutedSubject = applySubstitutions(subject || "");
+    let substitutedBody = applySubstitutions(body || "");
 
+    // Verwijder dubbele afsluiting (de wrapper voegt al "Met vriendelijke groet, Bureau Vlieland" toe)
+    substitutedBody = substitutedBody
+      .replace(/\s*Met vriendelijke groet,?\s*\n+\s*Bureau Vlieland\.?\s*$/i, "")
+      .trimEnd();
 
     if (!recipientEmail || !subject || !body) {
       return new Response(
@@ -127,6 +134,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Convert {{portal_url}} that already ended up as a plain URL in the body
+    // into a clickable link (substitution above replaced the placeholder text).
+    const bodyHtml = substitutedBody
+      .replace(/\n/g, "<br>")
+      .replace(
+        new RegExp(portalReplacement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+        `<a href="${portalReplacement}" style="color: #1e3a5f; font-weight: 600;">${portalReplacement}</a>`,
+      );
+
     // Wrap body in a simple styled email layout
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -134,7 +150,7 @@ Deno.serve(async (req) => {
           <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
         </div>
         <div style="padding: 24px; line-height: 1.6; color: #333;">
-          ${substitutedBody.replace(/\n/g, "<br>")}
+          ${bodyHtml}
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <div style="padding: 0 24px 24px; color: #666; font-size: 14px;">
