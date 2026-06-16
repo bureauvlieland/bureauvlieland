@@ -229,6 +229,8 @@ Deno.serve(async (req) => {
       return {
         ...item,
         is_concept: isConcept,
+        block_short_description: blockDescMap[item.block_id]?.short_description ?? null,
+        block_description: blockDescMap[item.block_id]?.description ?? null,
         program_requests: programRequests,
         sibling_items: allRequestItems[item.request_id] || [],
       };
