@@ -324,6 +324,7 @@ const AdminRequestDetail = () => {
   const [cancelNotifyAccommodation, setCancelNotifyAccommodation] = useState<
     import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[]
   >([]);
+  const [isLoadingRetroCancel, setIsLoadingRetroCancel] = useState(false);
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
