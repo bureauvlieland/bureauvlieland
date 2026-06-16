@@ -1588,8 +1588,21 @@ const AdminRequestDetail = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Aanvraag geannuleerd</AlertTitle>
               <AlertDescription>
-                {request.cancelled_at && <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>}
-                {request.cancellation_reason && <> · {request.cancellation_reason}</>}
+                <div>
+                  {request.cancelled_at && <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>}
+                  {request.cancellation_reason && <> · {request.cancellation_reason}</>}
+                </div>
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={openRetroCancellationNotify}
+                    disabled={isLoadingRetroCancel}
+                  >
+                    <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    {isLoadingRetroCancel ? "Partners ophalen..." : "Partners (alsnog) informeren over annulering"}
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
