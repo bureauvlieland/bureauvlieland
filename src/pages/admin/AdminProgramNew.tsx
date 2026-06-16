@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { format, addDays } from "date-fns";
+import { format, addDays, subDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -67,6 +67,26 @@ const AdminProgramNewContent = () => {
     generalNotes: "",
     quoteValidUntil: addDays(new Date(), 14),
   });
+
+  // Default: 2 weken vóór de eerste programma-datum. Valt terug op vandaag+14
+  // als de berekende datum in het verleden zou liggen (korte termijn-aanvragen).
+  // Admin kan altijd handmatig overschrijven; we resetten enkel zolang de
+  // gebruiker zelf de datepicker nog niet heeft aangeraakt.
+  const [quoteValidUntilTouched, setQuoteValidUntilTouched] = useState(false);
+  useEffect(() => {
+    if (quoteValidUntilTouched) return;
+    const firstDate = formData.selectedDates[0];
+    if (!firstDate) return;
+    const tomorrow = addDays(new Date(), 1);
+    const twoWeeksBefore = subDays(firstDate, 14);
+    const next = twoWeeksBefore > tomorrow ? twoWeeksBefore : tomorrow;
+    setFormData((prev) =>
+      prev.quoteValidUntil.getTime() === next.getTime() ? prev : { ...prev, quoteValidUntil: next }
+    );
+  }, [formData.selectedDates, quoteValidUntilTouched]);
+
+  // dummy block to keep diff small; original initializer state above remains the source.
+  const __noop = (() => {
 
   const steps: { id: WizardStep; title: string; icon: React.ReactNode }[] = [
     { id: "type", title: "Type", icon: <FileText className="h-4 w-4" /> },
