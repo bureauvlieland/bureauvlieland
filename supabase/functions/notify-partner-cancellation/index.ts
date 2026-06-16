@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     // Get program request
     const { data: program } = await supabase
       .from("program_requests")
-      .select("id, reference_number, linked_accommodation_id")
+      .select("id, reference_number, linked_accommodation_id, cancellation_reason")
       .eq("id", request_id)
       .single();
 
@@ -67,13 +67,19 @@ Deno.serve(async (req) => {
     }
 
     const refNumber = program.reference_number || "Onbekend";
+    const cancellationReason = (program.cancellation_reason || "").trim();
+    const cancellationReasonHtml = cancellationReason ? sanitizeHtml(cancellationReason) : "";
 
-    // Get open program items
+    // Get program items — wanneer caller items al heeft geannuleerd (skip_item_cancel),
+    // ook 'cancelled' meenemen zodat we de juiste partners kunnen vinden.
+    const itemStatuses = skip_item_cancel
+      ? ["pending", "confirmed", "accepted", "counter_proposed", "cancelled"]
+      : ["pending", "confirmed", "accepted", "counter_proposed"];
     const { data: openItems } = await supabase
       .from("program_request_items")
       .select("id, provider_id, provider_name, provider_email, block_name, block_type, status")
       .eq("request_id", request_id)
-      .in("status", ["pending", "confirmed", "accepted", "counter_proposed"]);
+      .in("status", itemStatuses);
 
     const notifiableItems = (openItems || []).filter(
       (i: any) =>
@@ -141,15 +147,19 @@ Deno.serve(async (req) => {
         customer_name: "",
         reference_number: sanitizeHtml(refNumber),
         cancelled_items: itemsList,
-        cancellation_reason: "",
+        cancellation_reason: cancellationReasonHtml,
       });
 
       const subject = `${getSubjectPrefix(origin)}Aanvraag ${refNumber} is geannuleerd`;
+      const reasonBlock = cancellationReasonHtml
+        ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
+        : "";
       const body = templateResult?.body || `
         <p>Beste ${sanitizeHtml(group.name)},</p>
         <p>Hierbij laten we je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
         <p>De volgende onderdelen komen daarmee te vervallen:</p>
         <p>${itemsList}</p>
+        ${reasonBlock}
         <p>Heb je vragen, mail of bel ons gerust.</p>
       `;
 
@@ -257,10 +267,14 @@ Deno.serve(async (req) => {
               : `Uw offerte was nog in behandeling bij de klant. Met deze annulering komt de offerteaanvraag te vervallen — een reactie is niet meer nodig.`;
 
             const subject = `${getSubjectPrefix(origin)}Logies-aanvraag ${refNumber} is geannuleerd`;
+            const reasonBlock = cancellationReasonHtml
+              ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
+              : "";
             const body = `
               <p>Beste ${sanitizeHtml(partnerName)},</p>
               <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
               <p>${statusLine}</p>
+              ${reasonBlock}
               <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             `;

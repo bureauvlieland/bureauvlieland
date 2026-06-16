@@ -324,6 +324,7 @@ const AdminRequestDetail = () => {
   const [cancelNotifyAccommodation, setCancelNotifyAccommodation] = useState<
     import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[]
   >([]);
+  const [isLoadingRetroCancel, setIsLoadingRetroCancel] = useState(false);
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
@@ -846,6 +847,99 @@ const AdminRequestDetail = () => {
       toast.error("Fout bij ophalen aanvraag");
     } finally {
       if (!options?.silent) setIsLoading(false);
+    }
+  };
+
+  const openRetroCancellationNotify = async () => {
+    if (!request) return;
+    setIsLoadingRetroCancel(true);
+    try {
+      // 1) Activiteitenpartners — uit cancelled items, exclusief bureau/self_arranged
+      const { data: items } = await supabase
+        .from("program_request_items")
+        .select("id, provider_id, provider_name, provider_email, block_name, block_type, status")
+        .eq("request_id", request.id);
+
+      const partnerItems = (items || []).filter(
+        (i: any) =>
+          i.provider_id &&
+          i.provider_id !== "bureau" &&
+          i.block_type !== "bureau" &&
+          i.block_type !== "self_arranged",
+      );
+
+      // Enrich emails from partners table
+      const missingIds = [
+        ...new Set(partnerItems.filter((i: any) => !i.provider_email).map((i: any) => i.provider_id)),
+      ];
+      let partnerMap = new Map<string, any>();
+      if (missingIds.length > 0) {
+        const { data: partners } = await supabase
+          .from("partners")
+          .select("id, email, contact_email, name")
+          .in("id", missingIds);
+        partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+      }
+
+      const groups = new Map<string, { name: string; email: string | null; item_names: string[] }>();
+      for (const it of partnerItems) {
+        const partner = partnerMap.get(it.provider_id);
+        const email = it.provider_email || partner?.contact_email || partner?.email || null;
+        const name = it.provider_name || partner?.name || it.provider_id;
+        if (!groups.has(it.provider_id)) {
+          groups.set(it.provider_id, { name, email, item_names: [] });
+        }
+        groups.get(it.provider_id)!.item_names.push(it.block_name);
+      }
+      const activityPartners = Array.from(groups.entries()).map(([partner_id, g]) => ({
+        partner_id,
+        name: g.name,
+        email: g.email,
+        item_names: g.item_names,
+      }));
+
+      // 2) Logiespartners — quotes op gekoppelde logies-aanvraag
+      let accommodationPartners: import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[] = [];
+      if (request.linked_accommodation_id) {
+        const { data: quotes } = await supabase
+          .from("accommodation_quotes")
+          .select("id, partner_id, accommodation_name, status")
+          .eq("request_id", request.linked_accommodation_id)
+          .in("status", ["pending", "submitted", "selected", "accepted", "rejected", "declined"]);
+
+        const accPartnerIds = [...new Set((quotes || []).map((q: any) => q.partner_id).filter(Boolean))];
+        let accPartnerMap = new Map<string, any>();
+        if (accPartnerIds.length > 0) {
+          const { data: accPartners } = await supabase
+            .from("partners")
+            .select("id, name, email, contact_email")
+            .in("id", accPartnerIds);
+          accPartnerMap = new Map((accPartners || []).map((p: any) => [p.id, p]));
+        }
+        accommodationPartners = (quotes || []).map((q: any) => {
+          const p = accPartnerMap.get(q.partner_id);
+          return {
+            partner_id: q.partner_id,
+            name: p?.name || q.accommodation_name || q.partner_id,
+            email: p?.contact_email || p?.email || null,
+            accommodation_name: q.accommodation_name || "",
+          };
+        });
+      }
+
+      if (activityPartners.length + accommodationPartners.length === 0) {
+        toast.info("Geen gekoppelde partners gevonden voor dit project.");
+        return;
+      }
+
+      setCancelNotifyActivity(activityPartners);
+      setCancelNotifyAccommodation(accommodationPartners);
+      setCancelNotifyOpen(true);
+    } catch (err) {
+      console.error("openRetroCancellationNotify failed", err);
+      toast.error("Kon partners niet ophalen");
+    } finally {
+      setIsLoadingRetroCancel(false);
     }
   };
 
@@ -1588,8 +1682,21 @@ const AdminRequestDetail = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Aanvraag geannuleerd</AlertTitle>
               <AlertDescription>
-                {request.cancelled_at && <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>}
-                {request.cancellation_reason && <> · {request.cancellation_reason}</>}
+                <div>
+                  {request.cancelled_at && <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>}
+                  {request.cancellation_reason && <> · {request.cancellation_reason}</>}
+                </div>
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={openRetroCancellationNotify}
+                    disabled={isLoadingRetroCancel}
+                  >
+                    <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    {isLoadingRetroCancel ? "Partners ophalen..." : "Partners (alsnog) informeren over annulering"}
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
