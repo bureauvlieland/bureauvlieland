@@ -43,6 +43,8 @@ export interface PartnerItem {
   created_at: string;
   updated_at: string;
   duration: string | null;
+  block_short_description?: string | null;
+  block_description?: string | null;
   admin_price_notes: string | null;
   partner_instructions: string | null;
   location_address: string | null;

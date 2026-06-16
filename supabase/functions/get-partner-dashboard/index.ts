@@ -175,6 +175,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Enrich items with building_blocks descriptions so partner sees same omschrijving as customer
+    const blockIds = [...new Set(activeItems.map((i: any) => i.block_id).filter(Boolean))];
+    let blockDescMap: Record<string, { short_description: string | null; description: string | null }> = {};
+    if (blockIds.length > 0) {
+      const { data: blocks } = await supabase
+        .from("building_blocks")
+        .select("id, short_description, description")
+        .in("id", blockIds);
+      for (const b of blocks || []) {
+        blockDescMap[(b as any).id] = {
+          short_description: (b as any).short_description ?? null,
+          description: (b as any).description ?? null,
+        };
+      }
+    }
+
     // Attach sibling items to each partner item for conflict detection
     // Also strip customer contact details for bureau_central projects
     // For "concept" items (skip_partner_notification=true & pending) — strip ALL PII;
@@ -213,6 +229,8 @@ Deno.serve(async (req) => {
       return {
         ...item,
         is_concept: isConcept,
+        block_short_description: blockDescMap[item.block_id]?.short_description ?? null,
+        block_description: blockDescMap[item.block_id]?.description ?? null,
         program_requests: programRequests,
         sibling_items: allRequestItems[item.request_id] || [],
       };
