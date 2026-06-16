@@ -1,67 +1,39 @@
 ## Doel
-1. De misleidende toast na klantannulering vervangen door een accurate melding.
-2. Direct na de annulering (zowel klant- als admin-trigger vanuit projectdetail) een dialog openen die toont welke activiteiten- en logiespartners betrokken zijn, zodat de admin per partner kan kiezen of er een annuleringsmail uitgaat — vergelijkbaar met de bestaande "wijzigingen publiceren"-flow.
+1. De opgegeven annuleringsreden meesturen in de partner-annuleringsmails (zowel activiteitenpartners als logiespartners).
+2. Op reeds geannuleerde projecten een knop tonen waarmee je de nieuwe "Partners informeren"-dialog alsnog kunt openen, zodat we het kunnen testen op BV-2606-0005.
 
-## Wat er verandert
+## Wijzigingen
 
-### 1. `cancel-program-request` (edge function)
-- Naast `providersNotified`/`accommodationPartnersNotified` ook teruggeven:
-  - `affected_activity_partners: [{ partner_id, name, email, item_names: [...] }]`
-  - `affected_accommodation_partners: [{ partner_id, name, email, accommodation_name, previous_quote_status }]`
-- De automatische `admin_todo` "informeer X partners handmatig" wordt verwijderd (vervangen door de inline dialog). De interne BCC-mail naar Bureau Vlieland blijft.
+### 1. `notify-partner-cancellation` (edge function)
+- Aan het begin: ook `cancellation_reason` ophalen uit `program_requests` (samen met reference_number).
+- Doorgeven aan het `cancellation_partner`-template als variabele `cancellation_reason` (in plaats van de huidige lege string). Template toont de reden al wanneer aanwezig (zie EmailTemplateSheet preview).
+- Voor de logies-mail (hardcoded HTML in dezelfde functie): een extra alinea toevoegen vóór "Excuses voor het ongemak…" met:
+  > "Reden van annulering: <reden>"
+  alleen tonen wanneer er een reden is, netjes ge-sanitized.
+- Fallback-body voor activiteitenpartner (wanneer template-render faalt) krijgt dezelfde regel.
 
-### 2. `notify-partner-cancellation` (edge function)
-- Optionele filters toevoegen aan de request body:
-  - `partner_ids?: string[]` — alleen activiteitenpartners in deze lijst krijgen mail
-  - `accommodation_partner_ids?: string[]` — idem voor logies
-  - `skip_item_cancel?: boolean` — items zijn al geannuleerd door `cancel-program-request`, dus overslaan
-- Bestaande gedrag (zonder filters) blijft hetzelfde voor admin-projectverwijdering.
+### 2. `AdminRequestDetail.tsx` — handmatige hertrigger op cancelled projecten
+- Toon, wanneer `request.status === 'cancelled'`, naast de bestaande annuleringsmelding een knop **"Partners alsnog informeren over annulering"**.
+- Klik:
+  - Verzamelt dezelfde lijsten als `cancel-program-request` doet (activity partners uit `program_request_items` met `status='cancelled'`, gegroepeerd per `provider_id` waar het geen `block_type='bureau'`/`provider_id='bureau'` betreft; logies-partners uit `accommodation_quotes` op gekoppelde logies-aanvraag waar `status IN ('selected','pending','submitted','rejected','declined')`).
+  - Vult `cancellationPartners` state en opent de bestaande `PartnerCancellationNotifyDialog`.
+- Geen extra mailtjes/todo-aanpassingen — de dialog gebruikt verder de bestaande flow (`skip_item_cancel: true`).
+- Filterlogica plaatsen in een kleine helper `collectCancellationPartners(requestId)` binnen `AdminRequestDetail.tsx` (of in `src/lib/`) zodat we 'm bij de toekomstige cancel-trigger niet opnieuw bouwen.
 
-### 3. `AdminRequestDetail.tsx`
-- Na succesvolle `cancel-program-request` aanroep:
-  - Toast aanpassen naar: *"Aanvraag geannuleerd."* + extra regel als er partners zijn: *"Kies hieronder welke partners je een annuleringsmail wilt sturen."*
-  - Nieuwe state `cancellationPartners` (uit response) + `partnerNotifyDialogOpen`.
-- Nieuwe component `PartnerCancellationNotifyDialog`:
-  - Toont per partner:
-    - naam, e-mailadres, type (activiteit/logies), betrokken onderdeel/accommodatie-naam
-    - checkbox (default aangevinkt voor alle, behalve waar e-mail ontbreekt → disabled met uitleg)
-  - "Alles selecteren / niets selecteren" knop.
-  - Primaire actie: **"Verstuur annuleringsmails (N)"** → roept `notify-partner-cancellation` met de geselecteerde ids.
-  - Secundaire actie: **"Niet versturen / sluiten"** — sluit dialog zonder mails. (Geen automatische todo meer; admin neemt bewuste actie.)
-  - Bij succes: toast met aantal verstuurde mails + opnieuw `fetchRequestData` zodat de communicatie-tijdlijn de mails toont.
-
-### 4. (Optioneel binnen dezelfde dialog) Heropen-knop op projectdetail
-- Als de admin de dialog sluit zonder mails te versturen, een kleine "Stuur partners alsnog mail"-knop tonen in de project-header zolang `cancelled_at` recent is én er nog onverstuurde annuleringsmails per partner zijn (basis check: betrokken partner heeft geen `cancellation_partner`/`cancellation_accommodation_partner` mail in `email_log` voor dit project). Zo verlies je de actie niet als de tab sluit.
-
-## Technische details
-
-- Response-shape van `cancel-program-request` (toevoegingen, backwards-compatibel):
-  ```ts
-  {
-    success: true,
-    providersNotified: 0,                // blijft 0 — niet automatisch
-    accommodationPartnersNotified: 0,    // idem
-    affected_activity_partners: Array<{
-      partner_id: string; name: string; email: string | null;
-      item_names: string[];
-    }>,
-    affected_accommodation_partners: Array<{
-      partner_id: string; name: string; email: string | null;
-      accommodation_name: string; previous_quote_status: string;
-    }>,
-  }
-  ```
-- `notify-partner-cancellation` schakelt item-cancel over wanneer `skip_item_cancel === true` (frontend zet dit altijd vanuit de klant-cancel flow).
-- Filters worden vóór de bestaande `partnerGroups`/quote-loop toegepast.
-- Logging blijft via `logEmail` + `project_communications` zoals nu.
-- Geen DB-migratie nodig.
+### 3. Testen op BV-2606-0005
+- Na deploy van bovenstaande:
+  - Open project BV-2606-0005 in admin.
+  - Klik "Partners alsnog informeren over annulering".
+  - Selecteer de vier partners (Vliehors Expres, Bunkermuseum Wn12H, Vlieland Outdoor Center, Zuiver Traiteur — laatstgenoemde kan ook nog meegenomen worden).
+  - Verstuur en controleer:
+    - email_log entries (`cancellation_partner` + `cancellation_accommodation_partner`)
+    - reden uit `program_requests.cancellation_reason` verschijnt in body
+    - communicatie-tijdlijn van het project toont de mails.
 
 ## Bestanden
-- `supabase/functions/cancel-program-request/index.ts` — response uitbreiden, todo-insert verwijderen.
-- `supabase/functions/notify-partner-cancellation/index.ts` — optionele filters + `skip_item_cancel`.
-- `src/pages/admin/AdminRequestDetail.tsx` — toast + dialog-state + nieuwe import.
-- `src/components/admin/PartnerCancellationNotifyDialog.tsx` — nieuw.
+- `supabase/functions/notify-partner-cancellation/index.ts` — reden ophalen + meesturen.
+- `src/pages/admin/AdminRequestDetail.tsx` — knop + collector + dialog-trigger.
 
 ## Buiten scope
-- Wijzigingen aan admin-project-delete flow (`notify-partner-cancellation` blijft daar gewoon "alles versturen").
-- Wijzigingen aan klantportal-cancel UI.
+- Wijzigingen aan template-tekst zelf (kunt u zelf bewerken in Admin → E-mailtemplates → `cancellation_partner`; `{{cancellation_reason}}` variabele bestaat al).
+- Wijzigen van de logies-mail naar bewerkbare template (eerder voorstel) — pakken we later op als u dat wilt.
