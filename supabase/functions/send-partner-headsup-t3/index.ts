@@ -342,21 +342,9 @@ Deno.serve(async (req) => {
         },
       });
 
-      // Log in project dossier
-      try {
-        await supabase.from("project_communications").insert({
-          request_id: request.id,
-          partner_id: item.provider_id,
-          item_id: item.id,
-          direction: "outbound",
-          channel: "email",
-          subject,
-          summary: `T-3 heads-up naar ${partnerName} voor "${item.block_name}" op ${formatDateNL(activityDate)}`,
-          metadata: { template_name: EMAIL_TYPE, actor: "system" },
-        });
-      } catch (e) {
-        console.warn("project_communications insert failed:", e);
-      }
+      // Dossier-visibiliteit loopt via email_log (geen extra project_communications-insert nodig).
+
+
 
       if (resp.ok) sent++;
       else errors.push(`item ${item.id}: ${respText.slice(0, 300)}`);
