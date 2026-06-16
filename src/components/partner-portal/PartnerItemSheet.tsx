@@ -511,6 +511,33 @@ export const PartnerItemSheet = ({
             </div>
           </div>
 
+          {/* Activity description — same omschrijving as customer ziet */}
+          {(item.block_short_description || item.block_description) && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Omschrijving van de activiteit
+                </h3>
+                <div className="bg-muted/30 border rounded-lg p-3 space-y-2">
+                  {item.block_short_description && (
+                    <p className="text-sm font-medium leading-relaxed">
+                      {item.block_short_description}
+                    </p>
+                  )}
+                  {item.block_description && (
+                    <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                      {item.block_description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground italic pt-1">
+                    Dit is dezelfde tekst die de klant in zijn portaal ziet.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
           {(item.location_address || (item.location_lat !== null && item.location_lng !== null)) && (
             <PartnerLocationMap
               lat={item.location_lat}
