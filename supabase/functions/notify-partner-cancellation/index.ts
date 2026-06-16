@@ -221,25 +221,34 @@ Deno.serve(async (req) => {
     let accommodationQuotesCancelled = 0;
     let accommodationEmailsSent = 0;
     if (program.linked_accommodation_id) {
+      const quoteStatuses = skip_item_cancel
+        ? ["pending", "submitted", "selected", "accepted", "rejected", "declined"]
+        : ["pending", "submitted", "selected", "accepted"];
       const { data: openQuotes } = await supabase
         .from("accommodation_quotes")
         .select("id, partner_id, accommodation_name, status")
         .eq("request_id", program.linked_accommodation_id)
-        .in("status", ["pending", "submitted", "selected", "accepted"]);
+        .in("status", quoteStatuses);
 
-      if (openQuotes && openQuotes.length > 0) {
+      const filteredQuotes = (openQuotes || []).filter(
+        (q: any) => !accommodationFilter || (q.partner_id && accommodationFilter.has(q.partner_id))
+      );
+
+      if (filteredQuotes.length > 0) {
         // Enrich partner emails
-        const partnerIds = [...new Set(openQuotes.map((q: any) => q.partner_id).filter(Boolean))];
+        const partnerIds = [...new Set(filteredQuotes.map((q: any) => q.partner_id).filter(Boolean))];
         const { data: partners } = await supabase
           .from("partners")
           .select("id, name, email, contact_email")
           .in("id", partnerIds);
         const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
 
-        for (const quote of openQuotes) {
+        for (const quote of filteredQuotes) {
           const partner = partnerMap.get(quote.partner_id);
           const partnerEmail = partner ? (partner.contact_email || partner.email) : null;
           const partnerName = partner?.name || quote.accommodation_name || "partner";
+
+
 
           if (partnerEmail) {
             const wasSelected = quote.status === "selected" || quote.status === "accepted";
