@@ -24,7 +24,11 @@ const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 interface CancellationRequest {
   request_id: string;
   origin?: string;
+  partner_ids?: string[];
+  accommodation_partner_ids?: string[];
+  skip_item_cancel?: boolean;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
