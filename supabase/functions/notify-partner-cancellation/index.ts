@@ -208,15 +208,102 @@ Deno.serve(async (req) => {
 
     // Handle accommodation quotes if applicable
     let accommodationQuotesCancelled = 0;
+    let accommodationEmailsSent = 0;
     if (program.linked_accommodation_id) {
       const { data: openQuotes } = await supabase
         .from("accommodation_quotes")
         .select("id, partner_id, accommodation_name, status")
         .eq("request_id", program.linked_accommodation_id)
-        .in("status", ["pending", "submitted"]);
+        .in("status", ["pending", "submitted", "selected", "accepted"]);
 
       if (openQuotes && openQuotes.length > 0) {
+        // Enrich partner emails
+        const partnerIds = [...new Set(openQuotes.map((q: any) => q.partner_id).filter(Boolean))];
+        const { data: partners } = await supabase
+          .from("partners")
+          .select("id, name, email, contact_email")
+          .in("id", partnerIds);
+        const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+
         for (const quote of openQuotes) {
+          const partner = partnerMap.get(quote.partner_id);
+          const partnerEmail = partner ? (partner.contact_email || partner.email) : null;
+          const partnerName = partner?.name || quote.accommodation_name || "partner";
+
+          if (partnerEmail) {
+            const wasSelected = quote.status === "selected" || quote.status === "accepted";
+            const statusLine = wasSelected
+              ? `Uw offerte was reeds geselecteerd voor deze aanvraag. Met deze annulering komt de boeking te vervallen.`
+              : `Uw offerte was nog in behandeling bij de klant. Met deze annulering komt de offerteaanvraag te vervallen — een reactie is niet meer nodig.`;
+
+            const subject = `${getSubjectPrefix(origin)}Logies-aanvraag ${refNumber} is geannuleerd`;
+            const body = `
+              <p>Beste ${sanitizeHtml(partnerName)},</p>
+              <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
+              <p>${statusLine}</p>
+              <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
+              <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
+            `;
+
+            const recipientEmail = getRecipientEmail(partnerEmail, origin);
+
+            const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Basic " + btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`),
+              },
+              body: JSON.stringify({
+                Messages: [{
+                  TrackClicks: "disabled", TrackOpens: "disabled",
+                  From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+                  To: [{ Email: recipientEmail, Name: partnerName }],
+                  Subject: subject,
+                  HTMLPart: body,
+                  ...(buildReplyTo(refNumber) ? { ReplyTo: buildReplyTo(refNumber) } : {}),
+                }],
+              }),
+            });
+
+            const mjData = await mjRes.json().catch(() => ({}));
+            const messageId = mjData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+            const status: "sent" | "failed" = mjRes.ok ? "sent" : "failed";
+            const errorMessage = mjRes.ok ? undefined : JSON.stringify(mjData).slice(0, 1000);
+
+            await logEmail({
+              email_type: "cancellation_accommodation_partner",
+              subject,
+              recipient_email: recipientEmail,
+              recipient_name: partnerName,
+              related_request_id: request_id,
+              related_partner_id: quote.partner_id,
+              status,
+              error_message: errorMessage,
+              mailjet_message_id: messageId || undefined,
+              sent_by: "admin",
+              metadata: {
+                template_name: "cancellation_accommodation_partner",
+                actor: "admin → logies-partner (project geannuleerd)",
+                accommodation_request_id: program.linked_accommodation_id,
+                quote_id: quote.id,
+                previous_quote_status: quote.status,
+              },
+            });
+
+            await supabase.from("project_communications").insert({
+              request_id,
+              communication_type: "email_out",
+              direction: "outbound",
+              subject,
+              content: `Annuleringsmelding logies verstuurd naar ${partnerName} (status was: ${quote.status})`,
+              contact_name: partnerName,
+              contact_email: recipientEmail,
+              metadata: { source: "email_log", email_type: "cancellation_accommodation_partner", quote_id: quote.id },
+            }).then(() => {}, () => {});
+
+            if (mjRes.ok) accommodationEmailsSent++;
+          }
+
           await supabase
             .from("accommodation_quotes")
             .update({ status: "rejected" })
@@ -232,7 +319,9 @@ Deno.serve(async (req) => {
         items_cancelled: notifiableItems.length,
         emails_sent: emailsSent,
         accommodation_quotes_cancelled: accommodationQuotesCancelled,
+        accommodation_emails_sent: accommodationEmailsSent,
       }),
+
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
