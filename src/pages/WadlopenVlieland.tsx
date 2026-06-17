@@ -32,7 +32,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
-import heroImage from "@/assets/dunes-group.jpg"; // placeholder — vervangen door eigen wadexcursie-foto
+import heroImage from "@/assets/seal-tour.jpg"; // tussentijds: zeehondentocht (zelfde wad-context). Vervangen door eigen wadexcursie-foto zodra beschikbaar.
 
 const FAQ: { q: string; a: string }[] = [
   {
