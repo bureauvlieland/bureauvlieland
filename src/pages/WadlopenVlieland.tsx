@@ -84,8 +84,6 @@ const WadlopenVlieland = () => {
         />
         <meta property="og:url" content={url} />
         <meta property="og:image" content={`https://bureauvlieland.nl${heroImage}`} />
-        {/* DRAFT — noindex tot eigen wadexcursie-foto's geplaatst zijn */}
-        <meta name="robots" content="noindex,follow" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "TouristTrip",
