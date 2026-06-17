@@ -356,6 +356,7 @@ const WadlopenVlieland = () => {
         </section>
       </main>
 
+      <GoogleReviewsBlock title="Reviews over Bureau Vlieland" subtitle="Wat klanten zeggen over onze wadexcursies en groepsprogramma's" />
       <Footer />
     </div>
   );
