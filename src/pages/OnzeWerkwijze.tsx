@@ -15,7 +15,7 @@ const OnzeWerkwijze = () => {
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>Onze werkwijze – Bureau Vlieland | Hoe wij groepen op Vlieland organiseren</title>
+        <title>Onze werkwijze – groepen organiseren op Vlieland</title>
         <meta
           name="description"
           content="Zo werkt Bureau Vlieland: zelf uw programma samenstellen of op maat. Eén vast aanspreekpunt, alle eilandpartners geboekt, één overzichtelijke factuur."
