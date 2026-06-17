@@ -47,6 +47,10 @@ const FAQ: { q: string; a: string }[] = [
     a: "Ja, de excursie is geschikt voor alle leeftijden en daarmee ook leuk voor gezinnen met kinderen.",
   },
   {
+    q: "Wanneer kan een wadexcursie plaatsvinden?",
+    a: "Een wadexcursie kan alleen rond laag water: ongeveer van 1 uur vóór tot 1 uur ná laagwater. De starttijd hangt dus af van het getij van die dag. Bekijk de actuele waterstanden Vlieland op getij.nl (Rijkswaterstaat) om een idee te krijgen van het tijdvenster.",
+  },
+  {
     q: "Hoe lang duurt een wadexcursie?",
     a: "Een wadexcursie op Vlieland duurt ongeveer 1,5 uur.",
   },
@@ -230,6 +234,7 @@ const WadlopenVlieland = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { icon: Clock, title: "Duur", text: "Ongeveer 1,5 uur." },
+              { icon: Clock, title: "Wanneer", text: "Alleen rond laagwater: van 1 uur vóór tot 1 uur ná laag tij." },
               { icon: MapPin, title: "Vertrekpunt", text: "Varieert per excursie — je krijgt het startpunt bij je boeking door." },
               { icon: Footprints, title: "Laarzen inbegrepen", text: "Geen waterschoenen nodig — wij zorgen voor laarzen." },
               { icon: ShieldCheck, title: "Veiligheid", text: "Altijd met een ervaren, lokale gids. Ga nooit alleen het wad op." },
@@ -245,6 +250,18 @@ const WadlopenVlieland = () => {
           </div>
           <p className="mt-8 text-sm text-muted-foreground text-center max-w-2xl mx-auto">
             <strong>Meenemen:</strong> kleren die nat/vies mogen, reservekleding en -sokken, drinken; bij zon: pet en zonnebrand.
+          </p>
+          <p className="mt-3 text-sm text-muted-foreground text-center max-w-2xl mx-auto">
+            Benieuwd wanneer het laag water is op Vlieland? Bekijk de actuele{" "}
+            <a
+              href="https://www.getij.nl/?locatiecode=VLIELHVN"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline underline-offset-2"
+            >
+              waterstanden Vlieland
+            </a>{" "}
+            (Rijkswaterstaat).
           </p>
         </section>
 
