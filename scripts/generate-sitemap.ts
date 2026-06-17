@@ -60,6 +60,8 @@ const staticEntries: SitemapEntry[] = [
   { path: "/familieweekend-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/zakelijk-evenement-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/wadlopen-vlieland", changefreq: "monthly", priority: "0.8" },
+  { path: "/zeehondentochten-vlieland", changefreq: "monthly", priority: "0.8" },
+  { path: "/activiteiten-vlieland", changefreq: "weekly", priority: "0.9" },
   { path: "/algemene-voorwaarden", changefreq: "yearly", priority: "0.3" },
   { path: "/partner-voorwaarden", changefreq: "yearly", priority: "0.3" },
 ].map((e) => ({ ...e, lastmod: today }));
