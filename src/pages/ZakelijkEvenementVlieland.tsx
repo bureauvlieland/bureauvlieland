@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Building2, Mic, Users, MapPin, Utensils, CheckCircle } from "lucide-react";
@@ -326,6 +327,16 @@ const ZakelijkEvenementVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="zakelijk-evenement-vlieland"
+          items={[
+            { question: 'Welke zakelijke evenementen organiseert Bureau Vlieland op Vlieland?', answer: 'Kick-offs, klantendagen, productlanceringen, kleinere congressen, partnerdagen en jubilea. Voor groter teamwork zie onze pagina over een teamuitje op Vlieland; voor strategie de heisessie-pagina.' },
+            { question: 'Voor hoeveel deelnemers kan een zakelijk evenement op Vlieland?', answer: 'Comfortabel tot circa 150 deelnemers. Daarboven werken wij met meerdere locaties of een hotel-overname. De boot-capaciteit en logies-capaciteit op Vlieland bepalen de bovengrens — wij plannen daarop.' },
+            { question: 'Wat kost een zakelijk evenement op Vlieland?', answer: 'Een eendaags zakelijk evenement start vanaf ongeveer € 150 per persoon (locatie, catering, basisprogramma, excl. overtocht). Meerdaags met overnachting vanaf € 395 per persoon.' },
+            { question: 'Welke locaties zijn beschikbaar voor een congres of evenement?', answer: 'Hotelvergaderzalen, strandpaviljoens, een filmtheater, eventhallen en in de zomer outdoor-locaties in de duinen. Wij matchen locatie aan deelnemersaantal, AV-eisen en sfeer.' }
+          ]}
+        />
       </main>
 
       <Footer />

@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Focus, Clock, Brain, MapPin, Users, CheckCircle } from "lucide-react";
@@ -323,6 +324,16 @@ const HeisessieVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="heisessie-vlieland"
+          items={[
+            { question: 'Welke locaties op Vlieland zijn geschikt voor een heisessie?', answer: 'Wij werken met afgesloten zalen in hotels, strandpaviljoens en duinlocaties. Welke locatie passend is hangt af van groepsgrootte, het gewenste karakter (formeel of informeel) en of er overnacht wordt.' },
+            { question: 'Hoe lang duurt een heisessie op Vlieland?', answer: "De meeste heisessies duren twee dagen met één overnachting. Dat geeft een volwaardig werkdeel én ruimte voor informele reflectie 's avonds en een korte ochtendsessie de tweede dag." },
+            { question: 'Wat kost een heisessie op Vlieland?', answer: 'Indicatie: € 350–€ 550 per persoon voor een tweedaagse heisessie inclusief logies, vergaderlocatie en catering. De exacte prijs hangt af van locatie en groepsgrootte; u ontvangt een offerte op maat.' },
+            { question: 'Kunnen wij een heisessie combineren met een teamuitje?', answer: 'Ja — een halve dag teamuitje op Vlieland combineert goed met een vergaderochtend. Zie ook onze pagina over een teamuitje op Vlieland voor activiteiten.' }
+          ]}
+        />
       </main>
 
       <Footer />

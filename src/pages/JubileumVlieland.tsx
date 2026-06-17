@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, PartyPopper, Cake, Gift, Users, Star, Utensils } from "lucide-react";
@@ -14,13 +15,13 @@ const JubileumVlieland = () => {
   return (
     <>
       <Helmet>
-        <title>Jubileum vieren op Vlieland – Verjaardag, pensioen of huwelijksjubileum | Bureau Vlieland</title>
+        <title>Jubileum vieren op Vlieland | Bureau Vlieland</title>
         <meta 
           name="description" 
           content="Vier uw jubileum, verjaardag of pensioen op Vlieland. Van intiem diner tot groot feest – wij verzorgen locatie, catering en activiteiten." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/jubileum-vlieland" />
-        <meta property="og:title" content="Jubileum vieren op Vlieland – Bureau Vlieland" />
+        <meta property="og:title" content="Jubileum vieren op Vlieland | Bureau Vlieland" />
         <meta property="og:description" content="Vier uw jubileum, verjaardag of pensioen op Vlieland. Wij verzorgen locatie, catering en activiteiten." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bureauvlieland.nl/jubileum-vlieland" />
@@ -288,6 +289,16 @@ const JubileumVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="jubileum-vlieland"
+          items={[
+            { question: 'Welke locaties zijn geschikt om een jubileum op Vlieland te vieren?', answer: 'Strandpaviljoens, restaurants met privézaal, hotelzalen en in de zomer ook buitenlocaties in de duinen. Wij selecteren een locatie die past bij het karakter van het jubileum en het aantal gasten.' },
+            { question: 'Voor hoeveel gasten kunnen jullie een jubileum organiseren?', answer: 'Van intieme diners voor 10 personen tot feesten voor 150+ gasten. Voor grote gezelschappen werken wij met meerdere logies en regelen wij de groepslogistiek volledig voor u.' },
+            { question: 'Wat kost een jubileumfeest op Vlieland?', answer: 'Een eendaags jubileumdiner met locatie en catering start vanaf ongeveer € 125 per persoon. Een jubileumweekend met overnachting en aanvullend programma ligt vanaf € 295 per persoon.' },
+            { question: 'Regelen jullie ook catering en overnachtingen voor de gasten?', answer: 'Ja — Bureau Vlieland verzorgt alles: locatie, catering, overnachtingen voor uw gasten, eventuele activiteiten en de overtocht. Eén aanspreekpunt, één factuur.' }
+          ]}
+        />
       </main>
 
       <Footer />

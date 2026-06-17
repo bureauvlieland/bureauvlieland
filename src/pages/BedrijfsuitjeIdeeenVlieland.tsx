@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Lightbulb, Puzzle, Compass, Bike, Ship, Utensils, Camera } from "lucide-react";
@@ -369,6 +370,16 @@ const BedrijfsuitjeIdeeenVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="bedrijfsuitje-ideeen-vlieland"
+          items={[
+            { question: 'Welke originele ideeën zijn er voor een bedrijfsuitje op Vlieland?', answer: 'Een wadexcursie met gids, blokarten op het strand, powerkiten, een Vliehors-Expresstocht, een kookworkshop met lokale chef, of een avondsurvival in de duinen. Wij combineren onderdelen op maat.' },
+            { question: 'Wat is een goed bedrijfsuitje voor een klein team?', answer: 'Voor teams tot 12 personen werkt een combinatie van een actieve ochtend (bv. zeilen of blokarten), gezamenlijke lunch en een reflectiesessie op een rustige locatie het beste.' },
+            { question: 'Welke actieve bedrijfsuitjes kunnen wij op Vlieland doen?', answer: 'Blokarten, powerkiten, zeilen, mountainbiken door het duingebied, paardrijden langs de vloedlijn, en georganiseerde dune-walks. Allemaal te combineren in één programma.' },
+            { question: 'Hoe combineer je een actief bedrijfsuitje met ontspanning?', answer: "Plan een actieve ochtend, gevolgd door een uitgebreide lunch en een rustig middagprogramma — bv. een wandeling met een natuurgids of een bezoek aan het Tromp's Huys museum." }
+          ]}
+        />
       </main>
 
       <Footer />

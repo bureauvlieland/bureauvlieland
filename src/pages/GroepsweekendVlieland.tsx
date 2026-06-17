@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users, Music, Utensils, MapPin, Bike, Compass } from "lucide-react";
@@ -15,13 +16,13 @@ const GroepsweekendVlieland = () => {
   return (
     <>
       <Helmet>
-        <title>Groepsweekend Vlieland – Organiseer een onvergetelijk weekend | Bureau Vlieland</title>
+        <title>Groepsweekend op Vlieland organiseren | Bureau Vlieland</title>
         <meta 
           name="description" 
           content="Organiseer een groepsweekend op Vlieland voor vrienden, verenigingen of sportclubs. Activiteiten, logies en catering – wij regelen alles of je stelt zelf samen." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/groepsweekend-vlieland" />
-        <meta property="og:title" content="Groepsweekend Vlieland – Bureau Vlieland" />
+        <meta property="og:title" content="Groepsweekend op Vlieland organiseren | Bureau Vlieland" />
         <meta property="og:description" content="Organiseer een groepsweekend op Vlieland. Activiteiten, logies en catering – compleet verzorgd of zelf samenstellen." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bureauvlieland.nl/groepsweekend-vlieland" />
@@ -293,6 +294,16 @@ const GroepsweekendVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="groepsweekend-vlieland"
+          items={[
+            { question: 'Voor hoeveel personen kan Bureau Vlieland een groepsweekend organiseren?', answer: 'Van kleine groepen vanaf 8 personen tot groepen van 80+. Voor grotere groepen combineren wij meerdere logies of werken wij met een groepsaccommodatie of hotel-overname.' },
+            { question: 'Wat kost een groepsweekend op Vlieland?', answer: 'Een groepsweekend start vanaf ongeveer € 195 per persoon voor twee nachten inclusief basisprogramma, excl. overtocht. De prijs varieert met logiestype, activiteiten en catering.' },
+            { question: 'Welke logies zijn geschikt voor een grotere groep op Vlieland?', answer: 'Groepsaccommodaties, vakantiehuizenparken, hotels met blokboeking en in een enkel geval een volledig pension. Wij stemmen logiestype af op groepsgrootte en gewenste sfeer.' },
+            { question: 'Hoe regelen jullie de overtocht voor de groep?', answer: 'Wij boeken de Doeksen-overtocht voor de hele groep op één Resnr en sturen u de tickets centraal toe. Op drukke data adviseren wij vroeg te boeken — heen- en terugreis op één boekingsreferentie.' }
+          ]}
+        />
       </main>
 
       <Footer />
