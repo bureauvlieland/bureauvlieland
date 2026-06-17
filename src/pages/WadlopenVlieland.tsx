@@ -5,10 +5,7 @@
  * (geulen zijn ook bij eb te diep). Product = wadEXCURSIE óp/rond Vlieland
  * met een lokale gids. Nergens "loop naar Vlieland" suggereren.
  *
- * Nog in te vullen voor noindex eraf kan:
- *   1. Eigen foto('s) van wadexcursie op Vlieland met alt-tekst.
- *
- * Pagina staat live maar krijgt NOINDEX tot eigen beeldmateriaal beschikbaar is.
+ * Eigen beeldmateriaal aanwezig — pagina is indexeerbaar.
  */
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -32,7 +29,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
-import heroImage from "@/assets/seal-tour.jpg"; // tussentijds: zeehondentocht (zelfde wad-context). Vervangen door eigen wadexcursie-foto zodra beschikbaar.
+import heroAsset from "@/assets/wadexcursie-vlieland-wad-schelpen.webp.asset.json";
+import gidsAsset from "@/assets/wadexcursie-vlieland-gids-wadworm.webp.asset.json";
+import gezinAsset from "@/assets/wadexcursie-vlieland-gezin-wadlopen.webp.asset.json";
+
+const heroImage = heroAsset.url;
+const gidsImage = gidsAsset.url;
+const gezinImage = gezinAsset.url;
 
 const FAQ: { q: string; a: string }[] = [
   {
@@ -81,8 +84,6 @@ const WadlopenVlieland = () => {
         />
         <meta property="og:url" content={url} />
         <meta property="og:image" content={`https://bureauvlieland.nl${heroImage}`} />
-        {/* DRAFT — noindex tot eigen wadexcursie-foto's geplaatst zijn */}
-        <meta name="robots" content="noindex,follow" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "TouristTrip",
@@ -184,17 +185,35 @@ const WadlopenVlieland = () => {
                 Bij laag water valt de zeebodem droog en kun je over het wad lopen. Onder begeleiding van een gids ontdek je dit unieke landschap van zandbanken, slik en geulen. De gids kent het gebied, de getijden en de gevaren, en leert je onderweg van alles over de Waddenzee.
               </p>
             </div>
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Voor wie is het geschikt?</h2>
-              <p className="text-foreground">
-                De wadexcursie is geschikt voor alle leeftijden. Het is geen zware tocht maar een leerzame wandeling, dus ook ideaal voor gezinnen met kinderen. Goede gezondheid en een beetje doorzettingsvermogen (het kan modderig zijn!) zijn wel handig.
-              </p>
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <img
+                src={gezinImage}
+                alt="Gezin met kinderen loopt over het wad tijdens een wadexcursie op Vlieland"
+                className="rounded-lg w-full h-64 object-cover"
+                loading="lazy"
+              />
+              <div>
+                <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Voor wie is het geschikt?</h2>
+                <p className="text-foreground">
+                  De wadexcursie is geschikt voor alle leeftijden. Het is geen zware tocht maar een leerzame wandeling, dus ook ideaal voor gezinnen met kinderen. Goede gezondheid en een beetje doorzettingsvermogen (het kan modderig zijn!) zijn wel handig.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Wat ga je zien en leren?</h2>
-              <p className="text-foreground">
-                Je leert hoe eb en vloed het wad vormen, welke dieren en planten hier leven en hoe je sporen leest in het slik. Met een beetje geluk spot je zeehonden op een zandplaat of zie je wadvogels foerageren.
-              </p>
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="md:order-2">
+                <img
+                  src={gidsImage}
+                  alt="Gids toont een wadworm op zijn hand tijdens de wadexcursie"
+                  className="rounded-lg w-full h-64 object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="md:order-1">
+                <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Wat ga je zien en leren?</h2>
+                <p className="text-foreground">
+                  Je leert hoe eb en vloed het wad vormen, welke dieren en planten hier leven en hoe je sporen leest in het slik. Met een beetje geluk spot je zeehonden op een zandplaat of zie je wadvogels foerageren.
+                </p>
+              </div>
             </div>
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Waarom met ons?</h2>
