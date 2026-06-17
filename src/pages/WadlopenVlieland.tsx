@@ -306,6 +306,46 @@ const WadlopenVlieland = () => {
             ))}
           </Accordion>
         </section>
+        {/* Interne links */}
+        <section className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-2xl font-display font-bold text-foreground mb-8 text-center">
+                Bekijk ook
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Link
+                  to="/bouwstenen"
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Alle activiteiten op Vlieland</span>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link
+                  to="/familieweekend-vlieland"
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Familieweekend op Vlieland</span>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link
+                  to="/groepsweekend-vlieland"
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Groepsweekend op Vlieland</span>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link
+                  to="/teamuitje-vlieland"
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Teamuitje op Vlieland</span>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

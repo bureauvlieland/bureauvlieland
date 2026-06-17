@@ -57,8 +57,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/jubileum-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/familieweekend-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/zakelijk-evenement-vlieland", changefreq: "monthly", priority: "0.7" },
-  // Wadlopen draft (noindex in Helmet, maar mag in sitemap blijven; alternatief: weghalen)
-  // { path: "/wadlopen-vlieland", changefreq: "monthly", priority: "0.8" },
+  { path: "/wadlopen-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/algemene-voorwaarden", changefreq: "yearly", priority: "0.3" },
   { path: "/partner-voorwaarden", changefreq: "yearly", priority: "0.3" },
 ].map((e) => ({ ...e, lastmod: today }));
