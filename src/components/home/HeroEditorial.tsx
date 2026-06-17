@@ -13,8 +13,11 @@ export const HeroEditorial = () => {
           src={heroImage}
           alt="Groep gasten geniet samen op Vlieland"
           className="w-full h-full object-cover"
+          width={1920}
+          height={1280}
           fetchPriority="high"
           loading="eager"
+          decoding="async"
           style={{ animation: "kenBurns 40s ease-in-out infinite alternate" }}
         />
         {/* Top vignette for nav legibility */}
