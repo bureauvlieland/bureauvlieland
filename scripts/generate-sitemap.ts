@@ -44,8 +44,10 @@ const staticEntries: SitemapEntry[] = [
   { path: "/contact", changefreq: "monthly", priority: "0.7" },
   { path: "/partners", changefreq: "weekly", priority: "0.7" },
   { path: "/catering", changefreq: "monthly", priority: "0.7" },
+  { path: "/catering-aanvragen", changefreq: "monthly", priority: "0.6" },
   { path: "/voorbeeldprogrammas", changefreq: "weekly", priority: "0.8" },
   { path: "/evenementen", changefreq: "monthly", priority: "0.7" },
+  { path: "/sitemap", changefreq: "monthly", priority: "0.3" },
   // Landingspagina's
   { path: "/bedrijfsuitje-vlieland", changefreq: "monthly", priority: "0.9" },
   { path: "/teamuitje-vlieland", changefreq: "monthly", priority: "0.9" },
@@ -108,19 +110,43 @@ function buildSitemap(entries: SitemapEntry[]) {
   ].join("\n");
 }
 
+async function fetchTemplateSlugs(): Promise<Array<{ slug: string; updated_at: string }>> {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/program_templates?select=id,updated_at&is_published=eq.true`;
+    const res = await fetch(url, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) {
+      console.warn(`[sitemap] Templates fetch failed: ${res.status}`);
+      return [];
+    }
+    const rows: Array<{ id: string; updated_at: string }> = await res.json();
+    return rows.map((r) => ({ slug: r.id, updated_at: r.updated_at?.slice(0, 10) ?? today }));
+  } catch (e) {
+    console.warn("[sitemap] Could not fetch templates:", e);
+    return [];
+  }
+}
+
 async function main() {
-  const blocks = await fetchBuildingBlockSlugs();
+  const [blocks, templates] = await Promise.all([fetchBuildingBlockSlugs(), fetchTemplateSlugs()]);
   const blockEntries: SitemapEntry[] = blocks.map((b) => ({
     path: `/activiteit/${b.slug}`,
     lastmod: b.updated_at,
     changefreq: "monthly",
     priority: "0.7",
   }));
+  const templateEntries: SitemapEntry[] = templates.map((t) => ({
+    path: `/voorbeeldprogrammas/${t.slug}`,
+    lastmod: t.updated_at,
+    changefreq: "monthly",
+    priority: "0.7",
+  }));
 
-  const all = [...staticEntries, ...blockEntries];
+  const all = [...staticEntries, ...blockEntries, ...templateEntries];
   const xml = buildSitemap(all);
   writeFileSync(resolve("public/sitemap.xml"), xml);
-  console.log(`sitemap.xml written (${all.length} entries: ${staticEntries.length} static + ${blockEntries.length} blocks)`);
+  console.log(`sitemap.xml written (${all.length} entries: ${staticEntries.length} static + ${blockEntries.length} blocks + ${templateEntries.length} templates)`);
 }
 
 main().catch((err) => {

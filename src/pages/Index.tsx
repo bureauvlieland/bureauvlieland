@@ -17,7 +17,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Bureau Vlieland – Lokale specialist voor groepsprogramma's op Vlieland</title>
+        <title>Bureau Vlieland – Groepsprogramma's op Vlieland</title>
         <meta
           name="description"
           content="Bureau Vlieland is uw lokale specialist voor groepsbezoek aan Vlieland: één partij, één factuur. Wij ontwikkelen het programma en boeken alle eilandpartners."
