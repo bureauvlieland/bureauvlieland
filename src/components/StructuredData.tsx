@@ -1,8 +1,51 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface CachedReview {
+  author_name: string;
+  rating: number;
+  text: string;
+}
+
+interface CacheRow {
+  rating: number | null;
+  review_count: number;
+  reviews: CachedReview[];
+}
+
+const FALLBACK_RATING = "4.9";
+const FALLBACK_COUNT = "3";
+
+const FALLBACK_REVIEWS: CachedReview[] = [
+  { author_name: "Mark de Vries", rating: 5, text: "Een fantastische ervaring! Het team van Bureau Vlieland heeft ons bedrijfsuitje tot in de puntjes verzorgd." },
+  { author_name: "Linda van der Berg", rating: 5, text: "Professionele organisatie en geweldige begeleiding. Onze teambuilding was een groot succes!" },
+  { author_name: "Peter Janssen", rating: 5, text: "Creatieve programma's en uitstekende service. Aanrader voor elk bedrijf dat een uniek uitje zoekt." },
+];
 
 export const StructuredData = () => {
+  const [cache, setCache] = useState<CacheRow | null>(null);
+
   useEffect(() => {
-    // LocalBusiness Schema
+    let alive = true;
+    supabase
+      .from("google_reviews_cache")
+      .select("rating, review_count, reviews")
+      .eq("id", "singleton")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (alive && data) setCache(data as unknown as CacheRow);
+      });
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    const hasLive = cache && cache.rating && cache.review_count > 0;
+    const ratingValue = hasLive ? String(cache!.rating) : FALLBACK_RATING;
+    const reviewCount = hasLive ? String(cache!.review_count) : FALLBACK_COUNT;
+    const reviewsForSchema: CachedReview[] = hasLive
+      ? (cache!.reviews || []).filter(r => (r.rating ?? 0) >= 4).slice(0, 5)
+      : FALLBACK_REVIEWS;
+
     const localBusiness = {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
@@ -26,124 +69,38 @@ export const StructuredData = () => {
         "longitude": "5.0639"
       },
       "priceRange": "€€",
-      "areaServed": {
-        "@type": "Place",
-        "name": "Nederland"
-      },
+      "areaServed": { "@type": "Place", "name": "Nederland" },
       "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "3"
+        "ratingValue": ratingValue,
+        "reviewCount": reviewCount
       }
     };
 
-    // Service Schemas
     const services = [
-      {
-        "@context": "https://schema.org",
-        "@type": "Service",
-        "serviceType": "Team Building",
-        "provider": {
-          "@type": "LocalBusiness",
-          "name": "Bureau Vlieland"
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "Nederland"
-        },
-        "description": "Op maat gemaakte teambuilding activiteiten op Vlieland. Van actieve uitdagingen tot creatieve workshops."
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "Service",
-        "serviceType": "Incentive Reizen",
-        "provider": {
-          "@type": "LocalBusiness",
-          "name": "Bureau Vlieland"
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "Nederland"
-        },
-        "description": "Beloon uw team met een uniek incentive arrangement op Vlieland. Complete verzorging van programma en accommodatie."
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "Service",
-        "serviceType": "Evenementen Organisatie",
-        "provider": {
-          "@type": "LocalBusiness",
-          "name": "Bureau Vlieland"
-        },
-        "areaServed": {
-          "@type": "Place",
-          "name": "Nederland"
-        },
-        "description": "Organisatie van bedrijfsfeesten, netwerkevents en andere zakelijke bijeenkomsten op Vlieland."
-      }
-    ];
+      { serviceType: "Team Building", description: "Op maat gemaakte teambuilding activiteiten op Vlieland. Van actieve uitdagingen tot creatieve workshops." },
+      { serviceType: "Incentive Reizen", description: "Beloon uw team met een uniek incentive arrangement op Vlieland. Complete verzorging van programma en accommodatie." },
+      { serviceType: "Evenementen Organisatie", description: "Organisatie van bedrijfsfeesten, netwerkevents en andere zakelijke bijeenkomsten op Vlieland." },
+    ].map(s => ({
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "serviceType": s.serviceType,
+      "provider": { "@type": "LocalBusiness", "name": "Bureau Vlieland" },
+      "areaServed": { "@type": "Place", "name": "Nederland" },
+      "description": s.description,
+    }));
 
-    // Reviews Schema
-    const reviews = [
-      {
-        "@context": "https://schema.org",
-        "@type": "Review",
-        "itemReviewed": {
-          "@type": "LocalBusiness",
-          "name": "Bureau Vlieland"
-        },
-        "author": {
-          "@type": "Person",
-          "name": "Mark de Vries"
-        },
-        "reviewRating": {
-          "@type": "Rating",
-          "ratingValue": "5",
-          "bestRating": "5"
-        },
-        "reviewBody": "Een fantastische ervaring! Het team van Bureau Vlieland heeft ons bedrijfsuitje tot in de puntjes verzorgd."
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "Review",
-        "itemReviewed": {
-          "@type": "LocalBusiness",
-          "name": "Bureau Vlieland"
-        },
-        "author": {
-          "@type": "Person",
-          "name": "Linda van der Berg"
-        },
-        "reviewRating": {
-          "@type": "Rating",
-          "ratingValue": "5",
-          "bestRating": "5"
-        },
-        "reviewBody": "Professionele organisatie en geweldige begeleiding. Onze teambuilding was een groot succes!"
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "Review",
-        "itemReviewed": {
-          "@type": "LocalBusiness",
-          "name": "Bureau Vlieland"
-        },
-        "author": {
-          "@type": "Person",
-          "name": "Peter Janssen"
-        },
-        "reviewRating": {
-          "@type": "Rating",
-          "ratingValue": "5",
-          "bestRating": "5"
-        },
-        "reviewBody": "Creatieve programma's en uitstekende service. Aanrader voor elk bedrijf dat een uniek uitje zoekt."
-      }
-    ];
+    const reviews = reviewsForSchema.map(r => ({
+      "@context": "https://schema.org",
+      "@type": "Review",
+      "itemReviewed": { "@type": "LocalBusiness", "name": "Bureau Vlieland" },
+      "author": { "@type": "Person", "name": r.author_name },
+      "reviewRating": { "@type": "Rating", "ratingValue": String(r.rating), "bestRating": "5" },
+      "reviewBody": r.text,
+    }));
 
-    // Insert all schemas
     const schemas = [localBusiness, ...services, ...reviews];
-    
+
     schemas.forEach((schema, index) => {
       const script = document.createElement('script');
       script.type = 'application/ld+json';
@@ -152,16 +109,13 @@ export const StructuredData = () => {
       document.head.appendChild(script);
     });
 
-    // Cleanup
     return () => {
       schemas.forEach((_, index) => {
         const script = document.getElementById(`structured-data-${index}`);
-        if (script) {
-          document.head.removeChild(script);
-        }
+        if (script) document.head.removeChild(script);
       });
     };
-  }, []);
+  }, [cache]);
 
   return null;
 };
