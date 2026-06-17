@@ -391,6 +391,7 @@ const ActiviteitenVlieland = () => {
         </section>
       </main>
 
+      <GoogleReviewsBlock title="Reviews over Bureau Vlieland" />
       <Footer />
     </div>
   );
