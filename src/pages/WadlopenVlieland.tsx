@@ -5,10 +5,7 @@
  * (geulen zijn ook bij eb te diep). Product = wadEXCURSIE óp/rond Vlieland
  * met een lokale gids. Nergens "loop naar Vlieland" suggereren.
  *
- * Nog in te vullen voor noindex eraf kan:
- *   1. Eigen foto('s) van wadexcursie op Vlieland met alt-tekst.
- *
- * Pagina staat live maar krijgt NOINDEX tot eigen beeldmateriaal beschikbaar is.
+ * Eigen beeldmateriaal aanwezig — pagina is indexeerbaar.
  */
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -32,7 +29,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
-import heroImage from "@/assets/seal-tour.jpg"; // tussentijds: zeehondentocht (zelfde wad-context). Vervangen door eigen wadexcursie-foto zodra beschikbaar.
+import heroAsset from "@/assets/wadexcursie-vlieland-wad-schelpen.webp.asset.json";
+import gidsAsset from "@/assets/wadexcursie-vlieland-gids-wadworm.webp.asset.json";
+import gezinAsset from "@/assets/wadexcursie-vlieland-gezin-wadlopen.webp.asset.json";
+
+const heroImage = heroAsset.url;
+const gidsImage = gidsAsset.url;
+const gezinImage = gezinAsset.url;
 
 const FAQ: { q: string; a: string }[] = [
   {
