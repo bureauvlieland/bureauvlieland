@@ -39,6 +39,9 @@ const beginHier: NavItem[] = [
 // "Verken het aanbod"
 const verkenItems: NavItem[] = [
   { label: "Alle bouwstenen", href: "/bouwstenen" },
+  { label: "Activiteiten Vlieland (overzicht)", href: "/activiteiten-vlieland" },
+  { label: "Wadexcursie", href: "/wadlopen-vlieland" },
+  { label: "Zeehondentocht", href: "/zeehondentochten-vlieland" },
   { label: "Losse activiteit aanvragen", href: "/snel-aanvragen" },
   { label: "Catering", href: "/catering" },
   { label: "Evenementen", href: "/evenementen" },
