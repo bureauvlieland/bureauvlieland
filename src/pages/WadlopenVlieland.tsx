@@ -185,17 +185,35 @@ const WadlopenVlieland = () => {
                 Bij laag water valt de zeebodem droog en kun je over het wad lopen. Onder begeleiding van een gids ontdek je dit unieke landschap van zandbanken, slik en geulen. De gids kent het gebied, de getijden en de gevaren, en leert je onderweg van alles over de Waddenzee.
               </p>
             </div>
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Voor wie is het geschikt?</h2>
-              <p className="text-foreground">
-                De wadexcursie is geschikt voor alle leeftijden. Het is geen zware tocht maar een leerzame wandeling, dus ook ideaal voor gezinnen met kinderen. Goede gezondheid en een beetje doorzettingsvermogen (het kan modderig zijn!) zijn wel handig.
-              </p>
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <img
+                src={gezinImage}
+                alt="Gezin met kinderen loopt over het wad tijdens een wadexcursie op Vlieland"
+                className="rounded-lg w-full h-64 object-cover"
+                loading="lazy"
+              />
+              <div>
+                <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Voor wie is het geschikt?</h2>
+                <p className="text-foreground">
+                  De wadexcursie is geschikt voor alle leeftijden. Het is geen zware tocht maar een leerzame wandeling, dus ook ideaal voor gezinnen met kinderen. Goede gezondheid en een beetje doorzettingsvermogen (het kan modderig zijn!) zijn wel handig.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Wat ga je zien en leren?</h2>
-              <p className="text-foreground">
-                Je leert hoe eb en vloed het wad vormen, welke dieren en planten hier leven en hoe je sporen leest in het slik. Met een beetje geluk spot je zeehonden op een zandplaat of zie je wadvogels foerageren.
-              </p>
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="md:order-2">
+                <img
+                  src={gidsImage}
+                  alt="Gids toont een wadworm op zijn hand tijdens de wadexcursie"
+                  className="rounded-lg w-full h-64 object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="md:order-1">
+                <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Wat ga je zien en leren?</h2>
+                <p className="text-foreground">
+                  Je leert hoe eb en vloed het wad vormen, welke dieren en planten hier leven en hoe je sporen leest in het slik. Met een beetje geluk spot je zeehonden op een zandplaat of zie je wadvogels foerageren.
+                </p>
+              </div>
             </div>
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">Waarom met ons?</h2>
