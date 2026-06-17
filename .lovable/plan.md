@@ -1,66 +1,84 @@
-# Plan — SEO Batch B (stap 1+2+3)
+## Batch 3 — Resterende quick wins (#5 + #9)
 
-Doel: maximale ranking-impact op de 10 bestaande landingspagina's in één ronde. Daarna (volgende ronde) doen we stap 4+5+6 (interne links, www-canonical, sitemap/robots).
-
-## Scope: 10 pagina's
-
-`/bedrijfsuitje-vlieland`, `/teamuitje-vlieland`, `/heisessie-vlieland`, `/familieweekend-vlieland`, `/groepsweekend-vlieland`, `/incentive-reis-vlieland`, `/jubileum-vlieland`, `/zakelijk-evenement-vlieland`, `/meerdaags-bedrijfsuitje-vlieland`, `/bedrijfsuitje-ideeen-vlieland`
+Twee nieuwe/uitgebouwde landingspagina's die direct ranken op brede, hoog-volume eilandtermen en interne linkjuice naar bestaande bouwstenen/programma's sturen.
 
 ---
 
-## Stap 1 — Title/meta/H1 rewrite
+### #5 — Zeehondentochten-landingspagina uitbouwen
 
-Per pagina: exact keyword vooraan in `<title>` (≤60 tekens), in `<h1>`, en in eerste 120 tekens van de eerste alinea. Meta description ≤155 tekens met keyword + USP + impliciete CTA.
+**Route:** `/zeehondentochten-vlieland` (nieuwe pagina, of upgrade als er al een placeholder is)
 
-Voorbeeldlijn (`/teamuitje-vlieland`):
-- title: `Teamuitje op Vlieland organiseren | Bureau Vlieland`
-- description: `Teamuitje op Vlieland van A tot Z geregeld: activiteiten, overnachting, catering en logistiek. Lokale specialist met één aanspreekpunt.`
-- h1: `Teamuitje op Vlieland`
+**Doel-zoekwoorden:** "zeehondentocht vlieland", "zeehonden spotten vlieland", "zeehondenboot vlieland", "boottocht zeehonden waddenzee"
 
-Voor elke pagina lever ik dit aan in het patroon dat `BedrijfsuitjeVlieland.tsx` al gebruikt (`<Helmet>` + `<LandingPageStructuredData>`). H1 + eerste alinea aanpassen waar het keyword er nu niet letterlijk in staat.
+**Inhoud (zelfde sjabloon als Wadlopen-pagina):**
+1. Hero met sterke H1: "Zeehondentochten Vlieland — spotten op de zandbanken"
+2. Intro (wat is het, waarom Vlieland uniek: Richel, grijze + gewone zeehond)
+3. "Hoe werkt het" — vertrektijden, duur, geschikt voor groepen
+4. Praktisch blok — seizoen, getij-afhankelijkheid, weer, kleding, toegankelijkheid
+5. "Voor groepen" — CTA naar Bureau Vlieland (incl. ferry + lunch + zeehondentocht als pakket)
+6. FAQ-blok (6–8 vragen) met FAQPage JSON-LD
+7. Gerelateerde activiteiten/programma's (interne links naar bouwstenen + voorbeeldprogramma's)
+8. Footer-CTA: aanvraag / contact
 
-## Stap 2 — Kannibalisatie "teamuitje / teambuilding vlieland"
-
-`/teamuitje-vlieland` wordt hoofdpagina voor de cluster teamuitje/teambuilding.
-
-- Canonical op `/teamuitje-vlieland` blijft self-referencing.
-- Andere 9 pagina's: canonicals blijven self-referencing (geen cross-canonical — dat zou ze uit de index gooien), maar in de bodytekst van `/bedrijfsuitje-vlieland`, `/heisessie-vlieland`, `/zakelijk-evenement-vlieland` etc. één expliciete tekstuele link naar `/teamuitje-vlieland` met anchor "teamuitje op Vlieland" toevoegen waar dat nu ontbreekt.
-- Title-tags ontdubbelen: zorg dat geen twee pagina's exact dezelfde primaire keyword in title hebben. `/bedrijfsuitje-vlieland` = "bedrijfsuitje", `/teamuitje-vlieland` = "teamuitje", `/heisessie-vlieland` = "heisessie", enz. — geen overlap in de hoofdfrase.
-
-## Stap 3 — FAQ-schema (JSON-LD) per pagina
-
-Per pagina 4 vragen (lokaal relevant, geen generiek). Nieuwe component `src/components/FaqStructuredData.tsx` die een `FAQPage` JSON-LD injecteert (zelfde patroon als `LandingPageStructuredData`). Optioneel ook visueel een FAQ-sectie tonen — voorstel: ja, want dat verbetert dwell-time en geeft Google de antwoorden in-page (Google geeft alleen rich snippets als de tekst zichtbaar is op de pagina).
-
-Per pagina kies ik 4 vragen passend bij intent, bv. voor `/teamuitje-vlieland`:
-1. Wat kost een teamuitje op Vlieland?
-2. Hoe lang duurt een teamuitje op Vlieland?
-3. Welke teambuilding-activiteiten zijn er op Vlieland?
-4. Kunnen wij met de auto naar Vlieland voor een teamuitje?
-
-Antwoorden kort (≤300 tekens), geen verkooppraat, feitelijk.
+**SEO:**
+- Helmet: title (~55 chars), meta description (~150 chars), self-referencing canonical + og:url
+- BreadcrumbList + FAQPage JSON-LD
+- 1× hero-afbeelding (uit bestaande media library als beschikbaar; anders nieuwe imagegen) met expliciete width/height en alt
+- Toevoegen aan `scripts/generate-sitemap.ts` (priority 0.8)
+- Interne links vanaf homepage `ActivitiesShowcase` + Wadlopen-pagina ("ook interessant")
 
 ---
 
-## Technische details
+### #9 — Overzichtspagina "Activiteiten Vlieland"
 
-- Nieuwe file: `src/components/FaqStructuredData.tsx` (JSON-LD-only, mirror van `LandingPageStructuredData`).
-- 10 page-files krijgen: aangepaste `<Helmet>`-content, aangepaste H1/eerste alinea waar nodig, één `<FaqStructuredData items={...}>` + zichtbare FAQ-sectie (accordion of simpele dl).
-- Geen routes-, hooks- of data-wijzigingen. Pure presentatielaag.
-- Geen schema- of edge-function-wijzigingen.
+**Route:** `/activiteiten-vlieland` (nieuw — naast bestaande `/bouwstenen` die meer als product-catalogus dient)
 
-## Wat ik NIET in deze ronde doe
+**Doel-zoekwoorden:** "vlieland activiteiten", "wat te doen op vlieland", "activiteiten vlieland groepen", "uitjes vlieland"
 
-- Geen redesign of nieuwe imagery.
-- Geen nieuwe pagina's.
-- Geen sitemap/robots/www-canonical (stap 5+6 volgende ronde).
-- Geen interne-link-blokken onderaan (stap 4 volgende ronde) — de bestaande "Bekijk ook"-blokken laten we staan zoals ze zijn.
+**Verschil met `/bouwstenen`:** bouwstenen = transactionele catalogus (filteren, prijzen, in winkelmand). Deze pagina = redactioneel SEO-overzicht dat het hele eiland-aanbod thematisch ontsluit en doorklikt naar de juiste landingspagina of bouwsteen-detail.
 
-## Volgorde van uitvoering
+**Inhoud:**
+1. Hero met H1 "Activiteiten op Vlieland — wat kun je doen?"
+2. Intro (200–300 woorden over Vlieland als bestemming, met focus op groepen)
+3. Thematische secties met elk een korte beschrijving + 3–6 doorkliks:
+   - **Wadden & natuur** → Wadlopen, Zeehondentochten, Excursies Staatsbosbeheer
+   - **Actief op het eiland** → Fietstochten (begeleid), MTB, blokarten, vuurtoren
+   - **Cultuur & historie** → Museum Tromp's Huys, Dorpsommetje, Vuurboetsduin
+   - **Eten & drinken** → Catering, lunches, BBQ
+   - **Voor groepen** → link naar `/voorwie`, `/programmas`
+4. "Plan een dag op Vlieland" — uitlegblok met link naar voorbeeldprogramma's
+5. FAQ (5–7 vragen): seizoen, met kinderen, slecht weer, etc. + FAQPage JSON-LD
+6. CTA: programma op maat / direct boeken
 
-1. Maak `FaqStructuredData` component.
-2. Per pagina (10x): titel/meta/H1/eerste alinea + FAQ-blok + JSON-LD.
-3. Steekproef in preview: bekijk `/teamuitje-vlieland` en `/bedrijfsuitje-vlieland` om te bevestigen dat Helmet + JSON-LD correct renderen.
+**SEO:**
+- Helmet (~55 chars title, ~150 chars description), self-canonical
+- BreadcrumbList + FAQPage + ItemList JSON-LD (de thematische lijst)
+- Iedere thema-kaart linkt naar bestaande pagina (geen dode links)
+- Toevoegen aan sitemap (priority 0.9 — hoog volume zoekterm)
+- Link toevoegen vanuit `MegaDropdown` (Navigatie) zodat de pagina ook intern goed bereikbaar is
 
-## Aanname die ik nodig heb voor groen licht
+---
 
-Voor de title-tags hanteer ik het patroon `{Keyword} op Vlieland organiseren | Bureau Vlieland` (of `… boeken` waar dat beter past — bv. `/incentive-reis-vlieland`). Als je een andere stijl wilt (bv. zonder " | Bureau Vlieland", of met jaartal), zeg het nu.
+### Technisch (samenvatting voor agent)
+
+**Nieuwe files:**
+- `src/pages/ZeehondentochtenVlieland.tsx`
+- `src/pages/ActiviteitenVlieland.tsx`
+
+**Te bewerken:**
+- `src/App.tsx` — twee nieuwe `<Route>` regels
+- `scripts/generate-sitemap.ts` — twee entries (sitemap regenereert via predev/prebuild)
+- `src/components/home/ActivitiesShowcase.tsx` — link naar Zeehondentochten als die nog niet gelinkt is
+- `src/components/navigation/MegaDropdown.tsx` — link "Activiteiten Vlieland" onder Inspiratie
+- `src/pages/WadlopenVlieland.tsx` — "ook interessant" blok met link naar Zeehondentochten
+
+**Patronen:** zelfde Helmet + JSON-LD aanpak als de bestaande `WadlopenVlieland.tsx`. Hero-afbeelding via bestaande `supabase-storage` media of `imagegen` (max 1 per pagina).
+
+**Buiten scope (later):** #10 aggregateRating-schema — wacht op Google Business Profile-koppeling met echte review-data.
+
+---
+
+### Verwacht resultaat
+- 2 nieuwe geïndexeerde pagina's gericht op breed eiland-zoekverkeer
+- Sterkere interne linkstructuur naar bouwstenen + programma-templates
+- Voltooit de oorspronkelijke top-10 SEO quick wins (op #10 reviews na)
