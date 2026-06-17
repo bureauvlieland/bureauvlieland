@@ -319,6 +319,7 @@ const ZeehondentochtenVlieland = () => {
         </section>
       </main>
 
+      <GoogleReviewsBlock title="Reviews over Bureau Vlieland" subtitle="Wat klanten zeggen over hun dag op het wad" />
       <Footer />
     </div>
   );
