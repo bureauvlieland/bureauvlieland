@@ -141,6 +141,8 @@ const App = () => {
             <Route path="/voor-wie" element={<VoorWie />} />
             <Route path="/samenwerken" element={<Programmas />} />
             <Route path="/bouwstenen" element={<Bouwstenen />} />
+            <Route path="/activiteit/:slug" element={<ActiviteitDetail />} />
+            <Route path="/wadlopen-vlieland" element={<WadlopenVlieland />} />
             <Route path="/programmamodules" element={<Navigate to="/voorbeeldprogrammas" replace />} />
             <Route path="/sitemap" element={<Sitemap />} />
             <Route path="/voorbeeldprogrammas" element={<VoorbeeldprogrammaOverzicht />} />
