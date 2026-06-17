@@ -1673,6 +1673,42 @@ export type Database = {
         }
         Relationships: []
       }
+      google_reviews_cache: {
+        Row: {
+          fetched_at: string
+          id: string
+          last_error: string | null
+          place_id: string | null
+          place_url: string | null
+          rating: number | null
+          review_count: number
+          reviews: Json
+          updated_at: string
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          last_error?: string | null
+          place_id?: string | null
+          place_url?: string | null
+          rating?: number | null
+          review_count?: number
+          reviews?: Json
+          updated_at?: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          last_error?: string | null
+          place_id?: string | null
+          place_url?: string | null
+          rating?: number | null
+          review_count?: number
+          reviews?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       map_bookings: {
         Row: {
           activity_name: string

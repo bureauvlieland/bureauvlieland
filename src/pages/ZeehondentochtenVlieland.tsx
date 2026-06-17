@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -318,6 +319,7 @@ const ZeehondentochtenVlieland = () => {
         </section>
       </main>
 
+      <GoogleReviewsBlock title="Reviews over Bureau Vlieland" subtitle="Wat klanten zeggen over hun dag op het wad" />
       <Footer />
     </div>
   );
