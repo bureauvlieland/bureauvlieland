@@ -30,6 +30,8 @@ const VoorbeeldprogrammaDetail = lazy(() => import("./pages/VoorbeeldprogrammaDe
 const Bouwstenen = lazy(() => import("./pages/Bouwstenen"));
 const ActiviteitDetail = lazy(() => import("./pages/ActiviteitDetail"));
 const WadlopenVlieland = lazy(() => import("./pages/WadlopenVlieland"));
+const ZeehondentochtenVlieland = lazy(() => import("./pages/ZeehondentochtenVlieland"));
+const ActiviteitenVlieland = lazy(() => import("./pages/ActiviteitenVlieland"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Programmas = lazy(() => import("./pages/Programmas"));
 const Evenementen = lazy(() => import("./pages/Evenementen"));
