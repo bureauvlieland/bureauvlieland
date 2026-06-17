@@ -1,58 +1,84 @@
-# Plan: A → C (SEO quick wins, dan Social live)
 
-## Stap A — Semrush SEO-scan + quick-win actielijst
+## Doel
 
-**Doel:** in één sessie een feitelijk beeld van waar bureauvlieland.nl staat in Google, wat de grootste kansen zijn, en een concrete top-10 actielijst die ik daarna kan uitvoeren.
-
-**Wat ik doe (read-only, geen code-wijzigingen):**
-
-1. **Domein-snapshot** via Semrush op `bureauvlieland.nl` (database `nl`):
-   - Geschatte organisch verkeer, aantal rankende keywords, Authority Score, trend laatste 12 maanden.
-2. **Top pagina's** — welke URL's brengen nu het verkeer binnen, en welke landingspagina's blijven achter ondanks dat ze er wél zijn (bv. `heisessie-vlieland`, `incentive-reis-vlieland`).
-3. **Keyword-posities** — keywords waar we op pagina 2 staan (positie 11–20): dit is de snelste winst, want kleine on-page verbeteringen tillen die naar pagina 1.
-4. **Concurrentie-analyse** — wie ranked op onze kernkeywords ("bedrijfsuitje Vlieland", "teamuitje Vlieland", "vergaderen Vlieland", "groepsweekend Vlieland"), en welke keywords hebben zij wel waar wij niets mee doen (keyword gap).
-5. **Interne SEO-scan** via de ingebouwde SEO-review op het project: titles, meta descriptions, canonicals, H1's, schema, alt-teksten, interne links.
-6. **Google Search Console check** — als er een verificatie ontbreekt of de site nog niet aangemeld is, signaleer ik dat (en kan ik dat in stap B oplossen).
-
-**Wat je terugkrijgt:**
-
-Een korte rapportage in chat met:
-- Huidige stand (1 alinea, geen jargondump)
-- Top 10 quick wins, gerangschikt op impact/inspanning, bv:
-  - "Pagina X staat op positie 12 voor [keyword] met 480 zoekopdrachten/mnd — title herschrijven + 2 interne links toevoegen = realistisch positie 5–8"
-  - "Landingspagina Y mist FAQ-schema — toevoegen geeft rich results"
-  - "Geen pagina voor [keyword met X zoekopdrachten] terwijl concurrent Z erop rankt — nieuwe landingspagina maken"
-- Welke acties ik direct zelf kan uitvoeren (code/copy), welke jouw input nodig hebben (bv. tekstkeuzes, USP's), en welke een vervolgsessie zijn (nieuwe content).
-
-**Doorlooptijd:** ±30 min onderzoek + rapportage. Daarna besluit jij per actie of ik 'm uitvoer.
+Twee SEO-quick-wins uit Batch 2:
+- **#9** Iedere bouwsteen krijgt zijn eigen indexeerbare pagina (`/activiteit/blokarten`, `/activiteit/paardrijden`, `/activiteit/surfles`, ...). Nu staat alles op één `/bouwstenen`-pagina in een dialog → Google ziet het niet.
+- **#3** Nieuwe landingspagina `/wadlopen-vlieland` (eerste draft, daarna jouw input op USP/foto/tekst).
 
 ---
 
-## Stap C — Social media publisher live
+## Stap 1 — Slug-veld op building_blocks
 
-**Voorwaarde:** je hebt een Facebook + Instagram **Business**-account (Instagram moet professional/business zijn, gekoppeld aan een Facebook Page). Een persoonlijk IG-account werkt niet via de Meta Graph API.
+Migratie:
+- Kolom `slug text` op `public.building_blocks` (unique, nullable initieel).
+- Backfill: slugify(`name`) — lowercase, spaties → `-`, diakrieten weg, non-alfanum strippen. Dubbele namen krijgen `-2`, `-3`.
+- Unique index op `slug` waar niet null.
+- Admin-edit-sheet krijgt een Slug-veld (auto-gevuld, handmatig overschrijfbaar) zodat jij later `blokarten-vlieland` ipv `blokarten` kan kiezen als dat beter scoort.
 
-**Wat ik doe:**
+Geen RLS-wijziging nodig — bestaande "published is publiek leesbaar"-policy dekt het.
 
-1. **Meta App configureren** — controleren of `META_APP_ID` en `META_APP_SECRET` als secrets in het project staan. Zo niet: ik vraag ze aan jou (eenmalig aanmaken in developers.facebook.com, kost ~10 min).
-2. **OAuth-koppeling** — via de bestaande edge function `social-meta-oauth-start` koppel je in de admin (`/admin/social-settings`) je Facebook Page + IG-account. De long-lived token (~60 dagen) wordt versleuteld opgeslagen.
-3. **Cadence-instellingen** afstemmen: standaard 2–3 posts/week. We zetten 'm eerst op **conceptmodus** (`publishing_enabled=false`) — dan genereert de AI wel concepten, maar publiceert nog niets. Jij keurt de eerste 1–2 weken handmatig goed voor je 'm losgooit.
-4. **Eerste batch concepten** — ik draai `social-generate-drafts` eenmalig handmatig om 3–5 concepten te laten genereren uit:
-   - Recente building blocks
-   - Mediabank-uploads
-   - Partners-in-de-spotlight rotatie
-5. **Inplannen + ritme** — samen kiezen we vaste momenten (bv. di/do/za 10:00). De edge function `social-publish` publiceert op de geplande tijd zodra `publishing_enabled=true`.
+## Stap 2 — Detailroute `/activiteit/:slug`
 
-**Wat je terugkrijgt:**
+Nieuwe pagina `src/pages/ActiviteitDetail.tsx`:
+- Lookup op `slug` (fallback op `id` voor oude links).
+- 404 als block niet `status='published'` of in `HIDDEN_IDS` (boot/fiets blijven verborgen — managed services).
+- Layout: hero met `image_url`, H1 = `name`, `short_description`, lange `description`, praktische info (duur, groepsgrootte, locatie, partner), prijsblok, gerelateerde bouwstenen (zelfde categorie, 3 stuks), CTA "Voeg toe aan offerte" → bestaande cart-flow.
+- **SEO per pagina (Helmet):**
+  - `<title>` = `{name} op Vlieland | Bureau Vlieland` (max 60 tekens, truncate met `…` als nodig).
+  - `<meta description>` = `short_description` of eerste 155 tekens van `description`.
+  - `<link rel="canonical">` = `https://bureauvlieland.nl/activiteit/{slug}` (self-referencing — voorkomt cannibalisatie met `/bouwstenen`).
+  - `og:title`, `og:url`, `og:image` (= `image_url`), `og:type=article`.
+  - JSON-LD `@type: Product` met name, description, image, brand (partner of Bureau Vlieland), offers (price/priceCurrency=EUR, availability=InStock) wanneer `price_adult` bekend is. Op-aanvraag → geen offers.
+  - JSON-LD `BreadcrumbList`: Home → Bouwstenen → {name}.
+- Semantische HTML: één `<h1>`, secties met `<section>`, alt-text op afbeelding = `name`.
 
-Een werkend `/admin/social` overzicht met concepten → goedkeuren → inplannen → automatisch publiceren naar FB + IG. Inclusief PII-scrub (geen klantnamen) en geen verzonnen prijzen/datums in captions.
+## Stap 3 — `/bouwstenen` linkt naar detailpagina's
 
-**Doorlooptijd:** ±20 min als Meta App al bestaat, ±45 min als we 'm nog moeten aanmaken.
+- Kaartjes worden `<Link to="/activiteit/{slug}">` ipv dialog-trigger.
+- Dialog blijft optioneel als "snel bekijken" knop, maar primaire klik = navigatie (crawlbare `<a href>`).
+- Interne links bouwen autoriteit op: home-mosaic (`ActivitiesShowcase`), programma-templates en partnerpagina's gaan ook linken naar `/activiteit/{slug}` in plaats van naar de dialog.
+
+## Stap 4 — Sitemap-uitbreiding
+
+`scripts/generate-sitemap.ts` (nieuw bestand — nu hebben we alleen `public/sitemap.xml` statisch):
+- Voor elk gepubliceerd, niet-verborgen block één entry: `/activiteit/{slug}`, `changefreq=monthly`, `priority=0.7`.
+- `predev` + `prebuild` hook in `package.json` zodat de sitemap automatisch klopt na elke nieuwe bouwsteen.
+- Bestaande statische routes blijven erin.
+
+## Stap 5 — Wadlopen-landingspagina (draft)
+
+`src/pages/WadlopenVlieland.tsx` op route `/wadlopen-vlieland`:
+- Eigen H1 "Wadlopen op Vlieland", 600–800 woorden draft-tekst (seizoen, getijden, ervaring, samenwerking met gecertificeerde gids, wat meenemen, vanaf-prijs op aanvraag).
+- Helmet: title `Wadlopen op Vlieland — met gids | Bureau Vlieland`, description gericht op keyword "wadlopen vlieland" (260 zoekopdr/mnd, nu pos 13).
+- JSON-LD `TouristAttraction` + `FAQPage` (3–5 vragen: seizoen, leeftijd, niveau, prijs, annulering).
+- CTA "Vraag wadlopen aan" → bestaande aanvraagflow met categorie gepreselecteerd.
+- Foto: tijdelijke placeholder uit `src/assets/` (bv. `dunes-group.jpg`) — jij levert later definitieve foto.
+- Tekst expliciet als "DRAFT — wacht op input Erwin" comment bovenaan zodat we weten dat het nog reviewed moet worden.
+
+Daarna vraag ik jou:
+1. USP (waarom wadlopen via Bureau Vlieland en niet rechtstreeks bij een gids?)
+2. Vanaf-prijs of "op aanvraag"?
+3. Welke partner-gids(en) noemen?
+4. 1 eigen foto (anders houden we de placeholder).
+
+## Stap 6 — Sitemap toevoegen aan robots.txt + memory
+
+- `Sitemap: https://bureauvlieland.nl/sitemap.xml` regel in `public/robots.txt` (al aanwezig checken).
+- Memory-entry: bouwsteen → publieke route `/activiteit/{slug}`, Product JSON-LD, sitemap auto-gegenereerd.
 
 ---
 
-## Vragen voordat we starten
+## Wat ik NIET in deze ronde doe
 
-1. **Search Console** — heeft `bureauvlieland.nl` al een geverifieerde Google Search Console property? (Zo niet, voeg ik dat in stap A toe — gratis, geeft veel betere data.)
-2. **Meta Business** — bestaat er al een Facebook Page voor Bureau Vlieland met een gekoppeld Instagram Business-account? (Bepaalt of stap C 20 of 45 min duurt.)
-3. **Stap A nu starten?** — zeg "ja" en ik begin direct met de scan.
+- Geen redirect van `/bouwstenen?block=xxx` modal-links — die bestaan niet als crawlbare URLs.
+- Geen rewrite van bestaande bouwsteen-content (description/short_description). Als die te kort/dun zijn voor goede SEO meld ik dat per block in een vervolgactie zodat jij ze kan aanvullen.
+- Wadlopen-tekst is een **draft** — geen publicatie op productie zonder jouw akkoord; pagina staat wel live maar krijgt `noindex` tot jij akkoord geeft.
+
+## Resultaat
+
+- Google kan ~40+ losse activiteitenpagina's indexeren ipv 1 verzamelpagina.
+- "blokarten vlieland", "paardrijden vlieland", "surfles vlieland", "powerkiten vlieland" etc. krijgen eigen ranking-kans (long-tail, lage difficulty).
+- Wadlopen-pagina = directe stoot op keyword met 260 zoekopdr/mnd, pos 13 → realistisch top-5 binnen 4–8 weken.
+- Sitemap blijft automatisch in sync.
+
+Akkoord? Dan bouw ik dit en kom ik daarna terug met de 4 wadlopen-vragen.

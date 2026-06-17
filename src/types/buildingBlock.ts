@@ -7,6 +7,7 @@ export type BuildingBlockStatus = "concept" | "active" | "published";
 
 export interface BuildingBlock {
   id: string;
+  slug: string | null;
   name: string;
   description: string | null;
   short_description: string | null;

@@ -169,7 +169,11 @@ const Bouwstenen = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filtered.map((block) => (
                   <Card key={block.id} className="overflow-hidden flex flex-col group hover:shadow-lg transition-shadow">
-                    <div className="relative h-44 overflow-hidden bg-muted">
+                    <Link
+                      to={`/activiteit/${block.slug ?? block.id}`}
+                      className="block relative h-44 overflow-hidden bg-muted"
+                      aria-label={`Bekijk ${block.name}`}
+                    >
                       <img
                         src={getBlockImage(block)}
                         alt={block.name}
@@ -181,11 +185,16 @@ const Bouwstenen = () => {
                           {categoryLabels[block.category] ?? block.category}
                         </Badge>
                       </div>
-                    </div>
+                    </Link>
                     <CardContent className="flex-1 flex flex-col p-5 gap-3">
                       <div>
                         <h3 className="font-display font-semibold text-lg text-foreground leading-tight mb-1">
-                          {block.name}
+                          <Link
+                            to={`/activiteit/${block.slug ?? block.id}`}
+                            className="hover:text-primary transition-colors"
+                          >
+                            {block.name}
+                          </Link>
                         </h3>
                         <p className="text-xs text-muted-foreground">
                           door {getProviderName(block)}
@@ -208,17 +217,12 @@ const Bouwstenen = () => {
                               </span>
                             )}
                           </div>
-                          {block.description && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="gap-1 h-7 px-2"
-                              onClick={() => setDetailBlock(block)}
-                            >
+                          <Link to={`/activiteit/${block.slug ?? block.id}`}>
+                            <Button size="sm" variant="ghost" className="gap-1 h-7 px-2">
                               <Info className="h-3.5 w-3.5" />
-                              Info
+                              Meer info
                             </Button>
-                          )}
+                          </Link>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">

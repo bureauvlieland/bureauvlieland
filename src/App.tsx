@@ -28,6 +28,8 @@ const Voorbeeldprogrammas = lazy(() => import("./pages/Voorbeeldprogrammas"));
 const VoorbeeldprogrammaOverzicht = lazy(() => import("./pages/VoorbeeldprogrammaOverzicht"));
 const VoorbeeldprogrammaDetail = lazy(() => import("./pages/VoorbeeldprogrammaDetail"));
 const Bouwstenen = lazy(() => import("./pages/Bouwstenen"));
+const ActiviteitDetail = lazy(() => import("./pages/ActiviteitDetail"));
+const WadlopenVlieland = lazy(() => import("./pages/WadlopenVlieland"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Programmas = lazy(() => import("./pages/Programmas"));
 const Evenementen = lazy(() => import("./pages/Evenementen"));
@@ -139,6 +141,8 @@ const App = () => {
             <Route path="/voor-wie" element={<VoorWie />} />
             <Route path="/samenwerken" element={<Programmas />} />
             <Route path="/bouwstenen" element={<Bouwstenen />} />
+            <Route path="/activiteit/:slug" element={<ActiviteitDetail />} />
+            <Route path="/wadlopen-vlieland" element={<WadlopenVlieland />} />
             <Route path="/programmamodules" element={<Navigate to="/voorbeeldprogrammas" replace />} />
             <Route path="/sitemap" element={<Sitemap />} />
             <Route path="/voorbeeldprogrammas" element={<VoorbeeldprogrammaOverzicht />} />

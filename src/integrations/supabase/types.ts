@@ -929,6 +929,7 @@ export type Database = {
           scaling_rules: Json
           seasonal_notes: string | null
           short_description: string | null
+          slug: string | null
           sort_order: number | null
           status: string
           suggested_addons: Json
@@ -978,6 +979,7 @@ export type Database = {
           scaling_rules?: Json
           seasonal_notes?: string | null
           short_description?: string | null
+          slug?: string | null
           sort_order?: number | null
           status?: string
           suggested_addons?: Json
@@ -1027,6 +1029,7 @@ export type Database = {
           scaling_rules?: Json
           seasonal_notes?: string | null
           short_description?: string | null
+          slug?: string | null
           sort_order?: number | null
           status?: string
           suggested_addons?: Json
@@ -3881,10 +3884,12 @@ export type Database = {
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       scan_stale_pending_changes: { Args: never; Returns: number }
+      slugify: { Args: { value: string }; Returns: string }
       touch_partner_last_seen: {
         Args: { p_partner_id: string }
         Returns: string
       }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "partner"
