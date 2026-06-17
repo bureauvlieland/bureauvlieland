@@ -41,6 +41,7 @@ const Index = () => {
         <ProgramTemplatesPreview />
         <ErwinManifesto />
         <Testimonials />
+        <GoogleReviewsBlock />
         <FinalCTA />
       </main>
       <Footer />
