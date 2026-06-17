@@ -47,6 +47,10 @@ const FAQ: { q: string; a: string }[] = [
     a: "Ja, de excursie is geschikt voor alle leeftijden en daarmee ook leuk voor gezinnen met kinderen.",
   },
   {
+    q: "Wanneer kan een wadexcursie plaatsvinden?",
+    a: "Een wadexcursie kan alleen rond laag water: ongeveer van 1 uur vóór tot 1 uur ná laagwater. De starttijd hangt dus af van het getij van die dag. Bekijk de actuele waterstanden Vlieland op getij.nl (Rijkswaterstaat) om een idee te krijgen van het tijdvenster.",
+  },
+  {
     q: "Hoe lang duurt een wadexcursie?",
     a: "Een wadexcursie op Vlieland duurt ongeveer 1,5 uur.",
   },
