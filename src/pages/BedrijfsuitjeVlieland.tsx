@@ -4,6 +4,7 @@ import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { 
@@ -292,6 +293,16 @@ const BedrijfsuitjeVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="bedrijfsuitje-vlieland"
+          items={[
+            { question: 'Wat kost een bedrijfsuitje op Vlieland?', answer: 'De prijs hangt af van groepsgrootte, programma en overnachting. Een dagprogramma start vanaf ongeveer € 95 per persoon (excl. overtocht); een meerdaags bedrijfsuitje met overnachting en catering ligt hoger. U ontvangt altijd een transparante offerte op maat.' },
+            { question: 'Hoeveel tijd moeten wij rekenen voor een bedrijfsuitje op Vlieland?', answer: "Reken minimaal één volle dag — de overtocht vanaf Harlingen duurt 90 minuten. Voor inhoudelijke programma's adviseren wij twee dagen met een overnachting, zodat er ruimte is voor zowel activiteit als reflectie." },
+            { question: 'Kunnen wij met de auto naar Vlieland voor een bedrijfsuitje?', answer: "Nee, Vlieland is autoluw — auto's blijven op het vasteland (parkeerterrein Harlingen). Op het eiland verplaatst u zich met de fiets, te voet of met een groepsvervoer dat wij voor u regelen." },
+            { question: 'Welke activiteiten zijn mogelijk voor een bedrijfsuitje op Vlieland?', answer: 'Onder andere wadexcursies, blokarten, powerkiten, paardrijden, zeilen, kookworkshops en strandactiviteiten. Bureau Vlieland combineert deze tot een samenhangend programma dat past bij het doel van uw uitje.' }
+          ]}
+        />
       </main>
 
       <Footer />

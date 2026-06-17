@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Heart, Home, Baby, Sparkles, MapPin, Utensils } from "lucide-react";
@@ -15,13 +16,13 @@ const FamilieweekendVlieland = () => {
   return (
     <>
       <Helmet>
-        <title>Familieweekend Vlieland – Reünie of uitje met de hele familie | Bureau Vlieland</title>
+        <title>Familieweekend op Vlieland organiseren | Bureau Vlieland</title>
         <meta 
           name="description" 
           content="Organiseer een familieweekend of reünie op Vlieland. Activiteiten voor alle leeftijden, groepsaccommodaties en catering – wij zorgen voor alles." 
         />
         <link rel="canonical" href="https://bureauvlieland.nl/familieweekend-vlieland" />
-        <meta property="og:title" content="Familieweekend Vlieland – Bureau Vlieland" />
+        <meta property="og:title" content="Familieweekend op Vlieland organiseren | Bureau Vlieland" />
         <meta property="og:description" content="Organiseer een familieweekend op Vlieland. Activiteiten voor alle leeftijden, logies en catering – compleet verzorgd." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://bureauvlieland.nl/familieweekend-vlieland" />
@@ -327,6 +328,16 @@ const FamilieweekendVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="familieweekend-vlieland"
+          items={[
+            { question: 'Wat kost een familieweekend op Vlieland?', answer: 'Een familieweekend start vanaf ongeveer € 175 per persoon voor twee nachten op basis van een groepsaccommodatie, excl. overtocht en activiteiten. De prijs schaalt met logiestype en programma.' },
+            { question: 'Welke logies zijn geschikt voor een grote familie op Vlieland?', answer: 'Groepsaccommodaties, vakantiehuizen voor 8–20 personen en hotels met aangrenzende kamers. Wij selecteren een logies dat past bij de groepssamenstelling — inclusief slaapsituatie voor kinderen.' },
+            { question: 'Welke activiteiten zijn er voor kinderen op Vlieland?', answer: 'Strandactiviteiten, wadexcursies, fietstochten, paardrijden, het Vliehors-Expressavontuur en speurtochten door de duinen. Alles binnen veilige loopafstand en zonder druk autoverkeer.' },
+            { question: 'Wanneer kunnen wij het beste boeken voor een familieweekend?', answer: 'Voor schoolvakanties en lange weekenden adviseren wij 3–6 maanden vooraf te boeken — populaire groepsaccommodaties zijn dan snel volgeboekt. Buiten het seizoen volstaat 4–6 weken vooraf.' }
+          ]}
+        />
       </main>
 
       <Footer />

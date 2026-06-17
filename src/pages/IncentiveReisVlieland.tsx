@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Award, Star, Sparkles, Utensils, Ship, MapPin } from "lucide-react";
@@ -304,6 +305,16 @@ const IncentiveReisVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="incentive-reis-vlieland"
+          items={[
+            { question: 'Wat is een incentive reis en wat kost dat op Vlieland?', answer: 'Een incentive reis is een exclusieve beloningsreis voor klanten of medewerkers. Op Vlieland start een tweedaagse incentive vanaf ongeveer € 595 per persoon inclusief premium logies, catering en exclusieve activiteiten.' },
+            { question: 'Hoeveel dagen duurt een incentive reis op Vlieland?', answer: 'De meeste incentives duren 2 of 3 dagen. Dat geeft ruimte voor een aankomstdiner, een vol dagprogramma met exclusieve activiteiten, en een ontspannen vertrek na een laatste ochtend op het eiland.' },
+            { question: 'Welke exclusieve activiteiten zijn mogelijk?', answer: "Privé-zeiltochten, een diner op het strand bij zonsondergang, vuurtorenbeklimming buiten openingstijden, exclusieve wadexcursies met een persoonlijke gids en chef's-table-diners op bijzondere locaties." },
+            { question: 'Kunnen jullie een privé-overtocht of charter regelen?', answer: 'Ja — voor selecte groepen organiseren wij een privé-charter (zeilcharter of motorboot) als alternatief voor de reguliere Doeksen-veerdienst. Dit voegt exclusiviteit toe aan het programma.' }
+          ]}
+        />
       </main>
 
       <Footer />

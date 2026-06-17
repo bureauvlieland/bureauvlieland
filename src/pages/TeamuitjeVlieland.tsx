@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users, Target, MessageCircle, Compass, MapPin, CheckCircle } from "lucide-react";
@@ -322,6 +323,16 @@ const TeamuitjeVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="teamuitje-vlieland"
+          items={[
+            { question: 'Wat kost een teamuitje op Vlieland?', answer: 'Een teamuitje op Vlieland start vanaf ongeveer € 95 per persoon voor een dagprogramma (excl. overtocht). De uiteindelijke prijs hangt af van groepsgrootte, activiteiten en eventuele overnachting.' },
+            { question: 'Hoe lang duurt een teamuitje op Vlieland?', answer: 'Door de overtocht van 90 minuten is een dagdeel niet realistisch. Reken minimaal één volle dag; voor teambuilding met diepgang adviseren wij twee dagen met een overnachting.' },
+            { question: 'Welke teambuilding-activiteiten zijn er op Vlieland?', answer: 'Wadexcursies, blokarten, powerkiten, zeilen, paardrijden langs het strand, dune-walks en kookworkshops. Wij combineren actieve en reflectieve onderdelen tot een programma dat samenwerking versterkt.' },
+            { question: 'Kunnen wij met de auto naar Vlieland voor een teamuitje?', answer: "Nee, Vlieland is autoluw. Auto's parkeert u in Harlingen; op het eiland gaat alles per fiets, te voet of met groepsvervoer dat wij regelen." }
+          ]}
+        />
       </main>
 
       <Footer />

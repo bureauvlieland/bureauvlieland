@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
+import { FaqSection } from "@/components/FaqSection";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { ArrowRight, Moon, Coffee, Users, Utensils, MapPin, CheckCircle, Bed } from "lucide-react";
@@ -346,6 +347,16 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
             </div>
           </div>
         </section>
+
+        <FaqSection
+          schemaId="meerdaags-bedrijfsuitje-vlieland"
+          items={[
+            { question: 'Hoeveel dagen duurt een meerdaags bedrijfsuitje op Vlieland?', answer: 'De meeste meerdaagse bedrijfsuitjes zijn twee dagen met één overnachting. Voor diepere teambuilding of een combinatie met een heisessie adviseren wij drie dagen met twee overnachtingen.' },
+            { question: 'Wat kost een meerdaags bedrijfsuitje op Vlieland?', answer: 'Vanaf ongeveer € 295 per persoon voor twee dagen inclusief logies, ontbijt, één activiteit en een groepsdiner. De exacte prijs hangt af van logiestype en programma — u ontvangt een offerte op maat.' },
+            { question: 'Welke logies zijn geschikt voor een meerdaags bedrijfsuitje?', answer: 'Hotels in dorp Oost-Vlieland, een groepsaccommodatie aan de duinrand of een hotel met blokboeking. Wij kiezen op basis van groepsgrootte, gewenste sfeer en budget.' },
+            { question: 'Wat doe je in de avond tijdens een meerdaags bedrijfsuitje op Vlieland?', answer: 'Een groepsdiner op een bijzondere locatie, een avondwandeling door de duinen, sterren kijken op het strand of een borrel in een lokaal café. Geen verplichte invulling — wij doen suggesties.' }
+          ]}
+        />
       </main>
 
       <Footer />
