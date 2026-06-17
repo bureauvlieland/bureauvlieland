@@ -315,7 +315,14 @@ const WadlopenVlieland = () => {
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Link
-                  to="/bouwstenen"
+                  to="/zeehondentochten-vlieland"
+                  className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                >
+                  <span className="font-medium text-foreground">Zeehondentochten op Vlieland</span>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </Link>
+                <Link
+                  to="/activiteiten-vlieland"
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
                   <span className="font-medium text-foreground">Alle activiteiten op Vlieland</span>
