@@ -702,6 +702,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                             <SelectItem value="per_person">Per persoon</SelectItem>
                             <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
                             <SelectItem value="total">Totaalprijs</SelectItem>
+                            <SelectItem value="tiered_total">Staffel op groepsgrootte</SelectItem>
                             <SelectItem value="on_request">Op aanvraag</SelectItem>
                           </SelectContent>
                         </Select>
@@ -785,7 +786,22 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                   
                   <Separator />
                   
-                  {form.watch("price_type") !== "on_request" && (
+                  {form.watch("price_type") === "tiered_total" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Staffels op groepsgrootte</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Voor activiteiten waarbij de totaalprijs voor de hele groep verandert per personenrange (bijv. Vliehors Expres).
+                      </p>
+                      <TierEditor
+                        tiers={tiers}
+                        onChange={setTiers}
+                        tiersAboveMax={tiersAboveMax}
+                        onTiersAboveMaxChange={setTiersAboveMax}
+                      />
+                    </div>
+                  )}
+
+                  {form.watch("price_type") !== "on_request" && form.watch("price_type") !== "tiered_total" && (
                     <div className="space-y-2">
                       <h4 className="font-medium">{form.watch("price_type") === "per_person" ? "Volwassenen" : "Prijs"}</h4>
                       <div className="grid grid-cols-2 gap-4">
