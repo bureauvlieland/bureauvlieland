@@ -58,6 +58,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MediaPickerDialog } from "./MediaPickerDialog";
+import { BlockComponentsEditor } from "./BlockComponentsEditor";
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
@@ -382,11 +383,14 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
           <Form {...form} key={formKey}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
               <Tabs defaultValue="general">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className={`grid w-full ${isEditing ? "grid-cols-5" : "grid-cols-4"}`}>
                   <TabsTrigger value="general">Algemeen</TabsTrigger>
                   <TabsTrigger value="pricing">Prijzen</TabsTrigger>
                   <TabsTrigger value="location">Locatie</TabsTrigger>
                   <TabsTrigger value="media">Media</TabsTrigger>
+                  {isEditing && (
+                    <TabsTrigger value="components">Samenstelling</TabsTrigger>
+                  )}
                 </TabsList>
                 
                 {/* General Tab */}
@@ -1021,6 +1025,12 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                     )}
                   />
                 </TabsContent>
+
+                {isEditing && block && (
+                  <TabsContent value="components" className="space-y-4 mt-4">
+                    <BlockComponentsEditor parentBlockId={block.id} />
+                  </TabsContent>
+                )}
               </Tabs>
               
               <Separator />

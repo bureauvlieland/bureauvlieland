@@ -886,6 +886,60 @@ export type Database = {
         }
         Relationships: []
       }
+      building_block_components: {
+        Row: {
+          child_block_id: string
+          created_at: string
+          id: string
+          is_required: boolean
+          notes: string | null
+          parent_block_id: string
+          quantity_mode: string
+          quantity_value: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          child_block_id: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          parent_block_id: string
+          quantity_mode?: string
+          quantity_value?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          child_block_id?: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          parent_block_id?: string
+          quantity_mode?: string
+          quantity_value?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_block_components_child_block_id_fkey"
+            columns: ["child_block_id"]
+            isOneToOne: false
+            referencedRelation: "building_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_block_components_parent_block_id_fkey"
+            columns: ["parent_block_id"]
+            isOneToOne: false
+            referencedRelation: "building_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_blocks: {
         Row: {
           block_type: Database["public"]["Enums"]["building_block_type"]
@@ -2723,6 +2777,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           override_people: number | null
+          parent_item_id: string | null
           partner_instructions: string | null
           partner_price_change_acknowledged_at: string | null
           partner_purchase_price: number | null
@@ -2818,6 +2873,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           override_people?: number | null
+          parent_item_id?: string | null
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           partner_purchase_price?: number | null
@@ -2913,6 +2969,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           override_people?: number | null
+          parent_item_id?: string | null
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           partner_purchase_price?: number | null
@@ -2967,6 +3024,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "program_request_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "program_request_items_purchase_invoice_id_fkey"
             columns: ["purchase_invoice_id"]

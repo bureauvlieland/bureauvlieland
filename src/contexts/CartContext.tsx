@@ -126,6 +126,36 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       notes: "",
       dayIndex,
     }]);
+
+    // Auto-add required components ("samengestelde bouwsteen"). Fire-and-forget;
+    // children are added as separate cart entries on the same day. We dedupe
+    // against the current cart and against blocks we just added.
+    (async () => {
+      try {
+        const { fetchRequiredChildrenForBlock } = await import("@/hooks/useBlockComponents");
+        const required = await fetchRequiredChildrenForBlock(blockId);
+        if (required.length === 0) return;
+
+        setCartItems((prev) => {
+          const have = new Set(prev.map((i) => i.blockId));
+          const additions: CartItemDetail[] = [];
+          for (const row of required) {
+            if (!row.child) continue;
+            if (have.has(row.child.id)) continue;
+            have.add(row.child.id);
+            additions.push({
+              blockId: row.child.id,
+              preferredTime: null,
+              notes: "",
+              dayIndex,
+            });
+          }
+          return additions.length > 0 ? [...prev, ...additions] : prev;
+        });
+      } catch (e) {
+        console.error("Composite auto-expand failed", e);
+      }
+    })();
     
     // Trigger animation
     if (addAnimationTimeoutRef.current) {
