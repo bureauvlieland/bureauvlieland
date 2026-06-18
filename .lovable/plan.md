@@ -1,72 +1,59 @@
-## Meta-koppeling afmaken
+## Doel
 
-De edge functions staan al: `social-generate-drafts`, `social-publish`, `social-refresh-token`, `social-meta-oauth-start/-callback`. Wat ontbreekt: secrets, cron, foutafhandeling, asset-validatie, go-live.
+Een **audit-rapport** opleveren (geen code- of datawijzigingen) dat per voorbeeldprogramma en per bouwsteen laat zien of de inhoud nog spoort met wat er de afgelopen 6 maanden daadwerkelijk is verkocht en bevestigd. Op basis daarvan beslis jij later per regel of we iets aanpassen.
 
----
+## Scope (uit jouw antwoorden)
 
-### Stap 1 — Secrets (jij)
+- **Voorbeeldprogramma's** (`program_templates` + `program_template_items`) — 11 templates, 9 gepubliceerd, 110 items
+- **Bouwstenen** (`building_blocks`) — 135 totaal, 51 actief
+- **Referentieset**: 14 bevestigde projecten (`quote_status IN ('akkoord_ontvangen','definitief_bevestigd')`) van de laatste 6 mnd, samen 99 program_request_items
+- **Output**: rapport, nog géén wijzigingen in templates of blocks
 
-Vóór ik kan bouwen heb ik nodig:
-- `META_APP_ID`
-- `META_APP_SECRET`
+## Deliverable
 
-Te maken in [Meta for Developers](https://developers.facebook.com/apps/) → nieuwe **Business**-app → Facebook Login + Instagram Graph toevoegen. Permissions die nodig zijn: `pages_manage_posts`, `pages_read_engagement`, `instagram_basic`, `instagram_content_publish`. In de App-console moet de OAuth-callback URL van `social-meta-oauth-callback` whitelisted worden — die URL geef ik je zodra je begint.
+Eén Excel-bestand `/mnt/documents/audit-voorbeeldprogrammas-bouwstenen.xlsx` met 5 tabbladen, plus een korte markdown-samenvatting in de chat.
 
-Zodra je zegt "ik heb de Meta App aangemaakt" vraag ik beide secrets via `add_secret`.
+### Tab 1 — Samenvatting
+Top-bevindingen, aantallen, en de "rode vlaggen": templates zonder recente match, bouwstenen die nooit verkocht zijn, bouwstenen die wél vaak verkocht worden maar inactief/concept zijn, prijsdrift > 15%.
 
----
+### Tab 2 — Voorbeeldprogramma's (templates)
+Per template (11 rijen):
+- naam, duur, doelgroep, gepubliceerd ja/nee, indicatieve prijs p.p.
+- aantal items in template
+- "matchscore" t.o.v. bevestigde projecten: hoeveel van de items komen terug in recente bevestigde programma's
+- gemiddelde werkelijke prijs p.p. van vergelijkbare bevestigde projecten (zelfde duur/doelgroep) vs. `indicative_price_pp` → afwijking in %
+- laatst inhoudelijk bijgewerkt (`updated_at`)
+- aanbeveling-kolom (leeg, jij vult in)
 
-### Stap 2 — OAuth-flow doortesten
+### Tab 3 — Template-items detail
+Alle 110 template-items uitgeklapt, gekoppeld aan de bouwsteen waar ze naar verwijzen, met: status van die bouwsteen, hoe vaak die bouwsteen in de 14 bevestigde projecten zit, en of de bouwsteen nog actief is. Hiermee zie je per template welke regel "stof vangt".
 
-Jij doorloopt `/admin/social-settings` → "Verbind Facebook" → kiest de FB-pagina + gekoppeld IG-business-account. Ik controleer of `meta_page_token` + `meta_ig_user_id` correct in `social_settings` landen.
+### Tab 4 — Bouwstenen-gebruik
+Alle 135 bouwstenen, gesorteerd op frequentie in bevestigde projecten:
+- naam, type, status (concept/actief/gepubliceerd), partner
+- # keer in bevestigde projecten (laatste 6 mnd)
+- # keer in templates
+- gemiddeld gefactureerde prijs in bevestigde projecten vs. huidige prijs op de bouwsteen → afwijking
+- laatst bijgewerkt
+- vlag: "veelgebruikt maar inactief", "in template maar nooit verkocht", "prijsdrift", "weeskind" (nergens gebruikt)
 
-Eventueel fix ik kleine bugs die boven komen.
+### Tab 5 — Bevestigde projecten (referentie)
+De 14 projecten met datum, doelgroep, # gasten, duur, totaalwaarde, en de items die erin zaten. Puur als bron-onderbouwing.
 
----
+## Aanpak (technisch)
 
-### Stap 3 — Asset-validatie vóór scheduling
+1. Read-only queries op `program_templates`, `program_template_items`, `building_blocks`, `program_requests` (filter op `quote_status` + 6mnd venster), `program_request_items`.
+2. Matching tussen bevestigde items en bouwstenen via `building_block_id` (waar aanwezig) + fallback op naam.
+3. Prijsdrift: vergelijk bouwsteen-prijs / template `indicative_price_pp` met gemiddelde `quoted_price` / `price_per_person` van bevestigde items.
+4. Excel gegenereerd via openpyxl conform de xlsx-skill (blauw = invoer/feit, zwart = berekening, prijzen incl. BTW conform projectregel).
+5. Geen migrations, geen edge-functions, geen UI-aanpassingen.
 
-In `social-generate-drafts` (of bij het schedulen): check per asset
-- Aspect ratio in {1:1, 4:5, 1.91:1} voor IG
-- Min. 320px aan de korte zijde
-- Bestandsgrootte binnen limiet
+## Wat dit rapport NIET doet
 
-Als asset niet voldoet → draft krijgt `status='rejected'` + reden, géén schedule.
+- Templates of bouwstenen aanpassen — dat doen we pas in een vervolgronde, per regel die jij markeert
+- Partners of prijzen in de database wijzigen
+- Iets publiceren of e-mailen
 
----
+## Vervolgstap (na jouw review)
 
-### Stap 4 — Foutafhandeling bij publish
-
-In `social-publish`: bij `status='failed'`
-- Schrijf `last_error` (bestaat al?) met provider-respons
-- Maak admin-todo (`type: 'social_publish_failed'`)
-- Stuur e-mail naar Erwin via bestaande Mailjet edge function
-
-Per memory-rule: `metadata.template_name` + `metadata.actor` op de logEmail-aanroep.
-
----
-
-### Stap 5 — Cron-jobs (via `supabase--insert`, niet via migratie — bevat anon key)
-
-```
-07:00 daily   → social-generate-drafts   (vult drafts voor komende week)
-*/15 * * * *  → social-publish           (pakt scheduled posts op)
-0 3 * * 0     → social-refresh-token     (Meta long-lived token vervalt na 60d)
-```
-
-`pg_cron` + `pg_net` zijn waarschijnlijk al aan (al gebruikt voor andere jobs); zo niet, eerst enabelen.
-
----
-
-### Stap 6 — Dry-run + go-live
-
-1. `publishing_enabled = false` laten staan.
-2. Eén draft handmatig op `scheduled` zetten op een test-tijdstip.
-3. `social-publish` triggert → controleer of FB+IG-call gemaakt wordt (dry-run mode: alleen loggen, niet posten) → fix wat stuk is.
-4. Daarna `publishing_enabled = true` en eerste echte post live.
-
----
-
-### Wat ik nu nodig heb
-
-Bevestig dat je de Meta App gaat aanmaken — dan geef ik je de exacte callback-URL die je moet whitelisten, plus de lijst permissions om in de App Review op te geven. Zodra je dat hebt, vraag ik de twee secrets aan en bouw ik stap 3–6 in één batch.
+Jij markeert in kolom "aanbeveling" wat aangepast moet worden (tekst herschrijven, prijs bijstellen, bouwsteen op inactief, item uit template halen, etc.). Daarna doen we die wijzigingen in een aparte build-ronde, eventueel met een admin-bulk-edit-scherm als de lijst lang wordt.
