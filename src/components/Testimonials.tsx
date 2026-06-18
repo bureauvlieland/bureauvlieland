@@ -99,7 +99,14 @@ export const Testimonials = () => {
     }));
 
   const googleNames = new Set(googleItems.map((g) => normalizeName(g.author)));
-  const manualDedup = manualTestimonials.filter((m) => !googleNames.has(normalizeName(m.author)));
+  const googleContentFingerprints = new Set(
+    googleItems.map((g) => normalizeName(g.quote).slice(0, 80))
+  );
+  const manualDedup = manualTestimonials.filter((m) => {
+    if (googleNames.has(normalizeName(m.author))) return false;
+    const fp = normalizeName(m.quote).slice(0, 80);
+    return !googleContentFingerprints.has(fp);
+  });
 
   const testimonials = [...googleItems, ...manualDedup];
 
