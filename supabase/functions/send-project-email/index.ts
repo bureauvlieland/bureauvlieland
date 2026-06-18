@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       recipientName,
       subject,
       body,
+      bodyHtml,
       requestId,
       accommodationId,
       partnerId,
