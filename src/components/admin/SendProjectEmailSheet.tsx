@@ -126,6 +126,8 @@ export function SendProjectEmailSheet({
     setSubject(defaultSubject || "");
     setBody(defaultBody || "");
     setSelectedTemplate("");
+    templateHtmlRef.current = null;
+    templatePlainRef.current = null;
     setAiInstruction("");
     setShowAiInstruction(false);
   }, [open, defaultSubject, defaultBody]);
