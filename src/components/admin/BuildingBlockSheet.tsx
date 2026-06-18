@@ -59,6 +59,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MediaPickerDialog } from "./MediaPickerDialog";
 import { BlockComponentsEditor } from "./BlockComponentsEditor";
+import { TierEditor } from "./TierEditor";
+import { getTieredConfig, validateTiers, type PriceTier, type TiersAboveMax } from "@/lib/tieredPricing";
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
@@ -112,6 +114,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [replacementBlockId, setReplacementBlockId] = useState<string>("");
+  const [tiers, setTiers] = useState<PriceTier[]>([]);
+  const [tiersAboveMax, setTiersAboveMax] = useState<TiersAboveMax>("highest");
   const isEditing = !!block;
   
   const createBlock = useCreateBuildingBlock();
