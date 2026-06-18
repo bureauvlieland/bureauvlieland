@@ -196,6 +196,8 @@ export function SendProjectEmailSheet({
       if (error) throw error;
       if (data?.subject) setSubject(data.subject);
       if (data?.body) setBody(data.body);
+      templateHtmlRef.current = typeof data?.html === "string" ? data.html : null;
+      templatePlainRef.current = typeof data?.body === "string" ? data.body : null;
     } catch (err) {
       console.error("Template render error:", err);
       toast.error("Kon template niet laden");
