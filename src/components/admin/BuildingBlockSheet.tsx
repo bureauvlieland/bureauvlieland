@@ -1024,6 +1024,12 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                     )}
                   />
                 </TabsContent>
+
+                {isEditing && block && (
+                  <TabsContent value="components" className="space-y-4 mt-4">
+                    <BlockComponentsEditor parentBlockId={block.id} />
+                  </TabsContent>
+                )}
               </Tabs>
               
               <Separator />
