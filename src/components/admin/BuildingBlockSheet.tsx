@@ -227,6 +227,9 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         location_lng: block.location_lng ?? null,
         location_address: block.location_address || "",
       });
+      const cfg = getTieredConfig(block);
+      setTiers(cfg.tiers);
+      setTiersAboveMax(cfg.tiers_above_max ?? "highest");
     } else {
       form.reset({
         id: "",
@@ -265,6 +268,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         location_lng: null,
         location_address: "",
       });
+      setTiers([]);
+      setTiersAboveMax("highest");
     }
   }, [block, form]);
   
