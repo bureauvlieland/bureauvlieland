@@ -279,16 +279,33 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       const tagsArray = data.tags
         ? data.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
-      
+
+      // Merge tiered staffel data into price_extras when applicable
+      let priceExtras: Record<string, unknown> | undefined;
+      if (data.price_type === "tiered_total") {
+        const err = validateTiers(tiers);
+        if (err) {
+          toast({ title: "Staffels onjuist", description: err, variant: "destructive" });
+          return;
+        }
+        const base = (block?.price_extras ?? {}) as Record<string, unknown>;
+        priceExtras = { ...base, tiers, tiers_above_max: tiersAboveMax };
+      } else if (block?.price_extras) {
+        // Strip tier data when switching away from tiered_total
+        const { tiers: _t, tiers_above_max: _a, ...rest } = block.price_extras as Record<string, unknown>;
+        priceExtras = rest;
+      }
+
       const submitData = {
         ...data,
         tags: tagsArray,
         is_published: data.status === "published",
         is_active: data.status !== "concept",
+        ...(priceExtras !== undefined ? { price_extras: priceExtras } : {}),
       };
-      
+
       if (isEditing) {
-        await updateBlock.mutateAsync({ id: block.id, updates: submitData });
+        await updateBlock.mutateAsync({ id: block.id, updates: submitData as any });
         toast({
           title: "Bouwsteen bijgewerkt",
           description: `${data.name} is succesvol opgeslagen.`,
