@@ -6,15 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SCOPES = [
-  "pages_show_list",
-  "pages_read_engagement",
-  "pages_manage_posts",
-  "pages_manage_metadata",
-  "instagram_basic",
-  "instagram_content_publish",
-  "business_management",
-].join(",");
+const META_CONFIG_ID = "1760726228673482";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -52,7 +44,7 @@ Deno.serve(async (req) => {
     url.searchParams.set("client_id", APP_ID);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
-    url.searchParams.set("scope", SCOPES);
+    url.searchParams.set("config_id", META_CONFIG_ID);
     url.searchParams.set("response_type", "code");
 
     return new Response(JSON.stringify({ url: url.toString() }), {
