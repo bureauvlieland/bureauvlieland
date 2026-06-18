@@ -169,6 +169,12 @@
     <priority>0.3</priority>
   </url>
   <url>
+    <loc>https://bureauvlieland.nl/activiteit/italiaanse-shared-dining-oliva</loc>
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://bureauvlieland.nl/activiteit/borrel-hapjes</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -182,6 +188,12 @@
   </url>
   <url>
     <loc>https://bureauvlieland.nl/activiteit/blokarten</loc>
+    <lastmod>2026-06-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/activiteit/outdoor-cooking</loc>
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -265,12 +277,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/activiteit/italiaanse-shared-dining-oliva</loc>
-    <lastmod>2026-06-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/activiteit/lasergamen</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -296,12 +302,6 @@
   </url>
   <url>
     <loc>https://bureauvlieland.nl/activiteit/ontbijt-op-locatie</loc>
-    <lastmod>2026-06-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://bureauvlieland.nl/activiteit/outdoor-cooking</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -463,19 +463,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/wellness-natuur</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/voorbeeldprogrammas/prive-eilanddag-regina-andrea</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://bureauvlieland.nl/voorbeeldprogrammas/wellness-natuur-3d</loc>
     <lastmod>2026-05-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
