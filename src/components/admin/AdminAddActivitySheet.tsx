@@ -542,7 +542,9 @@ export const AdminAddActivitySheet = ({
                 );
               })()}
               <p className="text-xs text-muted-foreground">
-                Standaardprijs bouwsteen: €{selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}
+                {isTieredBlock(selectedBlock)
+                  ? `Staffelprijs: € ${(calculateTieredTotal(selectedBlock, numberOfPeople) ?? 0).toFixed(2)} (groep van ${numberOfPeople} pers.)`
+                  : `Standaardprijs bouwsteen: €${selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}`}
               </p>
             </div>
 
