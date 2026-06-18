@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     url.searchParams.set("client_id", APP_ID);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
-    url.searchParams.set("scope", SCOPES);
+    url.searchParams.set("config_id", META_CONFIG_ID);
     url.searchParams.set("response_type", "code");
 
     return new Response(JSON.stringify({ url: url.toString() }), {
