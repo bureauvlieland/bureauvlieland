@@ -3,7 +3,6 @@ import { Footer } from "@/components/Footer";
 import { StructuredData } from "@/components/StructuredData";
 import { CookieConsent } from "@/components/CookieConsent";
 import { Testimonials } from "@/components/Testimonials";
-import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
 import { Helmet } from "react-helmet";
 import { HeroEditorial } from "@/components/home/HeroEditorial";
 import { ActivitiesShowcase } from "@/components/home/ActivitiesShowcase";
@@ -41,7 +40,6 @@ const Index = () => {
         <ProgramTemplatesPreview />
         <ErwinManifesto />
         <Testimonials />
-        <GoogleReviewsBlock />
         <FinalCTA />
       </main>
       <Footer />
