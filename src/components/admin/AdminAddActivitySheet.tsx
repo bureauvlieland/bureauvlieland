@@ -232,8 +232,93 @@ export const AdminAddActivitySheet = ({
           title: autoTodoTitles.bureau_item_pricing(customName || selectedBlock.name, custName),
         });
       }
-      
-      toast.success(`${selectedBlock.name} toegevoegd aan de offerte`);
+
+      // Auto-add required components ("samengestelde bouwsteen")
+      let addedChildrenCount = 0;
+      try {
+        const { fetchRequiredChildrenForBlock } = await import("@/hooks/useBlockComponents");
+        const { computeComponentQuantity } = await import("@/types/blockComponent");
+        const required = await fetchRequiredChildrenForBlock(selectedBlock.id);
+
+        const days = Math.max(1, selectedDates.length);
+        const childRows = required
+          .filter((r) => r.child)
+          .map((r) => {
+            const child = r.child!;
+            const qty = computeComponentQuantity(
+              r.quantity_mode,
+              Number(r.quantity_value),
+              numberOfPeople,
+              days,
+            );
+            const childProviderId = child.provider_id || "bureau";
+            const BUREAU_IDS = new Set(["bureau", "bureau-vlieland", "rederij", "fietsverhuur", "bagagevervoer-vlieland"]);
+            const childBlockType: "bureau" | "partner" | "self_arranged" =
+              BUREAU_IDS.has(childProviderId)
+                ? "bureau"
+                : (child.block_type === "self_arranged" ? "self_arranged" : "partner");
+
+            // Price multiplier semantics:
+            // - per_person / per_person_per_day blocks  → override_people = qty
+            // - total / on_request blocks               → quoted_price = price × qty
+            const childPriceType = (child.price_type ?? "per_person") as
+              | "per_person" | "per_person_per_day" | "total" | "on_request";
+            const isPerHead = childPriceType === "per_person" || childPriceType === "per_person_per_day";
+
+            const overridePeople = isPerHead ? qty : null;
+            const quotedPrice = !isPerHead && child.price_adult != null
+              ? Number(child.price_adult) * qty
+              : null;
+
+            return {
+              request_id: requestId,
+              parent_item_id: newItem.id,
+              block_id: child.id,
+              block_name: child.name,
+              block_category: child.category,
+              block_type: childBlockType,
+              provider_id: childProviderId,
+              provider_name: child.provider?.name || "Bureau Vlieland",
+              provider_email: child.provider?.email ?? null,
+              day_index: selectedDayIndex,
+              preferred_time: time,
+              customer_notes: r.notes || null,
+              duration: child.duration,
+              status: "pending" as const,
+              item_quote_status: "concept" as const,
+              admin_price_override: child.price_adult,
+              price_type: childPriceType,
+              override_people: overridePeople,
+              quoted_price: quotedPrice,
+              location_lat: child.location_lat ?? null,
+              location_lng: child.location_lng ?? null,
+              location_address: child.location_address ?? null,
+              skip_partner_notification: true,
+              pending_added: true,
+              pending_changed_at: new Date().toISOString(),
+            };
+          });
+
+        if (childRows.length > 0) {
+          const { error: childErr } = await supabase
+            .from("program_request_items")
+            .insert(childRows);
+          if (childErr) {
+            console.error("Auto-add children failed", childErr);
+            toast.warning("Hoofd-item toegevoegd, maar onderdelen konden niet automatisch worden toegevoegd.");
+          } else {
+            addedChildrenCount = childRows.length;
+          }
+        }
+      } catch (e) {
+        console.error("Composite expansion failed", e);
+      }
+
+      toast.success(
+        addedChildrenCount > 0
+          ? `${selectedBlock.name} + ${addedChildrenCount} onderde${addedChildrenCount === 1 ? "el" : "len"} toegevoegd`
+          : `${selectedBlock.name} toegevoegd aan de offerte`
+      );
       
       // Reset and close
       setSelectedBlock(null);
