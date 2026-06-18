@@ -58,6 +58,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MediaPickerDialog } from "./MediaPickerDialog";
+import { BlockComponentsEditor } from "./BlockComponentsEditor";
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
