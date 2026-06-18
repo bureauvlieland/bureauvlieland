@@ -254,6 +254,13 @@ export function SendProjectEmailSheet({
 
     // Send a separate email per recipient so each ontvanger keeps an isolated thread
     // (Reply-To is the same per project but each mail sequence is its own conversation)
+    // Als de admin de body niet wijzigde sinds het laden van de template,
+    // sturen we de originele rijke HTML door zodat tabellen/knoppen/kleuren behouden blijven.
+    const useTemplateHtml =
+      !!templateHtmlRef.current &&
+      templatePlainRef.current !== null &&
+      body === templatePlainRef.current;
+
     for (const r of finalRecipients) {
       try {
         const { error } = await supabase.functions.invoke("send-project-email", {
@@ -262,6 +269,7 @@ export function SendProjectEmailSheet({
             recipientName: r.name || undefined,
             subject,
             body,
+            bodyHtml: useTemplateHtml ? templateHtmlRef.current : undefined,
             requestId: requestId || undefined,
             accommodationId: accommodationId || undefined,
             partnerId: r.partnerId || undefined,
