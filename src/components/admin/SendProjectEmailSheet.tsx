@@ -80,6 +80,11 @@ export function SendProjectEmailSheet({
   const [subject, setSubject] = useState(defaultSubject || "");
   const [body, setBody] = useState(defaultBody || "");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  // Houd de originele template-HTML + bijbehorende platte tekst bij.
+  // Als de admin de body niet wijzigt versturen we de rijke HTML rechtstreeks,
+  // anders gaat het bewerkte bericht als platte tekst de wrapper in.
+  const templateHtmlRef = useRef<string | null>(null);
+  const templatePlainRef = useRef<string | null>(null);
 
   // Fetch active templates
   const { data: templates = [] } = useQuery<TemplateRow[]>({
