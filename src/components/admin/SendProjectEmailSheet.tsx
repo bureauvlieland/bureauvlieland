@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Sheet,
   SheetContent,
@@ -80,6 +80,11 @@ export function SendProjectEmailSheet({
   const [subject, setSubject] = useState(defaultSubject || "");
   const [body, setBody] = useState(defaultBody || "");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  // Houd de originele template-HTML + bijbehorende platte tekst bij.
+  // Als de admin de body niet wijzigt versturen we de rijke HTML rechtstreeks,
+  // anders gaat het bewerkte bericht als platte tekst de wrapper in.
+  const templateHtmlRef = useRef<string | null>(null);
+  const templatePlainRef = useRef<string | null>(null);
 
   // Fetch active templates
   const { data: templates = [] } = useQuery<TemplateRow[]>({
@@ -121,6 +126,8 @@ export function SendProjectEmailSheet({
     setSubject(defaultSubject || "");
     setBody(defaultBody || "");
     setSelectedTemplate("");
+    templateHtmlRef.current = null;
+    templatePlainRef.current = null;
     setAiInstruction("");
     setShowAiInstruction(false);
   }, [open, defaultSubject, defaultBody]);
@@ -189,6 +196,8 @@ export function SendProjectEmailSheet({
       if (error) throw error;
       if (data?.subject) setSubject(data.subject);
       if (data?.body) setBody(data.body);
+      templateHtmlRef.current = typeof data?.html === "string" ? data.html : null;
+      templatePlainRef.current = typeof data?.body === "string" ? data.body : null;
     } catch (err) {
       console.error("Template render error:", err);
       toast.error("Kon template niet laden");
@@ -245,6 +254,13 @@ export function SendProjectEmailSheet({
 
     // Send a separate email per recipient so each ontvanger keeps an isolated thread
     // (Reply-To is the same per project but each mail sequence is its own conversation)
+    // Als de admin de body niet wijzigde sinds het laden van de template,
+    // sturen we de originele rijke HTML door zodat tabellen/knoppen/kleuren behouden blijven.
+    const useTemplateHtml =
+      !!templateHtmlRef.current &&
+      templatePlainRef.current !== null &&
+      body === templatePlainRef.current;
+
     for (const r of finalRecipients) {
       try {
         const { error } = await supabase.functions.invoke("send-project-email", {
@@ -253,6 +269,7 @@ export function SendProjectEmailSheet({
             recipientName: r.name || undefined,
             subject,
             body,
+            bodyHtml: useTemplateHtml ? templateHtmlRef.current : undefined,
             requestId: requestId || undefined,
             accommodationId: accommodationId || undefined,
             partnerId: r.partnerId || undefined,
@@ -483,6 +500,13 @@ export function SendProjectEmailSheet({
               value={body}
               onChange={(e) => setBody(e.target.value)}
             />
+            {templateHtmlRef.current && templatePlainRef.current !== null && (
+              <p className="text-xs text-muted-foreground">
+                {body === templatePlainRef.current
+                  ? "✓ Template-opmaak (tabellen, knoppen, kleuren) blijft behouden. Zodra je iets aanpast wordt de mail als platte tekst verstuurd."
+                  : "✏️ Je hebt de template aangepast — deze mail wordt als platte tekst verstuurd binnen de Bureau Vlieland-huisstijl."}
+              </p>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">

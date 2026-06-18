@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
-import { buildReplyTo, getSubjectPrefix, getRecipientEmail, getPortalBaseUrl } from "../_shared/email-templates.ts";
+import { buildReplyTo, getSubjectPrefix, getRecipientEmail, getPortalBaseUrl, wrapEmailHtml } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       recipientName,
       subject,
       body,
+      bodyHtml,
       requestId,
       accommodationId,
       partnerId,
@@ -134,33 +135,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Convert {{portal_url}} that already ended up as a plain URL in the body
-    // into a clickable link (substitution above replaced the placeholder text).
-    const bodyHtml = substitutedBody
-      .replace(/\n/g, "<br>")
-      .replace(
-        new RegExp(portalReplacement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-        `<a href="${portalReplacement}" style="color: #1e3a5f; font-weight: 600;">${portalReplacement}</a>`,
-      );
+    // Bouw de uiteindelijke HTML:
+    // 1) Als de admin een rijke template-HTML meestuurt (ongewijzigd geladen),
+    //    behouden we de originele opmaak (tabellen, kleurblokken, knoppen).
+    //    Alleen placeholders worden vervangen — geen \n→<br> die de HTML zou breken.
+    // 2) Anders behandelen we de body als platte tekst en wrappen we hem in
+    //    de centrale Bureau Vlieland-skeleton (logo + footer uit app_settings).
+    let htmlBody: string;
 
-    // Wrap body in a simple styled email layout
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
-        </div>
-        <div style="padding: 24px; line-height: 1.6; color: #333;">
-          ${bodyHtml}
-        </div>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-        <div style="padding: 0 24px 24px; color: #666; font-size: 14px;">
-          <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
-          <p style="font-size: 12px;">
-            📧 <a href="mailto:hallo@bureauvlieland.nl" style="color: #0066cc;">hallo@bureauvlieland.nl</a> &nbsp;|&nbsp; 📞 0562 700 208
-          </p>
-        </div>
-      </div>
-    `;
+    if (typeof bodyHtml === "string" && bodyHtml.trim().length > 0) {
+      const substitutedTemplateHtml = applySubstitutions(bodyHtml);
+      // wrapEmailHtml herkent de <!--BV_WRAPPED--> marker en wrapt niet dubbel.
+      htmlBody = await wrapEmailHtml(substitutedTemplateHtml, supabase);
+    } else {
+      // Escape HTML special chars in vrij getypte body — anders kan een <
+      // het bericht verminken. Daarna \n→<br> en portal-URL klikbaar maken.
+      const escapeHtml = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const inner = escapeHtml(substitutedBody)
+        .replace(/\n/g, "<br>")
+        .replace(
+          new RegExp(portalReplacement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+          `<a href="${portalReplacement}" style="color: #1e3a5f; font-weight: 600;">${portalReplacement}</a>`,
+        );
+      htmlBody = await wrapEmailHtml(
+        `<div style="font-size:15px; line-height:1.6; color:#1a1a1a;">${inner}</div>`,
+        supabase,
+      );
+    }
 
     // Send via Mailjet
     const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
