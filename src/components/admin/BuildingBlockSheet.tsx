@@ -382,11 +382,14 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
           <Form {...form} key={formKey}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
               <Tabs defaultValue="general">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className={`grid w-full ${isEditing ? "grid-cols-5" : "grid-cols-4"}`}>
                   <TabsTrigger value="general">Algemeen</TabsTrigger>
                   <TabsTrigger value="pricing">Prijzen</TabsTrigger>
                   <TabsTrigger value="location">Locatie</TabsTrigger>
                   <TabsTrigger value="media">Media</TabsTrigger>
+                  {isEditing && (
+                    <TabsTrigger value="components">Samenstelling</TabsTrigger>
+                  )}
                 </TabsList>
                 
                 {/* General Tab */}
