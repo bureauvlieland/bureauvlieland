@@ -2,7 +2,7 @@
 
 export type BuildingBlockCategory = "outdoor" | "excursies" | "entertainment" | "locaties" | "catering" | "vervoer" | "services" | "overig" | "activiteiten";
 export type BuildingBlockType = "bureau" | "partner" | "self_arranged";
-export type BuildingBlockPriceType = "per_person" | "total" | "on_request" | "per_person_per_day";
+export type BuildingBlockPriceType = "per_person" | "total" | "on_request" | "per_person_per_day" | "tiered_total";
 export type BuildingBlockStatus = "concept" | "active" | "published";
 
 export interface BuildingBlock {
@@ -165,11 +165,24 @@ export const calculateBureauFee = (numberOfPeople: number): number => {
 // Helper function to format price for display
 export const formatBlockPrice = (block: BuildingBlock): string => {
   if (block.price_display_override) return block.price_display_override;
+
+  if (block.price_type === "tiered_total") {
+    // Lazy import-safe: read tiers directly from price_extras
+    const extras = (block.price_extras ?? {}) as Record<string, unknown>;
+    const tiers = (Array.isArray(extras.tiers) ? extras.tiers : []) as Array<{ price?: number }>;
+    const prices = tiers.map((t) => Number(t?.price)).filter((p) => Number.isFinite(p));
+    if (prices.length > 0) {
+      const min = Math.min(...prices);
+      return `vanaf € ${min.toFixed(0).replace(".", ",")}`;
+    }
+    return "Op aanvraag";
+  }
+
   if (block.price_adult === null) return "Op aanvraag";
-  
+
   const prefix = block.is_from_price ? "vanaf " : "";
   const price = `€ ${block.price_adult.toFixed(0).replace(".", ",")}`;
-  
+
   return `${prefix}${price}`;
 };
 
@@ -181,6 +194,7 @@ export const formatPriceNote = (block: BuildingBlock): string => {
     case "per_person": return "p.p.";
     case "per_person_per_day": return "p.p.p.d.";
     case "total": return "totaal";
+    case "tiered_total": return "groepstarief";
     default: return "";
   }
 };
@@ -190,9 +204,27 @@ export const calculateIndicativeTotal = (blocks: BuildingBlock[], numberOfPeople
   return blocks.reduce((total, block) => {
     // Skip self_arranged blocks (user pays externally)
     if (block.block_type === "self_arranged") return total;
+
+    // Tiered staffels: bereken o.b.v. groepsgrootte
+    if (block.price_type === "tiered_total") {
+      const extras = (block.price_extras ?? {}) as Record<string, unknown>;
+      const tiers = (Array.isArray(extras.tiers) ? extras.tiers : []) as Array<{ min_people?: number; max_people?: number; price?: number }>;
+      if (tiers.length === 0) return total;
+      const sorted = tiers
+        .filter((t) => Number.isFinite(t?.min_people) && Number.isFinite(t?.max_people) && Number.isFinite(t?.price))
+        .sort((a, b) => (a.min_people! - b.min_people!));
+      if (sorted.length === 0) return total;
+      const match = sorted.find((t) => numberOfPeople >= t.min_people! && numberOfPeople <= t.max_people!);
+      if (match) return total + Number(match.price);
+      // Boven hoogste staffel
+      const above = extras.tiers_above_max === "on_request" ? "on_request" : "highest";
+      if (above === "on_request") return total;
+      return total + Number(sorted[sorted.length - 1].price);
+    }
+
     // Skip blocks without a price
     if (block.price_adult === null) return total;
-    
+
     // Calculate based on price type
     switch (block.price_type) {
       case "per_person":
@@ -248,4 +280,5 @@ export const priceTypeLabels: Record<BuildingBlockPriceType, string> = {
   per_person_per_day: "Per persoon per dag",
   total: "Totaalprijs",
   on_request: "Op aanvraag",
+  tiered_total: "Staffel op groepsgrootte",
 };

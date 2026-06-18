@@ -4008,6 +4008,7 @@ export type Database = {
         | "total"
         | "on_request"
         | "per_person_per_day"
+        | "tiered_total"
       building_block_type: "bureau" | "partner" | "self_arranged"
     }
     CompositeTypes: {
@@ -4153,6 +4154,7 @@ export const Constants = {
         "total",
         "on_request",
         "per_person_per_day",
+        "tiered_total",
       ],
       building_block_type: ["bureau", "partner", "self_arranged"],
     },

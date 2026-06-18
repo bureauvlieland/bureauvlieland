@@ -59,6 +59,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MediaPickerDialog } from "./MediaPickerDialog";
 import { BlockComponentsEditor } from "./BlockComponentsEditor";
+import { TierEditor } from "./TierEditor";
+import { getTieredConfig, validateTiers, type PriceTier, type TiersAboveMax } from "@/lib/tieredPricing";
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
@@ -73,7 +75,7 @@ const formSchema = z.object({
   duration: z.string().optional(),
   price_adult: z.coerce.number().nullable().optional(),
   price_adult_note: z.string().optional(),
-  price_type: z.enum(["per_person", "per_person_per_day", "total", "on_request"]),
+  price_type: z.enum(["per_person", "per_person_per_day", "total", "on_request", "tiered_total"]),
   price_child: z.coerce.number().nullable().optional(),
   price_child_note: z.string().optional(),
   price_child_min_age: z.coerce.number().optional(),
@@ -112,6 +114,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [replacementBlockId, setReplacementBlockId] = useState<string>("");
+  const [tiers, setTiers] = useState<PriceTier[]>([]);
+  const [tiersAboveMax, setTiersAboveMax] = useState<TiersAboveMax>("highest");
   const isEditing = !!block;
   
   const createBlock = useCreateBuildingBlock();
@@ -223,6 +227,9 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         location_lng: block.location_lng ?? null,
         location_address: block.location_address || "",
       });
+      const cfg = getTieredConfig(block);
+      setTiers(cfg.tiers);
+      setTiersAboveMax(cfg.tiers_above_max ?? "highest");
     } else {
       form.reset({
         id: "",
@@ -261,6 +268,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         location_lng: null,
         location_address: "",
       });
+      setTiers([]);
+      setTiersAboveMax("highest");
     }
   }, [block, form]);
   
@@ -270,16 +279,33 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       const tagsArray = data.tags
         ? data.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
-      
+
+      // Merge tiered staffel data into price_extras when applicable
+      let priceExtras: Record<string, unknown> | undefined;
+      if (data.price_type === "tiered_total") {
+        const err = validateTiers(tiers);
+        if (err) {
+          toast({ title: "Staffels onjuist", description: err, variant: "destructive" });
+          return;
+        }
+        const base = (block?.price_extras ?? {}) as Record<string, unknown>;
+        priceExtras = { ...base, tiers, tiers_above_max: tiersAboveMax };
+      } else if (block?.price_extras) {
+        // Strip tier data when switching away from tiered_total
+        const { tiers: _t, tiers_above_max: _a, ...rest } = block.price_extras as Record<string, unknown>;
+        priceExtras = rest;
+      }
+
       const submitData = {
         ...data,
         tags: tagsArray,
         is_published: data.status === "published",
         is_active: data.status !== "concept",
+        ...(priceExtras !== undefined ? { price_extras: priceExtras } : {}),
       };
-      
+
       if (isEditing) {
-        await updateBlock.mutateAsync({ id: block.id, updates: submitData });
+        await updateBlock.mutateAsync({ id: block.id, updates: submitData as any });
         toast({
           title: "Bouwsteen bijgewerkt",
           description: `${data.name} is succesvol opgeslagen.`,
@@ -676,6 +702,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                             <SelectItem value="per_person">Per persoon</SelectItem>
                             <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
                             <SelectItem value="total">Totaalprijs</SelectItem>
+                            <SelectItem value="tiered_total">Staffel op groepsgrootte</SelectItem>
                             <SelectItem value="on_request">Op aanvraag</SelectItem>
                           </SelectContent>
                         </Select>
@@ -759,7 +786,22 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                   
                   <Separator />
                   
-                  {form.watch("price_type") !== "on_request" && (
+                  {form.watch("price_type") === "tiered_total" && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Staffels op groepsgrootte</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Voor activiteiten waarbij de totaalprijs voor de hele groep verandert per personenrange (bijv. Vliehors Expres).
+                      </p>
+                      <TierEditor
+                        tiers={tiers}
+                        onChange={setTiers}
+                        tiersAboveMax={tiersAboveMax}
+                        onTiersAboveMaxChange={setTiersAboveMax}
+                      />
+                    </div>
+                  )}
+
+                  {form.watch("price_type") !== "on_request" && form.watch("price_type") !== "tiered_total" && (
                     <div className="space-y-2">
                       <h4 className="font-medium">{form.watch("price_type") === "per_person" ? "Volwassenen" : "Prijs"}</h4>
                       <div className="grid grid-cols-2 gap-4">

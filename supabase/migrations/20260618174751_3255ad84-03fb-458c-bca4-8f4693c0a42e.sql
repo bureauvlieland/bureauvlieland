@@ -1,0 +1,1 @@
+ALTER TYPE public.building_block_price_type ADD VALUE IF NOT EXISTS 'tiered_total';

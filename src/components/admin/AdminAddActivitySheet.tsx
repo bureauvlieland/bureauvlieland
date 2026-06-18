@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { AlertTriangle } from "lucide-react";
+import { calculateTieredTotal, isTieredBlock } from "@/lib/tieredPricing";
 
 interface AdminAddActivitySheetProps {
   open: boolean;
@@ -122,12 +123,21 @@ export const AdminAddActivitySheet = ({
     setSelectedDayIndex(0);
     setPreferredTime("flexibel");
     setNotes("");
-    setPriceOverride(block.price_adult != null ? String(block.price_adult) : "");
-    setPriceType(
-      (block.price_type === "per_person_per_day" || block.price_type === "total")
-        ? block.price_type
-        : "per_person"
-    );
+
+    // Tiered staffel-prijs → bereken meteen het totaal voor deze groep
+    if (isTieredBlock(block)) {
+      const total = calculateTieredTotal(block, numberOfPeople);
+      setPriceOverride(total != null ? String(total) : "");
+      setPriceType("total");
+    } else {
+      setPriceOverride(block.price_adult != null ? String(block.price_adult) : "");
+      setPriceType(
+        (block.price_type === "per_person_per_day" || block.price_type === "total")
+          ? block.price_type
+          : "per_person"
+      );
+    }
+
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
     // block_type wordt afgeleid van de provider bij submit.
@@ -261,14 +271,25 @@ export const AdminAddActivitySheet = ({
             // Price multiplier semantics:
             // - per_person / per_person_per_day blocks  → override_people = qty
             // - total / on_request blocks               → quoted_price = price × qty
-            const childPriceType = (child.price_type ?? "per_person") as
-              | "per_person" | "per_person_per_day" | "total" | "on_request";
+            // - tiered_total blocks                     → quoted_price = staffel(qty) (qty is people-count)
+            const rawChildPriceType = (child.price_type ?? "per_person") as
+              | "per_person" | "per_person_per_day" | "total" | "on_request" | "tiered_total";
+            const isTieredChild = rawChildPriceType === "tiered_total";
+            const childPriceType: "per_person" | "per_person_per_day" | "total" | "on_request" =
+              isTieredChild ? "total" : (rawChildPriceType as "per_person" | "per_person_per_day" | "total" | "on_request");
             const isPerHead = childPriceType === "per_person" || childPriceType === "per_person_per_day";
 
-            const overridePeople = isPerHead ? qty : null;
-            const quotedPrice = !isPerHead && child.price_adult != null
-              ? Number(child.price_adult) * qty
-              : null;
+            let overridePeople: number | null = isPerHead ? qty : null;
+            let quotedPrice: number | null = null;
+            let adminOverride: number | null = child.price_adult ?? null;
+
+            if (isTieredChild) {
+              quotedPrice = calculateTieredTotal(child, qty);
+              adminOverride = null;
+              overridePeople = qty;
+            } else if (!isPerHead && child.price_adult != null) {
+              quotedPrice = Number(child.price_adult) * qty;
+            }
 
             return {
               request_id: requestId,
@@ -286,7 +307,7 @@ export const AdminAddActivitySheet = ({
               duration: child.duration,
               status: "pending" as const,
               item_quote_status: "concept" as const,
-              admin_price_override: child.price_adult,
+              admin_price_override: adminOverride,
               price_type: childPriceType,
               override_people: overridePeople,
               quoted_price: quotedPrice,
@@ -521,7 +542,9 @@ export const AdminAddActivitySheet = ({
                 );
               })()}
               <p className="text-xs text-muted-foreground">
-                Standaardprijs bouwsteen: €{selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}
+                {isTieredBlock(selectedBlock)
+                  ? `Staffelprijs: € ${(calculateTieredTotal(selectedBlock, numberOfPeople) ?? 0).toFixed(2)} (groep van ${numberOfPeople} pers.)`
+                  : `Standaardprijs bouwsteen: €${selectedBlock.price_adult?.toFixed(2) || "Op aanvraag"}`}
               </p>
             </div>
 
