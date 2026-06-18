@@ -500,6 +500,13 @@ export function SendProjectEmailSheet({
               value={body}
               onChange={(e) => setBody(e.target.value)}
             />
+            {templateHtmlRef.current && templatePlainRef.current !== null && (
+              <p className="text-xs text-muted-foreground">
+                {body === templatePlainRef.current
+                  ? "✓ Template-opmaak (tabellen, knoppen, kleuren) blijft behouden. Zodra je iets aanpast wordt de mail als platte tekst verstuurd."
+                  : "✏️ Je hebt de template aangepast — deze mail wordt als platte tekst verstuurd binnen de Bureau Vlieland-huisstijl."}
+              </p>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
