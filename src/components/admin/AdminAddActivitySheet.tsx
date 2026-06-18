@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { AlertTriangle } from "lucide-react";
+import { calculateTieredTotal, isTieredBlock } from "@/lib/tieredPricing";
 
 interface AdminAddActivitySheetProps {
   open: boolean;
@@ -122,12 +123,21 @@ export const AdminAddActivitySheet = ({
     setSelectedDayIndex(0);
     setPreferredTime("flexibel");
     setNotes("");
-    setPriceOverride(block.price_adult != null ? String(block.price_adult) : "");
-    setPriceType(
-      (block.price_type === "per_person_per_day" || block.price_type === "total")
-        ? block.price_type
-        : "per_person"
-    );
+
+    // Tiered staffel-prijs → bereken meteen het totaal voor deze groep
+    if (isTieredBlock(block)) {
+      const total = calculateTieredTotal(block, numberOfPeople);
+      setPriceOverride(total != null ? String(total) : "");
+      setPriceType("total");
+    } else {
+      setPriceOverride(block.price_adult != null ? String(block.price_adult) : "");
+      setPriceType(
+        (block.price_type === "per_person_per_day" || block.price_type === "total")
+          ? block.price_type
+          : "per_person"
+      );
+    }
+
     setCustomName(block.name);
     setCustomDescription(block.description || block.short_description || "");
     // block_type wordt afgeleid van de provider bij submit.
