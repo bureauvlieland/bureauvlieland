@@ -1,59 +1,72 @@
 ## Doel
 
-Een **audit-rapport** opleveren (geen code- of datawijzigingen) dat per voorbeeldprogramma en per bouwsteen laat zien of de inhoud nog spoort met wat er de afgelopen 6 maanden daadwerkelijk is verkocht en bevestigd. Op basis daarvan beslis jij later per regel of we iets aanpassen.
+Eén "hoofd"-bouwsteen (bv. *Beach Grill Experience @ Zuiver*) sleept automatisch verplichte onderdelen mee (*BBQ-huur*, *Meubilair-set* — beide Bureau Vlieland). De klant/configurator ziet één keuze; in offerte/programma verschijnen alle losse regels (transparant, correct gefactureerd, juiste partner per regel).
 
-## Scope (uit jouw antwoorden)
+## Concept
 
-- **Voorbeeldprogramma's** (`program_templates` + `program_template_items`) — 11 templates, 9 gepubliceerd, 110 items
-- **Bouwstenen** (`building_blocks`) — 135 totaal, 51 actief
-- **Referentieset**: 14 bevestigde projecten (`quote_status IN ('akkoord_ontvangen','definitief_bevestigd')`) van de laatste 6 mnd, samen 99 program_request_items
-- **Output**: rapport, nog géén wijzigingen in templates of blocks
+**Samengestelde bouwsteen** = gewone `building_block` met een lijst "components". Elke component verwijst naar een andere bouwsteen + hoeveelheidsregel.
 
-## Deliverable
+```text
+Beach Grill Experience (Zuiver)   ← hoofd
+ ├─ [verplicht]  BBQ-huur (BV)        × 1 vast
+ ├─ [verplicht]  Meubilair-set (BV)   × per 10 pers (afronden ↑)
+ └─ [optioneel]  Statafels (BV)       × per 10 pers — als upsell-chip
+```
 
-Eén Excel-bestand `/mnt/documents/audit-voorbeeldprogrammas-bouwstenen.xlsx` met 5 tabbladen, plus een korte markdown-samenvatting in de chat.
+## Datamodel
 
-### Tab 1 — Samenvatting
-Top-bevindingen, aantallen, en de "rode vlaggen": templates zonder recente match, bouwstenen die nooit verkocht zijn, bouwstenen die wél vaak verkocht worden maar inactief/concept zijn, prijsdrift > 15%.
+Nieuwe tabel `building_block_components`:
 
-### Tab 2 — Voorbeeldprogramma's (templates)
-Per template (11 rijen):
-- naam, duur, doelgroep, gepubliceerd ja/nee, indicatieve prijs p.p.
-- aantal items in template
-- "matchscore" t.o.v. bevestigde projecten: hoeveel van de items komen terug in recente bevestigde programma's
-- gemiddelde werkelijke prijs p.p. van vergelijkbare bevestigde projecten (zelfde duur/doelgroep) vs. `indicative_price_pp` → afwijking in %
-- laatst inhoudelijk bijgewerkt (`updated_at`)
-- aanbeveling-kolom (leeg, jij vult in)
+| veld | doel |
+|---|---|
+| parent_block_id | de samengestelde bouwsteen |
+| child_block_id | het meekomende onderdeel |
+| is_required | true = altijd mee, false = upsell-suggestie |
+| quantity_mode | `fixed` \| `per_group` \| `per_n_people` \| `per_people_per_day` |
+| quantity_value | numeriek — bij `per_n_people` = drempel (bv. 10 → "1 per 10 pers, naar boven") |
+| sort_order | volgorde |
+| notes | interne toelichting |
 
-### Tab 3 — Template-items detail
-Alle 110 template-items uitgeklapt, gekoppeld aan de bouwsteen waar ze naar verwijzen, met: status van die bouwsteen, hoe vaak die bouwsteen in de 14 bevestigde projecten zit, en of de bouwsteen nog actief is. Hiermee zie je per template welke regel "stof vangt".
+Op `program_request_items` nieuw nullable veld `parent_item_id (uuid)` zodat children gekoppeld blijven aan hun hoofd-regel.
 
-### Tab 4 — Bouwstenen-gebruik
-Alle 135 bouwstenen, gesorteerd op frequentie in bevestigde projecten:
-- naam, type, status (concept/actief/gepubliceerd), partner
-- # keer in bevestigde projecten (laatste 6 mnd)
-- # keer in templates
-- gemiddeld gefactureerde prijs in bevestigde projecten vs. huidige prijs op de bouwsteen → afwijking
-- laatst bijgewerkt
-- vlag: "veelgebruikt maar inactief", "in template maar nooit verkocht", "prijsdrift", "weeskind" (nergens gebruikt)
+`required_with` / `suggested_addons` jsonb blijft voor catering-wizard; geen migratie nu.
 
-### Tab 5 — Bevestigde projecten (referentie)
-De 14 projecten met datum, doelgroep, # gasten, duur, totaalwaarde, en de items die erin zaten. Puur als bron-onderbouwing.
+## Gedragsregels
 
-## Aanpak (technisch)
+1. **Toevoegen hoofd-bouwsteen** (configurator + admin programmabouwer):
+   - alle `is_required` components worden automatisch als losse `program_request_items` toegevoegd
+   - elk child houdt eigen `provider_id` / `block_type` (BBQ blijft "bureau", activiteit blijft "partner")
+   - hoeveelheid berekend uit `quantity_mode` × groepsgrootte / duur, opgeslagen in `override_people` of `quoted_price`
+   - `parent_item_id` verwijst naar hoofd-regel
+2. **Optionele components** verschijnen als **upsell-chip** ("+ Statafels toevoegen — €X") direct onder het hoofd-item, zowel in configurator als admin. Eén klik → toegevoegd als child-regel.
+3. **Verwijderen hoofd-item** → alle gekoppelde children mee verwijderd (met bevestiging "X onderdelen worden ook verwijderd").
+4. **Personen-wijziging** op project: child-regels met `per_n_people` / `per_people_per_day` herberekenen automatisch (zelfde hook als bestaande prijsherberekening).
+5. **Prijzen**: hoofd en children behouden eigen prijs; totaal = som. Geen dubbele facturering. `calculateIndicativeTotal` telt hoofd + verplichte children mee in templates/configurator.
 
-1. Read-only queries op `program_templates`, `program_template_items`, `building_blocks`, `program_requests` (filter op `quote_status` + 6mnd venster), `program_request_items`.
-2. Matching tussen bevestigde items en bouwstenen via `building_block_id` (waar aanwezig) + fallback op naam.
-3. Prijsdrift: vergelijk bouwsteen-prijs / template `indicative_price_pp` met gemiddelde `quoted_price` / `price_per_person` van bevestigde items.
-4. Excel gegenereerd via openpyxl conform de xlsx-skill (blauw = invoer/feit, zwart = berekening, prijzen incl. BTW conform projectregel).
-5. Geen migrations, geen edge-functions, geen UI-aanpassingen.
+## Admin UI (AdminBuildingBlocks → edit-sheet)
 
-## Wat dit rapport NIET doet
+Nieuw tabblad **"Samenstelling"**:
+- Lijst components (drag-sort)
+- "+ Component toevoegen" → zoekt actieve bouwstenen
+- Per regel: verplicht/optioneel toggle • hoeveelheidsmodus dropdown • value-input (bij `per_n_people` label "1 per … personen") • notitie
+- Hard guard: geen recursie — child mag zelf geen components hebben (max 1 niveau)
+- Op bouwsteen-overzicht: badge "🧩 samengesteld (n)" op parents
 
-- Templates of bouwstenen aanpassen — dat doen we pas in een vervolgronde, per regel die jij markeert
-- Partners of prijzen in de database wijzigen
-- Iets publiceren of e-mailen
+## Programma-detail (admin + customer portal + partner portal)
 
-## Vervolgstap (na jouw review)
+- Child-items visueel ingesprongen onder parent + badge "onderdeel van: *Beach Grill Experience*"
+- Eén "verwijder"-knop op parent → hele groep weg
+- Upsell-chip onder parent zolang er nog niet-toegevoegde optionele components zijn
+- Partner ziet alleen z'n eigen regel (RLS blijft ongewijzigd; elke regel houdt eigen `provider_id`)
 
-Jij markeert in kolom "aanbeveling" wat aangepast moet worden (tekst herschrijven, prijs bijstellen, bouwsteen op inactief, item uit template halen, etc.). Daarna doen we die wijzigingen in een aparte build-ronde, eventueel met een admin-bulk-edit-scherm als de lijst lang wordt.
+## Migratie & seed
+
+- Migration: `building_block_components` (incl. GRANTs + RLS: admin full, `authenticated`/`anon` select via join op `building_blocks.status='published'`), kolom `parent_item_id` op `program_request_items` (+ index), update-trigger
+- Geen backfill
+- Seed van *Beach Grill Experience* doe je zelf via de nieuwe admin-UI
+
+## Out of scope (nu niet)
+
+- Recursie dieper dan 1 niveau
+- Bundle-korting / vaste totaalprijs i.p.v. som (kan later via `price_display_override` op parent)
+- Migratie bestaande `required_with` jsonb
