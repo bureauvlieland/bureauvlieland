@@ -315,6 +315,7 @@ export function AddPurchaseInvoiceDialog({
       const { data, error } = await supabase
         .from("program_requests")
         .select("id, reference_number, customer_name, customer_company, created_at, status")
+        .not("status", "in", "(cancelled,deleted)")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -1262,7 +1263,7 @@ export function AddPurchaseInvoiceDialog({
                               />
                               <div>
                                 <div className="font-medium">{p.reference_number || "Geen ref"}</div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground [[data-selected=true]_&]:text-accent-foreground/90">
                                   {p.customer_company || p.customer_name}
                                 </div>
                               </div>
