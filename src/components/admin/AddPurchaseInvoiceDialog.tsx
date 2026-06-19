@@ -1263,7 +1263,7 @@ export function AddPurchaseInvoiceDialog({
                               />
                               <div>
                                 <div className="font-medium">{p.reference_number || "Geen ref"}</div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground group-data-[selected=true]:text-accent-foreground">
                                   {p.customer_company || p.customer_name}
                                 </div>
                               </div>
