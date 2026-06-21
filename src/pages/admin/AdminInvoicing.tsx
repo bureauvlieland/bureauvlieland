@@ -80,6 +80,7 @@ interface ProgramRequestWithItems {
     description: string | null;
     status: string | null;
     forwarded_to_accounting_at: string | null;
+    pdf_path: string | null;
   }[];
   selected_accommodation_base_total?: number | null;
   selected_accommodation_vat_rate?: number | null;
