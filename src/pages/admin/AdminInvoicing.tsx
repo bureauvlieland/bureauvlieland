@@ -28,7 +28,8 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
-import { CheckCircle2, Mail, Hotel } from "lucide-react";
+import { CheckCircle2, Mail, Hotel, Download } from "lucide-react";
+import { toast } from "sonner";
 import { CompletionActions } from "@/components/admin/CompletionActions";
 
 interface AccommodationExtraForInvoicing {
@@ -80,6 +81,7 @@ interface ProgramRequestWithItems {
     description: string | null;
     status: string | null;
     forwarded_to_accounting_at: string | null;
+    pdf_path: string | null;
   }[];
   selected_accommodation_base_total?: number | null;
   selected_accommodation_vat_rate?: number | null;
@@ -205,7 +207,7 @@ const AdminInvoicing = () => {
       // Get invoices for these requests
       const { data: invoicesData, error: invoicesError } = await supabase
         .from("bureau_invoices")
-        .select("id, request_id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description, status, forwarded_to_accounting_at")
+        .select("id, request_id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description, status, forwarded_to_accounting_at, pdf_path")
         .in("request_id", requestIds);
 
       if (invoicesError) throw invoicesError;
@@ -548,21 +550,56 @@ const AdminInvoicing = () => {
                         </Badge>
                       )}
                     </div>
-                    {!isForwarded && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() =>
-                          navigate(
-                            `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
-                          )
-                        }
-                      >
-                        <Mail className="h-3.5 w-3.5" />
-                        Doorsturen naar boekhouding
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {inv.pdf_path ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-2"
+                          onClick={async () => {
+                            const { data, error } = await supabase.storage
+                              .from("bureau-invoices")
+                              .createSignedUrl(inv.pdf_path!, 300);
+                            if (error || !data?.signedUrl) {
+                              toast.error("Kon PDF niet ophalen");
+                              return;
+                            }
+                            window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          PDF
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-2 text-muted-foreground"
+                          title="Origineel PDF niet gearchiveerd — open de factuur om opnieuw te genereren"
+                          onClick={() =>
+                            navigate(`/admin/projecten/${request.id}/factuur?invoiceId=${inv.id}`)
+                          }
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          PDF genereren
+                        </Button>
+                      )}
+                      {!isForwarded && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() =>
+                            navigate(
+                              `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
+                            )
+                          }
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          Doorsturen naar boekhouding
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

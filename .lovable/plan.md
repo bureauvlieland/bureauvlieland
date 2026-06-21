@@ -1,39 +1,41 @@
-## Wat er nu mis gaat
 
-Wanneer je in een project op **"Stuur e-mail"** klikt en een template kiest, gebeurt het volgende:
+## Wat er nu écht is gebeurd
 
-1. `render-email-template` haalt de template HTML op (met tabellen, gekleurde blokken, knoppen).
-2. Diezelfde edge function **strip de HTML naar platte tekst** voordat hij het in het tekstveld zet — zodat je nog kunt bijwerken.
-3. Bij verzenden zet `send-project-email` elke `\n` om in `<br>` en wikkelt het in een mini-header ("Bureau Vlieland" donkerblauwe balk). Resultaat = de kale stapel labels/waardes uit je screenshot.
+Ik heb in de database (`bureau_invoices` + `email_log`) gekeken naar project **BV-2605-0001**:
 
-Alle andere transactionele mails (partner-bevestiging via portaal, offertes, notificaties) gaan **wél** rechtstreeks als HTML via `getRenderedTemplate` en zijn dus niet aangetast. Dit probleem is geïsoleerd in de admin-handmatige flow (`SendProjectEmailSheet` → `send-project-email`).
+| Factuur | Bedrag incl. BTW | Status | Verstuurd |
+|---|---|---|---|
+| FV-BV-2605-0001-001 | € 1.524,75 | forwarded | eerder |
+| FV-BV-2605-0001-002 | € 1.932,15 | pending | 19-jun 14:09 naar `administratie@houtmolen.nl` |
 
-## Oplossing
+Het e-maillog van -002 bevat letterlijk `amountInclVat: 1932.15` en onderwerp `Factuur FV-BV-2605-0001-002 – Bureau Vlieland`. Dat is het juiste **delta**-bedrag (projecttotaal na nacalculatie minus de al gefactureerde € 1.524,75). De klant heeft dus de correcte factuur ontvangen — wat je nu in de UI als afwijkend totaal ziet is geen wijziging in wat verstuurd is, maar een display-issue in de preview.
 
-Behoud de oorspronkelijke template-HTML en stuur die ongewijzigd mee als de admin de body **niet** heeft aangepast. Als de admin wel typt, blijft het huidige platte-tekst-pad bestaan, maar in een nettere wrapper.
+Maar: de **PDF zelf wordt nergens opgeslagen**. Hij wordt client-side gerenderd (`renderInvoicePdf`), als base64 doorgestuurd naar `send-bureau-invoice-to-customer`, en daarna weggegooid. Daarom kun je 'm nu niet meer downloaden, en daarom kunnen we ook niet 100% bewijzen wat er in de PDF stond (alleen het bedrag uit het log).
 
-### Stap 1 — `render-email-template`
-Retourneert al `{ subject, body: plain, html }`. Geen wijziging nodig.
+## Wat ik ga bouwen
 
-### Stap 2 — `SendProjectEmailSheet`
-- Bewaar bij templatekeuze de geretourneerde `html` + de oorspronkelijke `plain` body in refs.
-- Bij verzenden: als het tekstveld nog gelijk is aan de geladen `plain` → stuur `bodyHtml: <originele html>` mee. Zo niet, stuur alleen `body` (zoals nu).
-- Visuele hint onder het tekstveld: *"Template-opmaak (tabellen, knoppen, kleuren) blijft behouden zolang je de inhoud niet aanpast. Bij wijzigingen wordt het als platte tekst verzonden."*
+### 1. Storage-bucket voor bureau-facturen
+- Nieuwe private bucket `bureau-invoices` (alleen admin lezen/schrijven via service-role + signed URLs).
+- Kolom `pdf_path text` op `bureau_invoices` om het storage-pad vast te leggen.
 
-### Stap 3 — `send-project-email`
-- Accepteer optionele `bodyHtml` parameter.
-- Als `bodyHtml` aanwezig is:
-  - Pas alleen de placeholder-substituties toe (`{{portal_url}}`, `{{customer_name}}` etc.).
-  - Verstuur die HTML rechtstreeks via Mailjet (geen `\n→<br>` transform, geen dubbele Bureau Vlieland header — de template heeft al een eigen layout-wrapper via `wrapEmailHtml`).
-- Anders: huidig gedrag voor vrij getypte berichten, maar de mini-wrapper vervangen door de centrale `wrapEmailHtml` skeleton zodat zelfgeschreven mails dezelfde branding (logo + footer uit `app_settings`) hebben als de rest van het systeem.
+### 2. PDF archiveren bij verzenden
+- In `SendBureauInvoiceToCustomerDialog`: na succesvolle send de PDF-blob ook uploaden naar `bureau-invoices/{request_id}/{invoice_number}.pdf` en `pdf_path` op de net-geregistreerde `bureau_invoices`-rij zetten.
+- Idem in elke andere plek die `send-bureau-invoice-to-customer` aanroept (check `RegisterBureauInvoiceDialog` en het preview-pad).
+- Pad ook loggen in `email_log.metadata.pdf_path` zodat de archiefkoppeling 1-op-1 traceerbaar is.
 
-### Stap 4 — Verificatie
-Geen migratie nodig. Verifiëren door:
-1. Project openen → e-mail sturen met template "Activiteit bevestigd" zonder aanpassingen → checken in test-inbox dat de groene status-tegel, knop en branding intact zijn.
-2. Zelfde flow, maar één zin in het tekstveld wijzigen → mail komt aan als platte tekst maar mét logo-header en footer.
+### 3. Download-knop in facturatieoverzicht
+- In `AdminInvoicing.tsx` bij elke rij onder "Geregistreerde facturen" een knop **"Download PDF"** met `Download`-icoon.
+- Bij klik: edge-function (of inline call) maakt een signed URL (geldig 5 min) voor `pdf_path` en opent die in een nieuw tabblad.
+- Voor facturen zónder `pdf_path` (alle bestaande, inclusief jouw -001 en -002): knop met label **"PDF opnieuw genereren"** + tooltip "Origineel niet gearchiveerd — totalen kunnen sinds verzending zijn aangepast". Die klik render de PDF opnieuw via `renderInvoicePdf` met de huidige projectdata en archiveert 'm meteen.
 
-## Buiten scope
+### 4. Wat te doen met -002
+- Voor jouw geruststelling: de mail die uitging vermeldde € 1.932,15 (exact het delta-bedrag). Ik laat dat nogmaals zien in de UI via een tooltip op de factuurregel met "verstuurd op 19-jun-2026 · € 1.932,15".
+- Wil je 100% zekerheid over de PDF-inhoud: na implementatie kun je daar "PDF opnieuw genereren" klikken. Dat geeft de huidige opbouw — als de totalen exact 1.932,15 opleveren weet je dat de oorspronkelijke PDF gelijk was.
 
-- Geen WYSIWYG-editor in het tekstveld (zou de UX flink veranderen en is niet nodig om dit probleem op te lossen).
-- Geen aanpassingen aan andere transactionele mailpaden — die zijn al correct.
-- Templates zelf worden niet aangepast.
+### Technische details
+- Migratie: `ALTER TABLE bureau_invoices ADD COLUMN pdf_path text;` + bucket-creatie + RLS (alleen admins via `has_role`).
+- Geen wijziging aan de edge function-payload — upload gebeurt in de browser ná `send`-call (service-role niet nodig, admin heeft via RLS write-access).
+- Bestandsnaamconventie: `{request_id}/{invoice_number}.pdf` (zo overschrijft regenerate netjes).
+- Geen breaking changes voor bestaande flows.
+
+Wil je dat ik dit zo bouw, of wil je liever dat de PDF server-side wordt gegenereerd (sterker bewijs, maar veel grotere ingreep — `renderInvoicePdf` draait nu op `pdf-lib` in de browser)?
