@@ -168,6 +168,29 @@ export const SendBureauInvoiceToCustomerDialog = ({
 
       if (fnError) throw fnError;
 
+      // 4. Archive PDF in storage so it can be re-downloaded later
+      if (invoiceId) {
+        try {
+          const pdfPath = `${requestId}/${invoiceNumber}.pdf`;
+          const { error: uploadErr } = await supabase.storage
+            .from("bureau-invoices")
+            .upload(pdfPath, blob, {
+              contentType: "application/pdf",
+              upsert: true,
+            });
+          if (uploadErr) {
+            console.error("PDF archive upload failed:", uploadErr);
+          } else {
+            await supabase
+              .from("bureau_invoices")
+              .update({ pdf_path: pdfPath })
+              .eq("id", invoiceId);
+          }
+        } catch (archiveErr) {
+          console.error("PDF archive error:", archiveErr);
+        }
+      }
+
       toast.success(`Factuur verstuurd naar ${recipient}`);
       onSent?.();
       onClose();
