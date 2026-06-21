@@ -550,21 +550,56 @@ const AdminInvoicing = () => {
                         </Badge>
                       )}
                     </div>
-                    {!isForwarded && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() =>
-                          navigate(
-                            `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
-                          )
-                        }
-                      >
-                        <Mail className="h-3.5 w-3.5" />
-                        Doorsturen naar boekhouding
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {inv.pdf_path ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-2"
+                          onClick={async () => {
+                            const { data, error } = await supabase.storage
+                              .from("bureau-invoices")
+                              .createSignedUrl(inv.pdf_path!, 300);
+                            if (error || !data?.signedUrl) {
+                              toast.error("Kon PDF niet ophalen");
+                              return;
+                            }
+                            window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          PDF
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-2 text-muted-foreground"
+                          title="Origineel PDF niet gearchiveerd — open de factuur om opnieuw te genereren"
+                          onClick={() =>
+                            navigate(`/admin/projecten/${request.id}/factuur?invoiceId=${inv.id}`)
+                          }
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          PDF genereren
+                        </Button>
+                      )}
+                      {!isForwarded && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() =>
+                            navigate(
+                              `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
+                            )
+                          }
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          Doorsturen naar boekhouding
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
