@@ -28,7 +28,8 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
-import { CheckCircle2, Mail, Hotel } from "lucide-react";
+import { CheckCircle2, Mail, Hotel, Download } from "lucide-react";
+import { toast } from "sonner";
 import { CompletionActions } from "@/components/admin/CompletionActions";
 
 interface AccommodationExtraForInvoicing {
