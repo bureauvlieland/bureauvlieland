@@ -364,6 +364,7 @@ const CustomerProgram = () => {
   };
 
   const viewProps = {
+    onNavigate: handleNavigate,
     program: program as any,
     invoicingMode,
     history,
