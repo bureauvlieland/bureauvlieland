@@ -179,12 +179,6 @@ export const ProgramOverviewCard = ({
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                {isMaatwerk
-                  ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
-                  : "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
-                }
-              </p>
               
               {/* Program description */}
               {programDescription && programDescription.trim().toLowerCase() !== "niet_gespecificeerd" && (
