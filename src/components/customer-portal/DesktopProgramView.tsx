@@ -16,9 +16,9 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
-import { GuestDetailsCard } from "./GuestDetailsCard";
 import { CompactBillingSection } from "./CompactBillingSection";
 import { PracticalView } from "./PracticalView";
+
 import { AcceptView } from "./AcceptView";
 import { TabHeader } from "./TabHeader";
 import { buildTabHeader } from "./tabHeaderConfig";
