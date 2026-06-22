@@ -315,6 +315,9 @@ Deno.serve(async (req) => {
           if (activeQuoteStatuses.includes(q.status)) return true;
           return new Date(q.updated_at) > cutoffDate;
         });
+
+        // Resolve invoicing mode from linked program and redact customer contact for bureau_central
+        const linkedProgramIds = [
           ...new Set(
             accommodationQuotes
               .map((q) => q.accommodation_requests?.linked_program_id)
