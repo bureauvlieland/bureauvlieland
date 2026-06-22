@@ -170,7 +170,7 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   // === 6. Open todo's met due_date verstreken ===
   const { data: overdueTodos } = await supabase
     .from("admin_todos")
-    .select("id, title, due_date, priority, related_request_id")
+    .select("id, title, due_date, priority, related_request_id, program_requests:related_request_id(reference_number, customer_name, customer_company)")
     .in("status", ["todo", "in_progress"])
     .not("due_date", "is", null)
     .lte("due_date", today)
@@ -179,11 +179,15 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   (overdueTodos ?? []).forEach((t: any) => {
     const age = Math.floor((now.getTime() - new Date(t.due_date).getTime()) / (24 * 60 * 60 * 1000));
     if (age >= 0) {
+      const projectLabel = t.program_requests?.customer_company || t.program_requests?.customer_name;
+      const ref = t.program_requests?.reference_number;
+      const projectSuffix = ref ? ` — project ${ref}${projectLabel ? ` (${projectLabel})` : ""}` : "";
       signals.push({
         category: "todo_overdue",
         entity_type: "admin_todo",
         entity_id: t.id,
-        summary: `Todo verstreken (${age} dgn): ${t.title}`,
+        reference: ref ?? undefined,
+        summary: `Todo verstreken (${age} dgn): ${t.title}${projectSuffix}`,
         age_days: age,
         deeplink: t.related_request_id ? deeplinkProject(t.related_request_id) : "/admin/werkbank",
       });
