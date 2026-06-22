@@ -511,6 +511,21 @@ export const DesktopProgramView = ({
               </Card>
             </div>
 
+            <ProgramIntroCard
+              programType={program.origin}
+              quoteStatus={program.quote_status}
+              quoteValidUntil={program.quote_valid_until}
+              termsAcceptedAt={program.terms_accepted_at}
+              itemCount={program.items.filter(i => i.status !== "cancelled").length}
+              isMaatwerkEmpty={isMaatwerkProject(program) && program.items.length === 0}
+              onAcceptQuoteProposal={onAcceptQuoteProposal}
+              hasUnapprovedItems={hasUnapprovedItems}
+              programPublishedAt={program.program_published_at}
+              allConfirmed={allConfirmed}
+              quotePdfUrl={(program as any).quote_pdf_url}
+            />
+
+
             {/* Floating changes bar */}
             {hasChanges && isPublished && (
               <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg">
