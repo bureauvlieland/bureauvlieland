@@ -53,6 +53,41 @@ export const useProgramStatus = (
   const isPreApproval = !!program.quote_status &&
     ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
 
+  // Items waar de klant NU akkoord op kan geven.
+  // Pending items = wacht op partner — daar kan de klant niets aan doen.
+  const customerActionableItems = useMemo(
+    () =>
+      program.items.filter(
+        (i) =>
+          i.block_type !== "self_arranged" &&
+          i.status !== "cancelled" &&
+          (i.status === "confirmed" || i.status === "alternative") &&
+          !i.customer_approved_at,
+      ),
+    [program.items],
+  );
+  const proposalActionsCount = customerActionableItems.length;
+
+  // Totaal te accorderen onderdelen (noemer voor "x van y").
+  const customerApprovableTotal = useMemo(
+    () =>
+      program.items.filter(
+        (i) =>
+          i.block_type !== "self_arranged" &&
+          i.status !== "cancelled" &&
+          (i.status === "confirmed" || i.status === "alternative"),
+      ).length,
+    [program.items],
+  );
+  const customerApprovedCount = customerApprovableTotal - proposalActionsCount;
+
+  const alternativeActionsCount = customerActionableItems.filter(
+    (i) => i.status === "alternative",
+  ).length;
+
+  // Single source of truth voor "wat moet de klant nu doen op deze tab".
+  const customerActionsCount = proposalActionsCount;
+
   const totalCost = useMemo(() => {
     let total = 0;
     program.items.forEach(item => {
@@ -77,5 +112,11 @@ export const useProgramStatus = (
     isQuoteAwaitingApproval,
     isPreApproval,
     totalCost,
+    // Customer-action telstaten — single source of truth voor badges, strook en sidebar.
+    customerActionsCount,
+    proposalActionsCount,
+    alternativeActionsCount,
+    customerApprovedCount,
+    customerApprovableTotal,
   };
 };

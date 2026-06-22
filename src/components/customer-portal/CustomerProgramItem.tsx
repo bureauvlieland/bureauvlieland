@@ -150,7 +150,7 @@ export const CustomerProgramItem = ({
                     <MicroPill tone="emerald">Bevestigd</MicroPill>
                   ) : null
                 ) : item.status === "pending" ? (
-                  <MicroPill tone="amber">Pending</MicroPill>
+                  <MicroPill tone="amber">Wacht op partner</MicroPill>
                 ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
                   <MicroPill tone="emerald">Bevestigd</MicroPill>
                 ) : (
@@ -317,13 +317,13 @@ export const CustomerProgramItem = ({
 
           {/* Action hint for items needing customer approval */}
           {needsCustomerAction && !readOnly && !priceChangeNeedsAttention && (
-            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm text-blue-700 dark:text-blue-300">
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
                 {item.status === "alternative" ? (
-                  <>De aanbieder heeft een alternatief voorstel gedaan. Klik op <strong>'Akkoord'</strong> om dit voorstel te bevestigen.</>
+                  <>De aanbieder stelt een <strong>aanpassing</strong> voor op tijd of prijs. Bekijk de details en geef akkoord, of stel via <em>Andere tijd</em> een alternatief voor.</>
                 ) : (
-                  <>Dit onderdeel wacht op uw bevestiging. Klik op <strong>'Akkoord'</strong> om het definitief op te nemen in uw programma.</>
+                  <>Dit onderdeel hoort bij uw voorstel. Geef akkoord zodat wij beschikbaarheid en definitieve prijs bij de aanbieder kunnen opvragen.</>
                 )}
               </span>
             </div>
@@ -383,7 +383,10 @@ export const CustomerProgramItem = ({
 
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
-            <div className="mt-3 flex flex-wrap gap-2 justify-end">
+            <div className={cn(
+              "mt-3 flex flex-wrap gap-2",
+              needsCustomerAction ? "justify-stretch" : "justify-end",
+            )}>
               {/* Per-item akkoord — voor zowel quote- als legacy-mode */}
               {needsCustomerAction && (isQuoteMode ? !!onApproveQuoteItem : !!onAccept) && (
                 <Button
@@ -399,15 +402,19 @@ export const CustomerProgramItem = ({
                     }
                   }}
                   disabled={localApproving || localAccepting || isAccepting}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                  className="flex-1 min-w-[220px] bg-green-600 hover:bg-green-700 text-white font-semibold ring-2 ring-green-400/40"
                 >
                   {(localApproving || localAccepting) ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <Check className="h-4 w-4 mr-1.5" />
+                    <Check className="h-4 w-4 mr-2" />
                   )}
-                  {priceChangeNeedsAttention ? "Akkoord met nieuwe prijs" : "Akkoord"}
+                  {priceChangeNeedsAttention
+                    ? "Akkoord met nieuwe prijs"
+                    : item.status === "alternative"
+                      ? "Ik ga akkoord met deze aanpassing"
+                      : "Ik ga akkoord met dit onderdeel"}
                 </Button>
               )}
 

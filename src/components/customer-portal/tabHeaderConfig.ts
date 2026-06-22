@@ -67,26 +67,31 @@ export function buildTabHeader({
         (statusSummary.counter_proposed || 0) === 0;
       const allApproved =
         customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
+      // Hoeveel onderdelen wachten nu écht op de klant?
+      const customerActionsOpen = Math.max(0, customerApprovableCount - customerApprovedCount);
       const badge =
         statusSummary.total === 0
           ? { label: "In voorbereiding", variant: "outline" as const }
           : allApproved
-            ? { label: "Goedgekeurd", variant: "default" as const }
-            : allConfirmed
-              ? { label: "Klaar voor akkoord", variant: "secondary" as const }
-              : statusSummary.alternative > 0
-                ? { label: "Actie vereist", variant: "destructive" as const }
-                : {
-                    label: `${statusSummary.confirmed}/${statusSummary.total} bevestigd`,
-                    variant: "outline" as const,
-                  };
+            ? { label: "Akkoord gegeven", variant: "default" as const }
+            : customerActionsOpen > 0
+              ? {
+                  // Amber 'secondary' — geen rood alarm, wél duidelijk dat u aan zet bent.
+                  label: `${customerActionsOpen} goed te keuren`,
+                  variant: "secondary" as const,
+                }
+              : allConfirmed
+                ? { label: "Klaar voor akkoord", variant: "secondary" as const }
+                : { label: "Wacht op partners", variant: "outline" as const };
       return {
         icon: Calendar,
         title: "Uw programma",
         subtitle:
           statusSummary.total === 0
             ? "Bureau Vlieland stelt uw programma samen. Zodra het klaarstaat, vindt u het hier terug."
-            : "Bekijk de onderdelen, geef feedback en keur per onderdeel goed.",
+            : customerActionsOpen > 0
+              ? "Bekijk elk onderdeel en geef akkoord. Daarna vragen wij bij de aanbieders beschikbaarheid en definitieve prijzen op."
+              : "Wij wachten op de aanbieders. Zodra zij reageren laten we het u weten.",
         badge,
       };
     }

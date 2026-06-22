@@ -485,7 +485,15 @@ const CustomerProgram = () => {
       {(() => null)()}
       {(() => {
         const termsAccepted = !!(program as any).terms_accepted_at;
-        const actionCount = statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0);
+        // Tellen alleen de onderdelen waar de klant NU akkoord op kan geven.
+        // 'pending' = wacht op partner; geen klantactie, dus niet meetellen.
+        const customerActionCount = program.items.filter(
+          (i: any) =>
+            i.block_type !== "self_arranged" &&
+            i.status !== "cancelled" &&
+            (i.status === "confirmed" || i.status === "alternative") &&
+            !i.customer_approved_at,
+        ).length;
         const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
           && !accommodationQuotes.some((q) => q.status === "selected");
         const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");
@@ -500,12 +508,14 @@ const CustomerProgram = () => {
           && (statusSummary.counter_proposed || 0) === 0;
         const badges = {
           accommodation: hasNewAccommodationQuote
-            ? { label: "Nieuw", variant: "destructive" as const }
+            ? { label: "Nieuw", variant: "default" as const }
             : hasSelectedAccommodation
             ? { label: "✓", variant: "secondary" as const }
             : undefined,
-          program: actionCount > 0
-            ? { label: `${actionCount} actie${actionCount > 1 ? "s" : ""}`, variant: "destructive" as const }
+          // Amber 'default' i.p.v. rood 'destructive': klantactie is geen alarm.
+          // Het programma is gewoon klaar om te beoordelen.
+          program: customerActionCount > 0
+            ? { label: `${customerActionCount} goed te keuren`, variant: "default" as const }
             : undefined,
           practical: guestIncomplete
             ? { label: "Aanvullen", variant: "outline" as const }
@@ -513,7 +523,7 @@ const CustomerProgram = () => {
           accept: termsAccepted
             ? { label: "✓", variant: "secondary" as const }
             : allConfirmed
-            ? { label: "Klaar", variant: "destructive" as const }
+            ? { label: "Klaar", variant: "default" as const }
             : undefined,
         };
         return (
@@ -628,9 +638,13 @@ const CustomerProgram = () => {
           }
           onChange={(v) => handleNavigate(v)}
           badges={{
-            program:
-              statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0) >
-              0,
+            program: program.items.some(
+              (i: any) =>
+                i.block_type !== "self_arranged" &&
+                i.status !== "cancelled" &&
+                (i.status === "confirmed" || i.status === "alternative") &&
+                !i.customer_approved_at,
+            ),
           }}
         />
       )}

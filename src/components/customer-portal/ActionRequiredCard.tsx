@@ -32,6 +32,10 @@ interface ActionRequiredCardProps {
   programPublishedAt?: string | null;
   guestDetailsIncomplete?: boolean;
   onOpenGuestDetails?: () => void;
+  /** Aantal onderdelen waarop de klant nu akkoord moet geven (incl. alternatieven). */
+  customerActionsCount?: number;
+  /** Aantal alternatieven binnen die acties — voor copy. */
+  alternativeActionsCount?: number;
   className?: string;
 }
 
@@ -63,25 +67,37 @@ export const ActionRequiredCard = ({
   programPublishedAt,
   guestDetailsIncomplete,
   onOpenGuestDetails,
+  customerActionsCount = 0,
+  alternativeActionsCount = 0,
   className,
 }: ActionRequiredCardProps) => {
   const isPublished = !!programPublishedAt;
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   const isQuotePreApproval = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming", "offerte_verstuurd"].includes(quoteStatus);
   const isQuoteBeingPrepared = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
-  // Note: `programType` is treated as the project's `origin` (Fase 5). Same string values.
 
   const getAction = (): ActionConfig | null => {
-    // Priority 1: Alternative proposals need customer action
-    if (statusSummary.alternative > 0) {
+    // Priority 0: Klantactie — onderdelen wachten op uw akkoord. Bovenaan de stack.
+    if (customerActionsCount > 0) {
+      const onlyAlternatives = alternativeActionsCount === customerActionsCount;
+      const someAlternatives = alternativeActionsCount > 0;
+      const label =
+        customerActionsCount === 1
+          ? "Eén onderdeel wacht op uw akkoord"
+          : `${customerActionsCount} onderdelen wachten op uw akkoord`;
+      const description = onlyAlternatives
+        ? "Een aanbieder stelt een aanpassing voor. Bekijk per onderdeel het voorstel en geef akkoord, of stel een andere tijd voor."
+        : someAlternatives
+          ? `Bekijk per onderdeel de details en geef akkoord. Bij ${alternativeActionsCount} onderdeel${alternativeActionsCount > 1 ? "en" : ""} stelt de aanbieder een aanpassing voor. Daarna vragen wij definitieve beschikbaarheid en prijzen op.`
+          : "Bekijk per onderdeel de details en geef akkoord. Daarna vragen wij bij de aanbieders beschikbaarheid en definitieve prijzen op. Uw boeking is pas definitief als alle partners én u akkoord zijn.";
       return {
         type: "alternative",
-        title: "Alternatief voorstel ontvangen",
-        description: `${statusSummary.alternative === 1 ? "Een aanbieder heeft" : `${statusSummary.alternative} aanbieders hebben`} een alternatief voorgesteld. Bekijk het voorstel en geef akkoord of stel een andere tijd voor.`,
+        title: label,
+        description,
         icon: <AlertCircle className="h-5 w-5" />,
         variant: "warning",
         cta: {
-          label: "Bekijk voorstel",
+          label: customerActionsCount === 1 ? "Naar onderdeel" : "Naar onderdelen",
           onClick: () => {
             const programSection = document.getElementById("program");
             programSection?.scrollIntoView({ behavior: "smooth" });
@@ -90,7 +106,7 @@ export const ActionRequiredCard = ({
       };
     }
 
-    // Priority 2: Counter proposals waiting for partner response
+    // Counter proposals waiting for partner response
     if ((statusSummary.counter_proposed || 0) > 0) {
       return {
         type: "counter_proposed",

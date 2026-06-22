@@ -196,6 +196,9 @@ export const DesktopProgramView = ({
     isQuoteAwaitingApproval,
     isPreApproval,
     totalCost,
+    customerActionsCount,
+    customerApprovedCount,
+    customerApprovableTotal: customerApprovableCount,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -216,12 +219,6 @@ export const DesktopProgramView = ({
       : accommodation
         ? "requested"
         : "none";
-  const customerApprovedCount = program.items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at,
-  ).length;
-  const customerApprovableCount = program.items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled",
-  ).length;
 
   const handleStepAction = (stepId: StepId) => {
     if (stepId === "lodging") {
@@ -296,6 +293,8 @@ export const DesktopProgramView = ({
               programType={program.origin}
               quoteStatus={program.quote_status}
               programPublishedAt={program.program_published_at}
+              customerActionsCount={customerActionsCount}
+              alternativeActionsCount={statusSummary.alternative}
               guestDetailsIncomplete={
                 !!guestDetails &&
                 (!guestDetails.guest_names ||
@@ -387,16 +386,19 @@ export const DesktopProgramView = ({
                         </Tooltip>
                       </TooltipProvider>
                       {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
-                      {customerApprovableCount > customerApprovedCount && onBulkApproveQuoteItems && (
+                      {customerActionsCount > 0 && onBulkApproveQuoteItems && (
                         <Button
                           size="sm"
                           variant="default"
+                          className="bg-green-600 hover:bg-green-700 text-white"
                           onClick={async () => {
                             await onBulkApproveQuoteItems();
                           }}
                         >
                           <ThumbsUp className="h-4 w-4 mr-1" />
-                          Alle onderdelen goedkeuren ({customerApprovableCount - customerApprovedCount})
+                          {customerActionsCount === 1
+                            ? "Geef akkoord op dit onderdeel"
+                            : `Geef akkoord op alle ${customerActionsCount} onderdelen`}
                         </Button>
                       )}
                       {!termsAccepted && isPublished && (
