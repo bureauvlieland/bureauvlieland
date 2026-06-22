@@ -277,11 +277,14 @@ Deno.serve(async (req) => {
             const reasonBlock = cancellationReasonHtml
               ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
               : "";
+            const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
             const body = `
               <p>Beste ${sanitizeHtml(partnerName)},</p>
               <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
               <p>${statusLine}</p>
               ${reasonBlock}
+              <p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p>
+              <p style="font-size:12px;color:#64748b">Geannuleerde aanvragen blijven in je portal vindbaar via zoeken op referentie (incl. archief).</p>
               <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             `;
