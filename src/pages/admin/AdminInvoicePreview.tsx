@@ -535,6 +535,25 @@ const AdminInvoicePreview = () => {
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
 
 
+    if (isSlot) {
+      // Eén factuurregel: het openstaande restant.
+      const priorRefs = priorOtherLocal.map((p) => p.invoice_number).join(", ");
+      const sub = priorRefs
+        ? `Restant na reeds gefactureerde termijn${priorOtherLocal.length > 1 ? "en" : ""}: ${priorRefs}`
+        : "Restant openstaand bedrag";
+      categories.push({
+        label: "Termijnfactuur",
+        rows: [
+          {
+            description: `Slotfactuur project ${request.reference_number ?? ""}`.trim(),
+            subDescription: sub,
+            qty: "1",
+            unitPrice: fmt(netDueLocal),
+            amount: fmt(netDueLocal),
+          },
+        ],
+      });
+    } else {
 
     for (const cat of sortedCategories) {
       const catItems = groupedByCategory[cat];
@@ -691,6 +710,36 @@ const AdminInvoicePreview = () => {
     if (coordRows.length > 0) {
       categories.push({ label: "Coördinatie & bijdragen", rows: coordRows });
     }
+    }
+
+    // Pro-rata BTW-uitsplitsing voor slot-mode (zelfde logica als render).
+    let slotTotalsLocal: { totalExclVat: number; totalVat: number; totalInclVat: number; vatLines: { rate: number; exclVat: number; vatAmount: number }[] } | null = null;
+    if (isSlot && totalsLocal.totalInclVat > 0) {
+      const factor = netDueLocal / totalsLocal.totalInclVat;
+      let runE = 0, runV = 0;
+      const lines = totalsLocal.vatLines.map((l) => {
+        const exclVat = Math.round(l.exclVat * factor * 100) / 100;
+        const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
+        runE += exclVat; runV += vatAmount;
+        return { rate: l.rate, exclVat, vatAmount };
+      });
+      if (lines.length > 0) {
+        const diff = netDueLocal - (runE + runV);
+        const idx = lines.findIndex((l) => l.rate > 0);
+        const i = idx === -1 ? 0 : idx;
+        const r = lines[i].rate;
+        const exclAdd = r > 0 ? diff / (1 + r / 100) : diff;
+        lines[i].exclVat = Math.round((lines[i].exclVat + exclAdd) * 100) / 100;
+        lines[i].vatAmount = Math.round((lines[i].vatAmount + (diff - exclAdd)) * 100) / 100;
+      }
+      slotTotalsLocal = {
+        totalExclVat: lines.reduce((s, l) => s + l.exclVat, 0),
+        totalVat: lines.reduce((s, l) => s + l.vatAmount, 0),
+        totalInclVat: netDueLocal,
+        vatLines: lines,
+      };
+    }
+
 
     // ── Customer block
     const billingNameLocal =
