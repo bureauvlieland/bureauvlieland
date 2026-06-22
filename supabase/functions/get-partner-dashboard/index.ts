@@ -128,14 +128,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter: active-status items always shown, closed items only if < 3 months old
+    // Filter: active-status items always shown, closed items only if < 3 months old.
+    // Cancelled items (of items in een cancelled aanvraag) blijven nog 12 maanden zichtbaar
+    // zodat partners ze kunnen terugvinden via zoeken/archief.
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+    const cancelledCutoff = new Date();
+    cancelledCutoff.setFullYear(cancelledCutoff.getFullYear() - 1);
 
     const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
     const activeItems = (items || []).filter(item => {
-      // Exclude items whose parent program_request is cancelled
-      if (item.program_requests?.status === "cancelled" || item.program_requests?.cancelled_at) return false;
+      const req = item.program_requests;
+      const reqCancelled = req?.status === "cancelled" || !!req?.cancelled_at;
+      const itemCancelled = item.status === "cancelled" || item.status === "unavailable";
+      if (reqCancelled || itemCancelled) {
+        const ref = item.updated_at || req?.cancelled_at;
+        return ref ? new Date(ref) > cancelledCutoff : false;
+      }
       if (activeStatuses.includes(item.status)) return true;
       return new Date(item.updated_at) > cutoffDate;
     });
@@ -286,6 +295,7 @@ Deno.serve(async (req) => {
             special_requests,
             status,
             created_at,
+            reference_number,
             linked_program_id
           )
         `)
@@ -293,10 +303,15 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (!quotesError && quotes) {
-        // Filter out quotes from cancelled requests + old closed quotes (> 3 months)
+        // Active quotes always shown; cancelled/closed blijven 12 maanden zichtbaar
+        // voor archief/zoeken in de partnerportal.
         const activeQuoteStatuses = ["pending", "submitted", "selected"];
         accommodationQuotes = quotes.filter((q) => {
-          if (q.accommodation_requests?.status === "cancelled") return false;
+          const reqCancelled = q.accommodation_requests?.status === "cancelled";
+          const quoteCancelled = ["cancelled", "rejected", "declined"].includes(q.status);
+          if (reqCancelled || quoteCancelled) {
+            return new Date(q.updated_at) > cancelledCutoff;
+          }
           if (activeQuoteStatuses.includes(q.status)) return true;
           return new Date(q.updated_at) > cutoffDate;
         });

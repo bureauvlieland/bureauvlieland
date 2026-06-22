@@ -6,6 +6,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  getPortalBaseUrl,
   SENDER_EMAIL,
   SENDER_NAME,
   TemplateIds,
@@ -99,20 +100,22 @@ Deno.serve(async (req) => {
     }
 
 
-    // Enrich missing emails
-    const missingEmailIds = [
+    // Enrich missing emails + verzamel partner_tokens voor deeplinks naar de portal
+    const partnerIdsForEnrich = [
       ...new Set(
-        notifiableItems
-          .filter((i: any) => !i.provider_email && i.provider_id)
-          .map((i: any) => i.provider_id)
+        notifiableItems.map((i: any) => i.provider_id).filter(Boolean)
       ),
     ];
-    if (missingEmailIds.length > 0) {
+    const partnerTokenMap = new Map<string, string>();
+    if (partnerIdsForEnrich.length > 0) {
       const { data: partners } = await supabase
         .from("partners")
-        .select("id, email, contact_email, name")
-        .in("id", missingEmailIds);
+        .select("id, email, contact_email, name, partner_token")
+        .in("id", partnerIdsForEnrich);
       const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+      for (const p of partners || []) {
+        if ((p as any).partner_token) partnerTokenMap.set((p as any).id, (p as any).partner_token);
+      }
       for (const item of notifiableItems) {
         if (!item.provider_email && item.provider_id) {
           const partner = partnerMap.get(item.provider_id);
@@ -154,7 +157,9 @@ Deno.serve(async (req) => {
       const reasonBlock = cancellationReasonHtml
         ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
         : "";
-      const body = templateResult?.body || `
+      const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
+      const portalLinkBlock = `<p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p><p style="font-size:12px;color:#64748b">Of zoek in je portal op referentie <strong>${sanitizeHtml(refNumber)}</strong> (incl. geannuleerde aanvragen).</p>`;
+      const baseBody = templateResult?.body || `
         <p>Beste ${sanitizeHtml(group.name)},</p>
         <p>Hierbij laten we je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
         <p>De volgende onderdelen komen daarmee te vervallen:</p>
@@ -162,8 +167,10 @@ Deno.serve(async (req) => {
         ${reasonBlock}
         <p>Heb je vragen, mail of bel ons gerust.</p>
       `;
+      const body = `${baseBody}${portalLinkBlock}`;
 
       const recipientEmail = getRecipientEmail(group.email, origin);
+
 
       const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -270,11 +277,14 @@ Deno.serve(async (req) => {
             const reasonBlock = cancellationReasonHtml
               ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
               : "";
+            const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
             const body = `
               <p>Beste ${sanitizeHtml(partnerName)},</p>
               <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
               <p>${statusLine}</p>
               ${reasonBlock}
+              <p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p>
+              <p style="font-size:12px;color:#64748b">Geannuleerde aanvragen blijven in je portal vindbaar via zoeken op referentie (incl. archief).</p>
               <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             `;

@@ -111,11 +111,16 @@ const PartnerDashboardContent = () => {
   const rows = useMemo(() => (data ? buildPartnerOverviewRows(data) : []), [data]);
 
   const visibleRows = useMemo(() => {
+    const hasSearch = search.trim().length > 0;
     return rows.filter(r => {
-      if (!archive && ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
-      if (archive && !ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
+      // Bij actieve zoekopdracht negeren we het archief-filter, zodat je
+      // ook geannuleerde / afgeronde aanvragen kunt terugvinden via referentie.
+      if (!hasSearch) {
+        if (!archive && ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
+        if (archive && !ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
+      }
       if (typeFilter !== "all" && r.kind !== typeFilter) return false;
-      if (search.trim()) {
+      if (hasSearch) {
         const q = search.toLowerCase();
         const hay = [r.reference, r.customerLabel].filter(Boolean).join(" ").toLowerCase();
         if (!hay.includes(q)) return false;
