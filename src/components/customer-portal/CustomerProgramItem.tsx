@@ -317,13 +317,13 @@ export const CustomerProgramItem = ({
 
           {/* Action hint for items needing customer approval */}
           {needsCustomerAction && !readOnly && !priceChangeNeedsAttention && (
-            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm text-blue-700 dark:text-blue-300">
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
                 {item.status === "alternative" ? (
-                  <>De aanbieder heeft een alternatief voorstel gedaan. Klik op <strong>'Akkoord'</strong> om dit voorstel te bevestigen.</>
+                  <>De aanbieder stelt een <strong>aanpassing</strong> voor op tijd of prijs. Bekijk de details en geef akkoord, of stel via <em>Andere tijd</em> een alternatief voor.</>
                 ) : (
-                  <>Dit onderdeel wacht op uw bevestiging. Klik op <strong>'Akkoord'</strong> om het definitief op te nemen in uw programma.</>
+                  <>Dit onderdeel hoort bij uw voorstel. Geef akkoord zodat wij beschikbaarheid en definitieve prijs bij de aanbieder kunnen opvragen.</>
                 )}
               </span>
             </div>
