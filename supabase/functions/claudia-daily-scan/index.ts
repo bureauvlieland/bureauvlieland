@@ -240,7 +240,9 @@ Prioriteit-richtlijn:
 - normal: actie nodig deze week
 - info: goed om te weten, geen directe deadline
 
-Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X", "bel partner Y", "factureer Z").`;
+Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X", "bel partner Y", "factureer Z").
+
+BELANGRIJK: noem in elke aanbeveling (zowel title als body) altijd de projectnaam (klantnaam of bedrijfsnaam uit de summary) én het projectreferentienummer (bijv. BV-2606-0011) wanneer die in het signaal beschikbaar zijn. Voorbeeld titel: "Partnerherinnering Lunch op locatie versturen — Acme BV (BV-2606-0011)". Zo weet Erwin direct om welk project het gaat.`;
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
