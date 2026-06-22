@@ -994,6 +994,26 @@ const AdminInvoicePreview = () => {
             </div>
           </div>
 
+          {canOfferSlotMode && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <span className="font-medium mr-1">Factuurmodus:</span>
+              <Button
+                size="sm"
+                variant={isSlotMode ? "default" : "outline"}
+                onClick={() => setMode("slot")}
+              >
+                Slotfactuur openstaand · {formatCurrency(netDueIncl)}
+              </Button>
+              <Button
+                size="sm"
+                variant={!isSlotMode ? "default" : "outline"}
+                onClick={() => setMode("full")}
+              >
+                Termijn met regels
+              </Button>
+            </div>
+          )}
+
           {(() => {
             const matchedExisting = priorInvoices.find((p) => p.invoice_number === invoiceNumber);
             const wantNewTermijn = searchParams.get("new") === "1";
@@ -1009,6 +1029,14 @@ const AdminInvoicePreview = () => {
                 </div>
               );
             }
+            if (isSlotMode) {
+              return (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                  Je maakt een <strong>slotfactuur</strong> ({invoiceNumber}) voor het openstaande bedrag van <strong>{formatCurrency(netDueIncl)}</strong>.
+                  De factuur bevat één regel die verwijst naar de eerder verstuurde termijn(en).
+                </div>
+              );
+            }
             if (hasPrior && wantNewTermijn) {
               return (
                 <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -1019,6 +1047,7 @@ const AdminInvoicePreview = () => {
             }
             return null;
           })()}
+
 
 
           <div className="grid lg:grid-cols-3 gap-6">
