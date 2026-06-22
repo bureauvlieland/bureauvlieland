@@ -1,71 +1,42 @@
-## Doel
+## Probleem
 
-1. **Eén betekenis per woord.** Het woord *"akkoord"* wordt gereserveerd voor het **eindakkoord/ondertekenen** aan het einde van het traject. Per onderdeel spreken we van *"goedkeuren / goedgekeurd"*. Zo is er geen verwarring meer of de klant het programma al wel of niet definitief akkoord heeft gegeven.
-2. **Eén statusboodschap.** Op het Programma-tabblad staan nu 3–4 zinnen door elkaar die hetzelfde of tegenstrijdige zeggen ("Wij wachten op de aanbieders" / "Bureau Vlieland stelt uw programma samen" / "Aanvragen verstuurd" / "Bureau Vlieland coördineert..."). We laten **één** duidelijke boodschap staan.
+Wanneer Bureau Vlieland een logies-aanvraag annuleert, krijgt de partner een mail met de referentie (bv. `BV-2605-0005`). In de partnerportal wordt deze offerte/aanvraag dan echter volledig verborgen: in `get-partner-dashboard` worden alle quotes waarvan `accommodation_requests.status === "cancelled"` is, weggefilterd (zelfde geldt voor programma-items met `status = "cancelled"`). De partner kan dus niet terugzoeken om welke aanvraag het gaat.
 
----
+## Oplossing
 
-## Wijzigingen — Terminologie
+Twee samenhangende stappen: (1) geannuleerde items zichtbaar maken via een archief + zoekfunctie, en (2) de annuleringsmail een directe deeplink geven naar die archief-weergave.
 
-### A. Per-onderdeel groene bevestiging
-`src/components/customer-portal/CustomerProgramItem.tsx` (regel 380)
+### 1. Backend: geannuleerde items meesturen (gemarkeerd)
 
-- "U hebt akkoord gegeven op dit voorstel" → **"U heeft dit programmaonderdeel goedgekeurd"**
+In `supabase/functions/get-partner-dashboard/index.ts`:
+- Verwijder de harde uitsluiting van `accommodation_requests.status === "cancelled"` en van `program_requests.status === "cancelled"` / `i.status === "cancelled"`.
+- In plaats daarvan: cancelled items wél meesturen, maar alleen als de annulering binnen het laatste jaar valt (anders blijft de lijst niet onbeperkt groeien). Bestaande retentie van 3 maanden voor closed quotes blijft gelden voor niet-cancelled.
+- Voeg op item/quote-niveau een vlag toe (`is_cancelled: true` + `cancelled_at`) zodat de frontend ze duidelijk anders kan tonen.
+- Aanvraagreferentie (`reference_number`) staat al op `program_requests`; voor `accommodation_requests` moeten we de reference ook teruggeven. Check of `accommodation_requests` een referentie heeft — zo niet, gebruik dan het bijbehorende `linked_program.reference_number` als zoek-/weergaveveld.
 
-### B. Per-onderdeel knoppen (zelfde bestand, knoplabels)
+### 2. Frontend: archief + zoeken op referentie
 
-- "Ik ga akkoord met dit onderdeel" → **"Dit onderdeel goedkeuren"**
-- "Ik ga akkoord met deze aanpassing" → **"Wijziging goedkeuren"**
-- "Akkoord met nieuwe prijs" → **"Nieuwe prijs goedkeuren"**
+In `src/pages/PartnerDashboard.tsx` / `PartnerWerkbankList.tsx` / `PartnerProjectsTable.tsx`:
+- Werkbank blijft default zoals nu (geen cancelled).
+- Tab **Projecten**: voeg een toggle "Toon ook geannuleerd" toe naast de bestaande archive-toggle. Als aan, worden cancelled program-items en cancelled accommodation-quotes meegenomen, met een rode/grijze badge "Geannuleerd" en de annuleringsdatum + reden (indien beschikbaar).
+- Versterk het bestaande zoekveld zodat zoeken op de referentie (`BV-2605-0005`) altijd matcht, ook als het item cancelled is — dus de cancelled-filter wordt automatisch genegeerd zodra de gebruiker een referentie intypt die exact matcht.
+- Klik op een cancelled rij opent het bestaande `PartnerItemSheet` / `PartnerAccommodationQuoteSheet` (die hebben de cancelled-state al ingebouwd, zie `PartnerItemSheet.tsx` regel 399 en `PartnerAccommodationQuoteSheet.tsx` regel 579 — geen extra UI nodig, alleen data doorlaten).
 
-### C. Tab-badges (`tabHeaderConfig.ts`)
+### 3. Annuleringsmail: deeplink
 
-- "N goed te keuren" blijft (al goed).
-- "Akkoord gegeven" (badge wanneer alles is goedgekeurd) → **"Alles goedgekeurd"**
-- "Klaar voor akkoord" → **"Klaar voor ondertekening"**
+In de edge function die de "Logies-aanvraag … is geannuleerd"-mail verstuurt (waarschijnlijk `notify-partner-cancellation` of de logies-variant — wordt in build-mode opgezocht en aangepast):
+- Voeg onderaan een knop/link toe: "Bekijk in je partnerportal" → `https://…/partner/dashboard?tab=projecten&q=BV-2605-0005&includeCancelled=1`.
+- `PartnerDashboard.tsx` moet de query-params `q` en `includeCancelled` initieel oppakken in zijn search-state.
 
-### D. Hero-strook bovenaan (`ProgramOverviewCard.tsx`)
+## Technische details
 
-De badge "Akkoord gegeven" rechtsboven het programma → **"Alles goedgekeurd"**. (Het echte akkoord = ondertekening, dat hoort op de Akkoord-tab.)
+- Geen schemawijzigingen nodig: `cancelled_at` en `status='cancelled'` bestaan al op zowel `program_request_items`, `program_requests` als `accommodation_requests`/`accommodation_quotes`.
+- Aanpassing in `get-partner-dashboard`: filters in regels ~137-138, ~165 en ~296-302 versoepelen + enrichment uitbreiden met `is_cancelled`, `cancelled_at`, en (voor logies) een reference-veld.
+- PII-redactie voor `bureau_central` blijft ongewijzigd; alleen meta (referentie, datums, status) is voor partner relevant.
+- Werkbank-filtering in `PartnerWerkbankList.tsx` (regels 76 en 124) blijft zoals die nu is — cancelled hoort niet in werkbank, alleen in projecten/archief.
+- Geen wijziging in `customer_approved_at`/workflowlogica.
 
-> De sidebar-stap *"Onderdelen goedkeuren"* en *"Voorwaarden ondertekenen"* blijven ongewijzigd — die maken het onderscheid al correct.
+## Niet in scope
 
----
-
-## Wijzigingen — Dubbele statusboodschappen
-
-Volgorde van blokken op screenshot 2:
-
-```
-1. ProgramOverviewCard (hero, "Uw programma" + subtitel)
-2. tabHeaderConfig subtitel (sticky tab-header)
-3. ActionRequiredCard banner ("Aanvragen verstuurd naar aanbieders")
-4. ProgramIntroCard (klein grijs blokje onderaan de programma-lijst)
-```
-
-We houden **ActionRequiredCard** (3) als enige drager van de status­boodschap en strippen de duplicaten:
-
-### 1. `ProgramOverviewCard.tsx` — regel 182-187
-Verwijder de subtitel-`<p>` die nu zegt *"Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."* / *"Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."* — dit dupliceert de ActionRequiredCard en is bij maatwerk-na-publicatie ook gewoon onjuist. De badge rechts ("Maatwerk", "Alles goedgekeurd") communiceert het programmatype al.
-
-### 2. `tabHeaderConfig.ts` — Programma-case
-De `subtitle` van de Programma-tab wordt **leeg** zodra de ActionRequiredCard de boodschap toont (statusSummary.total > 0). Bij `statusSummary.total === 0` (nog niets klaargezet) blijft "Bureau Vlieland stelt uw programma samen. Zodra het klaarstaat, vindt u het hier terug." staan, want dan is er nog geen ActionRequiredCard met items.
-
-### 3. `ProgramIntroCard.tsx` — regel 218-226
-Verwijder het grijze blok onderaan (*"Bureau Vlieland coördineert de aanvragen..."*). Wanneer er geen items zijn, blijft de "Hieronder vindt u uw programma..."-tekst staan; in de gepubliceerde situatie rendert de component niets meer (volledig overbodig).
-
-### 4. `ActionRequiredCard.tsx`
-Blijft de enige bron. Tekst blijft:
-- Titel: **"Aanvragen verstuurd naar aanbieders"**
-- Beschrijving: **"Uw aanvragen zijn verstuurd naar de aanbieders. Zodra zij reageren ontvangt u hiervan een e-mail."**
-
----
-
-## Bestanden die wijzigen
-
-- `src/components/customer-portal/CustomerProgramItem.tsx` (groene tekst + knoplabels)
-- `src/components/customer-portal/tabHeaderConfig.ts` (badge-labels + subtitle leegmaken)
-- `src/components/customer-portal/ProgramOverviewCard.tsx` (badge-label + subtitel verwijderen)
-- `src/components/customer-portal/ProgramIntroCard.tsx` (grijs blok verwijderen)
-
-Geen backend- of typewijzigingen nodig — alleen presentatie­tekst.
+- Geen aparte "Archief"-pagina; we breiden de bestaande Projecten-tab uit. Eén bron van waarheid, minder navigatie.
+- Geen historie van handmatig verwijderde quotes (alleen status-cancelled).
