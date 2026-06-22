@@ -277,7 +277,7 @@ const StepPip = ({
         dimensions,
         step.state === "done" && "bg-success border-success text-success-foreground shadow-sm",
         step.state === "active" &&
-          "bg-background border-success text-success ring-4 ring-success/15",
+          "bg-background border-primary text-primary ring-4 ring-primary/15",
         step.state === "upcoming" && "bg-background border-border text-muted-foreground",
       )}
     >
