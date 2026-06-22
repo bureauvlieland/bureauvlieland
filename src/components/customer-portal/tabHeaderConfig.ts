@@ -73,7 +73,7 @@ export function buildTabHeader({
         statusSummary.total === 0
           ? { label: "In voorbereiding", variant: "outline" as const }
           : allApproved
-            ? { label: "Akkoord gegeven", variant: "default" as const }
+            ? { label: "Alles goedgekeurd", variant: "default" as const }
             : customerActionsOpen > 0
               ? {
                   // Amber 'secondary' — geen rood alarm, wél duidelijk dat u aan zet bent.
@@ -81,7 +81,7 @@ export function buildTabHeader({
                   variant: "secondary" as const,
                 }
               : allConfirmed
-                ? { label: "Klaar voor akkoord", variant: "secondary" as const }
+                ? { label: "Klaar voor ondertekening", variant: "secondary" as const }
                 : { label: "Wacht op partners", variant: "outline" as const };
       return {
         icon: Calendar,
@@ -89,9 +89,7 @@ export function buildTabHeader({
         subtitle:
           statusSummary.total === 0
             ? "Bureau Vlieland stelt uw programma samen. Zodra het klaarstaat, vindt u het hier terug."
-            : customerActionsOpen > 0
-              ? "Bekijk elk onderdeel en geef akkoord. Daarna vragen wij bij de aanbieders beschikbaarheid en definitieve prijzen op."
-              : "Wij wachten op de aanbieders. Zodra zij reageren laten we het u weten.",
+            : undefined,
         badge,
       };
     }
