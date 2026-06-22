@@ -174,6 +174,7 @@ export const MobileProgramView = ({
   guestDetails,
   billingLinesByItem,
   blockVatRates,
+  onNavigate,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
