@@ -1,41 +1,25 @@
+## Wat ik ga doen
 
-## Wat er nu écht is gebeurd
+### 1. Factuur -002 verwijderen (jij kijkt eerst in UI)
+- Eerst open jij in `/admin/facturatie` de PDF-download-knop voor `FV-BV-2605-0001-002` (die heb ik in de vorige iteratie toegevoegd) om met eigen ogen te bevestigen dat daar inderdaad € 1.932,15 op staat i.p.v. € 407,40.
+- Zodra je groen licht geeft verwijder ik de rij `bureau_invoices` voor -002 volledig (hard delete via `supabase--insert`), plus eventueel het PDF-bestand in storage (bucket `bureau-invoices`).
+- Ik log de verwijdering in `program_request_history` zodat het dossier traceerbaar blijft ("Factuur -002 verwijderd: bedrag was onjuist (projecttotaal i.p.v. restbedrag). Klant wordt opnieuw gefactureerd.").
+- Door de trigger `recalculate_program_completion_status` op `bureau_invoices` springt het project automatisch terug van `fully_invoiced` naar `partially_invoiced`, en verschijnt het project weer in het facturatie-overzicht met openstaand bedrag € 407,40. Jij maakt dan handmatig de nieuwe factuur -002 aan (delta € 407,40 incl.) en stuurt 'm naar de klant met de mededeling dat de eerder verzonden -002 onjuist was.
 
-Ik heb in de database (`bureau_invoices` + `email_log`) gekeken naar project **BV-2605-0001**:
+### 2. Komt dit niet meer voor? — zo zorg ik daarvoor
+De oorzaak zit in `RegisterBureauInvoiceDialog`: de prefill kan ontsporen als het Financieel-Overzicht (en dus `suggestedAmount` = openstaand) op het moment van openen al up-to-date was, maar er onderweg iets gewijzigd is, of als de gebruiker op enig moment het bedrag handmatig aanpaste naar het projecttotaal. Er zit nu géén harde grens of waarschuwing in. Ik bouw drie zekerheden in:
 
-| Factuur | Bedrag incl. BTW | Status | Verstuurd |
-|---|---|---|---|
-| FV-BV-2605-0001-001 | € 1.524,75 | forwarded | eerder |
-| FV-BV-2605-0001-002 | € 1.932,15 | pending | 19-jun 14:09 naar `administratie@houtmolen.nl` |
+1. **Prominente weergave van "Openstaand op project"** bovenaan de dialog (groot, met euroteken) — niet alleen als ronde info onder de invoerveldjes. Zo zie je in één oogopslag of de invoer overeenkomt met wat er nog te factureren is.
+2. **Waarschuwing + bevestiging** als `totaal incl. BTW > openstaand bedrag`: rode banner *"Let op: dit bedrag (€ X) is hoger dan het openstaand bedrag (€ Y). Weet je zeker dat dit klopt?"* met expliciete checkbox die je moet aanvinken vóór je kunt opslaan. Voor type `credit` en `final` blijft dit een waarschuwing (niet blokkerend), voor `partial` is het standaard blokkerend.
+3. **Submit-bevestiging**: een korte confirm-stap *"Je staat op het punt € X incl. BTW te registreren als factuur {nummer}. Doorgaan?"* — voorkomt per ongeluk submitten met een verkeerd ingevuld bedrag.
 
-Het e-maillog van -002 bevat letterlijk `amountInclVat: 1932.15` en onderwerp `Factuur FV-BV-2605-0001-002 – Bureau Vlieland`. Dat is het juiste **delta**-bedrag (projecttotaal na nacalculatie minus de al gefactureerde € 1.524,75). De klant heeft dus de correcte factuur ontvangen — wat je nu in de UI als afwijkend totaal ziet is geen wijziging in wat verstuurd is, maar een display-issue in de preview.
-
-Maar: de **PDF zelf wordt nergens opgeslagen**. Hij wordt client-side gerenderd (`renderInvoicePdf`), als base64 doorgestuurd naar `send-bureau-invoice-to-customer`, en daarna weggegooid. Daarom kun je 'm nu niet meer downloaden, en daarom kunnen we ook niet 100% bewijzen wat er in de PDF stond (alleen het bedrag uit het log).
-
-## Wat ik ga bouwen
-
-### 1. Storage-bucket voor bureau-facturen
-- Nieuwe private bucket `bureau-invoices` (alleen admin lezen/schrijven via service-role + signed URLs).
-- Kolom `pdf_path text` op `bureau_invoices` om het storage-pad vast te leggen.
-
-### 2. PDF archiveren bij verzenden
-- In `SendBureauInvoiceToCustomerDialog`: na succesvolle send de PDF-blob ook uploaden naar `bureau-invoices/{request_id}/{invoice_number}.pdf` en `pdf_path` op de net-geregistreerde `bureau_invoices`-rij zetten.
-- Idem in elke andere plek die `send-bureau-invoice-to-customer` aanroept (check `RegisterBureauInvoiceDialog` en het preview-pad).
-- Pad ook loggen in `email_log.metadata.pdf_path` zodat de archiefkoppeling 1-op-1 traceerbaar is.
-
-### 3. Download-knop in facturatieoverzicht
-- In `AdminInvoicing.tsx` bij elke rij onder "Geregistreerde facturen" een knop **"Download PDF"** met `Download`-icoon.
-- Bij klik: edge-function (of inline call) maakt een signed URL (geldig 5 min) voor `pdf_path` en opent die in een nieuw tabblad.
-- Voor facturen zónder `pdf_path` (alle bestaande, inclusief jouw -001 en -002): knop met label **"PDF opnieuw genereren"** + tooltip "Origineel niet gearchiveerd — totalen kunnen sinds verzending zijn aangepast". Die klik render de PDF opnieuw via `renderInvoicePdf` met de huidige projectdata en archiveert 'm meteen.
-
-### 4. Wat te doen met -002
-- Voor jouw geruststelling: de mail die uitging vermeldde € 1.932,15 (exact het delta-bedrag). Ik laat dat nogmaals zien in de UI via een tooltip op de factuurregel met "verstuurd op 19-jun-2026 · € 1.932,15".
-- Wil je 100% zekerheid over de PDF-inhoud: na implementatie kun je daar "PDF opnieuw genereren" klikken. Dat geeft de huidige opbouw — als de totalen exact 1.932,15 opleveren weet je dat de oorspronkelijke PDF gelijk was.
+Daarnaast laat ik de prefill onveranderd (die is wiskundig correct), maar voeg ik een veiligheidstest toe: bij `partial` mag het opgegeven `amount_incl_vat` niet groter zijn dan `outstanding * 1.001` (kleine afrondingsmarge) — anders verschijnt de blokkerende waarschuwing.
 
 ### Technische details
-- Migratie: `ALTER TABLE bureau_invoices ADD COLUMN pdf_path text;` + bucket-creatie + RLS (alleen admins via `has_role`).
-- Geen wijziging aan de edge function-payload — upload gebeurt in de browser ná `send`-call (service-role niet nodig, admin heeft via RLS write-access).
-- Bestandsnaamconventie: `{request_id}/{invoice_number}.pdf` (zo overschrijft regenerate netjes).
-- Geen breaking changes voor bestaande flows.
+- Verwijderfactuur: `DELETE FROM bureau_invoices WHERE id = '<uuid -002>'` + history insert + storage remove.
+- Dialog-aanpassingen in `src/components/admin/RegisterBureauInvoiceDialog.tsx`; nieuwe prop `outstandingAmount` vanuit `AdminInvoicing.tsx` (waarde = `calculateInvoiceTotals(selectedRequest).outstanding`).
+- Geen schema-wijzigingen.
 
-Wil je dat ik dit zo bouw, of wil je liever dat de PDF server-side wordt gegenereerd (sterker bewijs, maar veel grotere ingreep — `renderInvoicePdf` draait nu op `pdf-lib` in de browser)?
+### Wat ik NIET doe (tenzij je dat wil)
+- Geen creditnota meer (was alternatief plan; jij koos voor hard verwijderen + nieuwe -002).
+- Geen wijziging aan Snelstart-doorzending; -002 staat nog op `pending` dus is daar nooit aangekomen.

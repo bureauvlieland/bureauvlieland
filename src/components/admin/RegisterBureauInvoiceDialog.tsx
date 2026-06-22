@@ -60,6 +60,12 @@ interface RegisterBureauInvoiceDialogProps {
   suggestedExclVat?: number;
   suggestedVatAmount?: number;
   suggestedVatGroups?: { rate: number; exclVat: number; vatAmount: number }[];
+  /** Bedrag dat nog open staat op het project (projecttotaal − reeds gefactureerd). */
+  outstandingAmount?: number;
+  /** Projecttotaal incl. BTW. */
+  projectTotal?: number;
+  /** Reeds gefactureerd bedrag incl. BTW. */
+  alreadyInvoiced?: number;
   onSuccess: () => void;
 }
 
@@ -71,10 +77,14 @@ export const RegisterBureauInvoiceDialog = ({
   suggestedExclVat,
   suggestedVatAmount,
   suggestedVatGroups = [],
+  outstandingAmount,
+  projectTotal,
+  alreadyInvoiced,
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vatBreakdown, setVatBreakdown] = useState<{ rate: number; excl: number; vat: number }[]>([]);
+  const [overrideConfirmed, setOverrideConfirmed] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -155,8 +165,22 @@ export const RegisterBureauInvoiceDialog = ({
   const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
   const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
   const totalInclVat = amountExclVat + vatAmount;
+  const invoiceType = form.watch("invoice_type");
+
+  const hasOutstanding = outstandingAmount != null && outstandingAmount > 0;
+  const tolerance = 0.01;
+  const exceedsOutstanding = hasOutstanding && totalInclVat > (outstandingAmount as number) + tolerance;
+  // Voor 'partial' is overschrijden blokkerend tenzij expliciet bevestigd; voor 'final'/'credit' alleen waarschuwen.
+  const blockingExceed = exceedsOutstanding && invoiceType === "partial" && !overrideConfirmed;
 
   const onSubmit = async (data: FormData) => {
+    if (blockingExceed) {
+      toast.error("Bedrag overschrijdt het openstaand bedrag. Vink de bevestiging aan of pas het bedrag aan.");
+      return;
+    }
+    const confirmMsg = `Je staat op het punt € ${totalInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. BTW te registreren als factuur ${data.invoice_number}.\n\nDoorgaan?`;
+    if (!window.confirm(confirmMsg)) return;
+
     setIsSubmitting(true);
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -203,6 +227,7 @@ export const RegisterBureauInvoiceDialog = ({
 
       toast.success("Factuur geregistreerd");
       form.reset();
+      setOverrideConfirmed(false);
       onSuccess();
       onClose();
     } catch (error) {
@@ -231,6 +256,34 @@ export const RegisterBureauInvoiceDialog = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {(hasOutstanding || projectTotal != null) && (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1 text-sm">
+                {projectTotal != null && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Projecttotaal</span>
+                    <span className="tabular-nums">
+                      €{(projectTotal ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {alreadyInvoiced != null && alreadyInvoiced > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Reeds gefactureerd</span>
+                    <span className="tabular-nums">
+                      −€{alreadyInvoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {hasOutstanding && (
+                  <div className="flex justify-between font-semibold text-primary pt-1 border-t border-primary/20">
+                    <span>Openstaand (te factureren)</span>
+                    <span className="tabular-nums text-base">
+                      €{(outstandingAmount ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             <FormField
               control={form.control}
               name="invoice_number"
@@ -386,6 +439,28 @@ export const RegisterBureauInvoiceDialog = ({
               </div>
             </div>
 
+            {exceedsOutstanding && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 space-y-2 text-sm">
+                <p className="font-semibold text-destructive">
+                  Let op: dit bedrag (€{totalInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) is hoger dan het openstaand bedrag (€{(outstandingAmount ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Controleer of je het juiste bedrag invult. Voor een 2e/3e factuur hoor je alleen het <strong>restbedrag</strong> in te vullen, niet het projecttotaal.
+                </p>
+                {invoiceType === "partial" && (
+                  <label className="flex items-start gap-2 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={overrideConfirmed}
+                      onChange={(e) => setOverrideConfirmed(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>Ja, ik weet zeker dat dit bedrag klopt en ik wil meer factureren dan het openstaand bedrag.</span>
+                  </label>
+                )}
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="description"
@@ -404,7 +479,7 @@ export const RegisterBureauInvoiceDialog = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Annuleren
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || blockingExceed}>
                 {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Factuur Opslaan
               </Button>
