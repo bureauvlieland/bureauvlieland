@@ -52,6 +52,7 @@ export const CheckoutContactForm = ({
     reference: string | null;
     quoteStatus: string | null;
     createdAt: string;
+    sameDatesAndSize: boolean;
   } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -136,27 +137,48 @@ export const CheckoutContactForm = ({
       // Soft warning: actieve aanvraag op dit e-mailadres (geen tijdslimiet).
       // We willen voorkomen dat klanten parallelle dossiers aanmaken in plaats
       // van door te gaan met hun bestaande, lopende aanvraag.
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("program_requests")
-        .select("id, reference_number, quote_status, created_at, completion_status")
+        .select("id, reference_number, quote_status, created_at, completion_status, selected_dates, number_of_people")
         .eq("customer_email", formData.email)
         .neq("status", "cancelled")
         .neq("completion_status", "fully_invoiced")
         .order("created_at", { ascending: false })
         .limit(1);
 
+      if (existingError) {
+        setSubmitError(
+          "We konden niet controleren of u al een aanvraag heeft lopen. Probeer het zo opnieuw, of bel ons op 0562 700 208."
+        );
+        return;
+      }
+
       if (existing && existing.length > 0) {
+        const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+        const existingDates = Array.isArray(existing[0].selected_dates)
+          ? (existing[0].selected_dates as string[]).map(String).sort()
+          : [];
+        const sameDates =
+          existingDates.length === isoDates.length &&
+          [...isoDates].sort().every((d, i) => d === existingDates[i]);
+        const sameSize = existing[0].number_of_people === numberOfPeople;
+
         setExistingRequest({
           id: existing[0].id,
           reference: existing[0].reference_number ?? null,
           quoteStatus: existing[0].quote_status ?? null,
           createdAt: existing[0].created_at,
+          sameDatesAndSize: sameDates && sameSize,
         });
         setDuplicateWarningOpen(true);
         return;
       }
-    } catch {
-      // Bij een check-fail laten we de submit gewoon doorgaan
+    } catch (err) {
+      console.error("dedup check failed:", err);
+      setSubmitError(
+        "We konden niet controleren of u al een aanvraag heeft lopen. Probeer het zo opnieuw, of bel ons op 0562 700 208."
+      );
+      return;
     }
 
     await executeSubmit();
@@ -338,19 +360,24 @@ export const CheckoutContactForm = ({
       // Clear in-flight lock zodat de gebruiker opnieuw kan proberen
       try { sessionStorage.removeItem(buildSubmitHash()); } catch { /* no-op */ }
 
+      const rawMsg = (error?.message || "") + " " + (error?.details || "");
+      const isDuplicate = rawMsg.includes("duplicate_program_request") || error?.code === "23505";
+
       trackSubmitFailed({
         formType: 'program_request',
         error,
         extra: {
           number_of_people: numberOfPeople,
           items_count: cartItems.length,
+          duplicate_blocked: isDuplicate,
         },
       });
-      const friendly =
-        "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
+      const friendly = isDuplicate
+        ? "Deze aanvraag is zojuist al verstuurd. Controleer uw inbox en spam-folder. Bel ons gerust op 0562 700 208 als u geen bevestiging heeft ontvangen."
+        : "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
       setSubmitError(friendly);
       toast({
-        title: "Aanvraag niet verzonden",
+        title: isDuplicate ? "Aanvraag al ontvangen" : "Aanvraag niet verzonden",
         description: friendly,
         variant: "destructive",
       });
@@ -561,14 +588,16 @@ export const CheckoutContactForm = ({
             >
               <a href="tel:+31562700208">Bel ons: 0562 700 208</a>
             </Button>
-            <button
-              type="button"
-              onClick={() => executeSubmit()}
-              className="text-xs text-muted-foreground underline hover:text-foreground mt-2 self-center"
-              disabled={isResendingLink}
-            >
-              Dit is écht een nieuwe aanvraag voor een andere groep of datum
-            </button>
+            {!existingRequest?.sameDatesAndSize && (
+              <button
+                type="button"
+                onClick={() => executeSubmit()}
+                className="text-xs text-muted-foreground underline hover:text-foreground mt-2 self-center"
+                disabled={isResendingLink}
+              >
+                Dit is écht een nieuwe aanvraag voor een andere groep of datum
+              </button>
+            )}
             <AlertDialogCancel className="mt-1">Annuleren</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
