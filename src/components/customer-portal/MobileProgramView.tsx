@@ -188,6 +188,9 @@ export const MobileProgramView = ({
     isMultiDay,
     hasSelectedAccommodation,
     isPreApproval,
+    customerActionsCount,
+    customerApprovedCount,
+    customerApprovableTotal: customerApprovableCount,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -206,10 +209,10 @@ export const MobileProgramView = ({
 
   // Get next action for mobile sticky bar
   const getNextAction = () => {
-    if (statusSummary.alternative > 0) {
-      return { 
-        label: "Bekijk", 
-        onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }) 
+    if (customerActionsCount > 0) {
+      return {
+        label: "Goedkeuren",
+        onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }),
       };
     }
     if (isMultiDay && !hasSelectedAccommodation) {
@@ -236,12 +239,6 @@ export const MobileProgramView = ({
       : accommodation
         ? "requested"
         : "none";
-  const customerApprovedCount = program.items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at,
-  ).length;
-  const customerApprovableCount = program.items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled",
-  ).length;
 
   const handleStepAction = (stepId: StepId) => {
     if (stepId === "lodging") {
