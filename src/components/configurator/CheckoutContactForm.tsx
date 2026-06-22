@@ -588,14 +588,16 @@ export const CheckoutContactForm = ({
             >
               <a href="tel:+31562700208">Bel ons: 0562 700 208</a>
             </Button>
-            <button
-              type="button"
-              onClick={() => executeSubmit()}
-              className="text-xs text-muted-foreground underline hover:text-foreground mt-2 self-center"
-              disabled={isResendingLink}
-            >
-              Dit is écht een nieuwe aanvraag voor een andere groep of datum
-            </button>
+            {!existingRequest?.sameDatesAndSize && (
+              <button
+                type="button"
+                onClick={() => executeSubmit()}
+                className="text-xs text-muted-foreground underline hover:text-foreground mt-2 self-center"
+                disabled={isResendingLink}
+              >
+                Dit is écht een nieuwe aanvraag voor een andere groep of datum
+              </button>
+            )}
             <AlertDialogCancel className="mt-1">Annuleren</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
