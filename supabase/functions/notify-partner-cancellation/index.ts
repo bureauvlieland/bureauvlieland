@@ -99,20 +99,22 @@ Deno.serve(async (req) => {
     }
 
 
-    // Enrich missing emails
-    const missingEmailIds = [
+    // Enrich missing emails + verzamel partner_tokens voor deeplinks naar de portal
+    const partnerIdsForEnrich = [
       ...new Set(
-        notifiableItems
-          .filter((i: any) => !i.provider_email && i.provider_id)
-          .map((i: any) => i.provider_id)
+        notifiableItems.map((i: any) => i.provider_id).filter(Boolean)
       ),
     ];
-    if (missingEmailIds.length > 0) {
+    const partnerTokenMap = new Map<string, string>();
+    if (partnerIdsForEnrich.length > 0) {
       const { data: partners } = await supabase
         .from("partners")
-        .select("id, email, contact_email, name")
-        .in("id", missingEmailIds);
+        .select("id, email, contact_email, name, partner_token")
+        .in("id", partnerIdsForEnrich);
       const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
+      for (const p of partners || []) {
+        if ((p as any).partner_token) partnerTokenMap.set((p as any).id, (p as any).partner_token);
+      }
       for (const item of notifiableItems) {
         if (!item.provider_email && item.provider_id) {
           const partner = partnerMap.get(item.provider_id);
