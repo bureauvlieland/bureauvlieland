@@ -638,9 +638,13 @@ const CustomerProgram = () => {
           }
           onChange={(v) => handleNavigate(v)}
           badges={{
-            program:
-              statusSummary.pending + statusSummary.alternative + (statusSummary.counter_proposed || 0) >
-              0,
+            program: program.items.some(
+              (i: any) =>
+                i.block_type !== "self_arranged" &&
+                i.status !== "cancelled" &&
+                (i.status === "confirmed" || i.status === "alternative") &&
+                !i.customer_approved_at,
+            ),
           }}
         />
       )}
