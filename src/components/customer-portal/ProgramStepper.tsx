@@ -175,12 +175,18 @@ function buildProgramTrack(
     };
   }
   if (!providersDone) {
+    const bureauManaged = statusSummary.bureauManaged ?? 0;
+    const partnerTotal = statusSummary.partnerTotal ?? statusSummary.total;
+    const partnerConfirmed = statusSummary.partnerConfirmed ?? statusSummary.confirmed;
+    const bureauLine = bureauManaged > 0
+      ? ` ${bureauManaged} onderde${bureauManaged === 1 ? "el regelt" : "len regelt"} Bureau Vlieland zelf.`
+      : "";
     return {
       ...base,
       statusLine:
         statusSummary.alternative > 0
           ? `${statusSummary.alternative} alternatief voorgesteld — uw aandacht is gewenst.`
-          : `${statusSummary.confirmed} van ${statusSummary.total} onderdelen bevestigd door aanbieders.`,
+          : `${partnerConfirmed} van ${partnerTotal} partner-onderdelen bevestigd.${bureauLine}`,
       cta:
         statusSummary.alternative > 0 || (statusSummary.counter_proposed || 0) > 0
           ? { label: "Programma bekijken", stepId: "providers" }
