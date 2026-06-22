@@ -141,6 +141,7 @@ interface DesktopProgramViewProps {
   // Pre-resolved server data from get-customer-program edge function
   billingLinesByItem?: Record<string, any[]>;
   blockVatRates?: Record<string, number>;
+  onNavigate?: (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => void;
 }
 
 export const DesktopProgramView = ({
@@ -178,6 +179,7 @@ export const DesktopProgramView = ({
   guestDetails,
   billingLinesByItem,
   blockVatRates,
+  onNavigate,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -227,6 +229,7 @@ export const DesktopProgramView = ({
       document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
     } else if (stepId === "billing_terms") {
       if (!billingComplete) onOpenBilling();
+      else if (onNavigate) onNavigate("accept");
       else scrollToTerms();
     }
   };

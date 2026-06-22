@@ -137,6 +137,7 @@ interface MobileProgramViewProps {
   // Pre-resolved server data from get-customer-program edge function
   billingLinesByItem?: Record<string, any[]>;
   blockVatRates?: Record<string, number>;
+  onNavigate?: (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => void;
 }
 
 export const MobileProgramView = ({
@@ -173,6 +174,7 @@ export const MobileProgramView = ({
   guestDetails,
   billingLinesByItem,
   blockVatRates,
+  onNavigate,
 }: MobileProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
 
@@ -247,6 +249,7 @@ export const MobileProgramView = ({
       document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
     } else if (stepId === "billing_terms") {
       if (!billingComplete) onOpenBilling();
+      else if (onNavigate) onNavigate("accept");
       else document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" });
     }
   };
