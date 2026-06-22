@@ -531,6 +531,22 @@ export const MobileProgramView = ({
         )}
       </ProgramSection>}
 
+      {(initialSection === "program" || !initialSection) && (
+        <ProgramIntroCard
+          programType={program.origin}
+          quoteStatus={program.quote_status}
+          quoteValidUntil={program.quote_valid_until}
+          termsAcceptedAt={program.terms_accepted_at}
+          itemCount={program.items.filter(i => i.status !== "cancelled").length}
+          isMaatwerkEmpty={isMaatwerkProject(program) && program.items.length === 0}
+          onAcceptQuoteProposal={onAcceptQuoteProposal}
+          hasUnapprovedItems={hasUnapprovedItems}
+          programPublishedAt={program.program_published_at}
+          allConfirmed={allConfirmed}
+          quotePdfUrl={(program as any).quote_pdf_url}
+        />
+      )}
+
       {/* 5. Billing-only view: financial summary */}
       {initialSection === "billing" && (
         <div className="space-y-4">
