@@ -1503,6 +1503,8 @@ const AdminInvoicePreview = () => {
                               )}
                             </>
                           )}
+                          </>
+                          )}
                         </tbody>
                       </table>
 
