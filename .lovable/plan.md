@@ -1,25 +1,50 @@
-## Wat ik ga doen
+## Probleem
 
-### 1. Factuur -002 verwijderen (jij kijkt eerst in UI)
-- Eerst open jij in `/admin/facturatie` de PDF-download-knop voor `FV-BV-2605-0001-002` (die heb ik in de vorige iteratie toegevoegd) om met eigen ogen te bevestigen dat daar inderdaad € 1.932,15 op staat i.p.v. € 407,40.
-- Zodra je groen licht geeft verwijder ik de rij `bureau_invoices` voor -002 volledig (hard delete via `supabase--insert`), plus eventueel het PDF-bestand in storage (bucket `bureau-invoices`).
-- Ik log de verwijdering in `program_request_history` zodat het dossier traceerbaar blijft ("Factuur -002 verwijderd: bedrag was onjuist (projecttotaal i.p.v. restbedrag). Klant wordt opnieuw gefactureerd.").
-- Door de trigger `recalculate_program_completion_status` op `bureau_invoices` springt het project automatisch terug van `fully_invoiced` naar `partially_invoiced`, en verschijnt het project weer in het facturatie-overzicht met openstaand bedrag € 407,40. Jij maakt dan handmatig de nieuwe factuur -002 aan (delta € 407,40 incl.) en stuurt 'm naar de klant met de mededeling dat de eerder verzonden -002 onjuist was.
+Goede observatie. De PDF naar de klant klopt nu (te voldoen € 407,40), maar de **UBL/XML naar Snelstart klopt niet** — en dat is wat Snelstart boekhoudkundig verwerkt.
 
-### 2. Komt dit niet meer voor? — zo zorg ik daarvoor
-De oorzaak zit in `RegisterBureauInvoiceDialog`: de prefill kan ontsporen als het Financieel-Overzicht (en dus `suggestedAmount` = openstaand) op het moment van openen al up-to-date was, maar er onderweg iets gewijzigd is, of als de gebruiker op enig moment het bedrag handmatig aanpaste naar het projecttotaal. Er zit nu géén harde grens of waarschuwing in. Ik bouw drie zekerheden in:
+In `supabase/functions/forward-bureau-invoice/index.ts` worden bij élke deelfactuur **alle** `program_item_billing_lines` van het project meegestuurd. Dus:
 
-1. **Prominente weergave van "Openstaand op project"** bovenaan de dialog (groot, met euroteken) — niet alleen als ronde info onder de invoerveldjes. Zo zie je in één oogopslag of de invoer overeenkomt met wat er nog te factureren is.
-2. **Waarschuwing + bevestiging** als `totaal incl. BTW > openstaand bedrag`: rode banner *"Let op: dit bedrag (€ X) is hoger dan het openstaand bedrag (€ Y). Weet je zeker dat dit klopt?"* met expliciete checkbox die je moet aanvinken vóór je kunt opslaan. Voor type `credit` en `final` blijft dit een waarschuwing (niet blokkerend), voor `partial` is het standaard blokkerend.
-3. **Submit-bevestiging**: een korte confirm-stap *"Je staat op het punt € X incl. BTW te registreren als factuur {nummer}. Doorgaan?"* — voorkomt per ongeluk submitten met een verkeerd ingevuld bedrag.
+- Factuur **-001** (€ 1.524,75): UBL bevat de **volledige** projectregels → subtotaal € 1.711,99 excl. + **€ 220,16 BTW** (0,00 / 96,16 / 124,00). Snelstart heeft dit zo geboekt.
+- Factuur **-002** (€ 407,40): zou met de huidige code **opnieuw** € 1.711,99 excl. + **€ 220,16 BTW** meesturen → **dubbele BTW-boeking** en verkeerd factuurtotaal in Snelstart.
 
-Daarnaast laat ik de prefill onveranderd (die is wiskundig correct), maar voeg ik een veiligheidstest toe: bij `partial` mag het opgegeven `amount_incl_vat` niet groter zijn dan `outstanding * 1.001` (kleine afrondingsmarge) — anders verschijnt de blokkerende waarschuwing.
+`bureau_invoices` slaat per factuur maar één `amount_excl_vat` + `vat_amount` op, dus de UBL moet zelf de BTW-splitsing per tarief afleiden uit de projectregels.
 
-### Technische details
-- Verwijderfactuur: `DELETE FROM bureau_invoices WHERE id = '<uuid -002>'` + history insert + storage remove.
-- Dialog-aanpassingen in `src/components/admin/RegisterBureauInvoiceDialog.tsx`; nieuwe prop `outstandingAmount` vanuit `AdminInvoicing.tsx` (waarde = `calculateInvoiceTotals(selectedRequest).outstanding`).
-- Geen schema-wijzigingen.
+## Oplossing
 
-### Wat ik NIET doe (tenzij je dat wil)
-- Geen creditnota meer (was alternatief plan; jij koos voor hard verwijderen + nieuwe -002).
-- Geen wijziging aan Snelstart-doorzending; -002 staat nog op `pending` dus is daar nooit aangekomen.
+### 1. Forward-functie: UBL per deelfactuur schalen
+
+In `forward-bureau-invoice/index.ts` de regels-opbouw vervangen door een proportionele samenvatting per BTW-tarief:
+
+- Bereken uit `program_item_billing_lines` de projecttotalen per tarief: `{ rate → { excl, vat } }` (0% / 9% / 21%).
+- Bereken `factor = invoice.amount_excl_vat / projectTotalExcl` (geclamped op 0..1; bij `final` mag dat ook >1 zijn als rounding).
+- Genereer **één UBL-regel per tarief** met:
+  - `description`: `"{Deelfactuur|Eindfactuur|Creditnota} {invoice_number} — BTW {rate}%"`
+  - `amount_excl_vat = round2(rateExcl * factor)`
+  - `vat_amount = round2(rateVat * factor)`
+- Cent-correctie: corrigeer de laatste regel zodat de som exact gelijk is aan `invoice.amount_excl_vat` en `invoice.vat_amount` (geen ½-cent verschillen tussen PDF en UBL).
+- Voor `credit`: zelfde logica, absolute bedragen (UBL CreditNote-semantiek flipt het teken).
+- Fallback (geen billing-lines beschikbaar): houd de huidige single-line fallback met `rate = vat_amount / amount_excl_vat`.
+
+### 2. Bestaande factuur -001 in Snelstart
+
+Factuur -001 is met de oude (foute) UBL doorgestuurd: € 1.711,99 excl. + € 220,16 BTW i.p.v. de werkelijke € 1.524,75 incl. Dit moet handmatig in Snelstart gecorrigeerd worden. Twee opties:
+
+- **A (aanbevolen):** -001 in Snelstart aanpassen naar de werkelijke deelfactuurbedragen (€ 1.524,75 incl., met BTW proportioneel: ±€ 0 / € 85,68 / € 110,46 — exacte cijfers worden door de nieuwe logica gegenereerd en kun je 1‑op‑1 overnemen). Daarna -002 opnieuw doorsturen → BTW klopt over beide.
+- **B:** -001 in Snelstart crediteren (UBL credit) en -001 opnieuw boeken met de juiste verdeling. Meer audit-spoor, maar zwaarder werk.
+
+Wij doen dit niet automatisch — de keuze ligt bij jou, en het is een handmatige correctie in Snelstart.
+
+### 3. Niet binnen deze stap
+
+- Geen wijziging aan de klant-PDF (die klopt al).
+- Geen schemawijziging op `bureau_invoices` (BTW-splitsing per tarief blijft afgeleid uit de projectregels — voldoende zolang de itemset niet wijzigt tussen deelfacturen).
+- Geen auto-credit/auto-rebook van -001; dat is een boekhoudkundige beslissing.
+
+## Te wijzigen bestanden
+
+- `supabase/functions/forward-bureau-invoice/index.ts` — regel-opbouw + cent-correctie.
+
+## Verificatie
+
+- Voor het huidige project: handmatig forwarden van -002 (na deploy) → UBL bevat exact 3 regels (0% / 9% / 21%) waarvan de som € 336,69 excl. + € 70,71 BTW = € 407,40 incl. is.
+- Som van UBL-bedragen van -001 + -002 = projecttotaal € 1.711,99 excl. + € 220,16 BTW.
