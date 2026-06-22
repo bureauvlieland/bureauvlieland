@@ -1642,8 +1642,8 @@ const AdminInvoicePreview = () => {
         recipientName={request.billing_contact_name || request.customer_name}
         invoiceNumber={invoiceNumber}
         invoiceDate={invoiceDate}
-        amountExclVat={Math.round(totals.totalExclVat * 100) / 100}
-        vatAmount={Math.round(totals.totalVat * 100) / 100}
+        amountExclVat={Math.round(effectiveTotalExclVat * 100) / 100}
+        vatAmount={Math.round(effectiveTotalVat * 100) / 100}
         invoiceType="partial"
         description={notes}
         onGeneratePdf={buildPdfBlob}
