@@ -249,6 +249,7 @@ export const MobileProgramView = ({
       document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
     } else if (stepId === "billing_terms") {
       if (!billingComplete) onOpenBilling();
+      else if (onNavigate) onNavigate("accept");
       else document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" });
     }
   };
