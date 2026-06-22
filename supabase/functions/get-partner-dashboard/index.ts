@@ -128,14 +128,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter: active-status items always shown, closed items only if < 3 months old
+    // Filter: active-status items always shown, closed items only if < 3 months old.
+    // Cancelled items (of items in een cancelled aanvraag) blijven nog 12 maanden zichtbaar
+    // zodat partners ze kunnen terugvinden via zoeken/archief.
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+    const cancelledCutoff = new Date();
+    cancelledCutoff.setFullYear(cancelledCutoff.getFullYear() - 1);
 
     const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
     const activeItems = (items || []).filter(item => {
-      // Exclude items whose parent program_request is cancelled
-      if (item.program_requests?.status === "cancelled" || item.program_requests?.cancelled_at) return false;
+      const req = item.program_requests;
+      const reqCancelled = req?.status === "cancelled" || !!req?.cancelled_at;
+      const itemCancelled = item.status === "cancelled" || item.status === "unavailable";
+      if (reqCancelled || itemCancelled) {
+        const ref = item.updated_at || req?.cancelled_at;
+        return ref ? new Date(ref) > cancelledCutoff : false;
+      }
       if (activeStatuses.includes(item.status)) return true;
       return new Date(item.updated_at) > cutoffDate;
     });
