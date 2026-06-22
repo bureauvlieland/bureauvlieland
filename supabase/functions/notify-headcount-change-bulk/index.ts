@@ -187,7 +187,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const { data: items } = await supabase
         .from("program_request_items")
         .select(
-          "id, block_name, provider_id, provider_name, provider_email, block_type, price_type, admin_price_override, quoted_price, override_people",
+          "id, block_name, provider_id, provider_name, block_type, block_category, provider_email, price_type, admin_price_override, quoted_price, override_people",
         )
         .in("id", partner_item_ids);
 
