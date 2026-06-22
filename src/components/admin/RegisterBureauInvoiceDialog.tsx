@@ -165,8 +165,22 @@ export const RegisterBureauInvoiceDialog = ({
   const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
   const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
   const totalInclVat = amountExclVat + vatAmount;
+  const invoiceType = form.watch("invoice_type");
+
+  const hasOutstanding = outstandingAmount != null && outstandingAmount > 0;
+  const tolerance = 0.01;
+  const exceedsOutstanding = hasOutstanding && totalInclVat > (outstandingAmount as number) + tolerance;
+  // Voor 'partial' is overschrijden blokkerend tenzij expliciet bevestigd; voor 'final'/'credit' alleen waarschuwen.
+  const blockingExceed = exceedsOutstanding && invoiceType === "partial" && !overrideConfirmed;
 
   const onSubmit = async (data: FormData) => {
+    if (blockingExceed) {
+      toast.error("Bedrag overschrijdt het openstaand bedrag. Vink de bevestiging aan of pas het bedrag aan.");
+      return;
+    }
+    const confirmMsg = `Je staat op het punt € ${totalInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. BTW te registreren als factuur ${data.invoice_number}.\n\nDoorgaan?`;
+    if (!window.confirm(confirmMsg)) return;
+
     setIsSubmitting(true);
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -213,6 +227,7 @@ export const RegisterBureauInvoiceDialog = ({
 
       toast.success("Factuur geregistreerd");
       form.reset();
+      setOverrideConfirmed(false);
       onSuccess();
       onClose();
     } catch (error) {
