@@ -1,88 +1,107 @@
-## Vastgestelde workflow
+## Probleem
+
+Bij een project met al een deelfactuur en €407,40 openstaand:
 
 ```text
-1. Aanvraag binnen
-2. Bureau Vlieland bouwt programma + zet prijzen/tijden
-3. Bureau publiceert offerte → klant
-4. Klant geeft akkoord
-5. Partners ontvangen hun onderdelen ter beoordeling (status = pending)
-6. Partner bevestigt of stelt alternatief voor
-7. Bureau/klant accordeert eventuele aanpassingen + voorwaarden
-8. Status = confirmed → uitvoeren → factureren
+Openstaand                                 €407,40
+[Factuur Maken]   →  toont bestaande factuur 001 (€1.524,75) i.p.v. nieuwe
+                     factuur voor €407,40.
+
+Klik "Nieuwe termijn aanmaken"   →  nieuwe nummer FV-...-002, maar de
+                                    factuur herhaalt het volledige programma
+                                    (€1.932,15) met "reeds gefactureerd
+                                    -€1.524,75" eronder. Dat is niet wat je
+                                    wilt versturen als slotfactuur.
 ```
 
-Stap 5 mag **nooit** worden overgeslagen. Op dit moment gebeurt dat wél: items waar Bureau de prijs invult komen direct op `status=confirmed` / `item_quote_status=bevestigd`, zonder dat de partner ze ooit gezien heeft. Voorbeeld: BV-2606-0011 "Koffie & Gebak aan boord" (Rederij Doeksen) — admin-prijs €7,75 p.p., klantakkoord op 12 juni, partner heeft nooit ingelogd, item staat tóch als "Klant akkoord" in zijn portal en verschijnt nergens in zijn werkbank.
+Je wilt: één klik → klaarstaande **slotfactuur voor het openstaande bedrag** (€407,40), met één duidelijke regel, juiste BTW-uitsplitsing en correcte verwijzing naar de eerder verstuurde termijn(en).
 
 ## Wat ik ga aanpassen
 
-### A. Status-transities afdwingen (database)
+Alles speelt zich af in `src/pages/admin/AdminInvoicePreview.tsx` en in de "Factuur Maken"-knop in `src/components/admin/FinancialOverviewCard.tsx`. Geen database-wijzigingen.
 
-Bestaande trigger `guard_item_status_consistency` blokkeert alleen het scenario *skip_partner_notification = true*. Uitbreiden zodat een niet-bureau-item (`block_type <> 'bureau'`, `provider_id <> 'bureau'`) **nooit** naar `confirmed` / `bevestigd` mag zonder partner-handeling:
+### 1. Knop "Factuur Maken" stuurt slim door
 
-```text
-ALLOW confirmed/bevestigd ONLY IF
-   block_type = 'bureau'                              -- bureau-interne kost
-OR provider_id = 'bureau'                             -- ferries/bikes managed
-OR quoted_at IS NOT NULL                              -- partner heeft geofferd
-OR partner_price_change_acknowledged_at IS NOT NULL   -- partner heeft prijs gezien
-```
+In `FinancialOverviewCard.tsx`:
 
-Anders → `RAISE EXCEPTION` met hint "Item moet eerst door de partner worden bevestigd."
+- Als er **geen** facturen zijn → `/.../factuur` (huidig gedrag).
+- Als er prior facturen zijn **en openstaand > 0** → `/.../factuur?new=1&mode=slot` (direct nieuwe termijn voor het openstaande bedrag).
+- Als er prior facturen zijn **en openstaand ≈ 0** → `/.../factuur` (review-modus laatste factuur, huidig gedrag).
 
-Dit voorkomt dat het patroon zich herhaalt, ongeacht via welke admin-flow het item wordt opgeslagen.
+### 2. Nieuwe factuurmodus: "Slotfactuur / restantfactuur"
 
-### B. Publish-flow: items echt naar partner sturen
+In `AdminInvoicePreview.tsx` lees ik de query-param `mode` (`slot` of `full`, default `full`).
 
-Bij `program_published_at` / wanneer de klant akkoord geeft (`customer_approved_at` wordt gezet), moet voor elk niet-bureau-item dat nog `quoted_at IS NULL` heeft:
-
-- `status` blijven op `pending` (niet upgraden naar `confirmed`)
-- `item_quote_status` op `'in_afstemming'` (niet `'bevestigd'`)
-- partner-notificatie via bestaande edge function `notify-partner-new-item` (of equivalent) versturen aan `partners.contact_email`, tenzij `skip_partner_notification = true`
-
-Aanpassen op één van deze plekken (uitzoeken in build): de publish/akkoord-flow in `supabase/functions/publish-program/*` of `update-partner-item-status`/`customer-approve-quote`. Geen wijziging aan de UI-knoppen die admin gebruikt — alleen aan de waarden die worden weggeschreven.
-
-### C. Bestaande "vastgelopen" items terugzetten
-
-Eenmalige opschoning voor reeds gepubliceerde, klant-akkoorde items waar partner nooit naar gekeken heeft:
+**Bij `mode=slot`** verandert alleen wat op de PDF/preview wordt afgedrukt — de berekening van het programma blijft hetzelfde, maar de **factuurregels** worden vervangen door één regel:
 
 ```text
-UPDATE program_request_items SET
-  status = 'pending',
-  item_quote_status = 'in_afstemming',
-  status_updated_at = now()
-WHERE quoted_at IS NULL
-  AND partner_price_change_acknowledged_at IS NULL
-  AND status IN ('confirmed','accepted')
-  AND item_quote_status = 'bevestigd'
-  AND block_type <> 'bureau'
-  AND provider_id <> 'bureau'
-  AND skip_partner_notification = false
-  AND EXISTS ( customer_approved_at IS NOT NULL voor de request )
+Omschrijving                                          Bedrag
+─────────────────────────────────────────────────────────────
+Slotfactuur project BV-2605-0001                     €407,40
+"…" (klantnaam, datum)                               (incl. BTW)
+Restant na reeds gefactureerde termijn FV-…-001
+─────────────────────────────────────────────────────────────
+Subtotaal excl. BTW                                  €343,xx
+BTW 9% over €…                                       €…
+BTW 21% over €…                                      €…
+Totaal incl. BTW                                     €407,40
 ```
 
-Plus voor elk geraakt project één partner-notificatie sturen ("Bureau Vlieland heeft een onderdeel naar u doorgezet, gelieve te bevestigen.") — via dezelfde edge function als bij B, met dedupe op `email_log.metadata.item_id` zodat partners niet meerdere keren een mail krijgen.
+**BTW-uitsplitsing pro-rata**: ik verdeel het openstaand bedrag over de aanwezige BTW-tarieven in dezelfde verhouding als de totale `vatGroups` van het project. Voorbeeld:
 
-### D. Partnerportal-UI: zichtbaarheid
+```text
+Programma incl BTW totaal       €1.932,15  (9% €1.068,45 / 21% €590,50 / 0% €...)
+Openstaand                        €407,40
+→ aandeel 9%   = 407,40 * (1.068,45 / 1.932,15)  →  excl./BTW berekend
+→ aandeel 21%  = 407,40 * (590,50  / 1.932,15)
+→ aandeel 0%   = 407,40 * (rest / 1.932,15)
+```
 
-Met A+B is `status='pending'` voldoende: het item valt automatisch onder de bestaande **"Beoordeel deze aanvraag"** bucket in `PartnerWerkbankList.tsx` (regel 90) en in het projectdetail toont `PartnerProjectItemRow` de bestaande "Te beoordelen"-status met de bestaande **Bevestigen** / **Niet beschikbaar** / **Tegenvoorstel** knoppen. Geen nieuwe componenten nodig — bestaande logica werkt zodra de data klopt.
+Dit is fiscaal gangbaar voor termijn-/slotfacturen die naar een onderliggende offerte verwijzen. Resultaat klopt op de cent met het openstaand-totaal en BTW-aangifte blijft sluitend over de hele projectreeks.
 
-Eén kleine UI-aanpassing: als `admin_price_override IS NOT NULL` op een pending item, banner tonen *"Bureau Vlieland stelt voor: €X,XX p.p. — Bevestig of stel een tegenvoorstel"*. Hergebruikt bestaande price-change banner-logic in `PartnerProjectItemRow.tsx` (regels 79–212 hebben al `openPriceChange` + `submitAcceptPriceChange/submitCounterPrice`).
+### 3. Modus-keuze in de UI
+
+Bovenaan de invoice-pagina komt een kleine segmented control (alleen zichtbaar als prior facturen bestaan):
+
+```text
+( ● Slotfactuur openstaand €407,40 )  (   Termijn met regels    )
+```
+
+- **Slotfactuur openstaand** (default bij `?new=1&mode=slot`): één-regel-modus uit punt 2.
+- **Termijn met regels**: huidige weergave (alle programmaregels + "reeds gefactureerd" onderaan).
+
+Schakelen update de `mode` query-param zonder de pagina te herladen. De bestaande "Nieuwe termijn aanmaken"-knop en het bestaande "je bekijkt bestaande factuur"-pad blijven werken.
+
+### 4. Registreren & Snelstart blijven werken
+
+- `SendBureauInvoiceToCustomerDialog` krijgt al `amountExclVat` + `vatAmount` mee. Die voed ik in slot-modus uit de nieuwe slot-totals (€407,40 totaal, met pro-rata excl/btw).
+- `invoiceType` wordt op `"partial"` gehouden voor zowel termijn-met-regels als slotfactuur (bestaand veld in `bureau_invoices`). Geen DB-wijziging.
+- "Doorsturen naar Snelstart" gebruikt automatisch het juiste bedrag uit het opgeslagen `bureau_invoices`-record.
 
 ### Bestanden die geraakt worden
 
-- Migration: trigger `guard_item_status_consistency` uitbreiden + eenmalige UPDATE-statement
-- `supabase/functions/publish-program/index.ts` (of equivalent — uitzoeken bij build) — geen confirmed/bevestigd meer op non-bureau-items
-- `supabase/functions/customer-approve-quote/index.ts` (of equivalent) — idem
-- `src/components/partner-portal/PartnerProjectItemRow.tsx` — kleine banner-tekst-aanpassing voor admin_price_override op pending items
-- Geen wijziging aan `PartnerWerkbankList.tsx` (bestaande pending-bucket vangt deze items vanzelf op)
+```text
+src/components/admin/FinancialOverviewCard.tsx
+  └─ slimme route in onClick Factuur Maken
+
+src/pages/admin/AdminInvoicePreview.tsx
+  ├─ leest ?mode=slot
+  ├─ segmented control bovenin
+  ├─ nieuwe render-tak voor mode=slot (één regel + pro-rata BTW)
+  └─ totals voor SendBureauInvoiceToCustomerDialog in slot-modus
+```
 
 ### Buiten scope
 
-- Admin-zijde UI (de admin mag prijzen blijven invullen; alleen het automatisch op `bevestigd` zetten verdwijnt)
-- Wijziging van bureau-managed items (ferries/bikes, block_type=bureau, provider_id=bureau) — blijven direct confirmed
-- Wijziging van logies-flow (accommodation_quotes) — die volgt al de partner-akkoord-stap
+- Geen wijziging aan `bureau_invoices`-schema (`invoice_type` blijft `partial`).
+- Geen wijziging aan creditfactuur-flow.
+- Geen wijziging aan klant-portal of partner-portal.
+- Geen wijziging aan de berekening van `outstanding` zelf (komt al uit `calculateUnifiedInvoiceTotals`).
 
-### Vragen voordat ik bouw
+### Vraag voordat ik bouw
 
-1. **Notificatiemail bij opschoning (C)**: één bulk-mail per partner met alle items, of één mail per item? Voorkeur: één per partner per project, omdat het hier maar om een handvol gevallen gaat.
-2. **Counter-proposal op prijs**: mag een partner een tegenvoorstel op de admin-prijs doen (knop bestaat al), of wil je dat alle prijswijzigingen vanaf nu een tegenvoorstel-flow naar Bureau triggeren in plaats van directe acceptatie? Voorkeur: bestaande gedrag behouden — partner accepteert of doet tegenvoorstel.
+Standaard-modus bij klik op "Factuur Maken" met openstaand > 0:
+1. **Direct slotfactuur** (mijn voorstel — één klik, één regel, klaar voor versturen).
+2. **Modus-keuze tonen** (laat admin elke keer kiezen tussen slot- en regel-modus).
+
+Mijn voorkeur: optie 1, met de segmented control beschikbaar voor de uitzondering.
