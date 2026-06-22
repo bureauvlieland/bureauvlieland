@@ -1121,7 +1121,7 @@ const AdminInvoicePreview = () => {
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Ontvanger: {billingName}</p>
                   <p>Posten: {totalItemCount} items{accommodationQuote ? " (incl. logies)" : ""}</p>
-                  <p>Totaal: {formatCurrency(totals.totalInclVat)}</p>
+                  <p>Totaal: {formatCurrency(effectiveTotalInclVat)}</p>
                 </div>
               </CardContent>
             </Card>
