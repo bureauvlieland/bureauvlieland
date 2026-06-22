@@ -811,6 +811,28 @@ const AdminInvoicePreview = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {(() => {
+                const matchedExisting = priorInvoices.find((p) => p.invoice_number === invoiceNumber);
+                const wantNewTermijn = searchParams.get("new") === "1";
+                if (matchedExisting && !wantNewTermijn) {
+                  return (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const next = new URLSearchParams(searchParams);
+                        next.set("new", "1");
+                        next.delete("invoiceId");
+                        setSearchParams(next);
+                        // Force re-fetch to recompute next number
+                        fetchData();
+                      }}
+                    >
+                      Nieuwe termijn aanmaken
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
               <Button variant="outline" onClick={generatePDF} disabled={isGenerating || isAppSettingsLoading}>
                 {isGenerating ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -825,6 +847,33 @@ const AdminInvoicePreview = () => {
               </Button>
             </div>
           </div>
+
+          {(() => {
+            const matchedExisting = priorInvoices.find((p) => p.invoice_number === invoiceNumber);
+            const wantNewTermijn = searchParams.get("new") === "1";
+            const hasPrior = priorInvoices.length > 0;
+            if (matchedExisting) {
+              return (
+                <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                  Je bekijkt de reeds geregistreerde factuur <strong>{matchedExisting.invoice_number}</strong>
+                  {" "}van {format(new Date(matchedExisting.invoice_date), "d MMMM yyyy", { locale: nl })}
+                  {" "}(€{Number(matchedExisting.amount_incl_vat).toFixed(2)}).
+                  De PDF en bestandsnaam gebruiken dit bestaande nummer.
+                  Klik op <strong>Nieuwe termijn aanmaken</strong> alleen wanneer dit project een aanvullende termijn nodig heeft.
+                </div>
+              );
+            }
+            if (hasPrior && wantNewTermijn) {
+              return (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  Je maakt een <strong>nieuwe termijnfactuur</strong> ({invoiceNumber}) aan voor dit project.
+                  De reeds geregistreerde facturen worden onderaan als "reeds gefactureerd" afgetrokken.
+                </div>
+              );
+            }
+            return null;
+          })()}
+
 
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Settings sidebar */}
