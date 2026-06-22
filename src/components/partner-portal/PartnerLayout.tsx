@@ -91,8 +91,18 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
     { title: "Handleidingen", url: `/partner/handleidingen${urlSuffix}`, icon: BookOpen },
   ];
 
-  // Pad-only check (search params buiten beschouwing) — robuuster dan string-vergelijking.
-  const isActive = (url: string) => location.pathname === url.split("?")[0];
+  // Pad + optionele tab-param check zodat Werkbank/Projecten apart actief zijn.
+  const currentTab = searchParams.get("tab");
+  const isActive = (url: string) => {
+    const [path, query] = url.split("?");
+    if (location.pathname !== path) return false;
+    if (path === "/partner/dashboard") {
+      const target = new URLSearchParams(query ?? "").get("tab");
+      const active = currentTab ?? "werkbank";
+      return (target ?? "werkbank") === active;
+    }
+    return true;
+  };
 
   const renderGroup = (label: string, items: MenuItem[]) => (
     <SidebarGroup>
