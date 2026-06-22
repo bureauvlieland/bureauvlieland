@@ -368,6 +368,13 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
     return new Date(i.admin_price_override_updated_at).getTime() > new Date(i.customer_approved_at).getTime();
   }).length;
 
+  // Splitsing bureau (door Bureau Vlieland zelf geregeld) vs partner-onderdelen.
+  const bureauItems = relevantItems.filter(i => i.provider_id === "bureau");
+  const partnerItems = relevantItems.filter(i => i.provider_id !== "bureau");
+  const bureauManaged = bureauItems.length;
+  const partnerTotal = partnerItems.length;
+  const partnerConfirmed = partnerItems.filter(isItemTrulyConfirmed).length;
+
   return {
     total,
     confirmed,
@@ -379,6 +386,9 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
     customerApproved,
     awaitingPartnerSend,
     priceChanged,
+    bureauManaged,
+    partnerTotal,
+    partnerConfirmed,
     progress: total > 0 ? Math.round((confirmed / total) * 100) : 0,
   };
 }
