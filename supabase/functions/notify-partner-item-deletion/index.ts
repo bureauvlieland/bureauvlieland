@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
 
     const { data: items } = await supabase
       .from("program_request_items")
-      .select("id, provider_id, provider_name, provider_email, block_name, block_type, status, skip_partner_notification, customer_approved_at")
+      .select("id, provider_id, provider_name, provider_email, block_name, block_type, block_category, status, skip_partner_notification, customer_approved_at")
       .in("id", item_ids);
 
     const allItems = items || [];
