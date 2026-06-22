@@ -58,17 +58,6 @@ export const AcceptView = ({
         </div>
       </div>
 
-      {/* Facturatiegegevens-check */}
-      <CompactBillingSection
-        program={program}
-        items={items}
-        numberOfPeople={numberOfPeople}
-        numberOfDays={selectedDates.length || 1}
-        termsAccepted={termsAccepted}
-        selectedAccommodationQuote={accommodationQuotes.find((q) => q.status === "selected")}
-        onEditBilling={onOpenBilling}
-        invoicingMode={invoicingMode}
-      />
 
       {/* Akkoord */}
       {!termsAccepted ? (
