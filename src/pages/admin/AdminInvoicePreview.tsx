@@ -1221,9 +1221,33 @@ const AdminInvoicePreview = () => {
                           </tr>
                         </thead>
                         <tbody>
+                          {isSlotMode ? (
+                            <>
+                              <tr>
+                                <td
+                                  colSpan={4}
+                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
+                                >
+                                  Termijnfactuur
+                                </td>
+                              </tr>
+                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td className="py-1.5 px-2">
+                                  <p className="font-medium">{slotDescription}</p>
+                                  <p className="text-[9px] text-gray-500">{slotSubDescription}</p>
+                                </td>
+                                <td className="py-1.5 px-2 text-right">1</td>
+                                <td className="py-1.5 px-2 text-right">{formatCurrency(netDueIncl)}</td>
+                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(netDueIncl)}</td>
+                              </tr>
+                            </>
+                          ) : (
+                          <>
                           {sortedCategories.map((cat) => {
                             const catItems = groupedByCategory[cat];
                             const catLabel = (categoryLabels as Record<string, string>)[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
+
 
                             return (
                               <React.Fragment key={cat}>
