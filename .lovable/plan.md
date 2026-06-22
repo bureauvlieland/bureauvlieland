@@ -1,26 +1,40 @@
-## Wat is er gebeurd bij Salure (project f5a4b03d…)
+## Plan: structureel fix factuurnummering + herstel Houtmolen, Gymnasium, Tyrecenter
 
-**Database:** 1 factuur `FV-BV-2603-0003-001` · €13.535,49 · status `forwarded` (10-06).
-**Werkelijke PDF/UBL die naar klant + Snelstart ging:** genummerd `FV-BV-2603-0003-002` met projecttotaal en regel "reeds gefactureerd -001" → "te betalen -€0,01".
+### Bevestigde situatie in de database
+- Houtmolen `FV-BV-2605-0001`: DB heeft alleen `-001` à €1.524,75 (doorgestuurd). Foute PDF: `-002` met "reeds gefactureerd -001" → te betalen €0,00.
+- Gymnasium `FV-BV-2604-0002`: DB heeft `-002` à €2.634,32 (doorgestuurd) + eerdere aanbetaling (extern ref 218145, €25.000). Foute PDF: `-003` die zowel 218145 als `-002` aftrekt → te betalen €0,00.
+- Tyrecenter `FV-BV-2604-0010`: DB heeft alleen `-001` à €2.460,56 (doorgestuurd). Foute PDF: `-002` met "reeds gefactureerd -001" → te betalen €0,00.
+- Salure `FV-BV-2603-0003`: reeds opgeschoond.
 
-**Oorzaak:** `AdminInvoicePreview` suggereert het volgnummer op basis van het aantal bestaande facturen in de DB (`priorData.length + 1`). Toen de PDF uiteindelijk werd gegenereerd, stond er al een `-001`-record in `bureau_invoices`, dus het auto-nummer schoof door naar `-002` en `-001` werd als prior afgetrokken. De DB-rij zelf heeft nog wel het juiste nummer `-001` en het juiste totaalbedrag, waardoor het admin-overzicht (zie screenshot) misleidend "Doorgestuurd · €0,00 nog te factureren" toont.
+Conclusie: dit is een structureel issue in de preview/PDF, niet een incident.
 
-**Filename mismatch (`-001.pdf` met `-002` erin):** de download-naam komt uit `link.download = Factuur-${invoiceNumber}.pdf` op het moment van klik; vermoedelijk is er eerder al een download geweest toen het nummer nog op -001 stond. Niet kritiek, lost zichzelf op zodra we het schoonmaken.
+### Root cause
+De factuur-preview bepaalt bij iedere render een "volgend" nummer op basis van bestaande `bureau_invoices`-records. Zodra je nogmaals de preview opent of de PDF downloadt na registratie, krijgt de PDF één nummer hoger en wordt het reeds geregistreerde record onterecht als "reeds gefactureerd" afgetrokken. Dat verklaart waarom élke heropende preview "€0,00 te betalen" toont en met een te hoog nummer naar klant/Snelstart gaat.
 
-## Plan — alleen Salure, handmatig
+### 1. Structurele app-fix
+- Preview/PDF/UBL/bestandsnaam gebruiken één bron van waarheid voor het factuurnummer:
+  - Bestaat er al een `bureau_invoices`-record voor dit project/termijn? → gebruik dat nummer.
+  - Bestaat er nog niets? → stel pas dan een nieuw nummer voor.
+- Het "reeds gefactureerd"-blok filtert het huidige factuurrecord uit (op `id`), zodat een factuur zichzelf nooit kan aftrekken.
+- Externe/handmatige aanbetalingen (zoals 218145) blijven als "reeds gefactureerd" tonen, want die staan los van dit record.
+- Registreren/doorsturen wordt geblokkeerd als het PDF-nummer al voorkomt voor hetzelfde project.
 
-### Stap 1 · DB opschonen (Lovable doet dit na akkoord)
-Hard verwijderen: rij `925eb2d5-1e44-444f-8073-a181e01c1e1e` (`FV-BV-2603-0003-001`) uit `bureau_invoices`. Geen `bank_line_id`-koppeling, geen betaling binnen → veilig.
+### 2. Guardrails admin
+- In de preview een duidelijke melding "Deze factuur is al geregistreerd als X — je bekijkt het bestaande record" in plaats van stilletjes een nieuw nummer voorstellen.
+- "Nieuwe termijn aanmaken" wordt een aparte, expliciete actie.
 
-### Stap 2 · Snelstart corrigeren (jij)
-In Snelstart de daar geboekte `FV-BV-2603-0003-002` (€13.535,48) crediteren/verwijderen, zodat nummer `-001` straks opnieuw geboekt kan worden.
+### 3. Herstel per project (geen DB-cleanup nodig)
+Voor alle drie de gevallen blijft het bestaande DB-record correct staan. Wat jij doet in Snelstart:
+- Houtmolen: corrigeer/verwijder de daar onterecht geboekte `FV-BV-2605-0001-002`.
+- Gymnasium: corrigeer/verwijder de daar onterecht geboekte `FV-BV-2604-0002-003`.
+- Tyrecenter: corrigeer/verwijder de daar onterecht geboekte `FV-BV-2604-0010-002`.
 
-### Stap 3 · Nieuwe correcte factuur (jij, via UI)
-Na het opschonen suggereert `/admin/facturatie` → preview opnieuw `FV-BV-2603-0003-001`. PDF genereren, registreren, doorsturen naar klant + Snelstart. De UBL-fix van vorige beurt zorgt nu voor de juiste BTW-split.
+Na de app-fix levert "PDF downloaden" voor elk van deze projecten weer het juiste nummer en bedrag op, klaar om eventueel opnieuw naar de klant te sturen.
 
-## Bewust niet in dit plan
-- Geen wijziging aan de nummerings­logica of admin-overzicht (aparte bredere fix — pakken we los wanneer je dat wilt).
-- Geen acties op Gymnasium / Tyrecenter / Oostenveld — die doen we daarna één voor één.
+### Niet in dit plan
+- Geen retroactieve correctie van eerder correct verstuurde facturen.
+- Geen automatische Snelstart-correcties.
+- Geen wijziging aan bedragen, BTW-splits of klantgegevens buiten het "reeds gefactureerd"-blok en de nummering.
 
-## Vraag
-Akkoord met **stap 1** (record hard verwijderen)?
+### Vraag aan jou
+Akkoord met (a) de structurele app-fix en (b) geen DB-wijzigingen — alleen jij de drie dubbele boekingen in Snelstart corrigeren?
