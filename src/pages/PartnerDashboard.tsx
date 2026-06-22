@@ -30,7 +30,7 @@ const PartnerDashboardContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const tab = (searchParams.get("tab") as TabKey) || "projecten";
+  const tab = (searchParams.get("tab") as TabKey) || "werkbank";
   const search = searchParams.get("q") ?? "";
   const typeFilter = (searchParams.get("type") as PartnerRowKind | "all") ?? "all";
   const archive = searchParams.get("archief") === "1";
