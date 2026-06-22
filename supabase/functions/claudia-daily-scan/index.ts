@@ -44,7 +44,7 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   const { data: pendingItems } = await supabase
     .from("program_request_items")
     .select(
-      "id, request_id, block_name, status, item_quote_status, created_at, status_updated_at, skip_partner_notification, block_type, program_requests:request_id(id, reference_number, status)"
+      "id, request_id, block_name, status, item_quote_status, created_at, status_updated_at, skip_partner_notification, block_type, program_requests:request_id(id, reference_number, status, customer_name, customer_company)"
     )
     .eq("status", "pending")
     .neq("block_type", "bureau")
@@ -56,12 +56,14 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
     if (it.program_requests?.status !== "active") return;
     const sent = new Date(it.status_updated_at ?? it.created_at);
     const age = Math.floor((now.getTime() - sent.getTime()) / (24 * 60 * 60 * 1000));
+    const projectLabel = it.program_requests?.customer_company || it.program_requests?.customer_name || "onbekende klant";
+    const ref = it.program_requests?.reference_number ?? "";
     signals.push({
       category: "partner_overdue",
       entity_type: "program_request",
       entity_id: it.request_id,
       reference: it.program_requests?.reference_number,
-      summary: `Onderdeel "${it.block_name}" wacht ${age} dagen op partner-reactie`,
+      summary: `Onderdeel "${it.block_name}" in project ${ref} (${projectLabel}) wacht ${age} dagen op partner-reactie`,
       age_days: age,
       deeplink: deeplinkProject(it.request_id),
     });
@@ -168,7 +170,7 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   // === 6. Open todo's met due_date verstreken ===
   const { data: overdueTodos } = await supabase
     .from("admin_todos")
-    .select("id, title, due_date, priority, related_request_id")
+    .select("id, title, due_date, priority, related_request_id, program_requests:related_request_id(reference_number, customer_name, customer_company)")
     .in("status", ["todo", "in_progress"])
     .not("due_date", "is", null)
     .lte("due_date", today)
@@ -177,11 +179,15 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   (overdueTodos ?? []).forEach((t: any) => {
     const age = Math.floor((now.getTime() - new Date(t.due_date).getTime()) / (24 * 60 * 60 * 1000));
     if (age >= 0) {
+      const projectLabel = t.program_requests?.customer_company || t.program_requests?.customer_name;
+      const ref = t.program_requests?.reference_number;
+      const projectSuffix = ref ? ` — project ${ref}${projectLabel ? ` (${projectLabel})` : ""}` : "";
       signals.push({
         category: "todo_overdue",
         entity_type: "admin_todo",
         entity_id: t.id,
-        summary: `Todo verstreken (${age} dgn): ${t.title}`,
+        reference: ref ?? undefined,
+        summary: `Todo verstreken (${age} dgn): ${t.title}${projectSuffix}`,
         age_days: age,
         deeplink: t.related_request_id ? deeplinkProject(t.related_request_id) : "/admin/werkbank",
       });
@@ -234,7 +240,9 @@ Prioriteit-richtlijn:
 - normal: actie nodig deze week
 - info: goed om te weten, geen directe deadline
 
-Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X", "bel partner Y", "factureer Z").`;
+Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X", "bel partner Y", "factureer Z").
+
+BELANGRIJK: noem in elke aanbeveling (zowel title als body) altijd de projectnaam (klantnaam of bedrijfsnaam uit de summary) én het projectreferentienummer (bijv. BV-2606-0011) wanneer die in het signaal beschikbaar zijn. Voorbeeld titel: "Partnerherinnering Lunch op locatie versturen — Acme BV (BV-2606-0011)". Zo weet Erwin direct om welk project het gaat.`;
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
