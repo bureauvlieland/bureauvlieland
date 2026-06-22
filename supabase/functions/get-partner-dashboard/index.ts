@@ -295,6 +295,7 @@ Deno.serve(async (req) => {
             special_requests,
             status,
             created_at,
+            reference_number,
             linked_program_id
           )
         `)
@@ -302,16 +303,18 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false });
 
       if (!quotesError && quotes) {
-        // Filter out quotes from cancelled requests + old closed quotes (> 3 months)
+        // Active quotes always shown; cancelled/closed blijven 12 maanden zichtbaar
+        // voor archief/zoeken in de partnerportal.
         const activeQuoteStatuses = ["pending", "submitted", "selected"];
         accommodationQuotes = quotes.filter((q) => {
-          if (q.accommodation_requests?.status === "cancelled") return false;
+          const reqCancelled = q.accommodation_requests?.status === "cancelled";
+          const quoteCancelled = ["cancelled", "rejected", "declined"].includes(q.status);
+          if (reqCancelled || quoteCancelled) {
+            return new Date(q.updated_at) > cancelledCutoff;
+          }
           if (activeQuoteStatuses.includes(q.status)) return true;
           return new Date(q.updated_at) > cutoffDate;
         });
-
-        // Resolve invoicing mode from linked program and redact customer contact for bureau_central
-        const linkedProgramIds = [
           ...new Set(
             accommodationQuotes
               .map((q) => q.accommodation_requests?.linked_program_id)
