@@ -179,6 +179,7 @@ export const DesktopProgramView = ({
   guestDetails,
   billingLinesByItem,
   blockVatRates,
+  onNavigate,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
