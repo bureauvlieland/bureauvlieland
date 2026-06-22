@@ -53,6 +53,9 @@ export interface ProgramStepperProps {
     pending: number;
     alternative: number;
     counter_proposed?: number;
+    bureauManaged?: number;
+    partnerTotal?: number;
+    partnerConfirmed?: number;
   };
   billingComplete: boolean;
   termsAccepted: boolean;
