@@ -71,6 +71,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
 
   data.items.forEach(i => {
     if (i.is_concept) return; // concepts are read-only previews, no action yet
+    if (i.executed_at || i.invoiced_number || i.status === "executed" || i.status === "invoiced") return;
     const req = i.program_requests;
     if (req.cancelled_at || req.status === "cancelled" || i.status === "cancelled" || i.status === "unavailable") return;
 
@@ -110,9 +111,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
     }
 
     const canInvoice =
-      (i.status === "accepted" ||
-        i.status === "executed" ||
-        (i.status === "confirmed" && customerOk)) &&
+      (i.status === "accepted" || (i.status === "confirmed" && customerOk)) &&
       !i.invoiced_number &&
       req.terms_accepted_at;
     if (canInvoice) {
@@ -124,6 +123,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
     const r = q.accommodation_requests;
     if (q.status === "cancelled" || q.status === "rejected" || q.status === "declined" || r.status === "cancelled")
       return;
+    if (q.invoiced_number || q.status === "invoiced" || q.status === "executed") return;
     const customerLabel = r.customer_company || r.customer_name;
     const date = r.arrival_date ? new Date(r.arrival_date) : null;
     const base = {
