@@ -62,7 +62,7 @@ export const ProgramOverviewCard = ({
   // Determine program type label (status-driven, niet type-driven)
   const getProgramTypeLabel = () => {
     if (termsAcceptedAt) return "Boeking bevestigd";
-    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
+    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Alles goedgekeurd";
     if (isMaatwerk) return "Maatwerk";
     return "Voorstel";
   };
@@ -179,12 +179,6 @@ export const ProgramOverviewCard = ({
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                {isMaatwerk
-                  ? "Bureau Vlieland stelt uw programma samen. Wij nemen contact met u op."
-                  : "Dit voorstel is speciaal voor jullie samengesteld door Bureau Vlieland."
-                }
-              </p>
               
               {/* Program description */}
               {programDescription && programDescription.trim().toLowerCase() !== "niet_gespecificeerd" && (

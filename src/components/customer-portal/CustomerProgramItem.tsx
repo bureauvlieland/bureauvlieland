@@ -377,7 +377,7 @@ export const CustomerProgramItem = ({
           {item.customer_accepted_at && (
             <div className="mt-2 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
               <Check className="h-4 w-4" />
-              <span>U hebt akkoord gegeven op dit voorstel</span>
+              <span>U heeft dit programmaonderdeel goedgekeurd</span>
             </div>
           )}
 
@@ -411,10 +411,10 @@ export const CustomerProgramItem = ({
                     <Check className="h-4 w-4 mr-2" />
                   )}
                   {priceChangeNeedsAttention
-                    ? "Akkoord met nieuwe prijs"
+                    ? "Nieuwe prijs goedkeuren"
                     : item.status === "alternative"
-                      ? "Ik ga akkoord met deze aanpassing"
-                      : "Ik ga akkoord met dit onderdeel"}
+                      ? "Wijziging goedkeuren"
+                      : "Dit onderdeel goedkeuren"}
                 </Button>
               )}
 

@@ -215,13 +215,6 @@ export const ProgramIntroCard = ({
     return null;
   }
 
-  return (
-    <Card className="border-muted bg-muted/30">
-      <CardContent className="p-5">
-        <p className="text-sm text-foreground leading-relaxed">
-          Bureau Vlieland coördineert de aanvragen bij de aanbieders. U ontvangt bericht zodra er reacties zijn.
-        </p>
-      </CardContent>
-    </Card>
-  );
+  // Na publicatie: ActionRequiredCard toont de actuele status — geen duplicaat hier.
+  return null;
 };
