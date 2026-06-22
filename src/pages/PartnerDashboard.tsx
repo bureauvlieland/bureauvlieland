@@ -22,6 +22,7 @@ import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 
 type TabKey = "projecten" | "werkbank";
 
+
 const PartnerDashboardContent = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
