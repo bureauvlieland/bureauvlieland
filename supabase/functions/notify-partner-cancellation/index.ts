@@ -157,7 +157,9 @@ Deno.serve(async (req) => {
       const reasonBlock = cancellationReasonHtml
         ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
         : "";
-      const body = templateResult?.body || `
+      const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
+      const portalLinkBlock = `<p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p><p style="font-size:12px;color:#64748b">Of zoek in je portal op referentie <strong>${sanitizeHtml(refNumber)}</strong> (incl. geannuleerde aanvragen).</p>`;
+      const baseBody = templateResult?.body || `
         <p>Beste ${sanitizeHtml(group.name)},</p>
         <p>Hierbij laten we je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
         <p>De volgende onderdelen komen daarmee te vervallen:</p>
@@ -165,8 +167,10 @@ Deno.serve(async (req) => {
         ${reasonBlock}
         <p>Heb je vragen, mail of bel ons gerust.</p>
       `;
+      const body = `${baseBody}${portalLinkBlock}`;
 
       const recipientEmail = getRecipientEmail(group.email, origin);
+
 
       const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
