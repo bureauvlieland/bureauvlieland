@@ -439,6 +439,28 @@ export const RegisterBureauInvoiceDialog = ({
               </div>
             </div>
 
+            {exceedsOutstanding && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 space-y-2 text-sm">
+                <p className="font-semibold text-destructive">
+                  Let op: dit bedrag (€{totalInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) is hoger dan het openstaand bedrag (€{(outstandingAmount ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Controleer of je het juiste bedrag invult. Voor een 2e/3e factuur hoor je alleen het <strong>restbedrag</strong> in te vullen, niet het projecttotaal.
+                </p>
+                {invoiceType === "partial" && (
+                  <label className="flex items-start gap-2 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={overrideConfirmed}
+                      onChange={(e) => setOverrideConfirmed(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>Ja, ik weet zeker dat dit bedrag klopt en ik wil meer factureren dan het openstaand bedrag.</span>
+                  </label>
+                )}
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="description"
@@ -457,7 +479,7 @@ export const RegisterBureauInvoiceDialog = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Annuleren
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || blockingExceed}>
                 {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Factuur Opslaan
               </Button>
