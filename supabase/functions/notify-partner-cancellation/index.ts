@@ -6,6 +6,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  getPortalBaseUrl,
   SENDER_EMAIL,
   SENDER_NAME,
   TemplateIds,
