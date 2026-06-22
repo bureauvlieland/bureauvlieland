@@ -60,6 +60,12 @@ interface RegisterBureauInvoiceDialogProps {
   suggestedExclVat?: number;
   suggestedVatAmount?: number;
   suggestedVatGroups?: { rate: number; exclVat: number; vatAmount: number }[];
+  /** Bedrag dat nog open staat op het project (projecttotaal − reeds gefactureerd). */
+  outstandingAmount?: number;
+  /** Projecttotaal incl. BTW. */
+  projectTotal?: number;
+  /** Reeds gefactureerd bedrag incl. BTW. */
+  alreadyInvoiced?: number;
   onSuccess: () => void;
 }
 
@@ -71,10 +77,14 @@ export const RegisterBureauInvoiceDialog = ({
   suggestedExclVat,
   suggestedVatAmount,
   suggestedVatGroups = [],
+  outstandingAmount,
+  projectTotal,
+  alreadyInvoiced,
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vatBreakdown, setVatBreakdown] = useState<{ rate: number; excl: number; vat: number }[]>([]);
+  const [overrideConfirmed, setOverrideConfirmed] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
