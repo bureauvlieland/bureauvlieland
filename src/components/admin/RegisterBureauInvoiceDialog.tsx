@@ -256,6 +256,34 @@ export const RegisterBureauInvoiceDialog = ({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {(hasOutstanding || projectTotal != null) && (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1 text-sm">
+                {projectTotal != null && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Projecttotaal</span>
+                    <span className="tabular-nums">
+                      €{(projectTotal ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {alreadyInvoiced != null && alreadyInvoiced > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Reeds gefactureerd</span>
+                    <span className="tabular-nums">
+                      −€{alreadyInvoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {hasOutstanding && (
+                  <div className="flex justify-between font-semibold text-primary pt-1 border-t border-primary/20">
+                    <span>Openstaand (te factureren)</span>
+                    <span className="tabular-nums text-base">
+                      €{(outstandingAmount ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             <FormField
               control={form.control}
               name="invoice_number"
