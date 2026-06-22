@@ -89,7 +89,7 @@ export function buildTabHeader({
         subtitle:
           statusSummary.total === 0
             ? "Bureau Vlieland stelt uw programma samen. Zodra het klaarstaat, vindt u het hier terug."
-            : undefined,
+            : "",
         badge,
       };
     }
