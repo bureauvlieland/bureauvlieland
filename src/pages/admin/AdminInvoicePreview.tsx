@@ -520,9 +520,40 @@ const AdminInvoicePreview = () => {
     const fmt = (n: number) =>
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
+    // ── Slot-mode short-circuit: één regel voor het openstaande restant
+    const modeParamLocal = (searchParams.get("mode") || "full").toLowerCase();
+    const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
+    const priorSumLocal = priorOtherLocal.reduce(
+      (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
+      0,
+    );
+    const netDueLocal = Math.max(0, totalsLocal.totalInclVat - priorSumLocal);
+    const isSlot = modeParamLocal === "slot" && priorOtherLocal.length > 0 && netDueLocal > 0.005;
+
     // ── Build categorized line rows
     const categories: InvoiceCategory[] = [];
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
+
+
+    if (isSlot) {
+      // Eén factuurregel: het openstaande restant.
+      const priorRefs = priorOtherLocal.map((p) => p.invoice_number).join(", ");
+      const sub = priorRefs
+        ? `Restant na reeds gefactureerde termijn${priorOtherLocal.length > 1 ? "en" : ""}: ${priorRefs}`
+        : "Restant openstaand bedrag";
+      categories.push({
+        label: "Termijnfactuur",
+        rows: [
+          {
+            description: `Slotfactuur project ${request.reference_number ?? ""}`.trim(),
+            subDescription: sub,
+            qty: "1",
+            unitPrice: fmt(netDueLocal),
+            amount: fmt(netDueLocal),
+          },
+        ],
+      });
+    } else {
 
     for (const cat of sortedCategories) {
       const catItems = groupedByCategory[cat];
@@ -679,6 +710,36 @@ const AdminInvoicePreview = () => {
     if (coordRows.length > 0) {
       categories.push({ label: "Coördinatie & bijdragen", rows: coordRows });
     }
+    }
+
+    // Pro-rata BTW-uitsplitsing voor slot-mode (zelfde logica als render).
+    let slotTotalsLocal: { totalExclVat: number; totalVat: number; totalInclVat: number; vatLines: { rate: number; exclVat: number; vatAmount: number }[] } | null = null;
+    if (isSlot && totalsLocal.totalInclVat > 0) {
+      const factor = netDueLocal / totalsLocal.totalInclVat;
+      let runE = 0, runV = 0;
+      const lines = totalsLocal.vatLines.map((l) => {
+        const exclVat = Math.round(l.exclVat * factor * 100) / 100;
+        const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
+        runE += exclVat; runV += vatAmount;
+        return { rate: l.rate, exclVat, vatAmount };
+      });
+      if (lines.length > 0) {
+        const diff = netDueLocal - (runE + runV);
+        const idx = lines.findIndex((l) => l.rate > 0);
+        const i = idx === -1 ? 0 : idx;
+        const r = lines[i].rate;
+        const exclAdd = r > 0 ? diff / (1 + r / 100) : diff;
+        lines[i].exclVat = Math.round((lines[i].exclVat + exclAdd) * 100) / 100;
+        lines[i].vatAmount = Math.round((lines[i].vatAmount + (diff - exclAdd)) * 100) / 100;
+      }
+      slotTotalsLocal = {
+        totalExclVat: lines.reduce((s, l) => s + l.exclVat, 0),
+        totalVat: lines.reduce((s, l) => s + l.vatAmount, 0),
+        totalInclVat: netDueLocal,
+        vatLines: lines,
+      };
+    }
+
 
     // ── Customer block
     const billingNameLocal =
@@ -721,23 +782,26 @@ const AdminInvoicePreview = () => {
         deliveryDate: eventDates || undefined,
       },
       categories,
-      totals: {
+      totals: slotTotalsLocal ?? {
         totalExclVat: totalsLocal.totalExclVat,
         totalVat: totalsLocal.totalVat,
         totalInclVat: totalsLocal.totalInclVat,
         vatLines: totalsLocal.vatLines,
       },
       notes: notes || undefined,
-      priorInvoices: priorInvoices
-        .filter((p) => p.invoice_number !== invoiceNumber)
-        .map((p) => ({
-          invoiceNumber: p.invoice_number,
-          invoiceDate: new Date(p.invoice_date),
-          amountInclVat:
-            p.invoice_type === "credit"
-              ? -Number(p.amount_incl_vat)
-              : Number(p.amount_incl_vat),
-        })),
+      priorInvoices: isSlot
+        ? []
+        : priorInvoices
+            .filter((p) => p.invoice_number !== invoiceNumber)
+            .map((p) => ({
+              invoiceNumber: p.invoice_number,
+              invoiceDate: new Date(p.invoice_date),
+              amountInclVat:
+                p.invoice_type === "credit"
+                  ? -Number(p.amount_incl_vat)
+                  : Number(p.amount_incl_vat),
+            })),
+
     });
 
     return blob;
@@ -786,6 +850,88 @@ const AdminInvoicePreview = () => {
   ].filter(Boolean);
 
   const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + bundledExtras.length;
+
+  // ── Slot mode (restantfactuur voor het openstaande bedrag) ───────────────
+  // Toon één regel "Slotfactuur project ..." met pro-rata BTW-uitsplitsing,
+  // i.p.v. het hele programma met "reeds gefactureerd" eronder.
+  const modeParam = (searchParams.get("mode") || "full").toLowerCase();
+  const hasPriorOtherThanCurrent = priorInvoices.some(
+    (p) => p.invoice_number !== invoiceNumber,
+  );
+  const priorSumExcludingCurrent = priorInvoices
+    .filter((p) => p.invoice_number !== invoiceNumber)
+    .reduce(
+      (s, p) =>
+        s +
+        (p.invoice_type === "credit"
+          ? -Number(p.amount_incl_vat)
+          : Number(p.amount_incl_vat)),
+      0,
+    );
+  const netDueIncl = Math.max(0, totals.totalInclVat - priorSumExcludingCurrent);
+  const isSlotMode = modeParam === "slot" && hasPriorOtherThanCurrent && netDueIncl > 0.005;
+  const canOfferSlotMode = hasPriorOtherThanCurrent && netDueIncl > 0.005;
+
+  const setMode = (next: "slot" | "full") => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "slot") {
+      params.set("mode", "slot");
+      params.set("new", "1");
+    } else {
+      params.delete("mode");
+    }
+    setSearchParams(params, { replace: true });
+  };
+
+  // Pro-rata uitsplitsing van het openstaand bedrag over de bestaande
+  // BTW-tarieven, zodat BTW-aangifte sluitend blijft over de hele projectreeks.
+  const slotTotals = (() => {
+    if (!isSlotMode) return null;
+    const fullIncl = totals.totalInclVat;
+    if (fullIncl <= 0) return null;
+    const factor = netDueIncl / fullIncl;
+    let runningExcl = 0;
+    let runningVat = 0;
+    const lines = totals.vatLines.map((l) => {
+      const exclVat = Math.round(l.exclVat * factor * 100) / 100;
+      const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
+      runningExcl += exclVat;
+      runningVat += vatAmount;
+      return { rate: l.rate, exclVat, vatAmount };
+    });
+    // Rondingsverschil op laatste regel corrigeren zodat incl = netDue exact.
+    if (lines.length > 0) {
+      const diff = netDueIncl - (runningExcl + runningVat);
+      // Voeg verschil toe aan de excl-vat van de eerste regel met BTW>0,
+      // anders aan de eerste regel.
+      const idx = lines.findIndex((l) => l.rate > 0) === -1 ? 0 : lines.findIndex((l) => l.rate > 0);
+      lines[idx].exclVat = Math.round((lines[idx].exclVat + diff / (1 + lines[idx].rate / 100)) * 100) / 100;
+      lines[idx].vatAmount = Math.round((lines[idx].vatAmount + diff - diff / (1 + lines[idx].rate / 100)) * 100) / 100;
+    }
+    const totalExclVat = lines.reduce((s, l) => s + l.exclVat, 0);
+    const totalVat = lines.reduce((s, l) => s + l.vatAmount, 0);
+    return {
+      totalExclVat,
+      totalVat,
+      totalInclVat: netDueIncl,
+      vatLines: lines,
+    };
+  })();
+
+  const effectiveTotalExclVat = slotTotals?.totalExclVat ?? totals.totalExclVat;
+  const effectiveTotalVat = slotTotals?.totalVat ?? totals.totalVat;
+  const effectiveTotalInclVat = slotTotals?.totalInclVat ?? totals.totalInclVat;
+  const effectiveVatLines = slotTotals?.vatLines ?? totals.vatLines;
+
+  const priorRefList = priorInvoices
+    .filter((p) => p.invoice_number !== invoiceNumber)
+    .map((p) => p.invoice_number)
+    .join(", ");
+  const slotDescription = `Slotfactuur project ${request.reference_number ?? ""}`.trim();
+  const slotSubDescription = priorRefList
+    ? `Restant na reeds gefactureerde termijn${priorInvoices.length > 2 ? "en" : ""}: ${priorRefList}`
+    : "Restant openstaand bedrag";
+
 
   return (
     <>
@@ -848,6 +994,26 @@ const AdminInvoicePreview = () => {
             </div>
           </div>
 
+          {canOfferSlotMode && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <span className="font-medium mr-1">Factuurmodus:</span>
+              <Button
+                size="sm"
+                variant={isSlotMode ? "default" : "outline"}
+                onClick={() => setMode("slot")}
+              >
+                Slotfactuur openstaand · {formatCurrency(netDueIncl)}
+              </Button>
+              <Button
+                size="sm"
+                variant={!isSlotMode ? "default" : "outline"}
+                onClick={() => setMode("full")}
+              >
+                Termijn met regels
+              </Button>
+            </div>
+          )}
+
           {(() => {
             const matchedExisting = priorInvoices.find((p) => p.invoice_number === invoiceNumber);
             const wantNewTermijn = searchParams.get("new") === "1";
@@ -863,6 +1029,14 @@ const AdminInvoicePreview = () => {
                 </div>
               );
             }
+            if (isSlotMode) {
+              return (
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                  Je maakt een <strong>slotfactuur</strong> ({invoiceNumber}) voor het openstaande bedrag van <strong>{formatCurrency(netDueIncl)}</strong>.
+                  De factuur bevat één regel die verwijst naar de eerder verstuurde termijn(en).
+                </div>
+              );
+            }
             if (hasPrior && wantNewTermijn) {
               return (
                 <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -873,6 +1047,7 @@ const AdminInvoicePreview = () => {
             }
             return null;
           })()}
+
 
 
           <div className="grid lg:grid-cols-3 gap-6">
@@ -946,7 +1121,7 @@ const AdminInvoicePreview = () => {
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Ontvanger: {billingName}</p>
                   <p>Posten: {totalItemCount} items{accommodationQuote ? " (incl. logies)" : ""}</p>
-                  <p>Totaal: {formatCurrency(totals.totalInclVat)}</p>
+                  <p>Totaal: {formatCurrency(effectiveTotalInclVat)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -1046,9 +1221,33 @@ const AdminInvoicePreview = () => {
                           </tr>
                         </thead>
                         <tbody>
+                          {isSlotMode ? (
+                            <>
+                              <tr>
+                                <td
+                                  colSpan={4}
+                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
+                                >
+                                  Termijnfactuur
+                                </td>
+                              </tr>
+                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td className="py-1.5 px-2">
+                                  <p className="font-medium">{slotDescription}</p>
+                                  <p className="text-[9px] text-gray-500">{slotSubDescription}</p>
+                                </td>
+                                <td className="py-1.5 px-2 text-right">1</td>
+                                <td className="py-1.5 px-2 text-right">{formatCurrency(netDueIncl)}</td>
+                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(netDueIncl)}</td>
+                              </tr>
+                            </>
+                          ) : (
+                          <>
                           {sortedCategories.map((cat) => {
                             const catItems = groupedByCategory[cat];
                             const catLabel = (categoryLabels as Record<string, string>)[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
+
 
                             return (
                               <React.Fragment key={cat}>
@@ -1304,6 +1503,8 @@ const AdminInvoicePreview = () => {
                               )}
                             </>
                           )}
+                          </>
+                          )}
                         </tbody>
                       </table>
 
@@ -1312,22 +1513,22 @@ const AdminInvoicePreview = () => {
                         <div className="w-[260px] text-[10.5px]">
                           <div className="flex justify-between py-1">
                             <span className="text-gray-600">Subtotaal excl. BTW</span>
-                            <span>{formatCurrency(totals.totalExclVat)}</span>
+                            <span>{formatCurrency(effectiveTotalExclVat)}</span>
                           </div>
-                          {totals.vatLines.map((line) => (
+                          {effectiveVatLines.map((line) => (
                             <div key={line.rate} className="flex justify-between py-0.5 text-[10px] text-gray-500">
                               <span>BTW {line.rate}% over {formatCurrency(line.exclVat)}</span>
                               <span>{formatCurrency(line.vatAmount)}</span>
                             </div>
                           ))}
                           <div
-                            className="flex justify-between py-2 text-[11px] mt-1 border-t"
-                            style={{ borderColor: "#cbd5e1" }}
+                            className="flex justify-between py-2 text-[13px] font-bold mt-1 border-t-2"
+                            style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
                           >
                             <span>Totaal incl. BTW</span>
-                            <span>{formatCurrency(totals.totalInclVat)}</span>
+                            <span>{formatCurrency(effectiveTotalInclVat)}</span>
                           </div>
-                          {(() => {
+                          {!isSlotMode && (() => {
                             const relevantPrior = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
                             if (relevantPrior.length === 0) return null;
                             const priorSum = relevantPrior.reduce(
@@ -1364,6 +1565,7 @@ const AdminInvoicePreview = () => {
                               </>
                             );
                           })()}
+
                         </div>
                       </div>
 
@@ -1374,7 +1576,7 @@ const AdminInvoicePreview = () => {
                           (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
                           0,
                         );
-                        const netDue = totals.totalInclVat - priorSum;
+                        const netDue = isSlotMode ? netDueIncl : totals.totalInclVat - priorSum;
                         return (
                           <div className="p-3 rounded mb-5 text-[10.5px]" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
                             <p className="font-semibold mb-1">Betalingsgegevens</p>
@@ -1440,8 +1642,8 @@ const AdminInvoicePreview = () => {
         recipientName={request.billing_contact_name || request.customer_name}
         invoiceNumber={invoiceNumber}
         invoiceDate={invoiceDate}
-        amountExclVat={Math.round(totals.totalExclVat * 100) / 100}
-        vatAmount={Math.round(totals.totalVat * 100) / 100}
+        amountExclVat={Math.round(effectiveTotalExclVat * 100) / 100}
+        vatAmount={Math.round(effectiveTotalVat * 100) / 100}
         invoiceType="partial"
         description={notes}
         onGeneratePdf={buildPdfBlob}

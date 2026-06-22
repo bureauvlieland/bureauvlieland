@@ -653,7 +653,13 @@ export const FinancialOverviewCard = ({
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => navigate(`/admin/aanvragen/${requestId}/factuur`)}
+              onClick={() => {
+                const hasPrior = invoices.length > 0;
+                const hasOutstanding = outstandingAmount > 0.005;
+                const qs =
+                  hasPrior && hasOutstanding ? "?new=1&mode=slot" : "";
+                navigate(`/admin/aanvragen/${requestId}/factuur${qs}`);
+              }}
             >
               <FileText className="h-4 w-4 mr-2" />
               Factuur Maken
