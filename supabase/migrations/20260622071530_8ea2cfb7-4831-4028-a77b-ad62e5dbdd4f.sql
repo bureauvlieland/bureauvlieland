@@ -1,0 +1,1 @@
+DELETE FROM public.bureau_invoices WHERE id = '289b4fa3-f5c1-4eb3-af4f-69e5ac72e7f3' AND invoice_number = 'FV-BV-2605-0001-002' AND status = 'pending';
