@@ -314,50 +314,107 @@ Deno.serve(async (req) => {
       paymentTermDays: Number(await readSetting(supabase, "bureau_payment_term_days", "14")) || 14,
     };
 
-    // Fetch billing lines for this project's items, fallback to summary line if none
+    // Fetch billing lines for this project's items to derive per-VAT-rate totals
     const { data: items } = await supabase
       .from("program_request_items")
       .select("id")
       .eq("request_id", invoice.request_id);
     const itemIds = (items || []).map((i: any) => i.id);
 
-    let lines: BillingLineRow[] = [];
+    let projectLines: BillingLineRow[] = [];
     if (itemIds.length > 0) {
       const { data: lineRows } = await supabase
         .from("program_item_billing_lines")
         .select("description, quantity, unit_price_excl_vat, vat_rate, amount_excl_vat, vat_amount")
         .in("item_id", itemIds)
         .order("sort_order", { ascending: true });
-      lines = (lineRows || []) as BillingLineRow[];
+      projectLines = (lineRows || []) as BillingLineRow[];
     }
 
     const isCredit = invoice.invoice_type === "credit";
+    const invoiceExcl = Math.abs(Number(invoice.amount_excl_vat || 0));
+    const invoiceVat = Math.abs(Number(invoice.vat_amount || 0));
+    const typeLabelForLine = invoiceTypeLabels[invoice.invoice_type] || invoice.invoice_type;
 
-    // Fallback: synthesize a single line from invoice totals if no billing lines exist
-    if (lines.length === 0) {
-      const excl = Number(invoice.amount_excl_vat || 0);
-      const tax = Number(invoice.vat_amount || 0);
-      const rate = excl > 0 ? round2((tax / excl) * 100) : 21;
+    // Aggregate project totals per VAT-rate
+    const rateTotals = new Map<number, { excl: number; vat: number }>();
+    for (const l of projectLines) {
+      const r = round2(Number(l.vat_rate || 0));
+      const cur = rateTotals.get(r) || { excl: 0, vat: 0 };
+      cur.excl = round2(cur.excl + Number(l.amount_excl_vat || 0));
+      cur.vat = round2(cur.vat + Number(l.vat_amount || 0));
+      rateTotals.set(r, cur);
+    }
+    const projectExcl = round2(
+      Array.from(rateTotals.values()).reduce((s, v) => s + v.excl, 0),
+    );
+
+    let lines: BillingLineRow[] = [];
+
+    if (rateTotals.size === 0 || projectExcl <= 0) {
+      // Fallback: single summary line derived from the invoice totals only
+      const rate = invoiceExcl > 0 ? round2((invoiceVat / invoiceExcl) * 100) : 21;
       lines = [{
-        description: invoice.description || `${invoiceTypeLabels[invoice.invoice_type] || invoice.invoice_type} ${invoice.invoice_number}`,
+        description:
+          invoice.description ||
+          `${typeLabelForLine} ${invoice.invoice_number}`,
         quantity: 1,
-        unit_price_excl_vat: excl,
+        unit_price_excl_vat: invoiceExcl,
         vat_rate: rate,
-        amount_excl_vat: excl,
-        vat_amount: tax,
+        amount_excl_vat: invoiceExcl,
+        vat_amount: invoiceVat,
       }];
+    } else {
+      // Proportional split per VAT rate, scaled to this invoice's amounts.
+      // This ensures Snelstart books only the portion of BTW that belongs to
+      // THIS deelfactuur — not the entire project total each time.
+      const factor = projectExcl > 0 ? invoiceExcl / projectExcl : 0;
+      const ratesSorted = Array.from(rateTotals.entries()).sort((a, b) => a[0] - b[0]);
+      const scaled = ratesSorted.map(([rate, t]) => ({
+        rate,
+        excl: round2(t.excl * factor),
+        vat: round2(t.vat * factor),
+      }));
+
+      // Cent-correction: make sums match invoice.amount_excl_vat / vat_amount exactly.
+      // Apply the diff to the last non-zero-rate line (or last line if all zero).
+      const sumExcl = round2(scaled.reduce((s, x) => s + x.excl, 0));
+      const sumVat = round2(scaled.reduce((s, x) => s + x.vat, 0));
+      const diffExcl = round2(invoiceExcl - sumExcl);
+      const diffVat = round2(invoiceVat - sumVat);
+      let correctionIdx = scaled.length - 1;
+      for (let i = scaled.length - 1; i >= 0; i--) {
+        if (scaled[i].rate > 0) { correctionIdx = i; break; }
+      }
+      if (scaled[correctionIdx]) {
+        scaled[correctionIdx].excl = round2(scaled[correctionIdx].excl + diffExcl);
+        scaled[correctionIdx].vat = round2(scaled[correctionIdx].vat + diffVat);
+      }
+
+      lines = scaled
+        .filter((x) => x.excl !== 0 || x.vat !== 0)
+        .map((x) => ({
+          description: `${typeLabelForLine} ${invoice.invoice_number} — BTW ${fmt(x.rate)}%`,
+          quantity: 1,
+          unit_price_excl_vat: x.excl,
+          vat_rate: x.rate,
+          amount_excl_vat: x.excl,
+          vat_amount: x.vat,
+        }));
+
+      if (lines.length === 0) {
+        lines = [{
+          description: `${typeLabelForLine} ${invoice.invoice_number}`,
+          quantity: 1,
+          unit_price_excl_vat: 0,
+          vat_rate: 21,
+          amount_excl_vat: 0,
+          vat_amount: 0,
+        }];
+      }
     }
 
-    // For credit notes: ensure amounts are positive in UBL (CreditNote semantics flip the sign)
-    if (isCredit) {
-      lines = lines.map((l) => ({
-        ...l,
-        quantity: Math.abs(Number(l.quantity || 1)),
-        unit_price_excl_vat: Math.abs(Number(l.unit_price_excl_vat || 0)),
-        amount_excl_vat: Math.abs(Number(l.amount_excl_vat || 0)),
-        vat_amount: Math.abs(Number(l.vat_amount || 0)),
-      }));
-    }
+    // Amounts above are already absolute; UBL CreditNote semantics flip the sign for credits.
 
     const ublXml = buildUblXml({
       invoice,
