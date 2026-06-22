@@ -111,9 +111,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
     }
 
     const canInvoice =
-      (i.status === "accepted" ||
-        i.status === "executed" ||
-        (i.status === "confirmed" && customerOk)) &&
+      (i.status === "accepted" || (i.status === "confirmed" && customerOk)) &&
       !i.invoiced_number &&
       req.terms_accepted_at;
     if (canInvoice) {
