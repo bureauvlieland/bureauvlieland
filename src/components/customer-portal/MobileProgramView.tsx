@@ -19,8 +19,8 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
-import { GuestDetailsCard } from "./GuestDetailsCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
+
 import { ProgramStepper, type StepId } from "./ProgramStepper";
 import { TabHeader } from "./TabHeader";
 import { buildTabHeader } from "./tabHeaderConfig";
