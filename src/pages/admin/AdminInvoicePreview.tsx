@@ -1513,22 +1513,22 @@ const AdminInvoicePreview = () => {
                         <div className="w-[260px] text-[10.5px]">
                           <div className="flex justify-between py-1">
                             <span className="text-gray-600">Subtotaal excl. BTW</span>
-                            <span>{formatCurrency(totals.totalExclVat)}</span>
+                            <span>{formatCurrency(effectiveTotalExclVat)}</span>
                           </div>
-                          {totals.vatLines.map((line) => (
+                          {effectiveVatLines.map((line) => (
                             <div key={line.rate} className="flex justify-between py-0.5 text-[10px] text-gray-500">
                               <span>BTW {line.rate}% over {formatCurrency(line.exclVat)}</span>
                               <span>{formatCurrency(line.vatAmount)}</span>
                             </div>
                           ))}
                           <div
-                            className="flex justify-between py-2 text-[11px] mt-1 border-t"
-                            style={{ borderColor: "#cbd5e1" }}
+                            className="flex justify-between py-2 text-[13px] font-bold mt-1 border-t-2"
+                            style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
                           >
                             <span>Totaal incl. BTW</span>
-                            <span>{formatCurrency(totals.totalInclVat)}</span>
+                            <span>{formatCurrency(effectiveTotalInclVat)}</span>
                           </div>
-                          {(() => {
+                          {!isSlotMode && (() => {
                             const relevantPrior = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
                             if (relevantPrior.length === 0) return null;
                             const priorSum = relevantPrior.reduce(
@@ -1565,6 +1565,7 @@ const AdminInvoicePreview = () => {
                               </>
                             );
                           })()}
+
                         </div>
                       </div>
 
