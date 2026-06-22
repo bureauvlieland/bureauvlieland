@@ -360,19 +360,24 @@ export const CheckoutContactForm = ({
       // Clear in-flight lock zodat de gebruiker opnieuw kan proberen
       try { sessionStorage.removeItem(buildSubmitHash()); } catch { /* no-op */ }
 
+      const rawMsg = (error?.message || "") + " " + (error?.details || "");
+      const isDuplicate = rawMsg.includes("duplicate_program_request") || error?.code === "23505";
+
       trackSubmitFailed({
         formType: 'program_request',
         error,
         extra: {
           number_of_people: numberOfPeople,
           items_count: cartItems.length,
+          duplicate_blocked: isDuplicate,
         },
       });
-      const friendly =
-        "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
+      const friendly = isDuplicate
+        ? "Deze aanvraag is zojuist al verstuurd. Controleer uw inbox en spam-folder. Bel ons gerust op 0562 700 208 als u geen bevestiging heeft ontvangen."
+        : "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
       setSubmitError(friendly);
       toast({
-        title: "Aanvraag niet verzonden",
+        title: isDuplicate ? "Aanvraag al ontvangen" : "Aanvraag niet verzonden",
         description: friendly,
         variant: "destructive",
       });
