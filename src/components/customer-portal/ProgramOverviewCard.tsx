@@ -73,13 +73,13 @@ export const ProgramOverviewCard = ({
       return { label: "Definitief", variant: "success" as const, icon: CheckCircle2 };
     }
     if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") {
-      return { label: "Akkoord", variant: "success" as const, icon: CheckCircle2 };
+      return { label: "Voorstel goedgekeurd", variant: "success" as const, icon: CheckCircle2 };
     }
     if (isExpired) {
       return { label: "Verlopen", variant: "destructive" as const, icon: AlertTriangle };
     }
     if (quoteStatus === "offerte_verstuurd") {
-      return { label: "Wacht op akkoord", variant: "warning" as const, icon: Clock };
+      return { label: "Wacht op goedkeuring", variant: "warning" as const, icon: Clock };
     }
     return { label: "In voorbereiding", variant: "muted" as const, icon: Clock };
   };
