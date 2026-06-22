@@ -782,22 +782,24 @@ const AdminInvoicePreview = () => {
         deliveryDate: eventDates || undefined,
       },
       categories,
-      totals: {
+      totals: slotTotalsLocal ?? {
         totalExclVat: totalsLocal.totalExclVat,
         totalVat: totalsLocal.totalVat,
         totalInclVat: totalsLocal.totalInclVat,
         vatLines: totalsLocal.vatLines,
       },
       notes: notes || undefined,
-      priorInvoices: priorInvoices
-        .filter((p) => p.invoice_number !== invoiceNumber)
-        .map((p) => ({
-          invoiceNumber: p.invoice_number,
-          invoiceDate: new Date(p.invoice_date),
-          amountInclVat:
-            p.invoice_type === "credit"
-              ? -Number(p.amount_incl_vat)
-              : Number(p.amount_incl_vat),
+      priorInvoices: isSlot
+        ? []
+        : priorInvoices
+            .filter((p) => p.invoice_number !== invoiceNumber)
+            .map((p) => ({
+              invoiceNumber: p.invoice_number,
+              invoiceDate: new Date(p.invoice_date),
+              amountInclVat:
+                p.invoice_type === "credit"
+                  ? -Number(p.amount_incl_vat)
+                  : Number(p.amount_incl_vat),
         })),
     });
 
