@@ -155,12 +155,12 @@ export const ProgramSidebar = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <span className="absolute bottom-3 left-3 right-3 text-white font-semibold text-sm flex items-center gap-1.5 drop-shadow-md">
               <Coffee className="h-4 w-4" />
-              Vlielands Biercafé
+              Café Boven
             </span>
           </div>
           <div className="p-3 bg-card">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Gezellig borrelen met uitzicht over het dorp.
+              Trap op, glas vol, gezelligheid aan.
             </p>
             <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
               Meer info <ExternalLink className="h-3 w-3" />
