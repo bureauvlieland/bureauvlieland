@@ -1,52 +1,88 @@
-## Probleem
-Een admin-chatbericht bestemd voor de klant landt in de partner-chatthread van hetzelfde project. De partner ziet daar nu een bericht over een wadloopexcursie/zeehondenexcursie dat aan de klant gericht was.
+## Vastgestelde workflow
 
-## Root cause
-`src/components/admin/ProjectChatSheet.tsx` (de "Chat met klant"-sheet) zoekt de bestaande conversatie met **alleen** een filter op `request_id`:
-
-```ts
-.from("chat_conversations")
-.select("id")
-.eq("request_id", requestId)
-.order("last_message_at", { ascending: false })
-.limit(1)
+```text
+1. Aanvraag binnen
+2. Bureau Vlieland bouwt programma + zet prijzen/tijden
+3. Bureau publiceert offerte → klant
+4. Klant geeft akkoord
+5. Partners ontvangen hun onderdelen ter beoordeling (status = pending)
+6. Partner bevestigt of stelt alternatief voor
+7. Bureau/klant accordeert eventuele aanpassingen + voorwaarden
+8. Status = confirmed → uitvoeren → factureren
 ```
 
-Per project kunnen meerdere conversaties bestaan: één per partner (`source = 'partner_portal'`, `source_partner_id = <partner>`) én één voor de klant (`source = 'customer_portal'`, `source_token = <customer_token>`). Doordat het `source`-filter ontbreekt, pakt de admin-sheet de meest recent geüpdatete conversatie — vaak een partner-thread — en plakt het klantbericht daarin. De partner ziet het direct via realtime.
+Stap 5 mag **nooit** worden overgeslagen. Op dit moment gebeurt dat wél: items waar Bureau de prijs invult komen direct op `status=confirmed` / `item_quote_status=bevestigd`, zonder dat de partner ze ooit gezien heeft. Voorbeeld: BV-2606-0011 "Koffie & Gebak aan boord" (Rederij Doeksen) — admin-prijs €7,75 p.p., klantakkoord op 12 juni, partner heeft nooit ingelogd, item staat tóch als "Klant akkoord" in zijn portal en verschijnt nergens in zijn werkbank.
 
-De partnerkant (`useProjectChat`) filtert wel correct op `source = 'partner_portal' + source_partner_id`, dus daar zit het lek niet.
+## Wat ik ga aanpassen
 
-## Fix
+### A. Status-transities afdwingen (database)
 
-### `src/components/admin/ProjectChatSheet.tsx`
-Beperk zowel het zoeken als het aanmaken van de klant-conversatie strikt tot de klant-bron:
+Bestaande trigger `guard_item_status_consistency` blokkeert alleen het scenario *skip_partner_notification = true*. Uitbreiden zodat een niet-bureau-item (`block_type <> 'bureau'`, `provider_id <> 'bureau'`) **nooit** naar `confirmed` / `bevestigd` mag zonder partner-handeling:
 
-1. **Zoekquery** uitbreiden:
-   ```ts
-   .eq("request_id", requestId)
-   .eq("source", "customer_portal")
-   .is("source_partner_id", null)
-   .is("accommodation_id", null)
-   ```
-2. Bij `insert` blijft `source: "customer_portal"`; expliciet `source_partner_id: null` en `accommodation_id: null` zetten zodat het schema-niveau eenduidig is.
+```text
+ALLOW confirmed/bevestigd ONLY IF
+   block_type = 'bureau'                              -- bureau-interne kost
+OR provider_id = 'bureau'                             -- ferries/bikes managed
+OR quoted_at IS NOT NULL                              -- partner heeft geofferd
+OR partner_price_change_acknowledged_at IS NOT NULL   -- partner heeft prijs gezien
+```
 
-### Datasanering (één migratie)
-Bestaande "kruisbestuiving" opruimen zodat de partner-portal-thread weer schoon is:
+Anders → `RAISE EXCEPTION` met hint "Item moet eerst door de partner worden bevestigd."
 
-1. **Detecteren:** chat_messages met `sender_type = 'admin'` in conversaties met `source = 'partner_portal'` die binnen X minuten gevolgd/voorafgegaan zijn door geen partner-reactie en inhoudelijk verwijzen naar klant-context. Te risicovol om automatisch te verwijderen → in plaats daarvan:
-2. **Pragmatisch:** voor het specifieke project (`BV-2606-0011`, request van van der Velden Interieur) het foute admin-bericht handmatig identificeren en alleen díe `chat_messages.id` verplaatsen naar de juiste customer-portal conversatie (of soft-deleten). Geen brede automatische opschoning — risico te groot.
-3. Voor dit ene geval lever ik een gerichte `UPDATE` op `chat_messages` (verplaatsen naar customer-portal conv) als één losse migratie nadat ik beide conversatie-ids heb opgezocht via een `read_query`. Als er nog geen customer-portal conv bestaat voor dat request, maak die dan eerst aan met `source_token` uit `program_requests.customer_token`.
+Dit voorkomt dat het patroon zich herhaalt, ongeacht via welke admin-flow het item wordt opgeslagen.
 
-### Toekomstige bescherming
-Geen schema-constraint (één conv per project per source kan niet hard afgedwongen worden zonder partial unique index op `source + source_partner_id + accommodation_id`). Wel toevoegen als kleine extra zekerheid:
+### B. Publish-flow: items echt naar partner sturen
 
-- **Partial unique index** op `chat_conversations (request_id, source) WHERE source = 'customer_portal' AND status <> 'closed' AND accommodation_id IS NULL`. Dit voorkomt per ongeluk twee actieve customer-portal-threads voor hetzelfde project.
+Bij `program_published_at` / wanneer de klant akkoord geeft (`customer_approved_at` wordt gezet), moet voor elk niet-bureau-item dat nog `quoted_at IS NULL` heeft:
 
-## Verificatie
-1. Open een willekeurig project waar al een partner-chat loopt → klik admin "Chat met klant" → controleer dat een **nieuwe** conversatie wordt aangemaakt (`source = customer_portal`) en niet de partner-thread.
-2. Stuur een admin-bericht → controleer dat het **niet** verschijnt in `useProjectChat` van die partner (via partner-portal preview/impersonate).
-3. Controleer dat het bestaande foute bericht uit de partner-thread verdwenen is.
+- `status` blijven op `pending` (niet upgraden naar `confirmed`)
+- `item_quote_status` op `'in_afstemming'` (niet `'bevestigd'`)
+- partner-notificatie via bestaande edge function `notify-partner-new-item` (of equivalent) versturen aan `partners.contact_email`, tenzij `skip_partner_notification = true`
 
-## Out of scope
-- Geen UI-wijzigingen aan de partner-chat zelf.
-- Geen retroactieve scan van alle projecten (te veel false-positives); alleen het gerapporteerde project wordt opgeschoond. Wil je een bredere scan, dan apart aanvragen.
+Aanpassen op één van deze plekken (uitzoeken in build): de publish/akkoord-flow in `supabase/functions/publish-program/*` of `update-partner-item-status`/`customer-approve-quote`. Geen wijziging aan de UI-knoppen die admin gebruikt — alleen aan de waarden die worden weggeschreven.
+
+### C. Bestaande "vastgelopen" items terugzetten
+
+Eenmalige opschoning voor reeds gepubliceerde, klant-akkoorde items waar partner nooit naar gekeken heeft:
+
+```text
+UPDATE program_request_items SET
+  status = 'pending',
+  item_quote_status = 'in_afstemming',
+  status_updated_at = now()
+WHERE quoted_at IS NULL
+  AND partner_price_change_acknowledged_at IS NULL
+  AND status IN ('confirmed','accepted')
+  AND item_quote_status = 'bevestigd'
+  AND block_type <> 'bureau'
+  AND provider_id <> 'bureau'
+  AND skip_partner_notification = false
+  AND EXISTS ( customer_approved_at IS NOT NULL voor de request )
+```
+
+Plus voor elk geraakt project één partner-notificatie sturen ("Bureau Vlieland heeft een onderdeel naar u doorgezet, gelieve te bevestigen.") — via dezelfde edge function als bij B, met dedupe op `email_log.metadata.item_id` zodat partners niet meerdere keren een mail krijgen.
+
+### D. Partnerportal-UI: zichtbaarheid
+
+Met A+B is `status='pending'` voldoende: het item valt automatisch onder de bestaande **"Beoordeel deze aanvraag"** bucket in `PartnerWerkbankList.tsx` (regel 90) en in het projectdetail toont `PartnerProjectItemRow` de bestaande "Te beoordelen"-status met de bestaande **Bevestigen** / **Niet beschikbaar** / **Tegenvoorstel** knoppen. Geen nieuwe componenten nodig — bestaande logica werkt zodra de data klopt.
+
+Eén kleine UI-aanpassing: als `admin_price_override IS NOT NULL` op een pending item, banner tonen *"Bureau Vlieland stelt voor: €X,XX p.p. — Bevestig of stel een tegenvoorstel"*. Hergebruikt bestaande price-change banner-logic in `PartnerProjectItemRow.tsx` (regels 79–212 hebben al `openPriceChange` + `submitAcceptPriceChange/submitCounterPrice`).
+
+### Bestanden die geraakt worden
+
+- Migration: trigger `guard_item_status_consistency` uitbreiden + eenmalige UPDATE-statement
+- `supabase/functions/publish-program/index.ts` (of equivalent — uitzoeken bij build) — geen confirmed/bevestigd meer op non-bureau-items
+- `supabase/functions/customer-approve-quote/index.ts` (of equivalent) — idem
+- `src/components/partner-portal/PartnerProjectItemRow.tsx` — kleine banner-tekst-aanpassing voor admin_price_override op pending items
+- Geen wijziging aan `PartnerWerkbankList.tsx` (bestaande pending-bucket vangt deze items vanzelf op)
+
+### Buiten scope
+
+- Admin-zijde UI (de admin mag prijzen blijven invullen; alleen het automatisch op `bevestigd` zetten verdwijnt)
+- Wijziging van bureau-managed items (ferries/bikes, block_type=bureau, provider_id=bureau) — blijven direct confirmed
+- Wijziging van logies-flow (accommodation_quotes) — die volgt al de partner-akkoord-stap
+
+### Vragen voordat ik bouw
+
+1. **Notificatiemail bij opschoning (C)**: één bulk-mail per partner met alle items, of één mail per item? Voorkeur: één per partner per project, omdat het hier maar om een handvol gevallen gaat.
+2. **Counter-proposal op prijs**: mag een partner een tegenvoorstel op de admin-prijs doen (knop bestaat al), of wil je dat alle prijswijzigingen vanaf nu een tegenvoorstel-flow naar Bureau triggeren in plaats van directe acceptatie? Voorkeur: bestaande gedrag behouden — partner accepteert of doet tegenvoorstel.

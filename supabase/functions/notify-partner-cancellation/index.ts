@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       : ["pending", "confirmed", "accepted", "counter_proposed"];
     const { data: openItems } = await supabase
       .from("program_request_items")
-      .select("id, provider_id, provider_name, provider_email, block_name, block_type, status")
+      .select("id, provider_id, provider_name, provider_email, block_name, block_type, block_category, status")
       .eq("request_id", request_id)
       .in("status", itemStatuses);
 
