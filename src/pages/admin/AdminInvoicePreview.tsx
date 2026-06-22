@@ -314,10 +314,26 @@ const AdminInvoicePreview = () => {
         .order("invoice_date", { ascending: true });
       setPriorInvoices((priorData || []) as any);
 
-      // Generate invoice number suggestion
+      // Determine which number to show.
+      // CRITICAL: do NOT auto-suggest a "next" number when there are already
+      // registered invoices — that caused PDFs to be sent with an unregistered
+      // higher number while the existing record was subtracted as "reeds gefactureerd".
+      // Default to the LATEST existing invoice; only suggest a new number when
+      // explicitly requested via ?new=1 or when no invoices exist yet.
       const ref = requestData.reference_number || "XXXX";
-      const nextSeq = String(((priorData || []).length || 0) + 1).padStart(3, "0");
-      setInvoiceNumber(`FV-${ref}-${nextSeq}`);
+      const explicitInvoiceId = searchParams.get("invoiceId");
+      const wantNewTermijn = searchParams.get("new") === "1";
+      const hasPrior = (priorData?.length ?? 0) > 0;
+
+      if (!explicitInvoiceId && hasPrior && !wantNewTermijn) {
+        const latest = priorData![priorData!.length - 1];
+        setInvoiceNumber(latest.invoice_number);
+        if (latest.invoice_date) setInvoiceDate(new Date(latest.invoice_date));
+      } else if (!explicitInvoiceId) {
+        const nextSeq = String(((priorData || []).length || 0) + 1).padStart(3, "0");
+        setInvoiceNumber(`FV-${ref}-${nextSeq}`);
+      }
+      // If explicitInvoiceId is set, the dedicated effect above will set the number.
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Fout bij laden gegevens");
