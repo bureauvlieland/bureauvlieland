@@ -1576,7 +1576,7 @@ const AdminInvoicePreview = () => {
                           (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
                           0,
                         );
-                        const netDue = totals.totalInclVat - priorSum;
+                        const netDue = isSlotMode ? netDueIncl : totals.totalInclVat - priorSum;
                         return (
                           <div className="p-3 rounded mb-5 text-[10.5px]" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
                             <p className="font-semibold mb-1">Betalingsgegevens</p>
