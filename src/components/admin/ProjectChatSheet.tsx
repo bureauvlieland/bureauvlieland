@@ -71,11 +71,15 @@ export function ProjectChatSheet({
         const visitorName = customerName || meta.customer_name || "";
         const visitorEmail = customerEmail || meta.customer_email || "";
 
-        // Find any existing conversation for this project (shared with customer portal)
+        // Find existing customer-portal conversation for this project.
+        // Strict source filter prevents hijacking a partner-portal thread for the same request.
         const { data: existing } = await supabase
           .from("chat_conversations")
           .select("id")
           .eq("request_id", requestId)
+          .eq("source", "customer_portal")
+          .is("source_partner_id", null)
+          .is("accommodation_id", null)
           .order("last_message_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -89,6 +93,8 @@ export function ProjectChatSheet({
               request_id: requestId,
               source: "customer_portal",
               source_token: meta.customer_token,
+              source_partner_id: null,
+              accommodation_id: null,
               visitor_name: visitorName,
               visitor_email: visitorEmail,
               status: "active",
