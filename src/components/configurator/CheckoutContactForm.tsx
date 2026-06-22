@@ -137,27 +137,48 @@ export const CheckoutContactForm = ({
       // Soft warning: actieve aanvraag op dit e-mailadres (geen tijdslimiet).
       // We willen voorkomen dat klanten parallelle dossiers aanmaken in plaats
       // van door te gaan met hun bestaande, lopende aanvraag.
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("program_requests")
-        .select("id, reference_number, quote_status, created_at, completion_status")
+        .select("id, reference_number, quote_status, created_at, completion_status, selected_dates, number_of_people")
         .eq("customer_email", formData.email)
         .neq("status", "cancelled")
         .neq("completion_status", "fully_invoiced")
         .order("created_at", { ascending: false })
         .limit(1);
 
+      if (existingError) {
+        setSubmitError(
+          "We konden niet controleren of u al een aanvraag heeft lopen. Probeer het zo opnieuw, of bel ons op 0562 700 208."
+        );
+        return;
+      }
+
       if (existing && existing.length > 0) {
+        const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+        const existingDates = Array.isArray(existing[0].selected_dates)
+          ? (existing[0].selected_dates as string[]).map(String).sort()
+          : [];
+        const sameDates =
+          existingDates.length === isoDates.length &&
+          [...isoDates].sort().every((d, i) => d === existingDates[i]);
+        const sameSize = existing[0].number_of_people === numberOfPeople;
+
         setExistingRequest({
           id: existing[0].id,
           reference: existing[0].reference_number ?? null,
           quoteStatus: existing[0].quote_status ?? null,
           createdAt: existing[0].created_at,
+          sameDatesAndSize: sameDates && sameSize,
         });
         setDuplicateWarningOpen(true);
         return;
       }
-    } catch {
-      // Bij een check-fail laten we de submit gewoon doorgaan
+    } catch (err) {
+      console.error("dedup check failed:", err);
+      setSubmitError(
+        "We konden niet controleren of u al een aanvraag heeft lopen. Probeer het zo opnieuw, of bel ons op 0562 700 208."
+      );
+      return;
     }
 
     await executeSubmit();
