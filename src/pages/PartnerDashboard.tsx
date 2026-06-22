@@ -22,6 +22,7 @@ import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 
 type TabKey = "projecten" | "werkbank";
 
+
 const PartnerDashboardContent = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,7 +30,7 @@ const PartnerDashboardContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const tab = (searchParams.get("tab") as TabKey) || "projecten";
+  const tab = (searchParams.get("tab") as TabKey) || "werkbank";
   const search = searchParams.get("q") ?? "";
   const typeFilter = (searchParams.get("type") as PartnerRowKind | "all") ?? "all";
   const archive = searchParams.get("archief") === "1";
@@ -165,7 +166,7 @@ const PartnerDashboardContent = () => {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Projecten &amp; Werkbank</h1>
+          <h1 className="text-2xl font-bold">Werkbank &amp; Projecten</h1>
           <p className="text-sm text-muted-foreground">
             Overzicht van uw projecten, gesorteerd op eerstvolgende datum.
           </p>
@@ -191,8 +192,8 @@ const PartnerDashboardContent = () => {
         <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TabsList>
-              <TabsTrigger value="projecten">Projecten</TabsTrigger>
               <TabsTrigger value="werkbank">Werkbank</TabsTrigger>
+              <TabsTrigger value="projecten">Projecten</TabsTrigger>
             </TabsList>
 
             {tab === "projecten" && (
