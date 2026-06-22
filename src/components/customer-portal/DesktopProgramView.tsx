@@ -196,6 +196,9 @@ export const DesktopProgramView = ({
     isQuoteAwaitingApproval,
     isPreApproval,
     totalCost,
+    customerActionsCount,
+    customerApprovedCount,
+    customerApprovableTotal: customerApprovableCount,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -216,12 +219,6 @@ export const DesktopProgramView = ({
       : accommodation
         ? "requested"
         : "none";
-  const customerApprovedCount = program.items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled" && !!i.customer_approved_at,
-  ).length;
-  const customerApprovableCount = program.items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled",
-  ).length;
 
   const handleStepAction = (stepId: StepId) => {
     if (stepId === "lodging") {
