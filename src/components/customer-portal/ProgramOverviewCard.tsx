@@ -62,7 +62,7 @@ export const ProgramOverviewCard = ({
   // Determine program type label (status-driven, niet type-driven)
   const getProgramTypeLabel = () => {
     if (termsAcceptedAt) return "Boeking bevestigd";
-    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Akkoord gegeven";
+    if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Alles goedgekeurd";
     if (isMaatwerk) return "Maatwerk";
     return "Voorstel";
   };
