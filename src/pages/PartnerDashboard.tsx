@@ -166,7 +166,7 @@ const PartnerDashboardContent = () => {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Projecten &amp; Werkbank</h1>
+          <h1 className="text-2xl font-bold">Werkbank &amp; Projecten</h1>
           <p className="text-sm text-muted-foreground">
             Overzicht van uw projecten, gesorteerd op eerstvolgende datum.
           </p>
