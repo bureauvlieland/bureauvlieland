@@ -192,8 +192,8 @@ const PartnerDashboardContent = () => {
         <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TabsList>
-              <TabsTrigger value="projecten">Projecten</TabsTrigger>
               <TabsTrigger value="werkbank">Werkbank</TabsTrigger>
+              <TabsTrigger value="projecten">Projecten</TabsTrigger>
             </TabsList>
 
             {tab === "projecten" && (
