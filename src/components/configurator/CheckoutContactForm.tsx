@@ -52,6 +52,7 @@ export const CheckoutContactForm = ({
     reference: string | null;
     quoteStatus: string | null;
     createdAt: string;
+    sameDatesAndSize: boolean;
   } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
