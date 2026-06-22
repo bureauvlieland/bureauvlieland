@@ -150,7 +150,7 @@ export const CustomerProgramItem = ({
                     <MicroPill tone="emerald">Bevestigd</MicroPill>
                   ) : null
                 ) : item.status === "pending" ? (
-                  <MicroPill tone="amber">Pending</MicroPill>
+                  <MicroPill tone="amber">Wacht op partner</MicroPill>
                 ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
                   <MicroPill tone="emerald">Bevestigd</MicroPill>
                 ) : (
