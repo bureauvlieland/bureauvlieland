@@ -411,10 +411,10 @@ export const CustomerProgramItem = ({
                     <Check className="h-4 w-4 mr-2" />
                   )}
                   {priceChangeNeedsAttention
-                    ? "Akkoord met nieuwe prijs"
+                    ? "Nieuwe prijs goedkeuren"
                     : item.status === "alternative"
-                      ? "Ik ga akkoord met deze aanpassing"
-                      : "Ik ga akkoord met dit onderdeel"}
+                      ? "Wijziging goedkeuren"
+                      : "Dit onderdeel goedkeuren"}
                 </Button>
               )}
 
