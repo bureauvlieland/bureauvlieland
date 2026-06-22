@@ -32,6 +32,10 @@ interface ActionRequiredCardProps {
   programPublishedAt?: string | null;
   guestDetailsIncomplete?: boolean;
   onOpenGuestDetails?: () => void;
+  /** Aantal onderdelen waarop de klant nu akkoord moet geven (incl. alternatieven). */
+  customerActionsCount?: number;
+  /** Aantal alternatieven binnen die acties — voor copy. */
+  alternativeActionsCount?: number;
   className?: string;
 }
 
