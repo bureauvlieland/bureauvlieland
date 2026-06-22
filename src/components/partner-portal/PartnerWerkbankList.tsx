@@ -123,6 +123,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
     const r = q.accommodation_requests;
     if (q.status === "cancelled" || q.status === "rejected" || q.status === "declined" || r.status === "cancelled")
       return;
+    if (q.invoiced_number || q.status === "invoiced" || q.status === "executed") return;
     const customerLabel = r.customer_company || r.customer_name;
     const date = r.arrival_date ? new Date(r.arrival_date) : null;
     const base = {
