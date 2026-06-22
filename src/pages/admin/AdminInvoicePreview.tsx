@@ -787,6 +787,88 @@ const AdminInvoicePreview = () => {
 
   const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + bundledExtras.length;
 
+  // ── Slot mode (restantfactuur voor het openstaande bedrag) ───────────────
+  // Toon één regel "Slotfactuur project ..." met pro-rata BTW-uitsplitsing,
+  // i.p.v. het hele programma met "reeds gefactureerd" eronder.
+  const modeParam = (searchParams.get("mode") || "full").toLowerCase();
+  const hasPriorOtherThanCurrent = priorInvoices.some(
+    (p) => p.invoice_number !== invoiceNumber,
+  );
+  const priorSumExcludingCurrent = priorInvoices
+    .filter((p) => p.invoice_number !== invoiceNumber)
+    .reduce(
+      (s, p) =>
+        s +
+        (p.invoice_type === "credit"
+          ? -Number(p.amount_incl_vat)
+          : Number(p.amount_incl_vat)),
+      0,
+    );
+  const netDueIncl = Math.max(0, totals.totalInclVat - priorSumExcludingCurrent);
+  const isSlotMode = modeParam === "slot" && hasPriorOtherThanCurrent && netDueIncl > 0.005;
+  const canOfferSlotMode = hasPriorOtherThanCurrent && netDueIncl > 0.005;
+
+  const setMode = (next: "slot" | "full") => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "slot") {
+      params.set("mode", "slot");
+      params.set("new", "1");
+    } else {
+      params.delete("mode");
+    }
+    setSearchParams(params, { replace: true });
+  };
+
+  // Pro-rata uitsplitsing van het openstaand bedrag over de bestaande
+  // BTW-tarieven, zodat BTW-aangifte sluitend blijft over de hele projectreeks.
+  const slotTotals = (() => {
+    if (!isSlotMode) return null;
+    const fullIncl = totals.totalInclVat;
+    if (fullIncl <= 0) return null;
+    const factor = netDueIncl / fullIncl;
+    let runningExcl = 0;
+    let runningVat = 0;
+    const lines = totals.vatLines.map((l) => {
+      const exclVat = Math.round(l.exclVat * factor * 100) / 100;
+      const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
+      runningExcl += exclVat;
+      runningVat += vatAmount;
+      return { rate: l.rate, exclVat, vatAmount };
+    });
+    // Rondingsverschil op laatste regel corrigeren zodat incl = netDue exact.
+    if (lines.length > 0) {
+      const diff = netDueIncl - (runningExcl + runningVat);
+      // Voeg verschil toe aan de excl-vat van de eerste regel met BTW>0,
+      // anders aan de eerste regel.
+      const idx = lines.findIndex((l) => l.rate > 0) === -1 ? 0 : lines.findIndex((l) => l.rate > 0);
+      lines[idx].exclVat = Math.round((lines[idx].exclVat + diff / (1 + lines[idx].rate / 100)) * 100) / 100;
+      lines[idx].vatAmount = Math.round((lines[idx].vatAmount + diff - diff / (1 + lines[idx].rate / 100)) * 100) / 100;
+    }
+    const totalExclVat = lines.reduce((s, l) => s + l.exclVat, 0);
+    const totalVat = lines.reduce((s, l) => s + l.vatAmount, 0);
+    return {
+      totalExclVat,
+      totalVat,
+      totalInclVat: netDueIncl,
+      vatLines: lines,
+    };
+  })();
+
+  const effectiveTotalExclVat = slotTotals?.totalExclVat ?? totals.totalExclVat;
+  const effectiveTotalVat = slotTotals?.totalVat ?? totals.totalVat;
+  const effectiveTotalInclVat = slotTotals?.totalInclVat ?? totals.totalInclVat;
+  const effectiveVatLines = slotTotals?.vatLines ?? totals.vatLines;
+
+  const priorRefList = priorInvoices
+    .filter((p) => p.invoice_number !== invoiceNumber)
+    .map((p) => p.invoice_number)
+    .join(", ");
+  const slotDescription = `Slotfactuur project ${request.reference_number ?? ""}`.trim();
+  const slotSubDescription = priorRefList
+    ? `Restant na reeds gefactureerde termijn${priorInvoices.length > 2 ? "en" : ""}: ${priorRefList}`
+    : "Restant openstaand bedrag";
+
+
   return (
     <>
       <Helmet>
