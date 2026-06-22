@@ -70,7 +70,8 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   type MenuItem = { title: string; url: string; icon: typeof LayoutDashboard };
 
   const werkItems: MenuItem[] = [
-    { title: "Overzicht", url: `/partner/dashboard${urlSuffix}`, icon: LayoutDashboard },
+    { title: "Werkbank", url: `/partner/dashboard${urlSuffix}`, icon: ClipboardList },
+    { title: "Projecten", url: `/partner/dashboard${impersonateParam ? `?impersonate=${impersonateParam}&tab=projecten` : "?tab=projecten"}`, icon: LayoutDashboard },
     ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
     ...(isActivityPartner ? [{ title: "Activiteiten", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
     ...(isAccommodationPartner ? [
