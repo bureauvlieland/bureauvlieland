@@ -800,7 +800,8 @@ const AdminInvoicePreview = () => {
                 p.invoice_type === "credit"
                   ? -Number(p.amount_incl_vat)
                   : Number(p.amount_incl_vat),
-        })),
+            })),
+
     });
 
     return blob;
