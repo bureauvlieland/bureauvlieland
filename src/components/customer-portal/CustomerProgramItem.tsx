@@ -383,7 +383,10 @@ export const CustomerProgramItem = ({
 
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
-            <div className="mt-3 flex flex-wrap gap-2 justify-end">
+            <div className={cn(
+              "mt-3 flex flex-wrap gap-2",
+              needsCustomerAction ? "justify-stretch" : "justify-end",
+            )}>
               {/* Per-item akkoord — voor zowel quote- als legacy-mode */}
               {needsCustomerAction && (isQuoteMode ? !!onApproveQuoteItem : !!onAccept) && (
                 <Button
@@ -399,15 +402,19 @@ export const CustomerProgramItem = ({
                     }
                   }}
                   disabled={localApproving || localAccepting || isAccepting}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                  className="flex-1 min-w-[220px] bg-green-600 hover:bg-green-700 text-white font-semibold ring-2 ring-green-400/40"
                 >
                   {(localApproving || localAccepting) ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <Check className="h-4 w-4 mr-1.5" />
+                    <Check className="h-4 w-4 mr-2" />
                   )}
-                  {priceChangeNeedsAttention ? "Akkoord met nieuwe prijs" : "Akkoord"}
+                  {priceChangeNeedsAttention
+                    ? "Akkoord met nieuwe prijs"
+                    : item.status === "alternative"
+                      ? "Ik ga akkoord met deze aanpassing"
+                      : "Ik ga akkoord met dit onderdeel"}
                 </Button>
               )}
 
