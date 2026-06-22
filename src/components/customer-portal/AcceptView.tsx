@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { PaymentStatusCard } from "./PaymentStatusCard";
-import { CompactBillingSection } from "./CompactBillingSection";
 import { FileText, Info, CheckCircle2 } from "lucide-react";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
@@ -59,17 +58,6 @@ export const AcceptView = ({
         </div>
       </div>
 
-      {/* Facturatiegegevens-check */}
-      <CompactBillingSection
-        program={program}
-        items={items}
-        numberOfPeople={numberOfPeople}
-        numberOfDays={selectedDates.length || 1}
-        termsAccepted={termsAccepted}
-        selectedAccommodationQuote={accommodationQuotes.find((q) => q.status === "selected")}
-        onEditBilling={onOpenBilling}
-        invoicingMode={invoicingMode}
-      />
 
       {/* Akkoord */}
       {!termsAccepted ? (
