@@ -333,6 +333,8 @@ export const MobileProgramView = ({
             programType={program.origin}
             quoteStatus={program.quote_status}
             programPublishedAt={program.program_published_at}
+            customerActionsCount={customerActionsCount}
+            alternativeActionsCount={statusSummary.alternative}
             guestDetailsIncomplete={
               !!guestDetails &&
               (!guestDetails.guest_names ||
