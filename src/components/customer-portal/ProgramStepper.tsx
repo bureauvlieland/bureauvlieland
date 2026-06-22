@@ -275,9 +275,9 @@ const StepPip = ({
       className={cn(
         "relative z-10 flex shrink-0 items-center justify-center rounded-full border-2 transition-all",
         dimensions,
-        step.state === "done" && "bg-primary border-primary text-primary-foreground shadow-sm",
+        step.state === "done" && "bg-success border-success text-success-foreground shadow-sm",
         step.state === "active" &&
-          "bg-background border-primary text-primary ring-4 ring-primary/15",
+          "bg-background border-success text-success ring-4 ring-success/15",
         step.state === "upcoming" && "bg-background border-border text-muted-foreground",
       )}
     >
@@ -291,7 +291,7 @@ const Connector = ({ active, vertical = false }: { active: boolean; vertical?: b
     <span
       className={cn(
         "absolute left-[13px] top-7 bottom-0 w-0.5 -translate-x-1/2 rounded-full transition-colors",
-        active ? "bg-primary" : "bg-border",
+        active ? "bg-success" : "bg-border",
       )}
       aria-hidden
     />
@@ -299,7 +299,7 @@ const Connector = ({ active, vertical = false }: { active: boolean; vertical?: b
     <div
       className={cn(
         "h-0.5 flex-1 rounded-full transition-colors",
-        active ? "bg-primary" : "bg-border",
+        active ? "bg-success" : "bg-border",
       )}
     />
   );
@@ -378,7 +378,7 @@ const TrackCard = ({
                   {track.title}
                 </h4>
                 {track.done ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
                     <Check className="h-3 w-3" /> Gereed
                   </span>
                 ) : (
@@ -429,7 +429,7 @@ const TrackCard = ({
             {!track.cta && !track.done && (
               <Clock className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
             )}
-            {track.done && <Check className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />}
+            {track.done && <Check className="h-3.5 w-3.5 shrink-0 mt-0.5 text-success" />}
             <span>{track.statusLine}</span>
           </p>
           {track.cta && onAction && (
@@ -486,7 +486,7 @@ const TrackCardVertical = ({
           </p>
         </div>
         {track.done && (
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success">
             <Check className="h-3 w-3" />
           </div>
         )}
@@ -521,7 +521,7 @@ const TrackCardVertical = ({
           {!track.cta && !track.done && (
             <Clock className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground/70" />
           )}
-          {track.done && <Check className="h-3 w-3 shrink-0 mt-0.5 text-primary" />}
+          {track.done && <Check className="h-3 w-3 shrink-0 mt-0.5 text-success" />}
           <span>{track.statusLine}</span>
         </p>
         {track.cta && onAction && (
