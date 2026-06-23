@@ -178,8 +178,12 @@ export function deriveItemDisplayStatus(
     return "geaccepteerd";
   }
 
-  // De Status-kolom toont uitsluitend de klant-as. De vraag of het onderdeel
-  // al naar de partner is gestuurd staat hier los van en wordt elders getoond
-  // (zie de "Nog naar partner" / "Verstuurd"-chip).
+  // Klant heeft nog geen akkoord gegeven. Twee scenario's:
+  //  - status = 'pending'  → partner heeft nog niet gereageerd, dus de klant
+  //    kan ook nog niks goedkeuren → "wacht op aanbieder".
+  //  - status = 'confirmed' / 'alternative' → partner heeft gereageerd, nu is
+  //    de klant aan zet → "wacht op klant-akkoord".
+  if (item.status === "pending") return "wacht_op_partner";
   return "wacht_op_klant";
+
 }
