@@ -1,54 +1,55 @@
-# Sales Inbox
+## Probleem
 
-Nieuwe bron voor aanvragen: mails die binnenkomen op `sales@reply.bureauvlieland.nl` (en aliassen) verschijnen in een Sales Inbox in admin, worden via AI geparsed, en kunnen met één klik omgezet worden naar een project/aanvraag — net zoals de inkoopfacturen-inbox.
+Op BV-2606-0011 staan beide overtocht-items (Harlingen↔Vlieland) op `status='pending'` met `item_quote_status='in_afstemming'`. In de klantportal toont `CustomerProgramItem` daarom "· voorlopig" achter de prijs, ook al heb je als admin de prijs (€137,10) en de toelichting al gezet. Fietshuur staat wél op `status='confirmed'` / `item_quote_status='bevestigd'` en wordt dus als definitief getoond.
 
-## Mailjet routing — geen extra config nodig
+## Oorzaak
 
-Mailjet Parse staat één parseroute per API-key toe (één `@parse-in1.mailjet.com`-adres), maar onze huidige route is een **catch-all op `@reply.bureauvlieland.nl`**. Alle mail naar dat subdomein komt al binnen op één webhook (`inbound-email`). Daar kunnen we onbeperkt virtuele adressen op aanmaken — de routing gebeurt server-side op het `To:`-veld. Voor de sales inbox hoeft er dus **niets bij Mailjet** te veranderen.
+In `AdminEditActivitySheet.handleSave` (regels ~260-308) zit een auto-akkoord-tak die voor **bureau-items** (`block_type='bureau'`, dus ferry/fiets/bagage/bureau) automatisch `status='confirmed'`, `item_quote_status='bevestigd'`, `quoted_at`, `customer_approved_at`, `customer_accepted_at` en `skip_partner_notification=true` zet. Maar die tak draait **alleen als het item nog een draft is** (`pending_added===true`).
 
-## Wat de gebruiker krijgt
+Voor reeds gepubliceerde items gaat de save naar de pending-flow: `pending_admin_price_override` etc. worden gevuld en je moet "Publiceer & notificeer" doen. In `supabase/functions/publish-program-changes/index.ts` (regels ~590-637) wordt de prijs wel gepromoveerd naar live, maar de auto-akkoord-logica voor bureau-items ontbreekt daar — dus `status` blijft 'pending' en de klantportal blijft "voorlopig" tonen.
 
-1. Forward (of laat aanvragen rechtstreeks afleveren op) `sales@reply.bureauvlieland.nl`. Aliassen die ook werken: `leads@`, `aanvraag@`, `reply+sales@`.
-2. Nieuw menu-item **Sales Inbox** onder Admin (naast Inkoopfacturen Inbox).
-3. Lijst met afzender, onderwerp, ontvangstdatum, AI-status (pending/scanning/scanned/failed), en geparste klantnaam.
-4. Detailsheet: ruwe mail + bijlagen + bewerkbare geparste velden (naam, e-mail, telefoon, bedrijf, aantal personen, datums, type programma, wensen, budget, bron).
-5. Acties: **Maak project** (vult `program_requests` met de geparste data), **Hersannen**, **Negeer**.
+Fietshuur is waarschijnlijk vóór de eerste publicatie aangepast (draft-tak), de overtochten zijn ná publicatie aangepast (pending → publish-tak).
 
-## Technisch
+## Fix
 
-### Database
-Nieuwe tabel `sales_inbox` (admin-only RLS, service_role ALL):
-- afzender (email, naam), `subject`, `body_text`, `body_html`, `received_at`
-- `attachment_path/filename/size`, `raw_payload jsonb`
-- `scan_status` (pending/scanning/scanned/failed), `scan_result jsonb`, `scan_error`
-- `status` (new/processed/discarded), `processed_request_id` (FK `program_requests`), `processed_by`, `processed_at`, `notes`
+### 1. `supabase/functions/publish-program-changes/index.ts`
 
-Storage: hergebruik bestaande `email-attachments` bucket onder prefix `sales/<inbox_id>/...`.
+Direct nadat per item het `upd`-object is opgebouwd (rond regel 637, vóór `await supabase.from("program_request_items").update(upd)`), bureau-auto-akkoord toevoegen, in lijn met de draft-flow in `AdminEditActivitySheet`:
 
-### Edge functions
-- **`inbound-email`** (uitbreiden): nieuwe `isSalesInboxRecipient(recipient)` check vóór de reference-number lookup. Match op `sales@`, `leads@`, `aanvraag@`, `reply+sales@…`. Bij match → rij in `sales_inbox` + bijlagen opslaan + async `scan-sales-lead` triggeren.
-- **`scan-sales-lead`** (nieuw): leest body + tekstuele PDF-bijlagen, roept Lovable AI Gateway aan (`google/gemini-3-flash-preview` met `Output.object` schema), schrijft `scan_result` + `scan_status='scanned'`.
-- **`create-request-from-sales-inbox`** (nieuw): maakt `program_requests` rij met `source='sales_inbox'`, vult klantvelden, koppelt `processed_request_id`, zet `status='processed'`, kopieert bijlagen naar `project_communications` als documenten.
+```ts
+// Bureau-interne posten kennen geen partner-akkoord-traject én geen aparte
+// klant-akkoord-stap: zodra admin de prijs/inhoud publiceert is dit
+// definitief. Voorkomt dat klantportal "voorlopig" blijft tonen.
+const effectiveStatus = (upd.status as string | undefined) ?? it.status;
+if (effectiveBlockType === "bureau" && effectiveStatus === "pending") {
+  upd.status = "confirmed";
+  upd.item_quote_status = "bevestigd";
+  upd.quoted_at = upd.quoted_at ?? nowIso;
+  upd.customer_approved_at = upd.customer_approved_at ?? nowIso;
+  upd.customer_accepted_at = upd.customer_accepted_at ?? nowIso;
+  upd.skip_partner_notification = true;
+}
+```
 
-### AI scan-schema (Zod)
-`customer_name`, `customer_email`, `customer_phone`, `customer_company`, `number_of_people`, `preferred_dates[]`, `program_type`, `wishes`, `budget_indication`, `source`, `confidence`.
+Belangrijk: deze tak alleen toepassen als `resetCustomerApproval` níet hierboven `customer_*_at` op `null` heeft gezet voor een live bureau-item (huidige code reset alleen `customer_approved/accepted_at`, niet `status`, dus geen conflict — maar wel `??` gebruiken zodat reset-keuze prioriteit houdt). Voor `effectiveBlockType==='bureau'` is `resetPartnerApproval` al niet van toepassing (zie bestaande `effectiveBlockType !== "bureau"` guard regel 633).
 
-### Frontend
-- Route `/admin/sales-inbox` met admin-route-guard (zelfde shell als `/admin/inkoopfacturen-inbox`).
-- Componenten: `SalesInboxList`, `SalesInboxDetailSheet`, `SalesInboxScanResultForm`, `CreateRequestFromInboxDialog`.
-- Sidebar: nieuw item "Sales Inbox" met unread-badge (rijen met `status='new'`).
-- Bij "Maak project": navigatie naar `/admin/projecten/<nieuw id>` zodra de aanvraag is aangemaakt.
+### 2. Eenmalige data-fix voor BV-2606-0011
 
-### Bevestigde defaults (geen extra vraag nodig)
-- Ontvangstadres: `sales@reply.bureauvlieland.nl` (+ aliassen leads/aanvraag/reply+sales).
-- PDF-bijlagen meescannen: ja, body + extracted text uit PDF-bijlagen.
-- Status van het nieuwe project bij "Maak project": standaard `new_lead` (zelfde initiele state als configurator-aanvragen) zodat de bestaande admin-workflow erop aansluit.
+Voor de twee overtocht-items (`3562fceb-…` en `5dfed936-…`) handmatig dezelfde velden zetten zodat ze nu al definitief worden in de klantportal:
 
-## Uitvoervolgorde
+- `status = 'confirmed'`
+- `item_quote_status = 'bevestigd'`
+- `quoted_at = now()` (indien null)
+- `customer_approved_at = now()` (indien null)
+- `customer_accepted_at = now()` (indien null)
+- `skip_partner_notification = true`
 
-1. Migratie `sales_inbox` (tabel + grants + RLS + policies + trigger updated_at).
-2. `scan-sales-lead` edge function + Lovable AI Gateway helper.
-3. `inbound-email` uitbreiden met sales-routing.
-4. `create-request-from-sales-inbox` edge function.
-5. Admin-route + componenten + sidebar item.
-6. Sanity check: mail naar `sales@reply.bureauvlieland.nl` → verschijnt in inbox → wordt gescand → project aanmaken werkt.
+### 3. Niet in scope
+
+- Geen wijzigingen aan `deriveItemDisplayStatus` of aan de "voorlopig"-label-logica zelf — die is correct (basis = `status==='pending'`), het probleem is dat de status niet doorgezet werd.
+- Geen wijzigingen aan partner-portal of email-templates.
+- Geen retro-scan over alle andere projecten; als je dat wilt voer ik dat als losse data-fix uit na akkoord.
+
+## Wat moet je als admin nu doen (zonder fix)
+
+Tot de fix gedeployed is kun je de overtochten definitief maken door in admin op het item de "Publiceer & notificeer"-flow te draaien én daarna handmatig de status te overriden via de bestaande admin status-override-knop op het item (gebruikt `override-item-status` edge function → zet `status='confirmed'`). Met de fix hierboven is dat niet meer nodig: publiceren van een bureau-item bevestigt automatisch.
