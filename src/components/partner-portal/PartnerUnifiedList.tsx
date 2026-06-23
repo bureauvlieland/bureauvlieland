@@ -70,21 +70,17 @@ const getUrgencyScore = (status: string, canInvoice?: boolean): number => {
   return scores[status] ?? 0;
 };
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+// Status-config UITSLUITEND voor accommodatie-offertes (eigen statussen die niet in
+// het activiteit-domein bestaan). Activiteit-items gebruiken altijd
+// ItemDisplayStatusBadge met audience="partner" → één bron van waarheid.
+const accommodationStatusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   pending: { label: "Nieuw", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
-  confirmed: { label: "Voorstel verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  alternative: { label: "Wacht op klant", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  counter_proposed: { label: "Tegenvoorstel", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
-  accepted: { label: "Klant akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  executed: { label: "Uitgevoerd", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  invoiced: { label: "Gefactureerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
-  cancelled: { label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive/10" },
   submitted: { label: "Offerte verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
   selected: { label: "Akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
   rejected: { label: "Niet gekozen", color: "text-muted-foreground", bgColor: "bg-muted" },
   declined: { label: "Afgewezen (door u)", color: "text-muted-foreground", bgColor: "bg-muted" },
   expired: { label: "Verlopen", color: "text-muted-foreground", bgColor: "bg-muted" },
+  cancelled: { label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive/10" },
 };
 
 const isNewItem = (item: PartnerItem): boolean => {
