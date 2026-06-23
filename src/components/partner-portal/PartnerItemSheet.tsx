@@ -355,18 +355,7 @@ export const PartnerItemSheet = ({
         <SheetHeader>
           <div className="flex items-center gap-2 flex-wrap">
             <SheetTitle className="text-xl">{item.block_name}</SheetTitle>
-            <Badge 
-              variant="outline" 
-              className={cn("font-normal", statusInfo.color, statusInfo.bgColor, "border-0")}
-            >
-              {statusInfo.label}
-            </Badge>
-            {(item.customer_accepted_at || item.customer_approved_at) && (
-              <Badge className="bg-green-600 hover:bg-green-700">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Klant akkoord
-              </Badge>
-            )}
+            <ItemDisplayStatusBadge status={displayStatus} audience="partner" />
             {isModifiedByCustomer && (
               <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                 <RefreshCw className="h-3 w-3 mr-1" />
