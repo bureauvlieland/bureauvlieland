@@ -636,6 +636,22 @@ Deno.serve(async (req) => {
         upd.confirmed_time = null;
       }
 
+      // Bureau-interne posten (overtochten, fietsen, bagagevervoer, eigen
+      // kostenposten) kennen geen partner-akkoord-traject én geen aparte
+      // klant-akkoord-stap: zodra admin de prijs/inhoud publiceert is dit
+      // definitief. Mirror van de draft-flow in AdminEditActivitySheet, zodat
+      // de klantportal niet "voorlopig" blijft tonen voor live bureau-items
+      // die in de pending-flow zijn aangepast en nu gepubliceerd worden.
+      const effectiveStatus = (upd.status as string | undefined) ?? it.status;
+      if (effectiveBlockType === "bureau" && effectiveStatus === "pending") {
+        upd.status = "confirmed";
+        upd.item_quote_status = "bevestigd";
+        upd.quoted_at = upd.quoted_at ?? nowIso;
+        upd.customer_approved_at = upd.customer_approved_at ?? nowIso;
+        upd.customer_accepted_at = upd.customer_accepted_at ?? nowIso;
+        upd.skip_partner_notification = true;
+      }
+
       // Status_note opruimen wanneer een gepubliceerde wijziging de
       // bestaande toelichting niet meer dekt (bv. "Tijd 12:30 ingesteld door
       // admin" terwijl er net naar 10:00 is gepubliceerd). Simpel: zodra
