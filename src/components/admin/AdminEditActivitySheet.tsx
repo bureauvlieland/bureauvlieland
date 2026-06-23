@@ -267,10 +267,8 @@ export const AdminEditActivitySheet = ({
             ? {
                 confirmed_time: time,
                 proposed_time: null,
-                status_note: time
-                  ? `Tijd ${formatTimeHHmm(time)} ingesteld door admin`
-                  : "Tijd verwijderd door admin",
-                status_updated_at: new Date().toISOString(),
+                // Draft (pending_added): geen status_note schrijven — de klant
+                // ziet dit item nog niet, dus er is geen wijziging te melden.
               }
             : {}),
           admin_price_override: price,

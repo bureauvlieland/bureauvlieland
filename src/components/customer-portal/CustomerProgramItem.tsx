@@ -339,8 +339,8 @@ export const CustomerProgramItem = ({
             </p>
           )}
           
-          {/* Status note from provider */}
-          {item.status_note && (
+          {/* Status note from provider — verberg auto-gegenereerde admin-systeemnotities */}
+          {item.status_note && !/^Tijd (\d{1,2}:\d{2} ingesteld|verwijderd) door (admin|Bureau Vlieland)/i.test(item.status_note) && (
             <div className={cn(
               "mt-3 p-3 rounded-lg text-sm",
               statusConfig.bgColor
