@@ -18,6 +18,8 @@ import type { ProjectSummary } from "@/lib/getProject";
 import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
 import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { cn } from "@/lib/utils";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 type ItemRow = Pick<
   Tables<"program_request_items">,
