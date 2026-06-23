@@ -22,6 +22,8 @@ import { format, parseISO, differenceInHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceTypeSuffix } from "@/lib/portalPricing";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 interface PartnerItemCardProps {
   item: PartnerItem;
@@ -30,14 +32,6 @@ interface PartnerItemCardProps {
   onRegisterInvoice?: () => void;
   showInvoiceDetails?: boolean;
 }
-
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Aangevraagd", variant: "secondary" },
-  confirmed: { label: "Bevestigd", variant: "default" },
-  unavailable: { label: "Niet beschikbaar", variant: "destructive" },
-  alternative: { label: "Alternatief", variant: "outline" },
-  cancelled: { label: "Geannuleerd", variant: "destructive" },
-};
 
 // Check if item was recently modified (reset to pending with new version)
 const isRecentlyModified = (item: PartnerItem): boolean => {
