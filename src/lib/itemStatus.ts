@@ -207,3 +207,23 @@ export function deriveItemDisplayStatus(
   return "wacht_op_klant";
 
 }
+
+/**
+ * Loose variant van deriveItemDisplayStatus voor plekken die niet een volledig
+ * ProgramRequestItem-record hebben (partner-portal, planning-overzichten,
+ * werkbank). We castten naar ProgramRequestItem en geven sensible defaults voor
+ * de prijs-context — partners zien immers nooit een admin-prijs-override.
+ */
+export function deriveItemDisplayStatusLoose(item: {
+  status?: string | null;
+  block_type?: string | null;
+  customer_accepted_at?: string | null;
+  override_people?: number | null;
+  admin_price_override_updated_at?: string | null;
+  [key: string]: unknown;
+}, ctx?: Partial<DeriveContext>): ItemDisplayStatus {
+  return deriveItemDisplayStatus(item as unknown as ProgramRequestItem, {
+    programPeople: ctx?.programPeople ?? 0,
+    numberOfDays: ctx?.numberOfDays ?? 1,
+  });
+}
