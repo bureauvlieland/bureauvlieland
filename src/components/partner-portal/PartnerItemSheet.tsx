@@ -67,17 +67,7 @@ interface PartnerItemSheetProps {
   commissionPercentage: number;
 }
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
-  pending: { label: "Nieuw", color: "text-primary", bgColor: "bg-primary/10" },
-  confirmed: { label: "Bevestigd", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  accepted: { label: "Klantakkoord", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  executed: { label: "Uitgevoerd", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
-  invoiced: { label: "Gefactureerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
-  cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  alternative: { label: "Alternatief voorgesteld", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
-  counter_proposed: { label: "Tegenvoorstel klant", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
-};
+const _STATUS_CONFIG_REMOVED = null;
 
 type ResponseType = "confirmed" | "alternative" | "unavailable";
 
