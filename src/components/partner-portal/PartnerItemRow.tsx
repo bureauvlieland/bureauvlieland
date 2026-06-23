@@ -36,7 +36,10 @@ export const PartnerItemRow = ({ item, onClick }: PartnerItemRowProps) => {
   const request = item.program_requests;
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
-  const statusInfo = statusConfig[item.status] || statusConfig.pending;
+  const displayStatus = deriveItemDisplayStatusLoose(item, {
+    programPeople: request.number_of_people ?? 0,
+    numberOfDays: dates.length || 1,
+  });
   const isNew = isNewlyAdded(item);
   const isModified = isModifiedByCustomer(item);
   const hasCounter = hasCounterProposal(item);
