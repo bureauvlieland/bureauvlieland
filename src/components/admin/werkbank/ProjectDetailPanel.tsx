@@ -33,6 +33,7 @@ type ItemRow = Pick<
   | "provider_name"
   | "skip_partner_notification"
   | "customer_approved_at"
+  | "customer_accepted_at"
   | "item_quote_status"
 >;
 
