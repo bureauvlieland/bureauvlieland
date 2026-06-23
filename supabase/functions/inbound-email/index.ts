@@ -411,6 +411,100 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Sales inbox route — store inbound mail as a sales lead and trigger AI scan
+    if (isSalesInboxRecipient(recipient)) {
+      console.log(`Routing inbound email to sales inbox — recipient=${recipient}, subject="${subject}"`);
+      try {
+        const { name: senderName, email: senderEmail } = parseSender(sender);
+        const rawText = textContent || stripHtml(htmlContent) || "";
+        const trimmed = trimQuotedReply(rawText) || rawText;
+
+        // Sanitized payload snapshot (strip large base64)
+        const rawForLog: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rawPayload as Record<string, unknown>)) {
+          if (typeof v === "string" && v.length > 500 && /^(Inline)?Attachment\d+$/i.test(k)) {
+            rawForLog[k] = `<base64 ${v.length} chars>`;
+          } else {
+            rawForLog[k] = v;
+          }
+        }
+
+        const { data: inbox, error: insErr } = await supabase
+          .from("sales_inbox")
+          .insert({
+            recipient,
+            from_email: senderEmail || "unknown",
+            from_name: senderName || null,
+            subject: subject || null,
+            body_text: trimmed.substring(0, 20000),
+            body_html: (htmlContent || "").substring(0, 100000) || null,
+            raw_payload: rawForLog,
+            scan_status: "pending",
+            status: "new",
+          })
+          .select("id")
+          .single();
+
+        if (insErr || !inbox) {
+          console.error("sales_inbox insert error:", insErr);
+          return new Response(
+            JSON.stringify({ status: "error", routed_to: "sales_inbox", message: insErr?.message }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
+        // Store attachments under sales/<inbox_id>/...
+        const attachments = await extractAndStoreAttachments(rawPayload, supabase, `sales/${inbox.id}`);
+        if (attachments.length > 0) {
+          await supabase
+            .from("sales_inbox")
+            .update({
+              attachments,
+              attachment_path: attachments[0].path,
+              attachment_filename: attachments[0].name,
+              attachment_size: attachments[0].size,
+            })
+            .eq("id", inbox.id);
+        }
+
+        // Create admin todo
+        await supabase.from("admin_todos").insert({
+          title: `Nieuwe sales-aanvraag van ${senderName || senderEmail}`.substring(0, 200),
+          description: subject ? `Onderwerp: "${subject}"\n\nBekijk in de Sales Inbox.` : "Bekijk in de Sales Inbox.",
+          priority: "normal",
+          status: "todo",
+          auto_type: "sales_inbox",
+          auto_entity_id: inbox.id,
+        });
+
+        // Fire-and-forget AI scan
+        try {
+          const fnUrl = `${supabaseUrl}/functions/v1/scan-sales-lead`;
+          fetch(fnUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({ inbox_id: inbox.id }),
+          }).catch((e) => console.error("Background scan-sales-lead trigger failed:", e));
+        } catch (e) {
+          console.error("Could not trigger scan-sales-lead:", e);
+        }
+
+        return new Response(
+          JSON.stringify({ status: "ok", routed_to: "sales_inbox", inbox_id: inbox.id }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (err) {
+        console.error("sales_inbox routing failed:", err);
+        return new Response(
+          JSON.stringify({ status: "error", message: "sales_inbox_failed" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const referenceNumber = extractReferenceNumber(recipient);
     if (!referenceNumber) {
       console.warn(`No valid reference number found in recipient: ${recipient}`);
