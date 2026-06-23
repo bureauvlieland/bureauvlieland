@@ -341,7 +341,18 @@ export const DesktopProgramView = ({
         {/* 4. Program, billing, terms, contact - visible when not showing accommodation or billing-only */}
         {(initialSection === "program" || !initialSection) && (
           <>
-            {/* Voorstel-akkoord card (alleen actief in fase 2/maatwerk-leeg) — bóven het programma */}
+            {/* Fase 2: één centrale hero-kaart bóven het programma */}
+            {isProposalPhase && (
+              <ProposalHeroCard
+                quoteValidUntil={program.quote_valid_until}
+                hasUnapprovedItems={hasUnapprovedItems}
+                onAcceptQuoteProposal={onAcceptQuoteProposal}
+                bureauItemCount={bureauItemCount}
+                partnerItemCount={partnerItemCount}
+              />
+            )}
+
+            {/* Intro card behoudt maatwerk-leeg / bevestigd-flows */}
             <ProgramIntroCard
               programType={program.origin}
               quoteStatus={program.quote_status}
@@ -355,6 +366,7 @@ export const DesktopProgramView = ({
               allConfirmed={allConfirmed}
               quotePdfUrl={(program as any).quote_pdf_url}
             />
+
 
             {/* Program content only (no billing) */}
             <div id="program" className="scroll-mt-20">
