@@ -294,8 +294,10 @@ const ItemCard = ({
   onSelectItem: (item: PartnerItem) => void;
   onSelectQuote: (quote: PartnerAccommodationQuote) => void;
 }) => {
-  const statusInfo = statusConfig[item.status] || statusConfig.pending;
   const isActivity = item.type === "activity";
+  const accStatus = !isActivity
+    ? accommodationStatusConfig[item.status] || accommodationStatusConfig.pending
+    : null;
   const isRecentNegative = item.isRecentlyCancelled || item.isRecentlyRejected;
 
   return (
