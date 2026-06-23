@@ -187,7 +187,8 @@ function buildProgramTrack(
       statusLine:
         statusSummary.alternative > 0
           ? `${statusSummary.alternative} alternatief voorgesteld — uw aandacht is gewenst.`
-          : `${partnerConfirmed} van ${partnerTotal} partner-onderdelen bevestigd.${bureauLine}`,
+          : `${partnerConfirmed} van ${partnerTotal} partner onderdelen bevestigd door partner.${bureauLine}`,
+
       cta:
         statusSummary.alternative > 0 || (statusSummary.counter_proposed || 0) > 0
           ? { label: "Programma bekijken", stepId: "providers" }
