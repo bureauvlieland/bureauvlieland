@@ -142,7 +142,7 @@ function buildProgramTrack(
 
   const steps: MiniStep[] = [
     {
-      label: "Onderdelen goedkeuren",
+      label: approveDone ? "Alle onderdelen goedgekeurd" : "Onderdelen goedkeuren",
       icon: ThumbsUp,
       state: approveDone ? "done" : customerApprovableCount > 0 ? "active" : "upcoming",
     },
@@ -152,6 +152,7 @@ function buildProgramTrack(
       state: providersDone ? "done" : approveDone && statusSummary.total > 0 ? "active" : "upcoming",
     },
   ];
+
 
   const base = { id: "program" as const, tone: "program" as const, title: "Programma", subtitle: "Activiteiten & beleving", steps };
 
