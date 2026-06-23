@@ -334,6 +334,21 @@ export const DesktopProgramView = ({
         {/* 4. Program, billing, terms, contact - visible when not showing accommodation or billing-only */}
         {(initialSection === "program" || !initialSection) && (
           <>
+            {/* Voorstel-akkoord card (alleen actief in fase 2/maatwerk-leeg) — bóven het programma */}
+            <ProgramIntroCard
+              programType={program.origin}
+              quoteStatus={program.quote_status}
+              quoteValidUntil={program.quote_valid_until}
+              termsAcceptedAt={program.terms_accepted_at}
+              itemCount={program.items.filter(i => i.status !== "cancelled").length}
+              isMaatwerkEmpty={isMaatwerkProject(program) && program.items.length === 0}
+              onAcceptQuoteProposal={onAcceptQuoteProposal}
+              hasUnapprovedItems={hasUnapprovedItems}
+              programPublishedAt={program.program_published_at}
+              allConfirmed={allConfirmed}
+              quotePdfUrl={(program as any).quote_pdf_url}
+            />
+
             {/* Program content only (no billing) */}
             <div id="program" className="scroll-mt-20">
               <Card>
