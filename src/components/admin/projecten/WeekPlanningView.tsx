@@ -77,7 +77,7 @@ export function WeekPlanningView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_request_items")
-        .select("id, block_name, provider_name, status, proposed_date, day_index, request_id, proposed_time, preferred_time")
+        .select("id, block_name, provider_name, status, block_type, customer_accepted_at, proposed_date, day_index, request_id, proposed_time, preferred_time")
         .is("proposed_date", null)
         .neq("status", "cancelled");
       if (error) throw error;
