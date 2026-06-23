@@ -53,14 +53,24 @@ export const useProgramStatus = (
   const isPreApproval = !!program.quote_status &&
     ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
 
+  // Fase-flags (single source of truth voor portaal-UI).
+  const isProposalPhase = program.quote_status === "offerte_verstuurd"; // fase 2
+  const isApprovalPhase = program.quote_status === "akkoord_ontvangen"; // fase 3
+
+  // Bureau-onderdelen zijn per definitie akkoord (Bureau Vlieland regelt het zelf).
+  // De klant hoeft daar nooit op te klikken — ze tellen dus niet mee in actie-tellers.
+  const isCustomerActionableCandidate = (i: ProgramRequestItem) =>
+    i.block_type !== "self_arranged" &&
+    i.provider_id !== "bureau" &&
+    i.status !== "cancelled";
+
   // Items waar de klant NU akkoord op kan geven.
   // Pending items = wacht op partner — daar kan de klant niets aan doen.
   const customerActionableItems = useMemo(
     () =>
       program.items.filter(
         (i) =>
-          i.block_type !== "self_arranged" &&
-          i.status !== "cancelled" &&
+          isCustomerActionableCandidate(i) &&
           (i.status === "confirmed" || i.status === "alternative") &&
           !i.customer_approved_at,
       ),
@@ -73,8 +83,7 @@ export const useProgramStatus = (
     () =>
       program.items.filter(
         (i) =>
-          i.block_type !== "self_arranged" &&
-          i.status !== "cancelled" &&
+          isCustomerActionableCandidate(i) &&
           (i.status === "confirmed" || i.status === "alternative"),
       ).length,
     [program.items],
@@ -86,7 +95,8 @@ export const useProgramStatus = (
   ).length;
 
   // Single source of truth voor "wat moet de klant nu doen op deze tab".
-  const customerActionsCount = proposalActionsCount;
+  // In fase 2 (voorstel) zit de actie bovenaan (bulk-akkoord), niet per item.
+  const customerActionsCount = isApprovalPhase ? proposalActionsCount : 0;
 
   const totalCost = useMemo(() => {
     let total = 0;
@@ -111,6 +121,8 @@ export const useProgramStatus = (
     hasActiveAccommodation,
     isQuoteAwaitingApproval,
     isPreApproval,
+    isProposalPhase,
+    isApprovalPhase,
     totalCost,
     // Customer-action telstaten — single source of truth voor badges, strook en sidebar.
     customerActionsCount,
