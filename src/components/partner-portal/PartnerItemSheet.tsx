@@ -48,6 +48,8 @@ import {
   type PartnerConflictItem 
 } from "@/lib/timeUtils";
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
