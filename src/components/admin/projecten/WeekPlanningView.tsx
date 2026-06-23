@@ -18,6 +18,8 @@ import {
 } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Activity, Hotel } from "lucide-react";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose, type ItemDisplayStatus } from "@/lib/itemStatus";
 
 interface PlanningItem {
   type: "activity" | "arrival" | "departure";
@@ -25,17 +27,10 @@ interface PlanningItem {
   label: string;
   sublabel: string;
   linkTo: string;
-  status?: string;
+  displayStatus?: ItemDisplayStatus;
   customerName: string;
   groupSize?: number;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  confirmed: "bg-green-100 text-green-800",
-  proposed: "bg-blue-100 text-blue-800",
-  cancelled: "bg-red-100 text-red-800",
-};
 
 export function WeekPlanningView() {
   const [weekOffset, setWeekOffset] = useState(0);
