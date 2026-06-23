@@ -121,6 +121,8 @@ export const useProgramStatus = (
     hasActiveAccommodation,
     isQuoteAwaitingApproval,
     isPreApproval,
+    isProposalPhase,
+    isApprovalPhase,
     totalCost,
     // Customer-action telstaten — single source of truth voor badges, strook en sidebar.
     customerActionsCount,
