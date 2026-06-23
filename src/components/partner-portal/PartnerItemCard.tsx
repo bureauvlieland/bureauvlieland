@@ -119,7 +119,7 @@ export const PartnerItemCard = ({
                 Actie vereist
               </Badge>
             )}
-            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+            <ItemDisplayStatusBadge status={displayStatus} audience="partner" />
           </div>
         </div>
       </CardHeader>
