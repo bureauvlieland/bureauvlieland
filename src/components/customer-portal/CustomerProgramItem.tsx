@@ -141,25 +141,23 @@ export const CustomerProgramItem = ({
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
-                {isSelfArranged ? (
-                  <MicroPill tone="amber">Zelf te regelen</MicroPill>
-                ) : item.provider_id === "bureau" ? (
-                  // Bureau-onderdelen (veerboot, fiets, vrije tijd) worden door
-                  // het bureau zelf geregeld → altijd als bevestigd tonen.
-                  <MicroPill tone="emerald">Bevestigd</MicroPill>
-                ) : item.status === "pending" ? (
-                  <MicroPill tone="amber">Wacht op partner</MicroPill>
-                ) : isQuoteMode && item.customer_approved_at && item.status !== "confirmed" && item.status !== "alternative" ? (
-                  <MicroPill tone="emerald">Bevestigd</MicroPill>
-                ) : (
-                  <ItemStatusBadge status={item.status as ItemStatus} overrideLabel={
-                    needsCustomerAction && item.status === "alternative" ? "Alternatief voorstel" :
-                    undefined
-                  } />
-                )}
+                {(() => {
+                  // Unified status (zelfde bron als admin/partner-views). Bureau-onderdelen
+                  // tonen we expliciet als "Bevestigd" omdat die door het bureau zelf
+                  // geregeld worden en geen partner-keten doorlopen.
+                  if (item.provider_id === "bureau" && !isSelfArranged) {
+                    return <MicroPill tone="emerald">Bevestigd</MicroPill>;
+                  }
+                  const derived = deriveItemDisplayStatus(item, {
+                    programPeople: numberOfPeople ?? 1,
+                    numberOfDays: selectedDates.length || 1,
+                  });
+                  return <ItemDisplayStatusBadge status={derived} audience="customer" />;
+                })()}
                 {priceChangeNeedsAttention && (
                   <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
                 )}
+
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isSelfArranged ? "Zelf te boeken en betalen" : item.provider_name}
