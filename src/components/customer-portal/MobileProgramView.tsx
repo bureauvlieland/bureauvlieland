@@ -11,6 +11,8 @@ import { AcceptView } from "./AcceptView";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
+import { ProposalHeroCard } from "./ProposalHeroCard";
+
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerTimeline } from "./CustomerTimeline";
 import { AddActivitySheet } from "./AddActivitySheet";
