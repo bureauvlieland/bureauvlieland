@@ -104,10 +104,15 @@ export const CustomerProgramItem = ({
 
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
-  // opnieuw akkoord op moet geven. In quote-mode laten we de strikte item_quote_status
-  // check vallen omdat status=confirmed/alternative al voldoende signaleert dat de
-  // partner heeft gereageerd of dat het item via de offerte is bevestigd.
+  // opnieuw akkoord op moet geven.
+  // Bureau-onderdelen (provider_id="bureau") regelen wij zelf — die zijn voor de klant
+  // automatisch akkoord, dus geen per-item knop. Per-item knop verschijnt alleen in
+  // fase 3 (quote_status="akkoord_ontvangen"): in fase 2 zit de actie in de bulk-
+  // akkoord-card bovenaan om dubbele/contradicterende acties te voorkomen.
+  const isApprovalPhase = quoteStatus === "akkoord_ontvangen";
   const needsCustomerAction = !isSelfArranged
+    && item.provider_id !== "bureau"
+    && isApprovalPhase
     && (item.status === "confirmed" || item.status === "alternative")
     && (!item.customer_approved_at || priceChangeNeedsAttention)
     && !item.customer_accepted_at;
