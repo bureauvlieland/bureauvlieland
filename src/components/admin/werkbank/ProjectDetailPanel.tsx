@@ -235,7 +235,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
       const itemsPromise = supabase
         .from("program_request_items")
         .select(
-          "id, block_name, block_type, day_index, preferred_time, confirmed_time, status, quoted_price, provider_id, provider_name, skip_partner_notification, customer_approved_at, item_quote_status",
+          "id, block_name, block_type, day_index, preferred_time, confirmed_time, status, quoted_price, provider_id, provider_name, skip_partner_notification, customer_approved_at, customer_accepted_at, item_quote_status",
         )
         .eq("request_id", id)
         .order("day_index", { ascending: true });
