@@ -19,6 +19,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 export interface UnifiedListItem {
   id: string;
@@ -68,21 +70,17 @@ const getUrgencyScore = (status: string, canInvoice?: boolean): number => {
   return scores[status] ?? 0;
 };
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+// Status-config UITSLUITEND voor accommodatie-offertes (eigen statussen die niet in
+// het activiteit-domein bestaan). Activiteit-items gebruiken altijd
+// ItemDisplayStatusBadge met audience="partner" → één bron van waarheid.
+const accommodationStatusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   pending: { label: "Nieuw", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
-  confirmed: { label: "Voorstel verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  alternative: { label: "Wacht op klant", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  counter_proposed: { label: "Tegenvoorstel", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
-  accepted: { label: "Klant akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  executed: { label: "Uitgevoerd", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  invoiced: { label: "Gefactureerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
-  cancelled: { label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive/10" },
   submitted: { label: "Offerte verstuurd", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
   selected: { label: "Akkoord", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
   rejected: { label: "Niet gekozen", color: "text-muted-foreground", bgColor: "bg-muted" },
   declined: { label: "Afgewezen (door u)", color: "text-muted-foreground", bgColor: "bg-muted" },
   expired: { label: "Verlopen", color: "text-muted-foreground", bgColor: "bg-muted" },
+  cancelled: { label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive/10" },
 };
 
 const isNewItem = (item: PartnerItem): boolean => {
@@ -296,8 +294,10 @@ const ItemCard = ({
   onSelectItem: (item: PartnerItem) => void;
   onSelectQuote: (quote: PartnerAccommodationQuote) => void;
 }) => {
-  const statusInfo = statusConfig[item.status] || statusConfig.pending;
   const isActivity = item.type === "activity";
+  const accStatus = !isActivity
+    ? accommodationStatusConfig[item.status] || accommodationStatusConfig.pending
+    : null;
   const isRecentNegative = item.isRecentlyCancelled || item.isRecentlyRejected;
 
   return (
@@ -388,16 +388,26 @@ const ItemCard = ({
                 Nieuwe prijs
               </Badge>
             )}
-            <Badge
-              variant="outline"
-              className={cn(
-                "font-normal border-0",
-                statusInfo.color,
-                statusInfo.bgColor
-              )}
-            >
-              {item.canInvoice ? "Te factureren" : statusInfo.label}
-            </Badge>
+            {item.canInvoice ? (
+              <Badge variant="outline" className="font-normal border-0 text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50">
+                Te factureren
+              </Badge>
+            ) : isActivity ? (
+              <ItemDisplayStatusBadge
+                status={deriveItemDisplayStatusLoose(item.originalItem as PartnerItem, {
+                  programPeople: (item.originalItem as PartnerItem).program_requests?.number_of_people ?? item.peopleCount,
+                  numberOfDays: getNumberOfDays((item.originalItem as PartnerItem).program_requests?.selected_dates) || 1,
+                })}
+                audience="partner"
+              />
+            ) : (
+              <Badge
+                variant="outline"
+                className={cn("font-normal border-0", accStatus!.color, accStatus!.bgColor)}
+              >
+                {accStatus!.label}
+              </Badge>
+            )}
           </div>
 
           {/* Chevron */}

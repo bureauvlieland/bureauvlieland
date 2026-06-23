@@ -1,42 +1,77 @@
-## Probleem
+## Doel
 
-Wanneer Bureau Vlieland een logies-aanvraag annuleert, krijgt de partner een mail met de referentie (bv. `BV-2605-0005`). In de partnerportal wordt deze offerte/aanvraag dan echter volledig verborgen: in `get-partner-dashboard` worden alle quotes waarvan `accommodation_requests.status === "cancelled"` is, weggefilterd (zelfde geldt voor programma-items met `status = "cancelled"`). De partner kan dus niet terugzoeken om welke aanvraag het gaat.
+Eén bron van waarheid voor de status van een programma-onderdeel — `deriveItemDisplayStatus` in `src/lib/itemStatus.ts` — overal in de app gebruiken. Vandaag gebruiken slechts 2 UI-plekken die functie; de rest heeft eigen label-maps. Daardoor kan dezelfde rij in admin "Klant akkoord" tonen en in partnerportal "Bevestigd", of in werkbank gewoon de ruwe DB-status "pending".
 
-## Oplossing
+## Aanpak (2 stappen)
 
-Twee samenhangende stappen: (1) geannuleerde items zichtbaar maken via een archief + zoekfunctie, en (2) de annuleringsmail een directe deeplink geven naar die archief-weergave.
+### 1. Data-audit (eenmalig, alleen rapport — geen mutaties)
 
-### 1. Backend: geannuleerde items meesturen (gemarkeerd)
+Query op `program_request_items` om rijen te vinden waar de DB-staat intern niet logisch is. Niet-cancelled, niet-deleted items waar:
 
-In `supabase/functions/get-partner-dashboard/index.ts`:
-- Verwijder de harde uitsluiting van `accommodation_requests.status === "cancelled"` en van `program_requests.status === "cancelled"` / `i.status === "cancelled"`.
-- In plaats daarvan: cancelled items wél meesturen, maar alleen als de annulering binnen het laatste jaar valt (anders blijft de lijst niet onbeperkt groeien). Bestaande retentie van 3 maanden voor closed quotes blijft gelden voor niet-cancelled.
-- Voeg op item/quote-niveau een vlag toe (`is_cancelled: true` + `cancelled_at`) zodat de frontend ze duidelijk anders kan tonen.
-- Aanvraagreferentie (`reference_number`) staat al op `program_requests`; voor `accommodation_requests` moeten we de reference ook teruggeven. Check of `accommodation_requests` een referentie heeft — zo niet, gebruik dan het bijbehorende `linked_program.reference_number` als zoek-/weergaveveld.
+- `status='pending'` maar `customer_accepted_at IS NOT NULL` (klant heeft akkoord gegeven, status is niet bijgewerkt)
+- `status='confirmed'` of `'accepted'` maar partner_id IS NULL (geen partner = bureau-item, status klopt niet)
+- `item_quote_status='offerte_verstuurd'` of `'in_afstemming'` maar `status='cancelled'` (workflow-vlag was niet opgeschoond)
+- `customer_accepted_at IS NOT NULL` terwijl `status NOT IN ('confirmed','accepted','executed','invoiced','cancelled')`
 
-### 2. Frontend: archief + zoeken op referentie
+Output: CSV in `/mnt/documents/status-audit.csv` met `reference_number`, `item_id`, `title`, `status`, `item_quote_status`, `customer_accepted_at`, `partner_id`. Geen automatische correctie — eerst doorlopen met jou.
 
-In `src/pages/PartnerDashboard.tsx` / `PartnerWerkbankList.tsx` / `PartnerProjectsTable.tsx`:
-- Werkbank blijft default zoals nu (geen cancelled).
-- Tab **Projecten**: voeg een toggle "Toon ook geannuleerd" toe naast de bestaande archive-toggle. Als aan, worden cancelled program-items en cancelled accommodation-quotes meegenomen, met een rode/grijze badge "Geannuleerd" en de annuleringsdatum + reden (indien beschikbaar).
-- Versterk het bestaande zoekveld zodat zoeken op de referentie (`BV-2605-0005`) altijd matcht, ook als het item cancelled is — dus de cancelled-filter wordt automatisch genegeerd zodra de gebruiker een referentie intypt die exact matcht.
-- Klik op een cancelled rij opent het bestaande `PartnerItemSheet` / `PartnerAccommodationQuoteSheet` (die hebben de cancelled-state al ingebouwd, zie `PartnerItemSheet.tsx` regel 399 en `PartnerAccommodationQuoteSheet.tsx` regel 579 — geen extra UI nodig, alleen data doorlaten).
+### 2. Code-audit + opschoning
 
-### 3. Annuleringsmail: deeplink
+Alle UI- en e-mail-/PDF-plekken laten lopen via `deriveItemDisplayStatus` + `ItemDisplayStatusBadge`, met `audience` `"admin"` | `"customer"` | `"partner"`. Eigen label-maps verwijderen.
 
-In de edge function die de "Logies-aanvraag … is geannuleerd"-mail verstuurt (waarschijnlijk `notify-partner-cancellation` of de logies-variant — wordt in build-mode opgezocht en aangepast):
-- Voeg onderaan een knop/link toe: "Bekijk in je partnerportal" → `https://…/partner/dashboard?tab=projecten&q=BV-2605-0005&includeCancelled=1`.
-- `PartnerDashboard.tsx` moet de query-params `q` en `includeCancelled` initieel oppakken in zijn search-state.
+Bevestigde overtreders die nu eigen logica hebben (incompleet — wordt aangevuld met explore-rapport):
 
-## Technische details
+**Partner portal (eigen `statusConfig` / `statusLabel`):**
+- `src/components/partner-portal/PartnerItemRow.tsx`
+- `src/components/partner-portal/PartnerItemCard.tsx`
+- `src/components/partner-portal/PartnerProjectItemRow.tsx`
+- `src/components/partner-portal/PartnerItemSheet.tsx`
+- `src/components/partner-portal/PartnerWerkbankList.tsx`
+- `src/components/partner-portal/PartnerProjectsList.tsx`
+- `src/components/partner-portal/PartnerUnifiedList.tsx`
+- `src/components/partner-portal/PartnerPlanningCalendar.tsx`
+- `src/components/partner-portal/PartnerUpcomingActivities.tsx`
 
-- Geen schemawijzigingen nodig: `cancelled_at` en `status='cancelled'` bestaan al op zowel `program_request_items`, `program_requests` als `accommodation_requests`/`accommodation_quotes`.
-- Aanpassing in `get-partner-dashboard`: filters in regels ~137-138, ~165 en ~296-302 versoepelen + enrichment uitbreiden met `is_cancelled`, `cancelled_at`, en (voor logies) een reference-veld.
-- PII-redactie voor `bureau_central` blijft ongewijzigd; alleen meta (referentie, datums, status) is voor partner relevant.
-- Werkbank-filtering in `PartnerWerkbankList.tsx` (regels 76 en 124) blijft zoals die nu is — cancelled hoort niet in werkbank, alleen in projecten/archief.
-- Geen wijziging in `customer_approved_at`/workflowlogica.
+**Admin (ruwe `it.status` / eigen kleur-maps):**
+- `src/components/admin/werkbank/ProjectDetailPanel.tsx` (toont letterlijk `it.status` en `it.item_quote_status`)
+- `src/components/admin/projecten/WeekPlanningView.tsx` (eigen `STATUS_COLORS`, toont ruwe status)
+- `src/components/admin/WorkOverview.tsx`
+- `src/components/admin/AdminPartnerTimeline.tsx`
+- `src/pages/admin/AdminPlanning.tsx`
+- `src/pages/admin/AdminProjects.tsx` (overzicht)
+- `src/pages/admin/AdminDashboard.tsx`
 
-## Niet in scope
+**Customer portal (oud pad nog aanwezig):**
+- `src/components/customer-portal/ItemStatusBadge.tsx` — verwijderen of intern doorroepen naar `ItemDisplayStatusBadge`
+- `src/components/customer-portal/MobileProgramView.tsx` — controleren
+- `src/components/customer-portal/PriceSummaryCard.tsx` — controleren
 
-- Geen aparte "Archief"-pagina; we breiden de bestaande Projecten-tab uit. Eén bron van waarheid, minder navigatie.
-- Geen historie van handmatig verwijderde quotes (alleen status-cancelled).
+**Audience uitbreiden:**
+- `ItemDisplayStatusBadge` heeft nu `audience="admin"|"customer"`. Toevoegen: `audience="partner"` met partner-specifieke labels (bv. `geaccepteerd` → "Klantakkoord", `wacht_op_partner` → "Nieuw / Reactie gevraagd").
+- In `itemStatus.ts` `partnerLabel` toevoegen aan `ItemDisplayStatusInfo`.
+
+**E-mails / PDF / edge functions:**
+- `supabase/functions/get-partner-dashboard/index.ts` retourneert status — controleren of frontend `deriveItemDisplayStatus` toepast op de gereturnde items (model identiek aan `ProgramRequestItem`). Zo niet: payload aanvullen met minimaal benodigde velden.
+- E-mail-templates die status noemen (zoekstring "Wacht op", "Bevestigd", "Klantakkoord" in `supabase/functions/**`) afstemmen op één Nederlandse label-set; idem PDF-genereerders.
+
+### Acceptatiecriteria
+
+1. Eén project (bv. BV-2606-0011) in admin, klantportal én partnerportal naast elkaar tonen exact dezelfde status-tekst per item (rekening houdend met audience-verschil zoals "Klant akkoord" vs "Akkoord" vs "Klantakkoord").
+2. `rg "statusConfig|statusLabel|STATUS_COLORS" src/components/partner-portal src/components/admin` levert geen treffers meer op (m.u.v. opzettelijke uitzonderingen).
+3. `status-audit.csv` is leeg of bevat alleen rijen die we bewust met de hand fixen.
+
+## Wat er NIET in zit
+
+- Geen DB-migratie of mass-update; data-fixes na overleg met jou.
+- Geen wijziging van workflow-logica (wie wordt wanneer akkoord), alleen weergave.
+- Geen wijziging aan accommodatie-status (`AccommodationStatusBanner` heeft eigen domein).
+
+## Volgorde van uitvoeren
+
+1. CSV-audit draaien → samen door de gevallen lopen.
+2. `partnerLabel` toevoegen aan `itemStatus.ts` + `audience="partner"` in `ItemDisplayStatusBadge`.
+3. Partner-portal componenten 1-op-1 omzetten.
+4. Admin overzichten/werkbank omzetten.
+5. Customer-portal restanten opruimen (`ItemStatusBadge.tsx`).
+6. Edge functions / e-mails / PDF nalopen.
+7. Visuele cross-check op één live project + smoke-test op admin overzicht.

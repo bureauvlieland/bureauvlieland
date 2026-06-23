@@ -18,6 +18,8 @@ import {
 } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Activity, Hotel } from "lucide-react";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose, type ItemDisplayStatus } from "@/lib/itemStatus";
 
 interface PlanningItem {
   type: "activity" | "arrival" | "departure";
@@ -25,17 +27,10 @@ interface PlanningItem {
   label: string;
   sublabel: string;
   linkTo: string;
-  status?: string;
+  displayStatus?: ItemDisplayStatus;
   customerName: string;
   groupSize?: number;
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  confirmed: "bg-green-100 text-green-800",
-  proposed: "bg-blue-100 text-blue-800",
-  cancelled: "bg-red-100 text-red-800",
-};
 
 export function WeekPlanningView() {
   const [weekOffset, setWeekOffset] = useState(0);
@@ -56,7 +51,7 @@ export function WeekPlanningView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_request_items")
-        .select("id, block_name, provider_name, status, proposed_date, proposed_time, preferred_time, request_id, day_index")
+        .select("id, block_name, provider_name, status, block_type, customer_accepted_at, proposed_date, proposed_time, preferred_time, request_id, day_index")
         .gte("proposed_date", startStr)
         .lte("proposed_date", endStr)
         .neq("status", "cancelled");
@@ -82,7 +77,7 @@ export function WeekPlanningView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_request_items")
-        .select("id, block_name, provider_name, status, proposed_date, day_index, request_id, proposed_time, preferred_time")
+        .select("id, block_name, provider_name, status, block_type, customer_accepted_at, proposed_date, day_index, request_id, proposed_time, preferred_time")
         .is("proposed_date", null)
         .neq("status", "cancelled");
       if (error) throw error;
@@ -118,7 +113,7 @@ export function WeekPlanningView() {
         label: item.block_name,
         sublabel: `${item.provider_name} · ${item.proposed_time || item.preferred_time || ""}`,
         linkTo: `/admin/projecten/${item.request_id}`,
-        status: item.status,
+        displayStatus: deriveItemDisplayStatusLoose(item),
         customerName: req?.customer_name || "Onbekend",
         groupSize: req?.number_of_people,
       });
@@ -139,7 +134,7 @@ export function WeekPlanningView() {
           label: item.block_name,
           sublabel: `${item.provider_name} · ${item.preferred_time || ""}`,
           linkTo: `/admin/projecten/${item.request_id}`,
-          status: item.status,
+          displayStatus: deriveItemDisplayStatusLoose(item),
           customerName: req.customer_name,
           groupSize: req.number_of_people,
         });
@@ -258,13 +253,10 @@ export function WeekPlanningView() {
                             {item.sublabel && (
                               <p className="text-[10px] text-muted-foreground truncate">{item.sublabel}</p>
                             )}
-                            {item.status && (
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1 py-0 mt-0.5 ${STATUS_COLORS[item.status] || ""}`}
-                              >
-                                {item.status}
-                              </Badge>
+                            {item.displayStatus && (
+                              <div className="mt-0.5">
+                                <ItemDisplayStatusBadge status={item.displayStatus} audience="admin" />
+                              </div>
                             )}
                           </div>
                         </div>

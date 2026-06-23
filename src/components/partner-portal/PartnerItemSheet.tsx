@@ -48,6 +48,8 @@ import {
   type PartnerConflictItem 
 } from "@/lib/timeUtils";
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
@@ -65,17 +67,7 @@ interface PartnerItemSheetProps {
   commissionPercentage: number;
 }
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
-  pending: { label: "Nieuw", color: "text-primary", bgColor: "bg-primary/10" },
-  confirmed: { label: "Bevestigd", color: "text-green-700 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-950/50" },
-  accepted: { label: "Klantakkoord", color: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-950/50" },
-  executed: { label: "Uitgevoerd", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
-  invoiced: { label: "Gefactureerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  unavailable: { label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive/10" },
-  cancelled: { label: "Geannuleerd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  alternative: { label: "Alternatief voorgesteld", color: "text-amber-700 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-950/50" },
-  counter_proposed: { label: "Tegenvoorstel klant", color: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-950/50" },
-};
+const _STATUS_CONFIG_REMOVED = null;
 
 type ResponseType = "confirmed" | "alternative" | "unavailable";
 
@@ -140,7 +132,10 @@ export const PartnerItemSheet = ({
   const request = item.program_requests;
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
-  const statusInfo = statusConfig[item.status] || statusConfig.pending;
+  const displayStatus = deriveItemDisplayStatusLoose(item, {
+    programPeople: request.number_of_people ?? 0,
+    numberOfDays: dates.length || 1,
+  });
 
   // Calculate effective status (same as dashboard logic)
   const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
@@ -360,18 +355,7 @@ export const PartnerItemSheet = ({
         <SheetHeader>
           <div className="flex items-center gap-2 flex-wrap">
             <SheetTitle className="text-xl">{item.block_name}</SheetTitle>
-            <Badge 
-              variant="outline" 
-              className={cn("font-normal", statusInfo.color, statusInfo.bgColor, "border-0")}
-            >
-              {statusInfo.label}
-            </Badge>
-            {(item.customer_accepted_at || item.customer_approved_at) && (
-              <Badge className="bg-green-600 hover:bg-green-700">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Klant akkoord
-              </Badge>
-            )}
+            <ItemDisplayStatusBadge status={displayStatus} audience="partner" />
             {isModifiedByCustomer && (
               <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                 <RefreshCw className="h-3 w-3 mr-1" />

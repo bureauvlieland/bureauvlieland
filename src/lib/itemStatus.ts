@@ -26,10 +26,14 @@ export interface ItemDisplayStatusInfo {
   adminLabel: string;
   /** Label voor de klant (formele toon) */
   customerLabel: string;
+  /** Label voor de partner/aanbieder (jij-vorm) */
+  partnerLabel: string;
   /** Korte uitleg voor admin: betekenis + wie aan zet is */
   adminTooltip: string;
   /** Korte uitleg voor de klant (formele toon) */
   customerTooltip: string;
+  /** Korte uitleg voor de partner (jij-vorm) */
+  partnerTooltip: string;
   /** Wie moet er actie ondernemen? */
   actor: "partner" | "klant" | "bureau" | "geen";
   /** Tailwind text-color (semantisch via tokens waar mogelijk) */
@@ -52,8 +56,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   wacht_op_partner: {
     adminLabel: "Wacht op aanbieder",
     customerLabel: "Wacht op aanbieder",
+    partnerLabel: "Reactie gevraagd",
     adminTooltip: "Aanvraag is verstuurd. De aanbieder moet bevestigen of een alternatief voorstellen.",
     customerTooltip: "We wachten op een reactie van de aanbieder. Bureau Vlieland volgt dit voor u op.",
+    partnerTooltip: "Bureau Vlieland wacht op jouw reactie: bevestig, stel een alternatief voor of meld dat je niet beschikbaar bent.",
     actor: "partner",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
@@ -62,8 +68,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   wacht_op_klant: {
     adminLabel: "Wacht op klant-akkoord",
     customerLabel: "Akkoord nodig",
+    partnerLabel: "Voorstel verstuurd",
     adminTooltip: "De aanbieder heeft gereageerd. De klant moet dit onderdeel nog akkoord geven.",
     customerTooltip: "Dit onderdeel is beschikbaar. Geef akkoord om het definitief te bevestigen.",
+    partnerTooltip: "Je voorstel staat bij de klant. Zodra de klant akkoord geeft is dit onderdeel definitief.",
     actor: "klant",
     color: "text-blue-700 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-950/50",
@@ -72,8 +80,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   prijs_gewijzigd: {
     adminLabel: "Wacht op klant (nieuwe prijs)",
     customerLabel: "Nieuwe prijs — akkoord nodig",
+    partnerLabel: "Nieuwe prijs — wacht op klant",
     adminTooltip: "De prijs is aangepast. De klant moet de nieuwe prijs nog goedkeuren.",
     customerTooltip: "De prijs van dit onderdeel is bijgewerkt. Bevestig de nieuwe prijs om door te gaan.",
+    partnerTooltip: "De prijs is door Bureau Vlieland aangepast. De klant moet de nieuwe prijs nog goedkeuren.",
     actor: "klant",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
@@ -82,8 +92,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   geaccepteerd: {
     adminLabel: "Klant akkoord",
     customerLabel: "Akkoord",
+    partnerLabel: "Klantakkoord",
     adminTooltip: "Klant heeft akkoord gegeven. Geen actie nodig tot uitvoering.",
     customerTooltip: "U hebt dit onderdeel bevestigd. Het wordt op de afgesproken datum uitgevoerd.",
+    partnerTooltip: "De klant heeft akkoord gegeven. Reserveer dit definitief in je planning.",
     actor: "geen",
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
@@ -92,8 +104,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   uitgevoerd: {
     adminLabel: "Uitgevoerd",
     customerLabel: "Uitgevoerd",
+    partnerLabel: "Uitgevoerd",
     adminTooltip: "Onderdeel is uitgevoerd. Klaar voor facturatie of al gefactureerd.",
     customerTooltip: "Dit onderdeel is uitgevoerd.",
+    partnerTooltip: "Dit onderdeel is uitgevoerd. Je kunt het factureren als dat nog niet is gebeurd.",
     actor: "geen",
     color: "text-emerald-700 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-950/50",
@@ -102,8 +116,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   geannuleerd: {
     adminLabel: "Geannuleerd",
     customerLabel: "Geannuleerd",
+    partnerLabel: "Geannuleerd",
     adminTooltip: "Dit onderdeel is geannuleerd en telt niet meer mee in het programma.",
     customerTooltip: "Dit onderdeel is geannuleerd.",
+    partnerTooltip: "Dit onderdeel is geannuleerd en telt niet meer mee in het programma.",
     actor: "geen",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
@@ -112,8 +128,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   niet_beschikbaar: {
     adminLabel: "Niet beschikbaar",
     customerLabel: "Niet beschikbaar",
+    partnerLabel: "Niet beschikbaar gemeld",
     adminTooltip: "Aanbieder heeft afgewezen. Bureau moet vervanging zoeken of opnieuw uitvragen.",
     customerTooltip: "De aanbieder is niet beschikbaar. Bureau Vlieland zoekt een passend alternatief.",
+    partnerTooltip: "Je hebt aangegeven niet beschikbaar te zijn. Bureau Vlieland zoekt een alternatief.",
     actor: "bureau",
     color: "text-red-700 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-950/50",
@@ -122,8 +140,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   self_arranged: {
     adminLabel: "Zelf te regelen",
     customerLabel: "Zelf te regelen",
+    partnerLabel: "Klant regelt zelf",
     adminTooltip: "Klant regelt en betaalt dit onderdeel zelf — buiten Bureau Vlieland om.",
     customerTooltip: "U boekt en betaalt dit onderdeel zelf, rechtstreeks bij de aanbieder.",
+    partnerTooltip: "De klant regelt en betaalt dit onderdeel rechtstreeks bij jou, buiten Bureau Vlieland om.",
     actor: "klant",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
@@ -186,4 +206,17 @@ export function deriveItemDisplayStatus(
   if (item.status === "pending") return "wacht_op_partner";
   return "wacht_op_klant";
 
+}
+
+/**
+ * Loose variant van deriveItemDisplayStatus voor plekken die niet een volledig
+ * ProgramRequestItem-record hebben (partner-portal, planning-overzichten,
+ * werkbank). We castten naar ProgramRequestItem en geven sensible defaults voor
+ * de prijs-context — partners zien immers nooit een admin-prijs-override.
+ */
+export function deriveItemDisplayStatusLoose(item: unknown, ctx?: Partial<DeriveContext>): ItemDisplayStatus {
+  return deriveItemDisplayStatus(item as unknown as ProgramRequestItem, {
+    programPeople: ctx?.programPeople ?? 0,
+    numberOfDays: ctx?.numberOfDays ?? 1,
+  });
 }

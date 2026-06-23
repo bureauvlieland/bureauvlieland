@@ -18,6 +18,8 @@ import type { ProjectSummary } from "@/lib/getProject";
 import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
 import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { cn } from "@/lib/utils";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 type ItemRow = Pick<
   Tables<"program_request_items">,
@@ -33,6 +35,7 @@ type ItemRow = Pick<
   | "provider_name"
   | "skip_partner_notification"
   | "customer_approved_at"
+  | "customer_accepted_at"
   | "item_quote_status"
 >;
 
@@ -234,7 +237,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
       const itemsPromise = supabase
         .from("program_request_items")
         .select(
-          "id, block_name, block_type, day_index, preferred_time, confirmed_time, status, quoted_price, provider_id, provider_name, skip_partner_notification, customer_approved_at, item_quote_status",
+          "id, block_name, block_type, day_index, preferred_time, confirmed_time, status, quoted_price, provider_id, provider_name, skip_partner_notification, customer_approved_at, customer_accepted_at, item_quote_status",
         )
         .eq("request_id", id)
         .order("day_index", { ascending: true });
@@ -459,17 +462,20 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
                 <div key={it.id} className="flex items-center justify-between rounded border bg-background px-3 py-2 text-sm">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{it.block_name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {it.day_index === -1 ? "Intern" : `Dag ${it.day_index}`} · {fmtTime(it)} · {it.status}
-                      {it.block_type === "bureau" && " · Bureau Vlieland regelt"}
-                      {it.provider_name && it.block_type !== "bureau" && ` · ${it.provider_name}`}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span>{it.day_index === -1 ? "Intern" : `Dag ${it.day_index}`}</span>
+                      <span>·</span>
+                      <span>{fmtTime(it)}</span>
+                      <ItemDisplayStatusBadge
+                        status={deriveItemDisplayStatusLoose(it)}
+                        audience="admin"
+                      />
+                      {it.block_type === "bureau" && <span>· Bureau Vlieland regelt</span>}
+                      {it.provider_name && it.block_type !== "bureau" && <span>· {it.provider_name}</span>}
                     </div>
                   </div>
                   <div className="ml-2 shrink-0 text-right text-xs">
                     <div>{fmtEur(it.quoted_price)}</div>
-                    {it.item_quote_status && (
-                      <div className="text-muted-foreground">{it.item_quote_status}</div>
-                    )}
                   </div>
                 </div>
               ))}
