@@ -107,6 +107,7 @@ const AdminMedia = lazy(() => import("./pages/admin/AdminMedia"));
 const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
 const AdminPurchaseInvoices = lazy(() => import("./pages/admin/AdminPurchaseInvoices"));
 const AdminPurchaseInvoiceInbox = lazy(() => import("./pages/admin/AdminPurchaseInvoiceInbox"));
+const AdminSalesInbox = lazy(() => import("./pages/admin/AdminSalesInbox"));
 const AdminPaymentBatches = lazy(() => import("./pages/admin/AdminPaymentBatches"));
 const AdminBankStatements = lazy(() => import("./pages/admin/AdminBankStatements"));
 const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
@@ -267,6 +268,7 @@ const App = () => {
             <Route path="/admin/facturatie" element={<AdminInvoicing />} />
             <Route path="/admin/inkoopfacturen" element={<AdminPurchaseInvoices />} />
             <Route path="/admin/inkoopfacturen/inbox" element={<AdminPurchaseInvoiceInbox />} />
+            <Route path="/admin/sales-inbox" element={<AdminSalesInbox />} />
             <Route path="/admin/betaalbatches" element={<AdminPaymentBatches />} />
             <Route path="/admin/bankafschriften" element={<AdminBankStatements />} />
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />

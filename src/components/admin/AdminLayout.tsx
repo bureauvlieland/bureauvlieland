@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
+import { useSalesInboxCount } from "@/hooks/useSalesInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
@@ -114,6 +115,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const isCollapsed = state === "collapsed";
   const { data: todoCount = 0 } = useOpenTodoCount();
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
+  const { data: salesInboxCount = 0 } = useSalesInboxCount();
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
   const { data: openTicketsCount = 0 } = useOpenTicketsCount();
   const { data: bankPendingCount = 0 } = useBankPendingCount();
@@ -124,6 +126,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: todoCount },
         { title: "Projecten", url: "/admin/projecten", icon: CalendarDays },
+        { title: "Sales Inbox", url: "/admin/sales-inbox", icon: Mail, badge: salesInboxCount },
         { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
         { title: "CRM", url: "/admin/crm", icon: Users },
         { title: "Chat", url: "/admin/chat", icon: MessageCircle },

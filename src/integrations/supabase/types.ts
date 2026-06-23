@@ -3545,6 +3545,92 @@ export type Database = {
           },
         ]
       }
+      sales_inbox: {
+        Row: {
+          attachment_filename: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          attachments: Json
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          from_email: string
+          from_name: string | null
+          id: string
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          processed_request_id: string | null
+          raw_payload: Json | null
+          received_at: string
+          recipient: string | null
+          scan_error: string | null
+          scan_result: Json | null
+          scan_status: string
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          attachment_filename?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          attachments?: Json
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          from_email: string
+          from_name?: string | null
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_request_id?: string | null
+          raw_payload?: Json | null
+          received_at?: string
+          recipient?: string | null
+          scan_error?: string | null
+          scan_result?: Json | null
+          scan_status?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attachment_filename?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          attachments?: Json
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_request_id?: string | null
+          raw_payload?: Json | null
+          received_at?: string
+          recipient?: string | null
+          scan_error?: string | null
+          scan_result?: Json | null
+          scan_status?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_inbox_processed_request_id_fkey"
+            columns: ["processed_request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_programs: {
         Row: {
           cart_items: Json
