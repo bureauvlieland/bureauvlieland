@@ -477,19 +477,36 @@ Deno.serve(async (req) => {
           auto_entity_id: inbox.id,
         });
 
-        // Fire-and-forget AI scan
+        // Trigger AI scan synchronously so failures don't leave the row hanging on "pending"
         try {
           const fnUrl = `${supabaseUrl}/functions/v1/scan-sales-lead`;
-          fetch(fnUrl, {
+          console.log(`Triggering scan-sales-lead for inbox ${inbox.id}`);
+          const scanResp = await fetch(fnUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${supabaseServiceKey}`,
             },
             body: JSON.stringify({ inbox_id: inbox.id }),
-          }).catch((e) => console.error("Background scan-sales-lead trigger failed:", e));
+          });
+          const scanText = await scanResp.text().catch(() => "");
+          console.log(`scan-sales-lead responded ${scanResp.status}: ${scanText.substring(0, 300)}`);
+          if (!scanResp.ok) {
+            await supabase
+              .from("sales_inbox")
+              .update({
+                scan_status: "failed",
+                scan_error: `scan trigger HTTP ${scanResp.status}: ${scanText.substring(0, 400)}`,
+              })
+              .eq("id", inbox.id);
+          }
         } catch (e) {
-          console.error("Could not trigger scan-sales-lead:", e);
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error("Could not trigger scan-sales-lead:", msg);
+          await supabase
+            .from("sales_inbox")
+            .update({ scan_status: "failed", scan_error: `scan trigger error: ${msg}` })
+            .eq("id", inbox.id);
         }
 
         return new Response(
