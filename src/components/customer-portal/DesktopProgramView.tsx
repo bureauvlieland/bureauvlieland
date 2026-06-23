@@ -187,6 +187,11 @@ export const DesktopProgramView = ({
   const isPublished = !!program.program_published_at;
   const isQuoteMode = true; // All projects use unified quote pipeline
   const hasUnapprovedItems = hasQuoteItemsAwaitingCustomerApproval(program.items);
+  const isProposalPhase = program.quote_status === "offerte_verstuurd";
+  const activeItems = program.items.filter((i) => i.status !== "cancelled");
+  const bureauItemCount = activeItems.filter((i) => i.provider_id === "bureau").length;
+  const partnerItemCount = activeItems.length - bureauItemCount;
+
 
   const { getItemVatRate } = useItemVatRates(program.items, blockVatRates);
   const {
