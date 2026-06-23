@@ -379,7 +379,18 @@ export const MobileProgramView = ({
         </ProgramSection>
       )}
 
-      {/* Voorstel-akkoord card (alleen actief in fase 2/maatwerk-leeg) — bóven het programma */}
+      {/* Fase 2 hero — vervangt het oude duo ActionRequired+Intro voor 'voorstel klaar' */}
+      {(initialSection === "program" || !initialSection) && isProposalPhase && (
+        <ProposalHeroCard
+          quoteValidUntil={program.quote_valid_until}
+          hasUnapprovedItems={hasUnapprovedItems}
+          onAcceptQuoteProposal={onAcceptQuoteProposal}
+          bureauItemCount={bureauItemCount}
+          partnerItemCount={partnerItemCount}
+        />
+      )}
+
+      {/* Intro card behoudt maatwerk-leeg / bevestigd-flows */}
       {(initialSection === "program" || !initialSection) && (
         <ProgramIntroCard
           programType={program.origin}
@@ -395,6 +406,7 @@ export const MobileProgramView = ({
           quotePdfUrl={(program as any).quote_pdf_url}
         />
       )}
+
 
       {/* 4. Program section - hide when showing accommodation or billing */}
       {(initialSection === "program" || !initialSection) && <ProgramSection
