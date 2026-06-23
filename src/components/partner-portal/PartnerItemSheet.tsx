@@ -132,7 +132,10 @@ export const PartnerItemSheet = ({
   const request = item.program_requests;
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
-  const statusInfo = statusConfig[item.status] || statusConfig.pending;
+  const displayStatus = deriveItemDisplayStatusLoose(item, {
+    programPeople: request.number_of_people ?? 0,
+    numberOfDays: dates.length || 1,
+  });
 
   // Calculate effective status (same as dashboard logic)
   const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
