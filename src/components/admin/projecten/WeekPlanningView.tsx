@@ -134,7 +134,7 @@ export function WeekPlanningView() {
           label: item.block_name,
           sublabel: `${item.provider_name} · ${item.preferred_time || ""}`,
           linkTo: `/admin/projecten/${item.request_id}`,
-          status: item.status,
+          displayStatus: deriveItemDisplayStatusLoose(item),
           customerName: req.customer_name,
           groupSize: req.number_of_people,
         });
