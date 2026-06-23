@@ -1,0 +1,1 @@
+UPDATE public.program_requests SET selected_dates = '["2026-07-07"]'::jsonb WHERE id = '9ebeedc9-bb4b-4397-8f41-d14571022f14' AND selected_dates::text = '["7 juli"]';

@@ -96,18 +96,25 @@ const CustomerProgram = () => {
   // Parse dates, with defensive check for items beyond the date array
   const selectedDates = useMemo(() => {
     if (!program?.selected_dates) return [];
-    const parsed = program.selected_dates.map((d: string) => {
-      try {
-        return parseISO(d);
-      } catch {
-        return new Date(d);
-      }
-    });
+    // selected_dates kan vrije strings bevatten ("7 juli") naast ISO-datums.
+    // Filter ongeldige datums weg zodat date-fns format() niet crasht.
+    const parsed = program.selected_dates
+      .map((d: string) => {
+        let date: Date;
+        try {
+          date = parseISO(d);
+          if (isNaN(date.getTime())) date = new Date(d);
+        } catch {
+          date = new Date(d);
+        }
+        return date;
+      })
+      .filter((d: Date) => d instanceof Date && !isNaN(d.getTime()));
 
     // If items exist with a day_index beyond the dates array, generate placeholder dates
-    if (program?.items) {
+    if (program?.items && parsed.length > 0) {
       const maxDayIndex = Math.max(...program.items.filter((i: any) => i.status !== "cancelled").map((i: any) => i.day_index), -1);
-      while (parsed.length <= maxDayIndex && parsed.length > 0) {
+      while (parsed.length <= maxDayIndex) {
         const lastDate = parsed[parsed.length - 1];
         const nextDate = new Date(lastDate);
         nextDate.setDate(nextDate.getDate() + 1);
