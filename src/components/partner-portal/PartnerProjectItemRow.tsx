@@ -49,29 +49,8 @@ interface Props {
   onOpenDetails: () => void;
 }
 
-const statusStyle: Record<string, string> = {
-  pending: "bg-primary/10 text-primary",
-  confirmed: "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
-  accepted: "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300",
-  executed: "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300",
-  invoiced: "bg-muted text-muted-foreground",
-  unavailable: "bg-destructive/10 text-destructive",
-  cancelled: "bg-muted text-muted-foreground",
-  alternative: "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
-  counter_proposed: "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300",
-};
-
-const statusLabel: Record<string, string> = {
-  pending: "Nieuw — actie vereist",
-  confirmed: "Bevestigd",
-  accepted: "Klant akkoord",
-  executed: "Uitgevoerd",
-  invoiced: "Gefactureerd",
-  unavailable: "Niet beschikbaar",
-  cancelled: "Geannuleerd",
-  alternative: "Alternatief voorgesteld",
-  counter_proposed: "Tegenvoorstel klant",
-};
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 const formatEur = (n: number) =>
   n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
