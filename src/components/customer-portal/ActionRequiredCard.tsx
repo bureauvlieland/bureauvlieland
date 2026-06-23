@@ -80,25 +80,11 @@ export const ActionRequiredCard = ({
   const isFinalPhase = quoteStatus === "definitief_bevestigd"; // fase 4
 
   const getAction = (): ActionConfig | null => {
-    // FASE 2 — voorstel klaar, klant moet bovenaan akkoord geven.
-    // Geen per-item knoppen; de bulk-akkoord-card staat direct hieronder.
+    // FASE 2 — voorstel klaar: handled door ProposalHeroCard (geen duplicaat hier).
     if (isProposalPhase) {
-      return {
-        type: "alternative",
-        title: "Voorstel klaar — geef akkoord op uw programma",
-        description:
-          "Bekijk hieronder uw programmavoorstel met indicatieve prijzen. Geef in één klik akkoord, daarna vragen wij beschikbaarheid en definitieve prijzen op bij de aanbieders.",
-        icon: <AlertCircle className="h-5 w-5" />,
-        variant: "warning",
-        cta: {
-          label: "Naar akkoord-knop",
-          onClick: () => {
-            const card = document.getElementById("akkoord-checkbox")?.closest("[class*='Card']") as HTMLElement | null;
-            (card || document.getElementById("akkoord-checkbox") || document.getElementById("program"))?.scrollIntoView({ behavior: "smooth", block: "center" });
-          },
-        },
-      };
+      return null;
     }
+
 
     // FASE 3 — klant heeft het voorstel goedgekeurd; nu wachten op partners
     // en per onderdeel goedkeuren zodra partner heeft gereageerd.
