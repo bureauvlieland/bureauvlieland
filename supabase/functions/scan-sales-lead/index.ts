@@ -33,8 +33,30 @@ Deno.serve(async (req) => {
 
   try {
     const auth = req.headers.get("Authorization") || "";
-    const expected = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
-    if (auth !== expected) {
+    const token = auth.replace(/^Bearer\s+/i, "");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+
+    let authorized = token && token === serviceKey;
+
+    if (!authorized && token) {
+      // Validate as user JWT and require admin role
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? serviceKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: userData } = await userClient.auth.getUser();
+      const uid = userData?.user?.id;
+      if (uid) {
+        const adminClient = createClient(supabaseUrl, serviceKey);
+        const { data: isAdmin } = await adminClient.rpc("has_role", {
+          _user_id: uid,
+          _role: "admin",
+        });
+        if (isAdmin === true) authorized = true;
+      }
+    }
+
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
