@@ -13,7 +13,7 @@ import {
 
 interface ItemDisplayStatusBadgeProps {
   status: ItemDisplayStatus;
-  audience?: "admin" | "customer";
+  audience?: "admin" | "customer" | "partner";
   className?: string;
 }
 
@@ -56,8 +56,14 @@ export const ItemDisplayStatusBadge = ({
   className,
 }: ItemDisplayStatusBadgeProps) => {
   const cfg = itemDisplayStatusConfig[status];
-  const label = audience === "customer" ? cfg.customerLabel : cfg.adminLabel;
-  const tooltip = audience === "customer" ? cfg.customerTooltip : cfg.adminTooltip;
+  const label =
+    audience === "customer" ? cfg.customerLabel :
+    audience === "partner" ? cfg.partnerLabel :
+    cfg.adminLabel;
+  const tooltip =
+    audience === "customer" ? cfg.customerTooltip :
+    audience === "partner" ? cfg.partnerTooltip :
+    cfg.adminTooltip;
   const tone = TONE_BY_STATUS[status] ?? "slate";
 
   return (
