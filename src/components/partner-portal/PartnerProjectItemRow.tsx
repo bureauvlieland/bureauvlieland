@@ -196,12 +196,13 @@ export const PartnerProjectItemRow = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-medium truncate">{item.block_name}</h3>
-            <Badge
-              variant="outline"
-              className={cn("border-0 font-normal text-xs", statusStyle[effectiveStatus] || statusStyle.pending)}
-            >
-              {statusLabel[effectiveStatus] || effectiveStatus}
-            </Badge>
+            <ItemDisplayStatusBadge
+              status={deriveItemDisplayStatusLoose(item, {
+                programPeople: request.number_of_people ?? 0,
+                numberOfDays: numDays || 1,
+              })}
+              audience="partner"
+            />
             {item.version > 1 && (
               <Badge variant="outline" className="text-xs border-amber-300 text-amber-700 dark:text-amber-300">
                 v{item.version}
