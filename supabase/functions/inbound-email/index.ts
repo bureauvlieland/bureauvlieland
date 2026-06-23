@@ -31,6 +31,19 @@ function isPurchaseInvoiceRecipient(toAddress: string): boolean {
 }
 
 /**
+ * Detect if this email should be routed to the sales inbox.
+ * Matches recipients like:
+ *   - sales@reply.bureauvlieland.nl
+ *   - leads@reply.bureauvlieland.nl
+ *   - aanvraag@reply.bureauvlieland.nl / aanvragen@
+ *   - reply+sales@... / reply+leads@... / reply+aanvraag(en)@...
+ */
+function isSalesInboxRecipient(toAddress: string): boolean {
+  const lower = (toAddress || "").toLowerCase();
+  return /(?:^|<|,|\s)(?:reply\+)?(?:sales|leads|aanvraag|aanvragen)@/i.test(lower);
+}
+
+/**
  * Strip HTML tags from content, keeping text
  */
 function stripHtml(html: string): string {
