@@ -73,51 +73,88 @@ export const ActionRequiredCard = ({
 }: ActionRequiredCardProps) => {
   const isPublished = !!programPublishedAt;
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
-  const isQuotePreApproval = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming", "offerte_verstuurd"].includes(quoteStatus);
-  const isQuoteBeingPrepared = programType === "quote" && !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
+  // Quote-pipeline geldt voor alle projecten — niet meer afhankelijk van programType.
+  const isQuoteBeingPrepared = !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
+  const isProposalPhase = quoteStatus === "offerte_verstuurd"; // fase 2
+  const isApprovalPhase = quoteStatus === "akkoord_ontvangen"; // fase 3 — partner-fase
+  const isFinalPhase = quoteStatus === "definitief_bevestigd"; // fase 4
 
   const getAction = (): ActionConfig | null => {
-    // Priority 0: Klantactie — onderdelen wachten op uw akkoord. Bovenaan de stack.
-    if (customerActionsCount > 0) {
-      const onlyAlternatives = alternativeActionsCount === customerActionsCount;
-      const someAlternatives = alternativeActionsCount > 0;
-      const label =
-        customerActionsCount === 1
-          ? "Eén onderdeel wacht op uw akkoord"
-          : `${customerActionsCount} onderdelen wachten op uw akkoord`;
-      const description = onlyAlternatives
-        ? "Een aanbieder stelt een aanpassing voor. Bekijk per onderdeel het voorstel en geef akkoord, of stel een andere tijd voor."
-        : someAlternatives
-          ? `Bekijk per onderdeel de details en geef akkoord. Bij ${alternativeActionsCount} onderdeel${alternativeActionsCount > 1 ? "en" : ""} stelt de aanbieder een aanpassing voor. Daarna vragen wij definitieve beschikbaarheid en prijzen op.`
-          : "Bekijk per onderdeel de details en geef akkoord. Daarna vragen wij bij de aanbieders beschikbaarheid en definitieve prijzen op. Uw boeking is pas definitief als alle partners én u akkoord zijn.";
+    // FASE 2 — voorstel klaar, klant moet bovenaan akkoord geven.
+    // Geen per-item knoppen; de bulk-akkoord-card staat direct hieronder.
+    if (isProposalPhase) {
       return {
         type: "alternative",
-        title: label,
-        description,
+        title: "Voorstel klaar — geef akkoord op uw programma",
+        description:
+          "Bekijk hieronder uw programmavoorstel met indicatieve prijzen. Geef in één klik akkoord, daarna vragen wij beschikbaarheid en definitieve prijzen op bij de aanbieders.",
         icon: <AlertCircle className="h-5 w-5" />,
         variant: "warning",
         cta: {
-          label: customerActionsCount === 1 ? "Naar onderdeel" : "Naar onderdelen",
+          label: "Naar akkoord-knop",
           onClick: () => {
-            const programSection = document.getElementById("program");
-            programSection?.scrollIntoView({ behavior: "smooth" });
+            const card = document.getElementById("akkoord-checkbox")?.closest("[class*='Card']") as HTMLElement | null;
+            (card || document.getElementById("akkoord-checkbox") || document.getElementById("program"))?.scrollIntoView({ behavior: "smooth", block: "center" });
           },
         },
       };
     }
 
-    // Counter proposals waiting for partner response
-    if ((statusSummary.counter_proposed || 0) > 0) {
-      return {
-        type: "counter_proposed",
-        title: "Tegenvoorstel in behandeling",
-        description: `Uw tegenvoorstel is verzonden naar de aanbieder. U ontvangt bericht zodra zij reageren.`,
-        icon: <MessageSquareWarning className="h-5 w-5" />,
-        variant: "info",
-      };
+    // FASE 3 — klant heeft het voorstel goedgekeurd; nu wachten op partners
+    // en per onderdeel goedkeuren zodra partner heeft gereageerd.
+    if (isApprovalPhase) {
+      // 3a — onderdelen waar klant nu akkoord op kan geven (partner heeft gereageerd).
+      if (customerActionsCount > 0) {
+        const onlyAlternatives = alternativeActionsCount === customerActionsCount;
+        const someAlternatives = alternativeActionsCount > 0;
+        const label =
+          customerActionsCount === 1
+            ? "Eén onderdeel wacht op uw akkoord"
+            : `${customerActionsCount} onderdelen wachten op uw akkoord`;
+        const description = onlyAlternatives
+          ? "Een aanbieder stelt een aanpassing voor. Bekijk per onderdeel het voorstel en geef akkoord, of stel een andere tijd voor."
+          : someAlternatives
+            ? `Bekijk per onderdeel de details en geef akkoord. Bij ${alternativeActionsCount} onderdeel${alternativeActionsCount > 1 ? "en" : ""} stelt de aanbieder een aanpassing voor.`
+            : "Een aanbieder heeft beschikbaarheid bevestigd. Geef per onderdeel uw akkoord op de definitieve prijs.";
+        return {
+          type: "alternative",
+          title: label,
+          description,
+          icon: <AlertCircle className="h-5 w-5" />,
+          variant: "warning",
+          cta: {
+            label: customerActionsCount === 1 ? "Naar onderdeel" : "Naar onderdelen",
+            onClick: () => {
+              document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
+            },
+          },
+        };
+      }
+
+      // 3b — tegenvoorstel staat open bij partner.
+      if ((statusSummary.counter_proposed || 0) > 0) {
+        return {
+          type: "counter_proposed",
+          title: "Tegenvoorstel in behandeling",
+          description: "Uw tegenvoorstel is verzonden naar de aanbieder. U ontvangt bericht zodra zij reageren.",
+          icon: <MessageSquareWarning className="h-5 w-5" />,
+          variant: "info",
+        };
+      }
+
+      // 3c — aanvragen lopen, nog niets terug.
+      if (statusSummary.pending > 0) {
+        return {
+          type: "pending",
+          title: "Aanvragen verstuurd naar aanbieders",
+          description: "Uw aanvragen zijn verstuurd naar de aanbieders. Zodra zij reageren ontvangt u hiervan een e-mail.",
+          icon: <Clock className="h-5 w-5" />,
+          variant: "info",
+        };
+      }
     }
 
-    // Priority 3: Quote being prepared by admin (concept/in_afstemming)
+    // FASE 1 — admin werkt aan voorstel.
     if (isQuoteBeingPrepared) {
       return {
         type: "pending",
@@ -125,28 +162,6 @@ export const ActionRequiredCard = ({
         description: "Bureau Vlieland stelt uw programma samen. U ontvangt een bericht zodra het voorstel klaar is om te bekijken.",
         icon: <Clock className="h-5 w-5" />,
         variant: "neutral",
-      };
-    }
-
-    // Priority 4: Pending items waiting for partner confirmation
-    // Skip when quote is awaiting approval - requests haven't been sent yet
-    if (statusSummary.pending > 0 && !isQuotePreApproval) {
-      // If not yet published by admin, show "being reviewed" instead of "sent to partners"
-      if (!isPublished) {
-        return {
-          type: "pending",
-          title: "Uw aanvraag wordt beoordeeld",
-          description: "Bureau Vlieland bekijkt uw programma en bereidt de aanvragen voor. U ontvangt bericht zodra de aanvragen zijn verstuurd naar de aanbieders.",
-          icon: <Clock className="h-5 w-5" />,
-          variant: "neutral",
-        };
-      }
-      return {
-        type: "pending",
-        title: "Aanvragen verstuurd naar aanbieders",
-        description: `Uw aanvragen zijn verstuurd naar de aanbieders. Zodra zij reageren ontvangt u hiervan een e-mail.`,
-        icon: <Clock className="h-5 w-5" />,
-        variant: "info",
       };
     }
 
