@@ -388,16 +388,26 @@ const ItemCard = ({
                 Nieuwe prijs
               </Badge>
             )}
-            <Badge
-              variant="outline"
-              className={cn(
-                "font-normal border-0",
-                statusInfo.color,
-                statusInfo.bgColor
-              )}
-            >
-              {item.canInvoice ? "Te factureren" : statusInfo.label}
-            </Badge>
+            {item.canInvoice ? (
+              <Badge variant="outline" className="font-normal border-0 text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50">
+                Te factureren
+              </Badge>
+            ) : isActivity ? (
+              <ItemDisplayStatusBadge
+                status={deriveItemDisplayStatusLoose(item.originalItem as PartnerItem, {
+                  programPeople: (item.originalItem as PartnerItem).program_requests?.number_of_people ?? item.peopleCount,
+                  numberOfDays: getNumberOfDays((item.originalItem as PartnerItem).program_requests?.selected_dates) || 1,
+                })}
+                audience="partner"
+              />
+            ) : (
+              <Badge
+                variant="outline"
+                className={cn("font-normal border-0", accStatus!.color, accStatus!.bgColor)}
+              >
+                {accStatus!.label}
+              </Badge>
+            )}
           </div>
 
           {/* Chevron */}
