@@ -268,6 +268,7 @@ const App = () => {
             <Route path="/admin/facturatie" element={<AdminInvoicing />} />
             <Route path="/admin/inkoopfacturen" element={<AdminPurchaseInvoices />} />
             <Route path="/admin/inkoopfacturen/inbox" element={<AdminPurchaseInvoiceInbox />} />
+            <Route path="/admin/sales-inbox" element={<AdminSalesInbox />} />
             <Route path="/admin/betaalbatches" element={<AdminPaymentBatches />} />
             <Route path="/admin/bankafschriften" element={<AdminBankStatements />} />
             <Route path="/admin/bouwstenen" element={<AdminBuildingBlocks />} />
