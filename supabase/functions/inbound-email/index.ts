@@ -507,12 +507,85 @@ Deno.serve(async (req) => {
 
     const referenceNumber = extractReferenceNumber(recipient);
     if (!referenceNumber) {
-      console.warn(`No valid reference number found in recipient: ${recipient}`);
-      return new Response(JSON.stringify({ status: "ignored", reason: "no_reference" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.warn(`No valid reference number found in recipient: ${recipient} — storing as unrouted in sales_inbox`);
+      try {
+        const { name: senderName, email: senderEmail } = parseSender(sender);
+        const rawText = textContent || stripHtml(htmlContent) || "";
+        const trimmed = trimQuotedReply(rawText) || rawText;
+
+        const rawForLog: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rawPayload as Record<string, unknown>)) {
+          if (typeof v === "string" && v.length > 500 && /^(Inline)?Attachment\d+$/i.test(k)) {
+            rawForLog[k] = `<base64 ${v.length} chars>`;
+          } else {
+            rawForLog[k] = v;
+          }
+        }
+
+        const { data: inbox, error: insErr } = await supabase
+          .from("sales_inbox")
+          .insert({
+            recipient,
+            from_email: senderEmail || "unknown",
+            from_name: senderName || null,
+            subject: subject || null,
+            body_text: trimmed.substring(0, 20000),
+            body_html: (htmlContent || "").substring(0, 100000) || null,
+            raw_payload: rawForLog,
+            scan_status: "failed",
+            scan_error: `Onbekend ontvangstadres: ${recipient}. Mail is bewaard zodat je 'm handmatig kunt classificeren.`,
+            status: "new",
+            notes: `Unrouted: ontvanger '${recipient}' kwam niet overeen met een bekende route (sales/leads/aanvraag/invoices/inkoop/facturen/reply+REF).`,
+          })
+          .select("id")
+          .single();
+
+        if (insErr || !inbox) {
+          console.error("unrouted sales_inbox insert error:", insErr);
+          return new Response(JSON.stringify({ status: "ignored", reason: "no_reference" }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const attachments = await extractAndStoreAttachments(rawPayload, supabase, `sales/${inbox.id}`);
+        if (attachments.length > 0) {
+          await supabase
+            .from("sales_inbox")
+            .update({
+              attachments,
+              attachment_path: attachments[0].path,
+              attachment_filename: attachments[0].name,
+              attachment_size: attachments[0].size,
+            })
+            .eq("id", inbox.id);
+        }
+
+        await supabase.from("admin_todos").insert({
+          title: `Onbekend mailadres: ${recipient}`.substring(0, 200),
+          description:
+            `Inkomende mail van ${senderName || senderEmail} naar '${recipient}' kon niet automatisch worden gerouteerd. ` +
+            `Bekijk in de Sales Inbox en classificeer handmatig.` +
+            (subject ? `\n\nOnderwerp: "${subject}"` : ""),
+          priority: "normal",
+          status: "todo",
+          auto_type: "sales_inbox",
+          auto_entity_id: inbox.id,
+        });
+
+        return new Response(
+          JSON.stringify({ status: "ok", routed_to: "sales_inbox_unrouted", inbox_id: inbox.id }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (err) {
+        console.error("unrouted fallback failed:", err);
+        return new Response(JSON.stringify({ status: "ignored", reason: "no_reference" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
+
 
     console.log(`Extracted reference: ${referenceNumber}`);
 
