@@ -51,7 +51,7 @@ export function WeekPlanningView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_request_items")
-        .select("id, block_name, provider_name, status, proposed_date, proposed_time, preferred_time, request_id, day_index")
+        .select("id, block_name, provider_name, status, block_type, customer_accepted_at, proposed_date, proposed_time, preferred_time, request_id, day_index")
         .gte("proposed_date", startStr)
         .lte("proposed_date", endStr)
         .neq("status", "cancelled");
