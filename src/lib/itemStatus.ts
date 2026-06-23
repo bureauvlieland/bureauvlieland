@@ -26,10 +26,14 @@ export interface ItemDisplayStatusInfo {
   adminLabel: string;
   /** Label voor de klant (formele toon) */
   customerLabel: string;
+  /** Label voor de partner/aanbieder (jij-vorm) */
+  partnerLabel: string;
   /** Korte uitleg voor admin: betekenis + wie aan zet is */
   adminTooltip: string;
   /** Korte uitleg voor de klant (formele toon) */
   customerTooltip: string;
+  /** Korte uitleg voor de partner (jij-vorm) */
+  partnerTooltip: string;
   /** Wie moet er actie ondernemen? */
   actor: "partner" | "klant" | "bureau" | "geen";
   /** Tailwind text-color (semantisch via tokens waar mogelijk) */
