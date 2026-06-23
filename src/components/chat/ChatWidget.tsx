@@ -58,6 +58,14 @@ export const ChatWidget = ({
     }
   }, [messages, isOpen]);
 
+  // Allow other components to open the chat via a custom event.
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener("customer-chat:open", handler);
+    return () => window.removeEventListener("customer-chat:open", handler);
+  }, []);
+
+
   const handleSend = async () => {
     if (!message.trim() || isLoading) return;
     const text = message;
