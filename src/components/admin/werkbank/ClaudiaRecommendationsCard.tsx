@@ -81,11 +81,38 @@ export const ClaudiaRecommendationsCard = () => {
     refetchInterval: 60_000,
   });
 
+  const projectIds = Array.from(
+    new Set(
+      recs
+        .filter((r) => r.related_entity_type === "program_request" && r.related_entity_id)
+        .map((r) => r.related_entity_id as string),
+    ),
+  );
+
+  const { data: projectLabels = {} } = useQuery({
+    queryKey: ["claudia-project-labels", projectIds.sort().join(",")],
+    enabled: projectIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("program_requests")
+        .select("id, customer_company, customer_name")
+        .in("id", projectIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const row of data ?? []) {
+        const label = (row.customer_company || row.customer_name || "").trim();
+        if (label) map[row.id] = label;
+      }
+      return map;
+    },
+  });
+
   const { data: lastRun } = useQuery({
     queryKey: ["claudia-last-run"],
     queryFn: fetchLastRun,
     refetchInterval: 60_000,
   });
+
 
   // Realtime: refresh when new recommendations land
   useEffect(() => {
@@ -244,11 +271,20 @@ export const ClaudiaRecommendationsCard = () => {
                         <div className="min-w-0 flex-1">
                           <div className="font-medium text-slate-900 leading-snug">
                             {r.title}
+                            {r.related_entity_type === "program_request" &&
+                              r.related_entity_id &&
+                              projectLabels[r.related_entity_id] && (
+                                <span className="text-slate-500 font-normal">
+                                  {" — "}
+                                  {projectLabels[r.related_entity_id]}
+                                </span>
+                              )}
                           </div>
                           <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
                             {r.body}
                           </p>
                         </div>
+
                         <div className="flex items-center gap-1 shrink-0">
                           {r.deeplink && (
                             <Link
