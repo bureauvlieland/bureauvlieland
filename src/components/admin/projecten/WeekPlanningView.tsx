@@ -253,13 +253,10 @@ export function WeekPlanningView() {
                             {item.sublabel && (
                               <p className="text-[10px] text-muted-foreground truncate">{item.sublabel}</p>
                             )}
-                            {item.status && (
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1 py-0 mt-0.5 ${STATUS_COLORS[item.status] || ""}`}
-                              >
-                                {item.status}
-                              </Badge>
+                            {item.displayStatus && (
+                              <div className="mt-0.5">
+                                <ItemDisplayStatusBadge status={item.displayStatus} audience="admin" />
+                              </div>
                             )}
                           </div>
                         </div>
