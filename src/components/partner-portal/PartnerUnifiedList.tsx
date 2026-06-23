@@ -19,6 +19,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
+import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 
 export interface UnifiedListItem {
   id: string;
