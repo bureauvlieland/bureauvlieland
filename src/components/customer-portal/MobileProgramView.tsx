@@ -218,12 +218,20 @@ export const MobileProgramView = ({
 
   // Get next action for mobile sticky bar
   const getNextAction = () => {
+    if (isProposalPhase && hasUnapprovedItems) {
+      return {
+        label: "Akkoord geven",
+        onClick: () =>
+          document.getElementById("proposal-akkoord-checkbox")?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      };
+    }
     if (customerActionsCount > 0) {
       return {
         label: "Goedkeuren",
         onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }),
       };
     }
+
     if (isMultiDay && !hasSelectedAccommodation) {
       return { 
         label: "Logies", 
