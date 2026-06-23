@@ -181,8 +181,10 @@ export const ProgramIntroCard = ({
     );
   }
 
-  // Confirmed / terms accepted
-  if (isConfirmed) {
+  // Confirmed / terms accepted — alleen tonen na ondertekening van voorwaarden.
+  // Zonder die check verscheen deze tekst ook na het voorstel-akkoord, wat verwarrend
+  // is omdat de boeking dan nog niet definitief is.
+  if (isConfirmed && termsAcceptedAt) {
     return (
       <Card className="border-green-200/50 bg-green-50/30 dark:border-green-900/50 dark:bg-green-950/10">
         <CardContent className="p-5">
