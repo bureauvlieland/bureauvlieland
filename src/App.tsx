@@ -107,6 +107,7 @@ const AdminMedia = lazy(() => import("./pages/admin/AdminMedia"));
 const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
 const AdminPurchaseInvoices = lazy(() => import("./pages/admin/AdminPurchaseInvoices"));
 const AdminPurchaseInvoiceInbox = lazy(() => import("./pages/admin/AdminPurchaseInvoiceInbox"));
+const AdminSalesInbox = lazy(() => import("./pages/admin/AdminSalesInbox"));
 const AdminPaymentBatches = lazy(() => import("./pages/admin/AdminPaymentBatches"));
 const AdminBankStatements = lazy(() => import("./pages/admin/AdminBankStatements"));
 const AdminChat = lazy(() => import("./pages/admin/AdminChat"));
