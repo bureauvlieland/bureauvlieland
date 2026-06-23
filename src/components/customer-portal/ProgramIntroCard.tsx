@@ -104,82 +104,11 @@ export const ProgramIntroCard = ({
     );
   }
 
-  // Quote awaiting approval — niet-bindend voorstel
+  // Quote awaiting approval — handled door ProposalHeroCard.
   if (isAwaitingApproval) {
-    return (
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="p-5 space-y-4">
-          <div className="space-y-3">
-            <div>
-              <p className="text-base font-semibold text-foreground">
-                Programmavoorstel met indicatieve prijzen
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Hieronder vindt u het programma dat wij speciaal voor u hebben samengesteld.
-                Dit is nog géén definitieve boeking.
-              </p>
-            </div>
-
-            <div className="rounded-md bg-background/60 border border-primary/10 p-3 text-sm space-y-1.5">
-              <p className="font-medium text-foreground">Wat gebeurt er na uw akkoord?</p>
-              <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
-                <li>Wij vragen voor u beschikbaarheid op bij elke aanbieder.</li>
-                <li>U ziet hier per onderdeel de bevestiging of een alternatief.</li>
-                <li>Pas bij ondertekening van de algemene voorwaarden is alles definitief.</li>
-              </ol>
-            </div>
-
-            {validUntil && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Voorstel geldig tot {format(validUntil, "d MMMM yyyy", { locale: nl })}
-              </p>
-            )}
-          </div>
-
-          {hasUnapprovedItems && (
-            <>
-              <div className="flex items-center gap-2 pt-1">
-                <Checkbox
-                  id="akkoord-checkbox"
-                  checked={isChecked}
-                  onCheckedChange={(v) => setIsChecked(!!v)}
-                />
-                <Label htmlFor="akkoord-checkbox" className="text-sm cursor-pointer">
-                  Ik ga akkoord met dit voorstel
-                </Label>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <Button
-                  onClick={handleAccept}
-                  disabled={isLoading || !isChecked}
-                  className="whitespace-nowrap"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Verwerken...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Akkoord — vraag beschikbaarheid op
-                    </>
-                  )}
-                </Button>
-                {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Hiermee gaat u akkoord met de getoonde onderdelen en indicatieve prijzen.
-                Wijzigt een aanbieder iets wezenlijks, dan vragen we u dat onderdeel opnieuw te bevestigen.
-                Definitieve boeking volgt pas na ondertekening van de algemene voorwaarden.
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
+
 
   // Confirmed / terms accepted — alleen tonen na ondertekening van voorwaarden.
   // Zonder die check verscheen deze tekst ook na het voorstel-akkoord, wat verwarrend
