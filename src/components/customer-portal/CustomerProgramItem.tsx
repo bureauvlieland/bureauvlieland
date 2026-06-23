@@ -18,7 +18,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ItemStatusBadge } from "./ItemStatusBadge";
+
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { MicroPill } from "@/components/shared/MicroPill";
