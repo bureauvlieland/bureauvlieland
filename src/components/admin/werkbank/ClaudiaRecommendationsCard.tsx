@@ -271,11 +271,20 @@ export const ClaudiaRecommendationsCard = () => {
                         <div className="min-w-0 flex-1">
                           <div className="font-medium text-slate-900 leading-snug">
                             {r.title}
+                            {r.related_entity_type === "program_request" &&
+                              r.related_entity_id &&
+                              projectLabels[r.related_entity_id] && (
+                                <span className="text-slate-500 font-normal">
+                                  {" — "}
+                                  {projectLabels[r.related_entity_id]}
+                                </span>
+                              )}
                           </div>
                           <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
                             {r.body}
                           </p>
                         </div>
+
                         <div className="flex items-center gap-1 shrink-0">
                           {r.deeplink && (
                             <Link
