@@ -85,9 +85,7 @@ export const PartnerItemRow = ({ item, onClick }: PartnerItemRowProps) => {
         {request.number_of_people}
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className={cn("font-normal", statusInfo.color, statusInfo.bgColor, "border-0")}>
-          {statusInfo.label}
-        </Badge>
+        <ItemDisplayStatusBadge status={displayStatus} audience="partner" />
       </TableCell>
       <TableCell className="text-right">
         <Button variant="ghost" size="icon" className="h-8 w-8">
