@@ -8,6 +8,8 @@ import { ProgramStepper, type StepId } from "./ProgramStepper";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
+import { ProposalHeroCard } from "./ProposalHeroCard";
+
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerTimeline } from "./CustomerTimeline";
 import { AddActivitySheet } from "./AddActivitySheet";
@@ -187,6 +189,11 @@ export const DesktopProgramView = ({
   const isPublished = !!program.program_published_at;
   const isQuoteMode = true; // All projects use unified quote pipeline
   const hasUnapprovedItems = hasQuoteItemsAwaitingCustomerApproval(program.items);
+  const isProposalPhase = program.quote_status === "offerte_verstuurd";
+  const activeItems = program.items.filter((i) => i.status !== "cancelled");
+  const bureauItemCount = activeItems.filter((i) => i.provider_id === "bureau").length;
+  const partnerItemCount = activeItems.length - bureauItemCount;
+
 
   const { getItemVatRate } = useItemVatRates(program.items, blockVatRates);
   const {
@@ -334,7 +341,18 @@ export const DesktopProgramView = ({
         {/* 4. Program, billing, terms, contact - visible when not showing accommodation or billing-only */}
         {(initialSection === "program" || !initialSection) && (
           <>
-            {/* Voorstel-akkoord card (alleen actief in fase 2/maatwerk-leeg) — bóven het programma */}
+            {/* Fase 2: één centrale hero-kaart bóven het programma */}
+            {isProposalPhase && (
+              <ProposalHeroCard
+                quoteValidUntil={program.quote_valid_until}
+                hasUnapprovedItems={hasUnapprovedItems}
+                onAcceptQuoteProposal={onAcceptQuoteProposal}
+                bureauItemCount={bureauItemCount}
+                partnerItemCount={partnerItemCount}
+              />
+            )}
+
+            {/* Intro card behoudt maatwerk-leeg / bevestigd-flows */}
             <ProgramIntroCard
               programType={program.origin}
               quoteStatus={program.quote_status}
@@ -348,6 +366,7 @@ export const DesktopProgramView = ({
               allConfirmed={allConfirmed}
               quotePdfUrl={(program as any).quote_pdf_url}
             />
+
 
             {/* Program content only (no billing) */}
             <div id="program" className="scroll-mt-20">

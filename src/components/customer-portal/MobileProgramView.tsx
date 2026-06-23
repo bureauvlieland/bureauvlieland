@@ -11,6 +11,8 @@ import { AcceptView } from "./AcceptView";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
+import { ProposalHeroCard } from "./ProposalHeroCard";
+
 import { ProgramHistoryTimeline } from "./ProgramHistoryTimeline";
 import { CustomerTimeline } from "./CustomerTimeline";
 import { AddActivitySheet } from "./AddActivitySheet";
@@ -181,6 +183,11 @@ export const MobileProgramView = ({
   const isPublished = !!program.program_published_at;
   const isQuoteMode = true; // All projects use unified quote pipeline
   const hasUnapprovedItems = hasQuoteItemsAwaitingCustomerApproval(program.items);
+  const isProposalPhase = program.quote_status === "offerte_verstuurd";
+  const activeItems = program.items.filter((i) => i.status !== "cancelled");
+  const bureauItemCount = activeItems.filter((i) => i.provider_id === "bureau").length;
+  const partnerItemCount = activeItems.length - bureauItemCount;
+
 
   const { getItemVatRate } = useItemVatRates(program.items, blockVatRates);
   const {
@@ -211,12 +218,20 @@ export const MobileProgramView = ({
 
   // Get next action for mobile sticky bar
   const getNextAction = () => {
+    if (isProposalPhase && hasUnapprovedItems) {
+      return {
+        label: "Akkoord geven",
+        onClick: () =>
+          document.getElementById("proposal-akkoord-checkbox")?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      };
+    }
     if (customerActionsCount > 0) {
       return {
         label: "Goedkeuren",
         onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }),
       };
     }
+
     if (isMultiDay && !hasSelectedAccommodation) {
       return { 
         label: "Logies", 
@@ -372,7 +387,18 @@ export const MobileProgramView = ({
         </ProgramSection>
       )}
 
-      {/* Voorstel-akkoord card (alleen actief in fase 2/maatwerk-leeg) — bóven het programma */}
+      {/* Fase 2 hero — vervangt het oude duo ActionRequired+Intro voor 'voorstel klaar' */}
+      {(initialSection === "program" || !initialSection) && isProposalPhase && (
+        <ProposalHeroCard
+          quoteValidUntil={program.quote_valid_until}
+          hasUnapprovedItems={hasUnapprovedItems}
+          onAcceptQuoteProposal={onAcceptQuoteProposal}
+          bureauItemCount={bureauItemCount}
+          partnerItemCount={partnerItemCount}
+        />
+      )}
+
+      {/* Intro card behoudt maatwerk-leeg / bevestigd-flows */}
       {(initialSection === "program" || !initialSection) && (
         <ProgramIntroCard
           programType={program.origin}
@@ -388,6 +414,7 @@ export const MobileProgramView = ({
           quotePdfUrl={(program as any).quote_pdf_url}
         />
       )}
+
 
       {/* 4. Program section - hide when showing accommodation or billing */}
       {(initialSection === "program" || !initialSection) && <ProgramSection
