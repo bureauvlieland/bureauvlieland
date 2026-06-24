@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +40,23 @@ Deno.serve(async (req) => {
     const snoozedRequestIds = new Set<string>((snoozedRows || []).map((r: any) => r.id));
     const isSnoozed = (id?: string | null): boolean => !!id && snoozedRequestIds.has(id);
     console.log(`Snoozed projects skipped this run: ${snoozedRequestIds.size}`);
+
+    // Cooldown-set: projecten met contact in de laatste 2 dagen krijgen géén
+    // nieuwe reminder-todos (zou anders direct na een opvolgmail terug ploppen).
+    const { data: activeProjects } = await supabase
+      .from("program_requests")
+      .select("id")
+      .eq("status", "active")
+      .is("cancelled_at", null);
+    const activeIds = (activeProjects ?? []).map((r: any) => r.id);
+    const lastContactMap = await fetchLastContactByProject(supabase, activeIds);
+    const hotProjectIds = new Set<string>();
+    for (const [id, ts] of lastContactMap) {
+      if (cooldownFor(ts) === "hot") hotProjectIds.add(id);
+    }
+    const isHot = (id?: string | null): boolean => !!id && hotProjectIds.has(id);
+    console.log(`Hot projects (≤2d contact) — reminders skipped: ${hotProjectIds.size}`);
+
 
 
     // Fetch configurable settings
