@@ -26,7 +26,20 @@ export interface AccommodationPartner {
   name: string;
   email: string | null;
   accommodation_name: string;
+  quote_status?: string | null;
 }
+
+const ACC_STATUS_LABEL: Record<string, string> = {
+  pending: "Niet gereageerd",
+  submitted: "Offerte ingediend",
+  expired: "Offerte verlopen",
+  declined: "Afgewezen door partner",
+  rejected: "Afgewezen",
+  selected: "Geselecteerd",
+  accepted: "Geaccepteerd",
+};
+// Partners die default-aangevinkt worden: degenen die mogelijk nog een optie open hebben.
+const ACC_DEFAULT_CHECKED = new Set(["pending", "submitted", "expired", "selected", "accepted"]);
 
 interface Props {
   open: boolean;
