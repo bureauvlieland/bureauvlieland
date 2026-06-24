@@ -72,8 +72,10 @@ export const CheckoutContactForm = ({
 
   // Client-side dedup-hash op email + dates + cart. Voorkomt dat een dubbele
   // klik (of refresh + opnieuw verzenden) zelfs maar de DB-check bereikt.
+  // NB: lokale datum-format (geen toISOString) — UTC-shift zou de hash een
+  // dag later/eerder maken en dedup omzeilen.
   const buildSubmitHash = () => {
-    const dateKey = selectedDates.map((d) => d.toISOString().split("T")[0]).sort().join(",");
+    const dateKey = selectedDates.map((d) => format(d, "yyyy-MM-dd")).sort().join(",");
     const cartKey = cartItems
       .map((i) => `${i.blockId}@${i.dayIndex ?? 0}`)
       .sort()
@@ -154,7 +156,7 @@ export const CheckoutContactForm = ({
       }
 
       if (existing && existing.length > 0) {
-        const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+        const isoDates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
         const existingDates = Array.isArray(existing[0].selected_dates)
           ? (existing[0].selected_dates as string[]).map(String).sort()
           : [];
@@ -217,58 +219,69 @@ export const CheckoutContactForm = ({
   const executeSubmit = async () => {
     setDuplicateWarningOpen(false);
     setSubmitError(null);
+
+    // GUARD: bouwstenen moeten geladen zijn vóórdat we items kunnen mappen.
+    // Zonder deze check loopt blocksWithDetails leeg en komt de aanvraag
+    // zonder activiteiten binnen bij de admin.
+    if (cartItems.length === 0) {
+      setSubmitError("Uw programma bevat nog geen onderdelen. Voeg eerst activiteiten toe.");
+      return;
+    }
+    if (allBlocks.length === 0) {
+      setSubmitError(
+        "De bouwstenen worden nog geladen. Een moment geduld en probeer het opnieuw."
+      );
+      return;
+    }
+
+    // Bouw items eerst op en valideer — abort vóór elke DB-insert als er
+    // een mismatch is tussen cart en gepubliceerde bouwstenen.
+    const resolvedItems = cartItems.map((item) => {
+      const block = getBlockById(allBlocks, item.blockId);
+      return { item, block };
+    });
+    const missing = resolvedItems.filter((r) => !r.block || !r.block.id);
+    if (missing.length > 0) {
+      console.error("Missing blocks for cart items:", missing.map((m) => m.item.blockId));
+      setSubmitError(
+        "Enkele onderdelen uit uw programma zijn niet meer beschikbaar. Vernieuw de pagina en stel uw programma opnieuw samen, of bel ons op 0562 700 208."
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     markSubmit("in_flight");
-
 
     try {
       const token = generateCustomerToken();
 
-      const blocksWithDetails = cartItems.map((item) => {
-        const block = getBlockById(allBlocks, item.blockId);
-        return {
-          id: block?.id || "",
-          name: block?.name || "",
-          category: block?.category || "",
-          provider: block?.provider?.name || (block?.block_type === "bureau" ? "Bureau Vlieland" : block?.provider_id || "Bureau Vlieland"),
-          providerId: block?.provider_id || "",
-          providerEmail: block?.provider?.email || "",
-          blockType: block?.block_type || "partner",
-          externalUrl: block?.external_url,
-          preferredTime: item.preferredTime,
-          itemNotes: item.notes,
-          dayIndex: item.dayIndex ?? 0,
-        };
-      });
+      const blocksWithDetails = resolvedItems.map(({ item, block }) => ({
+        id: block!.id,
+        name: block!.name || "",
+        category: block!.category || "",
+        provider: block!.provider?.name || (block!.block_type === "bureau" ? "Bureau Vlieland" : block!.provider_id || "Bureau Vlieland"),
+        providerId: block!.provider_id || "",
+        providerEmail: block!.provider?.email || "",
+        blockType: block!.block_type || "partner",
+        externalUrl: block!.external_url,
+        preferredTime: item.preferredTime,
+        itemNotes: item.notes,
+        dayIndex: item.dayIndex ?? 0,
+      }));
 
       const formattedDates = selectedDates.map((d) =>
         format(d, "d MMMM yyyy", { locale: nl })
       );
-      const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+      // Lokale yyyy-MM-dd (geen toISOString) — anders schuift de datum
+      // door UTC-conversie 1 dag terug voor NL-gebruikers (UTC+1/+2).
+      const isoDates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
 
       const finalEventType = inferredEventType || "niet_gespecificeerd";
 
       const requestId = crypto.randomUUID();
-      const { error: insertError } = await supabase
-        .from("program_requests")
-        .insert({
-          id: requestId,
-          customer_token: token,
-          customer_name: formData.name,
-          customer_email: formData.email,
-          customer_phone: formData.phone,
-          customer_company: formData.company || null,
-          number_of_people: numberOfPeople,
-          selected_dates: isoDates,
-          general_notes: formData.notes || null,
-          origin: "self_service",
-          program_description: finalEventType,
-          quote_status: "concept",
-          attribution: buildAttribution(),
-        });
 
-      if (insertError) throw insertError;
-
+      // Bouw items-payload op vóór de program_request insert, zodat we niet
+      // halverwege blijven hangen met een lege aanvraag in de admin.
       const itemsToInsert = blocksWithDetails.map((block) => {
         const fullBlock = getBlockById(allBlocks, block.id);
         return {
@@ -296,11 +309,41 @@ export const CheckoutContactForm = ({
         };
       });
 
+      const { error: insertError } = await supabase
+        .from("program_requests")
+        .insert({
+          id: requestId,
+          customer_token: token,
+          customer_name: formData.name,
+          customer_email: formData.email,
+          customer_phone: formData.phone,
+          customer_company: formData.company || null,
+          number_of_people: numberOfPeople,
+          selected_dates: isoDates,
+          general_notes: formData.notes || null,
+          origin: "self_service",
+          program_description: finalEventType,
+          quote_status: "concept",
+          attribution: buildAttribution(),
+        });
+
+      if (insertError) throw insertError;
+
       const { error: itemsError } = await supabase
         .from("program_request_items")
         .insert(itemsToInsert);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        // Compensating rollback: verwijder de zojuist aangemaakte program_request
+        // zodat er geen wees-aanvraag zonder activiteiten in de admin verschijnt.
+        try {
+          await supabase.from("program_requests").delete().eq("id", requestId);
+        } catch (rollbackErr) {
+          console.error("Rollback delete failed:", rollbackErr);
+        }
+        throw itemsError;
+      }
+
 
       await supabase.from("program_request_history").insert({
         request_id: requestId,

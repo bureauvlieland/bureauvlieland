@@ -105,60 +105,70 @@ export const RequestFormModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Effective dates eerst — guard heeft die nodig.
+    const effectiveDates = selectedDates.length > 0 ? selectedDates : (selectedDate ? [selectedDate] : []);
+
+    // GUARDS: voorkom lege/halve aanvragen.
+    if (cartItems.length === 0) {
+      toast({
+        title: "Geen onderdelen geselecteerd",
+        description: "Voeg eerst activiteiten toe aan uw programma.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (allBlocks.length === 0) {
+      toast({
+        title: "Bouwstenen worden geladen",
+        description: "Een moment geduld en probeer het opnieuw.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const resolved = cartItems.map((item) => ({ item, block: getBlockById(allBlocks, item.blockId) }));
+    const missing = resolved.filter((r) => !r.block || !r.block.id);
+    if (missing.length > 0) {
+      console.error("Missing blocks for cart items:", missing.map((m) => m.item.blockId));
+      toast({
+        title: "Onderdeel niet beschikbaar",
+        description: "Vernieuw de pagina en stel uw programma opnieuw samen.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       // Generate customer token
       const token = generateCustomerToken();
-      
-      const blocksWithDetails = cartItems.map((item) => {
-        const block = getBlockById(allBlocks, item.blockId);
-        return {
-          id: block?.id || "",
-          name: block?.name || "",
-          category: block?.category || "",
-          provider: block?.provider?.name || "Bureau Vlieland",
-          providerId: block?.provider_id || "",
-          providerEmail: block?.provider?.email || "",
-          blockType: block?.block_type || "partner",
-          externalUrl: block?.external_url,
-          preferredTime: item.preferredTime,
-          itemNotes: item.notes,
-          dayIndex: item.dayIndex ?? 0,
-        };
-      });
 
-      // Format dates for the request
-      const effectiveDates = selectedDates.length > 0 ? selectedDates : (selectedDate ? [selectedDate] : []);
+      const blocksWithDetails = resolved.map(({ item, block }) => ({
+        id: block!.id,
+        name: block!.name || "",
+        category: block!.category || "",
+        provider: block!.provider?.name || "Bureau Vlieland",
+        providerId: block!.provider_id || "",
+        providerEmail: block!.provider?.email || "",
+        blockType: block!.block_type || "partner",
+        externalUrl: block!.external_url,
+        preferredTime: item.preferredTime,
+        itemNotes: item.notes,
+        dayIndex: item.dayIndex ?? 0,
+      }));
+
+      // Format dates for the request (lokale yyyy-MM-dd; geen toISOString → geen UTC-shift)
       const formattedDates = effectiveDates.map(d => format(d, "d MMMM yyyy", { locale: nl }));
-      const isoDates = effectiveDates.map(d => d.toISOString().split('T')[0]);
+      const isoDates = effectiveDates.map(d => format(d, "yyyy-MM-dd"));
       
       // Create program request in database
       // Event type is stored as description metadata; origin is always 'self_service' for configurator
       const finalEventType = formData.eventType || inferredEventType || 'niet_gespecificeerd';
       
       const requestId = crypto.randomUUID();
-      const { error: insertError } = await supabase
-        .from("program_requests")
-        .insert({
-          id: requestId,
-          customer_token: token,
-          customer_name: formData.name,
-          customer_email: formData.email,
-          customer_phone: formData.phone,
-          customer_company: formData.company || null,
-          number_of_people: numberOfPeople,
-          selected_dates: isoDates,
-          general_notes: formData.notes || null,
-          origin: 'self_service',
-          program_description: finalEventType,
-          quote_status: 'concept',
-          attribution: buildAttribution(),
-        });
 
-      if (insertError) throw insertError;
-
-      // Create program request items
+      // Items-payload eerst bouwen, vóór de program_requests insert.
       const itemsToInsert = blocksWithDetails.map((block) => {
         const fullBlock = getBlockById(allBlocks, block.id);
         return {
@@ -186,11 +196,40 @@ export const RequestFormModal = ({
         };
       });
 
+      const { error: insertError } = await supabase
+        .from("program_requests")
+        .insert({
+          id: requestId,
+          customer_token: token,
+          customer_name: formData.name,
+          customer_email: formData.email,
+          customer_phone: formData.phone,
+          customer_company: formData.company || null,
+          number_of_people: numberOfPeople,
+          selected_dates: isoDates,
+          general_notes: formData.notes || null,
+          origin: 'self_service',
+          program_description: finalEventType,
+          quote_status: 'concept',
+          attribution: buildAttribution(),
+        });
+
+      if (insertError) throw insertError;
+
       const { error: itemsError } = await supabase
         .from("program_request_items")
         .insert(itemsToInsert);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        // Compensating rollback bij gefaalde items-insert
+        try {
+          await supabase.from("program_requests").delete().eq("id", requestId);
+        } catch (rollbackErr) {
+          console.error("Rollback delete failed:", rollbackErr);
+        }
+        throw itemsError;
+      }
+
 
       // Log creation in history
       await supabase.from("program_request_history").insert({
