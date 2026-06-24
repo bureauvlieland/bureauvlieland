@@ -516,7 +516,10 @@ export default function AdminTickets() {
             </Table>
           </div>
         )}
+        </>
+        )}
       </div>
+
 
       {emailDialog && (
         <SendTicketEmailDialog
