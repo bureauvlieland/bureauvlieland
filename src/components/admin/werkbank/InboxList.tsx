@@ -1,11 +1,11 @@
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { loadInbox, type InboxItem, type InboxReason } from "@/lib/getInbox";
 import type { ProjectKind } from "@/lib/getProject";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { COMMUNICATION_STATE_META } from "@/lib/projectCommunication";
-import { AlertTriangle, ListTodo, Hourglass, Hotel } from "lucide-react";
+import { CLUSTER_META, type TodoCluster } from "@/lib/projectActivity";
+import { AlertTriangle, ListTodo, Hourglass, Hotel, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const REASON_META: Record<InboxReason, { label: string; icon: typeof AlertTriangle; tone: string }> = {
@@ -22,7 +22,6 @@ interface InboxListProps {
 }
 
 export function InboxList({ selectedProjectId, onSelect, kindFilter = "all", showSnoozed = false }: InboxListProps) {
-  const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ["werkbank-inbox", showSnoozed ? "with-snoozed" : "no-snoozed"],
     queryFn: () => loadInbox({ includeSnoozed: showSnoozed }),
@@ -69,6 +68,24 @@ export function InboxList({ selectedProjectId, onSelect, kindFilter = "all", sho
   );
 }
 
+function formatCooldown(days: number | null): string {
+  if (days == null) return "";
+  if (days < 1) return "vandaag";
+  if (days < 2) return "1 dag geleden";
+  return `${Math.floor(days)} dagen geleden`;
+}
+
+function pickNextAction(item: InboxItem): string | null {
+  // 1. concrete bureau-hint heeft voorrang
+  if (item.project?.bureauActionHints?.length) return item.project.bureauActionHints[0];
+  // 2. anders: titel van hoogste-prio zichtbare todo
+  const sorted = [...item.todos].sort((a, b) => {
+    const order = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
+    return (order[a.priority] ?? 9) - (order[b.priority] ?? 9);
+  });
+  return sorted[0]?.title ?? null;
+}
+
 function InboxRow({
   item,
   selected,
@@ -80,12 +97,31 @@ function InboxRow({
 }) {
   const project = item.project;
   const commMeta = item.comm ? COMMUNICATION_STATE_META[item.comm] : null;
+  const cooldown = item.activity.cooldown;
+  const cooldownLabel =
+    cooldown === "hot"  ? `⏱ Net contact gehad · ${formatCooldown(item.activity.daysSinceContact)}` :
+    cooldown === "warm" ? `⏱ Recent contact · ${formatCooldown(item.activity.daysSinceContact)}` :
+    null;
+
+  // Cluster-samenvatting: max 1 regel per cluster
+  const byCluster = new Map<TodoCluster, { count: number; sample: string }>();
+  for (const t of item.todos) {
+    const cur = byCluster.get(t.cluster);
+    if (cur) cur.count += 1;
+    else byCluster.set(t.cluster, { count: 1, sample: t.title });
+  }
+  const clusters = Array.from(byCluster.entries())
+    .sort((a, b) => CLUSTER_META[a[0]].order - CLUSTER_META[b[0]].order);
+
+  const nextAction = pickNextAction(item);
+
   return (
     <button
       onClick={onClick}
       className={cn(
         "w-full rounded-md border bg-background px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
         selected && "border-primary bg-muted/40",
+        cooldown !== "cold" && !selected && "opacity-90",
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -117,55 +153,49 @@ function InboxRow({
           )}
         </div>
         {commMeta && (
-          <span className="shrink-0 text-xs">
+          <span className="shrink-0 text-xs" title={commMeta.label}>
             <span aria-hidden>{commMeta.emoji}</span>
           </span>
         )}
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        {item.reasons.map((r) => {
-          const meta = REASON_META[r];
-          const Icon = meta.icon;
-          const count = r === "todo" ? item.todos.length : null;
-          return (
-            <span
-              key={r}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px]",
-                meta.tone,
-              )}
-            >
-              <Icon className="h-3 w-3" />
-              {meta.label}
-              {count != null && <span className="opacity-70">· {count}</span>}
+      {cooldownLabel && (
+        <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Timer className="h-3 w-3" />
+          <span>{cooldownLabel}</span>
+        </div>
+      )}
+
+      {nextAction && (
+        <div className="mt-1 truncate text-xs text-blue-700 dark:text-blue-300">
+          → {nextAction}
+        </div>
+      )}
+
+      {clusters.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {clusters.map(([cluster, info]) => {
+            const meta = CLUSTER_META[cluster];
+            return (
+              <span
+                key={cluster}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px]",
+                  meta.tone,
+                )}
+                title={info.sample}
+              >
+                {meta.label}
+                {info.count > 1 && <span className="opacity-70">· {info.count}</span>}
+              </span>
+            );
+          })}
+          {item.suppressedCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground" title="Onderdrukt door recent contact">
+              +{item.suppressedCount} stil
             </span>
-          );
-        })}
-      </div>
-
-      {item.reasons.includes("bij_bureau") && project?.bureauActionHints?.length ? (
-        <ul className="mt-1 space-y-0.5 text-xs text-blue-700 dark:text-blue-300">
-          {project.bureauActionHints.map((h, i) => (
-            <li key={i} className="truncate">→ {h}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      {item.todos.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
-          {item.todos.slice(0, 2).map((t) => (
-            <li key={t.id} className="truncate">
-              • {t.title}
-              {t.priority === "urgent" || t.priority === "high" ? (
-                <span className="ml-1 text-rose-600">({t.priority})</span>
-              ) : null}
-            </li>
-          ))}
-          {item.todos.length > 2 && (
-            <li className="opacity-70">+ {item.todos.length - 2} meer…</li>
           )}
-        </ul>
+        </div>
       )}
     </button>
   );
