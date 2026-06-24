@@ -106,6 +106,7 @@ export function BureauExecutionList() {
             bureau_guide_contact: r.bureau_guide_contact ?? null,
             bureau_arranged_at: r.bureau_arranged_at ?? null,
             bureau_arranged_notes: r.bureau_arranged_notes ?? null,
+            customer_approved_at: r.customer_approved_at ?? null,
             reference_number: project?.reference_number ?? null,
             customer_name: project?.customer_name ?? "",
             customer_company: project?.customer_company ?? null,
