@@ -1279,6 +1279,7 @@ Deno.serve(async (req) => {
 
       for (const prog of phaseBPrograms || []) {
         if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isHot(prog.id))     { totalSkipped++; continue; }
         const items = (prog.items as any[]) || [];
         const anyApproved = items.some(
           (i) => i.customer_approved_at || i.customer_accepted_at,
