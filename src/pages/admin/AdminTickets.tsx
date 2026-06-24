@@ -47,6 +47,8 @@ import {
 } from "@/lib/ticketItems";
 import { cn } from "@/lib/utils";
 import { SendTicketEmailDialog } from "@/components/admin/tickets/SendTicketEmailDialog";
+import { BureauExecutionList } from "@/components/admin/bureau-execution/BureauExecutionList";
+
 
 interface TicketRow {
   id: string;
