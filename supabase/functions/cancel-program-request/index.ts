@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       .eq("request_id", program.id);
 
     // Cancel linked accommodation request and its quotes
-    const accommodationPartners = new Map<string, { name: string; email: string; accommodationName: string }>();
+    const accommodationPartners = new Map<string, { name: string; email: string; accommodationName: string; quoteStatus: string }>();
 
     const cancelAccommodationRequest = async (accommodationId: string) => {
       await supabase
@@ -176,25 +176,29 @@ Deno.serve(async (req) => {
         .update({ status: "cancelled", updated_at: new Date().toISOString() })
         .eq("id", accommodationId);
 
-      const { data: quotesToCancel } = await supabase
+      // Verzamel ALLE relevante quotes — ook expired/declined/rejected — zodat
+      // de admin per partner kan kiezen of er een annuleringsmail uitgaat.
+      const { data: quotesToCollect } = await supabase
         .from("accommodation_quotes")
-        .select("id, partner_id, accommodation_name, partner:partners(id, name, email, contact_email)")
+        .select("id, status, partner_id, accommodation_name, partner:partners(id, name, email, contact_email)")
         .eq("request_id", accommodationId)
-        .in("status", ["pending", "submitted"]);
+        .in("status", ["pending", "submitted", "expired", "declined", "rejected"]);
 
-      if (quotesToCancel) {
-        for (const q of quotesToCancel) {
+      if (quotesToCollect) {
+        for (const q of quotesToCollect) {
           const partner = q.partner as { id: string; name: string; email: string; contact_email: string | null } | null;
           if (partner?.email && !accommodationPartners.has(partner.id)) {
             accommodationPartners.set(partner.id, {
               name: partner.name,
               email: partner.contact_email || partner.email,
               accommodationName: q.accommodation_name,
+              quoteStatus: q.status,
             });
           }
         }
       }
 
+      // Auto-reject blijft beperkt tot nog-openstaande quotes.
       await supabase
         .from("accommodation_quotes")
         .update({ status: "rejected", updated_at: new Date().toISOString() })
@@ -402,6 +406,7 @@ Deno.serve(async (req) => {
       name: p.name,
       email: p.email || null,
       accommodation_name: p.accommodationName,
+      quote_status: p.quoteStatus,
     }));
 
     return new Response(

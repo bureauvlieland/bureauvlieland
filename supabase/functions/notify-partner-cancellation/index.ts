@@ -239,8 +239,8 @@ Deno.serve(async (req) => {
     let accommodationEmailsSent = 0;
     if (program.linked_accommodation_id) {
       const quoteStatuses = skip_item_cancel
-        ? ["pending", "submitted", "selected", "accepted", "rejected", "declined"]
-        : ["pending", "submitted", "selected", "accepted"];
+        ? ["pending", "submitted", "expired", "selected", "accepted", "rejected", "declined"]
+        : ["pending", "submitted", "expired", "selected", "accepted"];
       const { data: openQuotes } = await supabase
         .from("accommodation_quotes")
         .select("id, partner_id, accommodation_name, status")

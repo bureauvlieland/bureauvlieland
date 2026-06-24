@@ -1,29 +1,35 @@
 ## Probleem
 
-Op `BV-2606-0020` heeft de klant het enige programma-onderdeel al goedgekeurd (groen vinkje + "U heeft dit programmaonderdeel goedgekeurd" zichtbaar op de kaart), maar de zijbalk-stepper toont nog:
+Bij annulering van een project worden alleen logiespartners getoond in de "Partners informeren"-modal als hun offerte-status `pending` of `submitted` is. Op `LOG-2606-0002` betekent dit:
 
-- "Onderdelen goedkeuren · 0/2 · 0%"
-- "Bekijk en keur uw onderdelen goed (0 van 0)"
-- Actieve blauwe knop **Onderdeel goedkeuren →**
+- **Stortemelk** (`rejected`) — wel getoond
+- **Zeezicht Vlieland** & **Westcord Strandhotel Seeduyn** (`expired` — offerte ingediend, maar `valid_until` verlopen) — **niet getoond**
+- **Donia Huys, Hotel De Wadden, Vliemare, Torenzicht** (`declined`) — niet getoond
 
-De admin-omgeving toont de status wél correct.
+Juist de logies met `expired` quotes (offerte uit) houden vaak een optie open in hun eigen systeem en moeten een annuleringsmail kunnen krijgen.
 
-## Oorzaak
+## Fix
 
-In `src/hooks/useProgramStatus.ts` worden `customerApprovableTotal` en `customerApprovedCount` afgeleid uit items met `status IN ('confirmed','alternative')`. Het onderdeel in de screenshot heeft `status = 'pending'` (wacht nog op partner-bevestiging), maar `customer_approved_at` is wél gezet. Dat item valt daardoor uit zowel teller als noemer → resultaat "0 van 0", `approveDone = false`, en de CTA blijft staan.
+### 1. Filter verbreden in `cancel-program-request` edge function
+`supabase/functions/cancel-program-request/index.ts` — in `cancelAccommodationRequest`:
+- Quote-selectie verbreden naar `['pending','submitted','expired','declined','rejected']` zodat álle relevante partners als `affected_accommodation_partners` worden teruggegeven.
+- Per partner een `quote_status` veld meegeven zodat de UI weet welke "voorgevinkt" moeten zijn.
+- Auto-reject blijft alleen op `pending`/`submitted` (anders zetten we declined/rejected/expired terug naar rejected — onnodig).
 
-## Fix (frontend only, geen data-migratie)
+### 2. Retro-flow gelijktrekken
+`src/pages/admin/AdminRequestDetail.tsx` — in `openRetroCancellationNotify`: zelfde status-set hanteren + `quote_status` doorzetten.
 
-`src/hooks/useProgramStatus.ts`:
+### 3. Dialog: voorvinken differentiëren
+`src/components/admin/PartnerCancellationNotifyDialog.tsx` + de twee type-definities:
+- `AccommodationPartner` krijgt optioneel veld `quote_status?: string`.
+- Default-aangevinkt: partners met status `pending`, `submitted` of `expired` (die hebben mogelijk een optie open).
+- Default-uit: `declined`/`rejected` (al actief afgewezen).
+- Bij iedere partner een klein statuslabel tonen ("Offerte verlopen", "Afgewezen door partner", "Niet gereageerd", …) zodat admin bewuste keuze kan maken.
 
-1. Noemer (`customerApprovableTotal`) uitbreiden: een item telt mee zodra de klant er iets over kan/heeft kunnen zeggen — dus `status IN ('confirmed','alternative')` **OR** `customer_approved_at IS NOT NULL` (en uiteraard nog steeds `isCustomerActionableCandidate`).
-2. Teller (`customerApprovedCount`) baseren op `customer_approved_at` in plaats van op het verschil met `proposalActionsCount`. Zo blijft de teller correct ook als status later wijzigt.
-3. `proposalActionsCount` blijft ongewijzigd (alleen items die nog daadwerkelijk klant-actie nodig hebben).
+### 4. Retroactief versturen voor LOG-2606-0002
+Direct na deploy een eenmalige `notify-partner-cancellation`-invoke (via een korte Node/curl-stap of via een tijdelijk script in deze chat) met:
+- `request_id` van de gekoppelde `program_request`
+- `accommodation_partner_ids`: Zeezicht Vlieland en Westcord Strandhotel Seeduyn
+- `skip_item_cancel: true`
 
-Hierdoor:
-- Zijbalk toont "1 van 1" → `approveDone = true` → groen vinkje op stap "Alle onderdelen goedgekeurd".
-- CTA "Onderdeel goedkeuren" verdwijnt.
-- Stepper schuift door naar "Aanbieders bevestigen" (actief), in lijn met admin.
-- Geen impact op fase-2 bulk-akkoord (`proposalActionsCount` ongewijzigd).
-
-Geen wijzigingen aan database, edge functions of admin-views nodig.
+Geen DB-migratie, geen wijzigingen aan klantportaal of mail-templates nodig.

@@ -26,7 +26,20 @@ export interface AccommodationPartner {
   name: string;
   email: string | null;
   accommodation_name: string;
+  quote_status?: string | null;
 }
+
+const ACC_STATUS_LABEL: Record<string, string> = {
+  pending: "Niet gereageerd",
+  submitted: "Offerte ingediend",
+  expired: "Offerte verlopen",
+  declined: "Afgewezen door partner",
+  rejected: "Afgewezen",
+  selected: "Geselecteerd",
+  accepted: "Geaccepteerd",
+};
+// Partners die default-aangevinkt worden: degenen die mogelijk nog een optie open hebben.
+const ACC_DEFAULT_CHECKED = new Set(["pending", "submitted", "expired", "selected", "accepted"]);
 
 interface Props {
   open: boolean;
@@ -49,8 +62,19 @@ export const PartnerCancellationNotifyDialog = ({
     () => activityPartners.filter((p) => p.email).map((p) => p.partner_id),
     [activityPartners],
   );
-  const defaultAccommodationIds = useMemo(
+  // Alle logies-partners met e-mail mogen worden aangevinkt (= "Alles selecteren").
+  const allAccommodationIds = useMemo(
     () => accommodationPartners.filter((p) => p.email).map((p) => p.partner_id),
+    [accommodationPartners],
+  );
+  // Voorgevinkt: alleen partners die mogelijk nog een optie open hebben staan
+  // (pending / submitted / expired / selected). Afgewezen partners niet, maar
+  // ze blijven wel zichtbaar zodat admin ze handmatig kan aanvinken.
+  const defaultAccommodationIds = useMemo(
+    () =>
+      accommodationPartners
+        .filter((p) => p.email && ACC_DEFAULT_CHECKED.has((p.quote_status || "").toLowerCase()))
+        .map((p) => p.partner_id),
     [accommodationPartners],
   );
 
@@ -73,11 +97,11 @@ export const PartnerCancellationNotifyDialog = ({
   };
 
   const totalSelected = selectedActivity.size + selectedAccommodation.size;
-  const totalAvailable = defaultActivityIds.length + defaultAccommodationIds.length;
+  const totalAvailable = defaultActivityIds.length + allAccommodationIds.length;
 
   const selectAll = () => {
     setSelectedActivity(new Set(defaultActivityIds));
-    setSelectedAccommodation(new Set(defaultAccommodationIds));
+    setSelectedAccommodation(new Set(allAccommodationIds));
   };
   const selectNone = () => {
     setSelectedActivity(new Set());
@@ -228,6 +252,11 @@ export const PartnerCancellationNotifyDialog = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">{p.name}</span>
+                            {p.quote_status && ACC_STATUS_LABEL[p.quote_status.toLowerCase()] && (
+                              <Badge variant="secondary" className="font-normal">
+                                {ACC_STATUS_LABEL[p.quote_status.toLowerCase()]}
+                              </Badge>
+                            )}
                             {disabled && (
                               <Badge variant="destructive" className="gap-1">
                                 <AlertTriangle className="h-3 w-3" /> geen e-mail
