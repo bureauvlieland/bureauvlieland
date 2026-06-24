@@ -180,6 +180,13 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
 interface DeriveContext {
   programPeople: number;
   numberOfDays: number;
+  /**
+   * Projectfase (`program_requests.quote_status`). Bepaalt of de klant nog
+   * akkoord moet geven vóórdat we überhaupt naar de aanbieder gaan. Optioneel
+   * voor backwards-compat met views die deze context (nog) niet meegeven —
+   * dan vallen we terug op de oude itemstatus-gebaseerde afleiding.
+   */
+  quoteStatus?: string | null;
 }
 
 /**
@@ -189,9 +196,13 @@ interface DeriveContext {
  *   1. Terminale toestanden (cancelled, executed, invoiced, unavailable, self_arranged)
  *   2. Klant heeft akkoord gegeven (customer_accepted_at)
  *      - met openstaande nieuwe prijs → prijs_gewijzigd
+ *      - bureau-onderdeel → klant_akkoord_bureau
+ *      - partner nog niet bevestigd → klant_akkoord_wacht_partner
  *      - anders → geaccepteerd
- *   3. Partner heeft gereageerd maar klant nog niet akkoord → wacht_op_klant
- *   4. Default → wacht_op_partner
+ *   3. Projectfase = offerte_verstuurd en klant heeft nog niet goedgekeurd
+ *      → wacht_op_klant (workflow: eerst klantakkoord, dan pas naar aanbieder)
+ *   4. Partner heeft gereageerd maar klant nog niet akkoord → wacht_op_klant
+ *   5. Default → wacht_op_partner
  */
 export function deriveItemDisplayStatus(
   item: ProgramRequestItem,
@@ -203,6 +214,9 @@ export function deriveItemDisplayStatus(
   if (item.status === "unavailable") return "niet_beschikbaar";
 
   const hasAcceptance = !!item.customer_accepted_at;
+  // Een eerder gegeven klant-akkoord vervalt zodra de aanbieder een
+  // ALTERNATIEF voorstel doet — dan moet de klant opnieuw beslissen.
+  const hasApproval = !!item.customer_approved_at && item.status !== "alternative";
 
   // Open admin-prijswijziging die de klant nog niet heeft afgehandeld.
   const openPriceChange = hasOpenAdminPriceChange(
@@ -212,7 +226,6 @@ export function deriveItemDisplayStatus(
   );
 
   if (hasAcceptance) {
-    // Edge case: admin heeft ná het klant-akkoord een nieuwe override gezet.
     if (
       openPriceChange &&
       item.admin_price_override_updated_at &&
@@ -221,18 +234,19 @@ export function deriveItemDisplayStatus(
     ) {
       return "prijs_gewijzigd";
     }
-    // Bureau-onderdelen regelen wij zelf — geen partner-bevestiging nodig.
     if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
-    // Partner heeft nog niet bevestigd → klant heeft wel akkoord, partner aan zet.
     if (item.status === "pending") return "klant_akkoord_wacht_partner";
     return "geaccepteerd";
   }
 
-  // Klant heeft nog geen akkoord gegeven. Twee scenario's:
-  //  - status = 'pending'  → partner heeft nog niet gereageerd, dus de klant
-  //    kan ook nog niks goedkeuren → "wacht op aanbieder".
-  //  - status = 'confirmed' / 'alternative' → partner heeft gereageerd, nu is
-  //    de klant aan zet → "wacht op klant-akkoord".
+  // Workflow-regel: tijdens de offerte-fase wacht ALLES eerst op klant-akkoord,
+  // ongeacht de technische itemstatus. Pas ná klant-akkoord gaan onderdelen
+  // naar de aanbieder. Bureau-onderdelen die de klant per bulk heeft
+  // goedgekeurd vallen via hasApproval/hasAcceptance al naar groen.
+  if (ctx.quoteStatus === "offerte_verstuurd" && !hasApproval) {
+    return "wacht_op_klant";
+  }
+
   if (item.status === "pending") return "wacht_op_partner";
   return "wacht_op_klant";
 
@@ -248,5 +262,6 @@ export function deriveItemDisplayStatusLoose(item: unknown, ctx?: Partial<Derive
   return deriveItemDisplayStatus(item as unknown as ProgramRequestItem, {
     programPeople: ctx?.programPeople ?? 0,
     numberOfDays: ctx?.numberOfDays ?? 1,
+    quoteStatus: ctx?.quoteStatus ?? null,
   });
 }
