@@ -34,6 +34,7 @@ interface BureauRow {
   bureau_guide_contact: string | null;
   bureau_arranged_at: string | null;
   bureau_arranged_notes: string | null;
+  customer_approved_at: string | null;
   reference_number: string | null;
   customer_name: string;
   customer_company: string | null;
