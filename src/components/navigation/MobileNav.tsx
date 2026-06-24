@@ -37,68 +37,55 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
       <div className="flex flex-col gap-1 py-6 px-2">
         {/* Primary CTA */}
         <div className="px-2 mb-6">
-          <Link to="/programma-samenstellen" onClick={onClose}>
+          <Link to="/#routes" onClick={onClose}>
             <Button
               variant="default"
               className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
             >
-              Stel zelf uw programma samen
+              Start uw aanvraag
             </Button>
           </Link>
         </div>
 
-        {/* Programma's */}
+        {/* Wat we organiseren */}
         <div className="px-2">
           <button
             onClick={() => toggle("programmas")}
             className={`flex items-center justify-between w-full py-3 ${topLevelClass(false)}`}
           >
-            <span>Programma's</span>
+            <span>Wat we organiseren</span>
             <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === "programmas" ? "rotate-180" : ""}`} />
           </button>
           {openDropdown === "programmas" && (
-            <div className="pl-4 pb-2 space-y-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  Begin hier
-                </p>
-                {navItems.beginHier.map((item) => (
-                  <Link key={item.href} to={item.href} onClick={onClose} className={subItemClass(item.href)}>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-              <div className="border-t border-border pt-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                  Verken het aanbod
-                </p>
-                {navItems.verkenItems.map((item) => (
-                  <Link key={item.href} to={item.href} onClick={onClose} className={subItemClass(item.href)}>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
+            <div className="pl-4 pb-2">
+              {navItems.watWeOrganiserenItems.map((item) => (
+                <Link key={item.href} to={item.href} onClick={onClose} className={subItemClass(item.href)}>
+                  {item.label}
+                </Link>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Overnachten */}
-        <Link
-          to="/logies-vlieland"
-          onClick={onClose}
-          className={`px-2 py-3 ${topLevelClass(isActive("/logies-vlieland"))}`}
-        >
-          Overnachten
-        </Link>
-
-        {/* Catering */}
-        <Link
-          to="/catering"
-          onClick={onClose}
-          className={`px-2 py-3 ${topLevelClass(isActive("/catering"))}`}
-        >
-          Catering
-        </Link>
+        {/* Inspiratie */}
+        <div className="px-2">
+          <button
+            onClick={() => toggle("inspiratie")}
+            className={`flex items-center justify-between w-full py-3 ${topLevelClass(isGroupActive(navItems.inspiratieItems.map((i) => i.href)))}`}
+          >
+            <span>Inspiratie</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${openDropdown === "inspiratie" ? "rotate-180" : ""}`} />
+          </button>
+          {openDropdown === "inspiratie" && (
+            <div className="pl-4 pb-2">
+              {navItems.inspiratieItems.map((item) => (
+                <Link key={item.href} to={item.href} onClick={onClose} className={subItemClass(item.href)}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Voor wie */}
         <div className="px-2">
