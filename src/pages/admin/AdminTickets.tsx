@@ -337,6 +337,11 @@ export default function AdminTickets() {
             <p className="text-sm text-slate-500">
               Bootovertochten, fietshuur en eigen begeleide activiteiten.
             </p>
+            {pendingCustomerCount > 0 && (
+              <p className="text-xs text-amber-700 mt-1">
+                {pendingCustomerCount} {pendingCustomerCount === 1 ? "item wacht" : "items wachten"} nog op klantakkoord — nog niet boeken/regelen.
+              </p>
+            )}
           </div>
         </div>
 
