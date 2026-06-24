@@ -370,7 +370,7 @@ Deno.serve(async (req) => {
       const staleIds: string[] = [];
       for (const todo of customerStatusUpdateTodos) {
         const r: any = reqMap.get(todo.related_request_id);
-        if (!r || r.cancelled_at || r.completion_status === "completed") {
+        if (!r || r.cancelled_at || ["completed","ready_for_invoice","partially_invoiced","fully_invoiced"].includes(r.completion_status)) {
           staleIds.push(todo.id);
           continue;
         }
