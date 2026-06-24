@@ -161,7 +161,10 @@ const LegendPill = ({ children, className }: { children: React.ReactNode; classN
 );
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { TicketBookingInline } from "@/components/admin/tickets/TicketBookingInline";
+import { BureauExecutionInline } from "@/components/admin/bureau-execution/BureauExecutionInline";
 import { isTicketItem } from "@/lib/ticketItems";
+import { isBureauExecutionItem } from "@/lib/bureauExecutionItems";
+
 import { PublishChangesDialog } from "@/components/admin/PublishChangesDialog";
 
 
