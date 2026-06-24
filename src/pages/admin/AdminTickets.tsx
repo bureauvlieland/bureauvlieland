@@ -321,15 +321,27 @@ export default function AdminTickets() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Ticket className="h-6 w-6" />
-              Tickets
+              Tickets & uitvoering
             </h1>
             <p className="text-sm text-slate-500">
-              Overzicht van alle bootovertochten en fietshuur. {openCount} open.
+              Bootovertochten, fietshuur en eigen begeleide activiteiten.
             </p>
           </div>
         </div>
 
+        <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
+          <TabsList>
+            <TabsTrigger value="tickets">Tickets ({openCount} open)</TabsTrigger>
+            <TabsTrigger value="bureau">Bureau-uitvoering</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {view === "bureau" ? (
+          <BureauExecutionList />
+        ) : (
+        <>
         <div className="flex flex-wrap items-center gap-2">
+
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
