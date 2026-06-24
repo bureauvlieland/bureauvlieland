@@ -65,6 +65,7 @@ interface TicketRow {
   confirmed_time: string | null;
   proposed_time: string | null;
   preferred_time: string | null;
+  customer_approved_at: string | null;
   // project
   reference_number: string | null;
   customer_name: string;
@@ -110,7 +111,7 @@ export default function AdminTickets() {
       const { data, error } = await supabase
         .from("program_request_items")
         .select(
-          "id, request_id, block_id, block_name, day_index, status, booking_reference, booking_document_path, booking_group_id, ticket_last_emailed_at, override_people, confirmed_time, proposed_time, preferred_time, program_requests!inner(reference_number, customer_name, customer_company, customer_email, selected_dates, number_of_people, status)"
+          "id, request_id, block_id, block_name, day_index, status, booking_reference, booking_document_path, booking_group_id, ticket_last_emailed_at, override_people, confirmed_time, proposed_time, preferred_time, customer_approved_at, program_requests!inner(reference_number, customer_name, customer_company, customer_email, selected_dates, number_of_people, status)"
         )
         .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
         .neq("status", "cancelled")
@@ -134,6 +135,7 @@ export default function AdminTickets() {
           confirmed_time: r.confirmed_time ?? null,
           proposed_time: r.proposed_time ?? null,
           preferred_time: r.preferred_time ?? null,
+          customer_approved_at: r.customer_approved_at ?? null,
           reference_number: project?.reference_number ?? null,
           customer_name: project?.customer_name ?? "",
           customer_company: project?.customer_company ?? null,
@@ -147,10 +149,19 @@ export default function AdminTickets() {
     refetchInterval: 60_000,
   });
 
+  const approvedRows = useMemo(
+    () => (rows || []).filter((r) => !!r.customer_approved_at),
+    [rows]
+  );
+
+  const pendingCustomerCount = useMemo(
+    () => (rows || []).filter((r) => !r.customer_approved_at).length,
+    [rows]
+  );
+
   const filtered = useMemo(() => {
-    if (!rows) return [];
     const todayIso = new Date().toISOString().slice(0, 10);
-    return rows
+    return approvedRows
       .filter((r) => {
         // Period
         if (period === "upcoming" && r.ticketDate && r.ticketDate < todayIso) return false;
@@ -180,7 +191,7 @@ export default function AdminTickets() {
         // Bundle by project: sort by project's earliest ticket date, then by request_id,
         // then by ticket date within the project, then day_index.
         const projMin = new Map<string, string>();
-        for (const r of rows!) {
+        for (const r of approvedRows) {
           const d = r.ticketDate ?? "9999-12-31";
           const cur = projMin.get(r.request_id);
           if (!cur || d < cur) projMin.set(r.request_id, d);
@@ -194,11 +205,11 @@ export default function AdminTickets() {
         if (ad !== bd) return ad < bd ? -1 : 1;
         return (a.day_index ?? 0) - (b.day_index ?? 0);
       });
-  }, [rows, period, kind, status, search]);
+  }, [approvedRows, period, kind, status, search]);
 
   const openCount = useMemo(
-    () => (rows || []).filter((r) => getTicketStatus(r) === "open").length,
-    [rows]
+    () => approvedRows.filter((r) => getTicketStatus(r) === "open").length,
+    [approvedRows]
   );
 
   const updateBooking = async (id: string, field: "booking_reference", value: string) => {
@@ -326,6 +337,11 @@ export default function AdminTickets() {
             <p className="text-sm text-slate-500">
               Bootovertochten, fietshuur en eigen begeleide activiteiten.
             </p>
+            {pendingCustomerCount > 0 && (
+              <p className="text-xs text-amber-700 mt-1">
+                {pendingCustomerCount} {pendingCustomerCount === 1 ? "item wacht" : "items wachten"} nog op klantakkoord — nog niet boeken/regelen.
+              </p>
+            )}
           </div>
         </div>
 

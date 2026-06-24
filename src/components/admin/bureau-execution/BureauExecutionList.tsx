@@ -34,6 +34,7 @@ interface BureauRow {
   bureau_guide_contact: string | null;
   bureau_arranged_at: string | null;
   bureau_arranged_notes: string | null;
+  customer_approved_at: string | null;
   reference_number: string | null;
   customer_name: string;
   customer_company: string | null;
@@ -81,7 +82,7 @@ export function BureauExecutionList() {
       const { data, error } = await supabase
         .from("program_request_items")
         .select(
-          "id, request_id, block_id, block_name, day_index, override_people, confirmed_time, proposed_time, preferred_time, bureau_guide_name, bureau_guide_contact, bureau_arranged_at, bureau_arranged_notes, provider_id, program_requests!inner(reference_number, customer_name, customer_company, selected_dates, number_of_people, status)",
+          "id, request_id, block_id, block_name, day_index, override_people, confirmed_time, proposed_time, preferred_time, bureau_guide_name, bureau_guide_contact, bureau_arranged_at, bureau_arranged_notes, customer_approved_at, provider_id, program_requests!inner(reference_number, customer_name, customer_company, selected_dates, number_of_people, status)",
         )
         .eq("provider_id", "bureau")
         .neq("status", "cancelled")
@@ -105,6 +106,7 @@ export function BureauExecutionList() {
             bureau_guide_contact: r.bureau_guide_contact ?? null,
             bureau_arranged_at: r.bureau_arranged_at ?? null,
             bureau_arranged_notes: r.bureau_arranged_notes ?? null,
+            customer_approved_at: r.customer_approved_at ?? null,
             reference_number: project?.reference_number ?? null,
             customer_name: project?.customer_name ?? "",
             customer_company: project?.customer_company ?? null,
@@ -117,10 +119,19 @@ export function BureauExecutionList() {
     refetchInterval: 60_000,
   });
 
+  const approvedRows = useMemo(
+    () => (rows || []).filter((r) => !!r.customer_approved_at),
+    [rows],
+  );
+
+  const pendingCustomerCount = useMemo(
+    () => (rows || []).filter((r) => !r.customer_approved_at).length,
+    [rows],
+  );
+
   const filtered = useMemo(() => {
-    if (!rows) return [];
     const todayIso = new Date().toISOString().slice(0, 10);
-    return rows
+    return approvedRows
       .filter((r) => {
         if (period === "upcoming" && r.itemDate && r.itemDate < todayIso) return false;
         if (period === "archive" && r.itemDate && r.itemDate >= todayIso) return false;
@@ -150,11 +161,11 @@ export function BureauExecutionList() {
         if (a.request_id !== b.request_id) return a.request_id < b.request_id ? -1 : 1;
         return (a.day_index ?? 0) - (b.day_index ?? 0);
       });
-  }, [rows, period, status, search]);
+  }, [approvedRows, period, status, search]);
 
   const openCount = useMemo(
-    () => (rows || []).filter((r) => !r.bureau_arranged_at).length,
-    [rows],
+    () => approvedRows.filter((r) => !r.bureau_arranged_at).length,
+    [approvedRows],
   );
 
   return (
@@ -163,6 +174,11 @@ export function BureauExecutionList() {
         Eigen activiteiten waar Bureau Vlieland zelf een begeleider voor regelt
         (vuurtorenbezoek, gids fietstocht, etc.). {openCount} nog te regelen.
       </p>
+      {pendingCustomerCount > 0 && (
+        <p className="text-xs text-amber-700">
+          {pendingCustomerCount} {pendingCustomerCount === 1 ? "item wacht" : "items wachten"} nog op klantakkoord — nog niet regelen.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
