@@ -59,7 +59,7 @@ const routes: Route[] = [
 
 export const RoutePicker = () => {
   return (
-    <section className="relative bg-background py-16 lg:py-24">
+    <section id="routes" className="relative bg-background py-16 lg:py-24 scroll-mt-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div className="text-center max-w-2xl mx-auto mb-10 lg:mb-14">
           <p className="text-xs uppercase tracking-[0.25em] text-primary mb-3 font-semibold">

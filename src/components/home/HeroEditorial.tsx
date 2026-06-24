@@ -91,16 +91,16 @@ export const HeroEditorial = () => {
             transition={{ duration: 0.8, delay: 0.7 }}
             className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col gap-4 lg:items-end"
           >
-            <Link to="/programma-samenstellen" className="group">
+            <a href="#routes" className="group">
               <Button
                 size="lg"
                 className="bg-sunset hover:bg-sunset/90 text-sunset-foreground shadow-glow text-base px-8 h-14 rounded-sm group-hover:translate-x-1 transition-transform"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Stel uw programma samen
+                Start uw aanvraag
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
-            </Link>
+            </a>
             <p className="text-sm text-sand/80 lg:text-right">
               Liever volledig op maat?{" "}
               <Link
