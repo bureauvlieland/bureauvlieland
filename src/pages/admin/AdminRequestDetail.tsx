@@ -2348,6 +2348,7 @@ const AdminRequestDetail = () => {
                                               status={deriveItemDisplayStatus(item as any, {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
+                                                quoteStatus: request.quote_status ?? null,
                                               })}
                                             />
                                             {(() => {
@@ -2476,6 +2477,7 @@ const AdminRequestDetail = () => {
                                               const displayStatus = deriveItemDisplayStatus(item as any, {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
+                                                quoteStatus: request.quote_status ?? null,
                                               });
 
                                               type ActionDef = {
@@ -2622,6 +2624,7 @@ const AdminRequestDetail = () => {
                                               status={deriveItemDisplayStatus(item as any, {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
+                                                quoteStatus: request.quote_status ?? null,
                                               })}
                                             />
                                           </div>
