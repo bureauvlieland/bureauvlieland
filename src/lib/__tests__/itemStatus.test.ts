@@ -194,3 +194,29 @@ describe("deriveItemDisplayStatusLoose", () => {
     expect(deriveItemDisplayStatusLoose(item, ctx)).toBe(deriveItemDisplayStatus(item, ctx));
   });
 });
+
+describe("regressie: partner-alternatief vraagt opnieuw klant-akkoord", () => {
+  // Scenario uit BV-2606-0020: klant gaf bulk-akkoord, partner kwam daarna
+  // met andere tijd. Item moet terugvallen op "Akkoord nodig" — niet groen
+  // blijven door een achtergebleven customer_approved_at.
+  it("status=alternative zonder customer_accepted_at → wacht_op_klant", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({
+        status: "alternative",
+        customer_approved_at: "2024-05-01T10:00:00Z",
+        customer_accepted_at: null,
+      } as any),
+      ctx,
+    )).toBe("wacht_op_klant");
+  });
+
+  it("status=alternative met verse customer_accepted_at → geaccepteerd", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({
+        status: "alternative",
+        customer_accepted_at: "2024-05-02T10:00:00Z",
+      } as any),
+      ctx,
+    )).toBe("geaccepteerd");
+  });
+});

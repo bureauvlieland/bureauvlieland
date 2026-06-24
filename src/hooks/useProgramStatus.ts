@@ -64,6 +64,12 @@ export const useProgramStatus = (
     i.provider_id !== "bureau" &&
     i.status !== "cancelled";
 
+  // Een eerdere klant-goedkeuring vervalt zodra de aanbieder een ALTERNATIEF
+  // voorstel doet (status='alternative'). Het item vraagt dan opnieuw expliciete
+  // klant-actie en mag niet meetellen als goedgekeurd.
+  const hasLiveCustomerApproval = (i: ProgramRequestItem) =>
+    !!i.customer_approved_at && i.status !== "alternative";
+
   // Items waar de klant NU akkoord op kan geven.
   // Pending items = wacht op partner — daar kan de klant niets aan doen.
   const customerActionableItems = useMemo(
@@ -72,7 +78,7 @@ export const useProgramStatus = (
         (i) =>
           isCustomerActionableCandidate(i) &&
           (i.status === "confirmed" || i.status === "alternative") &&
-          !i.customer_approved_at,
+          !hasLiveCustomerApproval(i),
       ),
     [program.items],
   );
@@ -94,11 +100,12 @@ export const useProgramStatus = (
       ).length,
     [program.items],
   );
-  // Teller op basis van customer_approved_at — robuust ongeacht latere status-wijzigingen.
+  // Teller op basis van customer_approved_at — een latere partner-alternative
+  // wist deze akkoord-staat (zie hasLiveCustomerApproval).
   const customerApprovedCount = useMemo(
     () =>
       program.items.filter(
-        (i) => isCustomerActionableCandidate(i) && !!i.customer_approved_at,
+        (i) => isCustomerActionableCandidate(i) && hasLiveCustomerApproval(i),
       ).length,
     [program.items],
   );

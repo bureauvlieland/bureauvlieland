@@ -110,11 +110,17 @@ export const CustomerProgramItem = ({
   // fase 3 (quote_status="akkoord_ontvangen"): in fase 2 zit de actie in de bulk-
   // akkoord-card bovenaan om dubbele/contradicterende acties te voorkomen.
   const isApprovalPhase = quoteStatus === "akkoord_ontvangen";
+  // Een alternatief voorstel van de aanbieder (status='alternative') vraagt
+  // ALTIJD opnieuw expliciete goedkeuring van de klant — ook als er eerder
+  // bulk-akkoord is gegeven (customer_approved_at). De per-item knop moet dan
+  // weer verschijnen zolang de klant niet expliciet (customer_accepted_at) op
+  // het nieuwe voorstel heeft gereageerd.
+  const isPartnerAlternative = item.status === "alternative";
   const needsCustomerAction = !isSelfArranged
     && item.provider_id !== "bureau"
     && isApprovalPhase
     && (item.status === "confirmed" || item.status === "alternative")
-    && (!item.customer_approved_at || priceChangeNeedsAttention)
+    && (!item.customer_approved_at || priceChangeNeedsAttention || isPartnerAlternative)
     && !item.customer_accepted_at;
 
   // Check if item is newly added (pending status and created within last 24 hours)

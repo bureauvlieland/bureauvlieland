@@ -326,16 +326,20 @@ Deno.serve(async (req) => {
         updateData.quoted_notes = quotedNotes || null;
         updateData.partner_price_change_acknowledged_at = new Date().toISOString();
       }
-      // Substantieel ander voorstel — klant moet opnieuw bevestigen.
-      // customer_approved_at blijft staan als signaal dat het voorstel als geheel akkoord was;
-      // customer_accepted_at clearen we zodat de per-item "Akkoord"-knop terugkomt.
+      // Substantieel ander voorstel — klant moet voor DIT onderdeel opnieuw
+      // expliciet akkoord geven. Beide vlaggen wissen zodat het onderdeel in
+      // klant/admin/partner-views terugvalt op "Akkoord nodig" en niet meer
+      // meetelt als goedgekeurd in aggregaten ("Alles goedgekeurd").
       updateData.customer_accepted_at = null;
+      updateData.customer_approved_at = null;
+      updateData.item_quote_status = "wacht_op_klant";
     }
 
     if (status === "unavailable") {
       // Partner kan niet leveren — klant-acceptatie van het oorspronkelijke voorstel
       // op dit onderdeel vervalt; bureau moet vervanging zoeken.
       updateData.customer_accepted_at = null;
+      updateData.customer_approved_at = null;
     }
 
     if (isPriceAck) {
