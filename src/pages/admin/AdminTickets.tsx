@@ -135,6 +135,7 @@ export default function AdminTickets() {
           confirmed_time: r.confirmed_time ?? null,
           proposed_time: r.proposed_time ?? null,
           preferred_time: r.preferred_time ?? null,
+          customer_approved_at: r.customer_approved_at ?? null,
           reference_number: project?.reference_number ?? null,
           customer_name: project?.customer_name ?? "",
           customer_company: project?.customer_company ?? null,
