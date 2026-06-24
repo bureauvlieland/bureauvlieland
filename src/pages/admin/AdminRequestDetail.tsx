@@ -905,7 +905,7 @@ const AdminRequestDetail = () => {
           .from("accommodation_quotes")
           .select("id, partner_id, accommodation_name, status")
           .eq("request_id", request.linked_accommodation_id)
-          .in("status", ["pending", "submitted", "selected", "accepted", "rejected", "declined"]);
+          .in("status", ["pending", "submitted", "expired", "declined", "rejected", "selected", "accepted"]);
 
         const accPartnerIds = [...new Set((quotes || []).map((q: any) => q.partner_id).filter(Boolean))];
         let accPartnerMap = new Map<string, any>();
@@ -923,6 +923,7 @@ const AdminRequestDetail = () => {
             name: p?.name || q.accommodation_name || q.partner_id,
             email: p?.contact_email || p?.email || null,
             accommodation_name: q.accommodation_name || "",
+            quote_status: q.status,
           };
         });
       }
