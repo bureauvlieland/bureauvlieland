@@ -222,7 +222,8 @@ Deno.serve(async (req) => {
         .from("program_requests")
         .select("id, customer_name, customer_company, quote_status")
         .neq("status", "cancelled")
-        .is("cancelled_at", null);
+        .is("cancelled_at", null)
+        .not("completion_status", "in", "(ready_for_invoice,partially_invoiced,fully_invoiced,completed)");
 
       let createdCount = 0;
       for (const project of activeProjects || []) {
