@@ -82,7 +82,7 @@ export function BureauExecutionList() {
       const { data, error } = await supabase
         .from("program_request_items")
         .select(
-          "id, request_id, block_id, block_name, day_index, override_people, confirmed_time, proposed_time, preferred_time, bureau_guide_name, bureau_guide_contact, bureau_arranged_at, bureau_arranged_notes, provider_id, program_requests!inner(reference_number, customer_name, customer_company, selected_dates, number_of_people, status)",
+          "id, request_id, block_id, block_name, day_index, override_people, confirmed_time, proposed_time, preferred_time, bureau_guide_name, bureau_guide_contact, bureau_arranged_at, bureau_arranged_notes, customer_approved_at, provider_id, program_requests!inner(reference_number, customer_name, customer_company, selected_dates, number_of_people, status)",
         )
         .eq("provider_id", "bureau")
         .neq("status", "cancelled")
