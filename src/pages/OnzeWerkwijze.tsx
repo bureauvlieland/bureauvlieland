@@ -76,12 +76,12 @@ const OnzeWerkwijze = () => {
               Klaar om te starten?
             </h2>
             <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
-              Stel direct uw programma samen uit onze bouwstenen. Liever persoonlijk advies? Vraag een maatwerkofferte aan.
+              Kies hoe u uw aanvraag wilt starten — losse activiteit, compleet programma of maatwerk.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/programma-samenstellen">
+              <Link to="/#routes">
                 <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
-                  Stel uw programma samen
+                  Start uw aanvraag
                 </Button>
               </Link>
               <Link to="/programma-op-maat">

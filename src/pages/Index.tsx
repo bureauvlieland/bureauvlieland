@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { StructuredData } from "@/components/StructuredData";
@@ -14,6 +16,18 @@ import { RoutePicker } from "@/components/home/RoutePicker";
 import { CateringHighlight } from "@/components/home/CateringHighlight";
 
 const Index = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === "#routes") {
+      // Wait one frame so the section is mounted
+      requestAnimationFrame(() => {
+        const el = document.getElementById("routes");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [location.hash]);
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>

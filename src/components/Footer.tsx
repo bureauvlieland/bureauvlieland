@@ -58,28 +58,18 @@ export const Footer = () => {
             </div>
           </div>
 
-          {/* Column 2: Begin hier */}
+          {/* Column 2: Wat we organiseren */}
           <div>
-            <h4 className="font-semibold text-foreground mb-4">Begin hier</h4>
+            <h4 className="font-semibold text-foreground mb-4">Wat we organiseren</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link to="/programma-samenstellen" className="hover:text-primary transition-colors font-medium text-foreground">
-                  Stel zelf uw programma samen
-                </Link>
-              </li>
-              <li>
-                <Link to="/programma-op-maat" className="hover:text-primary transition-colors">
-                  Programma op maat
-                </Link>
-              </li>
-              <li>
-                <Link to="/voorbeeldprogrammas" className="hover:text-primary transition-colors">
-                  Voorbeeldprogramma's
+                <Link to="/#routes" className="hover:text-primary transition-colors font-medium text-foreground">
+                  Start uw aanvraag
                 </Link>
               </li>
               <li>
                 <Link to="/bouwstenen" className="hover:text-primary transition-colors">
-                  Alle bouwstenen
+                  Activiteiten
                 </Link>
               </li>
               <li>
@@ -95,6 +85,16 @@ export const Footer = () => {
               <li>
                 <Link to="/evenementen" className="hover:text-primary transition-colors">
                   Evenementen
+                </Link>
+              </li>
+              <li>
+                <Link to="/voorbeeldprogrammas" className="hover:text-primary transition-colors">
+                  Voorbeeldprogramma's
+                </Link>
+              </li>
+              <li>
+                <Link to="/programma-op-maat" className="hover:text-primary transition-colors">
+                  Programma op maat
                 </Link>
               </li>
             </ul>
@@ -153,6 +153,21 @@ export const Footer = () => {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* SEO strip — long-tail landings, kept crawlable but uit hoofdmenu */}
+        <div className="pt-6 mb-6 border-t border-border">
+          <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-3">
+            Veelgevraagd op Vlieland
+          </h4>
+          <nav aria-label="Populaire activiteiten" className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <Link to="/activiteiten-vlieland" className="hover:text-primary transition-colors">Activiteiten Vlieland</Link>
+            <Link to="/wadlopen-vlieland" className="hover:text-primary transition-colors">Wadlopen</Link>
+            <Link to="/zeehondentochten-vlieland" className="hover:text-primary transition-colors">Zeehondentochten</Link>
+            <Link to="/snel-aanvragen" className="hover:text-primary transition-colors">Snel aanvragen</Link>
+            <Link to="/activiteiten-boeken" className="hover:text-primary transition-colors">Losse activiteiten boeken</Link>
+            <Link to="/catering-aanvragen" className="hover:text-primary transition-colors">Catering aanvragen</Link>
+          </nav>
         </div>
 
         <div className="pt-8 border-t border-border space-y-6">

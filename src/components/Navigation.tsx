@@ -6,21 +6,26 @@ import logo from "@/assets/logo.png";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   ProgrammasMega,
+  InspiratieDropdown,
   VoorWieMega,
   OverOnsDropdown,
   navItems,
 } from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
 
-const programmasHrefs = [
-  "/programma-samenstellen",
+const watWeOrganiserenHrefs = [
+  ...navItems.watWeOrganiserenItems.map((i) => i.href),
+  // legacy/SEO landings that conceptually belong to this group
+  "/activiteiten-vlieland",
+  "/wadlopen-vlieland",
+  "/zeehondentochten-vlieland",
   "/snel-aanvragen",
-  "/voorbeeldprogrammas",
-  "/bouwstenen",
-  "/catering",
-  "/evenementen",
   "/activiteiten-boeken",
+  "/programma-samenstellen",
+  "/catering-aanvragen",
 ];
+
+const inspiratieHrefs = navItems.inspiratieItems.map((i) => i.href);
 
 const voorWieHrefs = [
   ...navItems.voorBedrijvenItems.map((i) => i.href),
@@ -37,24 +42,15 @@ function useNavItemClass(hrefs: string[]) {
     : "text-sm text-muted-foreground hover:text-foreground transition-colors";
 }
 
-function useSingleNavClass(href: string) {
-  const { pathname } = useLocation();
-  const isActive = pathname === href || pathname.startsWith(href + "/");
-  return isActive
-    ? "text-sm font-medium text-primary border-b-2 border-primary pb-0.5"
-    : "text-sm text-muted-foreground hover:text-foreground transition-colors";
-}
-
-type DropdownKey = "programmas" | "voorwie" | "overons" | null;
+type DropdownKey = "programmas" | "inspiratie" | "voorwie" | "overons" | null;
 
 export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const programmasClass = useNavItemClass(programmasHrefs);
-  const overnachtenClass = useSingleNavClass("/logies-vlieland");
-  const cateringClass = useSingleNavClass("/catering");
+  const programmasClass = useNavItemClass(watWeOrganiserenHrefs);
+  const inspiratieClass = useNavItemClass(inspiratieHrefs);
   const voorWieClass = useNavItemClass(voorWieHrefs);
   const overOnsClass = useNavItemClass(overOnsHrefs);
 
@@ -115,28 +111,19 @@ export const Navigation = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-5">
-              {renderDropdown("programmas", "Programma's", programmasClass, ProgrammasMega)}
-
-              <Link to="/logies-vlieland" className={overnachtenClass}>
-                Overnachten
-              </Link>
-
-              <Link to="/catering" className={cateringClass}>
-                Catering
-              </Link>
-
+              {renderDropdown("programmas", "Wat we organiseren", programmasClass, ProgrammasMega)}
+              {renderDropdown("inspiratie", "Inspiratie", inspiratieClass, InspiratieDropdown)}
               {renderDropdown("voorwie", "Voor wie", voorWieClass, VoorWieMega)}
-
               {renderDropdown("overons", "Over ons", overOnsClass, OverOnsDropdown)}
 
               {/* CTA */}
-              <Link to="/programma-samenstellen">
+              <Link to="/#routes">
                 <Button
                   variant="default"
                   size="sm"
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  Stel zelf uw programma samen
+                  Start uw aanvraag
                 </Button>
               </Link>
             </div>
