@@ -1369,6 +1369,7 @@ Deno.serve(async (req) => {
     } else {
       for (const prog of phaseCPrograms || []) {
         if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isHot(prog.id))     { totalSkipped++; continue; }
         const items = (prog.items as any[]) || [];
         // Phase C = at least one approved item that was/should be sent to a partner,
         // and at least one item is still pending (not yet confirmed)
