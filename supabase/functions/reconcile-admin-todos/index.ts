@@ -1,6 +1,10 @@
 // Reconcile open admin_todos: close ones whose anchor is resolved, then
 // invoke check-pending-items to (re)create new ones.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  fetchLastContactByProject,
+  REMINDER_TYPES_GUARDED_BY_COOLDOWN,
+} from "../_shared/project-activity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
