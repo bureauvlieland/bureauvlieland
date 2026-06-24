@@ -1192,6 +1192,7 @@ Deno.serve(async (req) => {
 
       for (const prog of expiringPrograms || []) {
         if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isHot(prog.id))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
