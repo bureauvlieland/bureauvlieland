@@ -239,6 +239,7 @@ Deno.serve(async (req) => {
 
       for (const item of pendingItems || []) {
         if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
+        if (isHot(item.request_id))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -364,6 +365,7 @@ Deno.serve(async (req) => {
       for (const quote of activeQuotes) {
         const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
         if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+        if (isHot(linkedProgramId))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -473,6 +475,7 @@ Deno.serve(async (req) => {
       for (const quote of activeForwarded) {
         const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
         if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+        if (isHot(linkedProgramId))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
@@ -526,6 +529,7 @@ Deno.serve(async (req) => {
 
       for (const req of inactiveRequests || []) {
         if (isSnoozed(req.id)) { totalSkipped++; continue; }
+        if (isHot(req.id))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
