@@ -1,102 +1,31 @@
-## Doel
 
-De klantpagina in fase 2 ("Voorstel klaar") moet in één oogopslag duidelijk maken:
-1. **Wat moet ik doen?** → akkoord geven
-2. **Wat als ik iets wil wijzigen?** → zelf aanpassen of via chat
-3. **Wat gebeurt er daarna?** → wij vragen beschikbaarheid op
+## Wat speelt er
 
-Nu staan er meerdere kaarten boven elkaar (`TabHeader`, `ProgramOverviewCard`, `ActionRequiredCard`, `ProgramIntroCard`) die deels dezelfde boodschap herhalen. Resultaat: veel scrollen, dubbele tekst, en de echte CTA valt weg.
+Amber (Island Events) ontving op 22-06 een mail "Logies-aanvraag **BV-2605-0005** is geannuleerd". Die referentie kan ze niet vinden, omdat logies-partners de aanvraag bij ons kennen onder de **LOG-referentie** uit `accommodation_requests` (in dit geval `LOG-2606-0004`). De `BV-…` referentie hoort bij het bovenliggende programma. Bovendien stond er geen klant-/bedrijfsnaam in de mail, waardoor herkenning extra lastig is.
 
----
+DB-bevindingen:
+- `program_requests.reference_number = BV-2605-0005` (cancelled)
+- gekoppelde `accommodation_requests.reference_number = LOG-2606-0004` (cancelled), met `customer_company` / `customer_name` beschikbaar
+- email_log: subject "Logies-aanvraag BV-2605-0005 is geannuleerd"
 
-## 1. Eén "Hero Action"-kaart bovenaan (vervangt 2 huidige kaarten)
+In `supabase/functions/notify-partner-cancellation/index.ts` (logies-blok, regels ~240-340) wordt overal `refNumber` (BV-…) gebruikt en is geen klantnaam aanwezig.
 
-Vervang `ActionRequiredCard` + `ProgramIntroCard` in fase 2 door één geanimeerde **Voorstel-kaart** direct onder de TabHeader:
+## Fix
 
-```text
-┌─────────────────────────────────────────────────┐
-│ ✨ Uw programmavoorstel ligt klaar              │
-│                                                 │
-│ Bekijk hieronder uw programma met indicatieve   │
-│ prijzen. Onderdelen van Bureau Vlieland zijn    │
-│ al bevestigd (✓). Voor de overige onderdelen    │
-│ vragen wij — zodra u akkoord geeft —            │
-│ beschikbaarheid en definitieve prijzen op bij   │
-│ onze aanbieders.                                │
-│                                                 │
-│ [ ✓ Akkoord op het hele programma ]   (primair) │
-│                                                 │
-│ Iets wijzigen? Pas het zelf aan in het          │
-│ programma hieronder, of stel uw vraag via       │
-│ de chat rechtsonder 💬                          │
-└─────────────────────────────────────────────────┘
-```
+In `supabase/functions/notify-partner-cancellation/index.ts`:
 
-**Vorm**: zachte gradient achtergrond (primary/10 → primary/5), subtiele `animate-fade-in` bij mount, primaire CTA met `hover-scale` + `pulse` ring zolang er nog niet is goedgekeurd. Op mobiel sticky bottom CTA-bar i.p.v. inline.
+1. Vóór het logies-mailblok één extra lookup op `accommodation_requests` voor `program.linked_accommodation_id` om op te halen: `reference_number`, `customer_company`, `customer_name`, `arrival_date`, `departure_date`. Bewaar als `accommodationRef` en `customerLabel` (= `customer_company || customer_name || "onbekend"`).
+2. Logies-mail aanpassen (regels ~276-290):
+   - **Subject**: `Logies-aanvraag {accommodationRef} – {customerLabel} is geannuleerd` (fallback naar `refNumber` als LOG-ref ontbreekt).
+   - **Body**: openingszin wordt "Hierbij laten we je weten dat de logies-aanvraag met referentie **{accommodationRef}** voor **{customerLabel}** is geannuleerd." Optioneel een regel met aankomst-/vertrekdatum als die beschikbaar zijn, voor extra herkenning. Subtiele toevoeging "Onderdeel van programma {refNumber}." zodat de programma-koppeling zichtbaar blijft.
+   - **Portal-link**: `?tab=projecten&q={accommodationRef}` (komt overeen met wat de partner in zijn portal ziet).
+   - **Footer-hint**: ook `accommodationRef` gebruiken.
+3. Reply-To en correlatie via `request_id` blijven ongewijzigd. In `metadata` extra velden loggen: `accommodation_reference_number`, `customer_label`.
 
-**Gedrag**:
-- CTA scrollt + highlight: na klik → bevestigingsdialoog → bulk-approve → kaart morpht naar groen "Bedankt, wij gaan voor u aan de slag" met confetti-pulse.
-- Chat-link in tekst opent de bestaande chat-widget (al rechtsonder).
-- Wijzigingen-zin krijgt een kleine pijl naar het eerste programma-item.
+Het programma-annuleringsblok (reguliere partners, regels ~140-235) blijft ongewijzigd: daar is de BV-referentie correct. Optioneel kan daar wél `customerLabel` worden toegevoegd aan subject/body voor dezelfde herkenbaarheid — graag bevestigen of dat ook gewenst is, of dat we het beperken tot de logies-mail.
 
-## 2. ProgramOverviewCard inkrimpen → "Reissamenvatting"-strip
+Geen DB-migratie of frontendwijzigingen. Geen automatische herverzending van de eerdere mail naar Amber.
 
-De huidige overzichtskaart herhaalt datums/personen die ook in de TabHeader staan. Maak er een compacte 1-regel strip van (datum · personen · referentie · "wijzig"-link), direct onder de TabHeader. Geen eigen kaart meer in fase 2.
+## Bestanden
 
-## 3. Programma-lijst — per-item duidelijkheid
-
-Per `CustomerProgramItem`:
-- **Bureau Vlieland items** (veerboot, fietsen, eigen activiteiten): groene `✓ Bevestigd door Bureau Vlieland` badge, geen actie nodig, lichte achtergrond.
-- **Partner items in fase 2**: amber badge `Wacht op uw akkoord`, met subtiele puls op de badge tot er akkoord is.
-- **Wijzig/verwijder** knoppen blijven inline maar krijgen tooltip "Liever overleggen? Gebruik de chat rechtsonder."
-
-## 4. Chat-affordance zichtbaarder
-
-De chat-widget rechtsonder is nu onopvallend. Toevoegingen:
-- Eenmalige tooltip-bubble bij eerste bezoek: *"Vragen of wijzigingen? Stel ze hier — wij reageren snel."* (auto-dismiss na 6s of bij klik).
-- In de Hero-kaart een tekstuele verwijzing met 💬-icoon.
-
-## 5. Bevestigings-flow na akkoord
-
-Na klik op "Akkoord op het hele programma":
-1. Modal met korte samenvatting (X onderdelen, Y personen, totaal indicatief €Z incl. btw) + "Bevestig akkoord".
-2. Na bevestigen: Hero morpht naar success-state, programma-items krijgen sequentiële `fade-in` met groene check-animatie.
-3. `ActionRequiredCard` toont nu fase 3: "Wij vragen beschikbaarheid op bij de aanbieders — u hoort binnen 3 werkdagen van ons."
-
-## 6. Sticky mini-status op mobiel
-
-Mobiele bottom bar (al deels aanwezig via `MobileStickyStatus` + `MobileBottomNav`) krijgt in fase 2 één enkele primaire CTA: **"Akkoord geven"**. In fase 3 verandert hij naar "Aanvragen lopen — X/Y bevestigd" met progress.
-
-## 7. Tekstuele opschoning (definitief, geen dubbeling meer)
-
-| Plek | Nieuwe tekst |
-|---|---|
-| TabHeader (fase 2) | *Voorstel klaar voor akkoord* |
-| Hero-kaart titel | *Uw programmavoorstel ligt klaar* |
-| Hero-kaart body | zie blok hierboven (één plek, nergens anders herhalen) |
-| Item badge Bureau | *Bevestigd door Bureau Vlieland* |
-| Item badge Partner fase 2 | *Wacht op uw akkoord* |
-| Na akkoord (fase 3) | *Wij vragen nu beschikbaarheid op bij de aanbieders* |
-
-Alle varianten van "verstuurd naar aanbieders" worden uit fase 2 verwijderd.
-
----
-
-## Technische details (voor de bouwfase)
-
-- **Nieuw component** `src/components/customer-portal/ProposalHeroCard.tsx` — vervangt het fase-2-pad in `ActionRequiredCard` + `ProgramIntroCard`.
-- **`ActionRequiredCard`**: behoudt fase 3/4/5 logica, fase 2 pad wordt verwijderd.
-- **`ProgramIntroCard`**: behoudt alleen `isMaatwerkEmpty` en `isConfirmed` paden; fase-2 akkoord-UI verhuist naar `ProposalHeroCard`.
-- **`ProgramOverviewCard`**: nieuwe `variant="strip"` voor compacte 1-regel weergave in fase 2.
-- **`DesktopProgramView` + `MobileProgramView`**: render `ProposalHeroCard` als eerste kind in fase 2; strip-variant van overview eronder; lijst daaronder.
-- **`CustomerProgramItem`**: badge-variant per item op basis van `provider_id === 'bureau'` en `quote_status`.
-- **Animaties**: bestaande Tailwind utilities (`animate-fade-in`, `hover-scale`, `pulse`); geen nieuwe library nodig.
-- **Chat-tooltip**: lichte useEffect + localStorage flag `chat-hint-seen-{token}`.
-
-Geen wijzigingen aan backend, edge functions, e-mails of business logic — puur frontend/UX.
-
----
-
-## Open punt vóór implementatie
-
-Akkoord met **één primaire CTA "Akkoord op het hele programma"** in fase 2 (i.p.v. de huidige combinatie van bulk-knop in programmakop + losse "Geef akkoord"-knop in IntroCard)? Per-item akkoord blijft mogelijk via het item zelf, maar wordt visueel ondergeschikt.
+- `supabase/functions/notify-partner-cancellation/index.ts` — extra lookup + logies-mail subject/body/portal-link/metadata bijwerken met LOG-ref en klant-/bedrijfsnaam.

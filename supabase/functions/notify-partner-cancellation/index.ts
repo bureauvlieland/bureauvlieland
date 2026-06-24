@@ -251,6 +251,23 @@ Deno.serve(async (req) => {
         (q: any) => !accommodationFilter || (q.partner_id && accommodationFilter.has(q.partner_id))
       );
 
+      // Haal LOG-referentie + klantgegevens van de gekoppelde logies-aanvraag op
+      const { data: accommodationReq } = await supabase
+        .from("accommodation_requests")
+        .select("reference_number, customer_company, customer_name, arrival_date, departure_date")
+        .eq("id", program.linked_accommodation_id)
+        .single();
+      const accommodationRef = accommodationReq?.reference_number || refNumber;
+      const customerLabel =
+        accommodationReq?.customer_company ||
+        accommodationReq?.customer_name ||
+        "onbekende klant";
+      const arrival = accommodationReq?.arrival_date || null;
+      const departure = accommodationReq?.departure_date || null;
+      const periodLine = arrival && departure
+        ? `<p>Periode: <strong>${sanitizeHtml(arrival)}</strong> t/m <strong>${sanitizeHtml(departure)}</strong>.</p>`
+        : "";
+
       if (filteredQuotes.length > 0) {
         // Enrich partner emails
         const partnerIds = [...new Set(filteredQuotes.map((q: any) => q.partner_id).filter(Boolean))];
@@ -273,18 +290,20 @@ Deno.serve(async (req) => {
               ? `Uw offerte was reeds geselecteerd voor deze aanvraag. Met deze annulering komt de boeking te vervallen.`
               : `Uw offerte was nog in behandeling bij de klant. Met deze annulering komt de offerteaanvraag te vervallen — een reactie is niet meer nodig.`;
 
-            const subject = `${getSubjectPrefix(origin)}Logies-aanvraag ${refNumber} is geannuleerd`;
+            const subject = `${getSubjectPrefix(origin)}Logies-aanvraag ${accommodationRef} – ${customerLabel} is geannuleerd`;
             const reasonBlock = cancellationReasonHtml
               ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
               : "";
-            const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
+            const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(accommodationRef)}`;
             const body = `
               <p>Beste ${sanitizeHtml(partnerName)},</p>
-              <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
+              <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(accommodationRef)}</strong> voor <strong>${sanitizeHtml(customerLabel)}</strong> is geannuleerd.</p>
+              ${periodLine}
+              <p style="font-size:12px;color:#64748b">Onderdeel van programma ${sanitizeHtml(refNumber)}.</p>
               <p>${statusLine}</p>
               ${reasonBlock}
               <p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p>
-              <p style="font-size:12px;color:#64748b">Geannuleerde aanvragen blijven in je portal vindbaar via zoeken op referentie (incl. archief).</p>
+              <p style="font-size:12px;color:#64748b">Geannuleerde aanvragen blijven in je portal vindbaar via zoeken op referentie <strong>${sanitizeHtml(accommodationRef)}</strong> (incl. archief).</p>
               <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
             `;
@@ -329,6 +348,8 @@ Deno.serve(async (req) => {
                 template_name: "cancellation_accommodation_partner",
                 actor: "admin → logies-partner (project geannuleerd)",
                 accommodation_request_id: program.linked_accommodation_id,
+                accommodation_reference_number: accommodationRef,
+                customer_label: customerLabel,
                 quote_id: quote.id,
                 previous_quote_status: quote.status,
               },
