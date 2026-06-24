@@ -252,6 +252,11 @@ export const PartnerCancellationNotifyDialog = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">{p.name}</span>
+                            {p.quote_status && ACC_STATUS_LABEL[p.quote_status.toLowerCase()] && (
+                              <Badge variant="secondary" className="font-normal">
+                                {ACC_STATUS_LABEL[p.quote_status.toLowerCase()]}
+                              </Badge>
+                            )}
                             {disabled && (
                               <Badge variant="destructive" className="gap-1">
                                 <AlertTriangle className="h-3 w-3" /> geen e-mail
