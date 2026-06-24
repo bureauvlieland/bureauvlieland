@@ -361,6 +361,13 @@ export type Database = {
             referencedRelation: "accommodation_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "accommodation_quotes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "partner_accommodation_requests_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       accommodation_requests: {
@@ -1271,6 +1278,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "chat_conversations_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "partner_accommodation_requests_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "chat_conversations_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
@@ -1676,6 +1690,13 @@ export type Database = {
             columns: ["related_accommodation_id"]
             isOneToOne: false
             referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_related_accommodation_id_fkey"
+            columns: ["related_accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "partner_accommodation_requests_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3248,6 +3269,13 @@ export type Database = {
             referencedRelation: "accommodation_requests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "program_requests_linked_accommodation_id_fkey"
+            columns: ["linked_accommodation_id"]
+            isOneToOne: true
+            referencedRelation: "partner_accommodation_requests_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       program_template_items: {
@@ -3410,6 +3438,13 @@ export type Database = {
             columns: ["accommodation_id"]
             isOneToOne: false
             referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_communications_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "partner_accommodation_requests_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3932,6 +3967,104 @@ export type Database = {
       }
     }
     Views: {
+      partner_accommodation_requests_safe: {
+        Row: {
+          accommodation_type: string | null
+          arrival_date: string | null
+          budget_range: string | null
+          completed_at: string | null
+          completion_status: string | null
+          created_at: string | null
+          customer_company: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          departure_date: string | null
+          expires_at: string | null
+          facilities_required: Json | null
+          guest_details_updated_at: string | null
+          id: string | null
+          linked_program_id: string | null
+          location_preference: Json | null
+          number_of_guests: number | null
+          reference_number: string | null
+          room_assignment: string | null
+          room_count: number | null
+          room_occupancy: string | null
+          room_types: Json | null
+          special_requests: string | null
+          status: string | null
+          updated_at: string | null
+          wants_activities: boolean | null
+        }
+        Insert: {
+          accommodation_type?: string | null
+          arrival_date?: string | null
+          budget_range?: string | null
+          completed_at?: string | null
+          completion_status?: string | null
+          created_at?: string | null
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          departure_date?: string | null
+          expires_at?: string | null
+          facilities_required?: Json | null
+          guest_details_updated_at?: string | null
+          id?: string | null
+          linked_program_id?: string | null
+          location_preference?: Json | null
+          number_of_guests?: number | null
+          reference_number?: string | null
+          room_assignment?: string | null
+          room_count?: number | null
+          room_occupancy?: string | null
+          room_types?: Json | null
+          special_requests?: string | null
+          status?: string | null
+          updated_at?: string | null
+          wants_activities?: boolean | null
+        }
+        Update: {
+          accommodation_type?: string | null
+          arrival_date?: string | null
+          budget_range?: string | null
+          completed_at?: string | null
+          completion_status?: string | null
+          created_at?: string | null
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          departure_date?: string | null
+          expires_at?: string | null
+          facilities_required?: Json | null
+          guest_details_updated_at?: string | null
+          id?: string | null
+          linked_program_id?: string | null
+          location_preference?: Json | null
+          number_of_guests?: number | null
+          reference_number?: string | null
+          room_assignment?: string | null
+          room_count?: number | null
+          room_occupancy?: string | null
+          room_types?: Json | null
+          special_requests?: string | null
+          status?: string | null
+          updated_at?: string | null
+          wants_activities?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accommodation_requests_linked_program_id_fkey"
+            columns: ["linked_program_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners_public: {
         Row: {
           about_text: string | null
@@ -4037,6 +4170,13 @@ export type Database = {
         }[]
       }
       get_partner_id: { Args: { _user_id: string }; Returns: string }
+      get_partner_linked_program_invoicing_modes: {
+        Args: { p_program_ids: string[] }
+        Returns: {
+          id: string
+          invoicing_mode: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
