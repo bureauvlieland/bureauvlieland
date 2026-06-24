@@ -96,11 +96,13 @@ const formatNL = (d: string | null) => {
 export default function AdminTickets() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [view, setView] = useState<"tickets" | "bureau">("tickets");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [kind, setKind] = useState<KindFilter>("all");
   const [period, setPeriod] = useState<"upcoming" | "all" | "archive">("upcoming");
   const [emailDialog, setEmailDialog] = useState<{ items: TicketRow[]; project: TicketRow } | null>(null);
+
 
   const { data: rows, isLoading } = useQuery<TicketRow[]>({
     queryKey: ["admin-tickets-overview"],
