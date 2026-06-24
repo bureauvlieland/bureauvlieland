@@ -370,6 +370,31 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Cooldown-sweep: sluit reminder-todos die ouder zijn dan het laatste
+    // contact-moment in het dossier. Voorkomt dat een opvolgmail of nieuw
+    // partner-bericht een oude reminder in de werkbank laat staan.
+    {
+      const reminderTodos = list.filter(
+        (t) =>
+          t.auto_type &&
+          REMINDER_TYPES_GUARDED_BY_COOLDOWN.has(t.auto_type) &&
+          t.related_request_id &&
+          isUuid(t.related_request_id) &&
+          !closedIds.has(t.id),
+      );
+      const projectIds = [...new Set(reminderTodos.map((t) => t.related_request_id!))];
+      if (projectIds.length > 0) {
+        const lastContact = await fetchLastContactByProject(supabase, projectIds);
+        for (const t of reminderTodos) {
+          const contactAt = lastContact.get(t.related_request_id!);
+          if (!contactAt) continue;
+          if (new Date(contactAt).getTime() > new Date(t.created_at).getTime()) {
+            markClosed(t.id, "superseded_by_contact");
+          }
+        }
+      }
+    }
+
     // Snooze sweep: sluit alle open auto-todos waarvan het project nu gesnoozed is.
     {
       const candidateRequestIds = new Set<string>();
