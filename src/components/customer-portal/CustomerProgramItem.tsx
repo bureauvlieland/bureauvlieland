@@ -373,16 +373,9 @@ export const CustomerProgramItem = ({
             </div>
           )}
 
-          {/* Show accepted badge if customer has accepted the item, or if the customer has
-              already given proposal-akkoord on the whole quote (pending items are then
-              waiting on the partner — not on the customer anymore). */}
-          {(item.customer_accepted_at ||
-            (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd")) && (
-            <div className="mt-2 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-              <Check className="h-4 w-4" />
-              <span>U heeft dit programmaonderdeel goedgekeurd</span>
-            </div>
-          )}
+          {/* Groene "U heeft dit goedgekeurd"-zin verwijderd — de badge bovenaan
+              communiceert dit nu eenduidig met de juiste tooltip per situatie. */}
+
 
           {/* Always-visible action row */}
           {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
