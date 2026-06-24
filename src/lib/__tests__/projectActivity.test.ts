@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  cooldownFor as _ignored, // ensure module loadable
-} from "../projectActivity";
-import {
   getProjectActivityState,
   shouldShowDuringCooldown,
   clusterForAutoType,
