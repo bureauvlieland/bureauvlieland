@@ -166,9 +166,10 @@ const PartnerAccommodationContent = () => {
       return;
     }
 
-    // Fetch the accommodation requests
-    const { data: requestsData, error: requestsError } = await supabase
-      .from("accommodation_requests")
+    // Fetch the accommodation requests through the sanitized partner view
+    // (excludes admin-only PII such as customer_token, admin_notes, attribution).
+    const { data: requestsData, error: requestsError } = await (supabase as any)
+      .from("partner_accommodation_requests_safe")
       .select("*")
       .in("id", requestIds)
       .order("created_at", { ascending: false });
@@ -180,18 +181,18 @@ const PartnerAccommodationContent = () => {
       return;
     }
 
-    // Fetch linked program invoicing modes for all requests with a linked_program_id
+    // Fetch linked program invoicing modes via security-definer RPC (no PII exposure).
     const linkedProgramIds = (requestsData || [])
-      .map((r) => r.linked_program_id)
-      .filter((id): id is string => Boolean(id));
+      .map((r: any) => r.linked_program_id)
+      .filter((id: string | null): id is string => Boolean(id));
 
     const invoicingModeMap = new Map<string, string>();
     if (linkedProgramIds.length > 0) {
-      const { data: programs } = await supabase
-        .from("program_requests")
-        .select("id, invoicing_mode")
-        .in("id", linkedProgramIds);
-      (programs || []).forEach((p) => {
+      const { data: programs } = await (supabase as any).rpc(
+        "get_partner_linked_program_invoicing_modes",
+        { p_program_ids: linkedProgramIds },
+      );
+      (programs || []).forEach((p: { id: string; invoicing_mode: string | null }) => {
         if (p.invoicing_mode) invoicingModeMap.set(p.id, p.invoicing_mode);
       });
     }
