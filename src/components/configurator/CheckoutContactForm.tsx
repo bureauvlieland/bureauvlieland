@@ -72,8 +72,10 @@ export const CheckoutContactForm = ({
 
   // Client-side dedup-hash op email + dates + cart. Voorkomt dat een dubbele
   // klik (of refresh + opnieuw verzenden) zelfs maar de DB-check bereikt.
+  // NB: lokale datum-format (geen toISOString) — UTC-shift zou de hash een
+  // dag later/eerder maken en dedup omzeilen.
   const buildSubmitHash = () => {
-    const dateKey = selectedDates.map((d) => d.toISOString().split("T")[0]).sort().join(",");
+    const dateKey = selectedDates.map((d) => format(d, "yyyy-MM-dd")).sort().join(",");
     const cartKey = cartItems
       .map((i) => `${i.blockId}@${i.dayIndex ?? 0}`)
       .sort()
