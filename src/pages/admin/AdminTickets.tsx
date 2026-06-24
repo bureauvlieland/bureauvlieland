@@ -65,6 +65,7 @@ interface TicketRow {
   confirmed_time: string | null;
   proposed_time: string | null;
   preferred_time: string | null;
+  customer_approved_at: string | null;
   // project
   reference_number: string | null;
   customer_name: string;
