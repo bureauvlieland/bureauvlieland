@@ -440,7 +440,7 @@ Deno.serve(async (req) => {
           const r: any = reqMap.get(t.related_request_id);
           if (!r) return true;
           if (r.cancelled_at) return true;
-          if (r.completion_status === "completed") return true;
+          if (["completed","ready_for_invoice","partially_invoiced","fully_invoiced"].includes(r.completion_status)) return true;
           const lodgingMissing =
             !!r.linked_accommodation_id &&
             !lodgingSelectedReqIds.has(r.id);
