@@ -2198,7 +2198,21 @@ const AdminRequestDetail = () => {
                                             onChanged={() => fetchRequestData({ silent: true })}
                                           />
                                         )}
+                                        {isBureauExecutionItem(item) && (
+                                          <BureauExecutionInline
+                                            item={{
+                                              id: item.id,
+                                              block_name: item.block_name,
+                                              bureau_guide_name: item.bureau_guide_name ?? null,
+                                              bureau_guide_contact: item.bureau_guide_contact ?? null,
+                                              bureau_arranged_at: item.bureau_arranged_at ?? null,
+                                              bureau_arranged_notes: item.bureau_arranged_notes ?? null,
+                                            }}
+                                            onChanged={() => fetchRequestData({ silent: true })}
+                                          />
+                                        )}
                                       </div>
+
                                     </TableCell>
                                     <TableCell>
                                       <Link 
