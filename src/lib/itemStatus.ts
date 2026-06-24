@@ -15,6 +15,8 @@ export type ItemDisplayStatus =
   | "wacht_op_partner"
   | "wacht_op_klant"
   | "prijs_gewijzigd"
+  | "klant_akkoord_wacht_partner"
+  | "klant_akkoord_bureau"
   | "geaccepteerd"
   | "uitgevoerd"
   | "geannuleerd"
