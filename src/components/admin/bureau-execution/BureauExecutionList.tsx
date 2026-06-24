@@ -119,10 +119,19 @@ export function BureauExecutionList() {
     refetchInterval: 60_000,
   });
 
+  const approvedRows = useMemo(
+    () => (rows || []).filter((r) => !!r.customer_approved_at),
+    [rows],
+  );
+
+  const pendingCustomerCount = useMemo(
+    () => (rows || []).filter((r) => !r.customer_approved_at).length,
+    [rows],
+  );
+
   const filtered = useMemo(() => {
-    if (!rows) return [];
     const todayIso = new Date().toISOString().slice(0, 10);
-    return rows
+    return approvedRows
       .filter((r) => {
         if (period === "upcoming" && r.itemDate && r.itemDate < todayIso) return false;
         if (period === "archive" && r.itemDate && r.itemDate >= todayIso) return false;
@@ -152,11 +161,11 @@ export function BureauExecutionList() {
         if (a.request_id !== b.request_id) return a.request_id < b.request_id ? -1 : 1;
         return (a.day_index ?? 0) - (b.day_index ?? 0);
       });
-  }, [rows, period, status, search]);
+  }, [approvedRows, period, status, search]);
 
   const openCount = useMemo(
-    () => (rows || []).filter((r) => !r.bureau_arranged_at).length,
-    [rows],
+    () => approvedRows.filter((r) => !r.bureau_arranged_at).length,
+    [approvedRows],
   );
 
   return (
