@@ -262,5 +262,6 @@ export function deriveItemDisplayStatusLoose(item: unknown, ctx?: Partial<Derive
   return deriveItemDisplayStatus(item as unknown as ProgramRequestItem, {
     programPeople: ctx?.programPeople ?? 0,
     numberOfDays: ctx?.numberOfDays ?? 1,
+    quoteStatus: ctx?.quoteStatus ?? null,
   });
 }
