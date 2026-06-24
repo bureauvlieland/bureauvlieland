@@ -97,11 +97,11 @@ export const PartnerCancellationNotifyDialog = ({
   };
 
   const totalSelected = selectedActivity.size + selectedAccommodation.size;
-  const totalAvailable = defaultActivityIds.length + defaultAccommodationIds.length;
+  const totalAvailable = defaultActivityIds.length + allAccommodationIds.length;
 
   const selectAll = () => {
     setSelectedActivity(new Set(defaultActivityIds));
-    setSelectedAccommodation(new Set(defaultAccommodationIds));
+    setSelectedAccommodation(new Set(allAccommodationIds));
   };
   const selectNone = () => {
     setSelectedActivity(new Set());
