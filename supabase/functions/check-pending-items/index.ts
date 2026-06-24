@@ -1246,7 +1246,7 @@ Deno.serve(async (req) => {
       .eq("status", "active")
       .eq("quote_status", "offerte_verstuurd")
       .is("cancelled_at", null)
-      .neq("completion_status", "completed")
+      .not("completion_status", "in", "(ready_for_invoice,partially_invoiced,fully_invoiced,completed)")
       .not("quote_sent_at", "is", null);
 
     if (phaseBError) {
