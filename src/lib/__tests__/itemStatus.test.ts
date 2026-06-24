@@ -220,3 +220,53 @@ describe("regressie: partner-alternatief vraagt opnieuw klant-akkoord", () => {
     )).toBe("geaccepteerd");
   });
 });
+
+describe("regressie: projectfase offerte_verstuurd dwingt eerst klant-akkoord af", () => {
+  // Workflow: bij een verstuurd voorstel wacht ALLES eerst op klantakkoord.
+  // Items mogen pas naar "wacht op aanbieder" zodra de klant ze (per item of
+  // via bulk-akkoord) heeft goedgekeurd. Voorkomt dat de klant denkt dat we
+  // al bij de aanbieder zitten terwijl hij nog moet beslissen.
+  const phaseCtx = { ...ctx, quoteStatus: "offerte_verstuurd" };
+
+  it("pending item zonder klant-akkoord in offerte-fase → wacht_op_klant", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending" } as any),
+      phaseCtx,
+    )).toBe("wacht_op_klant");
+  });
+
+  it("pending item met customer_approved_at in offerte-fase → klant_akkoord_wacht_partner", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({
+        status: "pending",
+        customer_approved_at: "2024-05-01T10:00:00Z",
+        customer_accepted_at: "2024-05-01T10:00:00Z",
+      } as any),
+      phaseCtx,
+    )).toBe("klant_akkoord_wacht_partner");
+  });
+
+  it("bureau-onderdeel met klant-akkoord in offerte-fase → klant_akkoord_bureau", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({
+        status: "pending",
+        provider_id: "bureau",
+        customer_approved_at: "2024-05-01T10:00:00Z",
+        customer_accepted_at: "2024-05-01T10:00:00Z",
+      } as any),
+      phaseCtx,
+    )).toBe("klant_akkoord_bureau");
+  });
+
+  it("akkoord_ontvangen-fase blijft bestaande logica volgen (pending → wacht_op_partner)", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending" } as any),
+      { ...ctx, quoteStatus: "akkoord_ontvangen" },
+    )).toBe("wacht_op_partner");
+  });
+
+  it("zonder quoteStatus-context blijft bestaande logica gelden (backwards-compat)", () => {
+    expect(deriveItemDisplayStatus(makeItem({ status: "pending" } as any), ctx))
+      .toBe("wacht_op_partner");
+  });
+});
