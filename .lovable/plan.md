@@ -1,57 +1,67 @@
-## Aanpassing op vorige plan
+## Probleem
 
-Eens met je inzicht: `/bouwstenen` is visueel en inhoudelijk de sterkere inspiratiepagina (kaarten met beeld, prijs, categorieën, modale detail-views) en past beter bij hoe een klant zich oriënteert. `/activiteiten-vlieland` is meer een SEO-landingpagina met tekstblokken en categorieën. We draaien de rollen dus om:
+De klant heeft alles goedgekeurd, maar de huidige UI gooit drie verschillende labels door elkaar:
+- "Akkoord" (geaccepteerd) — verwarrend, lijkt op partner-akkoord
+- "Bevestigd" (bureau-onderdelen) — suggereert dat de aanbieder al heeft bevestigd
+- Géén onderscheid voor partner-onderdelen waarop we nog wachten (zoals Zeehondentocht: klant heeft goedgekeurd, partner staat nog op `pending`)
 
-- **`/bouwstenen` wordt de hoofd-inspiratiepagina** voor activiteiten — maar onder een klantvriendelijke naam in de navigatie.
-- **`/activiteiten-vlieland` blijft bestaan** als SEO-landing (URL ongewijzigd, content ongewijzigd), maar verdwijnt uit de hoofdnavigatie. Vindbaarheid via Google + sitemap + interne link onderaan `/bouwstenen` ("Lees meer over activiteiten op Vlieland").
+Tooltips spreken bovendien een andere taal dan de labels.
 
----
+## Oplossing: één bron, één label per situatie
 
-## Naamgeving "Bouwstenen" in de navigatie
+Eén label voor "klant heeft dit goedgekeurd" met **één tekst** voor klant/admin/partner, en een tooltip die afhankelijk van de *partner*-stand de werkelijke vervolgactie uitlegt. Dezelfde derivation wordt overal gebruikt (admin, klant, partner) — geen lokale overrides meer.
 
-"Bouwstenen" is onze interne term en zegt een klant niets. Mijn voorkeur, in volgorde:
+### Nieuwe / aangepaste display-statussen in `src/lib/itemStatus.ts`
 
-1. **"Activiteiten"** — kort, helder, dekt de lading, sluit aan bij hoe Google-zoekers en klanten denken. Past ook in de "Wat we organiseren"-dropdown naast Overnachten / Catering / Evenementen.
-2. "Activiteiten & ervaringen" — iets ruimer, geeft inspiratie-gevoel.
-3. "Wat kun je doen op Vlieland" — wervender, maar lang voor een nav-item.
+| Trigger | Status-key | Klantlabel | Admin-label | Partner-label |
+|---|---|---|---|---|
+| `customer_accepted_at` + partner `pending` (incl. bureau) | `klant_akkoord_wacht_partner` (nieuw) | **Door u goedgekeurd** | Klant akkoord — wacht op aanbieder | Klant akkoord — reactie gevraagd |
+| `customer_accepted_at` + partner `confirmed`/`alternative` | `geaccepteerd` (bestaand, label vernieuwd) | **Door u goedgekeurd** | Klant akkoord — aanbieder bevestigd | Klant akkoord — bevestig in planning |
+| Bureau-onderdeel (`provider_id="bureau"`) + klant akkoord | valt onder `klant_akkoord_wacht_partner` met *bureau*-tooltipvariant | **Door u goedgekeurd** | Bureau Vlieland regelt dit zelf | Bureau Vlieland regelt dit zelf |
 
-Voorstel: **"Activiteiten"** als nav-label, met `to="/bouwstenen"`. De URL blijft `/bouwstenen` (geen redirects, geen SEO-impact). Op de pagina zelf kunnen we de H1 evt. ook "Activiteiten op Vlieland" maken zodat het klant-perspectief consistent is — dat is een aparte redactionele keuze die ik los kan voorleggen.
+Bestaande keys `wacht_op_partner`, `wacht_op_klant`, `prijs_gewijzigd`, `uitgevoerd`, `geannuleerd`, `niet_beschikbaar`, `self_arranged` blijven ongewijzigd.
 
----
+### Tooltip-terminologie (gelijk aan label)
+- Klant-tooltip "Door u goedgekeurd" varianten:
+  - Wacht-op-partner: *"U hebt dit onderdeel goedgekeurd. Wij wachten nog op bevestiging van de aanbieder en houden u op de hoogte."*
+  - Bevestigd door partner: *"U hebt dit onderdeel goedgekeurd. De aanbieder heeft het bevestigd."*
+  - Bureau-onderdeel: *"U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig."*
+- Admin- en partner-tooltips spiegelen exact dezelfde feiten en wie aan zet is.
 
-## Aangepaste "Wat we organiseren"-dropdown
+### Derivation (`deriveItemDisplayStatus`)
+```text
+1. Terminale states (cancelled / executed / unavailable / self_arranged)
+2. customer_accepted_at gezet?
+   - openPriceChange ná akkoord → prijs_gewijzigd
+   - provider_id="bureau" → klant_akkoord_wacht_partner (bureau-variant)
+   - status="pending" (partner nog niet gereageerd) → klant_akkoord_wacht_partner
+   - anders → geaccepteerd (partner bevestigd)
+3. Geen klant-akkoord:
+   - status="pending" → wacht_op_partner
+   - anders → wacht_op_klant
+```
 
-| Nav-label    | URL                       | Rol                                                       |
-|--------------|---------------------------|-----------------------------------------------------------|
-| Activiteiten | `/bouwstenen`             | Hoofd-inspiratiepagina (visuele kaarten, modals)          |
-| Overnachten  | `/logies-vlieland`        | Logies-overzicht                                          |
-| Catering     | `/catering`               | Catering-overzicht                                        |
-| Evenementen  | `/evenementen`            | Zakelijk evenement / dagdeel-evenementen                  |
+De bureau-variant wordt onderscheiden door een extra contextveld in de derivation (we geven `item.provider_id` mee aan de badge-component voor tooltip-keuze) of door een dedicated sub-status `klant_akkoord_bureau`. Ik kies voor een **aparte key** `klant_akkoord_bureau` zodat de config statisch en testbaar blijft. Dus uiteindelijk twee nieuwe keys:
+- `klant_akkoord_wacht_partner`
+- `klant_akkoord_bureau`
 
-Wat verdwijnt uit de nav (blijft online):
-- `/activiteiten-vlieland` — SEO-landing, behouden, link via footer-SEO-strook en interne link op `/bouwstenen`.
-- `/wadlopen-vlieland`, `/zeehondentochten-vlieland` — detailpagina's, behouden, link via kaarten op `/bouwstenen` (modal → "Lees meer" → detailpagina) en footer-SEO-strook.
-- `/snel-aanvragen`, `/activiteiten-boeken` — geen aparte nav-ingang nodig; bereikbaar via de "Start uw aanvraag"-routekeuze en via de bouwstenen-kaarten ("Direct aanvragen"-knop).
+### UI-opruiming
+- `src/components/customer-portal/CustomerProgramItem.tsx`: lokale override (`if provider_id === "bureau" → 'Bevestigd'`) verwijderen — de derivation handelt dit nu af. Bestaande groene zin "U heeft dit programmaonderdeel goedgekeurd" onderaan de kaart verwijderen (dubbel met badge).
+- `src/components/shared/ItemDisplayStatusBadge.tsx`: nieuwe toon-mapping (groen tint) voor beide nieuwe keys.
+- Admin- en partner-views krijgen automatisch de nieuwe labels via `deriveItemDisplayStatus`.
 
----
+### Tests
+- `src/lib/__tests__/itemStatus.test.ts` uitbreiden:
+  - klant akkoord + partner pending + provider_id≠bureau → `klant_akkoord_wacht_partner`
+  - klant akkoord + provider_id=bureau → `klant_akkoord_bureau`
+  - klant akkoord + partner confirmed → `geaccepteerd`
+  - label-string-snapshot test dat klantlabel voor alle drie "Door u goedgekeurd" is.
 
-## Overige punten uit het vorige plan blijven staan
+## Bestanden
+- `src/lib/itemStatus.ts` (config + derivation)
+- `src/components/shared/ItemDisplayStatusBadge.tsx` (tone mapping)
+- `src/components/customer-portal/CustomerProgramItem.tsx` (override + dubbele zin weg)
+- `src/lib/__tests__/itemStatus.test.ts` (extra cases)
 
-- Top-nav: **Wat we organiseren · Voor wie · Inspiratie · Over ons** + CTA **"Start uw aanvraag"** → `/#routes`.
-- "Inspiratie"-dropdown bevat: Voorbeeldprogramma's, Bedrijfsuitje-ideeën, Onze werkwijze. ("Activiteiten" zit nu onder "Wat we organiseren", dus niet ook hier — geen dubbele exposure.)
-- Footer: vier kolommen volgen de nieuwe nav. SEO-strook "Veelgevraagd op Vlieland" onderaan met long-tail links (Wadexcursie, Zeehondentocht, Bedrijfsuitje ideeën, Teamuitje, Trouwen op Vlieland, Activiteiten Vlieland, …).
-- Mobiele nav: zelfde 4-secties + CTA.
-- `RoutePicker.tsx` krijgt `id="routes"`; `Index.tsx` vangt `#routes` hash op voor cross-page scroll.
-- Geen URL-wijzigingen, geen redirects nodig.
-
----
-
-## Wat dit nu oplost
-
-- ✅ Sterkste pagina (`/bouwstenen`) wordt de primaire ingang voor klanten.
-- ✅ Geen verwarrende dubbele activiteiten-overzichten in de nav meer.
-- ✅ Klantvriendelijk label "Activiteiten" i.p.v. intern jargon "Bouwstenen".
-- ✅ `/activiteiten-vlieland` en alle detail-SEO-pagina's blijven online en vindbaar via Google.
-- ✅ Eén heldere CTA "Start uw aanvraag" met routekeuze i.p.v. iedereen naar de configurator.
-
-Akkoord op deze richting? Dan bouw ik in één keer: Navigation, MegaDropdown, MobileNav, Footer, RoutePicker-anker en Index hash-scroll.
+## Out of scope
+Geen wijzigingen aan workflow-vlaggen, edge functions of database — alleen presentatielaag + derivation.

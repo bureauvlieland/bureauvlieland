@@ -73,18 +73,36 @@ describe("deriveItemDisplayStatus — workflow zonder klant-akkoord", () => {
 });
 
 describe("deriveItemDisplayStatus — klant-akkoord scenarios", () => {
-  it("klant heeft akkoord gegeven → geaccepteerd, ongeacht raw status", () => {
-    // Dit dekt de bug uit BV-2606-0011: status='pending' maar klant heeft
-    // het hele voorstel al geaccepteerd. UI moet 'akkoord' tonen.
+  it("klant akkoord + status=pending (partner nog niet bevestigd) → klant_akkoord_wacht_partner", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending", customer_accepted_at: "2024-05-01T10:00:00Z" } as any),
       ctx,
-    )).toBe("geaccepteerd");
+    )).toBe("klant_akkoord_wacht_partner");
+  });
 
+  it("klant akkoord + provider_id=bureau → klant_akkoord_bureau", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({
+        status: "pending",
+        customer_accepted_at: "2024-05-01T10:00:00Z",
+        provider_id: "bureau",
+      } as any),
+      ctx,
+    )).toBe("klant_akkoord_bureau");
+  });
+
+  it("klant akkoord + status=confirmed → geaccepteerd", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "confirmed", customer_accepted_at: "2024-05-01T10:00:00Z" } as any),
       ctx,
     )).toBe("geaccepteerd");
+  });
+
+  it("alle drie klant-akkoord-varianten tonen hetzelfde klantlabel", () => {
+    const label = "Door u goedgekeurd";
+    expect(itemDisplayStatusConfig.klant_akkoord_wacht_partner.customerLabel).toBe(label);
+    expect(itemDisplayStatusConfig.klant_akkoord_bureau.customerLabel).toBe(label);
+    expect(itemDisplayStatusConfig.geaccepteerd.customerLabel).toBe(label);
   });
 
   it("admin-prijswijziging ná klant-akkoord → prijs_gewijzigd", () => {

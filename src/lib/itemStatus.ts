@@ -15,6 +15,8 @@ export type ItemDisplayStatus =
   | "wacht_op_partner"
   | "wacht_op_klant"
   | "prijs_gewijzigd"
+  | "klant_akkoord_wacht_partner"
+  | "klant_akkoord_bureau"
   | "geaccepteerd"
   | "uitgevoerd"
   | "geannuleerd"
@@ -89,12 +91,36 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "AlertTriangle",
   },
+  klant_akkoord_wacht_partner: {
+    adminLabel: "Klant akkoord — wacht op aanbieder",
+    customerLabel: "Door u goedgekeurd",
+    partnerLabel: "Klant akkoord — reactie gevraagd",
+    adminTooltip: "Klant heeft dit onderdeel goedgekeurd. We wachten nog op bevestiging van de aanbieder.",
+    customerTooltip: "U hebt dit onderdeel goedgekeurd. Wij wachten nog op bevestiging van de aanbieder en houden u op de hoogte.",
+    partnerTooltip: "De klant heeft dit onderdeel goedgekeurd. Bevestig of stel een alternatief voor.",
+    actor: "partner",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950/50",
+    icon: "CheckCircle",
+  },
+  klant_akkoord_bureau: {
+    adminLabel: "Klant akkoord — Bureau regelt zelf",
+    customerLabel: "Door u goedgekeurd",
+    partnerLabel: "Door Bureau Vlieland geregeld",
+    adminTooltip: "Klant heeft dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig.",
+    customerTooltip: "U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig.",
+    partnerTooltip: "Bureau Vlieland regelt dit onderdeel zelf.",
+    actor: "geen",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950/50",
+    icon: "CheckCircle",
+  },
   geaccepteerd: {
-    adminLabel: "Klant akkoord",
-    customerLabel: "Akkoord",
-    partnerLabel: "Klantakkoord",
-    adminTooltip: "Klant heeft akkoord gegeven. Geen actie nodig tot uitvoering.",
-    customerTooltip: "U hebt dit onderdeel bevestigd. Het wordt op de afgesproken datum uitgevoerd.",
+    adminLabel: "Klant akkoord — aanbieder bevestigd",
+    customerLabel: "Door u goedgekeurd",
+    partnerLabel: "Klant akkoord — bevestig in planning",
+    adminTooltip: "Klant heeft goedgekeurd en de aanbieder heeft bevestigd. Geen actie nodig tot uitvoering.",
+    customerTooltip: "U hebt dit onderdeel goedgekeurd. De aanbieder heeft het bevestigd.",
     partnerTooltip: "De klant heeft akkoord gegeven. Reserveer dit definitief in je planning.",
     actor: "geen",
     color: "text-green-700 dark:text-green-400",
@@ -195,6 +221,10 @@ export function deriveItemDisplayStatus(
     ) {
       return "prijs_gewijzigd";
     }
+    // Bureau-onderdelen regelen wij zelf — geen partner-bevestiging nodig.
+    if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
+    // Partner heeft nog niet bevestigd → klant heeft wel akkoord, partner aan zet.
+    if (item.status === "pending") return "klant_akkoord_wacht_partner";
     return "geaccepteerd";
   }
 
