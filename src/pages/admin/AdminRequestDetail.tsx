@@ -161,7 +161,10 @@ const LegendPill = ({ children, className }: { children: React.ReactNode; classN
 );
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { TicketBookingInline } from "@/components/admin/tickets/TicketBookingInline";
+import { BureauExecutionInline } from "@/components/admin/bureau-execution/BureauExecutionInline";
 import { isTicketItem } from "@/lib/ticketItems";
+import { isBureauExecutionItem } from "@/lib/bureauExecutionItems";
+
 import { PublishChangesDialog } from "@/components/admin/PublishChangesDialog";
 
 
@@ -284,7 +287,12 @@ interface ProgramRequestItem {
   pending_block_type?: string | null;
   partner_instructions?: string | null;
   pending_partner_instructions?: string | null;
+  bureau_guide_name?: string | null;
+  bureau_guide_contact?: string | null;
+  bureau_arranged_at?: string | null;
+  bureau_arranged_notes?: string | null;
 }
+
 
 interface HistoryEntry {
   id: string;
@@ -2195,7 +2203,21 @@ const AdminRequestDetail = () => {
                                             onChanged={() => fetchRequestData({ silent: true })}
                                           />
                                         )}
+                                        {isBureauExecutionItem(item) && (
+                                          <BureauExecutionInline
+                                            item={{
+                                              id: item.id,
+                                              block_name: item.block_name,
+                                              bureau_guide_name: item.bureau_guide_name ?? null,
+                                              bureau_guide_contact: item.bureau_guide_contact ?? null,
+                                              bureau_arranged_at: item.bureau_arranged_at ?? null,
+                                              bureau_arranged_notes: item.bureau_arranged_notes ?? null,
+                                            }}
+                                            onChanged={() => fetchRequestData({ silent: true })}
+                                          />
+                                        )}
                                       </div>
+
                                     </TableCell>
                                     <TableCell>
                                       <Link 

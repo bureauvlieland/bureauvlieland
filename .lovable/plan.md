@@ -1,46 +1,74 @@
-## Diagnose project BV-2606-0020
+## Doel
 
-Item "Zeehondentocht Exclusief" (`c4d51c8b…`):
-- Klant gaf 22-06 13:39 bulk-akkoord op 17:30 → `customer_approved_at` én `customer_accepted_at` gezet.
-- Partner stuurde vandaag 24-06 07:18 alternatief 16:30 → `status='alternative'`, `proposed_time=16:30`, `status_note="Beschikbaar om 16:30 ipv 17:30"`.
-- **Mail naar klant is wél verstuurd**: `email_log` rij `template_name=status_alternative`, onderwerp "Alternatief voorstel voor Zeehondentocht Exclusief", 24-06 07:18.
+Bureau Vlieland kan per project per "eigen" activiteit (vuurtoren, begeleide fietstocht, etc.) een begeleider noteren en aanvinken dat het geregeld is — vergelijkbaar met de huidige tickets-flow voor boot en fietshuur.
 
-**MAAR**: `customer_accepted_at` is niet gewist door de edge function (waarschijnlijk gedeployde versie zonder die regel, of de regel werd door iets anders overschreven). Gevolg:
-- Badge in klantportal toont groen "Door u goedgekeurd".
-- Header toont "Alles goedgekeurd / Voorstel goedgekeurd".
-- Er verschijnt geen knop "Akkoord met nieuwe tijd".
-- Klant kan dus niet expliciet bevestigen, en denkt dat alles al rond is.
+## Scope
 
-## Wat ik ga doen
+Een item telt als **bureau-uitvoering** wanneer:
+- `provider_id = 'bureau'`, EN
+- het géén ticket-item is (`isTicketItem(item) === false`), EN
+- `block_type !== 'bureau'` is niet vereist — het gaat puur om provider_id
 
-### 1. Edge function `update-partner-item-status` — harden + redeployen
-Bij `status='alternative'` of `'unavailable'` na een eerdere klant-acceptatie altijd beide vlaggen wissen op het betrokken item:
-- `customer_accepted_at = null`
-- `customer_approved_at = null`
-- `item_quote_status = 'wacht_op_klant'` (reset workflow-vlag)
+Voorbeelden: vuurtorenbezoek, begeleide fietstocht, wadexcursie met eigen gids.
 
-Idem voor admin-flows die `proposed_time/date` of `quoted_price` na akkoord wijzigen — in die paden bestaat dezelfde reset al, maar controleren en consistent maken via één helper `resetCustomerApprovalOnItem(itemId)`.
+## Wat we bouwen
 
-### 2. Backfill BV-2606-0020
-Eenmalige SQL: voor item `c4d51c8b…` `customer_accepted_at` en `customer_approved_at` op `NULL`, `item_quote_status='wacht_op_klant'`. Klantportal valt direct terug op "Akkoord nodig" + actieknop.
+### 1. Datamodel (kleine uitbreiding op `program_request_items`)
+Nieuwe nullable kolommen:
+- `bureau_guide_name text` — naam begeleider (vrij veld)
+- `bureau_guide_contact text` — telefoon/e-mail, optioneel
+- `bureau_arranged_at timestamptz` — gezet zodra admin "Geregeld" aanvinkt
+- `bureau_arranged_notes text` — optionele interne notitie
 
-### 3. Klantportal — defensieve UI-regels
-In `CustomerProgramItem.tsx`:
-- `needsCustomerAction` mag niet door `customer_approved_at` worden gepacificeerd zolang `status='alternative'` en `updated_at > customer_approved_at`. Concreet: voor `alternative`-items zonder `customer_accepted_at` altijd actie vragen.
-- Banner boven het item: "Aanbieder heeft een andere tijd voorgesteld — uw goedkeuring nodig" met expliciete knop "Akkoord met 16:30" / "Tegenvoorstel doen" / "Verwijderen uit programma".
-- Toelichting van de partner (`status_note`) prominenter tonen bij alternative.
+Geen nieuwe tabel — past 1-op-1 op het item, net als `booking_reference` voor tickets. RLS erft van de bestaande tabel.
 
-### 4. Aggregaten — header, stepper, hero
-In `useProgramStatus` en `ProposalHeroCard`/`ProgramStepper`: een item telt pas als "goedgekeurd" wanneer `customer_accepted_at` aanwezig is én `updated_at <= customer_accepted_at` (geen latere partner-wijziging). Anders telt het als open.
+### 2. Helper: `src/lib/bureauExecutionItems.ts`
+```ts
+isBureauExecutionItem(item): boolean   // provider_id==='bureau' && !isTicketItem
+getBureauExecutionStatus(item): "open" | "arranged"
+```
 
-Resultaat: "Alles goedgekeurd" / "2/2 100%" verdwijnt zolang er een open alternative ligt.
+### 3. Inline popover: `BureauExecutionInline.tsx`
+Zelfde patroon als `TicketBookingInline`:
+- Trigger-chip naast item-naam in projectdetail:
+  - amber "Regelen" als open
+  - emerald "✓ {guide_name}" als geregeld
+- Popover-velden: begeleider naam, contact (optioneel), interne notitie, knop "Markeer als geregeld" / "Heropenen"
+- Schrijft direct naar `program_request_items` (admin-only via bestaande RLS)
 
-### 5. Tests
-Uitbreiding `itemStatus.test.ts` + nieuwe `useProgramStatus.test.ts`:
-- partner-alternative na klant-akkoord → derived = `wacht_op_klant`, niet `geaccepteerd`.
-- aggregaat "alle goedgekeurd" wordt `false` zodra één item een latere alternative heeft.
-- na klant accepteert alternative → derived = `geaccepteerd`, aggregaat weer `true`.
+Inlassen in `AdminRequestDetail.tsx` op dezelfde plek waar nu `<TicketBookingInline>` staat — beide kunnen naast elkaar bestaan, maar voor één item is er altijd maar één van toepassing.
 
-## Antwoord op uw vraag
+### 4. Overzichtspagina: `/admin/tickets` krijgt tab "Bureau-uitvoering"
+- Tabs: "Tickets" (huidig gedrag) | "Bureau-uitvoering"
+- Tab toont alle bureau-execution items over alle actieve/aankomende projecten, gegroepeerd per datum
+- Kolommen: datum · project · activiteit · aantal · begeleider · status (open/geregeld)
+- Filter "Alleen openstaand" default aan
+- Klik op rij opent zelfde popover-flow (of springt naar projectdetail)
 
-Ja, er is vanochtend om 07:18 een mail "Alternatief voorstel voor Zeehondentocht Exclusief" naar de klant gestuurd. Maar in de portal ziet de klant het niet als openstaand omdat de eerdere bulk-acceptatie niet werd gewist — dat is de échte bug, en die los ik met bovenstaande stappen voor eens en altijd op, inclusief regressietests.
+### 5. Klant/partner-zichtbaarheid
+- Klantportal: geen wijziging — bureau-items tonen al "Bevestigd" badge zoals nu
+- Partnerportal: geen wijziging — bureau-items komen daar niet voor
+
+### 6. Tests
+- `src/lib/__tests__/bureauExecutionItems.test.ts` — `isBureauExecutionItem` true voor bureau+non-ticket, false voor partner-items en voor ferries/bikes
+- Geen E2E nodig; popover-gedrag spiegelt bestaande tickets-flow
+
+## Buiten scope (voor later, indien gewenst)
+- Beheerde gidsen-tabel met dropdown
+- E-mail naar begeleider met opdrachtbevestiging
+- Automatische todo "Begeleider regelen" X dagen vóór datum
+- Begeleider als kostenregel/inkoopfactuur
+
+## Bestanden
+
+**Nieuw**
+- `supabase/migrations/<ts>_bureau_execution_fields.sql` — 4 kolommen + comment
+- `src/lib/bureauExecutionItems.ts`
+- `src/lib/__tests__/bureauExecutionItems.test.ts`
+- `src/components/admin/bureau-execution/BureauExecutionInline.tsx`
+- `src/components/admin/bureau-execution/BureauExecutionList.tsx` (tab-content)
+
+**Aangepast**
+- `src/types/programRequest.ts` — 4 velden toevoegen
+- `src/pages/admin/AdminRequestDetail.tsx` — inline-chip naast tickets renderen
+- `src/pages/admin/AdminTickets.tsx` — tabs toevoegen

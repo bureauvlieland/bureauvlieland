@@ -307,7 +307,13 @@ export interface ProgramRequestItem {
   booking_document_path?: string | null;
   booking_group_id?: string | null;
   ticket_last_emailed_at?: string | null;
+  // Bureau-uitvoering velden (eigen activiteiten met begeleider, bv. vuurtorenbezoek)
+  bureau_guide_name?: string | null;
+  bureau_guide_contact?: string | null;
+  bureau_arranged_at?: string | null;
+  bureau_arranged_notes?: string | null;
 }
+
 
 export interface ProgramRequestHistory {
   id: string;

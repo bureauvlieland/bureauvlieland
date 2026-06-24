@@ -2772,6 +2772,10 @@ export type Database = {
           booking_document_path: string | null
           booking_group_id: string | null
           booking_reference: string | null
+          bureau_arranged_at: string | null
+          bureau_arranged_notes: string | null
+          bureau_guide_contact: string | null
+          bureau_guide_name: string | null
           commission_amount: number | null
           commission_invoiced_at: string | null
           commission_notes: string | null
@@ -2868,6 +2872,10 @@ export type Database = {
           booking_document_path?: string | null
           booking_group_id?: string | null
           booking_reference?: string | null
+          bureau_arranged_at?: string | null
+          bureau_arranged_notes?: string | null
+          bureau_guide_contact?: string | null
+          bureau_guide_name?: string | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
@@ -2964,6 +2972,10 @@ export type Database = {
           booking_document_path?: string | null
           booking_group_id?: string | null
           booking_reference?: string | null
+          bureau_arranged_at?: string | null
+          bureau_arranged_notes?: string | null
+          bureau_guide_contact?: string | null
+          bureau_guide_name?: string | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
