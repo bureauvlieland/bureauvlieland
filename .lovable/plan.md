@@ -1,67 +1,52 @@
-## Probleem
+# Fix self-service aanvragen: lege items & datum-shift
 
-De klant heeft alles goedgekeurd, maar de huidige UI gooit drie verschillende labels door elkaar:
-- "Akkoord" (geaccepteerd) — verwarrend, lijkt op partner-akkoord
-- "Bevestigd" (bureau-onderdelen) — suggereert dat de aanbieder al heeft bevestigd
-- Géén onderscheid voor partner-onderdelen waarop we nog wachten (zoals Zeehondentocht: klant heeft goedgekeurd, partner staat nog op `pending`)
+Twee bugs in de configurator submit-flow zorgden ervoor dat zelf-service aanvragen leeg binnenkwamen en de datum een dag eerder werd opgeslagen. Beide raken `CheckoutContactForm.tsx` (primair) en `RequestFormModal.tsx` (legacy modal).
 
-Tooltips spreken bovendien een andere taal dan de labels.
+## Bug 1 — Datum 1 dag eerder
 
-## Oplossing: één bron, één label per situatie
+`d.toISOString().split("T")[0]` converteert een lokale Date naar UTC. Klant in NL (UTC+1/+2) die 15 juli kiest → opgeslagen als `"2025-07-14"`.
 
-Eén label voor "klant heeft dit goedgekeurd" met **één tekst** voor klant/admin/partner, en een tooltip die afhankelijk van de *partner*-stand de werkelijke vervolgactie uitlegt. Dezelfde derivation wordt overal gebruikt (admin, klant, partner) — geen lokale overrides meer.
+**Locaties:**
+- `src/components/configurator/CheckoutContactForm.tsx:247` (write naar `selected_dates`)
+- `src/components/configurator/CheckoutContactForm.tsx:76` (dedup-hash)
+- `src/components/configurator/RequestFormModal.tsx:134`
 
-### Nieuwe / aangepaste display-statussen in `src/lib/itemStatus.ts`
+**Fix:** vervangen door `format(d, "yyyy-MM-dd")` uit `date-fns` (lokale tijd, geen UTC).
 
-| Trigger | Status-key | Klantlabel | Admin-label | Partner-label |
-|---|---|---|---|---|
-| `customer_accepted_at` + partner `pending` (incl. bureau) | `klant_akkoord_wacht_partner` (nieuw) | **Door u goedgekeurd** | Klant akkoord — wacht op aanbieder | Klant akkoord — reactie gevraagd |
-| `customer_accepted_at` + partner `confirmed`/`alternative` | `geaccepteerd` (bestaand, label vernieuwd) | **Door u goedgekeurd** | Klant akkoord — aanbieder bevestigd | Klant akkoord — bevestig in planning |
-| Bureau-onderdeel (`provider_id="bureau"`) + klant akkoord | valt onder `klant_akkoord_wacht_partner` met *bureau*-tooltipvariant | **Door u goedgekeurd** | Bureau Vlieland regelt dit zelf | Bureau Vlieland regelt dit zelf |
+## Bug 2 — Lege aanvraag in admin
 
-Bestaande keys `wacht_op_partner`, `wacht_op_klant`, `prijs_gewijzigd`, `uitgevoerd`, `geannuleerd`, `niet_beschikbaar`, `self_arranged` blijven ongewijzigd.
+`blocksWithDetails` mapt cart items via `getBlockById(allBlocks, item.blockId)`. Als `usePublishedBuildingBlocks` nog niet is geresolved (`allBlocks = []`), worden alle `block?.id` leeg. De `program_request` insert (regel 252–268) commit dan al; de daarop volgende `program_request_items` insert (299) faalt op FK/UUID-validatie of schrijft lege rijen. Geen transactie → admin ziet kale request.
 
-### Tooltip-terminologie (gelijk aan label)
-- Klant-tooltip "Door u goedgekeurd" varianten:
-  - Wacht-op-partner: *"U hebt dit onderdeel goedgekeurd. Wij wachten nog op bevestiging van de aanbieder en houden u op de hoogte."*
-  - Bevestigd door partner: *"U hebt dit onderdeel goedgekeurd. De aanbieder heeft het bevestigd."*
-  - Bureau-onderdeel: *"U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig."*
-- Admin- en partner-tooltips spiegelen exact dezelfde feiten en wie aan zet is.
+Zelfde patroon in `RequestFormModal.tsx:141–193`.
 
-### Derivation (`deriveItemDisplayStatus`)
-```text
-1. Terminale states (cancelled / executed / unavailable / self_arranged)
-2. customer_accepted_at gezet?
-   - openPriceChange ná akkoord → prijs_gewijzigd
-   - provider_id="bureau" → klant_akkoord_wacht_partner (bureau-variant)
-   - status="pending" (partner nog niet gereageerd) → klant_akkoord_wacht_partner
-   - anders → geaccepteerd (partner bevestigd)
-3. Geen klant-akkoord:
-   - status="pending" → wacht_op_partner
-   - anders → wacht_op_klant
-```
+**Fix:**
+1. **Guard vóór submit**: als `allBlocks.length === 0` of als één lookup faalt → submit blokkeren met duidelijke foutmelding ("Bouwstenen worden nog geladen, probeer het opnieuw") i.p.v. doorsturen.
+2. **Pre-validate items**: bouw `blocksWithDetails` eerst; als één entry geen geldige `block.id` heeft → abort vóór de `program_request` insert.
+3. **Volgorde omdraaien**: items-payload eerst opbouwen + valideren → dan pas `program_requests` insert → dan `program_request_items` insert. Bij falen van items: rollback via nieuwe edge function of via cleanup-delete van het zojuist aangemaakte request.
+4. **Atomiciteit**: nieuwe edge function `submit-program-request` die beide inserts server-side in één RPC-call doet (Postgres function met BEGIN/COMMIT). Front-end roept alleen die functie aan. Voorkomt voor altijd weeskinderen.
 
-De bureau-variant wordt onderscheiden door een extra contextveld in de derivation (we geven `item.provider_id` mee aan de badge-component voor tooltip-keuze) of door een dedicated sub-status `klant_akkoord_bureau`. Ik kies voor een **aparte key** `klant_akkoord_bureau` zodat de config statisch en testbaar blijft. Dus uiteindelijk twee nieuwe keys:
-- `klant_akkoord_wacht_partner`
-- `klant_akkoord_bureau`
+## Unit tests (regressiebescherming)
 
-### UI-opruiming
-- `src/components/customer-portal/CustomerProgramItem.tsx`: lokale override (`if provider_id === "bureau" → 'Bevestigd'`) verwijderen — de derivation handelt dit nu af. Bestaande groene zin "U heeft dit programmaonderdeel goedgekeurd" onderaan de kaart verwijderen (dubbel met badge).
-- `src/components/shared/ItemDisplayStatusBadge.tsx`: nieuwe toon-mapping (groen tint) voor beide nieuwe keys.
-- Admin- en partner-views krijgen automatisch de nieuwe labels via `deriveItemDisplayStatus`.
+Toevoegen in `src/components/configurator/__tests__/`:
 
-### Tests
-- `src/lib/__tests__/itemStatus.test.ts` uitbreiden:
-  - klant akkoord + partner pending + provider_id≠bureau → `klant_akkoord_wacht_partner`
-  - klant akkoord + provider_id=bureau → `klant_akkoord_bureau`
-  - klant akkoord + partner confirmed → `geaccepteerd`
-  - label-string-snapshot test dat klantlabel voor alle drie "Door u goedgekeurd" is.
+1. `dateSerialization.test.ts` — `format(date, "yyyy-MM-dd")` met TZ stub op `Europe/Amsterdam` (zomer- én wintertijd) bewijst dat 15-07 → `"2025-07-15"` blijft, niet `"2025-07-14"`.
+2. `checkoutSubmit.test.ts` — mockt `usePublishedBuildingBlocks` met (a) `[]`, (b) gedeeltelijke match, (c) volledige match. Assert:
+   - (a) geen insert, gebruikersfout zichtbaar
+   - (b) geen insert, fout zichtbaar
+   - (c) beide inserts succesvol, items kloppen met cart
+3. `submitAtomicity.test.ts` — forceert error op items-insert; assert dat `program_requests` ook gerollbacked is (na intro van edge function).
+4. `draftRestore.test.ts` — Date → localStorage → restore → format roundtrip behoudt kalenderdatum.
+
+Daarnaast: bestaande `dateUtils`/`itemStatus` testsuite uitbreiden met "nooit `toISOString().split('T')[0]` gebruiken voor selected_dates" — een grep-based lint-test (`scripts/lint-no-iso-date-slice.ts`) die in `bun test` faalt als het patroon ooit terugkeert in `src/components/configurator/**`.
 
 ## Bestanden
-- `src/lib/itemStatus.ts` (config + derivation)
-- `src/components/shared/ItemDisplayStatusBadge.tsx` (tone mapping)
-- `src/components/customer-portal/CustomerProgramItem.tsx` (override + dubbele zin weg)
-- `src/lib/__tests__/itemStatus.test.ts` (extra cases)
 
-## Out of scope
-Geen wijzigingen aan workflow-vlaggen, edge functions of database — alleen presentatielaag + derivation.
+- bewerken: `src/components/configurator/CheckoutContactForm.tsx`
+- bewerken: `src/components/configurator/RequestFormModal.tsx`
+- nieuw: `supabase/functions/submit-program-request/index.ts` (atomic insert)
+- nieuw: 4 testbestanden onder `src/components/configurator/__tests__/`
+- nieuw: `scripts/lint-no-iso-date-slice.ts` + hookup in test script
+
+## Buiten scope
+
+Geen wijzigingen aan admin-weergave, status-logica of e-mailflow. Geen data-fix van bestaande lege requests (apart aan te vragen indien gewenst — ik kan dan ook de off-by-one datums in bestaande `program_requests.selected_dates` corrigeren).
