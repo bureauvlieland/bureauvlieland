@@ -79,16 +79,29 @@ export const useProgramStatus = (
   const proposalActionsCount = customerActionableItems.length;
 
   // Totaal te accorderen onderdelen (noemer voor "x van y").
+  // Een item telt mee zodra de klant er iets over kan/heeft kunnen zeggen:
+  // - status confirmed/alternative (klant kan nu akkoord geven), OF
+  // - customer_approved_at gezet (klant heeft al akkoord gegeven, ook al staat
+  //   het item nu op 'pending' omdat we op partner-bevestiging wachten).
   const customerApprovableTotal = useMemo(
     () =>
       program.items.filter(
         (i) =>
           isCustomerActionableCandidate(i) &&
-          (i.status === "confirmed" || i.status === "alternative"),
+          (i.status === "confirmed" ||
+            i.status === "alternative" ||
+            !!i.customer_approved_at),
       ).length,
     [program.items],
   );
-  const customerApprovedCount = customerApprovableTotal - proposalActionsCount;
+  // Teller op basis van customer_approved_at — robuust ongeacht latere status-wijzigingen.
+  const customerApprovedCount = useMemo(
+    () =>
+      program.items.filter(
+        (i) => isCustomerActionableCandidate(i) && !!i.customer_approved_at,
+      ).length,
+    [program.items],
+  );
 
   const alternativeActionsCount = customerActionableItems.filter(
     (i) => i.status === "alternative",
