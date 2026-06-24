@@ -348,6 +348,8 @@ Deno.serve(async (req) => {
                 template_name: "cancellation_accommodation_partner",
                 actor: "admin → logies-partner (project geannuleerd)",
                 accommodation_request_id: program.linked_accommodation_id,
+                accommodation_reference_number: accommodationRef,
+                customer_label: customerLabel,
                 quote_id: quote.id,
                 previous_quote_status: quote.status,
               },
