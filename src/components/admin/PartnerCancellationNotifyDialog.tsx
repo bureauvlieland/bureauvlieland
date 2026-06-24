@@ -62,8 +62,19 @@ export const PartnerCancellationNotifyDialog = ({
     () => activityPartners.filter((p) => p.email).map((p) => p.partner_id),
     [activityPartners],
   );
-  const defaultAccommodationIds = useMemo(
+  // Alle logies-partners met e-mail mogen worden aangevinkt (= "Alles selecteren").
+  const allAccommodationIds = useMemo(
     () => accommodationPartners.filter((p) => p.email).map((p) => p.partner_id),
+    [accommodationPartners],
+  );
+  // Voorgevinkt: alleen partners die mogelijk nog een optie open hebben staan
+  // (pending / submitted / expired / selected). Afgewezen partners niet, maar
+  // ze blijven wel zichtbaar zodat admin ze handmatig kan aanvinken.
+  const defaultAccommodationIds = useMemo(
+    () =>
+      accommodationPartners
+        .filter((p) => p.email && ACC_DEFAULT_CHECKED.has((p.quote_status || "").toLowerCase()))
+        .map((p) => p.partner_id),
     [accommodationPartners],
   );
 
