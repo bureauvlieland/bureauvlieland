@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { loadInbox, type InboxItem, type InboxReason } from "@/lib/getInbox";
 import type { ProjectKind } from "@/lib/getProject";
@@ -23,7 +22,6 @@ interface InboxListProps {
 }
 
 export function InboxList({ selectedProjectId, onSelect, kindFilter = "all", showSnoozed = false }: InboxListProps) {
-  const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ["werkbank-inbox", showSnoozed ? "with-snoozed" : "no-snoozed"],
     queryFn: () => loadInbox({ includeSnoozed: showSnoozed }),
