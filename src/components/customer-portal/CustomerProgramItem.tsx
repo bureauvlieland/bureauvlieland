@@ -161,6 +161,7 @@ export const CustomerProgramItem = ({
                   const derived = deriveItemDisplayStatus(item, {
                     programPeople: numberOfPeople ?? 1,
                     numberOfDays: selectedDates.length || 1,
+                    quoteStatus: quoteStatus ?? null,
                   });
                   return <ItemDisplayStatusBadge status={derived} audience="customer" />;
                 })()}
