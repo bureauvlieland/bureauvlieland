@@ -156,7 +156,7 @@ export const CheckoutContactForm = ({
       }
 
       if (existing && existing.length > 0) {
-        const isoDates = selectedDates.map((d) => d.toISOString().split("T")[0]);
+        const isoDates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
         const existingDates = Array.isArray(existing[0].selected_dates)
           ? (existing[0].selected_dates as string[]).map(String).sort()
           : [];
