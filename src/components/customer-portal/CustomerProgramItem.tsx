@@ -151,11 +151,7 @@ export const CustomerProgramItem = ({
                 )}
                 {(() => {
                   // Unified status (zelfde bron als admin/partner-views). Bureau-onderdelen
-                  // tonen we expliciet als "Bevestigd" omdat die door het bureau zelf
-                  // geregeld worden en geen partner-keten doorlopen.
-                  if (item.provider_id === "bureau" && !isSelfArranged) {
-                    return <MicroPill tone="emerald">Bevestigd</MicroPill>;
-                  }
+                  // en klant-akkoord-varianten worden nu door de derivation zelf afgehandeld.
                   const derived = deriveItemDisplayStatus(item, {
                     programPeople: numberOfPeople ?? 1,
                     numberOfDays: selectedDates.length || 1,
