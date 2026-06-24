@@ -149,10 +149,19 @@ export default function AdminTickets() {
     refetchInterval: 60_000,
   });
 
+  const approvedRows = useMemo(
+    () => (rows || []).filter((r) => !!r.customer_approved_at),
+    [rows]
+  );
+
+  const pendingCustomerCount = useMemo(
+    () => (rows || []).filter((r) => !r.customer_approved_at).length,
+    [rows]
+  );
+
   const filtered = useMemo(() => {
-    if (!rows) return [];
     const todayIso = new Date().toISOString().slice(0, 10);
-    return rows
+    return approvedRows
       .filter((r) => {
         // Period
         if (period === "upcoming" && r.ticketDate && r.ticketDate < todayIso) return false;
@@ -182,7 +191,7 @@ export default function AdminTickets() {
         // Bundle by project: sort by project's earliest ticket date, then by request_id,
         // then by ticket date within the project, then day_index.
         const projMin = new Map<string, string>();
-        for (const r of rows!) {
+        for (const r of approvedRows) {
           const d = r.ticketDate ?? "9999-12-31";
           const cur = projMin.get(r.request_id);
           if (!cur || d < cur) projMin.set(r.request_id, d);
@@ -196,11 +205,11 @@ export default function AdminTickets() {
         if (ad !== bd) return ad < bd ? -1 : 1;
         return (a.day_index ?? 0) - (b.day_index ?? 0);
       });
-  }, [rows, period, kind, status, search]);
+  }, [approvedRows, period, kind, status, search]);
 
   const openCount = useMemo(
-    () => (rows || []).filter((r) => getTicketStatus(r) === "open").length,
-    [rows]
+    () => approvedRows.filter((r) => getTicketStatus(r) === "open").length,
+    [approvedRows]
   );
 
   const updateBooking = async (id: string, field: "booking_reference", value: string) => {
