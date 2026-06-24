@@ -174,6 +174,11 @@ export function BureauExecutionList() {
         Eigen activiteiten waar Bureau Vlieland zelf een begeleider voor regelt
         (vuurtorenbezoek, gids fietstocht, etc.). {openCount} nog te regelen.
       </p>
+      {pendingCustomerCount > 0 && (
+        <p className="text-xs text-amber-700">
+          {pendingCustomerCount} {pendingCustomerCount === 1 ? "item wacht" : "items wachten"} nog op klantakkoord — nog niet regelen.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
