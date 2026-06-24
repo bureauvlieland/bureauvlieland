@@ -111,7 +111,7 @@ export default function AdminTickets() {
       const { data, error } = await supabase
         .from("program_request_items")
         .select(
-          "id, request_id, block_id, block_name, day_index, status, booking_reference, booking_document_path, booking_group_id, ticket_last_emailed_at, override_people, confirmed_time, proposed_time, preferred_time, program_requests!inner(reference_number, customer_name, customer_company, customer_email, selected_dates, number_of_people, status)"
+          "id, request_id, block_id, block_name, day_index, status, booking_reference, booking_document_path, booking_group_id, ticket_last_emailed_at, override_people, confirmed_time, proposed_time, preferred_time, customer_approved_at, program_requests!inner(reference_number, customer_name, customer_company, customer_email, selected_dates, number_of_people, status)"
         )
         .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
         .neq("status", "cancelled")
