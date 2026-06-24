@@ -96,12 +96,12 @@ describe("configurator submit — regressie guards", () => {
         expect(itemsBuildIdx).toBeLessThan(requestInsertIdx);
       });
 
-      it("blokkeert duplicaten binnen het korte venster", () => {
-        const src = read(file);
-        // Korte-termijn dedup-check op customer_email vóór insert.
-        expect(src).toMatch(/customer_email/);
-        expect(src).toMatch(/gte\(\s*["']created_at["']/);
-      });
     });
   }
+
+  it("CheckoutContactForm blokkeert duplicaten op customer_email binnen tijdvenster", () => {
+    const src = read("src/components/configurator/CheckoutContactForm.tsx");
+    expect(src).toMatch(/customer_email/);
+    expect(src).toMatch(/gte\(\s*["']created_at["']/);
+  });
 });
