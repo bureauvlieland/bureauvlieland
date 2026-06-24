@@ -287,7 +287,12 @@ interface ProgramRequestItem {
   pending_block_type?: string | null;
   partner_instructions?: string | null;
   pending_partner_instructions?: string | null;
+  bureau_guide_name?: string | null;
+  bureau_guide_contact?: string | null;
+  bureau_arranged_at?: string | null;
+  bureau_arranged_notes?: string | null;
 }
+
 
 interface HistoryEntry {
   id: string;
