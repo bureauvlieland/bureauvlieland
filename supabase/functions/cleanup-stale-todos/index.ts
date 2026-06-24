@@ -196,8 +196,22 @@ Deno.serve(async (req) => {
 
     if (sendItemsTodos?.length) {
       const staleIds: string[] = [];
+      const reqIdsForSend = sendItemsTodos.map((t: any) => t.related_request_id).filter(Boolean);
+      const { data: sendReqs } = reqIdsForSend.length
+        ? await supabase
+            .from("program_requests")
+            .select("id, completion_status, cancelled_at")
+            .in("id", reqIdsForSend)
+        : { data: [] as any[] };
+      const sendReqMap = new Map((sendReqs || []).map((r: any) => [r.id, r]));
+      const INV_DONE = ["completed","ready_for_invoice","partially_invoiced","fully_invoiced"];
       for (const todo of sendItemsTodos) {
         if (!todo.related_request_id) { staleIds.push(todo.id); continue; }
+        const r: any = sendReqMap.get(todo.related_request_id);
+        if (!r || r.cancelled_at || INV_DONE.includes(r.completion_status)) {
+          staleIds.push(todo.id);
+          continue;
+        }
         const { data: pendingItems } = await supabase
           .from("program_request_items")
           .select("id")
@@ -222,7 +236,8 @@ Deno.serve(async (req) => {
         .from("program_requests")
         .select("id, customer_name, customer_company, quote_status")
         .neq("status", "cancelled")
-        .is("cancelled_at", null);
+        .is("cancelled_at", null)
+        .not("completion_status", "in", "(ready_for_invoice,partially_invoiced,fully_invoiced,completed)");
 
       let createdCount = 0;
       for (const project of activeProjects || []) {
@@ -332,7 +347,7 @@ Deno.serve(async (req) => {
           const r: any = reqMap.get(t.related_request_id);
           if (!r) return true;
           if (r.cancelled_at) return true;
-          if (r.completion_status === "completed") return true;
+          if (["completed","ready_for_invoice","partially_invoiced","fully_invoiced"].includes(r.completion_status)) return true;
           if (r.quote_status !== "offerte_verstuurd") return true;
           if (approvedReqIds.has(t.related_request_id)) return true;
           return false;
@@ -369,7 +384,7 @@ Deno.serve(async (req) => {
       const staleIds: string[] = [];
       for (const todo of customerStatusUpdateTodos) {
         const r: any = reqMap.get(todo.related_request_id);
-        if (!r || r.cancelled_at || r.completion_status === "completed") {
+        if (!r || r.cancelled_at || ["completed","ready_for_invoice","partially_invoiced","fully_invoiced"].includes(r.completion_status)) {
           staleIds.push(todo.id);
           continue;
         }
@@ -439,7 +454,7 @@ Deno.serve(async (req) => {
           const r: any = reqMap.get(t.related_request_id);
           if (!r) return true;
           if (r.cancelled_at) return true;
-          if (r.completion_status === "completed") return true;
+          if (["completed","ready_for_invoice","partially_invoiced","fully_invoiced"].includes(r.completion_status)) return true;
           const lodgingMissing =
             !!r.linked_accommodation_id &&
             !lodgingSelectedReqIds.has(r.id);

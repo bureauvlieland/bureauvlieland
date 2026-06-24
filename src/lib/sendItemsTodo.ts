@@ -11,12 +11,18 @@ export async function ensureSendItemsTodo(requestId: string): Promise<void> {
   try {
     const { data: project } = await supabase
       .from("program_requests")
-      .select("id, customer_name, customer_company, quote_status, status, cancelled_at")
+      .select("id, customer_name, customer_company, quote_status, status, cancelled_at, completion_status")
       .eq("id", requestId)
       .maybeSingle();
 
-    if (!project || project.status === "cancelled" || project.cancelled_at) {
-      // Project gone or cancelled → close any open todo
+    const inInvoicingOrDone =
+      project?.completion_status === "ready_for_invoice" ||
+      project?.completion_status === "partially_invoiced" ||
+      project?.completion_status === "fully_invoiced" ||
+      project?.completion_status === "completed";
+
+    if (!project || project.status === "cancelled" || project.cancelled_at || inInvoicingOrDone) {
+      // Project gone, cancelled, of in facturatie/afgerond → sluit lopende todo
       await closeOpenTodo(requestId);
       return;
     }
