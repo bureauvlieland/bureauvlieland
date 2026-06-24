@@ -221,6 +221,10 @@ export function deriveItemDisplayStatus(
     ) {
       return "prijs_gewijzigd";
     }
+    // Bureau-onderdelen regelen wij zelf — geen partner-bevestiging nodig.
+    if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
+    // Partner heeft nog niet bevestigd → klant heeft wel akkoord, partner aan zet.
+    if (item.status === "pending") return "klant_akkoord_wacht_partner";
     return "geaccepteerd";
   }
 
