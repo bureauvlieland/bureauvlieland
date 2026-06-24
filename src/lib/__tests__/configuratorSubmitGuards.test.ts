@@ -38,7 +38,8 @@ describe("configurator submit — regressie guards", () => {
       it("valideert allBlocks vóór de program_requests insert", () => {
         const src = read(file);
         const allBlocksGuardIdx = src.indexOf("allBlocks.length === 0");
-        const insertIdx = src.indexOf('from("program_requests")');
+        // Zoek de daadwerkelijke INSERT (niet een eerdere select voor dedup).
+        const insertIdx = src.search(/from\(\s*["']program_requests["']\s*\)\s*\n?\s*\.insert/);
         expect(allBlocksGuardIdx).toBeGreaterThan(-1);
         expect(insertIdx).toBeGreaterThan(-1);
         expect(allBlocksGuardIdx).toBeLessThan(insertIdx);
