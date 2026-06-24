@@ -406,6 +406,7 @@ Deno.serve(async (req) => {
       name: p.name,
       email: p.email || null,
       accommodation_name: p.accommodationName,
+      quote_status: p.quoteStatus,
     }));
 
     return new Response(
