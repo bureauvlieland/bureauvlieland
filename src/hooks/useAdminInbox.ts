@@ -41,6 +41,8 @@ export type InboxData = {
   emails: InboxEmail[];
   chats: InboxChatMessage[];
   liveChats: InboxLiveChat[];
+  chatUnreadConversations: number;
+  liveChatUnreadTotal: number;
   totalUnread: number;
 };
 
