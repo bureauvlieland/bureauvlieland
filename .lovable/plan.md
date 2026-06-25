@@ -1,13 +1,29 @@
 ## Probleem
-Claudia toont "Partnerreactie open" taken voor projecten waarvan de `completion_status` al `ready_for_invoice` is (zoals BV-2602-0002 en BV-2602-0005 in de screenshot). Die projecten zitten in de facturatiefase — partnerreactie-opvolging is dan niet meer relevant.
+De **Inbox-dropdown** rechtsboven toont drie bronnen:
+1. Inkomende e-mails (`project_communications` direction=inbound, niet beantwoord)
+2. Berichten klant/partner (`chat_messages` uit projecten/logies — niet-website chats)
+3. Live chat website (`chat_messages` uit website-widget conversaties)
 
-## Oorzaak
-In `supabase/functions/_shared/projectActivity.ts` bevat `TERMINAL_COMPLETION_STATUSES` alleen `invoiced`, `completed`, `feedback_received`, `cancelled`. `ready_for_invoice` ontbreekt, dus signalen op die projecten worden niet onderdrukt in `claudia-daily-scan`.
+Het **Berichtencentrum → Te beantwoorden** toont alleen bron 1 (inkomende e-mails uit `project_communications`). De chat-berichten van klanten/partners en de live website-chats ontbreken hier, waardoor de dropdown wel items toont en de pagina "Geen e-mails te beantwoorden".
 
-## Fix
-1. In `supabase/functions/_shared/projectActivity.ts`: voeg `ready_for_invoice` toe aan `TERMINAL_COMPLETION_STATUSES`. Vanaf "klaar voor facturatie" zijn partner-/klant-opvolgsignalen niet meer nuttig; alleen het facturatie-signaal zelf moet blijven (en dat is in `claudia-daily-scan` al expliciet uitgezonderd via `s.category !== "ready_for_invoice"`).
-2. Geen UI-wijzigingen nodig — de kaart leest het resultaat van de scan.
-3. De volgende daily scan (of een handmatige "Run nu") schoont de lijst op.
+## Oplossing
+`InboxToAnswer` (Berichtencentrum → Te beantwoorden) wordt uitgebreid zodat dezelfde drie bronnen zichtbaar zijn als in de dropdown.
 
-## Scope
-Alleen 1 regel in 1 shared file. Geen schema- of UI-aanpassingen.
+### Wijzigingen in `src/components/admin/InboxToAnswer.tsx`
+- Naast `fetchInboundEmails` ook chat-berichten ophalen via dezelfde logica als `useAdminInbox` (split op `chat_conversations.source`: project/logies-chats vs. website live-chats).
+- Drie secties onder elkaar binnen het bestaande "Te beantwoorden"-paneel:
+  - **Inkomende e-mails** (huidige lijst, ongewijzigd qua rij-render en reply-flow)
+  - **Berichten klant/partner** — per chat-bericht een rij met afzender + projectreferentie; klik opent het project op tab `communicatie` (zelfde route als dropdown gebruikt).
+  - **Live chat (website)** — gegroepeerd per conversatie met ongelezen-teller; klik opent `/admin/berichten?conversation=…` (zelfde route als dropdown).
+- Lege staat: alleen "Geen berichten te beantwoorden" tonen als álle drie de bronnen leeg zijn.
+- Filter "Alles beantwoord" blijft alleen van toepassing op de e-mails-sectie; chat-secties hebben hun eigen unread-criterium (`read_at IS NULL` voor live, ontbrekend `replied_at`/laatste admin-reply voor project-chats — voor nu: alle niet-admin berichten van laatste 14 dagen, gelijk aan dropdown).
+
+### Wijzigingen in `src/pages/admin/AdminMessages.tsx`
+- Badge-teller op tab "Te beantwoorden": gebruik dezelfde totaaltelling als de dropdown (`useAdminInbox().data.totalUnread` of een gedeelde teller-query), zodat tab-badge en dropdown-badge altijd matchen.
+- Tab-label blijft "Te beantwoorden" maar krijgt subtekst/uitleg "E-mails en berichten van klanten en partners" om te verduidelijken dat dit niet alleen e-mail is.
+
+### Geen schemawijzigingen
+Alle benodigde tabellen (`project_communications`, `chat_messages`, `chat_conversations`) worden al gebruikt door `useAdminInbox`; geen DB-migratie nodig.
+
+## Resultaat
+Dropdown en Berichtencentrum tonen exact dezelfde set items en hetzelfde aantal "nieuw".
