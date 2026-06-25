@@ -550,6 +550,41 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
   pdf.line(rightLabelX, yR + 1.5, rightValueX, yR + 1.5);
   yR += 6;
 
+  // ── BTW-specificatie over déze factuur (pro-rata over openstaand bedrag)
+  // Alleen tonen als er eerdere facturen zijn — anders is "Totaal btw" hierboven
+  // al gelijk aan de BTW van deze factuur.
+  if (priorInvoices.length > 0 && data.totals.totalInclVat > 0 && netDue > 0.005) {
+    const factor = netDue / data.totals.totalInclVat;
+    const lines = data.totals.vatLines.map((l) => {
+      const inclVatLine = l.exclVat + l.vatAmount;
+      const restInclLine = Math.round(inclVatLine * factor * 100) / 100;
+      const exclLine = l.rate > 0 ? restInclLine / (1 + l.rate / 100) : restInclLine;
+      const vatLine = restInclLine - exclLine;
+      return { rate: l.rate, vatAmount: Math.round(vatLine * 100) / 100 };
+    });
+    // Rondingscorrectie zodat som = totale BTW op deze factuur
+    const expectedVat = Math.round(data.totals.totalVat * factor * 100) / 100;
+    const sumVat = lines.reduce((s, l) => s + l.vatAmount, 0);
+    const diff = Math.round((expectedVat - sumVat) * 100) / 100;
+    if (Math.abs(diff) >= 0.01 && lines.length > 0) {
+      const idx = lines.findIndex((l) => l.rate > 0);
+      const i = idx === -1 ? 0 : idx;
+      lines[i].vatAmount = Math.round((lines[i].vatAmount + diff) * 100) / 100;
+    }
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    setText(pdf, TEXT_MUTED);
+    pdf.text("waarvan BTW over deze factuur:", rightLabelX, yR);
+    yR += 3.6;
+    for (const l of lines) {
+      pdf.text(`BTW ${fmtNumber(l.rate)}%`, rightLabelX + 2, yR);
+      pdf.text(fmtEuro(l.vatAmount), rightValueX, yR, { align: "right" });
+      yR += 3.4;
+    }
+    yR += 2;
+  }
+
   return Math.max(yL, yR) + 5;
 }
 

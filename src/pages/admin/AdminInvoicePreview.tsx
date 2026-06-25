@@ -520,40 +520,20 @@ const AdminInvoicePreview = () => {
     const fmt = (n: number) =>
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
-    // ── Slot-mode short-circuit: één regel voor het openstaande restant
-    const modeParamLocal = (searchParams.get("mode") || "full").toLowerCase();
+    // Slot-mode is deprecated: vervolgfacturen tonen altijd het volledige
+    // projectoverzicht met "Reeds gefactureerd" eronder. Dit is voor de
+    // klantadministratie de juiste vorm (zie plan: BTW pro-rata over restant).
     const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
-    const priorSumLocal = priorOtherLocal.reduce(
-      (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
-      0,
-    );
-    const netDueLocal = Math.max(0, totalsLocal.totalInclVat - priorSumLocal);
-    const isSlot = modeParamLocal === "slot" && priorOtherLocal.length > 0 && netDueLocal > 0.005;
+    const isSlot = false;
+
 
     // ── Build categorized line rows
     const categories: InvoiceCategory[] = [];
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
 
 
-    if (isSlot) {
-      // Eén factuurregel: het openstaande restant.
-      const priorRefs = priorOtherLocal.map((p) => p.invoice_number).join(", ");
-      const sub = priorRefs
-        ? `Restant na reeds gefactureerde termijn${priorOtherLocal.length > 1 ? "en" : ""}: ${priorRefs}`
-        : "Restant openstaand bedrag";
-      categories.push({
-        label: "Termijnfactuur",
-        rows: [
-          {
-            description: `Slotfactuur project ${request.reference_number ?? ""}`.trim(),
-            subDescription: sub,
-            qty: "1",
-            unitPrice: fmt(netDueLocal),
-            amount: fmt(netDueLocal),
-          },
-        ],
-      });
-    } else {
+    {
+
 
     for (const cat of sortedCategories) {
       const catItems = groupedByCategory[cat];
@@ -712,35 +692,6 @@ const AdminInvoicePreview = () => {
     }
     }
 
-    // Pro-rata BTW-uitsplitsing voor slot-mode (zelfde logica als render).
-    let slotTotalsLocal: { totalExclVat: number; totalVat: number; totalInclVat: number; vatLines: { rate: number; exclVat: number; vatAmount: number }[] } | null = null;
-    if (isSlot && totalsLocal.totalInclVat > 0) {
-      const factor = netDueLocal / totalsLocal.totalInclVat;
-      let runE = 0, runV = 0;
-      const lines = totalsLocal.vatLines.map((l) => {
-        const exclVat = Math.round(l.exclVat * factor * 100) / 100;
-        const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
-        runE += exclVat; runV += vatAmount;
-        return { rate: l.rate, exclVat, vatAmount };
-      });
-      if (lines.length > 0) {
-        const diff = netDueLocal - (runE + runV);
-        const idx = lines.findIndex((l) => l.rate > 0);
-        const i = idx === -1 ? 0 : idx;
-        const r = lines[i].rate;
-        const exclAdd = r > 0 ? diff / (1 + r / 100) : diff;
-        lines[i].exclVat = Math.round((lines[i].exclVat + exclAdd) * 100) / 100;
-        lines[i].vatAmount = Math.round((lines[i].vatAmount + (diff - exclAdd)) * 100) / 100;
-      }
-      slotTotalsLocal = {
-        totalExclVat: lines.reduce((s, l) => s + l.exclVat, 0),
-        totalVat: lines.reduce((s, l) => s + l.vatAmount, 0),
-        totalInclVat: netDueLocal,
-        vatLines: lines,
-      };
-    }
-
-
     // ── Customer block
     const billingNameLocal =
       request.billing_company_name || request.customer_company || request.customer_name;
@@ -782,27 +733,23 @@ const AdminInvoicePreview = () => {
         deliveryDate: eventDates || undefined,
       },
       categories,
-      totals: slotTotalsLocal ?? {
+      totals: {
         totalExclVat: totalsLocal.totalExclVat,
         totalVat: totalsLocal.totalVat,
         totalInclVat: totalsLocal.totalInclVat,
         vatLines: totalsLocal.vatLines,
       },
       notes: notes || undefined,
-      priorInvoices: isSlot
-        ? []
-        : priorInvoices
-            .filter((p) => p.invoice_number !== invoiceNumber)
-            .map((p) => ({
-              invoiceNumber: p.invoice_number,
-              invoiceDate: new Date(p.invoice_date),
-              amountInclVat:
-                p.invoice_type === "credit"
-                  ? -Number(p.amount_incl_vat)
-                  : Number(p.amount_incl_vat),
-            })),
-
+      priorInvoices: priorOtherLocal.map((p) => ({
+        invoiceNumber: p.invoice_number,
+        invoiceDate: new Date(p.invoice_date),
+        amountInclVat:
+          p.invoice_type === "credit"
+            ? -Number(p.amount_incl_vat)
+            : Number(p.amount_incl_vat),
+      })),
     });
+
 
     return blob;
   };
@@ -869,8 +816,10 @@ const AdminInvoicePreview = () => {
       0,
     );
   const netDueIncl = Math.max(0, totals.totalInclVat - priorSumExcludingCurrent);
-  const isSlotMode = modeParam === "slot" && hasPriorOtherThanCurrent && netDueIncl > 0.005;
-  const canOfferSlotMode = hasPriorOtherThanCurrent && netDueIncl > 0.005;
+  // Slot-mode is deprecated: vervolgfacturen tonen altijd de volledige
+  // projectspecificatie met "Reeds gefactureerd" eronder.
+  const isSlotMode = false;
+  const canOfferSlotMode = false;
 
   const setMode = (next: "slot" | "full") => {
     const params = new URLSearchParams(searchParams);
