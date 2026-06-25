@@ -348,9 +348,13 @@ export function useAdminChat() {
     isOnline,
     statusFilter,
     setStatusFilter,
+    showArchived,
+    setShowArchived,
     updatePresence,
     sendMessage,
     closeConversation,
+    archiveConversation,
     saveChatToProject,
   };
 }
+
