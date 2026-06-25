@@ -41,6 +41,8 @@ export type InboxData = {
   emails: InboxEmail[];
   chats: InboxChatMessage[];
   liveChats: InboxLiveChat[];
+  chatUnreadConversations: number;
+  liveChatUnreadTotal: number;
   totalUnread: number;
 };
 
@@ -118,7 +120,10 @@ async function fetchInbox(): Promise<InboxData> {
 
   // Split: widget chat (source="website") vs project/logies chat
   const isWidget = (s: string) => s === "website" || s === "widget" || s === "homepage";
-  const chats = allMsgs.filter((m) => !isWidget(m.source)).slice(0, 15);
+  // Project/partner chat in "te beantwoorden": alleen ongelezen berichten
+  const unreadProjectMsgs = allMsgs.filter((m) => !isWidget(m.source) && m.read_at === null);
+  const chats = unreadProjectMsgs.slice(0, 15);
+  const chatUnreadConversations = new Set(unreadProjectMsgs.map((m) => m.conversation_id)).size;
 
   // Live chat: group by conversation, only unread, only widget source
   const widgetMsgs = allMsgs.filter((m) => isWidget(m.source) && m.read_at === null);
@@ -144,17 +149,18 @@ async function fetchInbox(): Promise<InboxData> {
   const liveChats = Array.from(liveMap.values())
     .sort((a, b) => b.last_message_at.localeCompare(a.last_message_at))
     .slice(0, 15);
+  const liveChatUnreadTotal = liveChats.reduce((s, l) => s + l.unread_count, 0);
 
-  // Unread = items newer than watermark
+  // Unread e-mails = nieuwer dan watermerk (gemarkeerd als nieuw in bel)
   const newEmails = emails.filter((e) => e.created_at > seenAt).length;
-  const newChats = chats.filter((c) => c.created_at > seenAt).length;
-  const newLive = liveChats.reduce((sum, lc) => sum + lc.unread_count, 0);
 
   return {
     emails,
     chats: chats.map(({ read_at, ...rest }) => rest),
     liveChats,
-    totalUnread: newEmails + newChats + newLive,
+    chatUnreadConversations,
+    liveChatUnreadTotal,
+    totalUnread: newEmails + chatUnreadConversations + liveChatUnreadTotal,
   };
 }
 

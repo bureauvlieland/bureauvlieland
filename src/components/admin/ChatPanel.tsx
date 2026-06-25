@@ -59,6 +59,7 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
     messages,
     unreadCount,
     unreadConversationIds,
+    unreadByConversation,
     isOnline,
     statusFilter,
     setStatusFilter,
@@ -84,10 +85,18 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
     }
   }, [initialConversationId, setActiveConversationId]);
 
-  const channelFiltered =
+  const channelFiltered = (
     channelFilter === "all"
       ? filteredConversations
-      : filteredConversations.filter((c) => c.source === channelFilter);
+      : filteredConversations.filter((c) => c.source === channelFilter)
+  )
+    .slice()
+    .sort((a, b) => {
+      const ua = unreadByConversation.get(a.id) ?? 0;
+      const ub = unreadByConversation.get(b.id) ?? 0;
+      if ((ua > 0) !== (ub > 0)) return ua > 0 ? -1 : 1;
+      return b.last_message_at.localeCompare(a.last_message_at);
+    });
 
   const handleSendWithToast = async (text: string) => {
     try {
@@ -204,6 +213,7 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
               conversation={conv}
               isActive={activeConversationId === conv.id}
               projectRef={projectRefs[conv.id]}
+              unreadCount={unreadByConversation.get(conv.id) ?? 0}
               onClick={() => setActiveConversationId(conv.id)}
             />
           ))}
