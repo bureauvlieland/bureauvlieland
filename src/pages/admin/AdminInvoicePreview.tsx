@@ -816,8 +816,10 @@ const AdminInvoicePreview = () => {
       0,
     );
   const netDueIncl = Math.max(0, totals.totalInclVat - priorSumExcludingCurrent);
-  const isSlotMode = modeParam === "slot" && hasPriorOtherThanCurrent && netDueIncl > 0.005;
-  const canOfferSlotMode = hasPriorOtherThanCurrent && netDueIncl > 0.005;
+  // Slot-mode is deprecated: vervolgfacturen tonen altijd de volledige
+  // projectspecificatie met "Reeds gefactureerd" eronder.
+  const isSlotMode = false;
+  const canOfferSlotMode = false;
 
   const setMode = (next: "slot" | "full") => {
     const params = new URLSearchParams(searchParams);
