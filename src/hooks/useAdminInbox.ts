@@ -147,22 +147,30 @@ async function fetchInbox(): Promise<InboxData> {
     }));
 
 
-  const allMsgs: (InboxChatMessage & { read_at: string | null })[] = (msgsRes.data ?? []).map((m: any) => {
-    const conv = convMap.get(m.conversation_id) ?? {};
-    return {
-      id: m.id,
-      conversation_id: m.conversation_id,
-      content: m.content,
-      sender_name: m.sender_name,
-      sender_type: m.sender_type,
-      created_at: m.created_at,
-      read_at: m.read_at,
-      source: conv.source ?? "unknown",
-      request_id: conv.request_id ?? null,
-      accommodation_request_id: conv.accommodation_request_id ?? null,
-      visitor_name: conv.visitor_name ?? m.sender_name,
-    };
-  });
+  const allMsgs: (InboxChatMessage & { read_at: string | null })[] = (msgsRes.data ?? [])
+    .filter((m: any) => {
+      const conv = convMap.get(m.conversation_id) ?? {};
+      if (conv.request_id && archivedProgramIds.has(conv.request_id)) return false;
+      if (conv.accommodation_request_id && archivedAccommodationIds.has(conv.accommodation_request_id)) return false;
+      return true;
+    })
+    .map((m: any) => {
+      const conv = convMap.get(m.conversation_id) ?? {};
+      return {
+        id: m.id,
+        conversation_id: m.conversation_id,
+        content: m.content,
+        sender_name: m.sender_name,
+        sender_type: m.sender_type,
+        created_at: m.created_at,
+        read_at: m.read_at,
+        source: conv.source ?? "unknown",
+        request_id: conv.request_id ?? null,
+        accommodation_request_id: conv.accommodation_request_id ?? null,
+        visitor_name: conv.visitor_name ?? m.sender_name,
+      };
+    });
+
 
   // Split: widget chat (source="website") vs project/logies chat
   const isWidget = (s: string) => s === "website" || s === "widget" || s === "homepage";
