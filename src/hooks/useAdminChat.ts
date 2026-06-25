@@ -201,7 +201,8 @@ export function useAdminChat() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [conversations]);
+
 
   // Admin presence
   const updatePresence = useCallback(async (online: boolean) => {
