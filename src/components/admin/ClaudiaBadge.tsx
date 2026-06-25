@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 async function fetchOpenCount(): Promise<{ total: number; urgent: number }> {
+  // 'info'-prio sluiten we uit zodat de sidebar-badge alleen écht actuele items telt.
   const nowIso = new Date().toISOString();
   const { data, error } = await supabase
     .from("admin_recommendations")
