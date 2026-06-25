@@ -213,6 +213,7 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
               conversation={conv}
               isActive={activeConversationId === conv.id}
               projectRef={projectRefs[conv.id]}
+              unreadCount={unreadByConversation.get(conv.id) ?? 0}
               onClick={() => setActiveConversationId(conv.id)}
             />
           ))}
