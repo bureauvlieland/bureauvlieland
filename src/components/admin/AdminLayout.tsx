@@ -57,6 +57,7 @@ import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 import { InboxBell } from "@/components/admin/InboxBell";
+import { useAdminInbox } from "@/hooks/useAdminInbox";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -119,6 +120,8 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
   const { data: openTicketsCount = 0 } = useOpenTicketsCount();
   const { data: bankPendingCount = 0 } = useBankPendingCount();
+  const { data: inboxData } = useAdminInbox();
+  const messagesBadge = inboxData?.totalUnread ?? 0;
 
   const menuSections: MenuSection[] = [
     {
@@ -134,7 +137,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
     {
       label: "Berichten",
       items: [
-        { title: "Berichtencentrum", url: "/admin/berichten", icon: MessageCircle },
+        { title: "Berichtencentrum", url: "/admin/berichten", icon: MessageCircle, badge: messagesBadge },
       ],
     },
     {
