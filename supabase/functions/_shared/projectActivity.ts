@@ -59,6 +59,7 @@ export function shouldShowSignalDuringCooldown(
 }
 
 export const TERMINAL_COMPLETION_STATUSES = new Set<string>([
+  "ready_for_invoice",
   "invoiced",
   "completed",
   "feedback_received",
