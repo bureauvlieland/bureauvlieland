@@ -200,15 +200,17 @@ export function InboxToAnswer({ initialOpenId }: InboxToAnswerProps) {
         ? `/admin/projecten/${e.accommodation_id}?tab=communicatie`
         : null;
 
+  const hasAny = visible.length + chats.length + liveChats.length > 0;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <Inbox className="h-4 w-4" />
           <span>
-            {unansweredCount === 0
+            {!hasAny
               ? "Alles beantwoord 🎉"
-              : `${unansweredCount} ${unansweredCount === 1 ? "e-mail wacht" : "e-mails wachten"} op antwoord`}
+              : `${unansweredCount} e-mail${unansweredCount === 1 ? "" : "s"} · ${chats.length} bericht${chats.length === 1 ? "" : "en"} · ${liveChats.length} live chat${liveChats.length === 1 ? "" : "s"}`}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -225,126 +227,184 @@ export function InboxToAnswer({ initialOpenId }: InboxToAnswerProps) {
             <Skeleton key={i} className="h-20 w-full" />
           ))}
         </div>
-      ) : visible.length === 0 ? (
+      ) : !hasAny ? (
         <Card>
           <CardContent className="p-12 text-center text-slate-500">
             <Mail className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-            <p className="font-medium">Geen e-mails te beantwoorden</p>
-            <p className="text-sm mt-1">Nieuwe inkomende e-mails verschijnen hier automatisch.</p>
+            <p className="font-medium">Geen berichten te beantwoorden</p>
+            <p className="text-sm mt-1">Nieuwe e-mails en chatberichten verschijnen hier automatisch.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {visible.map((email) => {
-            const isExpanded = expandedId === email.id;
-            const isHighlighted = initialOpenId === email.id;
-            const href = projectHref(email);
-            const answered = !!email.answered_at;
+        <div className="space-y-6">
+          {visible.length > 0 && (
+            <div className="space-y-2">
+              <SectionHeader icon={<Mail className="h-3.5 w-3.5" />} title="Inkomende e-mails" count={visible.length} />
+              {visible.map((email) => {
+                const isExpanded = expandedId === email.id;
+                const isHighlighted = initialOpenId === email.id;
+                const href = projectHref(email);
+                const answered = !!email.answered_at;
 
-            return (
-              <Card
-                key={email.id}
-                id={`inbox-email-${email.id}`}
-                className={cn(
-                  "transition-colors",
-                  isHighlighted && "ring-2 ring-blue-400",
-                  answered && "opacity-70",
-                )}
-              >
-                <CardContent className="p-0">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(isExpanded ? null : email.id)}
-                    className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors"
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 mt-1 text-slate-400 shrink-0" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 mt-1 text-slate-400 shrink-0" />
+                return (
+                  <Card
+                    key={email.id}
+                    id={`inbox-email-${email.id}`}
+                    className={cn(
+                      "transition-colors",
+                      isHighlighted && "ring-2 ring-blue-400",
+                      answered && "opacity-70",
                     )}
+                  >
+                    <CardContent className="p-0">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isExpanded ? null : email.id)}
+                        className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 mt-1 text-slate-400 shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 mt-1 text-slate-400 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="font-medium text-slate-900 truncate">
+                              {email.subject || "(geen onderwerp)"}
+                            </p>
+                            <span className="text-xs text-slate-400 shrink-0" title={format(new Date(email.communication_date), "d MMM yyyy HH:mm", { locale: nl })}>
+                              {formatDistanceToNow(new Date(email.communication_date), { addSuffix: true, locale: nl })}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                            <span className="text-sm text-slate-600">
+                              {email.contact_name || email.contact_email || "Onbekende afzender"}
+                            </span>
+                            {email.project_label && (
+                              <Badge variant="outline" className="text-[11px] font-normal">
+                                {email.project_label}
+                              </Badge>
+                            )}
+                            {answered && (
+                              <Badge className="bg-green-100 text-green-800 text-[11px]" variant="secondary">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Beantwoord {email.answered_at && format(new Date(email.answered_at), "d MMM HH:mm", { locale: nl })}
+                              </Badge>
+                            )}
+                          </div>
+                          {!isExpanded && (
+                            <p className="text-sm text-slate-500 line-clamp-2 mt-1">
+                              {email.content.replace(/\s+/g, " ").trim()}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pl-11 space-y-4">
+                          <div className="rounded-lg border bg-slate-50/60 p-4">
+                            <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">
+                              {email.content.trim()}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button size="sm" onClick={() => openReply(email)}>
+                              <Reply className="h-4 w-4 mr-2" />
+                              Beantwoorden
+                            </Button>
+                            {href && (
+                              <Button size="sm" variant="outline" asChild>
+                                <Link to={href}>
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Naar project
+                                </Link>
+                              </Button>
+                            )}
+                            {answered ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={markAnswered.isPending}
+                                onClick={() => markAnswered.mutate({ id: email.id, answered: false })}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Toch niet beantwoord
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={markAnswered.isPending}
+                                onClick={() => markAnswered.mutate({ id: email.id, answered: true })}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Markeer als beantwoord
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {chats.length > 0 && (
+            <div className="space-y-2">
+              <SectionHeader icon={<MessageSquare className="h-3.5 w-3.5" />} title="Berichten klant/partner" count={chats.length} />
+              {chats.map((c) => (
+                <Card key={c.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => goToChat(c)}>
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <MessageSquare className="h-4 w-4 mt-1 text-slate-400 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="font-medium text-slate-900 truncate">
-                          {email.subject || "(geen onderwerp)"}
+                          {c.visitor_name || c.sender_name}
                         </p>
-                        <span className="text-xs text-slate-400 shrink-0" title={format(new Date(email.communication_date), "d MMM yyyy HH:mm", { locale: nl })}>
-                          {formatDistanceToNow(new Date(email.communication_date), { addSuffix: true, locale: nl })}
+                        <span className="text-xs text-slate-400 shrink-0">
+                          {formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: nl })}
                         </span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                        <span className="text-sm text-slate-600">
-                          {email.contact_name || email.contact_email || "Onbekende afzender"}
-                        </span>
-                        {email.project_label && (
-                          <Badge variant="outline" className="text-[11px] font-normal">
-                            {email.project_label}
-                          </Badge>
-                        )}
-                        {answered && (
-                          <Badge className="bg-green-100 text-green-800 text-[11px]" variant="secondary">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Beantwoord {email.answered_at && format(new Date(email.answered_at), "d MMM HH:mm", { locale: nl })}
-                          </Badge>
-                        )}
-                      </div>
-                      {!isExpanded && (
-                        <p className="text-sm text-slate-500 line-clamp-2 mt-1">
-                          {email.content.replace(/\s+/g, " ").trim()}
-                        </p>
-                      )}
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {c.sender_type === "partner" ? "Partner" : c.sender_type === "customer" ? "Klant" : c.sender_type}
+                      </p>
+                      <p className="text-sm text-slate-600 line-clamp-2 mt-1">{c.content}</p>
                     </div>
-                  </button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-                  {isExpanded && (
-                    <div className="px-4 pb-4 pl-11 space-y-4">
-                      <div className="rounded-lg border bg-slate-50/60 p-4">
-                        <p className="text-sm text-slate-800 whitespace-pre-wrap break-words">
-                          {email.content.trim()}
+          {liveChats.length > 0 && (
+            <div className="space-y-2">
+              <SectionHeader icon={<MessageCircle className="h-3.5 w-3.5" />} title="Live chat (website)" count={liveChats.length} />
+              {liveChats.map((l) => (
+                <Card key={l.conversation_id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => goToLive(l)}>
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <MessageCircle className="h-4 w-4 mt-1 text-slate-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="font-medium text-slate-900 truncate">
+                          {l.visitor_name || "Bezoeker"}
                         </p>
+                        <span className="text-xs text-slate-400 shrink-0">
+                          {formatDistanceToNow(new Date(l.last_message_at), { addSuffix: true, locale: nl })}
+                        </span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button size="sm" onClick={() => openReply(email)}>
-                          <Reply className="h-4 w-4 mr-2" />
-                          Beantwoorden
-                        </Button>
-                        {href && (
-                          <Button size="sm" variant="outline" asChild>
-                            <Link to={href}>
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Naar project
-                            </Link>
-                          </Button>
-                        )}
-                        {answered ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={markAnswered.isPending}
-                            onClick={() => markAnswered.mutate({ id: email.id, answered: false })}
-                          >
-                            <Undo2 className="h-4 w-4 mr-2" />
-                            Toch niet beantwoord
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={markAnswered.isPending}
-                            onClick={() => markAnswered.mutate({ id: email.id, answered: true })}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Markeer als beantwoord
-                          </Button>
-                        )}
-                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">{l.unread_count} ongelezen</p>
+                      <p className="text-sm text-slate-600 line-clamp-2 mt-1">{l.last_message}</p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
 
       {replyEmail && (
         <SendProjectEmailSheet
