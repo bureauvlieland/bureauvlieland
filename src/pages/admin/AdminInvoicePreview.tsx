@@ -520,15 +520,12 @@ const AdminInvoicePreview = () => {
     const fmt = (n: number) =>
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
-    // ── Slot-mode short-circuit: één regel voor het openstaande restant
-    const modeParamLocal = (searchParams.get("mode") || "full").toLowerCase();
+    // Slot-mode is deprecated: vervolgfacturen tonen altijd het volledige
+    // projectoverzicht met "Reeds gefactureerd" eronder. Dit is voor de
+    // klantadministratie de juiste vorm (zie plan: BTW pro-rata over restant).
     const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
-    const priorSumLocal = priorOtherLocal.reduce(
-      (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
-      0,
-    );
-    const netDueLocal = Math.max(0, totalsLocal.totalInclVat - priorSumLocal);
-    const isSlot = modeParamLocal === "slot" && priorOtherLocal.length > 0 && netDueLocal > 0.005;
+    const isSlot = false;
+
 
     // ── Build categorized line rows
     const categories: InvoiceCategory[] = [];
