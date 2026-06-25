@@ -1,44 +1,92 @@
-## Probleem
 
-1. **Chat & live-chat tab toont "13"** — dat is het totaal aantal recente berichten/conversaties, niet ongelezen. Verwarrend tegenover "Te beantwoorden 13" (e-mails).
-2. **Elke chat-rij toont "Actief"** — zegt niets. Geen visueel verschil tussen wél en niet ongelezen.
-3. **Volgorde** is puur op `last_message_at`. Een beantwoorde, recent gesloten chat staat boven een onbeantwoorde uit vanmorgen.
-4. **Te beantwoorden 13** = e-mails + chats + live-chat opgeteld. Logisch, maar e-mails per project groeperen komt in een volgende ronde (zoals jij aangaf).
+# Berichtencentrum: slim archief + e-mail-threads
 
-## Oplossing
+## Doel
+1. Afgeronde / geannuleerde projecten verdwijnen uit het berichtencentrum, maar zodra er **na** afronding nog een chat of e-mail binnenkomt, komt het dossier weer terug bovenaan.
+2. Admin kan handmatig hele gespreksdraden (chat én e-mail) archiveren met één klik. Nieuwe inkomende berichten heffen het archief automatisch op (Gmail-/Front-stijl).
+3. Tab **"Te beantwoorden"** wordt hernoemd naar **"E-mail"** en krijgt dezelfde 2-koloms opzet als de chat-tab: links groepen per project/klant/partner, rechts de complete e-mail-thread + inline beantwoorden.
 
-### A. Chat-tab badge telt alleen ongelezen
-`AdminMessages.tsx` rekent nu `chatsCount + liveChatsCount` (ruw aantal). Vervangen door:
-- `chatUnreadCount` = `unreadConversationIds.size` uit `useAdminChat` (conversaties met ongelezen visitor/customer/partner-berichten)
-- `liveChatUnreadCount` = som van `unread_count` over `inboxData.liveChats`
-- Tab-badge = som van beide. 0 = geen badge.
+---
 
-Zelfde fix in `useAdminInbox.totalUnread`, zodat de bel-dropdown rechtsboven hetzelfde getal toont.
+## 1. Slim archief (auto + handmatig)
 
-### B. Chat-rij krijgt heldere ongelezen-markering
-In `ChatConversationItem.tsx`:
-- Vervang het generieke "Actief" badge door:
-  - **Ongelezen**: rood pill met "● N nieuw" (count uit unread-map per conversatie).
-  - **Geen unread + status=closed**: grijze "Gesloten" pill.
-  - **Geen unread + status=waiting/active**: géén badge (rust).
-- Ongelezen rijen krijgen `font-semibold` naam, lichte achtergrond (`bg-rose-50/40`) en een dot links.
-- `useAdminChat` levert nu al `unreadConversationIds: Set<string>`; uitbreiden naar `unreadByConversation: Map<string, number>` (count per conversatie) zodat we het aantal kunnen tonen.
+### Auto-archief op project-niveau
+- Nieuwe kolom `archived_at TIMESTAMPTZ` op `program_requests` en `accommodation_requests`.
+- Trigger zet `archived_at = now()` zodra `completion_status` overgaat naar `ready_for_invoice`, `invoiced`, `completed`, `feedback_received` of `cancelled`. Reset naar `NULL` als de status terug verandert.
+- Filter-regel in `useAdminInbox` / `useAdminChat`: een project is verborgen **alleen als** `archived_at IS NOT NULL` **én** er geen inkomende e-mail of chat-bericht is met `created_at > archived_at`. Komt er na archivering nog mail/chat binnen → automatisch weer zichtbaar, bovenaan.
+- Trigger op `project_communications` (inbound) en `chat_messages` (niet-admin) reset `archived_at = NULL` op het gekoppelde project zodra zo'n bericht binnenkomt. Hierdoor blijft de filterlogica simpel en zonder per-query timestampvergelijking.
 
-### C. Sortering: ongelezen bovenaan
-In `ChatPanel.tsx` na `channelFiltered`: stabiel sorteren — eerst conversaties met `unreadByConversation.get(id) > 0` (op laatste bericht aflopend), daarna de rest. "Gesloten"-tab houdt huidige sortering.
+### Handmatig archiveren per draad
+- `chat_conversations.archived_at TIMESTAMPTZ` — kolom + actie "Archiveer gesprek" in chat-header.
+- `project_communications.archived_at TIMESTAMPTZ` per e-mail — actie "Archiveer thread" zet `archived_at = now()` op alle e-mails in die thread (zelfde project + contact_email).
+- Nieuwe inkomende chat/e-mail valt automatisch buiten archief (`archived_at IS NULL` voor de nieuwe row) → draad komt terug.
+- Optionele toggle "Toon gearchiveerd" in beide tabs (default uit).
 
-### D. Inbox-tabbadge consistent
-`unansweredCount` in `AdminMessages.tsx` blijft som van e-mail + chat-unread + live-chat-unread, maar gebruikt de nieuwe unread-tellers (B+A) zodat dropdown ↔ tab ↔ chat-tab altijd matchen.
+---
 
-### E. (Volgende ronde, niet nu) Te beantwoorden per project
-Notitie in `.lovable/plan.md`: e-mails in `InboxToAnswer` groeperen per `request_id`/`accommodation_id` met collapsible project-cards. Skippen we nu.
+## 2. E-mail tab herontwerp
 
-## Bestanden
+### Naam & navigatie
+- Tab "Te beantwoorden" → **"E-mail"**.
+- Sidebar-badge telt **ongelezen / onbeantwoorde** e-mailthreads (niet losse berichten).
 
-- `src/hooks/useAdminChat.ts` — `unreadByConversation` Map toevoegen aan return.
-- `src/hooks/useAdminInbox.ts` — `totalUnread` baseren op echte unread (live-chat ✓ al, chats herrekenen via read_at i.p.v. lookback).
-- `src/components/admin/chat/ChatConversationItem.tsx` — badge + styling per unread-state, accepteer `unreadCount` prop.
-- `src/components/admin/ChatPanel.tsx` — sortering + prop doorgeven + tabbadge "Inbox" gebruikt unread-aantal (al zo).
-- `src/pages/admin/AdminMessages.tsx` — tab-badge "Chat & live-chat" gebruikt nieuwe unread-tellers.
+### Layout (spiegelt `ChatPanel`)
+```text
+┌────────────────────┬──────────────────────────────────────┐
+│ 🔍 zoeken          │  Onderwerp / Klantnaam · BV-2606-001 │
+│ ─ filters ─        │  ───────────────────────────────────│
+│ ▾ BV-2606-0011  3● │  do 13:42  Klant → BV                 │
+│   Familie Jansen   │  "Bedankt voor het programma..."     │
+│ ▾ BV-2606-0007  1● │                                       │
+│ ▾ Zonder project   │  wo 09:15  BV → Klant                 │
+│   ─────────────    │  "Hierbij het voorstel..."           │
+│ Gearchiveerd ▸     │                                       │
+│                    │  [ Beantwoord ] [ Archiveer thread ] │
+│                    │  ───────── composer ─────────────────│
+└────────────────────┴──────────────────────────────────────┘
+```
 
-Geen DB-wijzigingen, geen edge-functions.
+### Linkerkolom
+- Groepering identiek aan chat: per project (programma/logies) met **referentienummer + klantnaam**, sortering = ongelezen/onbeantwoord eerst, daarna nieuwste e-mail.
+- "Zonder project" bucket voor losse inbound mail die nog niet aan een dossier hangt (handmatig koppelen mogelijk via bestaande project-koppelactie).
+- Rode pill `● N nieuw` voor onbeantwoorde threads; bold + lichte tint op ongelezen rijen.
+- Filterchips: **Alles · Onbeantwoord · Gearchiveerd**. Globale zoekbalk over onderwerp + content + afzender.
+
+### Rechterkolom (thread view)
+- Volledige conversatie chronologisch (inbound + outbound uit `project_communications` + `email_log`), bubble-stijl met afzender/datum.
+- Bijlagen tonen als kaartjes (al beschikbaar in `email_log.metadata`).
+- Acties bovenin: "Naar project", "Archiveer thread", "Markeer als (on)beantwoord".
+- Inline composer onderaan met dezelfde flow als `SendProjectEmailSheet` (Reply-To subaddressing blijft via Mailjet Parse webhook).
+- Quoted reply: bestaande `buildQuotedBody` hergebruiken.
+
+### Best practices die we meenemen
+- **Sticky headers** per groep zoals al in chat.
+- **Keyboard shortcuts**: `j/k` next/prev thread, `r` reply, `e` archive, `/` focus search.
+- **Snelle markeer-acties** bij hover op een thread-rij (archive / mark unread) — geen modaal nodig.
+- **Optimistic updates** voor markeer/archiveer zodat de lijst direct meebeweegt.
+- **Realtime sync**: bestaande Supabase-kanalen op `project_communications` + `chat_messages` blijven; nieuwe row haalt thread automatisch terug.
+
+---
+
+## 3. Technische uitvoering (samenvatting)
+
+1. **Migratie**
+   - `program_requests.archived_at`, `accommodation_requests.archived_at`
+   - `chat_conversations.archived_at`, `project_communications.archived_at`
+   - Triggers: zet archived_at bij completion_status-overgang; reset bij nieuwe inbound chat/e-mail.
+2. **Hooks**
+   - `useAdminInbox` + `useAdminChat`: vervang harde `TERMINAL_COMPLETION_STATUSES`-filter door check op `archived_at` van project/conversation/e-mail.
+   - Nieuwe `useEmailThreads` hook die `project_communications` groepeert per (project_id ?? contact_email) en thread-metadata teruggeeft (laatste bericht, unread count, archived).
+3. **UI**
+   - Nieuwe component `EmailPanel.tsx` (analoog aan `ChatPanel.tsx`) met 2-koloms layout, groepen, thread-detail en inline composer.
+   - `AdminMessages.tsx`: tab "Te beantwoorden" → "E-mail", rendert `EmailPanel` i.p.v. `InboxToAnswer`. `InboxToAnswer` blijft voor de bell-dropdown.
+   - Archive-knop in `ChatPanel` header voor handmatig chat-archief.
+4. **Bell-dropdown** (`InboxBell`)
+   - Telt op basis van dezelfde nieuwe filterlogica → na archivering verdwijnt het, bij nieuw bericht komt het terug.
+
+---
+
+## Out of scope (voorstel voor later)
+- Volledige labelling/tagging van e-mails.
+- Cross-project e-mail merge (zelfde afzender, verschillende projecten) — nu alleen per project gegroepeerd, "Zonder project" als vangnet.
+- Bulk-archiveren met checkbox-selectie (kan in v2 als behoefte blijkt).
