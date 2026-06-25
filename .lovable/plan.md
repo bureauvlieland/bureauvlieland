@@ -1,52 +1,48 @@
 ## Doel
-Claudia's aanbevelingen volgen dezelfde "rust & overzicht"-regels als de Werkbank Inbox: minder ruis, slimmer geclusterd, intuïtievere kaart.
+Vervolgfacturen (bijv. FV-BV-2605-0001-002) moeten voor de klant-boekhouding volledig zelfstandig leesbaar zijn: alle projectposten, BTW-uitsplitsing, "Reeds gefactureerd" met factuurnummers, en een netto te betalen bedrag met correct BTW-deel over alléén het restant.
 
-## Probleem nu
-- `claudia-daily-scan` haalt signalen op zonder rekening te houden met recent contact, snooze, of `completion_status` (`invoiced`/`completed`/`feedback_received`) — dus dezelfde signalen die we in de Werkbank al onderdrukken, komen via Claudia alsnog binnen.
-- Geen cooldown: een project waar gisteren contact mee was levert toch een "partner reageert niet"-aanbeveling.
-- UI groepeert puur op `priority`; meerdere aanbevelingen voor één project komen los te staan i.p.v. geclusterd per project.
-- Geen verschil tussen hot/warm/cold projecten.
+## Wijzigingen
 
-## Aanpak
+### 1. `src/pages/admin/AdminInvoicePreview.tsx`
+- Slot-mode short-circuit in `buildPdfBlob` (regels ~523–555) verwijderen: geen losse "Slotfactuur"-regel meer.
+- `mode=slot` blijft geaccepteerd voor backwards compat maar rendert identiek aan `full`.
+- `priorInvoices` altijd doorgeven aan de renderer.
+- Scherm-preview onder de slot-tak vervangen door dezelfde volledige tabel als full-mode, zodat scherm en PDF identiek zijn.
 
-### 1. Edge function `claudia-daily-scan` — signal-onderdrukking gelijktrekken met Werkbank
-In `gatherSignals` per signaaltype dezelfde guards toepassen als in `getInbox.ts` / `check-pending-items`:
+### 2. `src/lib/invoicePdfRenderer.ts` — BTW-logica
+Renderer berekent en toont twee BTW-blokken:
 
-- **Projectfilter**: sluit projecten uit waar `completion_status in ('ready_for_invoice'… wel toelaten, maar 'invoiced','completed','feedback_received','cancelled')` of `program_requests.status in ('completed','cancelled')`.
-  - Uitzondering: `ready_for_invoice` mag wel een signaal blijven (categorie 7).
-- **Cooldown per project**: bepaal `lastContactAt` uit `project_communications` + `program_request_items.status_updated_at` (zelfde bron als `loadInbox`). 
-  - `hot` (<3 dagen contact) → onderdruk niet-urgente signaaltypes (`partner_overdue`, `lodging_no_quotes`, `lodging_quote_unforwarded`, `todo_overdue` zonder harde deadline).
-  - `warm` (<7 dagen) → onderdruk alleen `info`-achtige todo's.
-  - `cold` → alles tonen.
-- **Snooze**: respecteer `program_requests.snoozed_until > now()` (categorie features/project-snooze).
-- Gedeelde helper hergebruiken: extraheer `shouldShowDuringCooldown` + `getProjectActivityState` uit `src/lib/projectActivity.ts` naar een Deno-compatibele module die de edge function importeert (of dupliceer minimaal in de edge function — eenvoudigste route, want geen build-pipeline tussen `src/` en `supabase/functions/`).
+1. **BTW over projecttotaal** (informatief, helpt klant projectadministratie sluitend te maken):
+   - Per tarief: excl, BTW, incl over het hele project.
 
-### 2. AI-prompt verfijnen
-- Voeg expliciet toe dat signalen waar `last_contact_days < 3` bij staan **info-only** mogen zijn, niet urgent.
-- Vraag de AI om aanbevelingen te clusteren: max 1 aanbeveling per project tenzij er financieel verschillende acties zijn.
-- Signalen krijgen extra velden: `last_contact_days`, `cooldown` ("hot"/"warm"/"cold"), `completion_status`.
+2. **BTW over deze factuur** (fiscaal leidend op deze factuur):
+   - Per BTW-tarief de pro-rata aandeel berekenen:
+     - `aandeel_tarief = (project_incl_tarief / project_incl_totaal)`
+     - `restant_incl_tarief = netto_te_betalen × aandeel_tarief`
+     - `restant_excl_tarief = restant_incl_tarief / (1 + tarief)`
+     - `restant_btw_tarief = restant_incl_tarief − restant_excl_tarief`
+   - Som van `restant_btw_tarief` over alle tarieven = BTW die op deze factuur wordt aangegeven.
+   - Afrondingsverschillen opvangen door laatste tariefregel te corrigeren zodat totaal exact klopt.
 
-### 3. UI `ClaudiaRecommendationsCard.tsx` — slimmer & intuïtiever
+Layout onderaan PDF:
+```
+Projecttotaal incl. BTW          € X
+  BTW 21% / 9% / 0% over project (specificatie)
+Reeds gefactureerd
+  FV-…-001 · 12-06-2026          − € Y
+Te betalen                        € Z
+  waarvan BTW 21%                 € a
+  waarvan BTW  9%                 € b
+  waarvan BTW  0%                 € c
+```
 
-- **Groeperen per project** (hetzelfde patroon als Werkbank Inbox): één rij per project, badges per onderliggende aanbeveling, met cooldown-pill ("3 dagen geleden contact").
-- **Cross-entity aanbevelingen** (commissiefacturen, orphan todo's) blijven in een aparte sectie "Overig".
-- **Sectie-volgorde**: `Urgent` → `Actie deze week` → `Overig / info`. Info-sectie standaard ingeklapt.
-- **Lege staat**: "Alles in orde" tekst houden, maar toon laatste run + telling van onderdrukte signalen (`x signalen onderdrukt door recent contact`).
-- **Per-rij snooze**: knop "Sluimer 3 dagen" naast Done/Dismiss; schrijft `dismissed_until` (nieuwe kolom of hergebruik `feedback_at` + `status='snoozed'`). Voor scope nu: alleen `status='dismissed'` met expliciete toast "weer zichtbaar bij volgende run als nog steeds relevant" — geen schemawijziging.
-- **Badge-teller in `ClaudiaBadge`**: telling sluit `info` uit zodat sidebar niet rood is om niet-urgente signalen.
+### 3. Edge case: laatste factuur met afrondingsverschil
+Als `netto_te_betalen` door eerdere afrondingen ±0,01 afwijkt, wordt het verschil op de hoogste BTW-categorie gecorrigeerd zodat het totaal van "waarvan BTW" exact gelijk is aan projecttotaal-BTW − reeds-gefactureerde-BTW.
 
-### 4. Tests
-- Unit tests voor de gedeelde cooldown-helper (al aanwezig in `projectActivity.test.ts`) uitbreiden met scenario's specifiek voor Claudia (snooze + completion_status).
-- Geen edge function tests (geen runner) — wel handmatige run-knop voor verificatie.
+### 4. Geen DB-wijzigingen
+`bureau_invoices` en bestaande `priorInvoices`-koppeling werken al; alleen presentatie en BTW-berekening op de PDF veranderen.
 
-## Technisch overzicht (bestanden)
-- `supabase/functions/claudia-daily-scan/index.ts`: filters per signal-categorie, lastContact-lookup, extra velden in `Signal`, prompt update.
-- `supabase/functions/_shared/projectActivity.ts` *(nieuw)*: Deno-port van `getProjectActivityState` + `shouldShowDuringCooldown`.
-- `src/lib/projectActivity.ts`: ongewijzigd (frontend), eventueel constante export delen.
-- `src/components/admin/werkbank/ClaudiaRecommendationsCard.tsx`: groeperen per project, cooldown-pill, ingeklapte info-sectie, "Onderdrukt"-teller in header.
-- `src/components/admin/ClaudiaBadge.tsx`: `total` filteren op `priority != 'info'`.
-- `src/lib/__tests__/projectActivity.test.ts`: extra cases.
-
-## Niet in scope
-- Geen schemawijziging op `admin_recommendations` (snooze-veld).
-- Geen wijziging aan cron-frequentie.
+## Resultaat
+- Klant ziet de volledige projectspecificatie voor zijn boekhouding.
+- Klant ziet duidelijk welke BTW hij op déze factuur als voorbelasting boekt (alleen over het restant).
+- Optelling van BTW over alle deelfacturen = BTW over het projecttotaal, zonder dubbeltellingen.
