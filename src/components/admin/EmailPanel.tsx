@@ -479,8 +479,8 @@ export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220
           requestId={replyContext.requestId}
           accommodationId={replyContext.accommodationId}
           recipients={replyContext.recipients}
-          initialSubject={replyContext.initialSubject}
           defaultSubject={replyContext.initialSubject}
+
 
         />
       )}
