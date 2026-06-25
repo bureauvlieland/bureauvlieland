@@ -15,7 +15,7 @@ async function fetchOpenCount(): Promise<{ total: number; urgent: number }> {
     .eq("status", "open")
     .gte("expires_at", nowIso);
   if (error) throw error;
-  const rows = (data ?? []) as { priority: string }[];
+  const rows = ((data ?? []) as { priority: string }[]).filter((r) => r.priority !== "info");
   return {
     total: rows.length,
     urgent: rows.filter((r) => r.priority === "urgent").length,
