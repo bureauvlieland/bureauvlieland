@@ -44,6 +44,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
+import { useAdminInbox } from "@/hooks/useAdminInbox";
 
 interface EmailLog {
   id: string;
@@ -98,7 +99,8 @@ const AdminMessages = () => {
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
 
-  const { data: unansweredCount = 0 } = useQuery({
+  const { data: inboxData } = useAdminInbox();
+  const { data: unansweredEmailCount = 0 } = useQuery({
     queryKey: ["inbox-unanswered-count"],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -111,6 +113,9 @@ const AdminMessages = () => {
     },
     refetchInterval: 60_000,
   });
+  const chatsCount = inboxData?.chats.length ?? 0;
+  const liveChatsCount = inboxData?.liveChats.reduce((s, l) => s + l.unread_count, 0) ?? 0;
+  const unansweredCount = unansweredEmailCount + chatsCount + liveChatsCount;
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
