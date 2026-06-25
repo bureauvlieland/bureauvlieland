@@ -124,21 +124,26 @@ export function useAdminChat() {
     return () => { supabase.removeChannel(channel); };
   }, [activeConversationId]);
 
-  // Unread count – count distinct conversations with unread visitor messages
+  // Unread count – count distinct conversations with unread visitor/customer/partner messages
   const [unreadConversationIds, setUnreadConversationIds] = useState<Set<string>>(new Set());
+  const [unreadByConversation, setUnreadByConversation] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     const fetchUnread = async () => {
       const { data } = await supabase
         .from("chat_messages")
         .select("conversation_id")
-        .in("sender_type", ["visitor", "customer"])
+        .neq("sender_type", "admin")
         .is("read_at", null);
-      const ids = new Set((data || []).map((r: { conversation_id: string }) => r.conversation_id));
+      const counts = new Map<string, number>();
+      (data || []).forEach((r: { conversation_id: string }) => {
+        counts.set(r.conversation_id, (counts.get(r.conversation_id) ?? 0) + 1);
+      });
+      setUnreadByConversation(counts);
+      const ids = new Set(counts.keys());
       setUnreadConversationIds(ids);
       setUnreadCount(ids.size);
     };
-    fetchUnread();
     fetchUnread();
 
     const channel = supabase
