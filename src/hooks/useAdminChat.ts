@@ -21,18 +21,58 @@ export function useAdminChat() {
       .select("*, chat_messages!inner(id)")
       .order("last_message_at", { ascending: false })
       .limit(50);
-    if (data) {
-      const seen = new Set<string>();
-      const unique = (data as Array<ChatConversation & { chat_messages?: unknown }>)
-        .filter((c) => {
-          if (seen.has(c.id)) return false;
-          seen.add(c.id);
-          return true;
-        })
-        .map(({ chat_messages: _msgs, ...rest }) => rest as ChatConversation);
-      setConversations(unique);
+    if (!data) return;
+
+    const seen = new Set<string>();
+    const unique = (data as Array<ChatConversation & { chat_messages?: unknown }>)
+      .filter((c) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      })
+      .map(({ chat_messages: _msgs, ...rest }) => rest as ChatConversation);
+
+    // Archiveer chats van afgeronde/geannuleerde projecten
+    const { TERMINAL_COMPLETION_STATUSES } = await import("@/lib/projectActivity");
+    const programIds = Array.from(new Set(unique.map((c) => c.request_id).filter(Boolean) as string[]));
+    const accommodationIds = Array.from(
+      new Set(unique.map((c) => (c as any).accommodation_request_id).filter(Boolean) as string[]),
+    );
+    const archivedPrograms = new Set<string>();
+    const archivedAccommodations = new Set<string>();
+    if (programIds.length > 0) {
+      const { data: progs } = await supabase
+        .from("program_requests")
+        .select("id, completion_status")
+        .in("id", programIds);
+      (progs ?? []).forEach((p: any) => {
+        if (p.completion_status && TERMINAL_COMPLETION_STATUSES.has(p.completion_status)) {
+          archivedPrograms.add(p.id);
+        }
+      });
     }
+    if (accommodationIds.length > 0) {
+      const { data: accs } = await supabase
+        .from("accommodation_requests")
+        .select("id, completion_status")
+        .in("id", accommodationIds);
+      (accs ?? []).forEach((a: any) => {
+        if (a.completion_status && TERMINAL_COMPLETION_STATUSES.has(a.completion_status)) {
+          archivedAccommodations.add(a.id);
+        }
+      });
+    }
+
+    const filtered = unique.filter((c) => {
+      if (c.request_id && archivedPrograms.has(c.request_id)) return false;
+      const accId = (c as any).accommodation_request_id as string | null | undefined;
+      if (accId && archivedAccommodations.has(accId)) return false;
+      return true;
+    });
+
+    setConversations(filtered);
   }, []);
+
 
   // Derived filtered lists
   const waitingConversations = useMemo(
@@ -135,8 +175,12 @@ export function useAdminChat() {
         .select("conversation_id")
         .neq("sender_type", "admin")
         .is("read_at", null);
+      const visibleIds = new Set(conversations.map((c) => c.id));
       const counts = new Map<string, number>();
       (data || []).forEach((r: { conversation_id: string }) => {
+        // Tel alleen mee als de conversatie nog actief is (gearchiveerde
+        // projecten zijn al uit `conversations` gefilterd).
+        if (visibleIds.size > 0 && !visibleIds.has(r.conversation_id)) return;
         counts.set(r.conversation_id, (counts.get(r.conversation_id) ?? 0) + 1);
       });
       setUnreadByConversation(counts);
@@ -145,6 +189,7 @@ export function useAdminChat() {
       setUnreadCount(ids.size);
     };
     fetchUnread();
+
 
     const channel = supabase
       .channel("admin-unread-count")
@@ -156,7 +201,8 @@ export function useAdminChat() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [conversations]);
+
 
   // Admin presence
   const updatePresence = useCallback(async (online: boolean) => {

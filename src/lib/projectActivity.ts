@@ -156,3 +156,17 @@ export function shouldShowDuringCooldown(
   // warm: high blijft door, normal/low wordt onderdrukt
   return prio === "high";
 }
+
+/**
+ * Projecten met deze completion_status worden gearchiveerd: hun chats en
+ * inkomende e-mails verschijnen niet meer in het berichtencentrum / inbox.
+ * Spiegelt supabase/functions/_shared/projectActivity.ts.
+ */
+export const TERMINAL_COMPLETION_STATUSES = new Set<string>([
+  "ready_for_invoice",
+  "invoiced",
+  "completed",
+  "feedback_received",
+  "cancelled",
+]);
+
