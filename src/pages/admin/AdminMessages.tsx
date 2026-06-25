@@ -46,7 +46,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
 import { ChatPanel } from "@/components/admin/ChatPanel";
+import { EmailPanel } from "@/components/admin/EmailPanel";
 import { useAdminInbox } from "@/hooks/useAdminInbox";
+
 
 interface EmailLog {
   id: string;
