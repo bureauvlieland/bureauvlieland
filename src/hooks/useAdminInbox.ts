@@ -147,10 +147,12 @@ async function fetchInbox(): Promise<InboxData> {
   const allMsgs: (InboxChatMessage & { read_at: string | null })[] = (msgsRes.data ?? [])
     .filter((m: any) => {
       const conv = convMap.get(m.conversation_id) ?? {};
+      if (conv.archived_at) return false;
       if (conv.request_id && archivedProgramIds.has(conv.request_id)) return false;
       if (conv.accommodation_request_id && archivedAccommodationIds.has(conv.accommodation_request_id)) return false;
       return true;
     })
+
     .map((m: any) => {
       const conv = convMap.get(m.conversation_id) ?? {};
       return {
