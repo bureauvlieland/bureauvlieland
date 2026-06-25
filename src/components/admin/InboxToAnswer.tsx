@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,9 +20,12 @@ import {
   ChevronDown,
   ChevronRight,
   Mail,
+  MessageSquare,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
+import { useAdminInbox, type InboxChatMessage, type InboxLiveChat } from "@/hooks/useAdminInbox";
 
 interface InboundEmail {
   id: string;
