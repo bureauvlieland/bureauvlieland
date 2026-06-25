@@ -532,25 +532,8 @@ const AdminInvoicePreview = () => {
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
 
 
-    if (isSlot) {
-      // Eén factuurregel: het openstaande restant.
-      const priorRefs = priorOtherLocal.map((p) => p.invoice_number).join(", ");
-      const sub = priorRefs
-        ? `Restant na reeds gefactureerde termijn${priorOtherLocal.length > 1 ? "en" : ""}: ${priorRefs}`
-        : "Restant openstaand bedrag";
-      categories.push({
-        label: "Termijnfactuur",
-        rows: [
-          {
-            description: `Slotfactuur project ${request.reference_number ?? ""}`.trim(),
-            subDescription: sub,
-            qty: "1",
-            unitPrice: fmt(netDueLocal),
-            amount: fmt(netDueLocal),
-          },
-        ],
-      });
-    } else {
+    {
+
 
     for (const cat of sortedCategories) {
       const catItems = groupedByCategory[cat];
