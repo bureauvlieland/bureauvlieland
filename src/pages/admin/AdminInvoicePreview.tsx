@@ -692,35 +692,6 @@ const AdminInvoicePreview = () => {
     }
     }
 
-    // Pro-rata BTW-uitsplitsing voor slot-mode (zelfde logica als render).
-    let slotTotalsLocal: { totalExclVat: number; totalVat: number; totalInclVat: number; vatLines: { rate: number; exclVat: number; vatAmount: number }[] } | null = null;
-    if (isSlot && totalsLocal.totalInclVat > 0) {
-      const factor = netDueLocal / totalsLocal.totalInclVat;
-      let runE = 0, runV = 0;
-      const lines = totalsLocal.vatLines.map((l) => {
-        const exclVat = Math.round(l.exclVat * factor * 100) / 100;
-        const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
-        runE += exclVat; runV += vatAmount;
-        return { rate: l.rate, exclVat, vatAmount };
-      });
-      if (lines.length > 0) {
-        const diff = netDueLocal - (runE + runV);
-        const idx = lines.findIndex((l) => l.rate > 0);
-        const i = idx === -1 ? 0 : idx;
-        const r = lines[i].rate;
-        const exclAdd = r > 0 ? diff / (1 + r / 100) : diff;
-        lines[i].exclVat = Math.round((lines[i].exclVat + exclAdd) * 100) / 100;
-        lines[i].vatAmount = Math.round((lines[i].vatAmount + (diff - exclAdd)) * 100) / 100;
-      }
-      slotTotalsLocal = {
-        totalExclVat: lines.reduce((s, l) => s + l.exclVat, 0),
-        totalVat: lines.reduce((s, l) => s + l.vatAmount, 0),
-        totalInclVat: netDueLocal,
-        vatLines: lines,
-      };
-    }
-
-
     // ── Customer block
     const billingNameLocal =
       request.billing_company_name || request.customer_company || request.customer_name;
@@ -762,27 +733,23 @@ const AdminInvoicePreview = () => {
         deliveryDate: eventDates || undefined,
       },
       categories,
-      totals: slotTotalsLocal ?? {
+      totals: {
         totalExclVat: totalsLocal.totalExclVat,
         totalVat: totalsLocal.totalVat,
         totalInclVat: totalsLocal.totalInclVat,
         vatLines: totalsLocal.vatLines,
       },
       notes: notes || undefined,
-      priorInvoices: isSlot
-        ? []
-        : priorInvoices
-            .filter((p) => p.invoice_number !== invoiceNumber)
-            .map((p) => ({
-              invoiceNumber: p.invoice_number,
-              invoiceDate: new Date(p.invoice_date),
-              amountInclVat:
-                p.invoice_type === "credit"
-                  ? -Number(p.amount_incl_vat)
-                  : Number(p.amount_incl_vat),
-            })),
-
+      priorInvoices: priorOtherLocal.map((p) => ({
+        invoiceNumber: p.invoice_number,
+        invoiceDate: new Date(p.invoice_date),
+        amountInclVat:
+          p.invoice_type === "credit"
+            ? -Number(p.amount_incl_vat)
+            : Number(p.amount_incl_vat),
+      })),
     });
+
 
     return blob;
   };
