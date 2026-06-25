@@ -282,8 +282,9 @@ const AdminMessages = () => {
             </TabsList>
 
             <TabsContent value="inbox" className="mt-4">
-              <InboxToAnswer initialOpenId={highlightedInboxId} />
+              <EmailPanel initialOpenId={highlightedInboxId} />
             </TabsContent>
+
 
             <TabsContent value="chat" className="mt-4">
               <ChatPanel initialConversationId={initialConversationId} />
