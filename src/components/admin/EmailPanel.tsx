@@ -261,11 +261,11 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
   return Array.from(groups.values())
     .map((g) => ({
       ...g,
-      items: g.items.slice().sort((a, b) => a.date.localeCompare(b.date)),
+      items: g.items.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")),
     }))
     .sort((a, b) => {
       if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1;
-      return b.lastAt.localeCompare(a.lastAt);
+      return (b.lastAt || "").localeCompare(a.lastAt || "");
     });
 }
 
