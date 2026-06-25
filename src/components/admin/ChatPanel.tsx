@@ -35,7 +35,10 @@ import {
   Phone,
   ArrowLeft,
   BedDouble,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
+
 
 type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
 
@@ -66,8 +69,12 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
     updatePresence,
     sendMessage,
     closeConversation,
+    archiveConversation,
+    showArchived,
+    setShowArchived,
     saveChatToProject,
   } = useAdminChat();
+
 
   const projectRefs = useConversationProjects(conversations);
   const navigate = useNavigate();
@@ -165,7 +172,15 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
             <span className="text-muted-foreground">{isOnline ? "Online" : "Offline"}</span>
             <Switch checked={isOnline} onCheckedChange={(v) => updatePresence(v)} />
           </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Archive className="h-3 w-3" /> Toon archief
+            </span>
+            <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+          </div>
         </div>
+
+
 
         <div className="px-3 pt-3">
           <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ChatStatusFilter)}>
@@ -416,6 +431,32 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
                     Sluiten
                   </Button>
                 )}
+                {(activeConversation as any).archived_at ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      archiveConversation(activeConversation.id, false);
+                      toast.success("Gesprek teruggehaald uit archief");
+                    }}
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-1" />
+                    Uit archief
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      archiveConversation(activeConversation.id, true);
+                      toast.success("Gesprek gearchiveerd");
+                    }}
+                  >
+                    <Archive className="h-4 w-4 mr-1" />
+                    Archiveer
+                  </Button>
+                )}
+
               </div>
             </div>
 

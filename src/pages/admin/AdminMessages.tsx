@@ -46,7 +46,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
 import { ChatPanel } from "@/components/admin/ChatPanel";
+import { EmailPanel } from "@/components/admin/EmailPanel";
 import { useAdminInbox } from "@/hooks/useAdminInbox";
+
 
 interface EmailLog {
   id: string;
@@ -249,8 +251,8 @@ const AdminMessages = () => {
           >
             <TabsList>
               <TabsTrigger value="inbox" className="gap-2">
-                <Inbox className="h-4 w-4" />
-                Te beantwoorden
+                <Mail className="h-4 w-4" />
+                E-mail
                 {unansweredCount > 0 && (
                   <Badge
                     variant="secondary"
@@ -260,6 +262,7 @@ const AdminMessages = () => {
                   </Badge>
                 )}
               </TabsTrigger>
+
               <TabsTrigger value="chat" className="gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Chat & live-chat
@@ -279,8 +282,9 @@ const AdminMessages = () => {
             </TabsList>
 
             <TabsContent value="inbox" className="mt-4">
-              <InboxToAnswer initialOpenId={highlightedInboxId} />
+              <EmailPanel initialOpenId={highlightedInboxId} />
             </TabsContent>
+
 
             <TabsContent value="chat" className="mt-4">
               <ChatPanel initialConversationId={initialConversationId} />

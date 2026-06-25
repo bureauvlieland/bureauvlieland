@@ -15,6 +15,8 @@ export function useAdminChat() {
 
   // Load conversations (alleen die met minimaal 1 bericht — voorkomt lege chats
   // die ontstaan zodra een klant/partner het chatvenster opent zonder te typen)
+  const [showArchived, setShowArchived] = useState(false);
+
   const loadConversations = useCallback(async () => {
     const { data } = await supabase
       .from("chat_conversations")
@@ -24,16 +26,16 @@ export function useAdminChat() {
     if (!data) return;
 
     const seen = new Set<string>();
-    const unique = (data as Array<ChatConversation & { chat_messages?: unknown }>)
+    const unique = (data as Array<ChatConversation & { chat_messages?: unknown; archived_at?: string | null }>)
       .filter((c) => {
         if (seen.has(c.id)) return false;
         seen.add(c.id);
         return true;
       })
-      .map(({ chat_messages: _msgs, ...rest }) => rest as ChatConversation);
+      .map(({ chat_messages: _msgs, ...rest }) => rest as ChatConversation & { archived_at?: string | null });
 
-    // Archiveer chats van afgeronde/geannuleerde projecten
-    const { TERMINAL_COMPLETION_STATUSES } = await import("@/lib/projectActivity");
+    // Project-niveau archief — trigger reset archived_at op program/accommodation
+    // zodra er weer een inbound bericht binnenkomt.
     const programIds = Array.from(new Set(unique.map((c) => c.request_id).filter(Boolean) as string[]));
     const accommodationIds = Array.from(
       new Set(unique.map((c) => (c as any).accommodation_request_id).filter(Boolean) as string[]),
@@ -43,35 +45,34 @@ export function useAdminChat() {
     if (programIds.length > 0) {
       const { data: progs } = await supabase
         .from("program_requests")
-        .select("id, completion_status")
-        .in("id", programIds);
-      (progs ?? []).forEach((p: any) => {
-        if (p.completion_status && TERMINAL_COMPLETION_STATUSES.has(p.completion_status)) {
-          archivedPrograms.add(p.id);
-        }
-      });
+        .select("id, archived_at")
+        .in("id", programIds)
+        .not("archived_at", "is", null);
+      (progs ?? []).forEach((p: any) => archivedPrograms.add(p.id));
     }
     if (accommodationIds.length > 0) {
       const { data: accs } = await supabase
         .from("accommodation_requests")
-        .select("id, completion_status")
-        .in("id", accommodationIds);
-      (accs ?? []).forEach((a: any) => {
-        if (a.completion_status && TERMINAL_COMPLETION_STATUSES.has(a.completion_status)) {
-          archivedAccommodations.add(a.id);
-        }
-      });
+        .select("id, archived_at")
+        .in("id", accommodationIds)
+        .not("archived_at", "is", null);
+      (accs ?? []).forEach((a: any) => archivedAccommodations.add(a.id));
     }
 
     const filtered = unique.filter((c) => {
-      if (c.request_id && archivedPrograms.has(c.request_id)) return false;
-      const accId = (c as any).accommodation_request_id as string | null | undefined;
-      if (accId && archivedAccommodations.has(accId)) return false;
+      if (!showArchived) {
+        if ((c as any).archived_at) return false;
+        if (c.request_id && archivedPrograms.has(c.request_id)) return false;
+        const accId = (c as any).accommodation_request_id as string | null | undefined;
+        if (accId && archivedAccommodations.has(accId)) return false;
+      }
       return true;
     });
 
     setConversations(filtered);
-  }, []);
+  }, [showArchived]);
+
+
 
 
   // Derived filtered lists
@@ -288,6 +289,18 @@ export function useAdminChat() {
     loadConversations();
   }, [activeConversationId, loadConversations]);
 
+  const archiveConversation = useCallback(async (id: string, archived = true) => {
+    await supabase
+      .from("chat_conversations")
+      .update({ archived_at: archived ? new Date().toISOString() : null })
+      .eq("id", id);
+    if (archived && activeConversationId === id) {
+      setActiveConversationId(null);
+    }
+    loadConversations();
+  }, [activeConversationId, loadConversations]);
+
+
   // Save chat history to project communications
   const saveChatToProject = useCallback(async (conversationId: string): Promise<boolean> => {
     const conv = conversations.find(c => c.id === conversationId);
@@ -335,9 +348,13 @@ export function useAdminChat() {
     isOnline,
     statusFilter,
     setStatusFilter,
+    showArchived,
+    setShowArchived,
     updatePresence,
     sendMessage,
     closeConversation,
+    archiveConversation,
     saveChatToProject,
   };
 }
+

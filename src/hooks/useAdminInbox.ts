@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { TERMINAL_COMPLETION_STATUSES } from "@/lib/projectActivity";
+
 
 
 const SEEN_KEY = "admin_inbox_seen_at";
@@ -63,9 +63,10 @@ async function fetchInbox(): Promise<InboxData> {
   const [emailsRes, msgsRes] = await Promise.all([
     supabase
       .from("project_communications")
-      .select("id, subject, contact_name, contact_email, content, communication_date, request_id, accommodation_id, direction")
+      .select("id, subject, contact_name, contact_email, content, communication_date, request_id, accommodation_id, direction, archived_at")
       .eq("direction", "inbound")
       .is("answered_at", null)
+      .is("archived_at", null)
       .gte("communication_date", sinceIso)
       .order("communication_date", { ascending: false })
       .limit(20),
@@ -81,18 +82,19 @@ async function fetchInbox(): Promise<InboxData> {
   if (emailsRes.error) throw emailsRes.error;
   if (msgsRes.error) throw msgsRes.error;
 
-  // Fetch conversations for chat messages
+  // Fetch conversations for chat messages (incl. archived_at op conversatie-niveau)
   const convIds = Array.from(new Set((msgsRes.data ?? []).map((m: any) => m.conversation_id)));
   let convMap = new Map<string, any>();
   if (convIds.length > 0) {
     const { data: convs } = await supabase
       .from("chat_conversations")
-      .select("id, source, request_id, accommodation_request_id, visitor_name, last_message_at")
+      .select("id, source, request_id, accommodation_request_id, visitor_name, last_message_at, archived_at")
       .in("id", convIds);
     (convs ?? []).forEach((c: any) => convMap.set(c.id, c));
   }
 
-  // Verzamel alle project-IDs (programma + logies) om gearchiveerde dossiers te filteren
+  // Project-niveau archief: hide when archived_at IS NOT NULL.
+  // Trigger reset archived_at zodra er weer een inbound bericht/e-mail komt.
   const programIds = new Set<string>();
   const accommodationIds = new Set<string>();
   (emailsRes.data ?? []).forEach((e: any) => {
@@ -109,24 +111,18 @@ async function fetchInbox(): Promise<InboxData> {
   if (programIds.size > 0) {
     const { data: progs } = await supabase
       .from("program_requests")
-      .select("id, completion_status")
-      .in("id", Array.from(programIds));
-    (progs ?? []).forEach((p: any) => {
-      if (p.completion_status && TERMINAL_COMPLETION_STATUSES.has(p.completion_status)) {
-        archivedProgramIds.add(p.id);
-      }
-    });
+      .select("id, archived_at")
+      .in("id", Array.from(programIds))
+      .not("archived_at", "is", null);
+    (progs ?? []).forEach((p: any) => archivedProgramIds.add(p.id));
   }
   if (accommodationIds.size > 0) {
     const { data: accs } = await supabase
       .from("accommodation_requests")
-      .select("id, completion_status")
-      .in("id", Array.from(accommodationIds));
-    (accs ?? []).forEach((a: any) => {
-      if (a.completion_status && TERMINAL_COMPLETION_STATUSES.has(a.completion_status)) {
-        archivedAccommodationIds.add(a.id);
-      }
-    });
+      .select("id, archived_at")
+      .in("id", Array.from(accommodationIds))
+      .not("archived_at", "is", null);
+    (accs ?? []).forEach((a: any) => archivedAccommodationIds.add(a.id));
   }
 
   const emails: InboxEmail[] = (emailsRes.data ?? [])
@@ -147,13 +143,16 @@ async function fetchInbox(): Promise<InboxData> {
     }));
 
 
+
   const allMsgs: (InboxChatMessage & { read_at: string | null })[] = (msgsRes.data ?? [])
     .filter((m: any) => {
       const conv = convMap.get(m.conversation_id) ?? {};
+      if (conv.archived_at) return false;
       if (conv.request_id && archivedProgramIds.has(conv.request_id)) return false;
       if (conv.accommodation_request_id && archivedAccommodationIds.has(conv.accommodation_request_id)) return false;
       return true;
     })
+
     .map((m: any) => {
       const conv = convMap.get(m.conversation_id) ?? {};
       return {
