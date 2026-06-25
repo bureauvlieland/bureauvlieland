@@ -285,6 +285,7 @@ export function useAdminChat() {
     messages,
     unreadCount,
     unreadConversationIds,
+    unreadByConversation,
     isOnline,
     statusFilter,
     setStatusFilter,
