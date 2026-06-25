@@ -289,6 +289,18 @@ export function useAdminChat() {
     loadConversations();
   }, [activeConversationId, loadConversations]);
 
+  const archiveConversation = useCallback(async (id: string, archived = true) => {
+    await supabase
+      .from("chat_conversations")
+      .update({ archived_at: archived ? new Date().toISOString() : null })
+      .eq("id", id);
+    if (archived && activeConversationId === id) {
+      setActiveConversationId(null);
+    }
+    loadConversations();
+  }, [activeConversationId, loadConversations]);
+
+
   // Save chat history to project communications
   const saveChatToProject = useCallback(async (conversationId: string): Promise<boolean> => {
     const conv = conversations.find(c => c.id === conversationId);
