@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { TERMINAL_COMPLETION_STATUSES } from "@/lib/projectActivity";
+
 
 
 const SEEN_KEY = "admin_inbox_seen_at";
