@@ -207,18 +207,110 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
               Geen gesprekken
             </div>
           )}
-          {channelFiltered.map((conv) => (
-            <ChatConversationItem
-              key={conv.id}
-              conversation={conv}
-              isActive={activeConversationId === conv.id}
-              projectRef={projectRefs[conv.id]}
-              unreadCount={unreadByConversation.get(conv.id) ?? 0}
-              onClick={() => setActiveConversationId(conv.id)}
-            />
-          ))}
+          {(() => {
+            type Group = {
+              key: string;
+              label: string;
+              icon: "program" | "accommodation" | "none";
+              targetHref: string | null;
+              convs: typeof channelFiltered;
+              unread: number;
+              lastAt: string;
+            };
+            const groups = new Map<string, Group>();
+            for (const conv of channelFiltered) {
+              const ref = projectRefs[conv.id];
+              let key: string;
+              let label: string;
+              let icon: Group["icon"];
+              let href: string | null;
+              if (ref?.program) {
+                key = `p:${ref.program.id}`;
+                label = ref.program.reference;
+                icon = "program";
+                href = `/admin/aanvragen/${ref.program.id}`;
+              } else if (ref?.accommodation) {
+                key = `a:${ref.accommodation.id}`;
+                label = ref.accommodation.label;
+                icon = "accommodation";
+                href = `/admin/logies/${ref.accommodation.id}`;
+              } else {
+                key = "none";
+                label = "Zonder project";
+                icon = "none";
+                href = null;
+              }
+              const u = unreadByConversation.get(conv.id) ?? 0;
+              const g = groups.get(key);
+              if (g) {
+                g.convs.push(conv);
+                g.unread += u;
+                if (conv.last_message_at > g.lastAt) g.lastAt = conv.last_message_at;
+              } else {
+                groups.set(key, {
+                  key,
+                  label,
+                  icon,
+                  targetHref: href,
+                  convs: [conv],
+                  unread: u,
+                  lastAt: conv.last_message_at,
+                });
+              }
+            }
+            const ordered = Array.from(groups.values()).sort((a, b) => {
+              if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1;
+              if (a.unread !== b.unread) return b.unread - a.unread;
+              if (a.key === "none") return 1;
+              if (b.key === "none") return -1;
+              return b.lastAt.localeCompare(a.lastAt);
+            });
+            return ordered.map((g) => (
+              <div key={g.key}>
+                <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-50 border-b sticky top-0 z-10">
+                  <button
+                    type="button"
+                    onClick={() => g.targetHref && navigate(g.targetHref)}
+                    disabled={!g.targetHref}
+                    className={cn(
+                      "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600 truncate",
+                      g.targetHref && "hover:text-primary"
+                    )}
+                  >
+                    {g.icon === "program" ? (
+                      <FileText className="h-3 w-3" />
+                    ) : g.icon === "accommodation" ? (
+                      <BedDouble className="h-3 w-3" />
+                    ) : (
+                      <MessageCircle className="h-3 w-3" />
+                    )}
+                    <span className="truncate">{g.label}</span>
+                    <span className="text-slate-400 normal-case font-normal">
+                      · {g.convs.length}
+                    </span>
+                  </button>
+                  {g.unread > 0 && (
+                    <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
+                      {g.unread}
+                    </Badge>
+                  )}
+                </div>
+                {g.convs.map((conv) => (
+                  <ChatConversationItem
+                    key={conv.id}
+                    conversation={conv}
+                    isActive={activeConversationId === conv.id}
+                    projectRef={projectRefs[conv.id]}
+                    unreadCount={unreadByConversation.get(conv.id) ?? 0}
+                    onClick={() => setActiveConversationId(conv.id)}
+                  />
+                ))}
+              </div>
+            ));
+          })()}
         </div>
       </div>
+
 
       {/* Conversation view */}
       <div className={cn("flex-1 flex-col bg-slate-50", activeConversation ? "flex" : "hidden lg:flex")}>
