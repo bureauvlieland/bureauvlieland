@@ -175,8 +175,12 @@ export function useAdminChat() {
         .select("conversation_id")
         .neq("sender_type", "admin")
         .is("read_at", null);
+      const visibleIds = new Set(conversations.map((c) => c.id));
       const counts = new Map<string, number>();
       (data || []).forEach((r: { conversation_id: string }) => {
+        // Tel alleen mee als de conversatie nog actief is (gearchiveerde
+        // projecten zijn al uit `conversations` gefilterd).
+        if (visibleIds.size > 0 && !visibleIds.has(r.conversation_id)) return;
         counts.set(r.conversation_id, (counts.get(r.conversation_id) ?? 0) + 1);
       });
       setUnreadByConversation(counts);
@@ -185,6 +189,7 @@ export function useAdminChat() {
       setUnreadCount(ids.size);
     };
     fetchUnread();
+
 
     const channel = supabase
       .channel("admin-unread-count")
