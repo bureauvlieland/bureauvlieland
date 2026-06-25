@@ -69,8 +69,12 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
     updatePresence,
     sendMessage,
     closeConversation,
+    archiveConversation,
+    showArchived,
+    setShowArchived,
     saveChatToProject,
   } = useAdminChat();
+
 
   const projectRefs = useConversationProjects(conversations);
   const navigate = useNavigate();
