@@ -81,17 +81,6 @@ async function fetchInbox(): Promise<InboxData> {
   if (emailsRes.error) throw emailsRes.error;
   if (msgsRes.error) throw msgsRes.error;
 
-  const emails: InboxEmail[] = (emailsRes.data ?? []).map((e: any) => ({
-    id: e.id,
-    subject: e.subject,
-    contact_name: e.contact_name,
-    contact_email: e.contact_email,
-    content: e.content,
-    created_at: e.communication_date,
-    request_id: e.request_id,
-    accommodation_id: e.accommodation_id,
-  }));
-
   // Fetch conversations for chat messages
   const convIds = Array.from(new Set((msgsRes.data ?? []).map((m: any) => m.conversation_id)));
   let convMap = new Map<string, any>();
@@ -102,6 +91,61 @@ async function fetchInbox(): Promise<InboxData> {
       .in("id", convIds);
     (convs ?? []).forEach((c: any) => convMap.set(c.id, c));
   }
+
+  // Verzamel alle project-IDs (programma + logies) om gearchiveerde dossiers te filteren
+  const programIds = new Set<string>();
+  const accommodationIds = new Set<string>();
+  (emailsRes.data ?? []).forEach((e: any) => {
+    if (e.request_id) programIds.add(e.request_id);
+    if (e.accommodation_id) accommodationIds.add(e.accommodation_id);
+  });
+  convMap.forEach((c: any) => {
+    if (c.request_id) programIds.add(c.request_id);
+    if (c.accommodation_request_id) accommodationIds.add(c.accommodation_request_id);
+  });
+
+  const archivedProgramIds = new Set<string>();
+  const archivedAccommodationIds = new Set<string>();
+  if (programIds.size > 0) {
+    const { data: progs } = await supabase
+      .from("program_requests")
+      .select("id, completion_status")
+      .in("id", Array.from(programIds));
+    (progs ?? []).forEach((p: any) => {
+      if (p.completion_status && TERMINAL_COMPLETION_STATUSES.has(p.completion_status)) {
+        archivedProgramIds.add(p.id);
+      }
+    });
+  }
+  if (accommodationIds.size > 0) {
+    const { data: accs } = await supabase
+      .from("accommodation_requests")
+      .select("id, completion_status")
+      .in("id", Array.from(accommodationIds));
+    (accs ?? []).forEach((a: any) => {
+      if (a.completion_status && TERMINAL_COMPLETION_STATUSES.has(a.completion_status)) {
+        archivedAccommodationIds.add(a.id);
+      }
+    });
+  }
+
+  const emails: InboxEmail[] = (emailsRes.data ?? [])
+    .filter((e: any) => {
+      if (e.request_id && archivedProgramIds.has(e.request_id)) return false;
+      if (e.accommodation_id && archivedAccommodationIds.has(e.accommodation_id)) return false;
+      return true;
+    })
+    .map((e: any) => ({
+      id: e.id,
+      subject: e.subject,
+      contact_name: e.contact_name,
+      contact_email: e.contact_email,
+      content: e.content,
+      created_at: e.communication_date,
+      request_id: e.request_id,
+      accommodation_id: e.accommodation_id,
+    }));
+
 
   const allMsgs: (InboxChatMessage & { read_at: string | null })[] = (msgsRes.data ?? []).map((m: any) => {
     const conv = convMap.get(m.conversation_id) ?? {};
