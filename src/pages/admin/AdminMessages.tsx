@@ -251,8 +251,8 @@ const AdminMessages = () => {
           >
             <TabsList>
               <TabsTrigger value="inbox" className="gap-2">
-                <Inbox className="h-4 w-4" />
-                Te beantwoorden
+                <Mail className="h-4 w-4" />
+                E-mail
                 {unansweredCount > 0 && (
                   <Badge
                     variant="secondary"
@@ -262,6 +262,7 @@ const AdminMessages = () => {
                   </Badge>
                 )}
               </TabsTrigger>
+
               <TabsTrigger value="chat" className="gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Chat & live-chat
