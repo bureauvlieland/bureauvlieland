@@ -431,6 +431,32 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
                     Sluiten
                   </Button>
                 )}
+                {(activeConversation as any).archived_at ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      archiveConversation(activeConversation.id, false);
+                      toast.success("Gesprek teruggehaald uit archief");
+                    }}
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-1" />
+                    Uit archief
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      archiveConversation(activeConversation.id, true);
+                      toast.success("Gesprek gearchiveerd");
+                    }}
+                  >
+                    <Archive className="h-4 w-4 mr-1" />
+                    Archiveer
+                  </Button>
+                )}
+
               </div>
             </div>
 
