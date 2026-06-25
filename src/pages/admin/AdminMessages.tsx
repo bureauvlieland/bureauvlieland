@@ -118,9 +118,10 @@ const AdminMessages = () => {
     },
     refetchInterval: 60_000,
   });
-  const chatsCount = inboxData?.chats.length ?? 0;
-  const liveChatsCount = inboxData?.liveChats.reduce((s, l) => s + l.unread_count, 0) ?? 0;
-  const unansweredCount = unansweredEmailCount + chatsCount + liveChatsCount;
+  const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
+  const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
+  const chatTotalUnread = chatUnreadConversations + liveChatUnreadTotal;
+  const unansweredCount = unansweredEmailCount + chatTotalUnread;
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
