@@ -1,32 +1,52 @@
-## Probleem
+## Doel
+Claudia's aanbevelingen volgen dezelfde "rust & overzicht"-regels als de Werkbank Inbox: minder ruis, slimmer geclusterd, intuïtievere kaart.
 
-`/admin/tickets` (Tickets én Bureau-uitvoering) tonen nu álle items van lopende projecten, ook als de klant het programma nog niet heeft goedgekeurd. Daardoor lijken ferries/fietsen/eigen activiteiten al "te boeken/regelen" terwijl we eigenlijk nog op de klant wachten.
+## Probleem nu
+- `claudia-daily-scan` haalt signalen op zonder rekening te houden met recent contact, snooze, of `completion_status` (`invoiced`/`completed`/`feedback_received`) — dus dezelfde signalen die we in de Werkbank al onderdrukken, komen via Claudia alsnog binnen.
+- Geen cooldown: een project waar gisteren contact mee was levert toch een "partner reageert niet"-aanbeveling.
+- UI groepeert puur op `priority`; meerdere aanbevelingen voor één project komen los te staan i.p.v. geclusterd per project.
+- Geen verschil tussen hot/warm/cold projecten.
 
-## Regel
+## Aanpak
 
-Een item is pas zichtbaar in deze werklijsten zodra de klant het heeft goedgekeurd: `program_request_items.customer_approved_at IS NOT NULL` (dit is ook al de signaal dat we elders in de app gebruiken voor "Door u goedgekeurd"). Cancelled items blijven uitgesloten (al het geval).
+### 1. Edge function `claudia-daily-scan` — signal-onderdrukking gelijktrekken met Werkbank
+In `gatherSignals` per signaaltype dezelfde guards toepassen als in `getInbox.ts` / `check-pending-items`:
 
-## Aanpassingen
+- **Projectfilter**: sluit projecten uit waar `completion_status in ('ready_for_invoice'… wel toelaten, maar 'invoiced','completed','feedback_received','cancelled')` of `program_requests.status in ('completed','cancelled')`.
+  - Uitzondering: `ready_for_invoice` mag wel een signaal blijven (categorie 7).
+- **Cooldown per project**: bepaal `lastContactAt` uit `project_communications` + `program_request_items.status_updated_at` (zelfde bron als `loadInbox`). 
+  - `hot` (<3 dagen contact) → onderdruk niet-urgente signaaltypes (`partner_overdue`, `lodging_no_quotes`, `lodging_quote_unforwarded`, `todo_overdue` zonder harde deadline).
+  - `warm` (<7 dagen) → onderdruk alleen `info`-achtige todo's.
+  - `cold` → alles tonen.
+- **Snooze**: respecteer `program_requests.snoozed_until > now()` (categorie features/project-snooze).
+- Gedeelde helper hergebruiken: extraheer `shouldShowDuringCooldown` + `getProjectActivityState` uit `src/lib/projectActivity.ts` naar een Deno-compatibele module die de edge function importeert (of dupliceer minimaal in de edge function — eenvoudigste route, want geen build-pipeline tussen `src/` en `supabase/functions/`).
 
-**1. `src/pages/admin/AdminTickets.tsx` — tickets-query**
-- Selecteer `customer_approved_at` mee.
-- Filter `filtered` zo dat rijen zonder `customer_approved_at` verborgen worden in `period === "upcoming"` en `period === "all"`. In `period === "archive"` laten we ze ook weg (geen historisch belang als nooit goedgekeurd).
-- `openCount` (tab-badge) telt alleen items mét klantakkoord die nog niet geboekt zijn.
-- Tel apart hoeveel items wél in het systeem staan maar nog op klantakkoord wachten en toon dat als grijze sub-tekst onder de paginakop: "X items wachten nog op klantakkoord — nog niet boeken."
+### 2. AI-prompt verfijnen
+- Voeg expliciet toe dat signalen waar `last_contact_days < 3` bij staan **info-only** mogen zijn, niet urgent.
+- Vraag de AI om aanbevelingen te clusteren: max 1 aanbeveling per project tenzij er financieel verschillende acties zijn.
+- Signalen krijgen extra velden: `last_contact_days`, `cooldown` ("hot"/"warm"/"cold"), `completion_status`.
 
-**2. `src/components/admin/bureau-execution/BureauExecutionList.tsx` — bureau-query**
-- Selecteer `customer_approved_at` mee.
-- Filter rijen zonder `customer_approved_at` uit `filtered`.
-- `openCount` telt alleen goedgekeurde, nog niet geregelde items.
-- Voeg dezelfde sub-tekst "X wachten nog op klantakkoord" toe onder de bestaande introzin.
+### 3. UI `ClaudiaRecommendationsCard.tsx` — slimmer & intuïtiever
 
-**3. Geen wijziging in de inline-popovers** (`TicketBookingInline`, `BureauExecutionInline`) — die blijven werken in de projectdetail-pagina, waar admin desgewenst alvast iets kan invullen. De werklijsten zijn puur de "klaar om te doen"-views.
+- **Groeperen per project** (hetzelfde patroon als Werkbank Inbox): één rij per project, badges per onderliggende aanbeveling, met cooldown-pill ("3 dagen geleden contact").
+- **Cross-entity aanbevelingen** (commissiefacturen, orphan todo's) blijven in een aparte sectie "Overig".
+- **Sectie-volgorde**: `Urgent` → `Actie deze week` → `Overig / info`. Info-sectie standaard ingeklapt.
+- **Lege staat**: "Alles in orde" tekst houden, maar toon laatste run + telling van onderdrukte signalen (`x signalen onderdrukt door recent contact`).
+- **Per-rij snooze**: knop "Sluimer 3 dagen" naast Done/Dismiss; schrijft `dismissed_until` (nieuwe kolom of hergebruik `feedback_at` + `status='snoozed'`). Voor scope nu: alleen `status='dismissed'` met expliciete toast "weer zichtbaar bij volgende run als nog steeds relevant" — geen schemawijziging.
+- **Badge-teller in `ClaudiaBadge`**: telling sluit `info` uit zodat sidebar niet rood is om niet-urgente signalen.
+
+### 4. Tests
+- Unit tests voor de gedeelde cooldown-helper (al aanwezig in `projectActivity.test.ts`) uitbreiden met scenario's specifiek voor Claudia (snooze + completion_status).
+- Geen edge function tests (geen runner) — wel handmatige run-knop voor verificatie.
+
+## Technisch overzicht (bestanden)
+- `supabase/functions/claudia-daily-scan/index.ts`: filters per signal-categorie, lastContact-lookup, extra velden in `Signal`, prompt update.
+- `supabase/functions/_shared/projectActivity.ts` *(nieuw)*: Deno-port van `getProjectActivityState` + `shouldShowDuringCooldown`.
+- `src/lib/projectActivity.ts`: ongewijzigd (frontend), eventueel constante export delen.
+- `src/components/admin/werkbank/ClaudiaRecommendationsCard.tsx`: groeperen per project, cooldown-pill, ingeklapte info-sectie, "Onderdrukt"-teller in header.
+- `src/components/admin/ClaudiaBadge.tsx`: `total` filteren op `priority != 'info'`.
+- `src/lib/__tests__/projectActivity.test.ts`: extra cases.
 
 ## Niet in scope
-- Geen DB-migratie nodig.
-- Geen wijzigingen aan klant/partner-portal of statusbadges.
-- Geen wijziging aan e-mailflows of edge functions.
-
-## Verificatie
-- Bestaande unit tests blijven groen.
-- Handmatig: een project in `offerte_verstuurd` met ferry + fietsen + eigen activiteit verdwijnt uit `/admin/tickets` (beide tabs) en verschijnt pas zodra de klant goedkeurt.
+- Geen schemawijziging op `admin_recommendations` (snooze-veld).
+- Geen wijziging aan cron-frequentie.
