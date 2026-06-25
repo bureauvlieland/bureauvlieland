@@ -172,7 +172,15 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
             <span className="text-muted-foreground">{isOnline ? "Online" : "Offline"}</span>
             <Switch checked={isOnline} onCheckedChange={(v) => updatePresence(v)} />
           </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Archive className="h-3 w-3" /> Toon archief
+            </span>
+            <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+          </div>
         </div>
+
+
 
         <div className="px-3 pt-3">
           <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ChatStatusFilter)}>
