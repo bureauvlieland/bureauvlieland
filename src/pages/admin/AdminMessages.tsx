@@ -40,10 +40,12 @@ import {
   RotateCcw,
   Settings,
   Inbox,
+  MessageCircle,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
+import { ChatPanel } from "@/components/admin/ChatPanel";
 import { useAdminInbox } from "@/hooks/useAdminInbox";
 
 interface EmailLog {
@@ -91,8 +93,11 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; label
 
 const AdminMessages = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") === "verzonden" ? "verzonden" : "inbox";
+  const tabParam = searchParams.get("tab");
+  const activeTab =
+    tabParam === "verzonden" ? "verzonden" : tabParam === "chat" ? "chat" : "inbox";
   const highlightedInboxId = searchParams.get("inbox");
+  const initialConversationId = searchParams.get("conversation");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -211,7 +216,7 @@ const AdminMessages = () => {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Berichtencentrum</h1>
               <p className="text-slate-500 mt-1">
-                Inkomende e-mails beantwoorden en verzonden e-mails inzien
+                Alle inkomende en uitgaande communicatie op één plek: e-mail, klant- en partner­chat en website live-chat
               </p>
             </div>
             <div className="flex gap-2">
@@ -254,6 +259,18 @@ const AdminMessages = () => {
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="chat" className="gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Chat & live-chat
+                {(chatsCount + liveChatsCount) > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
+                  >
+                    {chatsCount + liveChatsCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="verzonden" className="gap-2">
                 <Send className="h-4 w-4" />
                 Verzonden e-mails
@@ -263,6 +280,11 @@ const AdminMessages = () => {
             <TabsContent value="inbox" className="mt-4">
               <InboxToAnswer initialOpenId={highlightedInboxId} />
             </TabsContent>
+
+            <TabsContent value="chat" className="mt-4">
+              <ChatPanel initialConversationId={initialConversationId} />
+            </TabsContent>
+
 
             <TabsContent value="verzonden" className="mt-4 space-y-6">
           {/* Stats */}

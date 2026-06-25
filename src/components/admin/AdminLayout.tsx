@@ -57,6 +57,7 @@ import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 import { InboxBell } from "@/components/admin/InboxBell";
+import { useAdminInbox } from "@/hooks/useAdminInbox";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -119,6 +120,8 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
   const { data: openTicketsCount = 0 } = useOpenTicketsCount();
   const { data: bankPendingCount = 0 } = useBankPendingCount();
+  const { data: inboxData } = useAdminInbox();
+  const messagesBadge = inboxData?.totalUnread ?? 0;
 
   const menuSections: MenuSection[] = [
     {
@@ -129,7 +132,12 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Sales Inbox", url: "/admin/sales-inbox", icon: Mail, badge: salesInboxCount },
         { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
         { title: "CRM", url: "/admin/crm", icon: Users },
-        { title: "Chat", url: "/admin/chat", icon: MessageCircle },
+      ],
+    },
+    {
+      label: "Berichten",
+      items: [
+        { title: "Berichtencentrum", url: "/admin/berichten", icon: MessageCircle, badge: messagesBadge },
       ],
     },
     {
@@ -357,13 +365,13 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         { event: "INSERT", schema: "public", table: "chat_messages" },
         (payload) => {
           const msg = payload.new as { sender_type: string; sender_name: string; content: string };
-          if (msg.sender_type === "visitor" && !location.pathname.startsWith("/admin/chat")) {
+          if (msg.sender_type === "visitor" && !location.pathname.startsWith("/admin/berichten")) {
             const preview = msg.content.length > 80 ? msg.content.slice(0, 80) + "…" : msg.content;
             toast(`💬 ${msg.sender_name}`, {
               description: preview,
               action: {
                 label: "Bekijken",
-                onClick: () => navigate("/admin/chat"),
+                onClick: () => navigate("/admin/berichten?tab=chat"),
               },
             });
           }
