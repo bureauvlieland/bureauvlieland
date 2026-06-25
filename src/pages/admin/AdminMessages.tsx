@@ -263,12 +263,12 @@ const AdminMessages = () => {
               <TabsTrigger value="chat" className="gap-2">
                 <MessageCircle className="h-4 w-4" />
                 Chat & live-chat
-                {(chatsCount + liveChatsCount) > 0 && (
+                {chatTotalUnread > 0 && (
                   <Badge
                     variant="secondary"
                     className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
                   >
-                    {chatsCount + liveChatsCount}
+                    {chatTotalUnread}
                   </Badge>
                 )}
               </TabsTrigger>
