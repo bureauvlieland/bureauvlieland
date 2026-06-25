@@ -440,3 +440,13 @@ export function InboxToAnswer({ initialOpenId }: InboxToAnswerProps) {
     </div>
   );
 }
+
+function SectionHeader({ icon, title, count }: { icon: React.ReactNode; title: string; count: number }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground font-semibold px-1">
+      {icon}
+      <span>{title}</span>
+      <span className="text-muted-foreground/70">({count})</span>
+    </div>
+  );
+}
