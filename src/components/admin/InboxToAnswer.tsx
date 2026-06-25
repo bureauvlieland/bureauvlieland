@@ -98,6 +98,7 @@ interface InboxToAnswerProps {
 
 export function InboxToAnswer({ initialOpenId }: InboxToAnswerProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showAnswered, setShowAnswered] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(initialOpenId ?? null);
   const [replyEmail, setReplyEmail] = useState<InboundEmail | null>(null);
@@ -109,6 +110,20 @@ export function InboxToAnswer({ initialOpenId }: InboxToAnswerProps) {
     queryFn: fetchInboundEmails,
     refetchInterval: 60_000,
   });
+
+  const { data: inboxData } = useAdminInbox();
+  const chats: InboxChatMessage[] = inboxData?.chats ?? [];
+  const liveChats: InboxLiveChat[] = inboxData?.liveChats ?? [];
+
+  const goToChat = (c: InboxChatMessage) => {
+    if (c.request_id) navigate(`/admin/projecten/${c.request_id}?tab=communicatie`);
+    else if (c.accommodation_request_id) navigate(`/admin/projecten/${c.accommodation_request_id}?tab=communicatie`);
+    else navigate(`/admin/berichten`);
+  };
+
+  const goToLive = (l: InboxLiveChat) => {
+    navigate(`/admin/berichten?conversation=${l.conversation_id}`);
+  };
 
   // Realtime updates
   useEffect(() => {
