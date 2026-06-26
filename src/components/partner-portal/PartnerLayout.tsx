@@ -37,6 +37,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { Progress } from "@/components/ui/progress";
+import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
 
 interface PartnerLayoutProps {
   children: ReactNode;
@@ -51,6 +53,31 @@ interface PartnerInfo {
   partner_type: string | null;
   map_tenant_slug: string | null;
 }
+
+const PartnerProfileStrength = ({ partnerId, urlSuffix }: { partnerId: string; urlSuffix: string }) => {
+  const { completeness } = usePartnerCompleteness({ partnerId });
+  if (!completeness) return null;
+  const tone =
+    completeness.score >= 80
+      ? "text-emerald-700"
+      : completeness.score >= 50
+        ? "text-amber-700"
+        : "text-rose-700";
+  return (
+    <Link to={`/partner/profiel${urlSuffix}`} className="block group">
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className="text-muted-foreground">Profielsterkte</span>
+        <span className={`font-semibold ${tone}`}>{completeness.score}%</span>
+      </div>
+      <Progress value={completeness.score} className="h-1.5" />
+      {completeness.score < 80 && (
+        <p className="text-[10px] text-muted-foreground mt-1 group-hover:text-primary">
+          Tip: vul profiel verder aan voor meer boekingen →
+        </p>
+      )}
+    </Link>
+  );
+};
 
 const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
   const location = useLocation();
@@ -154,7 +181,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
 
         {/* Partner info */}
         {!collapsed && (
-          <div className="p-4 border-b">
+          <div className="p-4 border-b space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-5 w-5 text-primary" />
@@ -164,6 +191,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
                 <p className="text-xs text-muted-foreground truncate">{partner.email}</p>
               </div>
             </div>
+            <PartnerProfileStrength partnerId={partner.id} urlSuffix={urlSuffix} />
           </div>
         )}
 

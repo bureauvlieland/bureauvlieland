@@ -19,6 +19,9 @@ import {
   type PartnerRowKind,
 } from "@/lib/getPartnerProjectsOverview";
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
+import { PartnerCompletenessBanner } from "@/components/partner-portal/PartnerCompletenessBanner";
+import { PartnerShowcaseSection } from "@/components/partner-portal/PartnerShowcaseSection";
+import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
 
 type TabKey = "projecten" | "werkbank";
 
@@ -145,6 +148,10 @@ const PartnerDashboardContent = () => {
     return { ytdRevenue: ytdItems + ytdQuotes, pendingCommission: pending };
   }, [data]);
 
+  const { completeness } = usePartnerCompleteness({
+    partnerId: (data as any)?.partner?.id ?? null,
+  });
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-4">
@@ -190,6 +197,10 @@ const PartnerDashboardContent = () => {
           ).length)
         }
       />
+
+      {completeness && <PartnerCompletenessBanner completeness={completeness} />}
+
+
 
 
 
@@ -259,7 +270,10 @@ const PartnerDashboardContent = () => {
           />
         </div>
       </div>
+
+      <PartnerShowcaseSection />
     </div>
+
   );
 };
 

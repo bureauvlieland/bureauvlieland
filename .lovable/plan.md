@@ -1,53 +1,58 @@
-## Probleem
+# Partners aansporen hun aanbod te verrijken
 
-De E-mail-tab in het Berichtencentrum laat lang niet alles zien. Er zijn twee oorzaken:
+## Doel
+Partners actief laten zien dat een rijker profiel (foto's, omschrijving, prijzen, highlights) leidt tot vaker gekozen worden. Hotel Zeezicht en Yoga Vlieland als best-practice voorbeelden.
 
-### 1. Filter-bug in `EmailPanel.tsx`
-De panel-query filtert op `communication_type IN ('email')`. In de database komen e-mails echter binnen onder drie types:
+## Aanpak in 3 lagen
 
-| communication_type | direction | aantal (90d) |
-|---|---|---|
-| `email` | outbound | 12 |
-| `email_in` | inbound | **32** |
-| `email_out` | outbound | **83** |
+### 1. Profiel-volledigheidsscore (de motor)
+Nieuwe `src/lib/partnerCompleteness.ts` berekent per partner én per bouwsteen een score 0–100.
 
-→ 115 van de 127 e-mails (inbound antwoorden + de meeste handmatige verzendingen) worden nu **uitgefilterd**. Daarom zie je vrijwel alleen jouw eigen verzendingen, en zelfs daarvan niet alles.
+**Partnerprofiel** (`partners`):
+- about_text ≥ 200 tekens
+- image_url aanwezig
+- gallery_images ≥ 3
+- location_lat/lng + location_description
+- website_url
+- highlight_features ≥ 3
 
-### 2. Transactionele e-mails ontbreken volledig
-E-mails die het systeem automatisch verstuurt (offerte-mail, partner-uitvraag, annulering, herinneringen, etc. — laatste 30 dagen ~470 stuks in `email_log`) worden alleen gelogd in `email_log` en **niet** in `project_communications`. Daardoor mis je in het Berichtencentrum o.a.:
+**Per bouwsteen** (`building_blocks`):
+- short_description + description ≥ 150 tekens
+- image_url of image_asset
+- prijs ingevuld (price_adult of price_display_override)
+- duration, min/max_people
+- tags ≥ 2
+- location_address
 
-- offerte-mails naar klanten
-- aanvragen naar partners
-- annulering-/wijzigingsmails
-- herinneringen
-- factuur-doorzendingen
+Levert per item een lijst "ontbrekende velden" met directe deeplinks naar het juiste tabblad. Unit-getest in `src/lib/__tests__/partnerCompleteness.test.ts`.
 
-## Oplossing
+### 2. Nudges in de partnerportal
 
-### A. Filter-fix (root cause van "alleen mijn mails")
-In `EmailPanel.tsx` de filter verbreden naar `communication_type IN ('email', 'email_in', 'email_out')`. Daarmee verschijnen alle handmatig verstuurde mails én alle inkomende antwoorden direct in het overzicht en bij het juiste project gegroepeerd.
+**a. Dashboard-banner bovenaan `PartnerDashboard.tsx`** (alleen bij score < 80)
 
-### B. Transactionele mails meenemen
-`email_log` als tweede bron toevoegen aan `fetchEmails()` en mergen op project (via `related_request_id` / `related_accommodation_id`). Per regel een herkomst-label:
+> 💡 *Profielen met foto's, een duidelijke omschrijving en complete prijzen worden vaker gekozen door klanten. Hotel Zeezicht en Yoga Vlieland hebben hun aanbod compleet ingevuld — zie hieronder hoe zij dat doen.*  
+> Uw profiel is voor 62% compleet → **[Profiel verrijken]** **[Bouwstenen verbeteren]**
 
-- **Handmatig** — door admin verstuurd vanuit project (`project_communications` outbound)
-- **Automatisch** — systeem-trigger (`email_log` met `email_type` ≠ `admin_project_email`)
-- **Inkomend** — antwoord van klant/partner (`project_communications` inbound)
+Dismiss via sessionStorage — komt bij volgende login terug zolang score < 80.
 
-In de threadweergave krijgt elk bericht een klein label met type + ontvanger, zodat in één tijdlijn zichtbaar is: "offerte verstuurd → klant antwoordt → admin reageert handmatig → herinnering automatisch verzonden".
+**b. Voortgangsbalk in sidebar `PartnerLayout.tsx`**  
+Onder partnernaam: "Profielsterkte 62%" met dunne progressbar; klik → `/partner/profiel`.
 
-### C. Visuele tweaks
-- Filter-chips bovenaan de lijst: `Alles · Handmatig · Automatisch · Inkomend` (default Alles).
-- Badge per thread met telling per type, bijv. `3 ↓ · 5 ↑ auto · 2 ↑ handmatig`.
-- Inbound-bel/`useAdminInbox` blijft ongewijzigd (toont alleen onbeantwoorde inbound = correct gedrag).
+**c. Per-bouwsteen badge op `PartnerBlocks.tsx`**  
+Amber chip "Kan beter — 2 velden ontbreken" met tooltip die exact vertelt wat ontbreekt (foto, prijs, etc.).
 
-## Scope
+**d. Inline tips op `PartnerProfile.tsx` en bouwsteen-edit**  
+Bij lege/korte velden subtiele suggestie ("Tip: partners met ≥3 foto's worden vaker gekozen").
 
-- `src/components/admin/EmailPanel.tsx` — filter verbreden, `email_log` mergen, herkomst-labels, filter-chips.
-- Geen schemawijzigingen, geen edge function changes, geen impact op verzendlogica.
+### 3. Voorbeeld-showcase
+Nieuwe sectie onderaan dashboard "Zo doen anderen het" met 2 kaarten — Hotel Zeezicht en Yoga Vlieland, **hardcoded op partner-id/slug** in een constante. Mini-preview (foto + naam + korte tekst) → linkt naar publieke `/partners` kaart of detail.
 
-## Verificatie
+## Wat we NIET doen
+- Geen e-mail-campagne (kan later).
+- Geen verplicht maken van velden.
+- Geen "X% vaker gekozen"-cijfer tot we daadwerkelijk data hebben; copy blijft kwalitatief.
+- Geen schema-wijzigingen.
 
-1. SQL-check vooraf: tel per project alle rijen uit beide bronnen → moet overeenkomen met wat de panel toont.
-2. Open een recent project met bekende transactionele mail (bijv. offerte verstuurd): controleer dat hij verschijnt met label "Automatisch".
-3. Open een project met inkomende reply: controleer dat de reply nu zichtbaar is met label "Inkomend".
+## Bevestigde keuzes
+- Showcase-partners: **hardcoded** (constante met 2 id's in `src/lib/partnerShowcase.ts`).
+- Banner-dismiss: **mag terugkomen** bij volgende login zolang score < 80 (sessionStorage, geen DB).
