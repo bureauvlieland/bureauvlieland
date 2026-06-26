@@ -4,7 +4,18 @@
  * Wordt gebruikt voor nudges in de partnerportal — pure functies, geen DB.
  */
 
-import type { Partner, PartnerBuildingBlock } from "@/types/partner";
+import type { PartnerBuildingBlock } from "@/types/partner";
+
+export interface PartnerCompletenessInput {
+  about_text: string | null;
+  image_url: string | null;
+  gallery_images: { url: string; alt?: string }[] | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_description: string | null;
+  website_url: string | null;
+  highlight_features: string[] | null;
+}
 
 export interface CompletenessResult {
   score: number; // 0..100, afgerond
