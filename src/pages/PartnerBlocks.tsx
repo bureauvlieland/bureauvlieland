@@ -24,6 +24,7 @@ import { PartnerBlockSheet, type PrefillFromMap } from "@/components/partner-por
 import { MapTypeCard } from "@/components/partner-portal/MapTypeCard";
 import { useMapActivityTypes, type MapActivityType } from "@/hooks/useMapActivities";
 import type { PartnerBuildingBlock } from "@/types/partner";
+import { calculateBlockCompleteness } from "@/lib/partnerCompleteness";
 
 const PartnerBlocksContent = () => {
   const navigate = useNavigate();
@@ -358,6 +359,8 @@ const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
   const isActive = status === "active";
   const isFromMap = typeof block.map_activity_type_id === "number";
   const img = block.image_url || "/placeholder.svg";
+  const blockCompleteness = calculateBlockCompleteness(block as any);
+  const needsImprovement = blockCompleteness.score < 70;
 
   return (
     <Card
@@ -405,6 +408,16 @@ const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
             </div>
           </div>
           <div className="shrink-0 flex items-center gap-2">
+            {needsImprovement && !isDraft && (
+              <Badge
+                variant="outline"
+                className="bg-accent/10 text-accent-foreground border-accent/40 font-normal gap-1"
+                title={`${blockCompleteness.score}% compleet — ${blockCompleteness.missing.join(", ")}`}
+              >
+                <Sparkles className="h-3 w-3" />
+                Kan beter ({blockCompleteness.score}%)
+              </Badge>
+            )}
             {isDraft && (
               <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-normal">
                 Wacht op goedkeuring
