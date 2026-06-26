@@ -54,6 +54,31 @@ interface PartnerInfo {
   map_tenant_slug: string | null;
 }
 
+const PartnerProfileStrength = ({ partnerId, urlSuffix }: { partnerId: string; urlSuffix: string }) => {
+  const { completeness } = usePartnerCompleteness({ partnerId });
+  if (!completeness) return null;
+  const tone =
+    completeness.score >= 80
+      ? "text-emerald-700"
+      : completeness.score >= 50
+        ? "text-amber-700"
+        : "text-rose-700";
+  return (
+    <Link to={`/partner/profiel${urlSuffix}`} className="block group">
+      <div className="flex items-center justify-between text-xs mb-1">
+        <span className="text-muted-foreground">Profielsterkte</span>
+        <span className={`font-semibold ${tone}`}>{completeness.score}%</span>
+      </div>
+      <Progress value={completeness.score} className="h-1.5" />
+      {completeness.score < 80 && (
+        <p className="text-[10px] text-muted-foreground mt-1 group-hover:text-primary">
+          Tip: vul profiel verder aan voor meer boekingen →
+        </p>
+      )}
+    </Link>
+  );
+};
+
 const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
