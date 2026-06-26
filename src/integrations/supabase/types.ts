@@ -4238,6 +4238,10 @@ export type Database = {
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       scan_stale_pending_changes: { Args: never; Returns: number }
       slugify: { Args: { value: string }; Returns: string }
+      submit_self_service_program_request: {
+        Args: { p_items: Json; p_request: Json }
+        Returns: Json
+      }
       touch_partner_last_seen: {
         Args: { p_partner_id: string }
         Returns: string

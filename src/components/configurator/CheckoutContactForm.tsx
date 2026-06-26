@@ -309,49 +309,34 @@ export const CheckoutContactForm = ({
         };
       });
 
-      const { error: insertError } = await supabase
-        .from("program_requests")
-        .insert({
-          id: requestId,
-          customer_token: token,
-          customer_name: formData.name,
-          customer_email: formData.email,
-          customer_phone: formData.phone,
-          customer_company: formData.company || null,
-          number_of_people: numberOfPeople,
-          selected_dates: isoDates,
-          general_notes: formData.notes || null,
-          origin: "self_service",
-          program_description: finalEventType,
-          quote_status: "concept",
-          attribution: buildAttribution(),
-        });
-
-      if (insertError) throw insertError;
-
-      const { error: itemsError } = await supabase
-        .from("program_request_items")
-        .insert(itemsToInsert);
-
-      if (itemsError) {
-        // Compensating rollback: verwijder de zojuist aangemaakte program_request
-        // zodat er geen wees-aanvraag zonder activiteiten in de admin verschijnt.
-        try {
-          await supabase.from("program_requests").delete().eq("id", requestId);
-        } catch (rollbackErr) {
-          console.error("Rollback delete failed:", rollbackErr);
-        }
-        throw itemsError;
+      // Harde guard: 0 items mag nooit een aanvraag opleveren. We versturen
+      // request + items atomair via een RPC die in één DB-transactie draait
+      // en bij een lege items-array direct een exception gooit.
+      if (itemsToInsert.length === 0) {
+        throw new Error("Geen activiteiten geselecteerd — kan geen aanvraag versturen.");
       }
 
+      const { error: rpcError } = await supabase.rpc(
+        "submit_self_service_program_request",
+        {
+          p_request: {
+            id: requestId,
+            customer_token: token,
+            customer_name: formData.name,
+            customer_email: formData.email,
+            customer_phone: formData.phone,
+            customer_company: formData.company || null,
+            number_of_people: numberOfPeople,
+            selected_dates: isoDates,
+            general_notes: formData.notes || null,
+            program_description: finalEventType,
+            attribution: buildAttribution(),
+          },
+          p_items: itemsToInsert,
+        },
+      );
 
-      await supabase.from("program_request_history").insert({
-        request_id: requestId,
-        action: "created",
-        actor: "customer",
-        actor_name: formData.name,
-        new_value: { items_count: blocksWithDetails.length },
-      });
+      if (rpcError) throw rpcError;
 
       const { error } = await supabase.functions.invoke("send-program-request", {
         body: {
