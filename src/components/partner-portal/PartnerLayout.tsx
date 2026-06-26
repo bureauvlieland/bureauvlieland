@@ -37,6 +37,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { Progress } from "@/components/ui/progress";
+import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
 
 interface PartnerLayoutProps {
   children: ReactNode;
@@ -154,7 +156,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
 
         {/* Partner info */}
         {!collapsed && (
-          <div className="p-4 border-b">
+          <div className="p-4 border-b space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Building2 className="h-5 w-5 text-primary" />
@@ -164,6 +166,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
                 <p className="text-xs text-muted-foreground truncate">{partner.email}</p>
               </div>
             </div>
+            <PartnerProfileStrength partnerId={partner.id} urlSuffix={urlSuffix} />
           </div>
         )}
 
