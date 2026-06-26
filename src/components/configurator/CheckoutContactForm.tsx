@@ -390,6 +390,7 @@ export const CheckoutContactForm = ({
 
       const rawMsg = (error?.message || "") + " " + (error?.details || "");
       const isDuplicate = rawMsg.includes("duplicate_program_request") || error?.code === "23505";
+      const isEmptyItems = rawMsg.toLowerCase().includes("geen activiteiten") || rawMsg.toLowerCase().includes("leeg") || rawMsg.toLowerCase().includes("0 items");
 
       trackSubmitFailed({
         formType: 'program_request',
@@ -398,14 +399,17 @@ export const CheckoutContactForm = ({
           number_of_people: numberOfPeople,
           items_count: cartItems.length,
           duplicate_blocked: isDuplicate,
+          empty_items_blocked: isEmptyItems,
         },
       });
       const friendly = isDuplicate
         ? "Deze aanvraag is zojuist al verstuurd. Controleer uw inbox en spam-folder. Bel ons gerust op 0562 700 208 als u geen bevestiging heeft ontvangen."
-        : "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
+        : isEmptyItems
+          ? "Uw programma bevat nog geen onderdelen. Selecteer minstens één activiteit voordat u de aanvraag verstuurt."
+          : "We konden uw aanvraag op dit moment niet versturen. Dit kan komen door een tijdelijke verbindingsstoring. Probeer het opnieuw, of bel ons direct op 0562 700 208 — dan helpen wij u meteen verder.";
       setSubmitError(friendly);
       toast({
-        title: isDuplicate ? "Aanvraag al ontvangen" : "Aanvraag niet verzonden",
+        title: isDuplicate ? "Aanvraag al ontvangen" : isEmptyItems ? "Geen onderdelen geselecteerd" : "Aanvraag niet verzonden",
         description: friendly,
         variant: "destructive",
       });
@@ -533,7 +537,11 @@ export const CheckoutContactForm = ({
               <Alert variant="destructive" className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <div className="flex-1">
-                  <AlertTitle>Aanvraag niet verzonden</AlertTitle>
+                  <AlertTitle>
+                    {submitError.toLowerCase().includes("geen onderdelen") || submitError.toLowerCase().includes("geen activiteiten")
+                      ? "Geen onderdelen geselecteerd"
+                      : "Aanvraag niet verzonden"}
+                  </AlertTitle>
                   <AlertDescription>{submitError}</AlertDescription>
                 </div>
                 <Button
