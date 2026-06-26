@@ -43,17 +43,7 @@ const hasText = (v: string | null | undefined, min = 1) =>
   typeof v === "string" && v.trim().length >= min;
 
 export const calculatePartnerCompleteness = (
-  partner: Pick<
-    Partner,
-    | "about_text"
-    | "image_url"
-    | "gallery_images"
-    | "location_lat"
-    | "location_lng"
-    | "location_description"
-    | "website_url"
-    | "highlight_features"
-  > & { image_url?: string | null },
+  partner: PartnerCompletenessInput,
 ): CompletenessResult => {
   const gallery = Array.isArray(partner.gallery_images) ? partner.gallery_images : [];
   const highlights = Array.isArray(partner.highlight_features)
