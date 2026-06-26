@@ -148,6 +148,10 @@ const PartnerDashboardContent = () => {
     return { ytdRevenue: ytdItems + ytdQuotes, pendingCommission: pending };
   }, [data]);
 
+  const { completeness } = usePartnerCompleteness({
+    partnerId: (data as any)?.partner?.id ?? null,
+  });
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-4">
@@ -193,6 +197,10 @@ const PartnerDashboardContent = () => {
           ).length)
         }
       />
+
+      {completeness && <PartnerCompletenessBanner completeness={completeness} />}
+
+
 
 
 
