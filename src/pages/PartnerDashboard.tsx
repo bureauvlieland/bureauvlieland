@@ -270,7 +270,10 @@ const PartnerDashboardContent = () => {
           />
         </div>
       </div>
+
+      <PartnerShowcaseSection />
     </div>
+
   );
 };
 
