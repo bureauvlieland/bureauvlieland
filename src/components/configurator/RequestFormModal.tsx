@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -77,6 +78,7 @@ export const RequestFormModal = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [successBlocks, setSuccessBlocks] = useState<BuildingBlock[]>([]);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: prefillData?.name || "",
     email: prefillData?.email || "",
@@ -105,6 +107,7 @@ export const RequestFormModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     // Effective dates eerst — guard heeft die nodig.
     const effectiveDates = selectedDates.length > 0 ? selectedDates : (selectedDate ? [selectedDate] : []);
@@ -272,10 +275,16 @@ export const RequestFormModal = ({
       });
     } catch (error: any) {
       console.error("Error sending program request:", error);
-      trackSubmitFailed({ formType: 'program_request', error, extra: { source: 'request_form_modal' } });
+      const rawMsg = (error?.message || "") + " " + (error?.details || "");
+      const isEmptyItems = rawMsg.toLowerCase().includes("geen activiteiten") || rawMsg.toLowerCase().includes("leeg") || rawMsg.toLowerCase().includes("0 items");
+      const friendly = isEmptyItems
+        ? "Uw programma bevat nog geen onderdelen. Selecteer minstens één activiteit voordat u de aanvraag verstuurt."
+        : (error.message || "Probeer het later opnieuw of neem direct contact met ons op.");
+      trackSubmitFailed({ formType: 'program_request', error, extra: { source: 'request_form_modal', empty_items_blocked: isEmptyItems } });
+      setSubmitError(friendly);
       toast({
-        title: "Er ging iets mis",
-        description: error.message || "Probeer het later opnieuw of neem direct contact met ons op.",
+        title: isEmptyItems ? "Geen onderdelen geselecteerd" : "Er ging iets mis",
+        description: friendly,
         variant: "destructive",
       });
     } finally {
@@ -424,6 +433,19 @@ export const RequestFormModal = ({
             </div>
           </div>
         </div>
+
+        {/* Error alert */}
+        {submitError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>
+              {submitError.toLowerCase().includes("geen onderdelen") || submitError.toLowerCase().includes("geen activiteiten")
+                ? "Geen onderdelen geselecteerd"
+                : "Aanvraag niet verzonden"}
+            </AlertTitle>
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Summary grouped by invoice type */}
         <div className="bg-muted/50 rounded-lg p-4 mb-4">
