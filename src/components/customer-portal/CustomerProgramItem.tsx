@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
-import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
@@ -118,13 +117,11 @@ export const CustomerProgramItem = ({
   // In akkoord_ontvangen tonen we per-item acties alleen voor partner-reacties.
   const isApprovalPhase =
     quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
-  const isProposalPhase = quoteStatus === "offerte_verstuurd";
   // Een alternatief voorstel van de aanbieder (status='alternative') vraagt
   // ALTIJD opnieuw expliciete goedkeuring van de klant — ook als er eerder
   // bulk-akkoord is gegeven (customer_approved_at). De per-item knop moet dan
   // weer verschijnen zolang de klant niet expliciet (customer_accepted_at) op
   // het nieuwe voorstel heeft gereageerd.
-  const isPartnerAlternative = item.status === "alternative";
   const partnerHasResponded = !isSelfArranged
     && item.provider_id !== "bureau"
     && !item.customer_approved_at
