@@ -1,39 +1,48 @@
 ## Probleem
 
-Op het admin-detailpaneel van een aanvraag in `in_afstemming` staat overal **"Wacht op aanbieder"** — ook bij regels waar de aanbieder al bevestigd of een tegenvoorstel heeft gedaan. Naast die badge verschijnt nog een tweede, tegenstrijdig pilletje **"Partner: pending"** of **"Partner: bevestigd"**, dat niet in de legenda staat. Strandyoga (waar de partner een afwijkende prijs heeft doorgegeven) krijgt daardoor ook "Wacht op aanbieder" terwijl de partner juist al gereageerd heeft mét een andere prijs.
+Project **BV-2606-0028** staat op `quote_status = concept`. Alle items zijn `status = pending` zonder klant-akkoord. Toch toont zowel klantpagina als admin **"Wacht op aanbieder"**, terwijl de offerte nog niet verstuurd is en de aanbieder dus nog niet eens iets gevraagd is.
+
+Volgens onze workflow (Quote → Klant-akkoord → Aanbieder benaderen) is de blokkade in `concept` en `in_afstemming` altijd het klant-akkoord — niet de aanbieder.
 
 ## Oorzaak
 
-1. In `src/lib/itemStatus.ts` is recent een regel toegevoegd die tijdens `quote_status = concept | in_afstemming` ALLE items naar `wacht_op_partner` forceert, zodat de klant geen "Akkoord nodig" ziet vóór de offerte verstuurd is. Die maskering is alleen bedoeld voor het klantportaal, maar wordt nu ook in de admin-view toegepast (`AdminRequestDetail.tsx` geeft `quoteStatus` mee). Daardoor verbergt admin de echte itemstatus.
-2. In `AdminRequestDetail.tsx` (regels 2354–2395) staan, naast de nieuwe `ItemDisplayStatusBadge`, nog de oude pillen `Partner: pending` / `Partner: bevestigd`. Die zijn na de unificatie van statussen overbodig en spreken de hoofdbadge tegen.
-3. De legenda "Wat betekenen de statussen?" verwijst niet naar deze oude pillen — en zou dat ook niet moeten, omdat ze weg gaan.
-4. Een partner-prijswijziging (Strandyoga: €190 i.p.v. berekende €600) heeft nu geen eigen status. Dat is een aparte attentie die nu alleen als waarschuwingstekst onderin de prijs-kolom zichtbaar is.
+In `src/lib/itemStatus.ts` wordt `wacht_op_klant` alleen afgeleid wanneer `quoteStatus === "offerte_verstuurd"`. Voor `concept`/`in_afstemming` valt de logica terug op `wacht_op_partner` (omdat `item.status === "pending"`):
+
+- **Klantview**: pre-offerte maskering geeft expliciet `wacht_op_partner`.
+- **Adminview**: na het verwijderen van de maskering voor admin/partner valt admin terug op de generieke `pending → wacht_op_partner` regel.
+
+Beide zijn workflow-technisch onjuist zolang de offerte nog niet verzonden is.
 
 ## Oplossing
 
-### 1. Pre-offerte-maskering alleen voor de klant
-- `deriveItemDisplayStatus` (in `src/lib/itemStatus.ts`) krijgt een `audience: "admin" | "customer" | "partner"` in `DeriveContext` (default `"customer"` voor backwards-compat).
-- De `concept`/`in_afstemming`-tak die alles naar `wacht_op_partner` zet, draait alleen voor `audience === "customer"`. Admin en partner zien de feitelijke itemstatus.
-- Alle bestaande aanroepen vanuit `audience="admin"` views (admin-detail, werkbank, bureau-execution, planning, partner-overzichten) krijgen expliciet `audience` mee. Klant-portaal en stepper blijven zonder audience (= customer-default).
+In `src/lib/itemStatus.ts` de pre-offerte tak vervangen door één consistente regel:
 
-### 2. Dubbele "Partner:"-pillen verwijderen
-- In `AdminRequestDetail.tsx` regels 2354–2395 verdwijnen de pillen `Partner: pending` en `Partner: bevestigd`.
-- De **"Verstuurd"** / **"Nog naar partner"** chip blijft (geeft verzendfase aan, geen statusduplicaat).
-- De **"Status overrulen"**-knop blijft zichtbaar zolang `item.status === "pending"` (los van het pilletje).
+> Zolang `quoteStatus ∈ {concept, in_afstemming, offerte_verstuurd}` én het item nog geen klant-akkoord heeft, is de status **`wacht_op_klant`** voor alle audiences.
 
-### 3. Eigen status voor partner-prijswijziging
-- In `itemStatus.ts` komt er een check: als `item.status === "confirmed"` en de partner-prijs (`partner_quoted_price` / `quoted_price`) afwijkt van de berekende basisprijs, wordt status **`prijs_gewijzigd`** met label "Aanbieder stelde nieuwe prijs voor". Hiermee zien admin én klant in één oogopslag dat dit onderdeel een prijsattentie heeft.
-- De bestaande `prijs_gewijzigd`-tak (na klant-akkoord) blijft bestaan; we onderscheiden in de tooltip "door Bureau Vlieland" vs "door aanbieder".
+Concreet:
 
-### 4. Legenda bijwerken
-- "Wat betekenen de statussen?" toont nu alle daadwerkelijk gebruikte badges: Wacht op aanbieder, Wacht op klant-akkoord, Nieuwe prijs van aanbieder, Klant akkoord (3 varianten samengevat), Geannuleerd, Niet beschikbaar. De oude `Partner: …` regels worden verwijderd (bestonden niet in de legenda en gaan ook uit de tabel).
+1. Verwijder de bestaande `isPreOfferte && audience === "customer"` tak die `wacht_op_partner` forceert.
+2. Breid de bestaande `offerte_verstuurd`-check uit naar ook `concept` en `in_afstemming`:
+   ```ts
+   const isPreApproval =
+     ctx.quoteStatus === "concept" ||
+     ctx.quoteStatus === "in_afstemming" ||
+     ctx.quoteStatus === "offerte_verstuurd";
+   if (isPreApproval && !hasApproval && item.status !== "alternative") {
+     return "wacht_op_klant";
+   }
+   ```
+3. `alternative` items behouden de bestaande tak (partner heeft tegenvoorstel gedaan — vereist klant-actie ongeacht fase).
+4. Labels in `itemDisplayStatusConfig.wacht_op_klant` blijven ongewijzigd; voor de klant leest dit "Akkoord nodig" wat in concept/in_afstemming inhoudelijk klopt zodra het voorstel zichtbaar is.
 
-## Technische details
+## Tests
 
-- Bestanden:
-  - `src/lib/itemStatus.ts` — `audience` toevoegen, pre-offerte-tak conditioneel, prijs-mismatch detectie + nieuwe tooltip-variant.
-  - `src/components/shared/ItemDisplayStatusBadge.tsx` — tooltip-tekst voor `prijs_gewijzigd` afhankelijk van bron (admin override vs partner).
-  - `src/pages/admin/AdminRequestDetail.tsx` — pillen weghalen, `audience="admin"` doorgeven, legenda uitbreiden.
-  - Overige `deriveItemDisplayStatus(…)`-aanroepers in admin/werkbank/planning views: `audience="admin"` doorgeven.
-- Tests: `src/lib/__tests__/itemStatus.test.ts` uitbreiden met (a) admin ziet `wacht_op_klant` voor confirmed item in `in_afstemming`, (b) confirmed item met afwijkende partnerprijs ⇒ `prijs_gewijzigd`, (c) customer-view blijft `wacht_op_partner` tonen tijdens `in_afstemming`.
-- Geen DB- of edge-functie wijzigingen.
+`src/lib/__tests__/itemStatus.test.ts` uitbreiden:
+- concept + pending + geen approval → `wacht_op_klant` (admin én customer).
+- in_afstemming + pending + geen approval → `wacht_op_klant`.
+- Bestaande customer-view test die `wacht_op_partner` verwachtte in `in_afstemming` wordt aangepast naar `wacht_op_klant`.
+
+## Scope
+
+- Alleen `src/lib/itemStatus.ts` en de bijbehorende testfile.
+- Geen UI- of edge-functie wijzigingen — alle views (admin detail, klantportaal, stepper, sidebar) consumeren dezelfde helper en updaten automatisch.

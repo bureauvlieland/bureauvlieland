@@ -246,20 +246,20 @@ export function deriveItemDisplayStatus(
     return "geaccepteerd";
   }
 
-  if (ctx.quoteStatus === "offerte_verstuurd" && !hasApproval) {
+  // Workflow: zolang de klant het voorstel nog niet heeft goedgekeurd (in
+  // concept, in_afstemming of offerte_verstuurd) is de blokkade altijd het
+  // klant-akkoord — de aanbieder wordt pas ná klant-akkoord benaderd. Voor
+  // alternative items volgt de bestaande tak (vereist klant-actie, maar met
+  // eigen labels via item.status).
+  const isPreApproval =
+    ctx.quoteStatus === "concept" ||
+    ctx.quoteStatus === "in_afstemming" ||
+    ctx.quoteStatus === "offerte_verstuurd";
+  if (isPreApproval && !hasApproval && item.status !== "alternative") {
     return "wacht_op_klant";
   }
 
   if (item.status === "pending") return "wacht_op_partner";
-
-  // Pre-offerte maskering: tijdens concept/in_afstemming ziet de klant
-  // "Uw programma wordt voorbereid" — onderdelen mogen dan geen "Akkoord nodig"
-  // badge tonen. Geldt ALLEEN voor klant-views; admin en partner zien hier de
-  // echte itemstatus (partner bevestigd → wacht_op_klant; pending → wacht_op_partner).
-  const audience = ctx.audience ?? "customer";
-  const isPreOfferte =
-    ctx.quoteStatus === "concept" || ctx.quoteStatus === "in_afstemming";
-  if (isPreOfferte && audience === "customer") return "wacht_op_partner";
 
   return "wacht_op_klant";
 
