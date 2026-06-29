@@ -131,7 +131,10 @@ function buildProgramTrack(
   statusSummary: ProgramStepperProps["statusSummary"],
   customerApprovedCount: number,
   customerApprovableCount: number,
+  quoteStatus?: string | null,
 ): TrackViewModel {
+  const isPreOfferte =
+    quoteStatus === "concept" || quoteStatus === "in_afstemming";
   const approveDone =
     customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
   const providersDone =
@@ -144,7 +147,13 @@ function buildProgramTrack(
     {
       label: approveDone ? "Alle onderdelen goedgekeurd" : "Onderdelen goedkeuren",
       icon: ThumbsUp,
-      state: approveDone ? "done" : customerApprovableCount > 0 ? "active" : "upcoming",
+      state: approveDone
+        ? "done"
+        : isPreOfferte
+          ? "upcoming"
+          : customerApprovableCount > 0
+            ? "active"
+            : "upcoming",
     },
     {
       label: "Aanbieders bevestigen",
@@ -156,10 +165,11 @@ function buildProgramTrack(
 
   const base = { id: "program" as const, tone: "program" as const, title: "Programma", subtitle: "Activiteiten & beleving", steps };
 
-  if (statusSummary.total === 0) {
+  if (statusSummary.total === 0 || isPreOfferte) {
     return {
       ...base,
-      statusLine: "Wij stellen uw programma samen. U hoort van ons zodra het klaarstaat.",
+      statusLine:
+        "Wij stellen uw programma samen. U hoort van ons zodra het voorstel klaarstaat.",
       done: false,
     };
   }
