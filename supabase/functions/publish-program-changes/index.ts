@@ -634,6 +634,12 @@ Deno.serve(async (req) => {
         upd.quoted_at = null;
         upd.item_quote_status = "in_behandeling";
         upd.confirmed_time = null;
+        // Status mee terugzetten: anders blokkeert guard_item_status_consistency
+        // de update (status='confirmed' zonder quoted_at is inconsistent).
+        const currentStatus = (upd.status as string | undefined) ?? it.status;
+        if (currentStatus === "confirmed" || currentStatus === "accepted") {
+          upd.status = "pending";
+        }
       }
 
       // Bureau-interne posten (overtochten, fietsen, bagagevervoer, eigen
