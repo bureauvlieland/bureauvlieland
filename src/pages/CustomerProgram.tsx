@@ -493,15 +493,26 @@ const CustomerProgram = () => {
       {(() => null)()}
       {(() => {
         const termsAccepted = !!(program as any).terms_accepted_at;
+        const quoteStatus = (program as any).quote_status as string | null | undefined;
+        // Klant kan pas akkoord geven zodra de offerte officieel verstuurd is
+        // (of de quote al akkoord is). In concept/in_afstemming werkt Bureau
+        // Vlieland nog aan het voorstel — dan tonen we geen 'goed te keuren'
+        // badge, want de klant kan nog niets goedkeuren.
+        const isApprovalPhase =
+          quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
         // Tellen alleen de onderdelen waar de klant NU akkoord op kan geven.
-        // 'pending' = wacht op partner; geen klantactie, dus niet meetellen.
-        const customerActionCount = program.items.filter(
-          (i: any) =>
-            i.block_type !== "self_arranged" &&
-            i.status !== "cancelled" &&
-            (i.status === "confirmed" || i.status === "alternative") &&
-            !i.customer_approved_at,
-        ).length;
+        // 'pending' = wacht op partner; bureau-onderdelen regelt Bureau zelf
+        // (geen klantactie). Beide niet meetellen — consistent met sidebar.
+        const customerActionCount = isApprovalPhase
+          ? program.items.filter(
+              (i: any) =>
+                i.block_type !== "self_arranged" &&
+                i.provider_id !== "bureau" &&
+                i.status !== "cancelled" &&
+                (i.status === "confirmed" || i.status === "alternative") &&
+                !i.customer_approved_at,
+            ).length
+          : 0;
         const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
           && !accommodationQuotes.some((q) => q.status === "selected");
         const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");

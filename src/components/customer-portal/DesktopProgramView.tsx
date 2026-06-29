@@ -251,6 +251,7 @@ export const DesktopProgramView = ({
     termsAccepted,
     customerApprovedCount,
     customerApprovableCount,
+    quoteStatus: program.quote_status,
   });
 
   return (

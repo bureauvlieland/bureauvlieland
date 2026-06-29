@@ -1348,7 +1348,7 @@ const AdminRequestDetail = () => {
 
       const { error } = await supabase
         .from("program_request_items")
-        .update(updateData)
+        .update(updateData as never)
         .eq("id", itemId);
 
       if (error) throw error;
@@ -1667,7 +1667,7 @@ const AdminRequestDetail = () => {
                               if (date >= new Date() && request.quote_status === "verlopen") {
                                 updates.quote_status = "offerte_verstuurd";
                               }
-                              const { error } = await supabase.from("program_requests").update(updates).eq("id", request.id);
+                              const { error } = await supabase.from("program_requests").update(updates as never).eq("id", request.id);
                               if (error) toast.error("Kon verloopdatum niet opslaan");
                               else { toast.success("Verloopdatum bijgewerkt"); fetchRequestData(); }
                             }}
@@ -2256,7 +2256,7 @@ const AdminRequestDetail = () => {
                                               };
                                           const { error } = await supabase
                                             .from("program_request_items")
-                                            .update(updatePayload)
+                                            .update(updatePayload as never)
                                             .eq("id", item.id);
                                           if (error) {
                                             console.error("Fout bij opslaan tijd:", error);

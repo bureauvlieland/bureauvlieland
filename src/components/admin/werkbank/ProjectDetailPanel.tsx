@@ -153,7 +153,7 @@ function ProjectActionsCard({ requestId }: { requestId: string }) {
   const setStatus = async (id: string, status: "done" | "dismissed") => {
     const patch: Record<string, unknown> = { status };
     if (status === "done") patch.completed_at = new Date().toISOString();
-    const { error } = await supabase.from("admin_todos").update(patch).eq("id", id);
+    const { error } = await supabase.from("admin_todos").update(patch as never).eq("id", id);
     if (error) {
       toast({ title: "Kon niet bijwerken", description: error.message, variant: "destructive" });
       return;

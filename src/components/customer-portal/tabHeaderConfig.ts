@@ -19,6 +19,11 @@ interface BuildArgs {
   termsAccepted: boolean;
   customerApprovedCount: number;
   customerApprovableCount: number;
+  /**
+   * Projectfase. Pas vanaf 'offerte_verstuurd' kan de klant onderdelen
+   * goedkeuren — daarvoor werkt Bureau Vlieland nog aan het voorstel.
+   */
+  quoteStatus?: string | null;
 }
 
 type TabHeaderConfig = Pick<TabHeaderProps, "icon" | "title" | "subtitle" | "badge">;
@@ -36,6 +41,7 @@ export function buildTabHeader({
   termsAccepted,
   customerApprovedCount,
   customerApprovableCount,
+  quoteStatus,
 }: BuildArgs): TabHeaderConfig {
   switch (section) {
     case "accommodation": {
@@ -60,6 +66,10 @@ export function buildTabHeader({
       };
     }
     case "program": {
+      const isApprovalPhase =
+        quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
+      const isPreOfferte =
+        quoteStatus === "concept" || quoteStatus === "in_afstemming";
       const allConfirmed =
         statusSummary.total > 0 &&
         statusSummary.pending === 0 &&
@@ -68,26 +78,31 @@ export function buildTabHeader({
       const allApproved =
         customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
       // Hoeveel onderdelen wachten nu écht op de klant?
-      const customerActionsOpen = Math.max(0, customerApprovableCount - customerApprovedCount);
+      // Alleen relevant zodra de offerte naar de klant is.
+      const customerActionsOpen = isApprovalPhase
+        ? Math.max(0, customerApprovableCount - customerApprovedCount)
+        : 0;
       const badge =
         statusSummary.total === 0
           ? { label: "In voorbereiding", variant: "outline" as const }
-          : allApproved
-            ? { label: "Alles goedgekeurd", variant: "default" as const }
-            : customerActionsOpen > 0
-              ? {
-                  // Amber 'secondary' — geen rood alarm, wél duidelijk dat u aan zet bent.
-                  label: `${customerActionsOpen} goed te keuren`,
-                  variant: "secondary" as const,
-                }
-              : allConfirmed
-                ? { label: "Klaar voor ondertekening", variant: "secondary" as const }
-                : { label: "Wacht op partners", variant: "outline" as const };
+          : isPreOfferte
+            ? { label: "In voorbereiding", variant: "outline" as const }
+            : allApproved
+              ? { label: "Alles goedgekeurd", variant: "default" as const }
+              : customerActionsOpen > 0
+                ? {
+                    // Amber 'secondary' — geen rood alarm, wél duidelijk dat u aan zet bent.
+                    label: `${customerActionsOpen} goed te keuren`,
+                    variant: "secondary" as const,
+                  }
+                : allConfirmed
+                  ? { label: "Klaar voor ondertekening", variant: "secondary" as const }
+                  : { label: "Wacht op partners", variant: "outline" as const };
       return {
         icon: Calendar,
         title: "Uw programma",
         subtitle:
-          statusSummary.total === 0
+          statusSummary.total === 0 || isPreOfferte
             ? "Bureau Vlieland stelt uw programma samen. Zodra het klaarstaat, vindt u het hier terug."
             : "",
         badge,

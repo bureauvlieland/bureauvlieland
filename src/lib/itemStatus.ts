@@ -248,6 +248,16 @@ export function deriveItemDisplayStatus(
   }
 
   if (item.status === "pending") return "wacht_op_partner";
+
+  // Project zit nog in concept/in_afstemming (admin werkt nog aan de offerte).
+  // De klant ziet "Uw programma wordt voorbereid" — onderdelen mogen dan NIET
+  // de "Akkoord nodig" badge tonen, want de klant kan nog niets goedkeuren.
+  // Pas wanneer quote_status overgaat naar offerte_verstuurd valt het onderdeel
+  // in de wacht_op_klant-tak hierboven.
+  const isPreOfferte =
+    ctx.quoteStatus === "concept" || ctx.quoteStatus === "in_afstemming";
+  if (isPreOfferte) return "wacht_op_partner";
+
   return "wacht_op_klant";
 
 }
