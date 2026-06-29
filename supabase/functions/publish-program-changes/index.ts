@@ -632,7 +632,9 @@ Deno.serve(async (req) => {
       }
       if (wasLive && resetPartnerApproval && effectiveBlockType !== "bureau") {
         upd.quoted_at = null;
-        upd.item_quote_status = "in_behandeling";
+        // Gebruik een geldige DB-waarde. "in_afstemming" betekent hier:
+        // wijziging is gepubliceerd, maar de partner moet (opnieuw) reageren.
+        upd.item_quote_status = "in_afstemming";
         upd.confirmed_time = null;
         // Status mee terugzetten: anders blokkeert guard_item_status_consistency
         // de update (status='confirmed' zonder quoted_at is inconsistent).
