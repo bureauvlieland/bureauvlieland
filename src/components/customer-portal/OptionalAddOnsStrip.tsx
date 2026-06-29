@@ -33,7 +33,6 @@ export const OptionalAddOnsStrip = ({
   readOnly = false,
 }: OptionalAddOnsStripProps) => {
   const { token } = useParams<{ token: string }>();
-  const queryClient = useQueryClient();
   const [options, setOptions] = useState<OptionalChild[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
