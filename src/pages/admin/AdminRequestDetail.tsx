@@ -2612,6 +2612,7 @@ const AdminRequestDetail = () => {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
                                                 quoteStatus: request.quote_status ?? null,
+                                                audience: "admin",
                                               })}
                                             />
                                           </div>
