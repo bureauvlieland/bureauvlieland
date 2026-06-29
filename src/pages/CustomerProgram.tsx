@@ -94,6 +94,13 @@ const CustomerProgram = () => {
   const pendingChanges = getPendingChanges();
   const hasChanges = pendingChanges.length > 0;
 
+  // Optionele extra's vanuit OptionalAddOnsStrip triggeren een refresh
+  useEffect(() => {
+    const handler = () => { refetch(); };
+    window.addEventListener("customer-program:refresh", handler);
+    return () => window.removeEventListener("customer-program:refresh", handler);
+  }, [refetch]);
+
   // Parse dates, with defensive check for items beyond the date array
   const selectedDates = useMemo(() => {
     if (!program?.selected_dates) return [];

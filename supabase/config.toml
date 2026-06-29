@@ -99,6 +99,9 @@ verify_jwt = false
 [functions.approve-quote-item]
 verify_jwt = false
 
+[functions.customer-add-optional-component]
+verify_jwt = false
+
 [functions.update-partner-email]
 verify_jwt = false
 
