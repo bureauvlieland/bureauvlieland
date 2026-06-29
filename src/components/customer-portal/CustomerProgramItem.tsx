@@ -106,10 +106,11 @@ export const CustomerProgramItem = ({
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
   // opnieuw akkoord op moet geven.
   // Bureau-onderdelen (provider_id="bureau") regelen wij zelf — die zijn voor de klant
-  // automatisch akkoord, dus geen per-item knop. Per-item knop verschijnt alleen in
-  // fase 3 (quote_status="akkoord_ontvangen"): in fase 2 zit de actie in de bulk-
-  // akkoord-card bovenaan om dubbele/contradicterende acties te voorkomen.
-  const isApprovalPhase = quoteStatus === "akkoord_ontvangen";
+  // automatisch akkoord, dus geen per-item knop. De per-item knop verschijnt zodra de
+  // offerte naar de klant is verstuurd (fase 2: 'offerte_verstuurd') of in fase 3
+  // (quote_status="akkoord_ontvangen") voor nagekomen wijzigingen/alternatieven.
+  const isApprovalPhase =
+    quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
   // Een alternatief voorstel van de aanbieder (status='alternative') vraagt
   // ALTIJD opnieuw expliciete goedkeuring van de klant — ook als er eerder
   // bulk-akkoord is gegeven (customer_approved_at). De per-item knop moet dan
