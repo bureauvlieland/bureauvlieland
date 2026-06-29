@@ -1667,7 +1667,7 @@ const AdminRequestDetail = () => {
                               if (date >= new Date() && request.quote_status === "verlopen") {
                                 updates.quote_status = "offerte_verstuurd";
                               }
-                              const { error } = await supabase.from("program_requests").update(updates).eq("id", request.id);
+                              const { error } = await supabase.from("program_requests").update(updates as never).eq("id", request.id);
                               if (error) toast.error("Kon verloopdatum niet opslaan");
                               else { toast.success("Verloopdatum bijgewerkt"); fetchRequestData(); }
                             }}
