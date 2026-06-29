@@ -563,6 +563,7 @@ export const ProgramStepper = ({
   accommodationQuoteReceivedCount = 0,
   customerApprovedCount,
   customerApprovableCount,
+  quoteStatus,
   onStepAction,
   className,
   variant = "horizontal",
