@@ -273,53 +273,37 @@ Deno.serve(async (req) => {
     const emails: any[] = [];
     const pendingLogs: Array<{ messageIdx: number; logPayload: any }> = [];
 
-    // GEEN automatische partner-mails meer bij annulering door klant.
-    // Bureau informeert partners handmatig vanuit het admin-paneel.
-    const customerLabel = program.customer_company || program.customer_name || "";
-    const allPartnerNames = [
-      ...Array.from(providers.values()).map((p) => p.name),
-      ...Array.from(accommodationPartners.values()).map((p) => p.name),
-    ];
-
+    // Klant heeft zelf geannuleerd → partners automatisch informeren via
+    // notify-partner-cancellation (zelfde mailflow als admin gebruikt). De
+    // items zijn hierboven al op 'cancelled' gezet, dus skip_item_cancel=true.
+    let partnersNotifiedCount = 0;
+    let accommodationPartnersNotifiedCount = 0;
     if (providers.size > 0 || accommodationPartners.size > 0) {
       try {
-        emails.push({
-          From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-          To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
-          Subject: `${subjectPrefix}Klant annuleerde project — ${program.reference_number || customerLabel}`,
-          HTMLPart: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px;">
-              <h2>Project geannuleerd door klant</h2>
-              <p><strong>${sanitizeHtml(customerLabel)}</strong> (${program.reference_number || program.id})</p>
-              <p>Datums: ${dates}</p>
-              ${reason ? `<p>Reden: ${sanitizeHtml(reason)}</p>` : ""}
-              <p>Betrokken partners (${providers.size + accommodationPartners.size}): ${allPartnerNames.map((n) => sanitizeHtml(n)).join(", ") || "—"}</p>
-              <p><em>Open het project in admin om te kiezen welke partners een annuleringsmail krijgen.</em></p>
-            </div>
-          `,
-        });
-        pendingLogs.push({
-          messageIdx: emails.length - 1,
-          logPayload: {
-            email_type: "internal_customer_cancellation",
-            subject: `${subjectPrefix}Klant annuleerde project — ${program.reference_number || customerLabel}`,
-            recipient_email: "hallo@bureauvlieland.nl",
-            recipient_name: "Bureau Vlieland",
-            related_request_id: program.id,
-            sent_by: "cancel-program-request",
-            metadata: {
-              template_name: "internal_customer_cancellation",
-              actor: "klant → bureau (interne notificatie annulering)",
-              affected_partner_count: providers.size + accommodationPartners.size,
-              partner_names: allPartnerNames,
-              cancellation_reason: reason || null,
+        const { data: notifyResult, error: notifyErr } = await supabase.functions.invoke(
+          "notify-partner-cancellation",
+          {
+            body: {
+              request_id: program.id,
+              origin,
+              skip_item_cancel: true,
             },
           },
-        });
+        );
+        if (notifyErr) {
+          console.error("notify-partner-cancellation invoke error:", notifyErr);
+        } else {
+          partnersNotifiedCount = Number(notifyResult?.partners_notified || 0);
+          accommodationPartnersNotifiedCount = Number(
+            notifyResult?.accommodation_partners_notified || 0,
+          );
+        }
       } catch (notifErr) {
-        console.error("Failed to queue internal cancellation notice:", notifErr);
+        console.error("Failed to notify partners after customer cancellation:", notifErr);
       }
     }
+
+
 
 
 
@@ -412,8 +396,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        providersNotified: 0,
-        accommodationPartnersNotified: 0,
+        providersNotified: partnersNotifiedCount,
+        accommodationPartnersNotified: accommodationPartnersNotifiedCount,
+
         affected_activity_partners,
         affected_accommodation_partners,
       }),
