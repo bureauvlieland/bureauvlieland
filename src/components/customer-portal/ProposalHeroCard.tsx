@@ -171,7 +171,7 @@ export const ProposalHeroCard = ({
               ) : (
                 <>
                   <CheckCircle2 className="h-5 w-5 mr-2" />
-                  Akkoord op het hele programma
+                  Programma goedkeuren
                 </>
               )}
             </Button>
