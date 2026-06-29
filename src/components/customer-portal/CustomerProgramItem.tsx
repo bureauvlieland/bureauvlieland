@@ -117,6 +117,12 @@ export const CustomerProgramItem = ({
   // weer verschijnen zolang de klant niet expliciet (customer_accepted_at) op
   // het nieuwe voorstel heeft gereageerd.
   const isPartnerAlternative = item.status === "alternative";
+  const partnerHasResponded = !isSelfArranged
+    && item.provider_id !== "bureau"
+    && !item.customer_approved_at
+    && (item.status === "confirmed" || item.status === "alternative")
+    && (item.quoted_price != null || !!(item as any).quoted_at || !!(item as any).partner_price_change_acknowledged_at);
+
   const needsCustomerAction = !isSelfArranged
     && item.provider_id !== "bureau"
     && isApprovalPhase
