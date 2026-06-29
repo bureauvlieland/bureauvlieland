@@ -200,6 +200,7 @@ export const PartnerProjectItemRow = ({
               status={deriveItemDisplayStatusLoose(item, {
                 programPeople: request.number_of_people ?? 0,
                 numberOfDays: numDays || 1,
+                audience: "partner",
               })}
               audience="partner"
             />
