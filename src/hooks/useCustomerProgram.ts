@@ -881,12 +881,13 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     if (!program) return { approved: 0, failed: 0, autoSentToPartner: 0 };
 
     const adminOverride = isAdminImpersonating();
+    const isProposalPhase = program.quote_status === "offerte_verstuurd";
     const candidates = program.items.filter(
       (i: any) =>
         i.status !== "cancelled" &&
         i.block_type !== "self_arranged" &&
         !i.customer_approved_at &&
-        ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status || ""),
+        (isProposalPhase || ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status || "")),
     );
 
     let approved = 0;

@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { downloadSingleEvent } from "@/lib/calendarExport";
-import { isQuoteItemAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/types/programRequest";
@@ -102,6 +101,14 @@ export const CustomerProgramItem = ({
     && (item.status === "confirmed" || item.status === "alternative")
     && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
 
+  // Eén bron voor badge én actieknop. Zo kan een onderdeel niet meer wél
+  // "Goedkeuring nodig" tonen, maar géén goedkeurknop krijgen.
+  const derivedStatus = deriveItemDisplayStatus(item, {
+    programPeople: numberOfPeople ?? 1,
+    numberOfDays: selectedDates.length || 1,
+    quoteStatus: quoteStatus ?? null,
+  });
+
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
   // opnieuw akkoord op moet geven.
@@ -110,13 +117,11 @@ export const CustomerProgramItem = ({
   // In akkoord_ontvangen tonen we per-item acties alleen voor partner-reacties.
   const isApprovalPhase =
     quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
-  const isProposalPhase = quoteStatus === "offerte_verstuurd";
   // Een alternatief voorstel van de aanbieder (status='alternative') vraagt
   // ALTIJD opnieuw expliciete goedkeuring van de klant — ook als er eerder
   // bulk-akkoord is gegeven (customer_approved_at). De per-item knop moet dan
   // weer verschijnen zolang de klant niet expliciet (customer_accepted_at) op
   // het nieuwe voorstel heeft gereageerd.
-  const isPartnerAlternative = item.status === "alternative";
   const partnerHasResponded = !isSelfArranged
     && item.provider_id !== "bureau"
     && !item.customer_approved_at
@@ -125,9 +130,7 @@ export const CustomerProgramItem = ({
 
   const needsCustomerAction = !isSelfArranged
     && isApprovalPhase
-    && (isProposalPhase || item.status === "confirmed" || item.status === "alternative")
-    && (!item.customer_approved_at || priceChangeNeedsAttention || isPartnerAlternative)
-    && !item.customer_accepted_at;
+    && (derivedStatus === "wacht_op_klant" || derivedStatus === "prijs_gewijzigd");
 
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
@@ -161,16 +164,7 @@ export const CustomerProgramItem = ({
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
-                {(() => {
-                  // Unified status (zelfde bron als admin/partner-views). Bureau-onderdelen
-                  // en klant-akkoord-varianten worden nu door de derivation zelf afgehandeld.
-                  const derived = deriveItemDisplayStatus(item, {
-                    programPeople: numberOfPeople ?? 1,
-                    numberOfDays: selectedDates.length || 1,
-                    quoteStatus: quoteStatus ?? null,
-                  });
-                  return <ItemDisplayStatusBadge status={derived} audience="customer" />;
-                })()}
+                <ItemDisplayStatusBadge status={derivedStatus} audience="customer" />
                 {priceChangeNeedsAttention && (
                   <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
                 )}
@@ -401,7 +395,7 @@ export const CustomerProgramItem = ({
 
 
           {/* Always-visible action row */}
-          {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
+          {item.status !== "cancelled" && !readOnly && (
             <div className={cn(
               "mt-3 flex flex-wrap gap-2",
               needsCustomerAction ? "justify-stretch" : "justify-end",
