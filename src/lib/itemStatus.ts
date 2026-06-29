@@ -246,17 +246,27 @@ export function deriveItemDisplayStatus(
     return "geaccepteerd";
   }
 
-  // Workflow: zolang de klant het voorstel nog niet heeft goedgekeurd (in
-  // concept, in_afstemming of offerte_verstuurd) is de blokkade altijd het
-  // klant-akkoord — de aanbieder wordt pas ná klant-akkoord benaderd. Voor
-  // alternative items volgt de bestaande tak (vereist klant-actie, maar met
-  // eigen labels via item.status).
+  // Pre-offerte / pre-akkoord fase: zolang de klant het voorstel nog niet heeft
+  // goedgekeurd, hangt het label af van het type onderdeel én van of de partner
+  // al heeft gereageerd. Dit voorkomt dat we "Akkoord nodig" tonen op
+  // bureau-items (die geen klantakkoord per item nodig hebben) of op pending
+  // partner-items (waar de aanbieder nog moet reageren).
   const isPreApproval =
     ctx.quoteStatus === "concept" ||
     ctx.quoteStatus === "in_afstemming" ||
     ctx.quoteStatus === "offerte_verstuurd";
   if (isPreApproval && !hasApproval && item.status !== "alternative") {
-    return "wacht_op_klant";
+    // Bureau-onderdelen regelt Bureau Vlieland zelf — geen klantakkoord per item.
+    if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
+    // Partner heeft al een reactie/prijs gegeven → klant moet goedkeuren.
+    const partnerHasResponded =
+      item.status === "confirmed" ||
+      item.quoted_price != null ||
+      !!(item as any).quoted_at ||
+      !!(item as any).partner_price_change_acknowledged_at;
+    if (partnerHasResponded) return "wacht_op_klant";
+    // Anders: aanbieder moet nog reageren.
+    return "wacht_op_partner";
   }
 
   if (item.status === "pending") return "wacht_op_partner";

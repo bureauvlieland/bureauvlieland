@@ -117,6 +117,12 @@ export const CustomerProgramItem = ({
   // weer verschijnen zolang de klant niet expliciet (customer_accepted_at) op
   // het nieuwe voorstel heeft gereageerd.
   const isPartnerAlternative = item.status === "alternative";
+  const partnerHasResponded = !isSelfArranged
+    && item.provider_id !== "bureau"
+    && !item.customer_approved_at
+    && (item.status === "confirmed" || item.status === "alternative")
+    && (item.quoted_price != null || !!(item as any).quoted_at || !!(item as any).partner_price_change_acknowledged_at);
+
   const needsCustomerAction = !isSelfArranged
     && item.provider_id !== "bureau"
     && isApprovalPhase
@@ -330,6 +336,14 @@ export const CustomerProgramItem = ({
               <span>
                 {item.status === "alternative" ? (
                   <>De aanbieder stelt een <strong>aanpassing</strong> voor op tijd of prijs. Bekijk de details en geef akkoord, of stel via <em>Andere tijd</em> een alternatief voor.</>
+                ) : partnerHasResponded ? (
+                  <>
+                    De aanbieder heeft uw eerdere goedkeuring verwerkt
+                    {item.quoted_price != null && (
+                      <> en een definitieve prijs van <strong>€{Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> doorgegeven</>
+                    )}
+                    . Geef opnieuw akkoord om dit onderdeel definitief te bevestigen.
+                  </>
                 ) : (
                   <>Dit onderdeel hoort bij uw voorstel. Geef akkoord zodat wij beschikbaarheid en definitieve prijs bij de aanbieder kunnen opvragen.</>
                 )}

@@ -124,7 +124,7 @@ export const ProposalHeroCard = ({
               {partnerItemCount > 0 && (
                 <>
                   {" "}
-                  Voor de overige onderdelen vragen wij — zodra u akkoord geeft —
+                  Voor de overige onderdelen vragen wij — zodra u deze goedkeurt —
                   beschikbaarheid en definitieve prijzen op bij onze aanbieders.
                 </>
               )}
@@ -146,7 +146,7 @@ export const ProposalHeroCard = ({
                 htmlFor="proposal-akkoord-checkbox"
                 className="text-sm cursor-pointer leading-snug"
               >
-                Ik ga akkoord met dit programmavoorstel en de getoonde indicatieve prijzen.
+                Ik keur dit programmavoorstel met de getoonde indicatieve prijzen goed.
                 <span className="block text-xs text-muted-foreground mt-0.5">
                   Definitieve boeking volgt pas na bevestiging door de aanbieders én ondertekening van de algemene voorwaarden.
                 </span>
@@ -171,7 +171,7 @@ export const ProposalHeroCard = ({
               ) : (
                 <>
                   <CheckCircle2 className="h-5 w-5 mr-2" />
-                  Akkoord op het hele programma
+                  Programma goedkeuren
                 </>
               )}
             </Button>
