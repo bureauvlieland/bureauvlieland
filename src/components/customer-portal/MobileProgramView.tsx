@@ -220,7 +220,7 @@ export const MobileProgramView = ({
   const getNextAction = () => {
     if (isProposalPhase && hasUnapprovedItems) {
       return {
-        label: "Akkoord geven",
+        label: "Goedkeuren",
         onClick: () =>
           document.getElementById("proposal-akkoord-checkbox")?.scrollIntoView({ behavior: "smooth", block: "center" }),
       };

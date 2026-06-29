@@ -29,7 +29,7 @@ interface ProposalHeroCardProps {
  * Vervangt het oude duo ActionRequiredCard + ProgramIntroCard in deze fase.
  *
  * Doel: in één oogopslag duidelijk:
- *   1. Wat moet ik doen? → akkoord geven
+  *   1. Wat moet ik doen? → programma goedkeuren
  *   2. Wat als ik iets wil wijzigen? → zelf aanpassen of via chat
  *   3. Wat gebeurt er daarna? → wij vragen beschikbaarheid op
  */
@@ -116,9 +116,7 @@ export const ProposalHeroCard = ({
               {bureauItemCount > 0 && (
                 <>
                   {" "}
-                  Onderdelen die wij zelf verzorgen zijn al bevestigd
-                  <CheckCircle2 className="inline-block h-3.5 w-3.5 mx-0.5 text-emerald-600 align-text-bottom" />
-                  .
+                  Onderdelen die wij zelf verzorgen regelen wij na uw goedkeuring.
                 </>
               )}
               {partnerItemCount > 0 && (

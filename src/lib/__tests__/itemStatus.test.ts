@@ -221,18 +221,17 @@ describe("regressie: partner-alternatief vraagt opnieuw klant-akkoord", () => {
   });
 });
 
-describe("regressie: projectfase offerte_verstuurd — partner-respons bepaalt label", () => {
-  // Workflow: in de offerte-fase tonen we per item de feitelijke staat:
-  //   - bureau-onderdelen → "Bevestigd" (klant_akkoord_bureau)
-  //   - partner heeft gereageerd → klant moet akkoord geven (wacht_op_klant)
-  //   - partner is nog pending → wacht_op_partner
+describe("regressie: projectfase offerte_verstuurd — klant moet hele voorstel goedkeuren", () => {
+  // Workflow: in de offerte-fase wacht elk actief onderdeel zonder
+  // customer_approved_at op goedkeuring door de klant. Bureau-onderdelen en
+  // pending partner-items zijn dus niet automatisch groen.
   const phaseCtx = { ...ctx, quoteStatus: "offerte_verstuurd" };
 
-  it("pending partner-item zonder respons → wacht_op_partner", () => {
+  it("pending partner-item zonder respons → wacht_op_klant", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending" } as any),
       phaseCtx,
-    )).toBe("wacht_op_partner");
+    )).toBe("wacht_op_klant");
   });
 
   it("partner confirmed zonder klant-akkoord → wacht_op_klant", () => {
@@ -253,14 +252,14 @@ describe("regressie: projectfase offerte_verstuurd — partner-respons bepaalt l
     )).toBe("wacht_op_klant");
   });
 
-  it("bureau-item zonder klant-akkoord in offerte-fase → klant_akkoord_bureau", () => {
+  it("bureau-item zonder klant-goedkeuring in offerte-fase → wacht_op_klant", () => {
     expect(deriveItemDisplayStatus(
       makeItem({
         status: "pending",
         provider_id: "bureau",
       } as any),
       phaseCtx,
-    )).toBe("klant_akkoord_bureau");
+    )).toBe("wacht_op_klant");
   });
 
   it("pending item met customer_approved_at in offerte-fase → klant_akkoord_wacht_partner", () => {
@@ -298,11 +297,11 @@ describe("deriveItemDisplayStatus — pre-offerte fase (concept/in_afstemming)",
     )).toBe("wacht_op_partner");
   });
 
-  it("in_afstemming + bureau-item zonder klant-akkoord → klant_akkoord_bureau", () => {
+  it("in_afstemming + bureau-item zonder klant-goedkeuring → wacht_op_partner", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending", provider_id: "bureau" } as any),
       inAfstemming,
-    )).toBe("klant_akkoord_bureau");
+    )).toBe("wacht_op_partner");
   });
 
   it("concept + pending partner zonder respons → wacht_op_partner", () => {

@@ -113,7 +113,7 @@ export const StatusSummary = ({
             const programLabel = activitiesConfirmed
               ? `Bevestigd (${total}/${total})`
               : isAwaitingCustomerApproval
-                ? `Wachten op uw akkoord (${total} onderdelen)`
+                ? `Wachten op uw goedkeuring (${customerApprovableCount - customerApprovedCount} van ${customerApprovableCount})`
                 : isPreApproval && (!quoteStatus || ["concept", "in_afstemming"].includes(quoteStatus))
                   ? `In voorbereiding (${total} onderdelen)`
                   : alternative > 0
@@ -139,14 +139,14 @@ export const StatusSummary = ({
           {/* Klant akkoord — alleen tonen bij offerte_verstuurd of akkoord_ontvangen */}
           {customerApprovableCount > 0 && quoteStatus && ["offerte_verstuurd", "akkoord_ontvangen"].includes(quoteStatus) && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-0.5">Uw akkoord</p>
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">Uw goedkeuring</p>
               <StatusItem
                 icon={customerApprovedCount >= customerApprovableCount
                   ? <CheckCircle className="h-4 w-4 text-green-600" />
                   : <Circle className="h-4 w-4 text-muted-foreground" />
                 }
                 label={customerApprovedCount >= customerApprovableCount
-                  ? quoteStatus === "offerte_verstuurd" ? "Voorstel akkoord" : "Alle onderdelen geaccordeerd"
+                  ? quoteStatus === "offerte_verstuurd" ? "Voorstel goedgekeurd" : "Alle onderdelen geaccordeerd"
                   : quoteStatus === "offerte_verstuurd"
                     ? "Voorstel beoordelen"
                     : `${customerApprovedCount} van ${customerApprovableCount} geaccordeerd`
