@@ -113,7 +113,7 @@ export function WeekPlanningView() {
         label: item.block_name,
         sublabel: `${item.provider_name} · ${item.proposed_time || item.preferred_time || ""}`,
         linkTo: `/admin/projecten/${item.request_id}`,
-        displayStatus: deriveItemDisplayStatusLoose(item),
+        displayStatus: deriveItemDisplayStatusLoose(item, { audience: "admin" }),
         customerName: req?.customer_name || "Onbekend",
         groupSize: req?.number_of_people,
       });
@@ -134,7 +134,7 @@ export function WeekPlanningView() {
           label: item.block_name,
           sublabel: `${item.provider_name} · ${item.preferred_time || ""}`,
           linkTo: `/admin/projecten/${item.request_id}`,
-          displayStatus: deriveItemDisplayStatusLoose(item),
+          displayStatus: deriveItemDisplayStatusLoose(item, { audience: "admin" }),
           customerName: req.customer_name,
           groupSize: req.number_of_people,
         });

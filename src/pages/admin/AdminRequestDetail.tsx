@@ -2349,6 +2349,7 @@ const AdminRequestDetail = () => {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
                                                 quoteStatus: request.quote_status ?? null,
+                                                audience: "admin",
                                               })}
                                             />
                                             {(() => {
@@ -2363,38 +2364,23 @@ const AdminRequestDetail = () => {
                                                   </span>
                                                 );
                                               }
-                                              if (sendPhase === "verstuurd") {
+                                              if (sendPhase === "verstuurd" && item.status === "pending") {
+                                                // Hoofdbadge zegt al "Wacht op aanbieder" — alleen de override-knop
+                                                // tonen zodat admin handmatig kan ingrijpen als de partner niet reageert.
                                                 return (
-                                                  <div className="flex flex-col gap-1 items-start">
-                                                    <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-0.5 text-[11px] font-medium leading-tight text-muted-foreground">
-                                                      <Send className="h-2.5 w-2.5" />
-                                                      Verstuurd
-                                                    </span>
-                                                    {item.status === "pending" && (
-                                                      <div className="flex items-center gap-1 flex-wrap">
-                                                        <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
-                                                          Partner: pending
-                                                        </span>
-                                                        <OverrideItemStatusButton
-                                                          itemId={item.id}
-                                                          blockName={item.block_name}
-                                                          providerName={item.provider_name}
-                                                          onDone={() => fetchRequestData({ silent: true })}
-                                                        />
-                                                      </div>
-                                                    )}
-                                                    {item.status === "confirmed" && (
-                                                      <span className="inline-flex items-center self-start gap-1 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium leading-tight text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-400">
-                                                        Partner: bevestigd
-                                                      </span>
-                                                    )}
-                                                  </div>
+                                                  <OverrideItemStatusButton
+                                                    itemId={item.id}
+                                                    blockName={item.block_name}
+                                                    providerName={item.provider_name}
+                                                    onDone={() => fetchRequestData({ silent: true })}
+                                                  />
                                                 );
                                               }
                                               return null;
                                             })()}
                                           </div>
                                         </TableCell>
+
                                         <TableCell>
                                           <input
                                             type="number"
@@ -2478,6 +2464,7 @@ const AdminRequestDetail = () => {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
                                                 quoteStatus: request.quote_status ?? null,
+                                                audience: "admin",
                                               });
 
                                               type ActionDef = {
@@ -2625,6 +2612,7 @@ const AdminRequestDetail = () => {
                                                 programPeople: request.number_of_people,
                                                 numberOfDays: numDaysForItem,
                                                 quoteStatus: request.quote_status ?? null,
+                                                audience: "admin",
                                               })}
                                             />
                                           </div>

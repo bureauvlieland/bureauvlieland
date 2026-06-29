@@ -187,6 +187,13 @@ interface DeriveContext {
    * dan vallen we terug op de oude itemstatus-gebaseerde afleiding.
    */
   quoteStatus?: string | null;
+  /**
+   * Voor wie wordt het label berekend? De pre-offerte maskering
+   * (alles → "Wacht op aanbieder" tijdens concept/in_afstemming) is alléén
+   * bedoeld voor het klantportaal — admin en partner-views willen de feitelijke
+   * itemstatus zien. Default = "customer" voor backwards-compat.
+   */
+  audience?: "admin" | "customer" | "partner";
 }
 
 /**
@@ -239,24 +246,20 @@ export function deriveItemDisplayStatus(
     return "geaccepteerd";
   }
 
-  // Workflow-regel: tijdens de offerte-fase wacht ALLES eerst op klant-akkoord,
-  // ongeacht de technische itemstatus. Pas ná klant-akkoord gaan onderdelen
-  // naar de aanbieder. Bureau-onderdelen die de klant per bulk heeft
-  // goedgekeurd vallen via hasApproval/hasAcceptance al naar groen.
   if (ctx.quoteStatus === "offerte_verstuurd" && !hasApproval) {
     return "wacht_op_klant";
   }
 
   if (item.status === "pending") return "wacht_op_partner";
 
-  // Project zit nog in concept/in_afstemming (admin werkt nog aan de offerte).
-  // De klant ziet "Uw programma wordt voorbereid" — onderdelen mogen dan NIET
-  // de "Akkoord nodig" badge tonen, want de klant kan nog niets goedkeuren.
-  // Pas wanneer quote_status overgaat naar offerte_verstuurd valt het onderdeel
-  // in de wacht_op_klant-tak hierboven.
+  // Pre-offerte maskering: tijdens concept/in_afstemming ziet de klant
+  // "Uw programma wordt voorbereid" — onderdelen mogen dan geen "Akkoord nodig"
+  // badge tonen. Geldt ALLEEN voor klant-views; admin en partner zien hier de
+  // echte itemstatus (partner bevestigd → wacht_op_klant; pending → wacht_op_partner).
+  const audience = ctx.audience ?? "customer";
   const isPreOfferte =
     ctx.quoteStatus === "concept" || ctx.quoteStatus === "in_afstemming";
-  if (isPreOfferte) return "wacht_op_partner";
+  if (isPreOfferte && audience === "customer") return "wacht_op_partner";
 
   return "wacht_op_klant";
 
@@ -273,5 +276,6 @@ export function deriveItemDisplayStatusLoose(item: unknown, ctx?: Partial<Derive
     programPeople: ctx?.programPeople ?? 0,
     numberOfDays: ctx?.numberOfDays ?? 1,
     quoteStatus: ctx?.quoteStatus ?? null,
+    audience: ctx?.audience,
   });
 }

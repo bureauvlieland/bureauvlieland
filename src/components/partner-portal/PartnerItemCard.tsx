@@ -82,6 +82,7 @@ export const PartnerItemCard = ({
   const displayStatus = deriveItemDisplayStatusLoose(item, {
     programPeople: request.number_of_people ?? 0,
     numberOfDays: dates.length || 1,
+    audience: "partner",
   });
   const recentlyModified = isRecentlyModified(item);
   const newlyAdded = isNewlyAdded(item);
