@@ -210,14 +210,18 @@ describe("regressie: partner-alternatief vraagt opnieuw klant-akkoord", () => {
     )).toBe("wacht_op_klant");
   });
 
-  it("status=alternative met verse customer_accepted_at → geaccepteerd", () => {
+  it("status=alternative met verse customer_accepted_at → klant_akkoord_wacht_partner", () => {
+    // Klant heeft het alternatief geaccepteerd, maar de aanbieder moet de
+    // nieuwe tijd/prijs nog definitief vastleggen.
     expect(deriveItemDisplayStatus(
       makeItem({
         status: "alternative",
         customer_accepted_at: "2024-05-02T10:00:00Z",
+        customer_approved_at: "2024-05-02T10:00:00Z",
+        status_updated_at: "2024-05-01T10:00:00Z",
       } as any),
       ctx,
-    )).toBe("geaccepteerd");
+    )).toBe("klant_akkoord_wacht_partner");
   });
 });
 
