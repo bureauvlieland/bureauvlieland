@@ -202,7 +202,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
       parent_item_id: parent_item_id,
       block_id: child.id,
       block_name: child.name,
-      block_short_description: child.short_description ?? null,
       block_category: child.category,
       block_type: blockType,
       provider_id: childProviderId,
