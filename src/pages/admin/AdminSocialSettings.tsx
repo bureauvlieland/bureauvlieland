@@ -83,7 +83,7 @@ export default function AdminSocialSettings() {
 
     let res;
     if (settings.id) {
-      res = await supabase.from("social_settings").update(payload).eq("id", settings.id);
+      res = await supabase.from("social_settings").update(payload as any).eq("id", settings.id);
     } else {
       res = await supabase.from("social_settings").insert(payload);
     }

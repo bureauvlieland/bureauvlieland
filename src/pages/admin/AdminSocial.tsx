@@ -183,7 +183,7 @@ function DraftCard({ post, onChange }: { post: SocialPost; onChange: () => void 
       scheduled_for: publishNow ? new Date().toISOString() : new Date(scheduledFor).toISOString(),
       approved_at: new Date().toISOString(),
     };
-    const { error } = await supabase.from("social_posts").update(updates).eq("id", post.id);
+    const { error } = await supabase.from("social_posts").update(updates as any).eq("id", post.id);
     if (error) toast.error(error.message);
     else toast.success(publishNow ? "Direct ingepland voor publicatie" : "Goedgekeurd & ingepland");
     setBusy(false);

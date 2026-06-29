@@ -54,7 +54,7 @@ export async function savePartialItemField(
     if ((liveValue ?? null) === (value ?? null)) return;
     const { error } = await supabase
       .from("program_request_items")
-      .update({ [field]: value })
+      .update({ [field]: value } as any)
       .eq("id", item.id);
     if (error) throw error;
     return;
