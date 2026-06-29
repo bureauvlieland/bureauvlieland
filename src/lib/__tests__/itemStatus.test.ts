@@ -271,41 +271,47 @@ describe("regressie: projectfase offerte_verstuurd dwingt eerst klant-akkoord af
   });
 });
 
-describe("deriveItemDisplayStatus — audience scoping voor pre-offerte fase", () => {
-  const preOfferte = { ...ctx, quoteStatus: "in_afstemming" as const };
+describe("deriveItemDisplayStatus — pre-offerte fase (concept/in_afstemming)", () => {
+  const inAfstemming = { ...ctx, quoteStatus: "in_afstemming" as const };
+  const concept = { ...ctx, quoteStatus: "concept" as const };
 
-  it("customer-view tijdens in_afstemming: confirmed item wordt gemaskeerd naar wacht_op_partner", () => {
-    expect(deriveItemDisplayStatus(
-      makeItem({ status: "confirmed" } as any),
-      { ...preOfferte, audience: "customer" },
-    )).toBe("wacht_op_partner");
-  });
-
-  it("admin-view tijdens in_afstemming: confirmed item toont feitelijke wacht_op_klant", () => {
-    expect(deriveItemDisplayStatus(
-      makeItem({ status: "confirmed" } as any),
-      { ...preOfferte, audience: "admin" },
-    )).toBe("wacht_op_klant");
-  });
-
-  it("admin-view tijdens in_afstemming: pending item blijft wacht_op_partner", () => {
+  it("in_afstemming + pending zonder klant-akkoord → wacht_op_klant (customer)", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending" } as any),
-      { ...preOfferte, audience: "admin" },
-    )).toBe("wacht_op_partner");
-  });
-
-  it("partner-view tijdens in_afstemming: gedraagt zich als admin (geen klant-maskering)", () => {
-    expect(deriveItemDisplayStatus(
-      makeItem({ status: "confirmed" } as any),
-      { ...preOfferte, audience: "partner" },
+      { ...inAfstemming, audience: "customer" },
     )).toBe("wacht_op_klant");
   });
 
-  it("default audience (customer) blijft backwards-compatible", () => {
+  it("in_afstemming + pending zonder klant-akkoord → wacht_op_klant (admin)", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending" } as any),
+      { ...inAfstemming, audience: "admin" },
+    )).toBe("wacht_op_klant");
+  });
+
+  it("concept + pending zonder klant-akkoord → wacht_op_klant (admin)", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending" } as any),
+      { ...concept, audience: "admin" },
+    )).toBe("wacht_op_klant");
+  });
+
+  it("concept + pending zonder klant-akkoord → wacht_op_klant (customer)", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending" } as any),
+      concept,
+    )).toBe("wacht_op_klant");
+  });
+
+  it("in_afstemming + confirmed → wacht_op_klant ongeacht audience", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "confirmed" } as any),
-      preOfferte,
-    )).toBe("wacht_op_partner");
+      { ...inAfstemming, audience: "admin" },
+    )).toBe("wacht_op_klant");
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "confirmed" } as any),
+      { ...inAfstemming, audience: "customer" },
+    )).toBe("wacht_op_klant");
   });
 });
+
