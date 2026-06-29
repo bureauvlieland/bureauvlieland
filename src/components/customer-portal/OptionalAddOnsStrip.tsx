@@ -89,7 +89,8 @@ export const OptionalAddOnsStrip = ({
         return;
       }
       toast.success(`${childName} toegevoegd aan uw programma`);
-      await queryClient.invalidateQueries({ queryKey: ["customer-program", token] });
+      // Vraag de pagina om de programma-data opnieuw te laden
+      window.dispatchEvent(new CustomEvent("customer-program:refresh"));
     } catch (e) {
       console.error(e);
       toast.error("Toevoegen mislukt");
