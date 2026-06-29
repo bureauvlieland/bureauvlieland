@@ -146,7 +146,7 @@ export const ProposalHeroCard = ({
                 htmlFor="proposal-akkoord-checkbox"
                 className="text-sm cursor-pointer leading-snug"
               >
-                Ik ga akkoord met dit programmavoorstel en de getoonde indicatieve prijzen.
+                Ik keur dit programmavoorstel met de getoonde indicatieve prijzen goed.
                 <span className="block text-xs text-muted-foreground mt-0.5">
                   Definitieve boeking volgt pas na bevestiging door de aanbieders én ondertekening van de algemene voorwaarden.
                 </span>
