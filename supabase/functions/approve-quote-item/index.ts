@@ -280,6 +280,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     if (!admin_override) {
+      // Detecteer re-approval: partner had al gereageerd (prijs/bevestiging) maar
+      // de klant moest na een wijziging opnieuw akkoord geven.
+      const isReapprovalAfterPartnerResponse =
+        item.provider_id
+        && item.provider_id !== "bureau"
+        && (item.status === "confirmed" || item.status === "alternative")
+        && (item.quoted_price != null || !!item.quoted_at || !!item.partner_price_change_acknowledged_at);
+
       await supabase.from("program_request_history").insert({
         request_id: program.id,
         item_id: item_id,
@@ -288,8 +296,76 @@ Deno.serve(async (req: Request): Promise<Response> => {
         actor_name: program.customer_name,
         notes: triggerPartnerSend
           ? `Klant heeft "${item.block_name}" goedgekeurd. Aanvraag is automatisch naar partner ${item.provider_name} verstuurd.`
-          : `Klant heeft "${item.block_name}" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
+          : isReapprovalAfterPartnerResponse
+            ? `Klant heeft definitief akkoord gegeven op het aangepaste voorstel van ${item.provider_name} voor "${item.block_name}".`
+            : `Klant heeft "${item.block_name}" goedgekeurd. Bureau Vlieland kan dit onderdeel nu naar de partner sturen.`,
       });
+
+      // Notificeer partner bij re-approval (geen auto-send want partner staat
+      // al in de loop — dit is een bevestiging op zijn eigen voorstel).
+      if (isReapprovalAfterPartnerResponse && !triggerPartnerSend) {
+        try {
+          const baseUrl = getPortalBaseUrl(origin);
+          let partnerEmail = item.provider_email;
+          if (!partnerEmail) {
+            const { data: partner } = await supabase
+              .from("partners")
+              .select("email, contact_email")
+              .eq("id", item.provider_id)
+              .single();
+            partnerEmail = partner?.contact_email || partner?.email;
+          }
+          if (partnerEmail) {
+            const partnerPortalUrl = `${baseUrl}/partner/login`;
+            const recipientEmail = getRecipientEmail(partnerEmail, origin);
+            const replyTo = buildReplyTo(program.reference_number);
+            const priceLine = item.quoted_price != null
+              ? `<p><strong>Bevestigde prijs:</strong> €${Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>`
+              : "";
+            const emailSubject = `Klant akkoord op uw voorstel: ${item.block_name} — ${program.reference_number || ""}`;
+            const emailHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <h2 style="color: #1a365d;">Klant geeft akkoord op uw voorstel</h2>
+                <p>Hoi ${sanitizeHtml(item.provider_name)},</p>
+                <p>Goed nieuws: de klant heeft definitief akkoord gegeven op je aangepaste voorstel voor <strong>${sanitizeHtml(item.block_name)}</strong> (aanvraag ${sanitizeHtml(program.reference_number || "")}).</p>
+                ${priceLine}
+                <p>Bevestig dit onderdeel in je partnerportal zodat we het definitief kunnen inplannen.</p>
+                <p><a href="${partnerPortalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">Open partnerportal</a></p>
+                <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
+              </div>
+            `;
+            const mailjetResponse = await sendEmailViaMailjet([
+              {
+                From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+                To: [{ Email: recipientEmail, Name: item.provider_name }],
+                ...(replyTo ? { ReplyTo: replyTo } : {}),
+                Subject: `${subjectPrefix}${emailSubject}`,
+                HTMLPart: emailHtml,
+              },
+            ]);
+            await logEmail({
+              email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
+              subject: `${subjectPrefix}${emailSubject}`,
+              recipient_email: recipientEmail,
+              recipient_name: item.provider_name,
+              related_request_id: program.id,
+              related_item_id: item_id,
+              related_partner_id: item.provider_id,
+              status: "sent",
+              mailjet_message_id: mailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
+              sent_by: "system",
+              metadata: {
+                template_name: "program_partner_reapproval",
+                actor: "system → partner (re-approval na partner-wijziging)",
+                triggered_by: "per_item_reapproval",
+                test_mode: testMode,
+              },
+            });
+          }
+        } catch (reapprovalEmailError) {
+          console.error("Non-critical: re-approval partner email failed:", reapprovalEmailError);
+        }
+      }
 
       const { data: allItems } = await supabase
         .from("program_request_items")
@@ -317,9 +393,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({
           success: true,
-          message: triggerPartnerSend ? "Onderdeel geaccordeerd en partner geïnformeerd" : "Onderdeel geaccordeerd",
+          message: triggerPartnerSend
+            ? "Onderdeel geaccordeerd en partner geïnformeerd"
+            : isReapprovalAfterPartnerResponse
+              ? "Onderdeel geaccordeerd en partner geïnformeerd over re-approval"
+              : "Onderdeel geaccordeerd",
           all_approved: allApproved,
           auto_partner_sent: triggerPartnerSend,
+          reapproval_partner_notified: isReapprovalAfterPartnerResponse && !triggerPartnerSend,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
