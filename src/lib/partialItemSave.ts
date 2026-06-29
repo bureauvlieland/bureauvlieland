@@ -114,7 +114,7 @@ export async function savePartialItemField(
     .update({
       [pendingCol]: pendingValue,
       pending_changed_at: nextChangedAt,
-    })
+    } as any)
     .eq("id", item.id);
   if (error) throw error;
 }
