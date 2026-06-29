@@ -509,6 +509,18 @@ export const CustomerProgramItem = ({
               </Button>
             </div>
           )}
+
+          {/* Optionele extra's (bouwsteen-componenten) — alleen op hoofd-items */}
+          {!(item as any).parent_item_id && (
+            <OptionalAddOnsStrip
+              item={item}
+              allItems={allItems}
+              quoteStatus={quoteStatus}
+              readOnly={readOnly}
+            />
+          )}
+
+
           
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
