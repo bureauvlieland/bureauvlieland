@@ -124,7 +124,7 @@ export const ProposalHeroCard = ({
               {partnerItemCount > 0 && (
                 <>
                   {" "}
-                  Voor de overige onderdelen vragen wij — zodra u akkoord geeft —
+                  Voor de overige onderdelen vragen wij — zodra u deze goedkeurt —
                   beschikbaarheid en definitieve prijzen op bij onze aanbieders.
                 </>
               )}
