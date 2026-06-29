@@ -220,10 +220,22 @@ export function deriveItemDisplayStatus(
   if (item.status === "executed" || item.status === "invoiced") return "uitgevoerd";
   if (item.status === "unavailable") return "niet_beschikbaar";
 
-  const hasAcceptance = !!item.customer_accepted_at;
   // Een eerder gegeven klant-akkoord vervalt zodra de aanbieder een
-  // ALTERNATIEF voorstel doet — dan moet de klant opnieuw beslissen.
-  const hasApproval = !!item.customer_approved_at && item.status !== "alternative";
+  // ALTERNATIEF voorstel doet — TENZIJ de klant ná dat alternatief opnieuw
+  // heeft goedgekeurd (customer_approved_at >= status_updated_at).
+  const approvedAfterAlternative =
+    item.status === "alternative" &&
+    !!item.customer_approved_at &&
+    !!(item as any).status_updated_at &&
+    new Date(item.customer_approved_at).getTime() >=
+      new Date((item as any).status_updated_at).getTime();
+
+  const hasAcceptance =
+    !!item.customer_accepted_at &&
+    (item.status !== "alternative" || approvedAfterAlternative);
+  const hasApproval =
+    !!item.customer_approved_at &&
+    (item.status !== "alternative" || approvedAfterAlternative);
 
   // Open admin-prijswijziging die de klant nog niet heeft afgehandeld.
   const openPriceChange = hasOpenAdminPriceChange(
@@ -242,7 +254,11 @@ export function deriveItemDisplayStatus(
       return "prijs_gewijzigd";
     }
     if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
-    if (item.status === "pending") return "klant_akkoord_wacht_partner";
+    // Klant heeft (her)bevestigd; bij een alternatief moet de aanbieder de
+    // nieuwe tijd/prijs nog definitief vastleggen.
+    if (item.status === "pending" || item.status === "alternative") {
+      return "klant_akkoord_wacht_partner";
+    }
     return "geaccepteerd";
   }
 
