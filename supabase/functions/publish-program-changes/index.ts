@@ -679,7 +679,21 @@ Deno.serve(async (req) => {
         upd.status_note = null;
       }
 
-      await supabase.from("program_request_items").update(upd).eq("id", it.id);
+      const { error: updErr } = await supabase
+        .from("program_request_items")
+        .update(upd)
+        .eq("id", it.id);
+      if (updErr) {
+        console.error("publish-program-changes item update failed", { item_id: it.id, error: updErr });
+        return new Response(
+          JSON.stringify({
+            error: "item_update_failed",
+            message: `Publicatie geblokkeerd op "${it.block_name}": ${updErr.message}`,
+            item_id: it.id,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Update programma
