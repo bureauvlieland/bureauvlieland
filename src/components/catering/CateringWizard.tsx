@@ -153,33 +153,11 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
       const token = crypto.randomUUID();
       const isoDate = sel.date.toISOString().split("T")[0];
 
-      const { error: insErr } = await supabase.from("program_requests").insert({
-        id: requestId,
-        customer_token: token,
-        customer_name: contact.name,
-        customer_email: contact.email,
-        customer_phone: contact.phone,
-        customer_company: contact.company || null,
-        number_of_people: sel.guests,
-        selected_dates: [isoDate],
-        general_notes: contact.notes || null,
-        dietary_notes: contact.dietary || null,
-        origin: "catering_only",
-        program_description: `Catering: ${sel.type}`,
-        quote_status: "concept",
-        catering_location_text: sel.locationText,
-        catering_start_time: sel.startTime || null,
-        has_horeca_on_site: sel.hasHorecaOnSite,
-        attribution: buildAttribution(),
-      } as any);
-      if (insErr) throw insErr;
-
       const ids = [sel.mainBlockId, ...sel.addonBlockIds].filter(Boolean) as string[];
       const items = ids.map((id) => {
         const b = blocks.find((x) => x.id === id);
         if (!b) return null;
         return {
-          request_id: requestId,
           block_id: b.id,
           block_name: b.name,
           block_category: b.category,
@@ -197,18 +175,32 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
         };
       }).filter(Boolean) as any[];
 
-      if (items.length > 0) {
-        const { error: itemsErr } = await supabase.from("program_request_items").insert(items);
-        if (itemsErr) throw itemsErr;
+      if (items.length === 0) {
+        throw new Error("Geen catering-onderdelen geselecteerd");
       }
 
-      await supabase.from("program_request_history").insert({
-        request_id: requestId,
-        action: "created",
-        actor: "customer",
-        actor_name: contact.name,
-        new_value: { items_count: items.length, kind: "catering_only" },
-      });
+      const { error: rpcErr } = await supabase.rpc("submit_self_service_program_request", {
+        p_request: {
+          id: requestId,
+          customer_token: token,
+          customer_name: contact.name,
+          customer_email: contact.email,
+          customer_phone: contact.phone,
+          customer_company: contact.company || null,
+          number_of_people: sel.guests,
+          selected_dates: [isoDate],
+          general_notes: contact.notes || null,
+          dietary_notes: contact.dietary || null,
+          origin: "catering_only",
+          program_description: `Catering: ${sel.type}`,
+          attribution: buildAttribution(),
+          catering_location_text: sel.locationText,
+          catering_start_time: sel.startTime || null,
+          has_horeca_on_site: sel.hasHorecaOnSite,
+        },
+        p_items: items,
+      } as any);
+      if (rpcErr) throw rpcErr;
 
       // Fetch reference number assigned by DB trigger
       const { data: refRow } = await supabase
@@ -216,6 +208,7 @@ export const CateringWizard = ({ initialType = null }: CateringWizardProps) => {
         .select("reference_number")
         .eq("id", requestId)
         .maybeSingle();
+
 
       const { total, hasIndicative } = calculateTotal(sel, blocks);
 
