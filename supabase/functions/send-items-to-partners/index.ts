@@ -240,9 +240,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 5. Release bureau items.
-    //    Bureau-items zijn intern (aanbieder = Bureau Vlieland zelf), dus zodra
-    //    de klant akkoord heeft gegeven en we 'versturen', zetten we ze direct
-    //    op bevestigd — same same als de externe partner-bevestigingsstap.
+    //    Bureau-items zijn intern (aanbieder = Bureau Vlieland zelf). We mogen
+    //    ze operationeel bevestigen, maar nooit namens de klant goedkeuren:
+    //    customer_approved_at/customer_accepted_at blijven uitsluitend door de
+    //    klantgoedkeur-flow gezet.
     //
     //    Uitzondering: bootovertochten (Doeksen). Die moeten nog handmatig
     //    geboekt worden bij de rederij vóór ze definitief bevestigd zijn.
@@ -263,23 +264,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           skip_partner_notification: false,
           status: "confirmed",
           item_quote_status: "bevestigd",
-          customer_approved_at: nowIso,
           status_updated_at: nowIso,
         })
         .in("id", ids)
-        .is("customer_approved_at", null);
-
-      // Voor items die al een customer_approved_at hadden, alleen status doorzetten
-      await supabase
-        .from("program_request_items")
-        .update({
-          skip_partner_notification: false,
-          status: "confirmed",
-          item_quote_status: "bevestigd",
-          status_updated_at: nowIso,
-        })
-        .in("id", ids)
-        .not("customer_approved_at", "is", null);
+        .select("id");
 
       console.log(`Auto-confirmed ${bureauAutoConfirmItems.length} bureau item(s)`);
     }
