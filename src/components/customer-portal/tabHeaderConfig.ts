@@ -19,6 +19,7 @@ interface BuildArgs {
   termsAccepted: boolean;
   customerApprovedCount: number;
   customerApprovableCount: number;
+  customerActionsCount: number;
   /**
    * Projectfase. Pas vanaf 'offerte_verstuurd' kan de klant onderdelen
    * goedkeuren — daarvoor werkt Bureau Vlieland nog aan het voorstel.
@@ -41,6 +42,7 @@ export function buildTabHeader({
   termsAccepted,
   customerApprovedCount,
   customerApprovableCount,
+  customerActionsCount,
   quoteStatus,
 }: BuildArgs): TabHeaderConfig {
   switch (section) {
@@ -66,8 +68,6 @@ export function buildTabHeader({
       };
     }
     case "program": {
-      const isApprovalPhase =
-        quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
       const isPreOfferte =
         quoteStatus === "concept" || quoteStatus === "in_afstemming";
       const allConfirmed =
@@ -77,11 +77,6 @@ export function buildTabHeader({
         (statusSummary.counter_proposed || 0) === 0;
       const allApproved =
         customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
-      // Hoeveel onderdelen wachten nu écht op de klant?
-      // Alleen relevant zodra de offerte naar de klant is.
-      const customerActionsOpen = isApprovalPhase
-        ? Math.max(0, customerApprovableCount - customerApprovedCount)
-        : 0;
       const badge =
         statusSummary.total === 0
           ? { label: "In voorbereiding", variant: "outline" as const }
@@ -89,10 +84,10 @@ export function buildTabHeader({
             ? { label: "In voorbereiding", variant: "outline" as const }
             : allApproved
               ? { label: "Alles goedgekeurd", variant: "default" as const }
-              : customerActionsOpen > 0
+              : customerActionsCount > 0
                 ? {
                     // Amber 'secondary' — geen rood alarm, wél duidelijk dat u aan zet bent.
-                    label: `${customerActionsOpen} goed te keuren`,
+                    label: `${customerActionsCount} goed te keuren`,
                     variant: "secondary" as const,
                   }
                 : allConfirmed
