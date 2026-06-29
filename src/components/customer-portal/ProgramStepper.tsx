@@ -581,6 +581,7 @@ export const ProgramStepper = ({
     statusSummary,
     customerApprovedCount,
     customerApprovableCount,
+    quoteStatus,
   );
   const billingTrack = buildBillingTrack(billingComplete, termsAccepted);
 
