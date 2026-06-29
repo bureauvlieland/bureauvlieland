@@ -2256,7 +2256,7 @@ const AdminRequestDetail = () => {
                                               };
                                           const { error } = await supabase
                                             .from("program_request_items")
-                                            .update(updatePayload)
+                                            .update(updatePayload as never)
                                             .eq("id", item.id);
                                           if (error) {
                                             console.error("Fout bij opslaan tijd:", error);
