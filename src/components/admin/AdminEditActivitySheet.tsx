@@ -284,18 +284,14 @@ export const AdminEditActivitySheet = ({
           provider_email: newProviderEmail,
         };
 
-        // Auto-akkoord enkel voor échte live bureau-posten (vrije tijd, ferry,
-        // kostenpost). Voor nog niet gepubliceerde drafts (pending_added) heeft
-        // de klant het onderdeel nooit gezien — dan géén klant-akkoord stempelen.
-        // De normale workflow loopt dan via "Publiceer & notificeer".
+        // Bureau-post conceptueel voorbereiden, maar nooit namens de klant
+        // goedkeuren. Klantgoedkeuring loopt uitsluitend via de klantportal.
         const isBureauItemNow = newBlockType === "bureau";
         if (isBureauItemNow && item.status === "pending" && !item.pending_added) {
           const nowIso = new Date().toISOString();
           updateData.status = "confirmed";
           updateData.item_quote_status = "bevestigd";
           updateData.quoted_at = nowIso;
-          updateData.customer_approved_at = nowIso;
-          updateData.customer_accepted_at = nowIso;
           updateData.skip_partner_notification = true;
         }
 
