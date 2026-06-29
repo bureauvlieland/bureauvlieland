@@ -160,5 +160,3 @@ export const OptionalAddOnsStrip = ({
   );
 };
 
-// Keep Check imported (used by potential future "added" indicator) without unused warning
-void Check;
