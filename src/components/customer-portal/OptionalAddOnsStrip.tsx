@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +9,7 @@ import { fetchOptionalChildrenForBlock } from "@/hooks/useBlockComponents";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { BlockComponent } from "@/types/blockComponent";
 import type { BuildingBlock } from "@/types/buildingBlock";
+
 
 interface OptionalAddOnsStripProps {
   item: ProgramRequestItem;
