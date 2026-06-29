@@ -1348,7 +1348,7 @@ const AdminRequestDetail = () => {
 
       const { error } = await supabase
         .from("program_request_items")
-        .update(updateData)
+        .update(updateData as never)
         .eq("id", itemId);
 
       if (error) throw error;
