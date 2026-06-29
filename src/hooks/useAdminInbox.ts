@@ -230,7 +230,7 @@ export function useAdminInbox() {
   useEffect(() => {
     const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
     const ch = supabase
-      .channel("admin-inbox")
+      .channel(`admin-inbox-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_communications" }, invalidate)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, invalidate)
       .subscribe();
