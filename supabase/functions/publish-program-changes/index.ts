@@ -631,10 +631,21 @@ Deno.serve(async (req) => {
         upd.customer_accepted_at = null;
       }
       if (wasLive && resetPartnerApproval && effectiveBlockType !== "bureau") {
+        const partnerWasAlreadySent = it.skip_partner_notification === false;
+        const currentItemQuoteStatus = typeof it.item_quote_status === "string" ? it.item_quote_status : null;
+        const validUnsentQuoteStatuses = new Set(["concept", "offerte_verstuurd", "in_afstemming", "optioneel"]);
+
         upd.quoted_at = null;
-        // Gebruik een geldige DB-waarde. "in_afstemming" betekent hier:
-        // wijziging is gepubliceerd, maar de partner moet (opnieuw) reageren.
-        upd.item_quote_status = "in_afstemming";
+        // Gebruik alleen geldige DB-waarden. Een onderdeel dat al naar de partner
+        // is verstuurd, gaat terug naar "in_afstemming". Een onderdeel dat nog
+        // niet is verstuurd (skip_partner_notification=true, bv. concept/offerte)
+        // behoudt zijn bestaande workflowfase en mag dus niet naar een interne
+        // niet-bestaande waarde zoals "in_behandeling".
+        upd.item_quote_status = partnerWasAlreadySent
+          ? "in_afstemming"
+          : currentItemQuoteStatus && currentItemQuoteStatus !== "bevestigd" && validUnsentQuoteStatuses.has(currentItemQuoteStatus)
+            ? currentItemQuoteStatus
+            : "concept";
         upd.confirmed_time = null;
         // Status mee terugzetten: anders blokkeert guard_item_status_consistency
         // de update (status='confirmed' zonder quoted_at is inconsistent).
