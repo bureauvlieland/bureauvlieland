@@ -421,13 +421,13 @@ export const CustomerProgramItem = ({
                     }
                   }}
                   disabled={localApproving || localAccepting || isAccepting}
-                  size="lg"
-                  className="flex-1 min-w-[220px] bg-green-600 hover:bg-green-700 text-white font-semibold ring-2 ring-green-400/40"
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium ring-1 ring-green-400/30"
                 >
                   {(localApproving || localAccepting) ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                   ) : (
-                    <Check className="h-4 w-4 mr-2" />
+                    <Check className="h-3.5 w-3.5 mr-1.5" />
                   )}
                   {priceChangeNeedsAttention
                     ? "Nieuwe prijs goedkeuren"
