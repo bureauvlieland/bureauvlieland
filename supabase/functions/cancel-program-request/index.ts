@@ -396,8 +396,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        providersNotified: 0,
-        accommodationPartnersNotified: 0,
+        providersNotified: partnersNotifiedCount,
+        accommodationPartnersNotified: accommodationPartnersNotifiedCount,
+
         affected_activity_partners,
         affected_accommodation_partners,
       }),
