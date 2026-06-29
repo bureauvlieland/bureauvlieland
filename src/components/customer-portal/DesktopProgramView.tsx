@@ -435,8 +435,8 @@ export const DesktopProgramView = ({
                         >
                           <ThumbsUp className="h-4 w-4 mr-1" />
                           {customerActionsCount === 1
-                            ? "Geef akkoord op dit onderdeel"
-                            : `Geef akkoord op alle ${customerActionsCount} onderdelen`}
+                            ? "Dit onderdeel goedkeuren"
+                            : `Alle ${customerActionsCount} onderdelen goedkeuren`}
                         </Button>
                       )}
                       {!termsAccepted && isPublished && (

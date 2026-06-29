@@ -221,10 +221,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
         }
       : {};
 
-    // Als admin dit item heeft gemarkeerd als "wacht op klantgoedkeuring",
-    // dan triggert klantakkoord automatisch de partner-uitvraag (en wist de vlag).
+    // Na klant-goedkeuring in de offertefase mag een partner-item naar de aanbieder.
+    // Dit geldt óók als de expliciete awaiting_customer_for_partner_send-vlag ontbreekt;
+    // skip_partner_notification=true betekent hier: nog niet naar partner verstuurd.
     const triggerPartnerSend = !admin_override
-      && item.awaiting_customer_for_partner_send === true
+      && (item.awaiting_customer_for_partner_send === true || program.quote_status === "offerte_verstuurd")
       && item.provider_id
       && item.provider_id !== "bureau"
       && (item.skip_partner_notification === true || item.skip_partner_notification === null);

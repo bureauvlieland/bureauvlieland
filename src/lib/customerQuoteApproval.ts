@@ -6,9 +6,9 @@ import type { ProgramRequestItem } from "@/types/programRequest";
  *  - de klant het nog niet eerder akkoord heeft gegeven,
  *  - het géén self-arranged item is (klant regelt dat zelf).
  *
- * Het klant-akkoord op het voorstel is bewust laagdrempelig en niet-bindend:
- * pas ná dit akkoord vragen we partners om beschikbaarheid. Definitief
- * wordt het pas bij ondertekening van de algemene voorwaarden.
+ * De klant-goedkeuring op het voorstel is bewust laagdrempelig en niet-bindend:
+ * pas ná deze goedkeuring vragen we partners om beschikbaarheid. Definitief
+ * akkoord vindt plaats bij ondertekening van de algemene voorwaarden.
  */
 export const isQuoteItemAwaitingCustomerApproval = (
   item: Pick<

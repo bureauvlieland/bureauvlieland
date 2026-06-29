@@ -57,11 +57,11 @@ export const useProgramStatus = (
   const isProposalPhase = program.quote_status === "offerte_verstuurd"; // fase 2
   const isApprovalPhase = program.quote_status === "akkoord_ontvangen"; // fase 3
 
-  // Bureau-onderdelen zijn per definitie akkoord (Bureau Vlieland regelt het zelf).
-  // De klant hoeft daar nooit op te klikken — ze tellen dus niet mee in actie-tellers.
+  // Elk actief programmaonderdeel hoort bij de klant-goedkeuring van het voorstel.
+  // Bureau-onderdelen zijn dus niet automatisch door de klant goedgekeurd; ze
+  // worden pas groen nadat `customer_approved_at` is gezet.
   const isCustomerActionableCandidate = (i: ProgramRequestItem) =>
     i.block_type !== "self_arranged" &&
-    i.provider_id !== "bureau" &&
     i.status !== "cancelled";
 
   // Een eerdere klant-goedkeuring vervalt zodra de aanbieder een ALTERNATIEF
@@ -70,23 +70,26 @@ export const useProgramStatus = (
   const hasLiveCustomerApproval = (i: ProgramRequestItem) =>
     !!i.customer_approved_at && i.status !== "alternative";
 
-  // Items waar de klant NU akkoord op kan geven.
-  // Pending items = wacht op partner — daar kan de klant niets aan doen.
+  // Items waar de klant NU goedkeuring op kan geven.
+  // In offerte_verstuurd gaat het om het hele voorstel: ook pending partner-
+  // items en Bureau-onderdelen wachten dan op de klant. In akkoord_ontvangen
+  // gaat het alleen om nagekomen partner-reacties/wijzigingen per onderdeel.
   const customerActionableItems = useMemo(
     () =>
       program.items.filter(
         (i) =>
           isCustomerActionableCandidate(i) &&
-          (i.status === "confirmed" || i.status === "alternative") &&
+          (isProposalPhase || i.status === "confirmed" || i.status === "alternative") &&
           !hasLiveCustomerApproval(i),
       ),
-    [program.items],
+    [program.items, isProposalPhase],
   );
   const proposalActionsCount = customerActionableItems.length;
 
   // Totaal te accorderen onderdelen (noemer voor "x van y").
   // Een item telt mee zodra de klant er iets over kan/heeft kunnen zeggen:
-  // - status confirmed/alternative (klant kan nu akkoord geven), OF
+  // - offerte_verstuurd (het hele voorstel ligt bij de klant), OF
+  // - status confirmed/alternative (klant kan nu per onderdeel goedkeuren), OF
   // - customer_approved_at gezet (klant heeft al akkoord gegeven, ook al staat
   //   het item nu op 'pending' omdat we op partner-bevestiging wachten).
   const customerApprovableTotal = useMemo(
@@ -94,11 +97,12 @@ export const useProgramStatus = (
       program.items.filter(
         (i) =>
           isCustomerActionableCandidate(i) &&
-          (i.status === "confirmed" ||
+          (isProposalPhase ||
+            i.status === "confirmed" ||
             i.status === "alternative" ||
             !!i.customer_approved_at),
       ).length,
-    [program.items],
+    [program.items, isProposalPhase],
   );
   // Teller op basis van customer_approved_at — een latere partner-alternative
   // wist deze akkoord-staat (zie hasLiveCustomerApproval).
@@ -115,8 +119,7 @@ export const useProgramStatus = (
   ).length;
 
   // Single source of truth voor "wat moet de klant nu doen op deze tab".
-  // In fase 2 (voorstel) zit de actie bovenaan (bulk-akkoord), niet per item.
-  const customerActionsCount = isApprovalPhase ? proposalActionsCount : 0;
+  const customerActionsCount = (isProposalPhase || isApprovalPhase) ? proposalActionsCount : 0;
 
   const totalCost = useMemo(() => {
     let total = 0;

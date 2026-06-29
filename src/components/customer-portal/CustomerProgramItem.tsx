@@ -105,12 +105,12 @@ export const CustomerProgramItem = ({
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
   // opnieuw akkoord op moet geven.
-  // Bureau-onderdelen (provider_id="bureau") regelen wij zelf — die zijn voor de klant
-  // automatisch akkoord, dus geen per-item knop. De per-item knop verschijnt zodra de
-  // offerte naar de klant is verstuurd (fase 2: 'offerte_verstuurd') of in fase 3
-  // (quote_status="akkoord_ontvangen") voor nagekomen wijzigingen/alternatieven.
+  // In offerte_verstuurd moet de klant het hele programma goedkeuren: ook Bureau-
+  // onderdelen en nog-pending partneronderdelen zijn dan niet automatisch akkoord.
+  // In akkoord_ontvangen tonen we per-item acties alleen voor partner-reacties.
   const isApprovalPhase =
     quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
+  const isProposalPhase = quoteStatus === "offerte_verstuurd";
   // Een alternatief voorstel van de aanbieder (status='alternative') vraagt
   // ALTIJD opnieuw expliciete goedkeuring van de klant — ook als er eerder
   // bulk-akkoord is gegeven (customer_approved_at). De per-item knop moet dan
@@ -124,9 +124,8 @@ export const CustomerProgramItem = ({
     && (item.quoted_price != null || !!(item as any).quoted_at || !!(item as any).partner_price_change_acknowledged_at);
 
   const needsCustomerAction = !isSelfArranged
-    && item.provider_id !== "bureau"
     && isApprovalPhase
-    && (item.status === "confirmed" || item.status === "alternative")
+    && (isProposalPhase || item.status === "confirmed" || item.status === "alternative")
     && (!item.customer_approved_at || priceChangeNeedsAttention || isPartnerAlternative)
     && !item.customer_accepted_at;
 
@@ -336,6 +335,8 @@ export const CustomerProgramItem = ({
               <span>
                 {item.status === "alternative" ? (
                   <>De aanbieder stelt een <strong>aanpassing</strong> voor op tijd of prijs. Bekijk de details en geef akkoord, of stel via <em>Andere tijd</em> een alternatief voor.</>
+                ) : item.provider_id === "bureau" ? (
+                  <>Dit onderdeel verzorgt Bureau Vlieland zelf. Keur het programma goed zodat wij dit onderdeel kunnen regelen.</>
                 ) : partnerHasResponded ? (
                   <>
                     De aanbieder heeft uw eerdere goedkeuring verwerkt
@@ -345,7 +346,7 @@ export const CustomerProgramItem = ({
                     . Geef opnieuw akkoord om dit onderdeel definitief te bevestigen.
                   </>
                 ) : (
-                  <>Dit onderdeel hoort bij uw voorstel. Geef akkoord zodat wij beschikbaarheid en definitieve prijs bij de aanbieder kunnen opvragen.</>
+                  <>Dit onderdeel hoort bij uw voorstel. Keur het programma goed zodat wij beschikbaarheid en definitieve prijs bij de aanbieder kunnen opvragen.</>
                 )}
               </span>
             </div>
