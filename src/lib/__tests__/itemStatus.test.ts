@@ -270,3 +270,42 @@ describe("regressie: projectfase offerte_verstuurd dwingt eerst klant-akkoord af
       .toBe("wacht_op_partner");
   });
 });
+
+describe("deriveItemDisplayStatus — audience scoping voor pre-offerte fase", () => {
+  const preOfferte = { ...ctx, quoteStatus: "in_afstemming" as const };
+
+  it("customer-view tijdens in_afstemming: confirmed item wordt gemaskeerd naar wacht_op_partner", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "confirmed" } as any),
+      { ...preOfferte, audience: "customer" },
+    )).toBe("wacht_op_partner");
+  });
+
+  it("admin-view tijdens in_afstemming: confirmed item toont feitelijke wacht_op_klant", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "confirmed" } as any),
+      { ...preOfferte, audience: "admin" },
+    )).toBe("wacht_op_klant");
+  });
+
+  it("admin-view tijdens in_afstemming: pending item blijft wacht_op_partner", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending" } as any),
+      { ...preOfferte, audience: "admin" },
+    )).toBe("wacht_op_partner");
+  });
+
+  it("partner-view tijdens in_afstemming: gedraagt zich als admin (geen klant-maskering)", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "confirmed" } as any),
+      { ...preOfferte, audience: "partner" },
+    )).toBe("wacht_op_klant");
+  });
+
+  it("default audience (customer) blijft backwards-compatible", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "confirmed" } as any),
+      preOfferte,
+    )).toBe("wacht_op_partner");
+  });
+});
