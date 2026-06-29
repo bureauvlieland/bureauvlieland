@@ -102,6 +102,14 @@ export const CustomerProgramItem = ({
     && (item.status === "confirmed" || item.status === "alternative")
     && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
 
+  // Eén bron voor badge én actieknop. Zo kan een onderdeel niet meer wél
+  // "Goedkeuring nodig" tonen, maar géén goedkeurknop krijgen.
+  const derivedStatus = deriveItemDisplayStatus(item, {
+    programPeople: numberOfPeople ?? 1,
+    numberOfDays: selectedDates.length || 1,
+    quoteStatus: quoteStatus ?? null,
+  });
+
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
   // ALS er nog goedkeuring ontbreekt OF er een nieuwe admin-prijs ligt waar de klant
   // opnieuw akkoord op moet geven.
@@ -125,9 +133,7 @@ export const CustomerProgramItem = ({
 
   const needsCustomerAction = !isSelfArranged
     && isApprovalPhase
-    && (isProposalPhase || item.status === "confirmed" || item.status === "alternative")
-    && (!item.customer_approved_at || priceChangeNeedsAttention || isPartnerAlternative)
-    && !item.customer_accepted_at;
+    && (derivedStatus === "wacht_op_klant" || derivedStatus === "prijs_gewijzigd");
 
   // Check if item is newly added (pending status and created within last 24 hours)
   const isNewlyAdded = item.status === "pending" && 
@@ -161,16 +167,7 @@ export const CustomerProgramItem = ({
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
-                {(() => {
-                  // Unified status (zelfde bron als admin/partner-views). Bureau-onderdelen
-                  // en klant-akkoord-varianten worden nu door de derivation zelf afgehandeld.
-                  const derived = deriveItemDisplayStatus(item, {
-                    programPeople: numberOfPeople ?? 1,
-                    numberOfDays: selectedDates.length || 1,
-                    quoteStatus: quoteStatus ?? null,
-                  });
-                  return <ItemDisplayStatusBadge status={derived} audience="customer" />;
-                })()}
+                <ItemDisplayStatusBadge status={derivedStatus} audience="customer" />
                 {priceChangeNeedsAttention && (
                   <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
                 )}
@@ -401,7 +398,7 @@ export const CustomerProgramItem = ({
 
 
           {/* Always-visible action row */}
-          {item.status !== "cancelled" && item.status !== "counter_proposed" && !readOnly && (
+          {item.status !== "cancelled" && !readOnly && (
             <div className={cn(
               "mt-3 flex flex-wrap gap-2",
               needsCustomerAction ? "justify-stretch" : "justify-end",
