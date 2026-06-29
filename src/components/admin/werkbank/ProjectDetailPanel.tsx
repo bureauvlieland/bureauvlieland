@@ -467,7 +467,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
                       <span>·</span>
                       <span>{fmtTime(it)}</span>
                       <ItemDisplayStatusBadge
-                        status={deriveItemDisplayStatusLoose(it)}
+                        status={deriveItemDisplayStatusLoose(it, { audience: "admin" })}
                         audience="admin"
                       />
                       {it.block_type === "bureau" && <span>· Bureau Vlieland regelt</span>}
