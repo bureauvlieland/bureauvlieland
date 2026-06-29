@@ -34,8 +34,15 @@ const isCustomerActionableCandidate = (i: ProgramRequestItem) =>
   i.block_type !== "self_arranged" &&
   i.status !== "cancelled";
 
-const hasLiveCustomerApproval = (i: ProgramRequestItem) =>
-  !!i.customer_approved_at && i.status !== "alternative";
+const hasLiveCustomerApproval = (i: ProgramRequestItem) => {
+  if (!i.customer_approved_at) return false;
+  if (i.status !== "alternative") return true;
+  // Klant heeft het alternatief opnieuw goedgekeurd nadat de aanbieder
+  // het voorstel deed.
+  const statusUpdatedAt = (i as any).status_updated_at as string | null | undefined;
+  if (!statusUpdatedAt) return false;
+  return new Date(i.customer_approved_at).getTime() >= new Date(statusUpdatedAt).getTime();
+};
 
 export const getCustomerApprovalStats = (
   items: ProgramRequestItem[],
