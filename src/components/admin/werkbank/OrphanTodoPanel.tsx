@@ -67,7 +67,7 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
   const setStatus = async (status: "done" | "dismissed") => {
     const patch: Record<string, unknown> = { status };
     if (status === "done") patch.completed_at = new Date().toISOString();
-    const { error } = await supabase.from("admin_todos").update(patch).eq("id", todoId);
+    const { error } = await supabase.from("admin_todos").update(patch as any).eq("id", todoId);
     if (error) {
       toast({ title: "Kon niet bijwerken", description: error.message, variant: "destructive" });
       return;

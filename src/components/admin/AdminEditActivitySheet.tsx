@@ -301,7 +301,7 @@ export const AdminEditActivitySheet = ({
 
         const { error } = await supabase
           .from("program_request_items")
-          .update(updateData)
+          .update(updateData as any)
           .eq("id", item.id);
         if (error) throw error;
 
@@ -375,7 +375,7 @@ export const AdminEditActivitySheet = ({
 
         const { error } = await supabase
           .from("program_request_items")
-          .update(pendingUpdate)
+          .update(pendingUpdate as any)
           .eq("id", item.id);
         if (error) throw error;
       }

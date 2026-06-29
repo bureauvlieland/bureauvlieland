@@ -250,7 +250,7 @@ export function SyncBuildingBlocksDialog({
         if (Object.keys(updateData).length > 0) {
           const { error } = await supabase
             .from("program_request_items")
-            .update(updateData)
+            .update(updateData as any)
             .eq("id", item.itemId);
 
           if (error) {
