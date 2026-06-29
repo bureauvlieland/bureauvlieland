@@ -19,6 +19,11 @@ interface BuildArgs {
   termsAccepted: boolean;
   customerApprovedCount: number;
   customerApprovableCount: number;
+  /**
+   * Projectfase. Pas vanaf 'offerte_verstuurd' kan de klant onderdelen
+   * goedkeuren — daarvoor werkt Bureau Vlieland nog aan het voorstel.
+   */
+  quoteStatus?: string | null;
 }
 
 type TabHeaderConfig = Pick<TabHeaderProps, "icon" | "title" | "subtitle" | "badge">;
