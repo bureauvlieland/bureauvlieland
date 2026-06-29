@@ -13,6 +13,7 @@ import { MobileProgramView } from "@/components/customer-portal/MobileProgramVie
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
+import { getCustomerApprovalStats } from "@/hooks/useProgramStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEventMode } from "@/hooks/useEventMode";
@@ -494,25 +495,7 @@ const CustomerProgram = () => {
       {(() => {
         const termsAccepted = !!(program as any).terms_accepted_at;
         const quoteStatus = (program as any).quote_status as string | null | undefined;
-        // Klant kan pas akkoord geven zodra de offerte officieel verstuurd is
-        // (of de quote al akkoord is). In concept/in_afstemming werkt Bureau
-        // Vlieland nog aan het voorstel — dan tonen we geen 'goed te keuren'
-        // badge, want de klant kan nog niets goedkeuren.
-        const isApprovalPhase =
-          quoteStatus === "offerte_verstuurd" || quoteStatus === "akkoord_ontvangen";
-        // Tellen alleen de onderdelen waar de klant NU akkoord op kan geven.
-        // 'pending' = wacht op partner; bureau-onderdelen regelt Bureau zelf
-        // (geen klantactie). Beide niet meetellen — consistent met sidebar.
-        const customerActionCount = isApprovalPhase
-          ? program.items.filter(
-              (i: any) =>
-                i.block_type !== "self_arranged" &&
-                i.provider_id !== "bureau" &&
-                i.status !== "cancelled" &&
-                (i.status === "confirmed" || i.status === "alternative") &&
-                !i.customer_approved_at,
-            ).length
-          : 0;
+        const { customerActionsCount } = getCustomerApprovalStats(program.items, quoteStatus);
         const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
           && !accommodationQuotes.some((q) => q.status === "selected");
         const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");
@@ -533,8 +516,8 @@ const CustomerProgram = () => {
             : undefined,
           // Amber 'default' i.p.v. rood 'destructive': klantactie is geen alarm.
           // Het programma is gewoon klaar om te beoordelen.
-          program: customerActionCount > 0
-            ? { label: `${customerActionCount} goed te keuren`, variant: "default" as const }
+          program: customerActionsCount > 0
+            ? { label: `${customerActionsCount} goed te keuren`, variant: "default" as const }
             : undefined,
           practical: guestIncomplete
             ? { label: "Aanvullen", variant: "outline" as const }

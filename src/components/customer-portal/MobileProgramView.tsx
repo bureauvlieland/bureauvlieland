@@ -279,6 +279,7 @@ export const MobileProgramView = ({
     termsAccepted,
     customerApprovedCount,
     customerApprovableCount,
+    customerActionsCount,
     quoteStatus: program.quote_status,
   });
 
