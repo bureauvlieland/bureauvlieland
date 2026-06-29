@@ -24,6 +24,7 @@ import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { MicroPill } from "@/components/shared/MicroPill";
 
 import { CounterProposalDialog } from "./CounterProposalDialog";
+import { OptionalAddOnsStrip } from "./OptionalAddOnsStrip";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ChevronDown, ChevronUp, Calendar, Trash2, MessageSquare, Edit2, Timer, Sparkles, Check, Loader2, ArrowLeftRight, MapPin, ExternalLink, CalendarPlus, Users, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
