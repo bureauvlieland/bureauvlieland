@@ -44,11 +44,18 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
   const normalized = normalizeInvoiceNumber(scanInvoiceNumber);
   const supplierName = (item.scan_result?.supplier_name || "").toLowerCase().trim();
 
+  const scannedAmountIncl = (() => {
+    const r = item.scan_result;
+    if (!r) return null;
+    if (typeof r.amount_incl_vat === "number") return r.amount_incl_vat;
+    if (typeof r.amount_excl_vat === "number") return r.amount_excl_vat + (r.vat_amount ?? 0);
+    return null;
+  })();
+
   const { data: matches } = useQuery({
-    queryKey: ["inbox-match", item.id, normalized, supplierName],
-    enabled: !!normalized && normalized.length >= 3 && item.status === "new",
+    queryKey: ["inbox-match", item.id, normalized, supplierName, scannedAmountIncl],
+    enabled: item.status === "new" && (!!normalized || scannedAmountIncl != null),
     queryFn: async (): Promise<MatchRow[]> => {
-      // Pull candidates by date proximity; filter normalized client-side.
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
         .select(
@@ -58,23 +65,47 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
            program_request:program_requests!partner_purchase_invoices_request_id_fkey(reference_number, customer_company, customer_name)`,
         )
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(400);
       if (error) {
         console.error("Match lookup failed:", error);
         return [];
       }
       const all = (data || []) as unknown as MatchRow[];
-      const exact = all.filter((r) => normalizeInvoiceNumber(r.invoice_number) === normalized);
-      if (exact.length === 0) return [];
-      // If supplier hint, prefer rows with matching partner name; otherwise show all.
-      if (supplierName) {
-        const supplierMatches = exact.filter((r) => {
-          const pname = (r.partner?.name || "").toLowerCase();
-          return pname && (pname.includes(supplierName) || supplierName.includes(pname));
-        });
-        if (supplierMatches.length > 0) return supplierMatches;
+
+      // 1. Exact invoice-number match (oorspronkelijke gedrag).
+      const exactByNr = normalized && normalized.length >= 3
+        ? all.filter((r) => normalizeInvoiceNumber(r.invoice_number) === normalized)
+        : [];
+      if (exactByNr.length > 0) {
+        if (supplierName) {
+          const supplierMatches = exactByNr.filter((r) => {
+            const pname = (r.partner?.name || "").toLowerCase();
+            return pname && (pname.includes(supplierName) || supplierName.includes(pname));
+          });
+          if (supplierMatches.length > 0) return supplierMatches;
+        }
+        return exactByNr;
       }
-      return exact;
+
+      // 2. Bedrag-fallback: zelfde partner, bedrag binnen €0,02, nog geen PDF,
+      //    factuurdatum binnen 120 dagen. Vangt placeholder-nummers (1, 2, 3…) op
+      //    die later per mail met het echte nummer binnenkomen.
+      if (!supplierName || scannedAmountIncl == null) return [];
+      const scanDate = item.scan_result?.invoice_date
+        ? new Date(item.scan_result.invoice_date).getTime()
+        : Date.now();
+      return all.filter((r) => {
+        if (r.file_path) return false;
+        const pname = (r.partner?.name || "").toLowerCase();
+        const partnerHit = pname && (pname.includes(supplierName) || supplierName.includes(pname));
+        if (!partnerHit) return false;
+        const rowIncl = Number(r.amount_incl_vat ?? r.amount_excl_vat ?? 0);
+        if (Math.abs(rowIncl - scannedAmountIncl) > 0.02) return false;
+        const rowDate = r.invoice_date ? new Date(r.invoice_date).getTime() : 0;
+        if (!rowDate) return true;
+        const diffDays = Math.abs(scanDate - rowDate) / (1000 * 60 * 60 * 24);
+        return diffDays <= 120;
+      });
     },
   });
 
@@ -87,23 +118,54 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
     }
     setLinkingId(match.id);
     try {
+      // Schrijf het echte factuurnummer/-datum uit de scan terug op de bestaande
+      // registratie, anders blijft de placeholder ("1", "2", …) staan.
+      const scanNr = (item.scan_result?.invoice_number || "").trim();
+      const scanDate = item.scan_result?.invoice_date || null;
+      const newInvoiceNumber =
+        scanNr && normalizeInvoiceNumber(scanNr) !== normalizeInvoiceNumber(match.invoice_number)
+          ? scanNr
+          : null;
+      const newInvoiceDate = scanDate && scanDate !== match.invoice_date ? scanDate : null;
+
+      const patch: {
+        file_path: string;
+        updated_at: string;
+        invoice_number?: string;
+        invoice_date?: string;
+      } = {
+        file_path: item.attachment_path,
+        updated_at: new Date().toISOString(),
+      };
+      if (newInvoiceNumber) patch.invoice_number = newInvoiceNumber;
+      if (newInvoiceDate) patch.invoice_date = newInvoiceDate;
+
       const { error: updErr } = await supabase
         .from("partner_purchase_invoices")
-        .update({ file_path: item.attachment_path, updated_at: new Date().toISOString() })
+        .update(patch)
         .eq("id", match.id);
       if (updErr) throw updErr;
 
       if (match.item_id) {
+        const itemPatch: {
+          invoiced_file_path: string;
+          updated_at: string;
+          invoiced_number?: string;
+        } = {
+          invoiced_file_path: item.attachment_path,
+          updated_at: new Date().toISOString(),
+        };
+        if (newInvoiceNumber) itemPatch.invoiced_number = newInvoiceNumber;
         await supabase
           .from("program_request_items")
-          .update({ invoiced_file_path: item.attachment_path, updated_at: new Date().toISOString() })
+          .update(itemPatch)
           .eq("id", match.item_id);
       }
 
       await onLinked(match.id);
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
-      toast.success("PDF gekoppeld aan bestaande registratie");
+      toast.success("PDF gekoppeld en factuurnummer bijgewerkt");
     } catch (err) {
       console.error("Link PDF failed:", err);
       toast.error("Koppelen mislukt");
@@ -112,18 +174,30 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
     }
   };
 
+  // Beslis of we een exacte nummer-match hebben of een fallback op bedrag.
+  const isAmountFallback =
+    !!matches &&
+    matches.length > 0 &&
+    !!normalized &&
+    !matches.some((m) => normalizeInvoiceNumber(m.invoice_number) === normalized);
+
   return (
     <div className="rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 space-y-2">
       <div className="flex items-start gap-2 text-sm text-blue-900 dark:text-blue-100">
         <Link2 className="h-4 w-4 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="font-medium">
-            {matches.length === 1
-              ? "Deze factuur is al door de partner geregistreerd"
-              : `${matches.length} bestaande registraties gevonden met dit factuurnummer`}
+            {isAmountFallback
+              ? matches.length === 1
+                ? "Mogelijke dubbele registratie gevonden (zelfde partner & bedrag)"
+                : `${matches.length} mogelijke dubbele registraties gevonden (zelfde partner & bedrag)`
+              : matches.length === 1
+                ? "Deze factuur is al door de partner geregistreerd"
+                : `${matches.length} bestaande registraties gevonden met dit factuurnummer`}
           </p>
           <p className="text-xs mt-0.5 text-blue-800 dark:text-blue-200">
             Koppel de PDF aan de bestaande registratie i.p.v. een nieuwe inkoopfactuur aan te maken.
+            {isAmountFallback ? " Het factuurnummer wordt automatisch bijgewerkt naar het nummer uit de PDF." : ""}
           </p>
         </div>
       </div>
