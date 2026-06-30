@@ -1136,9 +1136,15 @@ const AdminInvoicePreview = () => {
                               <span className="w-36 text-right">{format(dueDate, "d MMMM yyyy", { locale: nl })}</span>
                             </div>
                             <div className="flex justify-end gap-4">
-                              <span className="text-gray-500">Referentie:</span>
+                              <span className="text-gray-500">Projectnummer:</span>
                               <span className="w-36 text-right">{request.reference_number}</span>
                             </div>
+                            {request.billing_reference ? (
+                              <div className="flex justify-end gap-4">
+                                <span className="text-gray-500">Referentie:</span>
+                                <span className="w-36 text-right">{request.billing_reference}</span>
+                              </div>
+                            ) : null}
                             <div className="flex justify-end gap-4">
                               <span className="text-gray-500">Aantal personen:</span>
                               <span className="w-36 text-right">{request.number_of_people}</span>
