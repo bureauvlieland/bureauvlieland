@@ -44,11 +44,18 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
   const normalized = normalizeInvoiceNumber(scanInvoiceNumber);
   const supplierName = (item.scan_result?.supplier_name || "").toLowerCase().trim();
 
+  const scannedAmountIncl = (() => {
+    const r = item.scan_result;
+    if (!r) return null;
+    if (typeof r.amount_incl_vat === "number") return r.amount_incl_vat;
+    if (typeof r.amount_excl_vat === "number") return r.amount_excl_vat + (r.vat_amount ?? 0);
+    return null;
+  })();
+
   const { data: matches } = useQuery({
-    queryKey: ["inbox-match", item.id, normalized, supplierName],
-    enabled: !!normalized && normalized.length >= 3 && item.status === "new",
+    queryKey: ["inbox-match", item.id, normalized, supplierName, scannedAmountIncl],
+    enabled: item.status === "new" && (!!normalized || scannedAmountIncl != null),
     queryFn: async (): Promise<MatchRow[]> => {
-      // Pull candidates by date proximity; filter normalized client-side.
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
         .select(
@@ -58,23 +65,47 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
            program_request:program_requests!partner_purchase_invoices_request_id_fkey(reference_number, customer_company, customer_name)`,
         )
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(400);
       if (error) {
         console.error("Match lookup failed:", error);
         return [];
       }
       const all = (data || []) as unknown as MatchRow[];
-      const exact = all.filter((r) => normalizeInvoiceNumber(r.invoice_number) === normalized);
-      if (exact.length === 0) return [];
-      // If supplier hint, prefer rows with matching partner name; otherwise show all.
-      if (supplierName) {
-        const supplierMatches = exact.filter((r) => {
-          const pname = (r.partner?.name || "").toLowerCase();
-          return pname && (pname.includes(supplierName) || supplierName.includes(pname));
-        });
-        if (supplierMatches.length > 0) return supplierMatches;
+
+      // 1. Exact invoice-number match (oorspronkelijke gedrag).
+      const exactByNr = normalized && normalized.length >= 3
+        ? all.filter((r) => normalizeInvoiceNumber(r.invoice_number) === normalized)
+        : [];
+      if (exactByNr.length > 0) {
+        if (supplierName) {
+          const supplierMatches = exactByNr.filter((r) => {
+            const pname = (r.partner?.name || "").toLowerCase();
+            return pname && (pname.includes(supplierName) || supplierName.includes(pname));
+          });
+          if (supplierMatches.length > 0) return supplierMatches;
+        }
+        return exactByNr;
       }
-      return exact;
+
+      // 2. Bedrag-fallback: zelfde partner, bedrag binnen €0,02, nog geen PDF,
+      //    factuurdatum binnen 120 dagen. Vangt placeholder-nummers (1, 2, 3…) op
+      //    die later per mail met het echte nummer binnenkomen.
+      if (!supplierName || scannedAmountIncl == null) return [];
+      const scanDate = item.scan_result?.invoice_date
+        ? new Date(item.scan_result.invoice_date).getTime()
+        : Date.now();
+      return all.filter((r) => {
+        if (r.file_path) return false;
+        const pname = (r.partner?.name || "").toLowerCase();
+        const partnerHit = pname && (pname.includes(supplierName) || supplierName.includes(pname));
+        if (!partnerHit) return false;
+        const rowIncl = Number(r.amount_incl_vat ?? r.amount_excl_vat ?? 0);
+        if (Math.abs(rowIncl - scannedAmountIncl) > 0.02) return false;
+        const rowDate = r.invoice_date ? new Date(r.invoice_date).getTime() : 0;
+        if (!rowDate) return true;
+        const diffDays = Math.abs(scanDate - rowDate) / (1000 * 60 * 60 * 24);
+        return diffDays <= 120;
+      });
     },
   });
 
