@@ -860,10 +860,11 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Partner invoice reminder T+1: 1 day after execution, no purchase invoice
+        // Partner invoice reminder T+3: 3 dagen na uitvoering, nog geen factuur.
+        // (Was T+1 — te kort dag; verschoven naar T+3 zodat partner ruimte heeft.)
         if (
           canSendEmail &&
-          item.executed_at && item.executed_at <= oneDayAgo &&
+          item.executed_at && item.executed_at <= threeDaysAgo &&
           !invoicedItemIds.has(item.id) &&
           item.block_type !== "bureau"
         ) {
@@ -885,7 +886,7 @@ Deno.serve(async (req) => {
                 amount_excl_vat: amountExcl,
                 portal_url: "https://bureauvlieland.nl/partner",
               },
-              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Gisteren is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een paar dagen geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Wanneer het uitkomt: stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
               logExtra: {
                 email_type: "partner_invoice_reminder_t1",
                 related_partner_id: item.provider_id as string,
