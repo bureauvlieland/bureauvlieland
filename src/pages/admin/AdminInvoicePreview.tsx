@@ -725,6 +725,7 @@ const AdminInvoicePreview = () => {
         postalCity: postalCity || undefined,
         vatNumber: request.billing_vat_number ?? undefined,
         customerNumber: request.reference_number ?? undefined,
+        customerReference: request.billing_reference ?? undefined,
       },
       meta: {
         invoiceNumber,
