@@ -111,7 +111,7 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
       const { data, error } = await supabase
         .from("email_log")
         .select(
-          "id,email_type,subject,recipient_email,recipient_name,related_partner_id,related_item_id,status,error_message,created_at,sent_at,delivered_at,opened_at,bounced_at,open_count",
+          "id,email_type,subject,recipient_email,recipient_name,related_partner_id,related_item_id,status,error_message,created_at,sent_at,delivered_at,opened_at,bounced_at,blocked_at,open_count,metadata,mailjet_events,mailjet_message_id,sent_by",
         )
         .or(orClauses.join(","))
         .not("related_partner_id", "is", null)
