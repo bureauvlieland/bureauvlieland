@@ -105,6 +105,43 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selected, setSelected] = useState<LogRow | null>(null);
 
+  const [confirmResend, setConfirmResend] = useState<LogRow | null>(null);
+  const [resending, setResending] = useState(false);
+
+  const reload = async () => {
+    const orClauses = [`related_request_id.eq.${requestId}`];
+    if (accommodationId) orClauses.push(`related_accommodation_id.eq.${accommodationId}`);
+    const { data, error } = await supabase
+      .from("email_log")
+      .select(
+        "id,email_type,subject,recipient_email,recipient_name,related_partner_id,related_item_id,status,error_message,created_at,sent_at,delivered_at,opened_at,bounced_at,blocked_at,open_count,metadata,mailjet_events,mailjet_message_id,sent_by",
+      )
+      .or(orClauses.join(","))
+      .not("related_partner_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (!error && data) setRows(data as LogRow[]);
+  };
+
+  const handleResend = async (row: LogRow) => {
+    setResending(true);
+    try {
+      const { error } = await supabase.functions.invoke("resend-email", {
+        body: { email_log_id: row.id, recipient_email: row.recipient_email },
+      });
+      if (error) throw error;
+      toast.success(`E-mail opnieuw verstuurd naar ${row.recipient_email}`);
+      setConfirmResend(null);
+      setSelected(null);
+      await reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Onbekende fout";
+      toast.error(`Opnieuw versturen mislukt: ${msg}`);
+    } finally {
+      setResending(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     const load = async () => {
