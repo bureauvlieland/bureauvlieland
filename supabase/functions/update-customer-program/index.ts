@@ -678,45 +678,8 @@ Deno.serve(async (req) => {
           related_request_id: program.id,
         });
 
-        // Send notification email to bureau
-        const bureauEmail = "erwin@bureauvlieland.nl";
-        const allAcceptedSubject = `${subjectPrefix}Alle onderdelen akkoord: ${program.customer_name}`;
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
-          Subject: allAcceptedSubject,
-          HTMLPart: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #16a34a; padding: 24px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">✅ Alle onderdelen akkoord</h1>
-              </div>
-              <div style="padding: 32px;">
-                <p>Klant <strong>${sanitizeHtml(program.customer_name)}</strong> heeft alle ${allItems.length} onderdelen geaccepteerd.</p>
-                <p>Het programma kan nu definitief worden afgerond.</p>
-                <p style="text-align: center; margin: 24px 0;">
-                  <a href="https://bureauvlieland.nl/admin/aanvragen/${program.id}" style="display: inline-block; background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk project →</a>
-                </p>
-                <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-              </div>
-            </div>
-          `,
-        });
-        pendingEmailLogs.push({
-          messageIdx: emailMessages.length - 1,
-          logPayload: {
-            email_type: "all_items_accepted_bureau",
-            subject: allAcceptedSubject,
-            recipient_email: bureauEmail,
-            recipient_name: "Bureau Vlieland",
-            related_request_id: program.id,
-            sent_by: "update-customer-program",
-            metadata: {
-              template_name: "all_items_accepted_bureau",
-              actor: "system → bureau (alle items akkoord)",
-              item_count: allItems.length,
-            },
-          },
-        });
+        // Interne bureau-mail vervangen door admin_todo (hierboven aangemaakt).
+
       }
 
       console.log(`Customer accepted item ${acceptItemId}`);
