@@ -101,6 +101,7 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
   const [search, setSearch] = useState("");
   const [partnerFilter, setPartnerFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selected, setSelected] = useState<LogRow | null>(null);
 
   useEffect(() => {
     let active = true;
