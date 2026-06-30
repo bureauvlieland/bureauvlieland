@@ -39,8 +39,6 @@ interface LogRow {
   mailjet_message_id: string | null;
   sent_by: string | null;
 }
-  open_count: number | null;
-}
 
 const EMAIL_TYPE_LABEL: Record<string, string> = {
   program_request_partner: "Initiële aanvraag",
