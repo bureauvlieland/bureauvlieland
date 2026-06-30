@@ -445,30 +445,8 @@ Deno.serve(async (req) => {
             <p><a href="${bureauUrl}" style="background:#1a365d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open werkbank →</a></p>
           </div>`;
 
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
-          Subject: `${subjectPrefix}Datumwijziging door klant — ${customerLabel}`,
-          HTMLPart: bureauHtml,
-        });
-        pendingEmailLogs.push({
-          messageIdx: emailMessages.length - 1,
-          logPayload: {
-            email_type: "customer_date_change_bureau",
-            subject: `${subjectPrefix}Datumwijziging door klant — ${customerLabel}`,
-            recipient_email: "hallo@bureauvlieland.nl",
-            recipient_name: "Bureau Vlieland",
-            related_request_id: program.id,
-            sent_by: "update-customer-program",
-            metadata: {
-              template_name: "customer_date_change_bureau",
-              actor: "klant → bureau (datumwijziging, interne notificatie)",
-              new_dates: newDates,
-              partners_to_inform: allInvolved,
-              accommodation_quotes_reset: accommodationQuoteCount,
-            },
-          },
-        });
+        // Interne bureau-mail vervangen door admin_todo (zie hieronder).
+
 
         // Admin-todo
         await supabase.from("admin_todos").insert({
