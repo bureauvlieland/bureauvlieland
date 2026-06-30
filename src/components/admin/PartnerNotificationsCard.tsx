@@ -32,6 +32,13 @@ interface LogRow {
   delivered_at: string | null;
   opened_at: string | null;
   bounced_at: string | null;
+  blocked_at: string | null;
+  open_count: number | null;
+  metadata: Record<string, any> | null;
+  mailjet_events: any[] | null;
+  mailjet_message_id: string | null;
+  sent_by: string | null;
+}
   open_count: number | null;
 }
 
