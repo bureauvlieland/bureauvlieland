@@ -1,95 +1,39 @@
-## Geconsolideerd plan: status- en terminologieconsistentie klantportal (BV-2602-0005 als leidraad)
+## Probleem
 
-Eén samenhangend plan dat de 4 punten uit de afgelopen chats samenvoegt: (1) status-derivatie kloppend voor beide workflows, (2) re-approval na partner-prijswijziging, (3) badge ↔ knop in lijn, (4) terminologie "goedkeuren" vs "akkoord".
+Voor BV-2606-0022 is het project nog in de **goedkeuring-door-klant** fase. Toch krijgt Vliehors Expres een T-7 herinnering "Reactie nodig". Dat klopt op twee niveaus niet:
 
----
+1. **Principe**: zolang de klant het project (of het specifieke onderdeel) nog niet heeft goedgekeurd, mag er sowieso niets naar de partner — niet als initiële aanvraag, niet als herinnering. Alleen een handmatige admin-actie mag dat doorbreken.
+2. **Bug**: `check-pending-items` (T-7/T-3) filtert nu niet op klant-goedkeuring en niet op `skip_partner_notification`, en checkt ook niet of de originele aanvraag ooit verzonden is. Daardoor gaan er "ghost-herinneringen" naar partners die nooit iets ontvangen hebben.
 
-### 1. `src/lib/itemStatus.ts` — pre-offerte tak herschrijven (één bron van waarheid)
+DB bevestigt: beide Vliehors-items (`6895cc71…`, `026ea1e6…`) hebben `skip_partner_notification = true` én geen `customer_approved_at`, maar in `email_log` staat wel een `partner_activity_unconfirmed_t7` naar info@vliehors-expres.nl.
 
-Vervangt de huidige regels 249-264 die alle niet-goedgekeurde items naar `wacht_op_klant` sturen. Nieuwe logica geldt voor `concept` / `in_afstemming` / `offerte_verstuurd` en is identiek voor admin én klant (audience-param blijft, maar speelt hier geen rol meer):
+## Plan
 
-```text
-Als !hasApproval && item.status !== 'alternative':
-  - provider_id === 'bureau'
-      → klant_akkoord_bureau   (Bevestigd, groen vinkje, geen knop)
-  - partner heeft gereageerd
-      (status === 'confirmed' OF quoted_price gevuld
-       OF quoted_at gevuld OF partner_price_change_acknowledged_at gevuld)
-      → wacht_op_klant          (Akkoord nodig + goedkeurknop)
-  - anders (pending, geen prijs)
-      → wacht_op_partner        (Wacht op aanbieder, geen knop)
-```
+### 1. Reminder-cron hardenen — `supabase/functions/check-pending-items/index.ts`
 
-Dekt beide workflows:
-- Offerte → klant keurt goed → partner bevestigt → definitief akkoord
-- Offerte → klant keurt goed → partner past prijs aan → opnieuw goedkeuren → definitief akkoord
+In de T-7 én T-3 loop (regel ~1073-1140) een driedubbel filter toevoegen vóór elke partner-mail:
 
-Resultaat in BV-2602-0005: bureau-items "Bevestigd", Strandyoga/Fortuna/Strandspektakel "Akkoord nodig" + knop, Zeehondetocht "Wacht op aanbieder", admin en klant zien hetzelfde.
+- **Skip als `skip_partner_notification = true`** — admin heeft expliciet aangegeven dat dit item nog niet de deur uit mag.
+- **Skip als klant nog niet heeft goedgekeurd én project staat in `concept` / `in_afstemming` / `offerte_verstuurd`** — zolang de klant niet akkoord is, mag een partner geen druk/herinnering krijgen. Pas vanaf `akkoord_ontvangen` (of `customer_approved_at` op het item) gaan reminders lopen.
+- **Skip als er nooit een initiële `partner_request_*`-mail in `email_log` voor `related_item_id = item.id` staat** — extra vangnet tegen ghost-reminders, ook voor historische data.
 
-### 2. Sidebar/stepper-teller volgt automatisch
+Bij elke skip een korte `console.log` met reden zodat we het in de edge-function logs kunnen terugzien.
 
-Verifiëren dat `useProgramStatus.ts` / `ProgramStepper.tsx` via `deriveItemDisplayStatus` rekenen. Zo ja: teller valt vanzelf op het juiste aantal (3 i.p.v. 5 in BV-2602-0005). Zo nee: zelfde regel daar toepassen.
+### 2. Eenmalig herstel BV-2606-0022
 
-### 3. Re-approval na partner-prijswijziging (Strandyoga-case)
+De twee Vliehors-items en, ter check, alle andere items in dit project waar al een T-7 is uitgegaan terwijl de klant nog niet akkoord is: status terugzetten naar correcte staat, `skip_partner_notification` laten staan op `true`. Geen retroactieve mail naar Vliehors — admin beslist zelf of/wanneer de aanvraag alsnog verstuurd wordt.
 
-**Klantportal — `src/components/customer-portal/CustomerProgramItem.tsx`:**
+### 3. Antwoord aan Petra (concept)
 
-Nieuwe vlag `partnerHasResponded`:
-```
-!isSelfArranged
-  && item.provider_id !== "bureau"
-  && !item.customer_approved_at
-  && (item.status === "confirmed" || item.status === "alternative")
-  && (item.quoted_price != null || !!item.quoted_at
-      || !!item.partner_price_change_acknowledged_at)
-```
+> Hoi Petra, je hebt gelijk en het spijt me. Deze herinnering had je niet moeten krijgen — het project zit nog in de fase waarin de klant het programma moet goedkeuren, dus de aanvraag was nog niet officieel jouw kant op gegaan. Door een fout in onze automatische herinneringen ging de T-7 mail wél de deur uit. Ik heb dat nu gerepareerd: herinneringen worden voortaan pas verstuurd zodra de klant akkoord is en de aanvraag echt naar jou is uitgegaan. Zodra de klant akkoord is op het programma stuur ik je de officiële aanvraag voor de Vliehors Expres + lunch toe.
 
-Bannertekst in 3 lagen:
-- `status === 'alternative'` → bestaande tekst (tijd/prijs aangepast).
-- `partnerHasResponded` → **"De aanbieder heeft uw eerdere akkoord verwerkt en een definitieve prijs van €X p.p. doorgegeven. Geef opnieuw akkoord om dit onderdeel definitief te bevestigen."**
-- anders → bestaande generieke "we vragen beschikbaarheid en prijs op".
+## Verificatie
 
-Goedkeurknop zelf ongewijzigd.
+- `supabase--read_query` op `email_log` om te bevestigen dat na de fix geen `partner_activity_unconfirmed_t7` / `partner_briefing_t3` rijen meer ontstaan voor items zonder `customer_approved_at` of met `skip_partner_notification = true`.
+- Bestaande regressietests in `src/lib/__tests__/itemStatus.test.ts` blijven groen (geen statuslogica gewijzigd, alleen reminder-trigger).
 
-**Partner-notificatie — `supabase/functions/approve-quote-item/index.ts`:**
+## Niet in scope
 
-Zelfde `isReapprovalAfterPartnerResponse`-detectie. Bij `true`:
-- Subject: `Klant akkoord op uw voorstel: {block_name} — {reference_number}`
-- Body: bevestiging dat klant het aangepaste voorstel goedkeurt; vraag om in partnerportal definitief te bevestigen.
-- Nieuwe template-naam: `program_partner_reapproval`.
-- `program_request_history.notes`: "Klant heeft definitief akkoord gegeven op het aangepaste voorstel van {provider_name}."
-
-Bestaande "first contact"-tak ongewijzigd.
-
-### 4. Terminologie: "goedkeuren" eerste stap, "akkoord" laatste stap
-
-In `src/components/customer-portal/ProposalHeroCard.tsx`:
-- **Regel 127:** "zodra u akkoord geeft" → **"zodra u deze goedkeurt"**.
-- **Regel 149:** "Ik ga akkoord met dit programmavoorstel en de getoonde indicatieve prijzen." → **"Ik keur dit programmavoorstel met de getoonde indicatieve prijzen goed."**
-- **Regel 151:** sub-tekst over "bevestiging door aanbieders én ondertekening" blijft — verwijst correct naar de eindstap.
-- **Regel 174 (knop):** "Akkoord op het hele programma" → **"Programma goedkeuren"**.
-
-Stepper, badges en per-item knoppen gebruiken al "goedkeuren / goedgekeurd" voor de eerste fase en "Akkoord" voor de laatste fase — niet aanraken.
-
-### 5. Unit-tests
-
-`src/lib/__tests__/itemStatus.test.ts`:
-- in_afstemming + bureau + geen approval → `klant_akkoord_bureau`
-- in_afstemming + partner + pending + geen prijs → `wacht_op_partner`
-- in_afstemming + partner + confirmed + quoted_price → `wacht_op_klant`
-- offerte_verstuurd + partner + pending → `wacht_op_partner`
-- offerte_verstuurd + partner + confirmed + acknowledged + geen approval → `wacht_op_klant`
-
-### 6. Verificatie
-
-- Klantpagina BV-2602-0005: bureau-onderdelen "Bevestigd", Zeehondetocht "Wacht op aanbieder", 3 partner-items met goedkeurknop, sidebar telt 3.
-- Strandyoga-banner toont de nieuwe re-approval tekst met €190.
-- Hero-CTA en checkbox tonen "goedkeuren"-terminologie.
-- Admin-detailpagina BV-2602-0005 toont identieke statussen.
-- Edge function-test: re-approval triggert `program_partner_reapproval` mail.
-
-### Out of scope
-
-- Geen wijziging aan goedkeurknop-logica zelf, edge functions buiten `approve-quote-item`, of `quote_status`-transities.
-- Geen nieuwe DB-kolommen — alle signalen bestaan al op `program_request_items`.
-- Stepper-kopje "Akkoord" blijft staan voor de eindfase.
+- Geen wijziging aan `send-items-to-partners` of admin-UI: handmatig versturen blijft werken zoals nu.
+- Geen schema-wijzigingen.
+- Klant-annulering-flow ongewijzigd (al opgelost in vorige turn).
