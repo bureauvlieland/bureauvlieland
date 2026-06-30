@@ -770,6 +770,7 @@ Deno.serve(async (req) => {
 
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // Get executed items (incl. fields needed for partner invoice reminders)
@@ -859,10 +860,11 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Partner invoice reminder T+1: 1 day after execution, no purchase invoice
+        // Partner invoice reminder T+3: 3 dagen na uitvoering, nog geen factuur.
+        // (Was T+1 — te kort dag; verschoven naar T+3 zodat partner ruimte heeft.)
         if (
           canSendEmail &&
-          item.executed_at && item.executed_at <= oneDayAgo &&
+          item.executed_at && item.executed_at <= threeDaysAgo &&
           !invoicedItemIds.has(item.id) &&
           item.block_type !== "bureau"
         ) {
@@ -884,7 +886,7 @@ Deno.serve(async (req) => {
                 amount_excl_vat: amountExcl,
                 portal_url: "https://bureauvlieland.nl/partner",
               },
-              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Gisteren is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een paar dagen geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Wanneer het uitkomt: stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
               logExtra: {
                 email_type: "partner_invoice_reminder_t1",
                 related_partner_id: item.provider_id as string,
@@ -1175,32 +1177,9 @@ Deno.serve(async (req) => {
           });
         }
 
-        // T-3: confirmed → briefing
-        if (daysUntil === 3 && item.status === "confirmed") {
-          const timeInfo = item.confirmed_time || item.proposed_time || item.preferred_time || "n.t.b.";
-          await sendReminderEmail({
-            templateId: "partner_briefing_t3",
-            recipientEmail: partnerEmail,
-            recipientName: partnerName,
-            subject: `Briefing: "${item.block_name}" over 3 dagen voor ${customerName}`,
-            variables: {
-              partner_name: partnerName,
-              block_name: item.block_name,
-              customer_name: customerName,
-              event_date: fmtDateNL(String(dateStr)),
-              number_of_people: String(reqRow.number_of_people || "n.t.b."),
-              time_info: String(timeInfo),
-              portal_url: portalUrl,
-            },
-            fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een korte heads-up: over 3 dagen (${fmtDateNL(String(dateStr))}) staat "<strong>${item.block_name}</strong>" voor ${customerName} gepland (${reqRow.number_of_people || "?"} pers., tijd: ${timeInfo}).</p>`,
-            logExtra: {
-              email_type: "partner_briefing_t3",
-              related_partner_id: item.provider_id,
-              related_request_id: item.request_id,
-              related_item_id: item.id,
-            },
-          });
-        }
+        // T-3 briefing wordt door send-partner-headsup-t3 verzorgd (rijkere
+        // briefing met gastenlijst/dieet/instructies). Niet hier nogmaals.
+
       }
     }
 

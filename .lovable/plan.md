@@ -1,39 +1,87 @@
-## Probleem
+## Doel
 
-Voor BV-2606-0022 is het project nog in de **goedkeuring-door-klant** fase. Toch krijgt Vliehors Expres een T-7 herinnering "Reactie nodig". Dat klopt op twee niveaus niet:
+1. Alle 9 opvallendheden uit het mail-audit oplossen.
+2. Daarna alle e-mailteksten (edge-function fallbacks + DB-templates) controleren op consistentie met de actuele workflow en huisstijl.
 
-1. **Principe**: zolang de klant het project (of het specifieke onderdeel) nog niet heeft goedgekeurd, mag er sowieso niets naar de partner — niet als initiële aanvraag, niet als herinnering. Alleen een handmatige admin-actie mag dat doorbreken.
-2. **Bug**: `check-pending-items` (T-7/T-3) filtert nu niet op klant-goedkeuring en niet op `skip_partner_notification`, en checkt ook niet of de originele aanvraag ooit verzonden is. Daardoor gaan er "ghost-herinneringen" naar partners die nooit iets ontvangen hebben.
+## Stap 1 — Cron-guards & dubbele T-3 oplossen
 
-DB bevestigt: beide Vliehors-items (`6895cc71…`, `026ea1e6…`) hebben `skip_partner_notification = true` én geen `customer_approved_at`, maar in `email_log` staat wel een `partner_activity_unconfirmed_t7` naar info@vliehors-expres.nl.
+### 1a. `supabase/functions/check-pending-items/index.ts`
+Bestaande guards (skip_partner_notification + fase + initiële mail) ook toepassen op:
+- CHECK 1 `reminder_activity_pending` (regel ~295-322) — nu nog kale `partner` check.
+- CHECK 2 `reminder_quote_pending` (regel ~404-436) — analoog: skip als logies-aanvraag nooit officieel is verstuurd.
+- T-7 `partner_activity_unconfirmed_t7` en T-3 `partner_briefing_t3` (al gedaan vorige turn — verifiëren).
+- Aankomst/gastenlijst-cron-blokken voor klant: skip projecten zonder `customer_approved_at` op project-niveau of zonder workflow_phase ∈ {`akkoord_ontvangen`, `in_uitvoering`}.
 
-## Plan
+Helper extraheren: `shouldSkipPartnerComm(item, request, hasInitialEmail)` → boolean, met console.log van reden.
 
-### 1. Reminder-cron hardenen — `supabase/functions/check-pending-items/index.ts`
+### 1b. T-3 dubbele heads-up
+`check-pending-items` stuurt `partner_briefing_t3` én `send-partner-headsup-t3` stuurt `partner_headsup_t3`. Beide op T-3, beide naar dezelfde partner.
 
-In de T-7 én T-3 loop (regel ~1073-1140) een driedubbel filter toevoegen vóór elke partner-mail:
+Beslissing: **`send-partner-headsup-t3` is de uitgebreide versie (met gastenlijst, dieetwensen, locatie, instructies) en blijft. De `partner_briefing_t3` in check-pending-items wordt verwijderd.**
 
-- **Skip als `skip_partner_notification = true`** — admin heeft expliciet aangegeven dat dit item nog niet de deur uit mag.
-- **Skip als klant nog niet heeft goedgekeurd én project staat in `concept` / `in_afstemming` / `offerte_verstuurd`** — zolang de klant niet akkoord is, mag een partner geen druk/herinnering krijgen. Pas vanaf `akkoord_ontvangen` (of `customer_approved_at` op het item) gaan reminders lopen.
-- **Skip als er nooit een initiële `partner_request_*`-mail in `email_log` voor `related_item_id = item.id` staat** — extra vangnet tegen ghost-reminders, ook voor historische data.
+### 1c. `send-partner-headsup-t3` dezelfde guards toevoegen
+Filter al op `status=accepted` en `skip_partner_notification=false`, maar mist:
+- Check op aanwezigheid van initiële `program_request_partner`-mail in `email_log`.
+- Check dat `customer_approved_at` is gezet op het item (workflow vereist klant-akkoord).
 
-Bij elke skip een korte `console.log` met reden zodat we het in de edge-function logs kunnen terugzien.
+### 1d. `send-arrival-reminder` en `send-guest-details-reminder`
+Guard toevoegen: alleen versturen als project `workflow_phase` ∈ {`akkoord_ontvangen`, `in_uitvoering`} en niet `cancelled`.
 
-### 2. Eenmalig herstel BV-2606-0022
+### 1e. Reminder-cadans `partner_invoice_reminder_t1` → T+3
+`check-pending-items` regel 862-895: `oneDayAgo` vervangen door `threeDaysAgo` voor invoice-reminder. T+7 escalatie blijft staan. (Todo's voor admin blijven op T+1/T+7 ongewijzigd — alleen de e-mail naar partner schuift naar T+3.)
 
-De twee Vliehors-items en, ter check, alle andere items in dit project waar al een T-7 is uitgegaan terwijl de klant nog niet akkoord is: status terugzetten naar correcte staat, `skip_partner_notification` laten staan op `true`. Geen retroactieve mail naar Vliehors — admin beslist zelf of/wanneer de aanvraag alsnog verstuurd wordt.
+## Stap 2 — Workflow `accept-quote-proposal` opruimen
 
-### 3. Antwoord aan Petra (concept)
+`accept-quote-proposal` werd gebruikt voor totaal-akkoord (oude flow). Klant keurt nu per item goed via `approve-quote-item`. Risico: dubbele `program_request_partner`-mail.
 
-> Hoi Petra, je hebt gelijk en het spijt me. Deze herinnering had je niet moeten krijgen — het project zit nog in de fase waarin de klant het programma moet goedkeuren, dus de aanvraag was nog niet officieel jouw kant op gegaan. Door een fout in onze automatische herinneringen ging de T-7 mail wél de deur uit. Ik heb dat nu gerepareerd: herinneringen worden voortaan pas verstuurd zodra de klant akkoord is en de aanvraag echt naar jou is uitgegaan. Zodra de klant akkoord is op het programma stuur ik je de officiële aanvraag voor de Vliehors Expres + lunch toe.
+Actie:
+- Code-check: zoek frontend-aanroepen van `accept-quote-proposal`. Indien nog actief → markeren als deprecated en mail-versturen stoppen (alleen DB-status update); de per-item flow stuurt al de juiste mail. Indien niet meer aangeroepen → functie loggen als ongebruikt (niet verwijderen i.v.m. legacy URL's).
 
-## Verificatie
+## Stap 3 — Interne mails → admin-todos
 
-- `supabase--read_query` op `email_log` om te bevestigen dat na de fix geen `partner_activity_unconfirmed_t7` / `partner_briefing_t3` rijen meer ontstaan voor items zonder `customer_approved_at` of met `skip_partner_notification = true`.
-- Bestaande regressietests in `src/lib/__tests__/itemStatus.test.ts` blijven groen (geen statuslogica gewijzigd, alleen reminder-trigger).
+`update-customer-program` stuurt drie "interne" mails naar bureau-inbox:
+- `internal_people_change_accommodation`
+- `customer_date_change_bureau`
+- `all_items_accepted_bureau`
+
+Vervangen door `admin_todos`-inserts met dezelfde context (titel + beschrijving + related_request_id). Dit reduceert inbox-ruis. E-mail-call vervangen door todo-insert; `logEmail` weghalen.
+
+## Stap 4 — Mail-teksten audit
+
+Na alle code-aanpassingen een tekstuele review. Per kanaal controleren:
+
+### 4a. Edge-function fallback HTML (in `index.ts` van elke functie)
+Controle op:
+- Aanhef ("u" voor klant, "je" voor partner).
+- Positionering (geen "regie", wel "lokale specialist / programma-ontwikkelaar / boekingskantoor").
+- Geen `facturatie@bureauvlieland.nl` — gebruik `inkoop@reply.bureauvlieland.nl` / `hallo@bureauvlieland.nl`.
+- Centrale facturatie-zin klopt: partner stuurt factuur naar Bureau Vlieland, niet naar klant.
+- CTA-knoppen kloppen (partner-portaal vs klant-portaal vs ondertekenen).
+- Status-terminologie: "goedgekeurd" (per onderdeel) vs "akkoord" (heel project) — zoals memorialiseerd.
+
+### 4b. DB-templates `email_templates`-tabel
+`SELECT id, subject, body_html FROM email_templates` doorlopen. Per template dezelfde checks. Updates via `psql` INSERT-only — daarom een migration voor UPDATE-statements.
+
+### 4c. Specifieke teksten die we moeten nalopen
+- `program_request_partner` / `program_partner_reapproval` — moet duidelijk zijn dat dit eerste-keer vs hernieuwd akkoord is.
+- `status_alternative` (partner stelt tijd voor) — wat ziet klant?
+- `cancellation_*` — vermelden of partner nog factuur stuurt voor reeds verrichte werk.
+- `customer_aftersales_review` — check links naar Google + eigen review.
+- `arrival_reminder` / `guest_details_reminder` — check leadtime-formuleringen.
+
+## Stap 5 — Verificatie
+
+- `vitest run` (bestaande tests blijven groen, geen statuslogica gewijzigd).
+- `supabase--read_query` op `email_log` voor BV-2606-0022: bevestigen dat geen nieuwe ghost-reminders ontstaan.
+- Edge-function logs van `check-pending-items` na deploy: skip-redenen zichtbaar in console.
+- Korte dry-run van `send-partner-headsup-t3` (`{ dry_run: true }`) om te zien welke items eruit gefilterd worden.
 
 ## Niet in scope
 
-- Geen wijziging aan `send-items-to-partners` of admin-UI: handmatig versturen blijft werken zoals nu.
-- Geen schema-wijzigingen.
-- Klant-annulering-flow ongewijzigd (al opgelost in vorige turn).
+- Geen wijzigingen aan UI-statuslabels (al gedaan in vorige turns).
+- Geen nieuwe mail-templates introduceren — alleen opschonen wat er is.
+- Geen wijziging aan inkomende mail-flow (`inbound-email`).
+
+## Open vraag
+
+Bij stap 1e: schuift de **eerste** partner-invoice-reminder naar T+3 (zoals voorgesteld), of liever T+5? Default in plan = T+3. Laat het weten als T+5 prettiger is.

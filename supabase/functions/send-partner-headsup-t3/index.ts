@@ -175,7 +175,18 @@ Deno.serve(async (req) => {
       .in("related_item_id", itemIds);
     const alreadySent = new Set((sentLog || []).map((r: any) => r.related_item_id));
 
-    const toSend = eligible.filter((e) => !alreadySent.has(e.item.id));
+    // Guard: alleen items waarvoor ooit een initiële program_request_partner
+    // mail naar deze partner is uitgegaan. Zo voorkomen we "ghost briefings"
+    // voor items die door de admin met skip_partner_notification zijn ingevuld
+    // of waarbij de partner nooit een aanvraag heeft gezien.
+    const { data: initialSendLog } = await supabase
+      .from("email_log")
+      .select("related_item_id")
+      .eq("email_type", "program_request_partner")
+      .in("related_item_id", itemIds);
+    const everSent = new Set((initialSendLog || []).map((r: any) => r.related_item_id));
+
+    const toSend = eligible.filter((e) => !alreadySent.has(e.item.id) && everSent.has(e.item.id));
 
     // 4) Fetch partner contact emails.
     const partnerIds = [...new Set(toSend.map((e) => e.item.provider_id!).filter(Boolean))];

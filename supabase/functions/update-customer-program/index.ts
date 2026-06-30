@@ -303,39 +303,9 @@ Deno.serve(async (req) => {
                 auto_entity_id: program.id,
               });
 
-              emailMessages.push({
-                From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-                To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
-                Subject: `${subjectPrefix}Klant wijzigde aantal personen — ${program.reference_number || program.customer_name}`,
-                HTMLPart: `
-                  <div style="font-family: sans-serif; max-width: 600px;">
-                    <h2>Aantal personen gewijzigd door klant</h2>
-                    <p><strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> (${program.reference_number || program.id})</p>
-                    <p>Aantal: <strong>${program.number_of_people} → ${programDetails.numberOfPeople}</strong></p>
-                    <p>${quoteIds.length} logies-offerte(s) teruggezet naar 'pending'. Accommodaties: ${accommodationNames.map((n: string) => sanitizeHtml(n)).join(", ") || "—"}.</p>
-                    <p>Informeer de logiespartners handmatig waar nodig.</p>
-                  </div>
-                `,
-              });
-              pendingEmailLogs.push({
-                messageIdx: emailMessages.length - 1,
-                logPayload: {
-                  email_type: "internal_people_change_accommodation",
-                  subject: `${subjectPrefix}Klant wijzigde aantal personen — ${program.reference_number || program.customer_name}`,
-                  recipient_email: "hallo@bureauvlieland.nl",
-                  recipient_name: "Bureau Vlieland",
-                  related_request_id: program.id,
-                  related_accommodation_id: program.linked_accommodation_id,
-                  sent_by: "update-customer-program",
-                  metadata: {
-                    template_name: "internal_people_change_accommodation",
-                    actor: "klant → bureau (interne notificatie)",
-                    old_people: program.number_of_people,
-                    new_people: programDetails.numberOfPeople,
-                    affected_quote_count: quoteIds.length,
-                  },
-                },
-              });
+              // Interne mail vervangen door admin_todo (zie hierboven) —
+              // bureau ziet het in de werkbank, geen extra inbox-ruis.
+
             } catch (todoErr) {
               console.error("Failed to create admin todo for people change:", todoErr);
             }
@@ -449,56 +419,13 @@ Deno.serve(async (req) => {
           }
         }
 
-        // === ADMIN TODO + INTERNE BUREAU-NOTIFICATIE ===
+        // === ADMIN TODO ===
         const allInvolved = [
           ...Array.from(providerItems.values()).map((p) => p.name),
         ];
-        const partnerListHtml = providerItems.size > 0
-          ? Array.from(providerItems.values())
-              .map((p) => `<li><strong>${sanitizeHtml(p.name)}</strong> — ${p.items.map(sanitizeHtml).join(", ")}</li>`)
-              .join("")
-          : "<li><em>Geen externe partners betrokken</em></li>";
-        const accLine = accommodationQuoteCount > 0
-          ? `<p>Ook <strong>${accommodationQuoteCount}</strong> logies-offerte(s) zijn terug naar status "pending" gezet.</p>`
-          : "";
+        // Interne bureau-mail vervangen door admin_todo (zie hieronder).
 
-        const bureauUrl = `https://bureauvlieland.nl/admin/aanvragen/${program.id}`;
-        const bureauHtml = `
-          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-            <h2>📅 Klant heeft data gewijzigd</h2>
-            <p><strong>${customerLabel}</strong> heeft de data van het programma aangepast.</p>
-            <p><strong>Nieuwe data:</strong> ${newDates}</p>
-            <p>Alle items zijn op "pending" gezet. Partners zijn <strong>NIET</strong> automatisch gemaild — informeer hen handmatig vanuit het project.</p>
-            <p><strong>Betrokken partners:</strong></p>
-            <ul>${partnerListHtml}</ul>
-            ${accLine}
-            <p><a href="${bureauUrl}" style="background:#1a365d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open werkbank →</a></p>
-          </div>`;
 
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
-          Subject: `${subjectPrefix}Datumwijziging door klant — ${customerLabel}`,
-          HTMLPart: bureauHtml,
-        });
-        pendingEmailLogs.push({
-          messageIdx: emailMessages.length - 1,
-          logPayload: {
-            email_type: "customer_date_change_bureau",
-            subject: `${subjectPrefix}Datumwijziging door klant — ${customerLabel}`,
-            recipient_email: "hallo@bureauvlieland.nl",
-            recipient_name: "Bureau Vlieland",
-            related_request_id: program.id,
-            sent_by: "update-customer-program",
-            metadata: {
-              template_name: "customer_date_change_bureau",
-              actor: "klant → bureau (datumwijziging, interne notificatie)",
-              new_dates: newDates,
-              partners_to_inform: allInvolved,
-              accommodation_quotes_reset: accommodationQuoteCount,
-            },
-          },
-        });
 
         // Admin-todo
         await supabase.from("admin_todos").insert({
@@ -730,45 +657,8 @@ Deno.serve(async (req) => {
           related_request_id: program.id,
         });
 
-        // Send notification email to bureau
-        const bureauEmail = "erwin@bureauvlieland.nl";
-        const allAcceptedSubject = `${subjectPrefix}Alle onderdelen akkoord: ${program.customer_name}`;
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
-          Subject: allAcceptedSubject,
-          HTMLPart: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #16a34a; padding: 24px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">✅ Alle onderdelen akkoord</h1>
-              </div>
-              <div style="padding: 32px;">
-                <p>Klant <strong>${sanitizeHtml(program.customer_name)}</strong> heeft alle ${allItems.length} onderdelen geaccepteerd.</p>
-                <p>Het programma kan nu definitief worden afgerond.</p>
-                <p style="text-align: center; margin: 24px 0;">
-                  <a href="https://bureauvlieland.nl/admin/aanvragen/${program.id}" style="display: inline-block; background: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk project →</a>
-                </p>
-                <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-              </div>
-            </div>
-          `,
-        });
-        pendingEmailLogs.push({
-          messageIdx: emailMessages.length - 1,
-          logPayload: {
-            email_type: "all_items_accepted_bureau",
-            subject: allAcceptedSubject,
-            recipient_email: bureauEmail,
-            recipient_name: "Bureau Vlieland",
-            related_request_id: program.id,
-            sent_by: "update-customer-program",
-            metadata: {
-              template_name: "all_items_accepted_bureau",
-              actor: "system → bureau (alle items akkoord)",
-              item_count: allItems.length,
-            },
-          },
-        });
+        // Interne bureau-mail vervangen door admin_todo (hierboven aangemaakt).
+
       }
 
       console.log(`Customer accepted item ${acceptItemId}`);
