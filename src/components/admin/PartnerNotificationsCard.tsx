@@ -5,11 +5,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Mail, Search, AlertTriangle, Eye } from "lucide-react";
+import { Bell, Mail, Search, AlertTriangle, Eye, Send, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNL, FMT_DAY_SHORT_YEAR_TIME } from "@/lib/dateFormat";
+import { toast } from "sonner";
 
 interface PartnerNotificationsCardProps {
   requestId: string;
@@ -102,6 +104,43 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
   const [partnerFilter, setPartnerFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selected, setSelected] = useState<LogRow | null>(null);
+
+  const [confirmResend, setConfirmResend] = useState<LogRow | null>(null);
+  const [resending, setResending] = useState(false);
+
+  const reload = async () => {
+    const orClauses = [`related_request_id.eq.${requestId}`];
+    if (accommodationId) orClauses.push(`related_accommodation_id.eq.${accommodationId}`);
+    const { data, error } = await supabase
+      .from("email_log")
+      .select(
+        "id,email_type,subject,recipient_email,recipient_name,related_partner_id,related_item_id,status,error_message,created_at,sent_at,delivered_at,opened_at,bounced_at,blocked_at,open_count,metadata,mailjet_events,mailjet_message_id,sent_by",
+      )
+      .or(orClauses.join(","))
+      .not("related_partner_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (!error && data) setRows(data as LogRow[]);
+  };
+
+  const handleResend = async (row: LogRow) => {
+    setResending(true);
+    try {
+      const { error } = await supabase.functions.invoke("resend-email", {
+        body: { email_log_id: row.id, recipient_email: row.recipient_email },
+      });
+      if (error) throw error;
+      toast.success(`E-mail opnieuw verstuurd naar ${row.recipient_email}`);
+      setConfirmResend(null);
+      setSelected(null);
+      await reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Onbekende fout";
+      toast.error(`Opnieuw versturen mislukt: ${msg}`);
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -248,9 +287,20 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
                     <div className="text-xs text-slate-500 sm:text-right">
                       {formatNL(new Date(r.created_at), FMT_DAY_SHORT_YEAR_TIME)}
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => setSelected(r)} className="gap-1">
-                      <Eye className="h-3.5 w-3.5" /> Bekijk
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => setSelected(r)} className="gap-1">
+                        <Eye className="h-3.5 w-3.5" /> Bekijk
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmResend(r)}
+                        className="gap-1"
+                        title="Opnieuw versturen"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" /> Opnieuw
+                      </Button>
+                    </div>
                   </div>
                 </li>
               );
@@ -358,8 +408,56 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
               </div>
             </ScrollArea>
           )}
+          {selected && (
+            <DialogFooter className="border-t pt-3">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmResend(selected)}
+                className="gap-1"
+              >
+                <RefreshCw className="h-4 w-4" /> Opnieuw versturen
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmResend} onOpenChange={(o) => !o && !resending && setConfirmResend(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>E-mail opnieuw versturen?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  De partner ontvangt deze e-mail opnieuw. Er wordt een nieuwe regel in
+                  het notificatielog vastgelegd met verwijzing naar de originele verzending.
+                </p>
+                {confirmResend && (
+                  <div className="rounded-md border bg-slate-50 p-2 text-xs space-y-0.5">
+                    <div><span className="text-slate-500">Aan: </span>{confirmResend.recipient_name ? `${confirmResend.recipient_name} <${confirmResend.recipient_email}>` : confirmResend.recipient_email}</div>
+                    <div><span className="text-slate-500">Onderwerp: </span>{confirmResend.subject}</div>
+                    <div><span className="text-slate-500">Type: </span>{EMAIL_TYPE_LABEL[confirmResend.email_type] || confirmResend.email_type}</div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resending}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmResend) handleResend(confirmResend);
+              }}
+              className="gap-1"
+            >
+              <Send className="h-4 w-4" />
+              {resending ? "Versturen…" : "Verstuur opnieuw"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
