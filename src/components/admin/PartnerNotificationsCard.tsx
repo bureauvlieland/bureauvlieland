@@ -287,9 +287,20 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
                     <div className="text-xs text-slate-500 sm:text-right">
                       {formatNL(new Date(r.created_at), FMT_DAY_SHORT_YEAR_TIME)}
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => setSelected(r)} className="gap-1">
-                      <Eye className="h-3.5 w-3.5" /> Bekijk
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => setSelected(r)} className="gap-1">
+                        <Eye className="h-3.5 w-3.5" /> Bekijk
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmResend(r)}
+                        className="gap-1"
+                        title="Opnieuw versturen"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" /> Opnieuw
+                      </Button>
+                    </div>
                   </div>
                 </li>
               );
