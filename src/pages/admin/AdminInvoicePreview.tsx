@@ -60,6 +60,7 @@ interface ProgramRequest {
   billing_address_postal: string | null;
   billing_address_city: string | null;
   billing_vat_number: string | null;
+  billing_reference: string | null;
 }
 
 interface ProgramItem {
