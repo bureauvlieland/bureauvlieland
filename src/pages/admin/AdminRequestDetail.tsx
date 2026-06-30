@@ -123,6 +123,7 @@ import { calculateProjectGrandTotal, calculateProjectOutstandingAmount } from "@
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
+import { PartnerNotificationsCard } from "@/components/admin/PartnerNotificationsCard";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
@@ -1979,6 +1980,7 @@ const AdminRequestDetail = () => {
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
               <TabsTrigger value="financien">Financiën</TabsTrigger>
               <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
+              <TabsTrigger value="notificaties">Notificaties</TabsTrigger>
               <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
             </TabsList>
 
@@ -3082,8 +3084,15 @@ const AdminRequestDetail = () => {
               />
             </TabsContent>
 
+            {/* Tab: Notificaties */}
+            <TabsContent value="notificaties">
+              <PartnerNotificationsCard
+                requestId={request.id}
+                accommodationId={request.linked_accommodation_id || undefined}
+              />
+            </TabsContent>
 
-            {/* Tab: Geschiedenis */}
+
             <TabsContent value="geschiedenis">
               <Card>
                 <CardHeader>
