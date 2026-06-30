@@ -244,8 +244,13 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
                       <p className="text-xs text-rose-600 mt-1">{r.error_message}</p>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 shrink-0 sm:text-right">
-                    {formatNL(new Date(r.created_at), FMT_DAY_SHORT_YEAR_TIME)}
+                  <div className="flex sm:flex-col items-start sm:items-end gap-2 shrink-0">
+                    <div className="text-xs text-slate-500 sm:text-right">
+                      {formatNL(new Date(r.created_at), FMT_DAY_SHORT_YEAR_TIME)}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setSelected(r)} className="gap-1">
+                      <Eye className="h-3.5 w-3.5" /> Bekijk
+                    </Button>
                   </div>
                 </li>
               );
@@ -253,6 +258,108 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
           </ul>
         )}
       </CardContent>
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              <Mail className="h-4 w-4" />
+              {selected ? EMAIL_TYPE_LABEL[selected.email_type] || selected.email_type : ""}
+              {selected && (
+                <Badge className={`text-xs ${(STATUS_BADGE[effectiveStatus(selected)] || { className: "bg-slate-100 text-slate-700" }).className}`}>
+                  {(STATUS_BADGE[effectiveStatus(selected)] || { label: effectiveStatus(selected) }).label}
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {selected && formatNL(new Date(selected.created_at), FMT_DAY_SHORT_YEAR_TIME)}
+              {selected?.sent_by && ` · door ${selected.sent_by}`}
+            </DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-1.5">
+                  <span className="text-slate-500">Aan</span>
+                  <span>{selected.recipient_name ? `${selected.recipient_name} <${selected.recipient_email}>` : selected.recipient_email}</span>
+                  <span className="text-slate-500">Onderwerp</span>
+                  <span className="font-medium">{selected.subject}</span>
+                  <span className="text-slate-500">Type</span>
+                  <span className="font-mono text-xs">{selected.email_type}</span>
+                  {selected.mailjet_message_id && (
+                    <>
+                      <span className="text-slate-500">Mailjet ID</span>
+                      <span className="font-mono text-xs">{selected.mailjet_message_id}</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Timeline */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase text-slate-500 mb-1.5">Status verloop</h4>
+                  <ul className="text-xs space-y-1">
+                    {[
+                      ["Aangemaakt", selected.created_at],
+                      ["Verzonden", selected.sent_at],
+                      ["Afgeleverd", selected.delivered_at],
+                      ["Geopend", selected.opened_at],
+                      ["Bounced", selected.bounced_at],
+                      ["Geblokkeerd", selected.blocked_at],
+                    ]
+                      .filter(([, v]) => !!v)
+                      .map(([label, v]) => (
+                        <li key={label as string} className="flex justify-between">
+                          <span className="text-slate-600">{label}</span>
+                          <span className="text-slate-500">{formatNL(new Date(v as string), FMT_DAY_SHORT_YEAR_TIME)}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+
+                {selected.error_message && (
+                  <div className="border border-rose-200 bg-rose-50 rounded-md p-3">
+                    <h4 className="text-xs font-semibold uppercase text-rose-700 mb-1 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> Foutmelding
+                    </h4>
+                    <p className="text-sm text-rose-800 whitespace-pre-wrap break-words">{selected.error_message}</p>
+                  </div>
+                )}
+
+                {(selected.metadata?.body_preview || selected.metadata?.message_preview) && (
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-slate-500 mb-1.5">Inhoud (preview)</h4>
+                    <div className="bg-slate-50 border rounded-md p-3 whitespace-pre-wrap text-sm text-slate-800">
+                      {selected.metadata?.body_preview || selected.metadata?.message_preview}
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-md border bg-amber-50 border-amber-200 p-2 text-xs text-amber-900">
+                  De volledige verzonden HTML-body wordt op dit moment niet bewaard in het log. Hieronder zie je alle context die wel is vastgelegd (template, ontvanger, status en metadata).
+                </div>
+
+                {selected.metadata && Object.keys(selected.metadata).length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-slate-500 mb-1.5">Metadata</h4>
+                    <pre className="text-xs bg-slate-900 text-slate-100 rounded-md p-3 overflow-auto max-h-72">
+{JSON.stringify(selected.metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {Array.isArray(selected.mailjet_events) && selected.mailjet_events.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-slate-500 mb-1.5">Mailjet events</h4>
+                    <pre className="text-xs bg-slate-900 text-slate-100 rounded-md p-3 overflow-auto max-h-72">
+{JSON.stringify(selected.mailjet_events, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
