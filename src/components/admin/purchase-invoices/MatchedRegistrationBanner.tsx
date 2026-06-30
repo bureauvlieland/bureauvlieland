@@ -118,23 +118,42 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
     }
     setLinkingId(match.id);
     try {
+      // Schrijf het echte factuurnummer/-datum uit de scan terug op de bestaande
+      // registratie, anders blijft de placeholder ("1", "2", …) staan.
+      const scanNr = (item.scan_result?.invoice_number || "").trim();
+      const scanDate = item.scan_result?.invoice_date || null;
+      const patch: Record<string, unknown> = {
+        file_path: item.attachment_path,
+        updated_at: new Date().toISOString(),
+      };
+      if (scanNr && normalizeInvoiceNumber(scanNr) !== normalizeInvoiceNumber(match.invoice_number)) {
+        patch.invoice_number = scanNr;
+      }
+      if (scanDate && scanDate !== match.invoice_date) {
+        patch.invoice_date = scanDate;
+      }
+
       const { error: updErr } = await supabase
         .from("partner_purchase_invoices")
-        .update({ file_path: item.attachment_path, updated_at: new Date().toISOString() })
+        .update(patch)
         .eq("id", match.id);
       if (updErr) throw updErr;
 
       if (match.item_id) {
         await supabase
           .from("program_request_items")
-          .update({ invoiced_file_path: item.attachment_path, updated_at: new Date().toISOString() })
+          .update({
+            invoiced_file_path: item.attachment_path,
+            ...(patch.invoice_number ? { invoiced_number: patch.invoice_number } : {}),
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", match.item_id);
       }
 
       await onLinked(match.id);
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
-      toast.success("PDF gekoppeld aan bestaande registratie");
+      toast.success("PDF gekoppeld en factuurnummer bijgewerkt");
     } catch (err) {
       console.error("Link PDF failed:", err);
       toast.error("Koppelen mislukt");
@@ -143,18 +162,30 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
     }
   };
 
+  // Beslis of we een exacte nummer-match hebben of een fallback op bedrag.
+  const isAmountFallback =
+    !!matches &&
+    matches.length > 0 &&
+    !!normalized &&
+    !matches.some((m) => normalizeInvoiceNumber(m.invoice_number) === normalized);
+
   return (
     <div className="rounded-md border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 space-y-2">
       <div className="flex items-start gap-2 text-sm text-blue-900 dark:text-blue-100">
         <Link2 className="h-4 w-4 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="font-medium">
-            {matches.length === 1
-              ? "Deze factuur is al door de partner geregistreerd"
-              : `${matches.length} bestaande registraties gevonden met dit factuurnummer`}
+            {isAmountFallback
+              ? matches.length === 1
+                ? "Mogelijke dubbele registratie gevonden (zelfde partner & bedrag)"
+                : `${matches.length} mogelijke dubbele registraties gevonden (zelfde partner & bedrag)`
+              : matches.length === 1
+                ? "Deze factuur is al door de partner geregistreerd"
+                : `${matches.length} bestaande registraties gevonden met dit factuurnummer`}
           </p>
           <p className="text-xs mt-0.5 text-blue-800 dark:text-blue-200">
             Koppel de PDF aan de bestaande registratie i.p.v. een nieuwe inkoopfactuur aan te maken.
+            {isAmountFallback ? " Het factuurnummer wordt automatisch bijgewerkt naar het nummer uit de PDF." : ""}
           </p>
         </div>
       </div>
