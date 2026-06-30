@@ -60,6 +60,7 @@ interface ProgramRequest {
   billing_address_postal: string | null;
   billing_address_city: string | null;
   billing_vat_number: string | null;
+  billing_reference: string | null;
 }
 
 interface ProgramItem {
@@ -724,6 +725,7 @@ const AdminInvoicePreview = () => {
         postalCity: postalCity || undefined,
         vatNumber: request.billing_vat_number ?? undefined,
         customerNumber: request.reference_number ?? undefined,
+        customerReference: request.billing_reference ?? undefined,
       },
       meta: {
         invoiceNumber,

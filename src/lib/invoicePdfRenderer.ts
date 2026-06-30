@@ -88,6 +88,8 @@ export interface InvoiceCustomer {
   vatNumber?: string;
   /** Customer/reference number (e.g. project reference BV-2602-0006). */
   customerNumber?: string;
+  /** Customer-supplied PO / cost-center reference (toont als "Referentie" op factuur). */
+  customerReference?: string;
 }
 
 export interface InvoiceMeta {
@@ -294,6 +296,9 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   ];
   if (data.customer.customerNumber) {
     metaRows.push(["Klantnummer", data.customer.customerNumber]);
+  }
+  if (data.customer.customerReference) {
+    metaRows.push(["Referentie", data.customer.customerReference]);
   }
   if (data.meta.deliveryDate) {
     metaRows.push(["Leverdatum", data.meta.deliveryDate]);
