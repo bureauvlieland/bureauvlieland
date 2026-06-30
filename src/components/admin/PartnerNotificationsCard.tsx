@@ -408,8 +408,56 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
               </div>
             </ScrollArea>
           )}
+          {selected && (
+            <DialogFooter className="border-t pt-3">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmResend(selected)}
+                className="gap-1"
+              >
+                <RefreshCw className="h-4 w-4" /> Opnieuw versturen
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmResend} onOpenChange={(o) => !o && !resending && setConfirmResend(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>E-mail opnieuw versturen?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  De partner ontvangt deze e-mail opnieuw. Er wordt een nieuwe regel in
+                  het notificatielog vastgelegd met verwijzing naar de originele verzending.
+                </p>
+                {confirmResend && (
+                  <div className="rounded-md border bg-slate-50 p-2 text-xs space-y-0.5">
+                    <div><span className="text-slate-500">Aan: </span>{confirmResend.recipient_name ? `${confirmResend.recipient_name} <${confirmResend.recipient_email}>` : confirmResend.recipient_email}</div>
+                    <div><span className="text-slate-500">Onderwerp: </span>{confirmResend.subject}</div>
+                    <div><span className="text-slate-500">Type: </span>{EMAIL_TYPE_LABEL[confirmResend.email_type] || confirmResend.email_type}</div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resending}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmResend) handleResend(confirmResend);
+              }}
+              className="gap-1"
+            >
+              <Send className="h-4 w-4" />
+              {resending ? "Versturen…" : "Verstuur opnieuw"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
