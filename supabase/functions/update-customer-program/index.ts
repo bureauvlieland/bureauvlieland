@@ -303,39 +303,9 @@ Deno.serve(async (req) => {
                 auto_entity_id: program.id,
               });
 
-              emailMessages.push({
-                From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-                To: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
-                Subject: `${subjectPrefix}Klant wijzigde aantal personen — ${program.reference_number || program.customer_name}`,
-                HTMLPart: `
-                  <div style="font-family: sans-serif; max-width: 600px;">
-                    <h2>Aantal personen gewijzigd door klant</h2>
-                    <p><strong>${sanitizeHtml(program.customer_company || program.customer_name)}</strong> (${program.reference_number || program.id})</p>
-                    <p>Aantal: <strong>${program.number_of_people} → ${programDetails.numberOfPeople}</strong></p>
-                    <p>${quoteIds.length} logies-offerte(s) teruggezet naar 'pending'. Accommodaties: ${accommodationNames.map((n: string) => sanitizeHtml(n)).join(", ") || "—"}.</p>
-                    <p>Informeer de logiespartners handmatig waar nodig.</p>
-                  </div>
-                `,
-              });
-              pendingEmailLogs.push({
-                messageIdx: emailMessages.length - 1,
-                logPayload: {
-                  email_type: "internal_people_change_accommodation",
-                  subject: `${subjectPrefix}Klant wijzigde aantal personen — ${program.reference_number || program.customer_name}`,
-                  recipient_email: "hallo@bureauvlieland.nl",
-                  recipient_name: "Bureau Vlieland",
-                  related_request_id: program.id,
-                  related_accommodation_id: program.linked_accommodation_id,
-                  sent_by: "update-customer-program",
-                  metadata: {
-                    template_name: "internal_people_change_accommodation",
-                    actor: "klant → bureau (interne notificatie)",
-                    old_people: program.number_of_people,
-                    new_people: programDetails.numberOfPeople,
-                    affected_quote_count: quoteIds.length,
-                  },
-                },
-              });
+              // Interne mail vervangen door admin_todo (zie hierboven) —
+              // bureau ziet het in de werkbank, geen extra inbox-ruis.
+
             } catch (todoErr) {
               console.error("Failed to create admin todo for people change:", todoErr);
             }
