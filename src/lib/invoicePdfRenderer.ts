@@ -297,6 +297,9 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   if (data.customer.customerNumber) {
     metaRows.push(["Klantnummer", data.customer.customerNumber]);
   }
+  if (data.customer.customerReference) {
+    metaRows.push(["Referentie", data.customer.customerReference]);
+  }
   if (data.meta.deliveryDate) {
     metaRows.push(["Leverdatum", data.meta.deliveryDate]);
   }
