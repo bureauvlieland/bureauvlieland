@@ -1075,9 +1075,10 @@ Deno.serve(async (req) => {
         .select(`
           id, block_name, status, day_index, provider_id, provider_name,
           block_type, request_id, preferred_time, proposed_time, confirmed_time,
+          customer_approved_at, skip_partner_notification,
           program_requests!inner (
             id, customer_name, customer_company, reference_number,
-            selected_dates, number_of_people, status, cancelled_at
+            selected_dates, number_of_people, status, cancelled_at, workflow_phase
           )
         `)
         .in("status", ["pending", "confirmed"])
@@ -1087,6 +1088,10 @@ Deno.serve(async (req) => {
       const fmtDateNL = (s: string) =>
         new Date(s).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
+      // Phases waarin de klant het programma nog niet (volledig) heeft goedgekeurd.
+      // Partners mogen in deze fases geen automatische herinnering krijgen.
+      const PRE_APPROVAL_PHASES = new Set(["concept", "in_afstemming", "offerte_verstuurd"]);
+
       for (const item of upcomingItems || []) {
         if (isSnoozed(item.request_id)) continue;
         const reqRow: any = Array.isArray(item.program_requests)
@@ -1094,6 +1099,37 @@ Deno.serve(async (req) => {
           : item.program_requests;
         if (!reqRow || reqRow.status !== "active" || reqRow.cancelled_at) continue;
         if (!item.provider_id) continue;
+
+        // Guard 1: admin heeft dit item expliciet nog niet de deur uit gestuurd.
+        if (item.skip_partner_notification) {
+          console.log(`[reminder-skip] item ${item.id} skip_partner_notification=true — geen herinnering`);
+          continue;
+        }
+
+        // Guard 2: project zit nog in een fase waarin klant moet goedkeuren EN
+        // dit specifieke item heeft nog geen klant-akkoord. Geen druk op partner.
+        const phase = reqRow.workflow_phase as string | null;
+        if (
+          (!phase || PRE_APPROVAL_PHASES.has(phase)) &&
+          !item.customer_approved_at
+        ) {
+          console.log(`[reminder-skip] item ${item.id} phase=${phase ?? "null"} zonder customer_approved_at — wacht op klant`);
+          continue;
+        }
+
+        // Guard 3: is de originele aanvraag ooit naar deze partner verstuurd?
+        // Zonder initiële mail mag er ook geen herinnering uit.
+        const { data: initialSend } = await supabase
+          .from("email_log")
+          .select("id")
+          .eq("related_item_id", item.id)
+          .eq("email_type", "program_request_partner")
+          .limit(1)
+          .maybeSingle();
+        if (!initialSend) {
+          console.log(`[reminder-skip] item ${item.id} geen initiële program_request_partner gevonden`);
+          continue;
+        }
 
         const dates: string[] = Array.isArray(reqRow.selected_dates) ? reqRow.selected_dates : [];
         const dateStr = dates[item.day_index ?? 0] || dates[0];
