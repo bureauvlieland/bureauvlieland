@@ -3083,8 +3083,15 @@ const AdminRequestDetail = () => {
               />
             </TabsContent>
 
+            {/* Tab: Notificaties */}
+            <TabsContent value="notificaties">
+              <PartnerNotificationsCard
+                requestId={request.id}
+                accommodationId={request.linked_accommodation_id || undefined}
+              />
+            </TabsContent>
 
-            {/* Tab: Geschiedenis */}
+
             <TabsContent value="geschiedenis">
               <Card>
                 <CardHeader>
