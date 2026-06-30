@@ -88,8 +88,10 @@ export interface InvoiceCustomer {
   vatNumber?: string;
   /** Customer/reference number (e.g. project reference BV-2602-0006). */
   customerNumber?: string;
-  /** Customer-supplied PO / cost-center reference (toont als "Referentie" op factuur). */
-  customerReference?: string;
+  /** Customer-supplied PO / cost-center reference (toont als "Referentie" op factuur). Bron: program_requests.billing_reference. */
+  billingReference?: string | null;
+  /** @deprecated gebruik billingReference. Behouden voor backward compat. */
+  customerReference?: string | null;
 }
 
 export interface InvoiceMeta {
