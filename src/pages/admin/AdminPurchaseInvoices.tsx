@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { InvoiceForwardHistoryPopover } from "@/components/admin/InvoiceForwardHistoryPopover";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
+import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/DuplicateCandidatesBanner";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
 import { Plus } from "lucide-react";
