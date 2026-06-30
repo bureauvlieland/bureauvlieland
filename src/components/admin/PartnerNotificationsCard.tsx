@@ -4,7 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell, Mail, Search, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bell, Mail, Search, AlertTriangle, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNL, FMT_DAY_SHORT_YEAR_TIME } from "@/lib/dateFormat";
 
@@ -12,6 +15,7 @@ interface PartnerNotificationsCardProps {
   requestId: string;
   accommodationId?: string;
 }
+
 
 interface LogRow {
   id: string;
