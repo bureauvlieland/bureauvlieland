@@ -122,16 +122,23 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
       // registratie, anders blijft de placeholder ("1", "2", …) staan.
       const scanNr = (item.scan_result?.invoice_number || "").trim();
       const scanDate = item.scan_result?.invoice_date || null;
-      const patch: Record<string, unknown> = {
+      const newInvoiceNumber =
+        scanNr && normalizeInvoiceNumber(scanNr) !== normalizeInvoiceNumber(match.invoice_number)
+          ? scanNr
+          : null;
+      const newInvoiceDate = scanDate && scanDate !== match.invoice_date ? scanDate : null;
+
+      const patch: {
+        file_path: string;
+        updated_at: string;
+        invoice_number?: string;
+        invoice_date?: string;
+      } = {
         file_path: item.attachment_path,
         updated_at: new Date().toISOString(),
       };
-      if (scanNr && normalizeInvoiceNumber(scanNr) !== normalizeInvoiceNumber(match.invoice_number)) {
-        patch.invoice_number = scanNr;
-      }
-      if (scanDate && scanDate !== match.invoice_date) {
-        patch.invoice_date = scanDate;
-      }
+      if (newInvoiceNumber) patch.invoice_number = newInvoiceNumber;
+      if (newInvoiceDate) patch.invoice_date = newInvoiceDate;
 
       const { error: updErr } = await supabase
         .from("partner_purchase_invoices")
@@ -140,13 +147,18 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
       if (updErr) throw updErr;
 
       if (match.item_id) {
+        const itemPatch: {
+          invoiced_file_path: string;
+          updated_at: string;
+          invoiced_number?: string;
+        } = {
+          invoiced_file_path: item.attachment_path,
+          updated_at: new Date().toISOString(),
+        };
+        if (newInvoiceNumber) itemPatch.invoiced_number = newInvoiceNumber;
         await supabase
           .from("program_request_items")
-          .update({
-            invoiced_file_path: item.attachment_path,
-            ...(patch.invoice_number ? { invoiced_number: patch.invoice_number } : {}),
-            updated_at: new Date().toISOString(),
-          })
+          .update(itemPatch)
           .eq("id", match.item_id);
       }
 
