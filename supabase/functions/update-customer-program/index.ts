@@ -419,33 +419,12 @@ Deno.serve(async (req) => {
           }
         }
 
-        // === ADMIN TODO + INTERNE BUREAU-NOTIFICATIE ===
+        // === ADMIN TODO ===
         const allInvolved = [
           ...Array.from(providerItems.values()).map((p) => p.name),
         ];
-        const partnerListHtml = providerItems.size > 0
-          ? Array.from(providerItems.values())
-              .map((p) => `<li><strong>${sanitizeHtml(p.name)}</strong> — ${p.items.map(sanitizeHtml).join(", ")}</li>`)
-              .join("")
-          : "<li><em>Geen externe partners betrokken</em></li>";
-        const accLine = accommodationQuoteCount > 0
-          ? `<p>Ook <strong>${accommodationQuoteCount}</strong> logies-offerte(s) zijn terug naar status "pending" gezet.</p>`
-          : "";
-
-        const bureauUrl = `https://bureauvlieland.nl/admin/aanvragen/${program.id}`;
-        const bureauHtml = `
-          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-            <h2>📅 Klant heeft data gewijzigd</h2>
-            <p><strong>${customerLabel}</strong> heeft de data van het programma aangepast.</p>
-            <p><strong>Nieuwe data:</strong> ${newDates}</p>
-            <p>Alle items zijn op "pending" gezet. Partners zijn <strong>NIET</strong> automatisch gemaild — informeer hen handmatig vanuit het project.</p>
-            <p><strong>Betrokken partners:</strong></p>
-            <ul>${partnerListHtml}</ul>
-            ${accLine}
-            <p><a href="${bureauUrl}" style="background:#1a365d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open werkbank →</a></p>
-          </div>`;
-
         // Interne bureau-mail vervangen door admin_todo (zie hieronder).
+
 
 
         // Admin-todo
