@@ -123,6 +123,7 @@ import { calculateProjectGrandTotal, calculateProjectOutstandingAmount } from "@
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
+import { PartnerNotificationsCard } from "@/components/admin/PartnerNotificationsCard";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
