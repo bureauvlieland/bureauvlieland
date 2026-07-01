@@ -582,7 +582,11 @@ Deno.serve(async (req) => {
               <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
             </ul>
 
+            ${includesBlockHtml}
+            ${roomConfigBlockHtml}
+
             ${request.reference_number ? `<p><strong>Referentie:</strong> ${sanitizeHtml(request.reference_number)}</p>` : ""}
+
             
             <p style="margin-top: 24px;">
               <a href="${portalLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk je programma →</a>
