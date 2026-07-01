@@ -329,10 +329,8 @@ export const ClaudiaRecommendationsCard = () => {
             </h2>
             <p className="text-[11px] text-slate-500 truncate">
               {lastRunText}
-              {suppressedCount > 0 && (
-                <span className="ml-1 text-slate-400">
-                  — {suppressedCount} signaal{suppressedCount === 1 ? "" : "en"} onderdrukt door recent contact
-                </span>
+              {suppressedLabel && (
+                <span className="ml-1 text-slate-400">— {suppressedLabel} onderdrukt</span>
               )}
               {lastRun?.status === "error" && (
                 <span className="text-red-600 ml-1">— laatste run faalde</span>
