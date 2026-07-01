@@ -4,8 +4,27 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
+const RETURN_URL_ALLOWLIST = [
+  "https://bureauvlieland.nl",
+  "https://www.bureauvlieland.nl",
+  "https://bureauvlieland.lovable.app",
+];
+
+function sanitizeReturnUrl(candidate: string | undefined): string {
+  if (!candidate) return "https://bureauvlieland.nl/admin/social/instellingen";
+  try {
+    const u = new URL(candidate);
+    const origin = `${u.protocol}//${u.host}`;
+    if (u.protocol !== "https:") throw new Error("scheme");
+    if (!RETURN_URL_ALLOWLIST.includes(origin)) throw new Error("host");
+    return u.toString();
+  } catch {
+    return "https://bureauvlieland.nl/admin/social/instellingen";
+  }
+}
+
 function html(message: string, returnUrl?: string, ok = false) {
-  const safeUrl = returnUrl?.replace(/"/g, "") ?? "";
+  const safeUrl = sanitizeReturnUrl(returnUrl);
   const color = ok ? "#16a34a" : "#dc2626";
   return `<!doctype html><html><head><meta charset="utf-8"><title>Meta koppeling</title>
 <style>body{font-family:system-ui;background:#f8fafc;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
@@ -13,8 +32,8 @@ function html(message: string, returnUrl?: string, ok = false) {
 h1{color:${color};font-size:18px;margin:0 0 12px}p{color:#475569;font-size:14px;margin:0 0 16px}
 a{display:inline-block;background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none}</style></head>
 <body><div class="card"><h1>${ok ? "✓ Meta gekoppeld" : "Koppeling mislukt"}</h1>
-<p>${message}</p>${safeUrl ? `<a href="${safeUrl}">Terug naar instellingen</a>` : ""}
-${safeUrl && ok ? `<script>setTimeout(()=>location.href=${JSON.stringify(safeUrl)},1500)</script>` : ""}
+<p>${message}</p><a href="${safeUrl}">Terug naar instellingen</a>
+${ok ? `<script>setTimeout(()=>location.href=${JSON.stringify(safeUrl)},1500)</script>` : ""}
 </div></body></html>`;
 }
 
