@@ -79,17 +79,23 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Optional shared-secret protection. If MAILJET_WEBHOOK_TOKEN is configured,
-  // Mailjet must include it as `?token=...` (Mailjet supports custom URLs).
+  // Mandatory shared-secret guard. Mailjet must include `?token=...` matching
+  // MAILJET_WEBHOOK_TOKEN. Fail closed if the secret is not configured on the
+  // server so that a missing env var never leaves this endpoint fully open.
   const expectedToken = Deno.env.get("MAILJET_WEBHOOK_TOKEN");
-  if (expectedToken) {
-    const url = new URL(req.url);
-    if (url.searchParams.get("token") !== expectedToken) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+  if (!expectedToken) {
+    console.error("mailjet-event-webhook: MAILJET_WEBHOOK_TOKEN is not configured");
+    return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const url = new URL(req.url);
+  if (url.searchParams.get("token") !== expectedToken) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   let payload: MailjetEvent | MailjetEvent[];
