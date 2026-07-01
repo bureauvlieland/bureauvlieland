@@ -4234,6 +4234,23 @@ export type Database = {
         Args: { _partner_id: string }
         Returns: boolean
       }
+      partner_self_update_sensitive_unchanged: {
+        Args: {
+          _accommodation_commission_percentage: number
+          _auth_user_id: string
+          _bank_iban: string
+          _bic: string
+          _commission_percentage: number
+          _email: string
+          _extras_commission_percentage: number
+          _id: string
+          _is_active: boolean
+          _kvk_number: string
+          _map_api_key: string
+          _partner_token: string
+        }
+        Returns: boolean
+      }
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       scan_stale_pending_changes: { Args: never; Returns: number }
