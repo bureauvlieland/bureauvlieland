@@ -98,7 +98,7 @@ async function loadProjectActivity(
   return result;
 }
 
-async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise<{ signals: Signal[]; suppressed: number }> {
+async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise<{ signals: Signal[]; suppressed: number; suppressedBreakdown: { cooldown: number; terminal: number; werkbank: number } }> {
   const raw: Signal[] = [];
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
