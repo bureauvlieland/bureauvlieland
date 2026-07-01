@@ -363,12 +363,12 @@ Cooldown-regels (cruciaal — minder ruis):
 - Signalen met cooldown="warm" (3–7 dagen): "normal" tenzij er een harde deadline of >€1000 op het spel staat.
 - Signalen met cooldown="cold" of geen recent contact: normale prioriteit-regels.
 
-Clustering: per project (zelfde related_entity_id) maximaal 1 aanbeveling, tenzij er aantoonbaar verschillende acties zijn (bijv. partner-reminder én facturatie).
+Clustering: per project (zelfde related_entity_id) MAXIMAAL 1 aanbeveling. Combineer meerdere signalen in één body als het over hetzelfde project gaat.
 
-Prioriteit-richtlijn:
-- urgent: verloopt < 3 dagen, klant-vertrouwen op spel, geld > €1000 staat lang open, EN geen recent contact
-- normal: actie nodig deze week
-- info: goed om te weten, geen directe deadline
+Prioriteit-richtlijn (streng — urgent moet écht urgent zijn):
+- urgent: aanvraag verloopt binnen 3 dagen zonder klant-akkoord, OF een bedrag > €1.000 staat > 21 dagen open, OF klantvertrouwen aantoonbaar op het spel — EN cooldown ≠ "hot".
+- normal: actie deze week nodig, geen harde deadline vandaag.
+- info: goed om te weten, geen deadline. Gebruik dit ook als je twijfelt of het urgent is.
 
 Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X", "bel partner Y", "factureer Z").
 
