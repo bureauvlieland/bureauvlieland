@@ -262,66 +262,80 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
     }
   });
 
-  // === 7. Projecten klaar voor facturatie ===
-  const { data: readyForInvoice } = await supabase
-    .from("program_requests")
-    .select("id, reference_number, customer_name, completion_status, updated_at")
-    .eq("completion_status", "ready_for_invoice")
-    .limit(10);
+  // NB: geen apart `ready_for_invoice`-signaal meer — de admin_todo "Facturatie …"
+  // die door set-project-ready-for-invoice wordt aangemaakt verschijnt al op de
+  // werkbank en (indien verstreken) via het todo_overdue-signaal. Dubbele melding
+  // is enkel ruis.
 
-  (readyForInvoice ?? []).forEach((r: any) => {
-    raw.push({
-      category: "ready_for_invoice",
-      entity_type: "program_request",
-      entity_id: r.id,
-      project_id: r.id,
-      reference: r.reference_number,
-      summary: `Project ${r.reference_number} (${r.customer_name}) is klaar voor facturatie`,
-      deeplink: `/admin/projecten/${r.id}/factuur`,
-    });
-  });
-
-  // === Cooldown/terminal/snooze filter per project ===
+  // === Cooldown/terminal/snooze filter + werkbank-dedupe per project ===
   const projectIds = Array.from(
     new Set(raw.map((s) => s.project_id).filter((x): x is string => !!x)),
   );
   const activity = await loadProjectActivity(supabase, projectIds);
 
+  // Werkbank-dedupe: welke projecten hebben al een open admin_todo?
+  // Zo ja, dan onderdrukken we alles behalve todo_overdue (want die
+  // wordt losstaand aangedreven door dezelfde tabel en heeft eigen leeftijdslogica).
+  const openTodoProjectIds = new Set<string>();
+  if (projectIds.length > 0) {
+    const { data: openTodos } = await supabase
+      .from("admin_todos")
+      .select("related_request_id")
+      .in("status", ["todo", "in_progress"])
+      .in("related_request_id", projectIds);
+    for (const row of (openTodos ?? []) as any[]) {
+      if (row.related_request_id) openTodoProjectIds.add(row.related_request_id);
+    }
+  }
+
   const signals: Signal[] = [];
-  let suppressed = 0;
+  let suppressedCooldown = 0;
+  let suppressedTerminal = 0;
+  let suppressedWerkbank = 0;
   for (const s of raw) {
     if (s.project_id) {
       const a = activity.get(s.project_id);
       if (a) {
-        // Terminale completion_status → drop alles behalve ready_for_invoice signaal zelf
-        if (
-          a.completionStatus &&
-          TERMINAL_COMPLETION_STATUSES.has(a.completionStatus) &&
-          s.category !== "ready_for_invoice"
-        ) {
-          suppressed++;
+        // Terminale completion_status → drop alle signalen voor dit project.
+        if (a.completionStatus && TERMINAL_COMPLETION_STATUSES.has(a.completionStatus)) {
+          suppressedTerminal++;
           continue;
         }
         if (a.status === "cancelled" || a.status === "completed") {
-          suppressed++;
+          suppressedTerminal++;
           continue;
         }
         if (a.snoozed) {
-          suppressed++;
+          suppressedCooldown++;
           continue;
         }
         if (!shouldShowSignalDuringCooldown(a.cooldown, s.category)) {
-          suppressed++;
+          suppressedCooldown++;
           continue;
         }
         s.cooldown = a.cooldown;
         s.last_contact_days = a.daysSinceContact != null ? Math.round(a.daysSinceContact) : null;
       }
+      // Dedupe met werkbank: als er al een open admin_todo op dit project
+      // bestaat, hoeft Claudia er geen extra signaal bovenop te leggen.
+      // todo_overdue mag door: die vertelt dat een taak *verstreken* is.
+      if (s.category !== "todo_overdue" && openTodoProjectIds.has(s.project_id)) {
+        suppressedWerkbank++;
+        continue;
+      }
     }
     signals.push(s);
   }
 
-  return { signals, suppressed };
+  return {
+    signals,
+    suppressed: suppressedCooldown + suppressedTerminal + suppressedWerkbank,
+    suppressedBreakdown: {
+      cooldown: suppressedCooldown,
+      terminal: suppressedTerminal,
+      werkbank: suppressedWerkbank,
+    },
+  };
 }
 
 interface PrioritizedRecommendation {
