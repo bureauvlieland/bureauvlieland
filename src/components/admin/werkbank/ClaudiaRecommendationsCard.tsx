@@ -216,6 +216,16 @@ export const ClaudiaRecommendationsCard = () => {
   }, [recs, projectLabels]);
 
   const suppressedCount: number = lastRun?.input_summary?.suppressed_by_cooldown ?? 0;
+  const suppressedBreakdown: { cooldown?: number; terminal?: number; werkbank?: number } | undefined =
+    lastRun?.input_summary?.suppressed_breakdown;
+  const suppressedLabel = (() => {
+    if (!suppressedCount) return null;
+    const parts: string[] = [];
+    if (suppressedBreakdown?.werkbank) parts.push(`${suppressedBreakdown.werkbank} al op werkbank`);
+    if (suppressedBreakdown?.terminal) parts.push(`${suppressedBreakdown.terminal} afgerond/gefactureerd`);
+    if (suppressedBreakdown?.cooldown) parts.push(`${suppressedBreakdown.cooldown} recent contact`);
+    return parts.length > 0 ? parts.join(" · ") : `${suppressedCount} onderdrukt`;
+  })();
 
   const lastRunText = lastRun
     ? `Laatste run: ${new Date(lastRun.created_at).toLocaleString("nl-NL", {
