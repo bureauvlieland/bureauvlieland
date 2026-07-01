@@ -462,11 +462,34 @@ serve(async (req) => {
       .single();
     runId = runRow?.id ?? null;
 
-    const { signals, suppressed } = await gatherSignals(supabase);
+    const { signals, suppressed, suppressedBreakdown } = await gatherSignals(supabase);
 
-    const recommendations = signals.length > 0
+    const rawRecommendations = signals.length > 0
       ? await prioritizeWithAI(signals, apiKey)
       : [];
+
+    // Harde cluster-cap: per gerelateerd project maximaal 1 aanbeveling.
+    // Behouden = eerste in de door AI aangeleverde volgorde (die is al op prioriteit gesorteerd),
+    // met voorkeur voor de hoogste priority als er meerdere zijn.
+    const PRIO_ORDER: Record<string, number> = { urgent: 0, normal: 1, info: 2 };
+    const bestPerProject = new Map<string, typeof rawRecommendations[number]>();
+    const nonProject: typeof rawRecommendations = [];
+    for (const r of rawRecommendations) {
+      if (r.related_entity_type === "program_request" && r.related_entity_id) {
+        const key = r.related_entity_id;
+        const existing = bestPerProject.get(key);
+        if (
+          !existing ||
+          (PRIO_ORDER[r.priority] ?? 9) < (PRIO_ORDER[existing.priority] ?? 9)
+        ) {
+          bestPerProject.set(key, r);
+        }
+      } else {
+        nonProject.push(r);
+      }
+    }
+    const recommendations = [...bestPerProject.values(), ...nonProject];
+    const clustered = rawRecommendations.length - recommendations.length;
 
     if (recommendations.length > 0) {
       await supabase
@@ -501,7 +524,12 @@ serve(async (req) => {
           recommendations_created: recommendations.length,
           duration_ms: Date.now() - startedAt,
           completed_at: new Date().toISOString(),
-          input_summary: { signals_count: signals.length, suppressed_by_cooldown: suppressed },
+          input_summary: {
+            signals_count: signals.length,
+            suppressed_by_cooldown: suppressed,
+            suppressed_breakdown: suppressedBreakdown,
+            clustered_by_project: clustered,
+          },
           output_summary: {
             recommendations: recommendations.length,
             urgent: recommendations.filter((r) => r.priority === "urgent").length,
@@ -509,6 +537,7 @@ serve(async (req) => {
         })
         .eq("id", runId);
     }
+
 
     return new Response(
       JSON.stringify({
