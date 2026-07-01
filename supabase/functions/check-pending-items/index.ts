@@ -1080,7 +1080,7 @@ Deno.serve(async (req) => {
           customer_approved_at, skip_partner_notification,
           program_requests!inner (
             id, customer_name, customer_company, reference_number,
-            selected_dates, number_of_people, status, cancelled_at, workflow_phase
+            selected_dates, number_of_people, status, cancelled_at
           )
         `)
         .in("status", ["pending", "confirmed"])
@@ -1089,10 +1089,6 @@ Deno.serve(async (req) => {
 
       const fmtDateNL = (s: string) =>
         new Date(s).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-
-      // Phases waarin de klant het programma nog niet (volledig) heeft goedgekeurd.
-      // Partners mogen in deze fases geen automatische herinnering krijgen.
-      const PRE_APPROVAL_PHASES = new Set(["concept", "in_afstemming", "offerte_verstuurd"]);
 
       for (const item of upcomingItems || []) {
         if (isSnoozed(item.request_id)) continue;
@@ -1108,16 +1104,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Guard 2: project zit nog in een fase waarin klant moet goedkeuren EN
-        // dit specifieke item heeft nog geen klant-akkoord. Geen druk op partner.
-        const phase = reqRow.workflow_phase as string | null;
-        if (
-          (!phase || PRE_APPROVAL_PHASES.has(phase)) &&
-          !item.customer_approved_at
-        ) {
-          console.log(`[reminder-skip] item ${item.id} phase=${phase ?? "null"} zonder customer_approved_at — wacht op klant`);
+        // Guard 2: zonder klant-akkoord op dit item geen druk op de partner.
+        // (De workflow_phase op program_requests bestaat niet in het schema;
+        // customer_approved_at is de bron van waarheid per item.)
+        if (!item.customer_approved_at) {
+          console.log(`[reminder-skip] item ${item.id} zonder customer_approved_at — wacht op klant`);
           continue;
         }
+
 
         // Guard 3: is de originele aanvraag ooit naar deze partner verstuurd?
         // Zonder initiële mail mag er ook geen herinnering uit.
