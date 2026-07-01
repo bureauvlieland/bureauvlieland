@@ -357,6 +357,35 @@ Deno.serve(async (req) => {
         ? `${sanitizeHtml(request.customer_company)} (${sanitizeHtml(request.customer_name)})`
         : sanitizeHtml(request.customer_name);
 
+      // Snapshot van wat de partner heeft geoffreerd — voorkomt discussie achteraf
+      const includesArray: string[] = Array.isArray((quote as any).includes)
+        ? ((quote as any).includes as string[]).filter((v) => typeof v === "string" && v.trim() !== "")
+        : [];
+      const includesListHtml = includesArray
+        .map((i) => `<li>${sanitizeHtml(i)}</li>`)
+        .join("");
+      const includesBlockHtml = includesArray.length > 0
+        ? `<p style="margin: 16px 0 4px 0;"><strong>Inbegrepen volgens uw offerte:</strong></p><ul>${includesListHtml}</ul>`
+        : "";
+      const roomConfigArray: any[] = Array.isArray((quote as any).room_configuration)
+        ? ((quote as any).room_configuration as any[])
+        : [];
+      const roomConfigSummary = roomConfigArray
+        .map((r: any) => {
+          const parts = [
+            r?.count ? `${r.count}×` : "",
+            r?.type ? sanitizeHtml(String(r.type)) : "",
+            r?.occupancy ? `(${r.occupancy}p)` : "",
+            r?.price_per_night ? `${formatCurrencyNL(Number(r.price_per_night))}/nacht` : "",
+          ].filter(Boolean);
+          return parts.join(" ");
+        })
+        .filter(Boolean)
+        .join(", ");
+      const roomConfigBlockHtml = roomConfigArray.length > 0
+        ? `<p style="margin: 16px 0 4px 0;"><strong>Kamerconfiguratie:</strong></p><ul>${roomConfigArray.map((r: any) => `<li>${sanitizeHtml(String(r?.count ?? ""))}× ${sanitizeHtml(String(r?.type ?? ""))}${r?.occupancy ? ` (${r.occupancy}p)` : ""}${r?.price_per_night ? ` — ${formatCurrencyNL(Number(r.price_per_night))}/nacht` : ""}</li>`).join("")}</ul>`
+        : "";
+
       const partnerTemplateVariables: Record<string, string> = {
         partner_name: sanitizeHtml(quote.partner?.name),
         accommodation_name: sanitizeHtml(quote.accommodation_name),
@@ -367,8 +396,13 @@ Deno.serve(async (req) => {
         base_price: formatCurrencyNL(quote.price_total),
         extras_total: extrasTotal > 0 ? formatCurrencyNL(extrasTotal) : "",
         extras_list: extras.map((e: any) => `<li>${e.name}: ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join(""),
+        includes_list: includesListHtml,
+        includes_block: includesBlockHtml,
+        room_configuration_summary: roomConfigSummary,
+        room_configuration_block: roomConfigBlockHtml,
         guest_name: guestDisplayName,
       };
+
 
       // Always hide customer PII from partners — Bureau Vlieland is the central contact
       partnerTemplateVariables.customer_name = "Bureau Vlieland";
@@ -400,6 +434,10 @@ Deno.serve(async (req) => {
               ${extras.length > 0 ? extras.map((e: any) => `<li><strong>${e.name}:</strong> ${formatCurrencyNL(e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity)}</li>`).join("") : ""}
               <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
             </ul>
+
+            ${includesBlockHtml}
+            ${roomConfigBlockHtml}
+
 
             <h2>Facturatie</h2>
             <p>Factureer het verblijf aan <strong>Bureau Vlieland</strong>. Je ontvangt hierover apart bericht via het partnerportaal.</p>
@@ -515,7 +553,12 @@ Deno.serve(async (req) => {
         terms_partner_name: sanitizeHtml(quote.partner?.name || quote.accommodation_name),
         terms_accepted_line: termsAcceptedLine,
         terms_accepted_block: termsAcceptedBlock,
+        includes_list: includesListHtml,
+        includes_block: includesBlockHtml,
+        room_configuration_summary: roomConfigSummary,
+        room_configuration_block: roomConfigBlockHtml,
       };
+
 
       const customerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables);
 
@@ -539,7 +582,11 @@ Deno.serve(async (req) => {
               <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
             </ul>
 
+            ${includesBlockHtml}
+            ${roomConfigBlockHtml}
+
             ${request.reference_number ? `<p><strong>Referentie:</strong> ${sanitizeHtml(request.reference_number)}</p>` : ""}
+
             
             <p style="margin-top: 24px;">
               <a href="${portalLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk je programma →</a>
