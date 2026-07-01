@@ -553,7 +553,12 @@ Deno.serve(async (req) => {
         terms_partner_name: sanitizeHtml(quote.partner?.name || quote.accommodation_name),
         terms_accepted_line: termsAcceptedLine,
         terms_accepted_block: termsAcceptedBlock,
+        includes_list: includesListHtml,
+        includes_block: includesBlockHtml,
+        room_configuration_summary: roomConfigSummary,
+        room_configuration_block: roomConfigBlockHtml,
       };
+
 
       const customerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_CUSTOMER, customerTemplateVariables);
 
