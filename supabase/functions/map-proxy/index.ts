@@ -47,6 +47,33 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Strict allowlist prevents path traversal and limits API-key abuse to
+    // read-only endpoints already surfaced on public pages.
+    const ALLOWED_ENDPOINTS = new Set([
+      "activities",
+      "activitytypes",
+      "activity-types",
+      "bookings",
+    ]);
+    if (!ALLOWED_ENDPOINTS.has(endpoint) || !/^[a-z-]+$/.test(endpoint)) {
+      return new Response(
+        JSON.stringify({ error: "Endpoint not allowed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!/^[a-z0-9-]+$/i.test(slug)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid slug" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (partnerId && !/^[0-9a-f-]{36}$/i.test(partnerId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid partnerId" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const apiKey = await getApiKeyForPartner(partnerId || null, slug);
 
     // Build URL without slug param — API auth is via X-Api-Key header per tenant
