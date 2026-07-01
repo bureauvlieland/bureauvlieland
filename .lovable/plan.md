@@ -1,27 +1,33 @@
-## Concepten opstellen voor BV-2603-0003 — ontbijt Hotel Zeezicht
+# Claudia slimmer: geen ruis over afgeronde projecten, geen overlap met werkbank
 
-Twee e-mailconcepten klaarzetten op basis van de bewijsvoering uit de Zeezicht-offerte (`includes: ["Ontbijt"]`, geselecteerd 01-04-2026, € 5.119,92 totaal incl. ontbijt).
+## Waarom
+Op de screenshot toont Claudia 7 aanbevelingen, waarvan **4 pure facturatie-herhalingen** van projecten die al de status `ready_for_invoice` hebben én al een "Facturatie …" todo op de werkbank (linker kolom) hebben staan. Bovendien pushen we projecten die feitelijk in de afsluitfase zitten nog steeds als "actie deze week". Dat maakt Claudia luidruchtig en verlaagt vertrouwen in de urgent-labels.
 
-### 1. Antwoord aan klant (Milou van der Zwaan, Salure)
-- Toon: formeel ("u"), kort, geruststellend.
-- Inhoud:
-  - Bevestigen dat we het hebben nagekeken.
-  - Verwijzen naar de offerte die Zeezicht zelf via hun partnerportal heeft ingediend op 30-03-2026, met ontbijt expliciet als "inbegrepen" aangevinkt.
-  - Bevestigen dat het totaalbedrag van € 5.119,92 (€ 97,67 p.p.p.n.) dus inclusief ontbijt was.
-  - Aangeven dat wij dit met Zeezicht opnemen en de eventueel dubbel gefactureerde € 39 p.p. corrigeren/crediteren richting de klant.
-  - Excuses voor het ongemak.
+## Wat verandert er
 
-### 2. E-mail aan Hotel Zeezicht
-- Toon: informeel ("je"), zakelijk-vriendelijk, feitelijk.
-- Inhoud:
-  - Verwijzing naar reservering Salure (LOG-2603-0002, 21–23 mei 2026, 33 gasten).
-  - Citeren wat in hún eigen offerte stond: `includes: ["Ontbijt"]`, € 179 / € 199 per kamer per nacht, totaal € 5.119,92.
-  - Constateren dat op inkoopfactuur het ontbijt apart in rekening is gebracht (€ 39 p.p.).
-  - Verzoek: creditfactuur voor het ontbijtdeel, of een onderbouwing waarom dit afwijkt van de geaccepteerde offerte.
-  - Bijlage/verwijzing: snapshot uit `accommodation_quote_history` v1 (10-06-2026) als bewijs.
+### 1. `supabase/functions/claudia-daily-scan/index.ts` — signalen inperken
+- **`ready_for_invoice`-signaal verwijderen.** De `set-project-ready-for-invoice` edge function maakt al automatisch een `admin_todo` "Facturatie …" aan; die verschijnt in de werkbank-lijst en (bij overschrijding due_date) via het bestaande `todo_overdue`-signaal. Dubbele melding is overbodig.
+- **Terminal-suppressie strenger:** de uitzondering `s.category !== "ready_for_invoice"` vervalt. Zodra `completion_status ∈ {ready_for_invoice, partially_invoiced, fully_invoiced, completed, cancelled, feedback_received}` of `status ∈ {cancelled, completed}`: álle Claudia-signalen voor dat project worden gedropt (net als bij snooze).
+- **Dedupe tegen open todo's:** per project laden we of er een open `admin_todo` bestaat (`status ∈ {todo, in_progress}`) waarvan de `due_date` nog niet verstreken is. Zo ja → onderdruk alle overige (niet-`todo_overdue`) signalen voor dat project. Werkbank ís dan al de handelingsplek; Claudia herhaalt niet.
+- **Harde cluster-cap:** na AI-prioritering per `project_id` maximaal 1 aanbeveling (behouden = hoogste priority). AI-instructie deed dit al "zacht"; we forceren het nu.
 
-### Aflevering
-- Beide concepten als kant-en-klare tekst in de chat — geen code-wijzigingen, geen edge function calls, geen automatische verzending.
-- Jij kopieert/verstuurt zelf vanuit je mailclient (of we kunnen ze daarna via de admin "Stuur e-mail"-flow versturen als je dat wilt).
+### 2. `supabase/functions/claudia-daily-scan/index.ts` — urgent = echt urgent
+De system prompt urgentie-regel wordt:
+- **urgent** alleen als: verloopt < 3 dagen zonder klant-akkoord, óf > €1.000 open > 21 dgn, óf klant-vertrouwen aantoonbaar op spel (customer_complaint categorie in toekomst) — én cooldown ≠ `hot`.
+- **normal** = actie deze week.
+- **info** = achtergrond, geen deadline.
 
-Akkoord? Dan zet ik beide concepten in het volgende bericht.
+Alles wat via de nieuwe dedupe al door de werkbank wordt afgevangen komt niet meer tot AI-prioritering, dus de urgent-badge in de header (`Claudia 7`) wordt betekenisvoller.
+
+### 3. UI — `ClaudiaRecommendationsCard.tsx` (klein)
+- Boven de lijst een sub-copyregel: "X onderdrukt (recent contact of open werkbank-taak)" i.p.v. alleen "signalen onderdrukt door recent contact".
+- Geen visuele overhaul; alleen tekst.
+
+## Bijwerkingen / niet in scope
+- Werkbank-todo-generatie blijft ongewijzigd.
+- `Claudia`-badgeteller (in header) reageert automatisch omdat hij `admin_recommendations` telt.
+- Bestaande recommendations verdwijnen pas bij de volgende scan-run (of via "Run nu").
+
+## Verificatie
+- `supabase/functions/_shared/projectActivity.ts` tests uitbreiden met een case: terminal completion_status → alle categorieën gesuppressed (ook `ready_for_invoice`).
+- Handmatig: "Run nu" op werkbank → verwacht dat de vier `Facturatie …` items uit de screenshot verdwijnen zolang er een openstaande admin_todo voor bestaat.

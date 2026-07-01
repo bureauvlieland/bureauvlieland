@@ -98,7 +98,7 @@ async function loadProjectActivity(
   return result;
 }
 
-async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise<{ signals: Signal[]; suppressed: number }> {
+async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise<{ signals: Signal[]; suppressed: number; suppressedBreakdown: { cooldown: number; terminal: number; werkbank: number } }> {
   const raw: Signal[] = [];
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
@@ -262,66 +262,80 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
     }
   });
 
-  // === 7. Projecten klaar voor facturatie ===
-  const { data: readyForInvoice } = await supabase
-    .from("program_requests")
-    .select("id, reference_number, customer_name, completion_status, updated_at")
-    .eq("completion_status", "ready_for_invoice")
-    .limit(10);
+  // NB: geen apart `ready_for_invoice`-signaal meer — de admin_todo "Facturatie …"
+  // die door set-project-ready-for-invoice wordt aangemaakt verschijnt al op de
+  // werkbank en (indien verstreken) via het todo_overdue-signaal. Dubbele melding
+  // is enkel ruis.
 
-  (readyForInvoice ?? []).forEach((r: any) => {
-    raw.push({
-      category: "ready_for_invoice",
-      entity_type: "program_request",
-      entity_id: r.id,
-      project_id: r.id,
-      reference: r.reference_number,
-      summary: `Project ${r.reference_number} (${r.customer_name}) is klaar voor facturatie`,
-      deeplink: `/admin/projecten/${r.id}/factuur`,
-    });
-  });
-
-  // === Cooldown/terminal/snooze filter per project ===
+  // === Cooldown/terminal/snooze filter + werkbank-dedupe per project ===
   const projectIds = Array.from(
     new Set(raw.map((s) => s.project_id).filter((x): x is string => !!x)),
   );
   const activity = await loadProjectActivity(supabase, projectIds);
 
+  // Werkbank-dedupe: welke projecten hebben al een open admin_todo?
+  // Zo ja, dan onderdrukken we alles behalve todo_overdue (want die
+  // wordt losstaand aangedreven door dezelfde tabel en heeft eigen leeftijdslogica).
+  const openTodoProjectIds = new Set<string>();
+  if (projectIds.length > 0) {
+    const { data: openTodos } = await supabase
+      .from("admin_todos")
+      .select("related_request_id")
+      .in("status", ["todo", "in_progress"])
+      .in("related_request_id", projectIds);
+    for (const row of (openTodos ?? []) as any[]) {
+      if (row.related_request_id) openTodoProjectIds.add(row.related_request_id);
+    }
+  }
+
   const signals: Signal[] = [];
-  let suppressed = 0;
+  let suppressedCooldown = 0;
+  let suppressedTerminal = 0;
+  let suppressedWerkbank = 0;
   for (const s of raw) {
     if (s.project_id) {
       const a = activity.get(s.project_id);
       if (a) {
-        // Terminale completion_status → drop alles behalve ready_for_invoice signaal zelf
-        if (
-          a.completionStatus &&
-          TERMINAL_COMPLETION_STATUSES.has(a.completionStatus) &&
-          s.category !== "ready_for_invoice"
-        ) {
-          suppressed++;
+        // Terminale completion_status → drop alle signalen voor dit project.
+        if (a.completionStatus && TERMINAL_COMPLETION_STATUSES.has(a.completionStatus)) {
+          suppressedTerminal++;
           continue;
         }
         if (a.status === "cancelled" || a.status === "completed") {
-          suppressed++;
+          suppressedTerminal++;
           continue;
         }
         if (a.snoozed) {
-          suppressed++;
+          suppressedCooldown++;
           continue;
         }
         if (!shouldShowSignalDuringCooldown(a.cooldown, s.category)) {
-          suppressed++;
+          suppressedCooldown++;
           continue;
         }
         s.cooldown = a.cooldown;
         s.last_contact_days = a.daysSinceContact != null ? Math.round(a.daysSinceContact) : null;
       }
+      // Dedupe met werkbank: als er al een open admin_todo op dit project
+      // bestaat, hoeft Claudia er geen extra signaal bovenop te leggen.
+      // todo_overdue mag door: die vertelt dat een taak *verstreken* is.
+      if (s.category !== "todo_overdue" && openTodoProjectIds.has(s.project_id)) {
+        suppressedWerkbank++;
+        continue;
+      }
     }
     signals.push(s);
   }
 
-  return { signals, suppressed };
+  return {
+    signals,
+    suppressed: suppressedCooldown + suppressedTerminal + suppressedWerkbank,
+    suppressedBreakdown: {
+      cooldown: suppressedCooldown,
+      terminal: suppressedTerminal,
+      werkbank: suppressedWerkbank,
+    },
+  };
 }
 
 interface PrioritizedRecommendation {
@@ -349,12 +363,12 @@ Cooldown-regels (cruciaal — minder ruis):
 - Signalen met cooldown="warm" (3–7 dagen): "normal" tenzij er een harde deadline of >€1000 op het spel staat.
 - Signalen met cooldown="cold" of geen recent contact: normale prioriteit-regels.
 
-Clustering: per project (zelfde related_entity_id) maximaal 1 aanbeveling, tenzij er aantoonbaar verschillende acties zijn (bijv. partner-reminder én facturatie).
+Clustering: per project (zelfde related_entity_id) MAXIMAAL 1 aanbeveling. Combineer meerdere signalen in één body als het over hetzelfde project gaat.
 
-Prioriteit-richtlijn:
-- urgent: verloopt < 3 dagen, klant-vertrouwen op spel, geld > €1000 staat lang open, EN geen recent contact
-- normal: actie nodig deze week
-- info: goed om te weten, geen directe deadline
+Prioriteit-richtlijn (streng — urgent moet écht urgent zijn):
+- urgent: aanvraag verloopt binnen 3 dagen zonder klant-akkoord, OF een bedrag > €1.000 staat > 21 dagen open, OF klantvertrouwen aantoonbaar op het spel — EN cooldown ≠ "hot".
+- normal: actie deze week nodig, geen harde deadline vandaag.
+- info: goed om te weten, geen deadline. Gebruik dit ook als je twijfelt of het urgent is.
 
 Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X", "bel partner Y", "factureer Z").
 
@@ -448,11 +462,34 @@ serve(async (req) => {
       .single();
     runId = runRow?.id ?? null;
 
-    const { signals, suppressed } = await gatherSignals(supabase);
+    const { signals, suppressed, suppressedBreakdown } = await gatherSignals(supabase);
 
-    const recommendations = signals.length > 0
+    const rawRecommendations = signals.length > 0
       ? await prioritizeWithAI(signals, apiKey)
       : [];
+
+    // Harde cluster-cap: per gerelateerd project maximaal 1 aanbeveling.
+    // Behouden = eerste in de door AI aangeleverde volgorde (die is al op prioriteit gesorteerd),
+    // met voorkeur voor de hoogste priority als er meerdere zijn.
+    const PRIO_ORDER: Record<string, number> = { urgent: 0, normal: 1, info: 2 };
+    const bestPerProject = new Map<string, typeof rawRecommendations[number]>();
+    const nonProject: typeof rawRecommendations = [];
+    for (const r of rawRecommendations) {
+      if (r.related_entity_type === "program_request" && r.related_entity_id) {
+        const key = r.related_entity_id;
+        const existing = bestPerProject.get(key);
+        if (
+          !existing ||
+          (PRIO_ORDER[r.priority] ?? 9) < (PRIO_ORDER[existing.priority] ?? 9)
+        ) {
+          bestPerProject.set(key, r);
+        }
+      } else {
+        nonProject.push(r);
+      }
+    }
+    const recommendations = [...bestPerProject.values(), ...nonProject];
+    const clustered = rawRecommendations.length - recommendations.length;
 
     if (recommendations.length > 0) {
       await supabase
@@ -487,7 +524,12 @@ serve(async (req) => {
           recommendations_created: recommendations.length,
           duration_ms: Date.now() - startedAt,
           completed_at: new Date().toISOString(),
-          input_summary: { signals_count: signals.length, suppressed_by_cooldown: suppressed },
+          input_summary: {
+            signals_count: signals.length,
+            suppressed_by_cooldown: suppressed,
+            suppressed_breakdown: suppressedBreakdown,
+            clustered_by_project: clustered,
+          },
           output_summary: {
             recommendations: recommendations.length,
             urgent: recommendations.filter((r) => r.priority === "urgent").length,
@@ -495,6 +537,7 @@ serve(async (req) => {
         })
         .eq("id", runId);
     }
+
 
     return new Response(
       JSON.stringify({
