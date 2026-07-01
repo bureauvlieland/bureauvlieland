@@ -326,6 +326,32 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
+  // Shared-secret guard. Mailjet Parse can POST to a custom URL that includes
+  // a `?token=...` query parameter. Fail closed — if the secret is not
+  // configured on the server, reject all requests rather than accepting
+  // anonymous inbound payloads.
+  const expectedToken =
+    Deno.env.get("MAILJET_INBOUND_WEBHOOK_SECRET") ||
+    Deno.env.get("MAILJET_INBOUND_WEBHOOK_TOKEN");
+  if (!expectedToken) {
+    console.error("inbound-email: MAILJET_INBOUND_WEBHOOK_SECRET is not configured");
+    return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const providedToken =
+    new URL(req.url).searchParams.get("token") ||
+    req.headers.get("x-webhook-token") ||
+    "";
+  if (providedToken !== expectedToken) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
