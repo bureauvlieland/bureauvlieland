@@ -1,51 +1,45 @@
-# Plan — Bewijsdossier BV-2603-0003 (Salure / Hotel Zeezicht)
 
-Doel: één **compleet, cijfermatig sluitend** PDF-dossier dat op elke pagina onderbouwd is met een databron uit de eigen backend, plus een audit van álle andere geaccepteerde logies-offertes zodat je zeker weet waar dit nog kan spelen. Geen tegenstrijdigheden meer met eerdere sessies: dit dossier vervangt alle eerdere versies en wordt getagd `v3-final`.
+# Plan — Extern feitenoverzicht BV-2603-0003 voor Salure & Zeezicht
 
-## Wat er wél / niet klopt aan eerdere versies
+Doel: één neutraal, extern presenteerbaar PDF dat alleen deze casus behandelt, met een echte visuele reconstructie van hoe de aanbieding er op 1 april 2026 uitzag voor de klant en voor de partner.
 
-Eerdere sessies noemden verschillende bedragen (€6.844 → €6.446 → €5.119,92) zonder duidelijk te maken uit welke bron elk bedrag komt. Dat leverde de indruk van tegenstrijdigheid op. Feitelijk zijn álle drie bedragen echt en horen ze bij verschillende momenten in dezelfde quote (`1584d8c2-…`). Het dossier gaat elk bedrag koppelen aan **één specifieke bron met timestamp**.
+## Wat het PDF wordt
 
-## Bronnen die ik ga bevriezen als bewijs
+Bestand: `/mnt/documents/Feitenoverzicht_BV-2603-0003_Salure-Zeezicht.pdf` — 4 à 5 pagina's, Bureau Vlieland briefpapier (logo, adres, contactblok, ondertekening Erwin onderaan).
 
-1. `accommodation_quotes.1584d8c2-fc8e-4f48-869e-aa6048c52e2f` — huidige waarde (`price_total = 5119.92`, `selected_at = 2026-04-01 07:06`, `updated_at = 2026-06-10 16:04:51`).
-2. `accommodation_quote_history` v1 (gemaakt 2026-06-10 16:04:51.545) — snapshot van vóór de mutatie: `price_total = 6446`, kamers `8×€179 + 9×€199`, includes `[Ontbijt]`.
-3. `email_log` — chronologie van álle mails aan `zwaan@salure.nl` en `manager@zeezichtvlieland.nl` rond deze quote: aanvragen, offerte-mails, klant-akkoord bevestiging, factuur `FV-BV-2603-0003-001` (10 juni 20:23), chat-notificaties.
-4. `admin_activity_log` + `updated_at` op de quote — wie de mutatie op 10 juni 16:04 heeft uitgevoerd (admin-user of edge function).
-5. `bureau_invoices` / `program_item_billing_lines` — welk bedrag uiteindelijk aan Salure gefactureerd is en welk bedrag Zeezicht als inkoopfactuur heeft ingediend.
+Inhoud, strikt neutraal (geen schuldvraag, geen voorstel):
 
-## Structuur van het PDF-dossier (`Bewijsdossier_BV-2603-0003_v3.pdf`)
+1. **Voorblad / aanleiding** — Één alinea: waarom dit overzicht bestaat en wat de bronnen zijn (mailtekst 30 mrt, klantakkoord 1 apr, quote-history versie 1, huidige quote-waarde).
+2. **Tijdlijn van de aanvraag** — Van eerste contact t/m factuur en het huidige geschil, per regel timestamp + gebeurtenis + bron.
+3. **Financieel overzicht** — Tabel met de drie bedragen die feitelijk in het dossier voorkomen (€6.844 initieel, €6.446 klantakkoord 1 apr, €5.119,92 huidige DB-waarde na mutatie 10 jun) en de partnerinkoop van 23 mei — allemaal met bron en timestamp.
+4. **Visuele reconstructie 1 april** — Twee paginagrote screenshots:
+   - Klantpagina zoals die er op 1 apr uitzag (quote-kaart + detailsheet Zeezicht met kamerlijst, "Inbegrepen: Ontbijt", totaal €6.446, knop "Kies deze").
+   - Partnerpagina met dezelfde onderliggende offerte-data.
+5. **Ondertekening** — Erwin, contactblok.
 
-1. **Samenvatting (1 pag.)** — Wat er is gebeurd, in klare taal, met de drie bedragen en hun bron.
-2. **Tijdlijn** — Elke regel = timestamp + gebeurtenis + bron-tabel + evt. e-mail-ID. Van eerste aanvraag t/m factuur en het geschil.
-3. **Financiële reconciliatie** — Tabel: geoffreerd door partner / gepresenteerd aan klant / akkoord klant / gefactureerd aan klant / inkoop van partner. Verschillen expliciet benoemd, incl. ontbijt-component.
-4. **Root cause** — De UI-zwakte: partner kon in `PartnerAccommodation.tsx` een `price_total` invullen die lager is dan de som van de kamerconfiguratie zonder blokkade. Verwijzing naar exact bestand + regel.
-5. **Bewijsstukken (bijlagen)** — Screenshots + JSON-snapshots:
-   - Klantpagina zoals die op 1 april werd getoond (reproductie via Playwright met historische data).
-   - Partner-portal weergave van dezelfde quote.
-   - E-mail body van akkoord-mail aan partner (uit `email_log`).
-   - Ruwe DB-snapshots (JSON) van quote v1 (history) én huidige quote.
-6. **Acties reeds genomen** — Wat sinds vorige week live is: acceptatie-mails tonen nu kamerconfig + `includes`; contract-tests op partner-update payload; RLS-guards.
-7. **Aanbevolen aanvullende acties** — 3 concrete fixes met risico-inschatting:
-   a. **DB-trigger** die `price_total` op `accommodation_quotes` blokkeert als hij < som(room_configuration × nights) is, tenzij een admin-flag `manual_override_reason` gezet is.
-   b. **`accepted_terms_log` uitbreiding**: bij `select-accommodation-quote` een volledige JSON-snapshot van `room_configuration`, `includes`, `extras`, `price_total` wegschrijven zodat elke akkoord onbetwistbaar is.
-   c. **Audit-view** in admin die per selected quote toont of `price_total` matcht met kamer-som (rood/geel/groen).
-8. **Portfolio-audit** — Scan van álle `status='selected'` quotes: per project een regel met `price_total`, som van `room_configuration`, delta, en of er ná `selected_at` nog een mutatie is geweest op `price_total`. Dit toont exact welke andere projecten hetzelfde risico dragen.
+Geen aanbevelingen, geen interne kritiek, geen root-cause. Puur reconstructie.
 
-## Werkstappen (bij build-mode)
+## Hoe de visuele reconstructie wordt gemaakt (technische sectie)
 
-1. SQL-scripts uitvoeren voor tijdlijn, reconciliatie en portfolio-audit; ruwe output naar `/tmp` en gefilterde tabellen naar het PDF.
-2. Historische klantpagina reproduceren met Playwright tegen lokale preview, met de v1-history als gemockte quote-data → screenshots naar `/tmp/browser/`.
-3. PDF genereren met `reportlab` (bestaande skill) → `/mnt/documents/Bewijsdossier_BV-2603-0003_v3.pdf`.
-4. QA-pass: elke pagina naar image, visueel controleren, fixen.
-5. Losse `Portfolio_Audit_geaccepteerde_logies.csv` naast het PDF leveren.
+Playwright draait tegen de lokale preview op `http://localhost:8080`, precies volgens de sandbox-instructies:
 
-## Wat ik NIET doe in deze ronde
+1. Route-injectie script: in een tijdelijke test-only render mount ik `AccommodationQuoteCard` en `AccommodationQuoteDetailSheet` met een **hand-gebouwd `AccommodationQuote`-object** dat exact matcht met `accommodation_quote_history` v1 (price_total €6.446, `room_configuration` 8×€179 + 9×€199, `includes` `["Ontbijt"]`, `valid_until` = 5 apr 2026). Dit gebeurt via een throwaway route `/dev/reconstruct-2603-0003` die alleen bestaat tijdens de screenshot-run — daarna weggegooid. Geen DB-mutatie.
+2. Playwright navigeert, wacht op render, en maakt element-screenshots op vaste viewport `1280×1800`.
+3. Zelfde principe voor de partner-view: mock-mount van `PartnerAccommodationQuoteSheet` met dezelfde data.
+4. Beide PNG's worden in het PDF ingesloten (reportlab, `Image` op ware breedte). Datumstempels in de screenshots worden bijgeknipt zodat "vandaag" niet zichtbaar is.
 
-- Geen wijzigingen aan producten of workflows. Aanbeveling 7a/b/c staat in het dossier maar wordt pas gebouwd na jouw expliciete akkoord.
-- Geen e-mail naar Zeezicht/Salure versturen. Het dossier is intern; jij bepaalt de vervolgcommunicatie.
+## Bronbevestiging vóór render
 
-## Vragen vóór ik bouw
+Vóór ik het PDF genereer haal ik via `supabase--read_query` één keer op:
+- `accommodation_quote_history` v1-record van quote `1584d8c2` (om zeker te weten dat mijn mock-data exact overeenkomt).
+- `email_log` regel van 30 mrt aan `zwaan@salure.nl` (voor citaat en timestamp).
+- Contact- en bedrijfsgegevens van Salure en Zeezicht voor het adresblok bovenaan.
 
-1. Wil je dat de portfolio-audit **alle** `selected` quotes meeneemt of alleen die van dit lopende seizoen (bijv. `selected_at >= 2026-01-01`)?
-2. De historische klantpagina-screenshot: ok dat ik daarvoor tijdelijk in Playwright de v1-history als mock injecteer (geen DB-mutatie), of wil je alleen tekstuele reconstructie zonder screenshot?
+## QA
+
+Na render: `pdftoppm` → elke pagina naar JPG → visueel controleren op afgekapte tekst, verkeerde bedragen, ontbrekende screenshots. Fixen, opnieuw. Pas leveren als alles klopt.
+
+## Wat niet in dit plan zit
+
+- Geen interne aanbevelingen, geen DB-trigger, geen `accepted_terms_log`-uitbreiding, geen portfolio-audit. Dit document is puur voor externe partijen; interne verbeteringen zijn een apart traject.
+- Geen automatische mailverzending; jij bepaalt of/hoe dit naar Salure/Zeezicht gaat.
