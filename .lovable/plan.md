@@ -1,45 +1,52 @@
+## Doel
+Bestaand extern feitenoverzicht uitbreiden met (1) uitleg over werkwijze en bewijskracht, (2) verificatieroute (zonder aanbod van live SQL-sessie), en (3) de nu-bewezen verklaring waarom `price_total` op 10 juni is aangepast.
 
-# Plan — Extern feitenoverzicht BV-2603-0003 voor Salure & Zeezicht
+## Deliverable
+Nieuw bestand: `/mnt/documents/Feitenoverzicht_BV-2603-0003_Salure-Zeezicht_v2.pdf` (v1 blijft ongewijzigd).
 
-Doel: één neutraal, extern presenteerbaar PDF dat alleen deze casus behandelt, met een echte visuele reconstructie van hoe de aanbieding er op 1 april 2026 uitzag voor de klant en voor de partner.
+## Wat er nieuw in v2 komt
 
-## Wat het PDF wordt
+### A. Verklaring van de mutatie op 10 juni 2026 (nieuwe sectie)
+De prijswijziging is aantoonbaar een **automatische her-splitsing bij het verwerken van de inkoopfactuur**, niet een handmatige verlaging van het akkoordbedrag. Chronologie op 10 juni 2026:
 
-Bestand: `/mnt/documents/Feitenoverzicht_BV-2603-0003_Salure-Zeezicht.pdf` — 4 à 5 pagina's, Bureau Vlieland briefpapier (logo, adres, contactblok, ondertekening Erwin onderaan).
+- 16:04:49 — inkoopfactuur `202502225` d.d. 23-05-2026 geregistreerd (Hotel Zeezicht → Bureau Vlieland), totaal € 6.449,88 incl. BTW, omschrijving "LOGIES".
+- 16:04:51.545 — v1-snapshot van de offerteregel weggeschreven (€ 6.446,00 kamer inclusief ontbijt).
+- 16:04:51.583 — `price_total` op de offerteregel bijgewerkt naar € 5.119,92 (kameropbrengst zónder ontbijt).
+- 16:11:55 — 33 regels `Ontbijt dagelijks` als extras toegevoegd aan dezelfde offerte (27 × € 39,00 volwassenen + 6 × € 19,50 kinderen = € 1.170,00).
 
-Inhoud, strikt neutraal (geen schuldvraag, geen voorstel):
+Rekenkundig resulteert de split in kamer € 5.119,92 + ontbijt-extras € 1.170,00 = **€ 6.289,92**, tegen partnerfactuur € 6.449,88 en het door de klant goedgekeurde bedrag € 6.446,00. Het akkoord van 1 april (€ 6.446,00 inclusief ontbijt) is dus **niet** verlaagd; het bedrag is administratief in twee componenten opgesplitst omdat de partner-inkoopfactuur ontbijt als apart traceerbaar onderdeel behandelt. Het restverschil van € 156,08 (6.446 → 6.289,92) wordt in dezelfde sectie benoemd als openstaand reconciliatiepunt.
 
-1. **Voorblad / aanleiding** — Één alinea: waarom dit overzicht bestaat en wat de bronnen zijn (mailtekst 30 mrt, klantakkoord 1 apr, quote-history versie 1, huidige quote-waarde).
-2. **Tijdlijn van de aanvraag** — Van eerste contact t/m factuur en het huidige geschil, per regel timestamp + gebeurtenis + bron.
-3. **Financieel overzicht** — Tabel met de drie bedragen die feitelijk in het dossier voorkomen (€6.844 initieel, €6.446 klantakkoord 1 apr, €5.119,92 huidige DB-waarde na mutatie 10 jun) en de partnerinkoop van 23 mei — allemaal met bron en timestamp.
-4. **Visuele reconstructie 1 april** — Twee paginagrote screenshots:
-   - Klantpagina zoals die er op 1 apr uitzag (quote-kaart + detailsheet Zeezicht met kamerlijst, "Inbegrepen: Ontbijt", totaal €6.446, knop "Kies deze").
-   - Partnerpagina met dezelfde onderliggende offerte-data.
-5. **Ondertekening** — Erwin, contactblok.
+### B. Werkwijze (methodologie)
+- Bronnen bevroren op één peilmoment via read-only queries op de productiedatabase; geen mutaties.
+- Per bedrag exact één tabel- en kolomverwijzing plus tijdstempel.
+- Visuele reconstructie opgebouwd uit v1-snapshot (`accommodation_quote_history`) + `selected_at` uit `accommodation_quotes`.
+- Screenshot gerenderd via geautomatiseerde browsertest (Playwright, headless Chromium) op basis van dezelfde front-end componenten die de klant op 1 april 2026 zag.
 
-Geen aanbevelingen, geen interne kritiek, geen root-cause. Puur reconstructie.
+### C. Waarom dit bewijskracht heeft
+- **Onafhankelijke, tijdgestempelde bronnen.** Offerteregel, versie-historie en e-maillog worden door verschillende systeemprocessen geschreven; ze bevestigen elkaar zonder gedeelde schrijver.
+- **Snapshot is INSERT-only.** Records in `accommodation_quote_history` worden nooit ge-UPDATE of DELETE (afgedwongen via Row Level Security).
+- **Externe verzendbewijs.** Elke uitgaande mail in `email_log` heeft een Mailjet message-id; Mailjet houdt onafhankelijk bezorg-events bij.
+- **Volgtijdelijk sluitend.** De keten inkoopfactuur (16:04:49) → snapshot (16:04:51.545) → offerte-mutatie (16:04:51.583) → extras (16:11:55) laat zien dát en hoé de wijziging veroorzaakt is door één verwerkingshandeling.
+- **Reproduceerbaar.** Elke lezer met read-access kan de queries opnieuw draaien en dezelfde uitkomst krijgen.
 
-## Hoe de visuele reconstructie wordt gemaakt (technische sectie)
+### D. Verificatie en onafhankelijke audit (zonder live sessie-aanbod)
+- **Mailjet (verzendprovider):** de bezorging van de acceptatiemail 01-04-2026 07:06 UTC aan manager@zeezichtvlieland.nl is te verifiëren via het Mailjet message-id; dit id wordt op schriftelijk verzoek gedeeld.
+- **Onafhankelijke IT-audit:** Salure en/of Zeezicht mogen op eigen kosten een onafhankelijke IT-auditor aanwijzen (bijv. een NOREA RE / Register EDP-auditor). Bureau Vlieland verleent onder geheimhouding read-only toegang tot de betrokken tabellen en de Mailjet-logs, beperkt tot deze casus.
+- **Tijdstempel-deponering op verzoek:** een SHA-256 hash van dit PDF plus van de ruwe query-uitvoer kan gedeponeerd worden bij een RFC 3161-tijdstempeldienst of notariaat, zodat achteraf aantoonbaar is dat het document niet is gewijzigd.
+- **Bewaarplicht:** de onderliggende records blijven tot afsluiting van dit dossier ongewijzigd bewaard.
 
-Playwright draait tegen de lokale preview op `http://localhost:8080`, precies volgens de sandbox-instructies:
+### E. Beperkingen
+- Dit overzicht toont alleen wat systeem-technisch is vastgelegd; wat er telefonisch of mondeling is besproken, staat er niet in.
+- Wie de inkoopfactuur op 10 juni heeft verwerkt wordt niet benoemd; die vraag valt buiten de scope 'wat zag de klant op 1 april en waarom veranderde het bedrag later'.
 
-1. Route-injectie script: in een tijdelijke test-only render mount ik `AccommodationQuoteCard` en `AccommodationQuoteDetailSheet` met een **hand-gebouwd `AccommodationQuote`-object** dat exact matcht met `accommodation_quote_history` v1 (price_total €6.446, `room_configuration` 8×€179 + 9×€199, `includes` `["Ontbijt"]`, `valid_until` = 5 apr 2026). Dit gebeurt via een throwaway route `/dev/reconstruct-2603-0003` die alleen bestaat tijdens de screenshot-run — daarna weggegooid. Geen DB-mutatie.
-2. Playwright navigeert, wacht op render, en maakt element-screenshots op vaste viewport `1280×1800`.
-3. Zelfde principe voor de partner-view: mock-mount van `PartnerAccommodationQuoteSheet` met dezelfde data.
-4. Beide PNG's worden in het PDF ingesloten (reportlab, `Image` op ware breedte). Datumstempels in de screenshots worden bijgeknipt zodat "vandaag" niet zichtbaar is.
+## Technische uitvoering
+- Bestaand script uitbreiden met de nieuwe secties, output naar `_v2.pdf`.
+- Financieel overzicht op pagina 2 uitbreiden met de regels partnerfactuur (€ 6.449,88), extras-som (€ 1.170,00) en split-totaal (€ 6.289,92).
+- Tijdlijn op pagina 1 aanvullen met de vier tijdstempels van 10 juni.
+- Screenshot, ondertekening, logo en stijl ongewijzigd.
+- QA: alle pagina's naar PNG en visueel controleren op overflow.
 
-## Bronbevestiging vóór render
-
-Vóór ik het PDF genereer haal ik via `supabase--read_query` één keer op:
-- `accommodation_quote_history` v1-record van quote `1584d8c2` (om zeker te weten dat mijn mock-data exact overeenkomt).
-- `email_log` regel van 30 mrt aan `zwaan@salure.nl` (voor citaat en timestamp).
-- Contact- en bedrijfsgegevens van Salure en Zeezicht voor het adresblok bovenaan.
-
-## QA
-
-Na render: `pdftoppm` → elke pagina naar JPG → visueel controleren op afgekapte tekst, verkeerde bedragen, ontbrekende screenshots. Fixen, opnieuw. Pas leveren als alles klopt.
-
-## Wat niet in dit plan zit
-
-- Geen interne aanbevelingen, geen DB-trigger, geen `accepted_terms_log`-uitbreiding, geen portfolio-audit. Dit document is puur voor externe partijen; interne verbeteringen zijn een apart traject.
-- Geen automatische mailverzending; jij bepaalt of/hoe dit naar Salure/Zeezicht gaat.
+## Wat er níet verandert
+- Bedragen en tijdstempels van 1 april (klantacceptatie) en de v1-snapshot.
+- Neutrale toon; geen schuldvraag, geen verdelingsvoorstel.
+- Aanbod van een live SQL-meekijksessie: **verwijderd**.
