@@ -435,6 +435,10 @@ Deno.serve(async (req) => {
               <li><strong>Totaalprijs:</strong> ${formatCurrencyNL(grandTotal)}</li>
             </ul>
 
+            ${includesBlockHtml}
+            ${roomConfigBlockHtml}
+
+
             <h2>Facturatie</h2>
             <p>Factureer het verblijf aan <strong>Bureau Vlieland</strong>. Je ontvangt hierover apart bericht via het partnerportaal.</p>
             <ul>
