@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
     // Load program
     const { data: program, error: progErr } = await supabase
       .from("program_requests")
-      .select("id, customer_name, customer_company, completion_status, status")
+      .select("id, customer_name, customer_company, completion_status, status, selected_dates")
       .eq("id", program_id)
       .maybeSingle();
     if (progErr) throw progErr;
@@ -132,17 +133,19 @@ Deno.serve(async (req) => {
 
     if (!existingTodo) {
       const customerLabel = program.customer_company || program.customer_name;
+      const snoozeUntil = computeInvoicingSnooze(program.selected_dates);
       await supabase.from("admin_todos").insert({
         title: `Facturatie: ${customerLabel}`,
         description:
           `Admin heeft het project handmatig op "klaar voor facturatie" gezet${
             reason ? ` — reden: ${reason}` : ""
-          }.`,
+          }.${snoozeUntil ? ` Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).` : ""}`,
         priority: "normal",
         status: "todo",
         related_request_id: program_id,
         auto_type: "invoicing_ready",
         auto_entity_id: program_id,
+        snoozed_until: snoozeUntil,
       });
     }
 

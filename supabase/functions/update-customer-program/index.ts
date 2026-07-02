@@ -15,6 +15,7 @@ import {
   getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1114,16 +1115,20 @@ Deno.serve(async (req) => {
       
       if (!existingInvoiceTodo) {
         const customerName = program.customer_company || program.customer_name;
+        const snoozeUntil = computeInvoicingSnooze(program.selected_dates);
         await supabase.from("admin_todos").insert({
           title: `Facturatie: ${customerName}`,
-          description: `Klant heeft de voorwaarden geaccepteerd. Programma is klaar voor facturatie.`,
+          description: snoozeUntil
+            ? `Klant heeft de voorwaarden geaccepteerd. Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).`
+            : `Klant heeft de voorwaarden geaccepteerd. Programma is klaar voor facturatie.`,
           priority: "normal",
           status: "todo",
           related_request_id: program.id,
           auto_type: "invoicing_ready",
           auto_entity_id: program.id,
+          snoozed_until: snoozeUntil,
         });
-        console.log(`Created invoicing_ready todo for request ${program.id}`);
+        console.log(`Created invoicing_ready todo for request ${program.id} (snoozed_until=${snoozeUntil ?? "n/a"})`);
       }
 
       // Get billing details for partner notification
