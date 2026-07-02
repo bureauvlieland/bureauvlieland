@@ -159,17 +159,19 @@ export const PartnerSettingsForm = () => {
     setIsSaving(true);
 
     try {
+      // Let op: bank_iban, bic en kvk_number worden om veiligheidsredenen
+      // centraal door Bureau Vlieland beheerd (RLS blokkeert self-update).
+      // Wijzigingen op die velden lopen via de bureau-medewerker, niet via
+      // dit formulier.
       const { error } = await supabase
         .from("partners")
         .update({
           name: formData.name,
           contact_email: formData.contact_email || null,
           phone: formData.phone || null,
-          kvk_number: formData.kvk_number || null,
           address_street: formData.address_street || null,
           address_postal: formData.address_postal || null,
           address_city: formData.address_city || null,
-          bank_iban: formData.bank_iban || null,
           bank_account_name: formData.bank_account_name || null,
           booking_contact_name: formData.booking_contact_name || null,
           booking_contact_phone: formData.booking_contact_phone || null,
@@ -329,10 +331,14 @@ export const PartnerSettingsForm = () => {
               <Input
                 id="kvk_number"
                 value={formData.kvk_number}
-                onChange={(e) => handleChange("kvk_number", e.target.value)}
                 placeholder="12345678"
                 maxLength={8}
+                readOnly
+                disabled
               />
+              <p className="text-xs text-muted-foreground">
+                KvK-nummer wordt centraal beheerd. Neem contact op met Bureau Vlieland om dit te wijzigen.
+              </p>
             </div>
           </div>
 
@@ -399,9 +405,13 @@ export const PartnerSettingsForm = () => {
               <Input
                 id="bank_iban"
                 value={formData.bank_iban}
-                onChange={(e) => handleChange("bank_iban", e.target.value.toUpperCase())}
                 placeholder="NL00 BANK 0000 0000 00"
+                readOnly
+                disabled
               />
+              <p className="text-xs text-muted-foreground">
+                IBAN wordt centraal beheerd om fraude te voorkomen. Neem contact op met Bureau Vlieland om dit in te stellen of te wijzigen.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="bank_account_name">Tenaamstelling</Label>
