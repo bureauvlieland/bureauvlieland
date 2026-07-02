@@ -343,24 +343,61 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
                   })}
                 </div>
               </div>
-              {hasPdf ? (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 shrink-0">
-                  <CheckCircle2 className="h-3 w-3 mr-1" /> PDF al gekoppeld
-                </Badge>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={() => handleLink(m)}
-                  disabled={linkingId === m.id || !item.attachment_path}
-                >
-                  {linkingId === m.id ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  ) : (
-                    <Link2 className="h-3 w-3 mr-1" />
-                  )}
-                  PDF koppelen
-                </Button>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {hasPdf ? (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <CheckCircle2 className="h-3 w-3 mr-1" /> PDF al gekoppeld
+                  </Badge>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleLink(m)}
+                    disabled={linkingId === m.id || !item.attachment_path}
+                  >
+                    {linkingId === m.id ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Link2 className="h-3 w-3 mr-1" />
+                    )}
+                    PDF koppelen
+                  </Button>
+                )}
+                {m.item_id && scannedLineItems.length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant={hasPdf ? "default" : "outline"}
+                        disabled={bookingId === m.id}
+                      >
+                        {bookingId === m.id ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <ListPlus className="h-3 w-3 mr-1" />
+                        )}
+                        Orderregels boeken ({scannedLineItems.length})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Orderregels boeken op onderdeel</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {scannedLineItems.length} gescande orderregels worden als factuurregels
+                          op het gekoppelde programma-onderdeel gezet. Eventuele bestaande
+                          factuurregels op dit onderdeel worden vervangen. Het inbox-item wordt
+                          hierna gemarkeerd als verwerkt.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleBookLines(m)}>
+                          Boeken
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </div>
           );
         })}
