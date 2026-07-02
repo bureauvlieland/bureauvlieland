@@ -188,6 +188,112 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
     }
   };
 
+  const handleBookLines = async (match: MatchRow) => {
+    if (!match.item_id) {
+      toast.error("Geen programma-onderdeel gekoppeld aan deze registratie");
+      return;
+    }
+    if (scannedLineItems.length === 0) {
+      toast.error("Geen gescande orderregels beschikbaar");
+      return;
+    }
+    setBookingId(match.id);
+    try {
+      // 1. Bouw billing-line rijen op basis van scan
+      const defaultVat = item.scan_result?.vat_rate ?? 21;
+      const billingRows = scannedLineItems.map((li, idx) => {
+        const qty = Number(li.quantity ?? 1) || 1;
+        const totalExcl = li.total_excl_vat != null ? Number(li.total_excl_vat) : null;
+        const unitExcl =
+          totalExcl != null && qty !== 0
+            ? totalExcl / qty
+            : Number(li.unit_price ?? 0);
+        const vatRate = li.vat_rate != null ? Number(li.vat_rate) : Number(defaultVat);
+        const amounts = computeBillingLineAmounts(qty, unitExcl, vatRate);
+        return {
+          item_id: match.item_id!,
+          description: (li.description || "Regel").slice(0, 500),
+          quantity: qty,
+          unit_price_excl_vat: Math.round(unitExcl * 100) / 100,
+          vat_rate: vatRate,
+          sort_order: idx,
+          ...amounts,
+        };
+      });
+
+      // 2. Vervang billing lines op het item
+      const { error: delBlErr } = await supabase
+        .from("program_item_billing_lines")
+        .delete()
+        .eq("item_id", match.item_id);
+      if (delBlErr) throw delBlErr;
+      const { error: insBlErr } = await supabase
+        .from("program_item_billing_lines")
+        .insert(billingRows);
+      if (insBlErr) throw insBlErr;
+
+      await supabase
+        .from("program_request_items")
+        .update({ final_billing_locked_at: new Date().toISOString() })
+        .eq("id", match.item_id);
+
+      // 3. Vervang allocations gegroepeerd per BTW-tarief
+      const byVat = new Map<number, { excl: number; vat: number; incl: number }>();
+      billingRows.forEach((r) => {
+        const cur = byVat.get(r.vat_rate) || { excl: 0, vat: 0, incl: 0 };
+        cur.excl += r.amount_excl_vat;
+        cur.vat += r.vat_amount;
+        cur.incl += r.amount_incl_vat;
+        byVat.set(r.vat_rate, cur);
+      });
+      const allocRows = Array.from(byVat.entries()).map(([vat_rate, sums], idx) => ({
+        invoice_id: match.id,
+        item_id: match.item_id!,
+        amount_excl_vat: Math.round(sums.excl * 100) / 100,
+        vat_rate,
+        vat_amount: Math.round(sums.vat * 100) / 100,
+        amount_incl_vat: Math.round(sums.incl * 100) / 100,
+        sort_order: idx,
+      }));
+
+      const { error: delAllocErr } = await supabase
+        .from("partner_purchase_invoice_allocations")
+        .delete()
+        .eq("invoice_id", match.id);
+      if (delAllocErr) throw delAllocErr;
+      if (allocRows.length > 0) {
+        const { error: insAllocErr } = await supabase
+          .from("partner_purchase_invoice_allocations")
+          .insert(allocRows);
+        if (insAllocErr) throw insAllocErr;
+      }
+
+      // 4. Log naar project historie
+      if (match.request_id) {
+        const totalIncl = billingRows.reduce((s, r) => s + r.amount_incl_vat, 0);
+        await supabase.from("program_request_history").insert({
+          request_id: match.request_id,
+          item_id: match.item_id,
+          action: "purchase_invoice_lines_booked",
+          actor: "admin",
+          notes: `${billingRows.length} orderregels alsnog geboekt op onderdeel vanuit inkoopfactuur ${match.invoice_number} (€${totalIncl.toFixed(2)} incl. BTW)`,
+        });
+      }
+
+      // 5. Inbox-item op processed zetten (koppelt aan bestaande invoice)
+      await onLinked(match.id);
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["program-item-billing-lines"] });
+      toast.success(`${billingRows.length} orderregels geboekt op het project`);
+    } catch (err) {
+      console.error("Book lines failed:", err);
+      toast.error(err instanceof Error ? err.message : "Boeken mislukt");
+    } finally {
+      setBookingId(null);
+    }
+  };
+
   // Beslis of we een exacte nummer-match hebben of een fallback op bedrag.
   const isAmountFallback =
     !!matches &&
