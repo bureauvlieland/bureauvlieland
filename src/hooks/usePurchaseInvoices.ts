@@ -24,35 +24,54 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           *,
           partners!inner(id, name, email),
           program_requests!inner(id, reference_number, customer_name, customer_company),
-          program_request_items!partner_purchase_invoices_item_id_fkey(id, block_name),
+          program_request_items!partner_purchase_invoices_item_id_fkey(id, block_name, commission_amount, commission_status, commission_percentage),
           payment_batches(id, batch_reference, requested_execution_date)
         `)
         .order("created_at", { ascending: false });
 
-      if (filters?.requestId) {
-        query = query.eq("request_id", filters.requestId);
-      }
-      if (filters?.partnerId) {
-        query = query.eq("partner_id", filters.partnerId);
-      }
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq("status", filters.status);
-      }
-      if (filters?.search) {
-        query = query.ilike("invoice_number", `%${filters.search}%`);
-      }
+      if (filters?.requestId) query = query.eq("request_id", filters.requestId);
+      if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
+      if (filters?.status && filters.status !== 'all') query = query.eq("status", filters.status);
+      if (filters?.search) query = query.ilike("invoice_number", `%${filters.search}%`);
 
       const { data, error } = await query;
-
       if (error) throw error;
 
-      return (data || []).map((invoice: any) => ({
+      const rows = (data || []).map((invoice: any) => ({
         ...invoice,
         partner: invoice.partners,
         program_request: invoice.program_requests,
         program_request_item: invoice.program_request_items,
         payment_batch: invoice.payment_batches,
       })) as PurchaseInvoiceWithRelations[];
+
+      // Enrich rows without item_id: look up a matching selected accommodation_quote
+      // (same partner, same linked program) so commissie herleidbaar blijft.
+      const candidates = rows.filter(r => !r.item_id && r.request_id && r.partner_id);
+      if (candidates.length > 0) {
+        const programIds = Array.from(new Set(candidates.map(r => r.request_id)));
+        const partnerIds = Array.from(new Set(candidates.map(r => r.partner_id)));
+        const { data: quotes } = await supabase
+          .from("accommodation_quotes")
+          .select("id, partner_id, commission_amount, commission_status, invoiced_number, invoiced_amount, accommodation_requests!inner(linked_program_id)")
+          .eq("status", "selected")
+          .in("partner_id", partnerIds);
+        const quoteMap = new Map<string, any>();
+        (quotes || []).forEach((q: any) => {
+          const linkedProgram = q.accommodation_requests?.linked_program_id;
+          if (linkedProgram && programIds.includes(linkedProgram)) {
+            quoteMap.set(`${linkedProgram}::${q.partner_id}`, q);
+          }
+        });
+        rows.forEach((r: any) => {
+          if (!r.item_id) {
+            const q = quoteMap.get(`${r.request_id}::${r.partner_id}`);
+            if (q) r.accommodation_quote = q;
+          }
+        });
+      }
+
+      return rows;
     },
   });
 
