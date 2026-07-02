@@ -285,7 +285,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       console.log(`Released ${bureauFerryItems.length} ferry item(s) — pending booking`);
 
       // Maak per overtocht-item een todo aan om tickets te boeken bij Doeksen.
+      // Boekingstaken zijn pas operationeel relevant vanaf ~3 weken voor aankomst;
+      // eerder boeken bij Doeksen heeft geen zin. We zetten snoozed_until zodat de
+      // taak pas dan opduikt in de werkbank en bij Claudia.
       const customerLabelForFerry = program.customer_company || program.customer_name;
+      const arrivalDates = Array.isArray(program.selected_dates)
+        ? (program.selected_dates as string[]).filter(Boolean).sort()
+        : [];
+      const arrival = arrivalDates[0] ?? null;
+      let snoozedUntil: string | null = null;
+      if (arrival) {
+        const arrivalMs = new Date(`${arrival}T00:00:00Z`).getTime();
+        const showFromMs = arrivalMs - 21 * 24 * 60 * 60 * 1000;
+        if (showFromMs > Date.now()) {
+          snoozedUntil = new Date(showFromMs).toISOString().slice(0, 10);
+        }
+      }
       for (const fi of bureauFerryItems) {
         const { data: existing } = await supabase
           .from("admin_todos")
@@ -303,9 +318,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
             related_request_id: program.id,
             auto_type: "book_ferry_tickets",
             auto_entity_id: fi.id,
+            snoozed_until: snoozedUntil,
+            due_date: arrival ?? null,
           });
         }
       }
+
     }
 
     // 6. Send only partner items via email
