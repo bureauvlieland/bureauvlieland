@@ -17,7 +17,18 @@ import {
   Download,
   ArrowRight,
   Mail,
+  RotateCcw,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -31,9 +42,10 @@ import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvo
 export default function AdminPurchaseInvoiceInbox() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<InboxStatus | "all">("new");
-  const { items, isLoading, discard, rescan, markProcessed } = usePurchaseInvoiceInbox(tab);
+  const { items, isLoading, discard, rescan, markProcessed, reprocess } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
   const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
+  const [reprocessItem, setReprocessItem] = useState<PurchaseInvoiceInboxItem | null>(null);
 
   const handleDownload = async (path: string) => {
     const { data, error } = await supabase.storage
@@ -260,6 +272,16 @@ export default function AdminPurchaseInvoiceInbox() {
                         onClick={() => navigate("/admin/inkoopfacturen")}
                       >
                         <ArrowRight className="h-3 w-3 mr-1" /> Bekijk factuur
+                      </Button>
+                    )}
+                    {item.status === "processed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setReprocessItem(item)}
+                        disabled={reprocess.isPending}
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" /> Opnieuw verwerken
                       </Button>
                     )}
                   </div>
