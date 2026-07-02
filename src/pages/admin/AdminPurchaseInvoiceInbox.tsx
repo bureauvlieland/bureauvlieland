@@ -17,7 +17,18 @@ import {
   Download,
   ArrowRight,
   Mail,
+  RotateCcw,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -31,9 +42,10 @@ import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvo
 export default function AdminPurchaseInvoiceInbox() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<InboxStatus | "all">("new");
-  const { items, isLoading, discard, rescan, markProcessed } = usePurchaseInvoiceInbox(tab);
+  const { items, isLoading, discard, rescan, markProcessed, reprocess } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
   const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
+  const [reprocessItem, setReprocessItem] = useState<PurchaseInvoiceInboxItem | null>(null);
 
   const handleDownload = async (path: string) => {
     const { data, error } = await supabase.storage
@@ -262,6 +274,16 @@ export default function AdminPurchaseInvoiceInbox() {
                         <ArrowRight className="h-3 w-3 mr-1" /> Bekijk factuur
                       </Button>
                     )}
+                    {item.status === "processed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setReprocessItem(item)}
+                        disabled={reprocess.isPending}
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" /> Opnieuw verwerken
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -281,6 +303,39 @@ export default function AdminPurchaseInvoiceInbox() {
         inboxItem={collectiveItem?.item || null}
         partnerId={collectiveItem?.partnerId || "rederij"}
       />
+
+      <AlertDialog open={!!reprocessItem} onOpenChange={(open) => !open && setReprocessItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verwerking ongedaan maken?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  De bestaande factuurregistratie wordt verwijderd (inclusief regels, verdelingen en factuur-/commissiestatus op het gekoppelde programma-onderdeel). Het inbox-item komt terug op <strong>Nieuw</strong> zodat je opnieuw kunt verwerken. De bijlage en het scan-resultaat blijven behouden.
+                </p>
+                {reprocessItem && isLikelyCollective(reprocessItem) && (
+                  <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 text-xs">
+                    ⚠️ Dit item is als verzamelfactuur verwerkt — mogelijk moeten aanvullende factuurregistraties handmatig via <code>/admin/inkoopfacturen</code> worden verwijderd.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!reprocessItem) return;
+                await reprocess.mutateAsync(reprocessItem);
+                setReprocessItem(null);
+                setTab("new");
+              }}
+            >
+              Opnieuw verwerken
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }

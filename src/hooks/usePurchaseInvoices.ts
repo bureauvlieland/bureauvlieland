@@ -249,6 +249,17 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         await supabase.storage.from("partner-invoices").remove([file_path]);
       }
 
+      // Reset any inbox row that referenced this invoice → back to "new"
+      await supabase
+        .from("purchase_invoice_inbox")
+        .update({
+          status: "new",
+          processed_invoice_id: null,
+          processed_by: null,
+          processed_at: null,
+        })
+        .eq("processed_invoice_id", id);
+
       // Best-effort: log
       if (request_id) {
         await supabase.from("program_request_history").insert({
