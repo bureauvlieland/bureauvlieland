@@ -743,7 +743,7 @@ Deno.serve(async (req) => {
         emailMessages.push({
           From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
           To: [{ Email: to, Name: program.customer_name }],
-          ReplyTo: { Email: buildReplyTo(requestId) },
+          ReplyTo: buildReplyTo(program.reference_number),
           Subject: subjectPrefix(origin) + rendered.subject,
           HTMLPart: rendered.body,
         });
@@ -806,7 +806,7 @@ Deno.serve(async (req) => {
       emailMessages.push({
         From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
         To: [{ Email: to, Name: partner.name }],
-        ReplyTo: { Email: buildReplyTo(requestId) },
+        ReplyTo: buildReplyTo(program.reference_number),
         Subject: subjectPrefix(origin) + rendered.subject,
         HTMLPart: rendered.body,
       });
