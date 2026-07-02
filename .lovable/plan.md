@@ -1,33 +1,43 @@
 ## Doel
 
-In de dialog **"Inkoopfactuur toevoegen"** wil je de 31 gescande orderregels rechtstreeks als factuurregels op het gekozen programma-onderdeel boeken, zonder dat je onderaan nog handmatig bedragen per BTW-tarief hoeft in te vullen.
+Voor inbox-items waar de PDF al aan een bestaande `partner_purchase_invoices`-registratie is gekoppeld (badge "PDF al gekoppeld"), moet je met één klik de gescande orderregels alsnog op het project boeken — zonder de factuur opnieuw te hoeven aanmaken.
 
-## Wat er nu gebeurt
+## Wat er nu mist
 
-- Er staat al een checkbox **"Neem factuurregels over op programma-onderdeel"** (`copyToBillingLines`).
-- Maar de dialog dwingt je nog steeds om zelf de **allocaties** in te vullen (bedrag excl. BTW per tarief), omdat de header-controle daarop leunt.
-- Pas als alles klopt worden de scanregels naar `program_item_billing_lines` gekopieerd.
+- `MatchedRegistrationBanner` biedt alleen "PDF koppelen" wanneer er nog geen PDF hangt. Zit die er al, dan is er geen vervolgactie.
+- De registratie bevat dan wel de PDF en het bedrag, maar:
+  - geen `program_item_billing_lines` op het gekoppelde `item_id` (dus factuur/klantoverzicht mist de detailregels);
+  - geen `partner_purchase_invoice_allocations` per BTW-tarief.
+- De gescande `scan_result.line_items` op het inbox-item bevatten precies wat we nodig hebben.
 
-Kortom: de scan-info wordt wél gebruikt, maar je moet 'm alsnog dubbel invoeren als allocatie.
+## Aanpak
 
-## Voorstel
+### UI
 
-Voeg één shortcut toe: **"Alle orderregels op dit programma-onderdeel boeken"**.
+- `src/components/admin/purchase-invoices/MatchedRegistrationBanner.tsx`
+  - Naast/onder de "PDF al gekoppeld"-badge een knop **"Orderregels boeken (N)"** tonen als:
+    - `m.file_path` gezet is (dus al gekoppeld), en
+    - `m.item_id` gezet is, en
+    - het inbox-item ≥ 1 `scan_result.line_items` heeft.
+  - Bij klik: bevestigings-`AlertDialog` ("Bestaande factuurregels op dit onderdeel worden overschreven"). Na bevestiging → mutatie draaien en het inbox-item naar `processed` zetten (koppelen aan bestaande `invoice_id`, zoals `markProcessed` in `usePurchaseInvoiceInbox`).
 
-1. Bovenaan bij Project/Onderdeel: knop **"Vul allocaties uit orderregels"** (alleen actief als er precies één programma-onderdeel gekozen is en er gescande regels zijn).
-2. Die knop groepeert de scanregels per BTW-tarief en vult automatisch de allocatie-tabel (bedrag excl + BTW% per tarief). Je hoeft dan niets meer te typen.
-3. `copyToBillingLines` blijft aan (default) — dus alle 31 regels landen 1-op-1 als billing lines op het onderdeel, met `use_actual_costs = true` en `final_billing_locked_at`.
-4. Werkt ook voor **extra projecten** (verdeelfactuur): per extra dezelfde knop.
-5. Bij verschillen tussen header en somregels wordt de bestaande auto-rebalance (sub-cent) gebruikt; grotere afwijkingen tonen we als waarschuwing zoals nu.
+### Data-mutatie (client-side, geen nieuwe edge function)
 
-## Waar
+Nieuwe helper in dezelfde component (of kleine hook `useBookScannedLinesToExistingInvoice`):
 
-- `src/components/admin/AddPurchaseInvoiceDialog.tsx`
-  - Nieuwe helper `deriveAllocationsFromLines(lines, itemId)` → array per unieke `vat_rate`.
-  - Knop naast het allocaties-blok (regel ~1322) en per extra (regel ~1296).
-  - Geen wijzigingen aan de kopieerlogica zelf (regel 917-975) — die pakt de scanregels al correct op zodra `copyToBillingLines` + één target-item.
+1. Map `scan_result.line_items` → rows voor `program_item_billing_lines` via bestaande `computeBillingLineAmounts` (zie `src/hooks/useItemBillingLines.ts`). VAT-rate fallback = dominant tarief uit scan, anders 21.
+2. `delete` bestaande `program_item_billing_lines` voor `match.item_id`, dan `insert` nieuwe rows; zet `program_request_items.final_billing_locked_at = now()`.
+3. Groepeer regels per `vat_rate` → `delete` bestaande `partner_purchase_invoice_allocations` voor `match.id`, dan `insert` één rij per BTW-tarief met `item_id = match.item_id`.
+4. Log in `program_request_history` met `action: "purchase_invoice_lines_booked"` en korte samenvatting (N regels, totaal).
+5. Inbox-item op `processed` zetten via bestaande `markProcessed` (koppelt aan `match.id`).
 
-## Buiten scope
+### Randgevallen
 
-- AI-scan / OCR zelf.
-- Verdeling over meerdere onderdelen automatisch raden (blijft handmatig; shortcut werkt alleen bij één gekozen onderdeel).
+- Als het gekoppelde item een logies-quote is (via `apply-purchase-invoice-to-lodging` flow): knop verbergen wanneer `match.item_id === null` (logies-registraties koppelen aan `request_id`, niet aan een program-item). Voor die gevallen blijft de bestaande flow gelden.
+- Als er al billing-lines staan: waarschuwing in de dialog met tellingen ("Er staan al X regels; deze worden vervangen").
+
+## Uit scope
+
+- Geen wijzigingen aan OCR/scan.
+- Geen wijzigingen aan de edge functions of aan de bestaande "nieuwe factuur boeken"-flow.
+- Geen support voor multi-item splitsingen bij deze shortcut — als de scan meerdere projecten raakt gebruik je nog steeds "Verwerken".
