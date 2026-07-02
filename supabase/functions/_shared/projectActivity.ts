@@ -60,8 +60,32 @@ export function shouldShowSignalDuringCooldown(
 
 export const TERMINAL_COMPLETION_STATUSES = new Set<string>([
   "ready_for_invoice",
+  "partially_invoiced",
+  "fully_invoiced",
   "invoiced",
   "completed",
   "feedback_received",
   "cancelled",
 ]);
+
+/**
+ * Bepaal snooze-datum voor een facturatie-todo: laatste event-datum + 1 dag.
+ * Returned ISO-date (YYYY-MM-DD) of null als er geen bruikbare datum bekend is
+ * of de datum al gepasseerd is (dan is snoozen niet zinvol).
+ */
+export function computeInvoicingSnooze(
+  selectedDates: unknown,
+  today: Date = new Date(),
+): string | null {
+  if (!Array.isArray(selectedDates) || selectedDates.length === 0) return null;
+  const times = selectedDates
+    .map((d) => new Date(String(d)).getTime())
+    .filter((t) => !Number.isNaN(t));
+  if (times.length === 0) return null;
+  const last = new Date(Math.max(...times));
+  last.setDate(last.getDate() + 1);
+  const todayMidnight = new Date(today);
+  todayMidnight.setHours(0, 0, 0, 0);
+  if (last.getTime() <= todayMidnight.getTime()) return null;
+  return last.toISOString().slice(0, 10);
+}
