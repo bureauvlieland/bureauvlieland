@@ -426,6 +426,33 @@ export default function AdminPurchaseInvoices() {
                       <TableCell className="text-right font-mono">
                         €{Number(invoice.amount_incl_vat ?? (Number(invoice.amount_excl_vat || 0) + Number(invoice.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {(() => {
+                          const stamped = Number(invoice.supplier_commission_excl_vat || 0);
+                          const itemComm = Number(invoice.program_request_item?.commission_amount || 0);
+                          const quoteComm = Number((invoice as any).accommodation_quote?.commission_amount || 0);
+                          const amount = stamped || itemComm || quoteComm;
+                          if (!amount) {
+                            return <span className="text-xs text-muted-foreground">—</span>;
+                          }
+                          const status =
+                            invoice.program_request_item?.commission_status ||
+                            (invoice as any).accommodation_quote?.commission_status ||
+                            "pending";
+                          const variant: "default" | "secondary" | "outline" =
+                            status === "invoiced" || status === "paid" ? "default" : "outline";
+                          return (
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="font-mono text-sm">
+                                €{amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <Badge variant={variant} className="text-[10px] px-1.5 py-0">
+                                {status === "paid" ? "Betaald" : status === "invoiced" ? "Gefactureerd" : "Openstaand"}
+                              </Badge>
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
