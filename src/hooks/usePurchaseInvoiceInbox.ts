@@ -94,7 +94,80 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
     },
   });
 
-  return { items, isLoading, newCount, discard, markProcessed, rescan };
+  const reprocess = useMutation({
+    mutationFn: async (item: PurchaseInvoiceInboxItem) => {
+      const invoiceId = item.processed_invoice_id;
+      if (invoiceId) {
+        // Fetch invoice for cleanup metadata
+        const { data: inv } = await supabase
+          .from("partner_purchase_invoices")
+          .select("id, item_id, request_id, file_path, invoice_number, partner_id, amount_excl_vat")
+          .eq("id", invoiceId)
+          .maybeSingle();
+
+        // Cascade cleanup children
+        await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", invoiceId);
+        await supabase.from("partner_purchase_invoice_allocations").delete().eq("invoice_id", invoiceId);
+
+        // Delete invoice header
+        await supabase.from("partner_purchase_invoices").delete().eq("id", invoiceId);
+
+        if (inv?.item_id) {
+          await supabase
+            .from("program_request_items")
+            .update({
+              invoiced_amount: null,
+              invoiced_number: null,
+              invoiced_date: null,
+              invoiced_file_path: null,
+              commission_amount: null,
+              commission_status: "not_applicable",
+              commission_notes: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", inv.item_id);
+        }
+
+        if (inv?.file_path) {
+          await supabase.storage.from("partner-invoices").remove([inv.file_path]);
+        }
+
+        if (inv?.request_id) {
+          await supabase.from("program_request_history").insert({
+            request_id: inv.request_id,
+            item_id: inv.item_id || null,
+            action: "purchase_invoice_reprocessed",
+            actor: "admin",
+            notes: `Inkoopfactuur ${inv.invoice_number || "(zonder nummer)"} (€${inv.amount_excl_vat}) teruggezet naar inbox voor herverwerking`,
+          });
+        }
+      }
+
+      // Reset inbox row back to "new" (keeps scan_result + bijlage)
+      const { error } = await supabase
+        .from("purchase_invoice_inbox")
+        .update({
+          status: "new",
+          processed_invoice_id: null,
+          processed_by: null,
+          processed_at: null,
+        })
+        .eq("id", item.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox-count"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      toast.success("Verwerking ongedaan gemaakt — klaar om opnieuw te verwerken");
+    },
+    onError: (err: Error) => {
+      console.error("Reprocess error:", err);
+      toast.error(err.message || "Kon verwerking niet ongedaan maken");
+    },
+  });
+
+  return { items, isLoading, newCount, discard, markProcessed, rescan, reprocess };
 }
 
 export function usePurchaseInvoiceInboxCount() {

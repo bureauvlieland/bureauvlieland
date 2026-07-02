@@ -1,35 +1,39 @@
-# Plan: Inkoopfacturen opnieuw kunnen verwerken
+# Inkoopfacturen opnieuw kunnen verwerken
 
-Doel: een reeds verwerkte inkoopfactuur kunnen "terugdraaien" zodat hij opnieuw vanaf de inbox verwerkt kan worden (bijv. na een foute koppeling, verkeerd programma-onderdeel, of verkeerd bedrag).
+Doel: een reeds verwerkte inkoopfactuur kunnen terugdraaien zodat hij opnieuw vanaf de inbox verwerkt kan worden (bijv. na een foute koppeling, verkeerd programma-onderdeel of verkeerd bedrag).
 
 ## Wijzigingen
 
-### 1. `src/hooks/usePurchaseInvoices.ts` — `deleteInvoice`
-Na het verwijderen van de factuur en het resetten van het programma-onderdeel:
-- Zet elke `purchase_invoice_inbox`-rij die naar deze factuur verwees terug naar `status='new'` en maak `processed_invoice_id`, `processed_by`, `processed_at` leeg.
-- Effect: als je op `/admin/inkoopfacturen` een factuur verwijdert die via de inbox binnenkwam, verschijnt hij automatisch weer in de inbox-tab "Nieuw" en kun je hem opnieuw verwerken (bestaande scan blijft behouden).
+### 1. Inbox: knop "Opnieuw verwerken" op verwerkte items
+Op `/admin/inkoopfacturen/inbox`, tabblad **Verwerkt** (en processed-items binnen **Alle**), naast **Bekijk factuur** een extra knop **Opnieuw verwerken** (icoon `RotateCcw`).
 
-### 2. `src/hooks/usePurchaseInvoiceInbox.ts` — nieuwe `reprocess` mutation
-Voor een inbox-item met `status='processed'`:
-1. Zoek `processed_invoice_id`.
-2. Verwijder gerelateerde `purchase_invoice_lines` en `partner_purchase_invoice_allocations`.
-3. Verwijder `partner_purchase_invoices`-rij.
-4. Reset gekoppeld `program_request_items` (invoiced_* en commission_* velden, zoals in bestaande `deleteInvoice`).
-5. Log naar `program_request_history` (`action: 'purchase_invoice_reprocessed'`).
-6. Zet inbox-rij terug op `status='new'`, `processed_invoice_id=null`, `processed_by=null`, `processed_at=null` (bijlage en scan_result blijven staan).
-7. Toast: "Verwerking ongedaan gemaakt — klaar om opnieuw te verwerken".
+Klik opent een bevestigingsdialoog:
+> "De bestaande factuurregistratie wordt verwijderd (inclusief regels, verdelingen en factuur-/commissiestatus op het programma-onderdeel). Het inbox-item komt terug op 'Nieuw' zodat je opnieuw kunt verwerken. Doorgaan?"
 
-Exporteer `reprocess` in de return.
+Bij bevestigen:
+1. Verwijder gerelateerde regels + verdelingen + de `partner_purchase_invoice`-rij.
+2. Reset factuur- en commissievelden op het gekoppelde programma-onderdeel (zoals de bestaande "Verwijderen"-actie doet).
+3. Verwijder de PDF uit storage (best effort).
+4. Log naar de projecthistorie (`purchase_invoice_reprocessed`).
+5. Zet het inbox-item terug op status **Nieuw**; scan-resultaat en bijlage blijven staan zodat je meteen door kunt.
+6. Springt automatisch naar de tab **Nieuw**.
 
-### 3. `src/pages/admin/AdminPurchaseInvoiceInbox.tsx`
-- Op tabblad "Verwerkt" (en "Alle" voor processed-items): naast **Bekijk factuur** een knop **Opnieuw verwerken** (icon `RotateCcw`, variant `outline`).
-- Klik opent een `AlertDialog` met bevestiging: "De bestaande factuurregistratie wordt verwijderd (inclusief regels, verdelingen en factuur-/commissiestatus op het programma-onderdeel). Het inbox-item komt terug in 'Nieuw' zodat je opnieuw kunt verwerken. Doorgaan?"
-- Bij bevestigen → `reprocess.mutate(item.id)` en switch daarna tab naar `"new"`.
+### 2. Facturenlijst: verwijderen → automatisch terug in inbox
+Op `/admin/inkoopfacturen`: bij het verwijderen van een factuur die oorspronkelijk via de inbox binnenkwam, komt het bijbehorende inbox-item automatisch terug op **Nieuw**. De bevestigingstekst krijgt een extra zin:
+> "Als deze factuur via de inbox is binnengekomen, komt het inbox-item automatisch terug op 'Nieuw' zodat je opnieuw kunt verwerken."
 
-### 4. `src/pages/admin/AdminPurchaseInvoices.tsx` — kleine UX-toevoeging
-- Update de tekst in de bestaande delete-confirm (`deleteTarget` dialog, rond regel 522-550) met een extra zin: "Als deze factuur via de inbox is binnengekomen, komt het inbox-item automatisch terug op 'Nieuw' zodat je opnieuw kunt verwerken."
+Zo werken beide ingangen (inbox-knop én verwijderen op de facturenlijst) consistent.
 
-## Scope-notes / buiten scope
-- **Verzamelfacturen**: één inbox-item kan meerdere `partner_purchase_invoices` hebben opgeleverd. De `reprocess`-knop verwijdert alleen de invoice waarnaar `processed_invoice_id` verwijst. Bij verzamelfacturen tonen we in de confirm-dialog een waarschuwing "Dit item is als verzamelfactuur verwerkt — mogelijk moeten aanvullende factuurregistraties handmatig via /admin/inkoopfacturen worden verwijderd." (detectie: `partner_purchase_invoices.is_collective === true` op de gelinkte invoice.)
-- Geen wijziging aan RLS of edge functions nodig; alle acties gaan via bestaande admin-rechten op de betrokken tabellen.
-- Geen nieuwe kolommen of migraties nodig.
+## Aandachtspunt: verzamelfacturen
+Eén inbox-item kan bij een verzamelfactuur (bv. Doeksen, Isla Vlieland) meerdere factuurregistraties hebben opgeleverd. De **Opnieuw verwerken**-knop verwijdert alleen de factuur waarnaar het inbox-item direct verwijst. In de bevestigingsdialoog verschijnt daarom bij verzamelfacturen een waarschuwing:
+> "Dit item is als verzamelfactuur verwerkt — mogelijk moeten aanvullende factuurregistraties handmatig via /admin/inkoopfacturen worden verwijderd."
+
+## Buiten scope
+- Geen wijzigingen aan RLS, edge functions, database-schema of migraties.
+- Geen automatische herscan; bestaand scan-resultaat wordt hergebruikt (met de bestaande **Opnieuw scannen**-knop als optie).
+
+## Technische notitie
+- `src/hooks/usePurchaseInvoices.ts` — in `deleteInvoice` de gekoppelde `purchase_invoice_inbox`-rij terugzetten op `status='new'` en `processed_*`-velden leegmaken.
+- `src/hooks/usePurchaseInvoiceInbox.ts` — nieuwe `reprocess`-mutatie die bovenstaande stappen uitvoert.
+- `src/pages/admin/AdminPurchaseInvoiceInbox.tsx` — extra knop + AlertDialog + tabwissel naar `"new"` na succes.
+- `src/pages/admin/AdminPurchaseInvoices.tsx` — tekstuele aanvulling op de bestaande delete-confirm.
