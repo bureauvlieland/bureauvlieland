@@ -528,6 +528,7 @@ export default function AdminPurchaseInvoices() {
                   {Number(deleteTarget.amount_incl_vat ?? (Number(deleteTarget.amount_excl_vat || 0) + Number(deleteTarget.vat_amount || 0))).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) te verwijderen.
                   <br /><br />
                   Dit reset ook de factuur- en commissie-status op het bijbehorende programma-onderdeel.
+                  Als deze factuur via de inbox is binnengekomen, komt het inbox-item automatisch terug op <strong>Nieuw</strong> zodat je opnieuw kunt verwerken.
                   Deze actie kan niet ongedaan worden gemaakt.
                 </>
               )}
