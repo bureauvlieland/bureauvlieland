@@ -303,6 +303,39 @@ export default function AdminPurchaseInvoiceInbox() {
         inboxItem={collectiveItem?.item || null}
         partnerId={collectiveItem?.partnerId || "rederij"}
       />
+
+      <AlertDialog open={!!reprocessItem} onOpenChange={(open) => !open && setReprocessItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verwerking ongedaan maken?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  De bestaande factuurregistratie wordt verwijderd (inclusief regels, verdelingen en factuur-/commissiestatus op het gekoppelde programma-onderdeel). Het inbox-item komt terug op <strong>Nieuw</strong> zodat je opnieuw kunt verwerken. De bijlage en het scan-resultaat blijven behouden.
+                </p>
+                {reprocessItem && isLikelyCollective(reprocessItem) && (
+                  <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 text-xs">
+                    ⚠️ Dit item is als verzamelfactuur verwerkt — mogelijk moeten aanvullende factuurregistraties handmatig via <code>/admin/inkoopfacturen</code> worden verwijderd.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!reprocessItem) return;
+                await reprocess.mutateAsync(reprocessItem);
+                setReprocessItem(null);
+                setTab("new");
+              }}
+            >
+              Opnieuw verwerken
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
