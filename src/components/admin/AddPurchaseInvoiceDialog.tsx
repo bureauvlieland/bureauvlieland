@@ -1361,6 +1361,36 @@ export function AddPurchaseInvoiceDialog({
                 setAllocations((prev) => prev.map((a) => ({ ...a, amount_excl_vat: per.toFixed(2), vat_rate: a.vat_rate || headerRate })));
               };
 
+              // Groepeer alle gescande orderregels per BTW-tarief en zet die
+              // 1-op-1 als allocaties op het gekozen programma-onderdeel neer,
+              // zodat je niet handmatig per BTW-tarief hoeft in te tikken.
+              const validScanLines = lines.filter((l) => {
+                const t = computeLineTotals(l);
+                return t.amount_excl_vat > 0;
+              });
+              const fillTargetItemId =
+                itemId || (availableItems.length === 1 ? (availableItems[0] as any).id : "");
+              const canFillFromLines = !!fillTargetItemId && validScanLines.length > 0;
+              const fillFromScannedLines = () => {
+                if (!canFillFromLines) return;
+                const byRate = new Map<number, number>();
+                for (const l of validScanLines) {
+                  const t = computeLineTotals(l);
+                  byRate.set(t.vat_rate, (byRate.get(t.vat_rate) || 0) + t.amount_excl_vat);
+                }
+                const next = Array.from(byRate.entries())
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([rate, excl]) => ({
+                    item_id: fillTargetItemId,
+                    amount_excl_vat: (Math.round(excl * 100) / 100).toFixed(2),
+                    vat_rate: String(rate),
+                    notes: "",
+                  }));
+                setAllocations(next);
+                setCopyToBillingLines(true);
+                toast.success(`${validScanLines.length} orderregels toegewezen aan onderdeel`);
+              };
+
               return (
                 <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1370,11 +1400,24 @@ export function AddPurchaseInvoiceDialog({
                         Verdeel het factuurbedrag over één of meerdere onderdelen.
                       </p>
                     </div>
-                    {allocations.length > 0 && (
-                      <Button type="button" variant="ghost" size="sm" onClick={distributeEvenly}>
-                        Verdeel gelijk
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {canFillFromLines && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={fillFromScannedLines}
+                          title="Groepeer alle orderregels per BTW-tarief en boek ze op het gekozen onderdeel"
+                        >
+                          Vul uit orderregels ({validScanLines.length})
+                        </Button>
+                      )}
+                      {allocations.length > 0 && (
+                        <Button type="button" variant="ghost" size="sm" onClick={distributeEvenly}>
+                          Verdeel gelijk
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {allocations.length > 0 && (
