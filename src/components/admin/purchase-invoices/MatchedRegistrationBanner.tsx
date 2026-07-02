@@ -3,11 +3,23 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link2, Loader2, CheckCircle2 } from "lucide-react";
+import { Link2, Loader2, CheckCircle2, ListPlus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { normalizeInvoiceNumber } from "@/lib/purchaseInvoiceDuplicateCheck";
+import { computeBillingLineAmounts } from "@/types/programItemBillingLine";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
 interface MatchRow {
