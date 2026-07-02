@@ -1,39 +1,33 @@
-# Inkoopfacturen opnieuw kunnen verwerken
+## Doel
 
-Doel: een reeds verwerkte inkoopfactuur kunnen terugdraaien zodat hij opnieuw vanaf de inbox verwerkt kan worden (bijv. na een foute koppeling, verkeerd programma-onderdeel of verkeerd bedrag).
+In de dialog **"Inkoopfactuur toevoegen"** wil je de 31 gescande orderregels rechtstreeks als factuurregels op het gekozen programma-onderdeel boeken, zonder dat je onderaan nog handmatig bedragen per BTW-tarief hoeft in te vullen.
 
-## Wijzigingen
+## Wat er nu gebeurt
 
-### 1. Inbox: knop "Opnieuw verwerken" op verwerkte items
-Op `/admin/inkoopfacturen/inbox`, tabblad **Verwerkt** (en processed-items binnen **Alle**), naast **Bekijk factuur** een extra knop **Opnieuw verwerken** (icoon `RotateCcw`).
+- Er staat al een checkbox **"Neem factuurregels over op programma-onderdeel"** (`copyToBillingLines`).
+- Maar de dialog dwingt je nog steeds om zelf de **allocaties** in te vullen (bedrag excl. BTW per tarief), omdat de header-controle daarop leunt.
+- Pas als alles klopt worden de scanregels naar `program_item_billing_lines` gekopieerd.
 
-Klik opent een bevestigingsdialoog:
-> "De bestaande factuurregistratie wordt verwijderd (inclusief regels, verdelingen en factuur-/commissiestatus op het programma-onderdeel). Het inbox-item komt terug op 'Nieuw' zodat je opnieuw kunt verwerken. Doorgaan?"
+Kortom: de scan-info wordt wél gebruikt, maar je moet 'm alsnog dubbel invoeren als allocatie.
 
-Bij bevestigen:
-1. Verwijder gerelateerde regels + verdelingen + de `partner_purchase_invoice`-rij.
-2. Reset factuur- en commissievelden op het gekoppelde programma-onderdeel (zoals de bestaande "Verwijderen"-actie doet).
-3. Verwijder de PDF uit storage (best effort).
-4. Log naar de projecthistorie (`purchase_invoice_reprocessed`).
-5. Zet het inbox-item terug op status **Nieuw**; scan-resultaat en bijlage blijven staan zodat je meteen door kunt.
-6. Springt automatisch naar de tab **Nieuw**.
+## Voorstel
 
-### 2. Facturenlijst: verwijderen → automatisch terug in inbox
-Op `/admin/inkoopfacturen`: bij het verwijderen van een factuur die oorspronkelijk via de inbox binnenkwam, komt het bijbehorende inbox-item automatisch terug op **Nieuw**. De bevestigingstekst krijgt een extra zin:
-> "Als deze factuur via de inbox is binnengekomen, komt het inbox-item automatisch terug op 'Nieuw' zodat je opnieuw kunt verwerken."
+Voeg één shortcut toe: **"Alle orderregels op dit programma-onderdeel boeken"**.
 
-Zo werken beide ingangen (inbox-knop én verwijderen op de facturenlijst) consistent.
+1. Bovenaan bij Project/Onderdeel: knop **"Vul allocaties uit orderregels"** (alleen actief als er precies één programma-onderdeel gekozen is en er gescande regels zijn).
+2. Die knop groepeert de scanregels per BTW-tarief en vult automatisch de allocatie-tabel (bedrag excl + BTW% per tarief). Je hoeft dan niets meer te typen.
+3. `copyToBillingLines` blijft aan (default) — dus alle 31 regels landen 1-op-1 als billing lines op het onderdeel, met `use_actual_costs = true` en `final_billing_locked_at`.
+4. Werkt ook voor **extra projecten** (verdeelfactuur): per extra dezelfde knop.
+5. Bij verschillen tussen header en somregels wordt de bestaande auto-rebalance (sub-cent) gebruikt; grotere afwijkingen tonen we als waarschuwing zoals nu.
 
-## Aandachtspunt: verzamelfacturen
-Eén inbox-item kan bij een verzamelfactuur (bv. Doeksen, Isla Vlieland) meerdere factuurregistraties hebben opgeleverd. De **Opnieuw verwerken**-knop verwijdert alleen de factuur waarnaar het inbox-item direct verwijst. In de bevestigingsdialoog verschijnt daarom bij verzamelfacturen een waarschuwing:
-> "Dit item is als verzamelfactuur verwerkt — mogelijk moeten aanvullende factuurregistraties handmatig via /admin/inkoopfacturen worden verwijderd."
+## Waar
+
+- `src/components/admin/AddPurchaseInvoiceDialog.tsx`
+  - Nieuwe helper `deriveAllocationsFromLines(lines, itemId)` → array per unieke `vat_rate`.
+  - Knop naast het allocaties-blok (regel ~1322) en per extra (regel ~1296).
+  - Geen wijzigingen aan de kopieerlogica zelf (regel 917-975) — die pakt de scanregels al correct op zodra `copyToBillingLines` + één target-item.
 
 ## Buiten scope
-- Geen wijzigingen aan RLS, edge functions, database-schema of migraties.
-- Geen automatische herscan; bestaand scan-resultaat wordt hergebruikt (met de bestaande **Opnieuw scannen**-knop als optie).
 
-## Technische notitie
-- `src/hooks/usePurchaseInvoices.ts` — in `deleteInvoice` de gekoppelde `purchase_invoice_inbox`-rij terugzetten op `status='new'` en `processed_*`-velden leegmaken.
-- `src/hooks/usePurchaseInvoiceInbox.ts` — nieuwe `reprocess`-mutatie die bovenstaande stappen uitvoert.
-- `src/pages/admin/AdminPurchaseInvoiceInbox.tsx` — extra knop + AlertDialog + tabwissel naar `"new"` na succes.
-- `src/pages/admin/AdminPurchaseInvoices.tsx` — tekstuele aanvulling op de bestaande delete-confirm.
+- AI-scan / OCR zelf.
+- Verdeling over meerdere onderdelen automatisch raden (blijft handmatig; shortcut werkt alleen bij één gekozen onderdeel).
