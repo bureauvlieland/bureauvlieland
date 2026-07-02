@@ -51,10 +51,12 @@ interface Props {
 export function MatchedRegistrationBanner({ item, onLinked }: Props) {
   const queryClient = useQueryClient();
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
 
   const scanInvoiceNumber = item.scan_result?.invoice_number || "";
   const normalized = normalizeInvoiceNumber(scanInvoiceNumber);
   const supplierName = (item.scan_result?.supplier_name || "").toLowerCase().trim();
+  const scannedLineItems = item.scan_result?.line_items ?? [];
 
   const scannedAmountIncl = (() => {
     const r = item.scan_result;
