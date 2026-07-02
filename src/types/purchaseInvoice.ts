@@ -26,6 +26,8 @@ export interface PurchaseInvoice {
   forwarded_to_accounting_at: string | null;
   forwarded_by: string | null;
   payment_batch_id: string | null;
+  supplier_commission_excl_vat?: number | null;
+  supplier_commission_vat?: number | null;
 }
 
 export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
@@ -43,7 +45,18 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
   program_request_item?: {
     id: string;
     block_name: string;
+    commission_amount?: number | null;
+    commission_status?: string | null;
+    commission_percentage?: number | null;
   };
+  accommodation_quote?: {
+    id: string;
+    partner_id: string;
+    commission_amount: number | null;
+    commission_status: string | null;
+    invoiced_number: string | null;
+    invoiced_amount: number | null;
+  } | null;
   payment_batch?: {
     id: string;
     batch_reference: string;
