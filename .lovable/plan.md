@@ -1,36 +1,35 @@
-## Doel
-Vóór we het externe feitenoverzicht (Salure/Zeezicht) definitief maken, elke stellige claim staven met een bronregel of expliciet degraderen tot "waarschijnlijk / niet vastgesteld". Ik ga geen nieuwe versie schrijven zolang de vier gaten hieronder niet dicht zijn.
+# Plan: Inkoopfacturen opnieuw kunnen verwerken
 
-## Wat ik ga doen (alleen lezen, geen mutaties)
+Doel: een reeds verwerkte inkoopfactuur kunnen "terugdraaien" zodat hij opnieuw vanaf de inbox verwerkt kan worden (bijv. na een foute koppeling, verkeerd programma-onderdeel, of verkeerd bedrag).
 
-### Stap 1 — Bevestig wat de klant op 30 mrt / 1 apr écht zag
-- `email_log`-rijen voor `zwaan@salure.nl` uit de vensters 30-03 20:37 en 01-04 07:06 uitlezen; alleen tekstvelden (`subject`, `metadata`, eventueel body-kolom).
-- Als de body geen bedrag bevat, controleren welke portal-URL erin stond en welke `price_total` op dat moment gold (op basis van `history` + `updated_at`).
-- Uitkomst: exacte bedragen die de klant per mail en op de portalpagina zag. Als er géén € 6.446 in staat, wordt de headline in het dossier bijgesteld.
+## Wijzigingen
 
-### Stap 2 — "Automatische split" hard maken of afzwakken
-- Zoeken in `supabase/functions/*` en `src/**` naar code die bij `partner_purchase_invoices` insert een `accommodation_quotes.price_total` update triggert.
-- `admin_activity_log` rond 10-06 16:04:49–16:11:55 uitlezen om te zien of één actor beide handelingen deed of dat er een systeemproces tussen zit.
-- Uitkomst: één van drie labels — (a) *automatisch via edge function X*, (b) *handmatig door admin Y binnen 2 minuten na factuur-registratie*, of (c) *causaliteit niet vast te stellen*.
+### 1. `src/hooks/usePurchaseInvoices.ts` — `deleteInvoice`
+Na het verwijderen van de factuur en het resetten van het programma-onderdeel:
+- Zet elke `purchase_invoice_inbox`-rij die naar deze factuur verwees terug naar `status='new'` en maak `processed_invoice_id`, `processed_by`, `processed_at` leeg.
+- Effect: als je op `/admin/inkoopfacturen` een factuur verwijdert die via de inbox binnenkwam, verschijnt hij automatisch weer in de inbox-tab "Nieuw" en kun je hem opnieuw verwerken (bestaande scan blijft behouden).
 
-### Stap 3 — Restverschil € 156,08 duiden
-- Inkoopfactuur 202502217 (€ 3.150,72, 22-05) én 202502225 (€ 6.449,88, 23-05) beide inhoudelijk vergelijken met het klantakkoord € 6.446.
-- Nagaan of er BTW-omrekening (9 % ontbijt vs 9 % logies), no-show-korting of aparte extras spelen.
-- Uitkomst: getal verklaard óf expliciet in dossier opgenomen als openstaand.
+### 2. `src/hooks/usePurchaseInvoiceInbox.ts` — nieuwe `reprocess` mutation
+Voor een inbox-item met `status='processed'`:
+1. Zoek `processed_invoice_id`.
+2. Verwijder gerelateerde `purchase_invoice_lines` en `partner_purchase_invoice_allocations`.
+3. Verwijder `partner_purchase_invoices`-rij.
+4. Reset gekoppeld `program_request_items` (invoiced_* en commission_* velden, zoals in bestaande `deleteInvoice`).
+5. Log naar `program_request_history` (`action: 'purchase_invoice_reprocessed'`).
+6. Zet inbox-rij terug op `status='new'`, `processed_invoice_id=null`, `processed_by=null`, `processed_at=null` (bijlage en scan_result blijven staan).
+7. Toast: "Verwerking ongedaan gemaakt — klaar om opnieuw te verwerken".
 
-### Stap 4 — Snapshot-gat 1 apr → 10 jun expliciet benoemen
-- In het dossier één zin toevoegen: er is één history-versie (v1 op 10-06); dat het bedrag tussen 1 apr en 10 jun ongewijzigd bleef leiden we af uit de afwezigheid van eerdere versies, niet uit een positief snapshotbewijs.
-- Geen "bewijs uit v1 dat de klant op 1 apr € 6.446 zag" meer claimen; herformuleren als "waarde vlak vóór de mutatie op 10 juni".
+Exporteer `reprocess` in de return.
 
-## Wat er dan met de PDF gebeurt
-- v2 blijft staan zoals hij is (jij hebt hem al).
-- Zodra stap 1–4 klaar zijn maak ik **v3** met de gecorrigeerde formuleringen. Geen bedragen of tijdstempels wijzigen die we hierboven wél bevestigd hebben; alleen claims verzachten die we niet kunnen dragen.
-- Kop op de eerste pagina wordt: "Reconstructie op basis van systeemgegevens" i.p.v. "Bewezen toedracht".
+### 3. `src/pages/admin/AdminPurchaseInvoiceInbox.tsx`
+- Op tabblad "Verwerkt" (en "Alle" voor processed-items): naast **Bekijk factuur** een knop **Opnieuw verwerken** (icon `RotateCcw`, variant `outline`).
+- Klik opent een `AlertDialog` met bevestiging: "De bestaande factuurregistratie wordt verwijderd (inclusief regels, verdelingen en factuur-/commissiestatus op het programma-onderdeel). Het inbox-item komt terug in 'Nieuw' zodat je opnieuw kunt verwerken. Doorgaan?"
+- Bij bevestigen → `reprocess.mutate(item.id)` en switch daarna tab naar `"new"`.
 
-## Wat ik expliciet **niet** doe
-- Geen mutaties, geen migraties, geen productiedata aanraken.
-- Geen nieuwe interpretatie van intentie ("Zeezicht had verkeerd bedrag ingevuld", "admin heeft bewust verlaagd" — dat blijft buiten scope).
-- Geen live-SQL-aanbod (staat er al uit).
+### 4. `src/pages/admin/AdminPurchaseInvoices.tsx` — kleine UX-toevoeging
+- Update de tekst in de bestaande delete-confirm (`deleteTarget` dialog, rond regel 522-550) met een extra zin: "Als deze factuur via de inbox is binnengekomen, komt het inbox-item automatisch terug op 'Nieuw' zodat je opnieuw kunt verwerken."
 
-## Vraag aan jou
-Wil je dat ik direct stap 1–4 doorloop en dan v3 lever, of eerst per stap de bevindingen terugkoppel zodat jij per punt kunt zeggen of het in de externe versie mag?
+## Scope-notes / buiten scope
+- **Verzamelfacturen**: één inbox-item kan meerdere `partner_purchase_invoices` hebben opgeleverd. De `reprocess`-knop verwijdert alleen de invoice waarnaar `processed_invoice_id` verwijst. Bij verzamelfacturen tonen we in de confirm-dialog een waarschuwing "Dit item is als verzamelfactuur verwerkt — mogelijk moeten aanvullende factuurregistraties handmatig via /admin/inkoopfacturen worden verwijderd." (detectie: `partner_purchase_invoices.is_collective === true` op de gelinkte invoice.)
+- Geen wijziging aan RLS of edge functions nodig; alle acties gaan via bestaande admin-rechten op de betrokken tabellen.
+- Geen nieuwe kolommen of migraties nodig.
