@@ -1,43 +1,45 @@
 ## Doel
+Bij elke partner-inkoopfactuur is de bijbehorende commissie herleidbaar, zichtbaar en correct gekoppeld — zowel voor bestaande facturen (backfill) als voor nieuwe registraties.
 
-Voor inbox-items waar de PDF al aan een bestaande `partner_purchase_invoices`-registratie is gekoppeld (badge "PDF al gekoppeld"), moet je met één klik de gescande orderregels alsnog op het project boeken — zonder de factuur opnieuw te hoeven aanmaken.
-
-## Wat er nu mist
-
-- `MatchedRegistrationBanner` biedt alleen "PDF koppelen" wanneer er nog geen PDF hangt. Zit die er al, dan is er geen vervolgactie.
-- De registratie bevat dan wel de PDF en het bedrag, maar:
-  - geen `program_item_billing_lines` op het gekoppelde `item_id` (dus factuur/klantoverzicht mist de detailregels);
-  - geen `partner_purchase_invoice_allocations` per BTW-tarief.
-- De gescande `scan_result.line_items` op het inbox-item bevatten precies wat we nodig hebben.
+## Wat er nu misgaat
+- **202602844 – Diner Zeezicht (BV-2604-0004):** wél gekoppeld aan het programma-onderdeel, commissie €331,36 (pending) staat op het item, maar `supplier_commission_excl_vat` op de factuur zelf is 0.
+- **202502225 – Logies Zeezicht (BV-2603-0003):** alleen op request-niveau geboekt, niet aan de `accommodation_quote` (Zeezicht, selected, commissie €644,60 pending). Daardoor ontbreekt `invoiced_amount` / `invoiced_number` op de quote en ontbreekt commissie op de factuur.
 
 ## Aanpak
 
-### UI
+### 1. Datamodel / afleiding
+Per rij in `partner_purchase_invoices` één "commission link" bepalen:
+- **item_id gezet** → commissie uit `program_request_items` (commission_amount, commission_status).
+- **geen item_id, wel request_id + partner_id** → zoek `accommodation_quotes` (status `selected`, matchende partner + linked_program_id = request_id). Als gevonden: koppel factuur aan die quote en vul `invoiced_amount`/`invoiced_number`/`invoiced_date`/`invoiced_file_path`.
+- Vul altijd `supplier_commission_excl_vat` en `supplier_commission_vat` op de factuur, afgeleid uit de gevonden commissie (of `amount_excl_vat × commission_percentage` als fallback).
 
-- `src/components/admin/purchase-invoices/MatchedRegistrationBanner.tsx`
-  - Naast/onder de "PDF al gekoppeld"-badge een knop **"Orderregels boeken (N)"** tonen als:
-    - `m.file_path` gezet is (dus al gekoppeld), en
-    - `m.item_id` gezet is, en
-    - het inbox-item ≥ 1 `scan_result.line_items` heeft.
-  - Bij klik: bevestigings-`AlertDialog` ("Bestaande factuurregels op dit onderdeel worden overschreven"). Na bevestiging → mutatie draaien en het inbox-item naar `processed` zetten (koppelen aan bestaande `invoice_id`, zoals `markProcessed` in `usePurchaseInvoiceInbox`).
+### 2. Backfill (eenmalig, via insert-tool)
+- Voor 202502225: koppelen aan accommodation_quote `1584d8c2…` (Zeezicht / BV-2603-0003), `invoiced_amount = 6449,88`, `invoiced_number = 202502225`, `invoiced_date`, `invoiced_file_path` uit de factuur, en `supplier_commission_*` invullen.
+- Voor 202602844: `supplier_commission_excl_vat = 331,36` + bijbehorende BTW invullen (commissie blijft op het item, alleen zichtbaar op factuur).
+- Alle overige oude `partner_purchase_invoices` zonder gevulde `supplier_commission_*` in één update-pass afleiden (item- óf quote-route).
 
-### Data-mutatie (client-side, geen nieuwe edge function)
+### 3. Registratie-flow bij nieuwe factuur
+Aanpassen in `AddPurchaseInvoiceDialog.tsx` + `MatchedRegistrationBanner.tsx` (route "orderregels boeken"):
+- Bij kiezen van een programma-onderdeel: commissie op het item ophalen en `supplier_commission_*` meesturen naar de insert.
+- Bij logies-facturen zonder item: dropdown/auto-suggest met de matchende `selected` accommodation_quote(s) van die partner op dat project; bij bevestigen ook `invoiced_amount`/`invoiced_number` op de quote schrijven, plus `supplier_commission_*` op de factuur.
+- Herverwerken/opnieuw boeken volgt dezelfde route.
 
-Nieuwe helper in dezelfde component (of kleine hook `useBookScannedLinesToExistingInvoice`):
+### 4. UI in Facturen-lijst (`AdminPurchaseInvoices.tsx`)
+Extra kolom **"Commissie"** naast "Bedrag incl.":
+- Toont `€ x,xx` uit `supplier_commission_excl_vat` (fallback: som van item/quote commission_amount).
+- Badge onder het bedrag: `pending` (amber) / `invoiced` (blauw) / `paid` (groen) / `— geen commissie` (grijs, bv. bureau-interne posten).
+- Klein icoontje/tooltip toont bron (item vs. logies-offerte).
 
-1. Map `scan_result.line_items` → rows voor `program_item_billing_lines` via bestaande `computeBillingLineAmounts` (zie `src/hooks/useItemBillingLines.ts`). VAT-rate fallback = dominant tarief uit scan, anders 21.
-2. `delete` bestaande `program_item_billing_lines` voor `match.item_id`, dan `insert` nieuwe rows; zet `program_request_items.final_billing_locked_at = now()`.
-3. Groepeer regels per `vat_rate` → `delete` bestaande `partner_purchase_invoice_allocations` voor `match.id`, dan `insert` één rij per BTW-tarief met `item_id = match.item_id`.
-4. Log in `program_request_history` met `action: "purchase_invoice_lines_booked"` en korte samenvatting (N regels, totaal).
-5. Inbox-item op `processed` zetten via bestaande `markProcessed` (koppelt aan `match.id`).
+### 5. Consistentie
+- `partner_purchase_invoices` blijft leidend voor "wat we van de partner ontvangen"; commission_status blijft op item/quote (zoals nu). De factuurregel is puur weergave + snapshot.
+- Geen wijzigingen aan `commission_invoices` / commissie-facturatie-flow zelf.
 
-### Randgevallen
+## Technische samenvatting
+- Backfill: 1 SQL-update via insert-tool voor beide specifieke facturen + generieke pass op basis van item_id / (request_id + partner_id → selected quote).
+- Frontend: `AdminPurchaseInvoices.tsx` (kolom + badge), `AddPurchaseInvoiceDialog.tsx` (bereken supplier_commission bij insert, quote-lookup voor logies), `MatchedRegistrationBanner.tsx` (idem bij "Orderregels boeken").
+- Types in `usePurchaseInvoices.ts` uitbreiden met commissie-afgeleide velden.
+- Geen schemawijziging nodig — kolommen bestaan al.
 
-- Als het gekoppelde item een logies-quote is (via `apply-purchase-invoice-to-lodging` flow): knop verbergen wanneer `match.item_id === null` (logies-registraties koppelen aan `request_id`, niet aan een program-item). Voor die gevallen blijft de bestaande flow gelden.
-- Als er al billing-lines staan: waarschuwing in de dialog met tellingen ("Er staan al X regels; deze worden vervangen").
-
-## Uit scope
-
-- Geen wijzigingen aan OCR/scan.
-- Geen wijzigingen aan de edge functions of aan de bestaande "nieuwe factuur boeken"-flow.
-- Geen support voor multi-item splitsingen bij deze shortcut — als de scan meerdere projecten raakt gebruik je nog steeds "Verwerken".
+## Buiten scope
+- Commissiefactuur-generatie zelf (`AdminCommissionInvoices`) blijft ongewijzigd.
+- Geen aanpassing aan RLS of triggers.
