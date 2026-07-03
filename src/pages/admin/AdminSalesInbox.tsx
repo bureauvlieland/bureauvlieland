@@ -276,6 +276,8 @@ function CreateRequestDialog({
       r?.source ? `Bron: ${r.source}` : null].filter(Boolean).join("\n\n"),
   });
   const [saving, setSaving] = useState(false);
+  const parsedDates = useMemo(() => parseDutchDates(form.selected_dates), [form.selected_dates]);
+  const datesInvalid = parsedDates.invalid.length > 0 || (form.selected_dates.trim() !== "" && parsedDates.dates.length === 0);
 
   const handleSubmit = async () => {
     if (!form.customer_name.trim() || !form.customer_email.trim()) {
