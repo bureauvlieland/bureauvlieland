@@ -128,9 +128,10 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
             .eq("id", inv.item_id);
         }
 
-        if (inv?.file_path) {
-          await supabase.storage.from("partner-invoices").remove([inv.file_path]);
-        }
+        // NB: bewust GEEN storage.remove() — het bestand blijft nodig voor
+        // de inbox-rij (attachment_path) en voor eventuele andere invoices
+        // die naar hetzelfde pad wijzen (extra-projects delen file_path).
+        // De bevestigingsdialoog belooft expliciet dat de bijlage bewaard blijft.
 
         if (inv?.request_id) {
           await supabase.from("program_request_history").insert({
