@@ -377,7 +377,7 @@ function CreateRequestDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={saving}>Annuleren</Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={handleSubmit} disabled={saving || datesInvalid}>
             {saving && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
             Maak project
           </Button>
