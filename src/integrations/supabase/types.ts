@@ -1615,6 +1615,8 @@ export type Database = {
           delivered_at: string | null
           email_type: string
           error_message: string | null
+          from_email: string | null
+          html_body: string | null
           id: string
           mailjet_events: Json
           mailjet_message_id: string | null
@@ -1627,11 +1629,13 @@ export type Database = {
           related_item_id: string | null
           related_partner_id: string | null
           related_request_id: string | null
+          reply_to: string | null
           sent_at: string | null
           sent_by: string | null
           spam_at: string | null
           status: string
           subject: string
+          text_body: string | null
           unsub_at: string | null
         }
         Insert: {
@@ -1643,6 +1647,8 @@ export type Database = {
           delivered_at?: string | null
           email_type: string
           error_message?: string | null
+          from_email?: string | null
+          html_body?: string | null
           id?: string
           mailjet_events?: Json
           mailjet_message_id?: string | null
@@ -1655,11 +1661,13 @@ export type Database = {
           related_item_id?: string | null
           related_partner_id?: string | null
           related_request_id?: string | null
+          reply_to?: string | null
           sent_at?: string | null
           sent_by?: string | null
           spam_at?: string | null
           status?: string
           subject: string
+          text_body?: string | null
           unsub_at?: string | null
         }
         Update: {
@@ -1671,6 +1679,8 @@ export type Database = {
           delivered_at?: string | null
           email_type?: string
           error_message?: string | null
+          from_email?: string | null
+          html_body?: string | null
           id?: string
           mailjet_events?: Json
           mailjet_message_id?: string | null
@@ -1683,11 +1693,13 @@ export type Database = {
           related_item_id?: string | null
           related_partner_id?: string | null
           related_request_id?: string | null
+          reply_to?: string | null
           sent_at?: string | null
           sent_by?: string | null
           spam_at?: string | null
           status?: string
           subject?: string
+          text_body?: string | null
           unsub_at?: string | null
         }
         Relationships: [
