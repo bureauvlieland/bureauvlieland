@@ -4,12 +4,17 @@ export type CommunicationSource = 'manual' | 'email_log';
 
 export interface ProjectCommunication {
   id: string;
+  email_log_id?: string;
   request_id: string | null;
   accommodation_id: string | null;
   communication_type: CommunicationType;
   direction: CommunicationDirection;
   subject: string | null;
   content: string;
+  html_body?: string | null;
+  text_body?: string | null;
+  from_email?: string | null;
+  reply_to?: string | null;
   contact_name: string | null;
   contact_email: string | null;
   logged_by: string | null;
