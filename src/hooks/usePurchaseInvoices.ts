@@ -293,12 +293,10 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           .eq("id", item_id);
       }
 
-      // Best-effort: remove PDF from storage
-      if (file_path) {
-        await supabase.storage.from("partner-invoices").remove([file_path]);
-      }
-
-      // Reset any inbox row that referenced this invoice → back to "new"
+      // Reset any inbox row that referenced this invoice → back to "new".
+      // Doen we vóór de storage-cleanup zodat we weten of het bestand nog
+      // ergens aan hangt (attachment_path op inbox, of andere invoices die
+      // hetzelfde file_path delen — bv. "extra projects").
       await supabase
         .from("purchase_invoice_inbox")
         .update({
@@ -308,6 +306,23 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           processed_at: null,
         })
         .eq("processed_invoice_id", id);
+
+      if (file_path) {
+        const [{ count: inboxRefs }, { count: invoiceRefs }] = await Promise.all([
+          supabase
+            .from("purchase_invoice_inbox")
+            .select("id", { count: "exact", head: true })
+            .eq("attachment_path", file_path),
+          supabase
+            .from("partner_purchase_invoices")
+            .select("id", { count: "exact", head: true })
+            .eq("file_path", file_path),
+        ]);
+
+        if ((inboxRefs ?? 0) === 0 && (invoiceRefs ?? 0) === 0) {
+          await supabase.storage.from("partner-invoices").remove([file_path]);
+        }
+      }
 
       // Best-effort: log
       if (request_id) {
