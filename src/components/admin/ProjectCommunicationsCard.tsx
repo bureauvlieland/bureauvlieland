@@ -41,17 +41,20 @@ import {
   Users,
   User,
   Paperclip,
+  Eye,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
 import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
 import { ProjectChatSheet } from "./ProjectChatSheet";
+import { EmailLogDetailDialog } from "./EmailLogDetailDialog";
 import {
   COMMUNICATION_TYPE_CONFIG,
   EMAIL_TYPE_LABELS,
   type CommunicationType,
 } from "@/types/projectCommunication";
+import type { ProjectCommunication } from "@/types/projectCommunication";
 import { cn } from "@/lib/utils";
 
 interface PartnerRecipient {
@@ -88,6 +91,7 @@ export function ProjectCommunicationsCard({
   const [expanded, setExpanded] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [activeThread, setActiveThread] = useState<string>(ALL_THREADS);
+  const [detailComm, setDetailComm] = useState<ProjectCommunication | null>(null);
 
   // Composer presets
   const [composerDefaults, setComposerDefaults] = useState<{
@@ -393,9 +397,20 @@ export function ProjectCommunicationsCard({
                           </span>
                         </div>
                         {comm.subject && (
-                          <p className="text-sm text-muted-foreground mt-0.5">
-                            {comm.subject}
-                          </p>
+                          isFromEmailLog ? (
+                            <button
+                              type="button"
+                              className="text-sm text-left text-muted-foreground hover:text-primary hover:underline underline-offset-2 mt-0.5"
+                              onClick={() => setDetailComm(comm)}
+                              title="Bekijk volledig bericht"
+                            >
+                              {comm.subject}
+                            </button>
+                          ) : (
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {comm.subject}
+                            </p>
+                          )
                         )}
                         {comm.contact_name && (
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -427,6 +442,17 @@ export function ProjectCommunicationsCard({
                         <EmailAttachments metadata={comm.metadata} />
                       </div>
                       <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isFromEmailLog && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => setDetailComm(comm)}
+                            title="Bekijk volledig bericht"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canReply && (
                           <Button
                             variant="ghost"
@@ -533,6 +559,13 @@ export function ProjectCommunicationsCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EmailLogDetailDialog
+        open={!!detailComm}
+        onOpenChange={(o) => { if (!o) setDetailComm(null); }}
+        communication={detailComm}
+        onReply={openReply}
+      />
     </>
   );
 }

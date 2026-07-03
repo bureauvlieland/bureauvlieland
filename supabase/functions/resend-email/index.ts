@@ -1,215 +1,167 @@
-// Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
-
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type",
 };
 
-const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY")!;
-const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY")!;
+const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
+const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
+const DEFAULT_SENDER_EMAIL = Deno.env.get("MAILJET_SENDER_EMAIL") || "info@bureauvlieland.nl";
+const DEFAULT_SENDER_NAME = Deno.env.get("MAILJET_SENDER_NAME") || "Bureau Vlieland";
 
-interface ResendRequest {
-  email_log_id: string;
-  recipient_email?: string;
+interface Body {
+  email_log_id?: string;
+  override_recipient_email?: string;
+  override_recipient_name?: string;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Verify admin auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Niet geauthenticeerd" }, 401);
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Verify user + admin
+    const userClient = createClient(supabaseUrl, anon, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return json({ error: "Niet geauthenticeerd" }, 401);
     }
 
-    // Check if user is admin
-    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: user.id });
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const admin = createClient(supabaseUrl, serviceKey);
+    const { data: isAdminRow } = await admin.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    if (!isAdminRow) {
+      return json({ error: "Alleen admins mogen berichten opnieuw versturen" }, 403);
     }
 
-    const { email_log_id, recipient_email } = (await req.json()) as ResendRequest;
+    const body: Body = await req.json().catch(() => ({}));
+    if (!body.email_log_id) {
+      return json({ error: "email_log_id is verplicht" }, 400);
+    }
 
-    // Fetch original email log
-    const { data: emailLog, error: fetchError } = await supabase
+    const { data: log, error: logErr } = await admin
       .from("email_log")
       .select("*")
-      .eq("id", email_log_id)
-      .single();
+      .eq("id", body.email_log_id)
+      .maybeSingle();
 
-    if (fetchError || !emailLog) {
-      throw new Error("Email log niet gevonden");
+    if (logErr || !log) {
+      return json({ error: "E-mail niet gevonden" }, 404);
     }
 
-    // Partner invitation emails contain one-time set-password links and cannot be replayed.
-    // Direct admins to the dedicated 'Stuur set-password link' action which generates a fresh link.
-    if (emailLog.email_type === EmailTypes.PARTNER_INVITATION) {
-      return new Response(
-        JSON.stringify({
-          error: "Partneruitnodigingen kunnen niet worden hergestuurd vanuit het log. Gebruik 'Stuur set-password link' op de partnerpagina — dat genereert een nieuwe persoonlijke link.",
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    if (!log.html_body && !log.text_body) {
+      return json(
+        {
+          error:
+            "De inhoud van dit bericht is niet bewaard (verstuurd vóór de opslag-update). Gebruik 'Beantwoorden' om een nieuw bericht op te stellen.",
+        },
+        409,
       );
     }
 
-    // Fetch template for this email type
-    const { data: template } = await supabase
-      .from("email_templates")
-      .select("*")
-      .eq("id", emailLog.email_type)
-      .single();
-
-    if (!template || !template.is_active) {
-      throw new Error("Email template niet gevonden of inactief");
+    if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
+      return json({ error: "Mailjet is niet geconfigureerd" }, 500);
     }
 
-    // Use custom recipient or original
-    const finalRecipient = recipient_email || emailLog.recipient_email;
+    const recipientEmail = (body.override_recipient_email || log.recipient_email || "").trim();
+    if (!recipientEmail) {
+      return json({ error: "Geen ontvanger" }, 400);
+    }
+    const recipientName = body.override_recipient_name || log.recipient_name || "";
 
-    // Get metadata for variable substitution
-    const metadata = emailLog.metadata || {};
+    const fromEmail = log.from_email || DEFAULT_SENDER_EMAIL;
+    const fromName = DEFAULT_SENDER_NAME;
 
-    // Substitute variables in subject and body
-    let subject = template.subject;
-    let bodyHtml = template.body_html;
+    const mjPayload: Record<string, unknown> = {
+      TrackClicks: "disabled",
+      TrackOpens: "disabled",
+      From: { Email: fromEmail, Name: fromName },
+      To: [{ Email: recipientEmail, Name: recipientName }],
+      Subject: log.subject,
+    };
+    if (log.html_body) mjPayload.HTMLPart = log.html_body;
+    if (log.text_body) mjPayload.TextPart = log.text_body;
+    if (log.reply_to) mjPayload.ReplyTo = { Email: log.reply_to };
 
-    const variables = metadata as Record<string, string>;
-    Object.entries(variables).forEach(([key, value]) => {
-      const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-      subject = subject.replace(regex, value?.toString() || "");
-      bodyHtml = bodyHtml.replace(regex, value?.toString() || "");
-    });
-
-    // Handle conditionals {{#if variable}}...{{/if}}
-    bodyHtml = bodyHtml.replace(
-      /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-      (_match: string, variable: string, content: string) => {
-        return variables[variable] ? content : "";
-      }
-    );
-
-    // Send via Mailjet
-    const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
+    const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
+        Authorization: "Basic " + btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`),
       },
-      body: JSON.stringify({
-        Messages: [
-          { TrackClicks: "disabled", TrackOpens: "disabled",
-            From: {
-              Email: "hallo@bureauvlieland.nl",
-              Name: "Bureau Vlieland",
-            },
-            To: [
-              {
-                Email: getRecipientEmail(finalRecipient, req.headers.get("origin") || undefined),
-                Name: emailLog.recipient_name || finalRecipient,
-              },
-            ],
-            Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
-            HTMLPart: bodyHtml,
-          },
-        ],
-      }),
+      body: JSON.stringify({ Messages: [mjPayload] }),
     });
 
-    const mailjetResult = await mailjetResponse.json();
-    const mailjetStatus = mailjetResult.Messages?.[0]?.Status;
+    const mjData = await mjRes.json();
+    const messageId = mjData?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+    const status: "sent" | "failed" = mjRes.ok ? "sent" : "failed";
+    const errorMessage = mjRes.ok ? undefined : JSON.stringify(mjData).slice(0, 1000);
 
-    if (mailjetStatus !== "success") {
-      const errorMessage = mailjetResult.Messages?.[0]?.Errors?.[0]?.ErrorMessage || "Mailjet error";
-      
-      // Log failed attempt
-      await logEmail({
-        email_type: emailLog.email_type,
-        subject: subject,
-        recipient_email: finalRecipient,
-        recipient_name: emailLog.recipient_name || null,
-        related_request_id: emailLog.related_request_id || undefined,
-        related_accommodation_id: emailLog.related_accommodation_id || undefined,
-        related_partner_id: emailLog.related_partner_id || undefined,
-        status: "failed",
-        error_message: errorMessage,
-        sent_by: "resend-email",
+    const originalMeta = (log.metadata as Record<string, unknown>) || {};
+    const originalTemplate = typeof originalMeta.template_name === "string" ? originalMeta.template_name : log.email_type;
+
+    // Log new send
+    const { data: newLog } = await admin
+      .from("email_log")
+      .insert({
+        email_type: log.email_type,
+        subject: log.subject,
+        recipient_email: recipientEmail,
+        recipient_name: recipientName || null,
+        related_request_id: log.related_request_id,
+        related_accommodation_id: log.related_accommodation_id,
+        related_partner_id: log.related_partner_id,
+        related_item_id: log.related_item_id,
+        status,
+        error_message: errorMessage || null,
+        mailjet_message_id: messageId,
+        sent_by: userData.user.email || "admin",
+        html_body: log.html_body,
+        text_body: log.text_body,
+        from_email: fromEmail,
+        reply_to: log.reply_to,
         metadata: {
-          template_name: emailLog.email_type,
-          actor: "admin → resend",
-          original_email_id: email_log_id,
-          ...metadata,
+          ...originalMeta,
+          template_name: `${originalTemplate}_resend`,
+          actor: `admin → resend (${userData.user.email || userData.user.id})`,
+          resend_of: log.id,
         },
-      });
+        sent_at: status === "sent" ? new Date().toISOString() : null,
+      })
+      .select("id")
+      .single();
 
-      throw new Error(errorMessage);
+    if (!mjRes.ok) {
+      return json({ error: `Verzenden mislukt: ${errorMessage}` }, 502);
     }
 
-    const messageId = mailjetResult.Messages?.[0]?.To?.[0]?.MessageID;
-
-    // Log successful resend
-    await logEmail({
-      email_type: emailLog.email_type,
-      subject: subject,
-      recipient_email: finalRecipient,
-      recipient_name: emailLog.recipient_name || null,
-      related_request_id: emailLog.related_request_id || undefined,
-      related_accommodation_id: emailLog.related_accommodation_id || undefined,
-      related_partner_id: emailLog.related_partner_id || undefined,
-      status: "sent",
-      mailjet_message_id: messageId?.toString(),
-      sent_by: "resend-email",
-      metadata: {
-        template_name: emailLog.email_type,
-        actor: "admin → resend",
-        original_email_id: email_log_id,
-        ...metadata,
-      },
-    });
-
-    return new Response(
-      JSON.stringify({ success: true, message_id: messageId }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
-  } catch (error: unknown) {
-    console.error("Resend email error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Er ging iets mis";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return json({ ok: true, new_email_log_id: newLog?.id });
+  } catch (err) {
+    console.error("resend-email error:", err);
+    return json({ error: (err as Error).message || "Onbekende fout" }, 500);
   }
 });
+
+function json(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}

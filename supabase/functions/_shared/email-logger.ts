@@ -14,6 +14,16 @@ export interface EmailLogEntry {
   mailjet_message_id?: string;
   sent_by: string;
   /**
+   * Optional volledige HTML/tekst inhoud van de verstuurde mail. Bewaren
+   * we zodat de admin een bericht later kan terugzien én opnieuw kan
+   * versturen. Als deze velden ontbreken, wordt in de UI een fallback
+   * getoond en is 'opnieuw versturen' uitgeschakeld.
+   */
+  html_body?: string;
+  text_body?: string;
+  from_email?: string;
+  reply_to?: string;
+  /**
    * Metadata MUST include `template_name` (machine-readable template identifier,
    * e.g. "partner_item_cancellation") and `actor` (who initiated the send,
    * e.g. "admin → partner", "klant → bureau", "system").
@@ -85,6 +95,10 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
       mailjet_message_id: entry.mailjet_message_id || null,
       sent_by: entry.sent_by,
       metadata: entry.metadata || {},
+      html_body: entry.html_body || null,
+      text_body: entry.text_body || null,
+      from_email: entry.from_email || null,
+      reply_to: entry.reply_to || null,
       sent_at: entry.status === "sent" ? new Date().toISOString() : null,
     });
 
