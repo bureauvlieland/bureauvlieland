@@ -91,6 +91,7 @@ export function ProjectCommunicationsCard({
   const [expanded, setExpanded] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [activeThread, setActiveThread] = useState<string>(ALL_THREADS);
+  const [detailComm, setDetailComm] = useState<ProjectCommunication | null>(null);
 
   // Composer presets
   const [composerDefaults, setComposerDefaults] = useState<{
