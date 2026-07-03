@@ -444,7 +444,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           related_request_id: program.id,
           status: "sent",
           mailjet_message_id:
-            customerMailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
+            customerMailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
           sent_by: "system",
           metadata: {
             template_name: "quote_accepted_customer",
@@ -638,7 +638,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           emailLogs[i].status = "sent";
           const msgIdx = logMessageIndex[i] ?? i;
           emailLogs[i].mailjet_message_id =
-            mailjetResponse?.Messages?.[msgIdx]?.MessageID?.toString() || null;
+            mailjetResponse?.Messages?.[msgIdx]?.To?.[0]?.MessageID?.toString() || null;
           await logEmail(emailLogs[i]);
         }
       } catch (emailError) {

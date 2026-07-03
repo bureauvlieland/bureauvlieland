@@ -354,7 +354,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
               related_item_id: item_id,
               related_partner_id: item.provider_id,
               status: "sent",
-              mailjet_message_id: mailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
+              mailjet_message_id: mailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
               sent_by: "system",
               metadata: {
                 template_name: "program_partner_reapproval",
@@ -476,7 +476,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           related_item_id: item_id,
           related_partner_id: item.provider_id,
           status: "sent",
-          mailjet_message_id: mailjetResponse?.Messages?.[0]?.MessageID?.toString() || null,
+          mailjet_message_id: mailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
           sent_by: "system",
           metadata: {
             template_name: EmailTypes.PROGRAM_REQUEST_PARTNER,

@@ -58,6 +58,7 @@ interface ItemEmailLogPopoverProps {
 
 const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
   sent: { label: "Verzonden", className: "bg-sky-100 text-sky-800 border-sky-200" },
+  sent_unconfirmed: { label: "Verzonden (geen bevestiging)", className: "bg-amber-100 text-amber-800 border-amber-200" },
   delivered: { label: "Afgeleverd", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   opened: { label: "Geopend", className: "bg-violet-100 text-violet-800 border-violet-200" },
   clicked: { label: "Geklikt", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
@@ -70,6 +71,18 @@ const STATUS_VARIANTS: Record<string, { label: string; className: string }> = {
   suppressed: { label: "Onderdrukt", className: "bg-slate-100 text-slate-700 border-slate-200" },
   dlq: { label: "Mislukt", className: "bg-rose-100 text-rose-800 border-rose-200" },
 };
+
+function effectiveLogStatus(log: { status: string; mailjet_message_id: string | null; delivered_at: string | null; sent_at: string | null; created_at: string; bounced_at?: string | null; opened_at?: string | null }): string {
+  if (log.bounced_at) return "bounced";
+  if (log.opened_at) return "opened";
+  if (log.delivered_at) return "delivered";
+  if (log.status === "sent") {
+    const ts = log.sent_at || log.created_at;
+    const ageMs = ts ? Date.now() - new Date(ts).getTime() : 0;
+    if (!log.mailjet_message_id || ageMs > 15 * 60 * 1000) return "sent_unconfirmed";
+  }
+  return log.status;
+}
 
 const SOURCE_LABELS: Record<MatchSource, string> = {
   direct: "Item",
@@ -458,8 +471,9 @@ export function ItemEmailLogPopover({ itemId, itemName, requestId }: ItemEmailLo
                 return (
                   <ul className="divide-y">
                     {visible.map((log) => {
-                  const variant = STATUS_VARIANTS[log.status] ?? {
-                    label: log.status,
+                  const effStatus = effectiveLogStatus(log);
+                  const variant = STATUS_VARIANTS[effStatus] ?? {
+                    label: effStatus,
                     className: "bg-slate-100 text-slate-700 border-slate-200",
                   };
                   const ts = log.sent_at || log.created_at;

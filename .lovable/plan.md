@@ -1,56 +1,56 @@
 ## Doel
-In het Communicatie-paneel van een project moet je op elk automatisch verstuurd bericht kunnen klikken om (1) het **volledige bericht** (subject + HTML body + ontvanger + tijdstip) te lezen en (2) het **opnieuw te versturen** naar dezelfde of een aangepaste ontvanger.
+De 72 actie-gerichte e-mails zonder `mailjet_message_id` (op actieve projecten met toekomstige startdatum) opnieuw versturen, nadat we zeker weten dat de fix in de edge functions werkt.
 
-## Uitgangspunt
-`email_log` bewaart nu alleen `subject` + metadata; de HTML/tekst van uitgaande e-mails wordt nergens opgeslagen. Zonder body kan je een bericht niet volledig terugzien of hersturen.
+## Fase 1 — Fix parsing in edge functions
+Corrigeer het uitlezen van Mailjet's response in alle betrokken functies. De juiste pad is `result.Messages[i].To[0].MessageID`, niet `result.Messages[i].MessageID`.
 
-## Aanpak
+Te fixen functies (op basis van eerdere audit):
+- `send-items-to-partners`
+- `accept-quote-proposal`
+- `send-accommodation-quote-request`
+- `send-accommodation-selected`
+- `send-counter-proposal`
+- `notify-partner-cancellation`
+- `send-quote-offer`
+- (en overige die via `sendEmailViaMailjet` een `logEmail` doen zonder message_id te capturen)
 
-### 1. Body opslaan in email_log
-- Migratie: kolommen `html_body text` en `text_body text` toevoegen aan `public.email_log` (nullable, geen GRANT-wijziging nodig — bestaande policies dekken al).
-- `supabase/functions/_shared/email-logger.ts`: `logEmail`-interface uitbreiden met optionele `html_body` / `text_body` en die opslaan.
-- Alle edge functions die Mailjet aanroepen (send-*, notify-*, publish-program-changes, etc.) doorgeven van de reeds opgebouwde HTML naar `logEmail`. We voegen één shared helper toe (`buildEmailLogPayload`) zodat toekomstige templates automatisch de body meesturen.
-- Historische rijen blijven zonder body — daar tonen we in de UI een nette fallback ("Bericht-inhoud is niet bewaard vóór X datum").
+Per functie: capture `mailjet_message_id` vóór `logEmail`, en zet `status: "failed"` als Mailjet geen MessageID teruggeeft.
 
-### 2. Body ophalen naar de UI
-- `useProjectCommunications`: `html_body`/`text_body` mee-selecteren en meegeven als extra veld op de `ProjectCommunication`-items (source `email_log`).
+Deploy alle gefixte functies.
 
-### 3. Detail-dialog met "Bekijk volledig bericht"
-- Nieuw component `EmailLogDetailDialog.tsx` (shadcn `Dialog`) met:
-  - Header: onderwerp + tijdstip + status-badges (verzonden/geopend/gebounced).
-  - Ontvanger-blok (naam + e-mail + template-naam + actor).
-  - Body: HTML gerenderd in een `iframe` sandbox (`sandbox="allow-same-origin"`, srcDoc = html_body). Fallback naar `<pre>` met text_body of "Niet beschikbaar".
-  - Acties: **"Opnieuw versturen"**, **"Beantwoorden"**, **"Sluiten"**.
-- In `ProjectCommunicationsCard.tsx`: extra actieknop "Bekijk" (icon `Eye`) naast Reply/Delete op elke rij; klik op onderwerp/preview opent ook de dialog.
+## Fase 2 — UI badges
+In `PartnerNotificationsCard.tsx` en `ItemEmailLogPopover.tsx` (en overige plekken die email-status tonen):
+- **Groen "Afgeleverd"**: `delivered_at` gezet.
+- **Blauw "Verzonden"**: `mailjet_message_id` aanwezig, geen `delivered_at`.
+- **Amber "Verzonden (geen bevestiging)"**: `status='sent'` maar geen `mailjet_message_id` (of ouder dan 15 min zonder delivery).
+- **Rood "Mislukt"**: `status='failed'`.
 
-### 4. Opnieuw versturen
-- Nieuwe edge function `resend-email` (POST `{ email_log_id, override_recipient_email? }`).
-  - Admin-only (verify JWT + `has_role(admin)`).
-  - Leest de log-rij; als `html_body` leeg is → 409 met melding.
-  - Verstuurt via bestaande Mailjet-client met dezelfde subject/html/text/reply-to en logt een **nieuwe** `email_log`-rij met `metadata.resend_of = original_id` + `actor = "admin → resend"`.
-- Frontend hook `useResendEmail` (React Query mutation) die de function aanroept en de communicatielijst invalideert.
-- In de dialog: knop "Opnieuw versturen" → optionele inline input om ontvanger aan te passen (default = origineel) → bevestiging + toast.
+## Fase 3 — Testverzending
+Eén test-mail sturen naar Erwin's adres via een van de gefixte functies, en verifiëren:
+1. `mailjet_message_id` staat in `email_log`.
+2. Delivery webhook zet `delivered_at`.
+3. Badge in UI wordt correct groen.
 
-### 5. Fallback voor oude berichten zonder body
-- "Opnieuw versturen" is uitgeschakeld met tooltip "Body niet bewaard — gebruik ‘Beantwoorden’ om handmatig een nieuwe mail op te stellen".
-- "Beantwoorden" (bestaand) blijft werken en pre-fillt de composer met subject/ontvanger.
+Pas doorgaan met Fase 4 als deze drie punten kloppen.
+
+## Fase 4 — Bulk resend van 72 mails
+Nieuwe edge function `bulk-resend-unconfirmed`:
+- Query: `email_log` rows waar `mailjet_message_id IS NULL` én project actief én startdatum in de toekomst én `email_type` in de actie-lijst (program_request_*, quote_request_*, accommodation_quote_request_partner, counter_proposal_partner, accommodation_selected_*, cancellation_*).
+- **Dry-run modus** (default): geeft lijst terug van {recipient, email_type, project, sent_at} zonder te versturen.
+- **Execute modus**: hergebruikt de bestaande `resend-email` functie per row, met 500ms delay tussen sends (rate limiting).
+- Elke resend logt een nieuwe `email_log` row met `metadata.bulk_resend_batch_id` zodat we ze kunnen tracken/terugdraaien.
+- Admin-only, auth check via `is_admin`.
+
+Ik voer eerst dry-run uit, laat je de lijst zien voor akkoord, en dan pas execute.
+
+## Fase 5 — Verificatie
+Na bulk resend:
+- Query hoeveel van de 72 nu een `mailjet_message_id` hebben.
+- Na ~15 min: hoeveel `delivered_at` hebben.
+- Rapport terug naar jou.
 
 ## Technische details
-- Migratie:
-  ```sql
-  ALTER TABLE public.email_log
-    ADD COLUMN IF NOT EXISTS html_body text,
-    ADD COLUMN IF NOT EXISTS text_body text;
-  ```
-  Geen extra GRANTs nodig (kolommen erven bestaande table-grants); RLS ongewijzigd.
-- `resend-email` gebruikt dezelfde Mailjet-config als `send-project-email` en logt met `template_name = original.metadata.template_name + "_resend"`.
-- Body-rendering in iframe voorkomt CSS-lekken en XSS in het admin-scherm.
-- Alle nieuwe edge function calls volgen bestaande logEmail-contract (template_name + actor verplicht).
-
-## Bestanden
-- Nieuw: `supabase/migrations/<ts>_email_log_body.sql`, `supabase/functions/resend-email/index.ts`, `src/components/admin/EmailLogDetailDialog.tsx`, `src/hooks/useResendEmail.ts`.
-- Aangepast: `supabase/functions/_shared/email-logger.ts`, `src/hooks/useProjectCommunications.ts`, `src/components/admin/ProjectCommunicationsCard.tsx`, alle send-* edge functions die `logEmail` gebruiken (body meesturen).
-
-## Buiten scope
-- Terugvullen van body voor historische berichten (niet mogelijk zonder Mailjet-archief).
-- Bulk-hersturen van meerdere berichten tegelijk.
+- Geen schema-wijzigingen nodig; `email_log` heeft al alle benodigde velden.
+- `bulk-resend-unconfirmed` in `supabase/functions/`, verify_jwt=false + in-code admin check.
+- Rate limit: 500ms per send = ~36s voor 72 mails, ruim onder Mailjet's rate limits.
+- Dubbele-mail risico geaccepteerd (kleine kans dat ontvanger 'm nu tweede keer krijgt).

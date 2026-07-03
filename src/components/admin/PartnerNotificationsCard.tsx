@@ -79,6 +79,7 @@ const EMAIL_TYPE_LABEL: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   sent: { label: "Verzonden", className: "bg-sky-100 text-sky-800 border-sky-200" },
+  sent_unconfirmed: { label: "Verzonden (geen bevestiging)", className: "bg-amber-100 text-amber-800 border-amber-200" },
   delivered: { label: "Afgeleverd", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   opened: { label: "Geopend", className: "bg-violet-100 text-violet-800 border-violet-200" },
   clicked: { label: "Geklikt", className: "bg-indigo-100 text-indigo-800 border-indigo-200" },
@@ -94,6 +95,11 @@ function effectiveStatus(row: LogRow): string {
   if (row.bounced_at) return "bounced";
   if (row.opened_at) return "opened";
   if (row.delivered_at) return "delivered";
+  if (row.status === "sent") {
+    const ts = row.sent_at || row.created_at;
+    const ageMs = ts ? Date.now() - new Date(ts).getTime() : 0;
+    if (!row.mailjet_message_id || (ageMs > 15 * 60 * 1000)) return "sent_unconfirmed";
+  }
   return row.status;
 }
 
