@@ -239,8 +239,8 @@ const handler = async (req: Request): Promise<Response> => {
     ]);
 
     // Log both sends (Email Logging Contract)
-    const bureauMsgId = mailjetResponse?.Messages?.[0]?.MessageID?.toString() || null;
-    const customerMsgId = mailjetResponse?.Messages?.[1]?.MessageID?.toString() || null;
+    const bureauMsgId = mailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null;
+    const customerMsgId = mailjetResponse?.Messages?.[1]?.To?.[0]?.MessageID?.toString() || null;
 
     await Promise.all([
       logEmail({

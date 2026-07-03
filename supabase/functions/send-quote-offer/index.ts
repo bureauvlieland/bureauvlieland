@@ -239,7 +239,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const mailjetResponse = await sendEmailViaMailjet([emailMessage]);
 
     // Log the email
-    const messageId = mailjetResponse?.Messages?.[0]?.MessageID || null;
+    const messageId = mailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID || null;
     await logEmail({
       email_type: "quote_offer_customer",
       subject: fullSubject,
