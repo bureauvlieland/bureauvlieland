@@ -559,6 +559,13 @@ export function ProjectCommunicationsCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EmailLogDetailDialog
+        open={!!detailComm}
+        onOpenChange={(o) => { if (!o) setDetailComm(null); }}
+        communication={detailComm}
+        onReply={openReply}
+      />
     </>
   );
 }
