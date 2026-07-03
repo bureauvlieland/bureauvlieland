@@ -431,6 +431,17 @@ export function ProjectCommunicationsCard({
                         <EmailAttachments metadata={comm.metadata} />
                       </div>
                       <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isFromEmailLog && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => setDetailComm(comm)}
+                            title="Bekijk volledig bericht"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canReply && (
                           <Button
                             variant="ghost"
