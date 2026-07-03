@@ -23,6 +23,108 @@ function generateToken(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
+// ---- Dutch date parser (zie ook src/lib/parseDutchDates.ts) ----
+const MONTHS: Record<string, number> = {
+  jan: 1, januari: 1, feb: 2, februari: 2, mrt: 3, maart: 3, mar: 3,
+  apr: 4, april: 4, mei: 5, jun: 6, juni: 6, jul: 7, juli: 7,
+  aug: 8, augustus: 8, sep: 9, sept: 9, september: 9,
+  okt: 10, oktober: 10, oct: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+function toIso(y: number, m: number, d: number): string | null {
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+interface Parts { day: number; month?: number; year?: number; }
+function parseSingle(input: string): Parts | null {
+  const s = input.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!s) return null;
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) return { year: +iso[1], month: +iso[2], day: +iso[3] };
+  const numeric = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if (numeric) {
+    let y = +numeric[3]; if (y < 100) y += 2000;
+    return { day: +numeric[1], month: +numeric[2], year: y };
+  }
+  const m = s.match(/^(\d{1,2})(?:\s+([a-zë.]+))?(?:\s+(\d{4}))?$/i);
+  if (m) {
+    const day = +m[1];
+    let month: number | undefined;
+    if (m[2]) {
+      const mm = MONTHS[m[2].replace(/\./g, "")];
+      if (mm == null) return null;
+      month = mm;
+    }
+    return { day, month, year: m[3] ? +m[3] : undefined };
+  }
+  return null;
+}
+function expandRange(left: Parts, right: Parts): string[] | null {
+  const l = { ...left }, r = { ...right };
+  if (l.month == null) l.month = r.month;
+  if (l.year == null) l.year = r.year;
+  if (r.month == null) r.month = l.month;
+  if (r.year == null) r.year = l.year;
+  if (l.month == null || l.year == null || r.month == null || r.year == null) return null;
+  const startIso = toIso(l.year, l.month, l.day);
+  const endIso = toIso(r.year, r.month, r.day);
+  if (!startIso || !endIso) return null;
+  const start = new Date(startIso + "T00:00:00Z");
+  const end = new Date(endIso + "T00:00:00Z");
+  if (end < start) return null;
+  const out: string[] = [];
+  const cur = new Date(start);
+  let guard = 0;
+  while (cur <= end && guard < 60) {
+    const iso = toIso(cur.getUTCFullYear(), cur.getUTCMonth() + 1, cur.getUTCDate());
+    if (iso) out.push(iso);
+    cur.setUTCDate(cur.getUTCDate() + 1);
+    guard++;
+  }
+  return out;
+}
+const RANGE_SPLIT = /\s*(?:tot en met|t\/m|t\.?m\.?|tm|-|–|—|tot)\s*/i;
+function parseToken(token: string): { dates: string[]; ok: boolean } {
+  const t = token.trim();
+  if (!t) return { dates: [], ok: true };
+  const numericFull = /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/;
+  const isoFull = /^\d{4}-\d{1,2}-\d{1,2}$/;
+  if (numericFull.test(t) || isoFull.test(t)) {
+    const p = parseSingle(t);
+    if (!p || p.month == null || p.year == null) return { dates: [], ok: false };
+    const iso = toIso(p.year, p.month, p.day);
+    return iso ? { dates: [iso], ok: true } : { dates: [], ok: false };
+  }
+  const parts = t.split(RANGE_SPLIT).map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 2) {
+    const left = parseSingle(parts[0]);
+    const right = parseSingle(parts[1]);
+    if (left && right) {
+      const range = expandRange(left, right);
+      if (range && range.length) return { dates: range, ok: true };
+    }
+    return { dates: [], ok: false };
+  }
+  const single = parseSingle(t);
+  if (!single || single.month == null || single.year == null) return { dates: [], ok: false };
+  const iso = toIso(single.year, single.month, single.day);
+  return iso ? { dates: [iso], ok: true } : { dates: [], ok: false };
+}
+function normalizeDates(input: unknown): { dates: string[]; invalid: string[] } {
+  const raw = Array.isArray(input) ? input.join(", ") : (typeof input === "string" ? input : "");
+  if (!raw.trim()) return { dates: [], invalid: [] };
+  const tokens = raw.split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
+  const set = new Set<string>();
+  const invalid: string[] = [];
+  for (const tok of tokens) {
+    const { dates, ok } = parseToken(tok);
+    if (!ok) invalid.push(tok);
+    for (const d of dates) set.add(d);
+  }
+  return { dates: Array.from(set).sort(), invalid };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -89,7 +191,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const selectedDates = Array.isArray(body.selected_dates) ? body.selected_dates : [];
+    const { dates: selectedDates, invalid: invalidDates } = normalizeDates(body.selected_dates);
+    if (invalidDates.length) {
+      return new Response(JSON.stringify({
+        error: `Kan datum niet interpreteren: ${invalidDates.map((s) => `"${s}"`).join(", ")}. Gebruik bijv. "22 t/m 25 oktober 2026" of "22-10-2026".`,
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const numberOfPeople = Number.isFinite(body.number_of_people as number) && (body.number_of_people as number) > 0
       ? Math.floor(body.number_of_people as number)
       : 20;

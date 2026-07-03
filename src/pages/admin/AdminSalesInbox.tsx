@@ -22,6 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSalesInbox } from "@/hooks/useSalesInbox";
 import type { SalesInboxItem, SalesInboxStatus } from "@/types/salesInbox";
 import { toast } from "sonner";
+import { parseDutchDates, formatDatesPreview } from "@/lib/parseDutchDates";
+import { useMemo } from "react";
 
 export default function AdminSalesInbox() {
   const navigate = useNavigate();
@@ -274,6 +276,8 @@ function CreateRequestDialog({
       r?.source ? `Bron: ${r.source}` : null].filter(Boolean).join("\n\n"),
   });
   const [saving, setSaving] = useState(false);
+  const parsedDates = useMemo(() => parseDutchDates(form.selected_dates), [form.selected_dates]);
+  const datesInvalid = parsedDates.invalid.length > 0 || (form.selected_dates.trim() !== "" && parsedDates.dates.length === 0);
 
   const handleSubmit = async () => {
     if (!form.customer_name.trim() || !form.customer_email.trim()) {
@@ -282,7 +286,7 @@ function CreateRequestDialog({
     }
     setSaving(true);
     try {
-      const dates = form.selected_dates.split(",").map((s) => s.trim()).filter(Boolean);
+      const dates = parsedDates.dates;
       const { data, error } = await supabase.functions.invoke("create-request-from-sales-inbox", {
         body: {
           inbox_id: item.id,
@@ -344,12 +348,22 @@ function CreateRequestDialog({
               />
             </div>
             <div>
-              <Label>Datums (komma-gescheiden)</Label>
+              <Label>Datums</Label>
               <Input
                 value={form.selected_dates}
                 onChange={(e) => setForm({ ...form, selected_dates: e.target.value })}
-                placeholder="bv. 15 mei 2026, 16 mei 2026"
+                placeholder="bv. 22 t/m 25 oktober 2026 of 15 mei 2026, 16 mei 2026"
+                className={datesInvalid ? "border-destructive" : ""}
               />
+              {form.selected_dates.trim() !== "" && (
+                parsedDates.dates.length > 0 && parsedDates.invalid.length === 0 ? (
+                  <p className="text-xs text-emerald-600 mt-1">→ {formatDatesPreview(parsedDates.dates)}</p>
+                ) : (
+                  <p className="text-xs text-destructive mt-1">
+                    Kan datum niet interpreteren{parsedDates.invalid.length ? `: "${parsedDates.invalid.join('", "')}"` : ""}. Gebruik bijv. "22 t/m 25 oktober 2026".
+                  </p>
+                )
+              )}
             </div>
           </div>
           <div>
@@ -363,7 +377,7 @@ function CreateRequestDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={saving}>Annuleren</Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={handleSubmit} disabled={saving || datesInvalid}>
             {saving && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
             Maak project
           </Button>
