@@ -286,7 +286,7 @@ function CreateRequestDialog({
     }
     setSaving(true);
     try {
-      const dates = form.selected_dates.split(",").map((s) => s.trim()).filter(Boolean);
+      const dates = parsedDates.dates;
       const { data, error } = await supabase.functions.invoke("create-request-from-sales-inbox", {
         body: {
           inbox_id: item.id,
