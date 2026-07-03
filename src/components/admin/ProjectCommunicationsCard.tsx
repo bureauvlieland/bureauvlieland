@@ -41,17 +41,20 @@ import {
   Users,
   User,
   Paperclip,
+  Eye,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjectCommunications } from "@/hooks/useProjectCommunications";
 import { AddCommunicationSheet } from "./AddCommunicationSheet";
 import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
 import { ProjectChatSheet } from "./ProjectChatSheet";
+import { EmailLogDetailDialog } from "./EmailLogDetailDialog";
 import {
   COMMUNICATION_TYPE_CONFIG,
   EMAIL_TYPE_LABELS,
   type CommunicationType,
 } from "@/types/projectCommunication";
+import type { ProjectCommunication } from "@/types/projectCommunication";
 import { cn } from "@/lib/utils";
 
 interface PartnerRecipient {
