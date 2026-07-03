@@ -268,9 +268,14 @@ export function deriveItemDisplayStatus(
   // aanbieder ná klant-akkoord een ALTERNATIEF voorstel heeft gedaan (status
   // "alternative" zonder herbevestiging) valt het onderdeel terug op de
   // partner-flow hieronder.
-  if (!hasApproval && item.status !== "alternative") {
+  const isPreApprovalPhase =
+    ctx.quoteStatus === "concept" ||
+    ctx.quoteStatus === "in_afstemming" ||
+    ctx.quoteStatus === "offerte_verstuurd";
+  if (isPreApprovalPhase && !hasApproval && item.status !== "alternative") {
     return "wacht_op_klant";
   }
+
 
   if (item.status === "pending") return "wacht_op_partner";
 
