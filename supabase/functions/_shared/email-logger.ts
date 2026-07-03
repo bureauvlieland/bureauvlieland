@@ -14,6 +14,16 @@ export interface EmailLogEntry {
   mailjet_message_id?: string;
   sent_by: string;
   /**
+   * Optional volledige HTML/tekst inhoud van de verstuurde mail. Bewaren
+   * we zodat de admin een bericht later kan terugzien én opnieuw kan
+   * versturen. Als deze velden ontbreken, wordt in de UI een fallback
+   * getoond en is 'opnieuw versturen' uitgeschakeld.
+   */
+  html_body?: string;
+  text_body?: string;
+  from_email?: string;
+  reply_to?: string;
+  /**
    * Metadata MUST include `template_name` (machine-readable template identifier,
    * e.g. "partner_item_cancellation") and `actor` (who initiated the send,
    * e.g. "admin → partner", "klant → bureau", "system").
