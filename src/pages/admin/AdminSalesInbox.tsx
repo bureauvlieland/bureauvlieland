@@ -348,12 +348,22 @@ function CreateRequestDialog({
               />
             </div>
             <div>
-              <Label>Datums (komma-gescheiden)</Label>
+              <Label>Datums</Label>
               <Input
                 value={form.selected_dates}
                 onChange={(e) => setForm({ ...form, selected_dates: e.target.value })}
-                placeholder="bv. 15 mei 2026, 16 mei 2026"
+                placeholder="bv. 22 t/m 25 oktober 2026 of 15 mei 2026, 16 mei 2026"
+                className={datesInvalid ? "border-destructive" : ""}
               />
+              {form.selected_dates.trim() !== "" && (
+                parsedDates.dates.length > 0 && parsedDates.invalid.length === 0 ? (
+                  <p className="text-xs text-emerald-600 mt-1">→ {formatDatesPreview(parsedDates.dates)}</p>
+                ) : (
+                  <p className="text-xs text-destructive mt-1">
+                    Kan datum niet interpreteren{parsedDates.invalid.length ? `: "${parsedDates.invalid.join('", "')}"` : ""}. Gebruik bijv. "22 t/m 25 oktober 2026".
+                  </p>
+                )
+              )}
             </div>
           </div>
           <div>
