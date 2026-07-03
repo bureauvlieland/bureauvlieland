@@ -262,30 +262,25 @@ export function deriveItemDisplayStatus(
     return "geaccepteerd";
   }
 
-  // Offerte staat bij de klant: elk actief onderdeel zonder klant-goedkeuring
-  // wacht op de klant. Bureau-onderdelen zijn dus NIET automatisch goedgekeurd;
-  // zij worden pas groen nadat de klant het programmavoorstel heeft goedgekeurd.
-  if (ctx.quoteStatus === "offerte_verstuurd" && !hasApproval) {
+  // Zolang de klant dit onderdeel niet heeft goedgekeurd, is de klant aan zet —
+  // ongeacht de projectfase (concept, in_afstemming of offerte_verstuurd) en
+  // ongeacht of het een bureau- of partneronderdeel is. Alleen wanneer de
+  // aanbieder ná klant-akkoord een ALTERNATIEF voorstel heeft gedaan (status
+  // "alternative" zonder herbevestiging) valt het onderdeel terug op de
+  // partner-flow hieronder.
+  const isPreApprovalPhase =
+    ctx.quoteStatus === "concept" ||
+    ctx.quoteStatus === "in_afstemming" ||
+    ctx.quoteStatus === "offerte_verstuurd";
+  if (isPreApprovalPhase && !hasApproval && item.status !== "alternative") {
     return "wacht_op_klant";
   }
 
-  // Concept/in_afstemming: Bureau werkt nog aan het voorstel; de klant is dan
-  // nog niet aan zet. Toon daarom alleen feitelijke partner-respons als die er is.
-  const isPreparationPhase =
-    ctx.quoteStatus === "concept" ||
-    ctx.quoteStatus === "in_afstemming";
-  if (isPreparationPhase && !hasApproval && item.status !== "alternative") {
-    const partnerHasResponded =
-      item.status === "confirmed" ||
-      item.quoted_price != null ||
-      !!(item as any).quoted_at ||
-      !!(item as any).partner_price_change_acknowledged_at;
-    return partnerHasResponded ? "wacht_op_klant" : "wacht_op_partner";
-  }
 
   if (item.status === "pending") return "wacht_op_partner";
 
   return "wacht_op_klant";
+
 
 }
 

@@ -291,28 +291,32 @@ describe("regressie: projectfase offerte_verstuurd — klant moet hele voorstel 
 });
 
 describe("deriveItemDisplayStatus — pre-offerte fase (concept/in_afstemming)", () => {
+  // Regel: in elke pre-akkoord-fase (concept, in_afstemming, offerte_verstuurd)
+  // wacht elk actief onderdeel zonder customer_approved_at op de klant. Ook
+  // pending partner-items en bureau-onderdelen tonen "Goedkeuring nodig",
+  // zodat klant, admin en partner dezelfde werkelijkheid zien.
   const inAfstemming = { ...ctx, quoteStatus: "in_afstemming" as const };
   const concept = { ...ctx, quoteStatus: "concept" as const };
 
-  it("in_afstemming + pending partner zonder respons → wacht_op_partner", () => {
+  it("in_afstemming + pending partner zonder respons → wacht_op_klant", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending" } as any),
       inAfstemming,
-    )).toBe("wacht_op_partner");
+    )).toBe("wacht_op_klant");
   });
 
-  it("in_afstemming + bureau-item zonder klant-goedkeuring → wacht_op_partner", () => {
+  it("in_afstemming + bureau-item zonder klant-goedkeuring → wacht_op_klant", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending", provider_id: "bureau" } as any),
       inAfstemming,
-    )).toBe("wacht_op_partner");
+    )).toBe("wacht_op_klant");
   });
 
-  it("concept + pending partner zonder respons → wacht_op_partner", () => {
+  it("concept + pending partner zonder respons → wacht_op_klant", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending" } as any),
       concept,
-    )).toBe("wacht_op_partner");
+    )).toBe("wacht_op_klant");
   });
 
   it("in_afstemming + confirmed → wacht_op_klant", () => {
@@ -322,5 +326,6 @@ describe("deriveItemDisplayStatus — pre-offerte fase (concept/in_afstemming)",
     )).toBe("wacht_op_klant");
   });
 });
+
 
 
