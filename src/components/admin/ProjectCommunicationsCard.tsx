@@ -397,9 +397,20 @@ export function ProjectCommunicationsCard({
                           </span>
                         </div>
                         {comm.subject && (
-                          <p className="text-sm text-muted-foreground mt-0.5">
-                            {comm.subject}
-                          </p>
+                          isFromEmailLog ? (
+                            <button
+                              type="button"
+                              className="text-sm text-left text-muted-foreground hover:text-primary hover:underline underline-offset-2 mt-0.5"
+                              onClick={() => setDetailComm(comm)}
+                              title="Bekijk volledig bericht"
+                            >
+                              {comm.subject}
+                            </button>
+                          ) : (
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {comm.subject}
+                            </p>
+                          )
                         )}
                         {comm.contact_name && (
                           <p className="text-xs text-muted-foreground mt-0.5">
