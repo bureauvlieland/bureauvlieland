@@ -95,6 +95,10 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
       mailjet_message_id: entry.mailjet_message_id || null,
       sent_by: entry.sent_by,
       metadata: entry.metadata || {},
+      html_body: entry.html_body || null,
+      text_body: entry.text_body || null,
+      from_email: entry.from_email || null,
+      reply_to: entry.reply_to || null,
       sent_at: entry.status === "sent" ? new Date().toISOString() : null,
     });
 
