@@ -95,12 +95,17 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
 
       const emailItems: ProjectCommunication[] = allEmailLogs.map((log) => ({
         id: `email_log_${log.id}`,
+        email_log_id: log.id,
         request_id: log.related_request_id,
         accommodation_id: log.related_accommodation_id,
         communication_type: 'email_out' as CommunicationType,
         direction: 'outbound' as CommunicationDirection,
         subject: log.subject,
-        content: '', // email_log doesn't store body
+        content: log.text_body || '', // fallback preview
+        html_body: log.html_body || null,
+        text_body: log.text_body || null,
+        from_email: log.from_email || null,
+        reply_to: log.reply_to || null,
         contact_name: log.recipient_name,
         contact_email: log.recipient_email,
         logged_by: null,
@@ -109,6 +114,7 @@ export function useProjectCommunications({ requestId, accommodationId }: UseProj
         metadata: {
           email_type: log.email_type,
           status: log.status,
+          mailjet_message_id: log.mailjet_message_id,
           ...(log.metadata as Record<string, unknown> || {}),
         },
         created_at: log.created_at,
