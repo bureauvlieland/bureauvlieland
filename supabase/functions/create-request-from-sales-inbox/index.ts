@@ -191,7 +191,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const selectedDates = Array.isArray(body.selected_dates) ? body.selected_dates : [];
+    const { dates: selectedDates, invalid: invalidDates } = normalizeDates(body.selected_dates);
+    if (invalidDates.length) {
+      return new Response(JSON.stringify({
+        error: `Kan datum niet interpreteren: ${invalidDates.map((s) => `"${s}"`).join(", ")}. Gebruik bijv. "22 t/m 25 oktober 2026" of "22-10-2026".`,
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const numberOfPeople = Number.isFinite(body.number_of_people as number) && (body.number_of_people as number) > 0
       ? Math.floor(body.number_of_people as number)
       : 20;
