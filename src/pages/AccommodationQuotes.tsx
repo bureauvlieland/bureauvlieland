@@ -12,6 +12,7 @@ import { AccommodationQuoteCard } from '@/components/accommodation-portal/Accomm
 import { AccommodationQuoteDetailSheet } from '@/components/accommodation-portal/AccommodationQuoteDetailSheet';
 import { SelectQuoteDialog } from '@/components/accommodation-portal/SelectQuoteDialog';
 import type { AccommodationQuote } from '@/types/accommodation';
+import { ProjectDocumentsPanel } from '@/components/shared/ProjectDocumentsPanel';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
 
