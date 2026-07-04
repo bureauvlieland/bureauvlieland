@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GuestDetailsCard } from "./GuestDetailsCard";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { supabase } from "@/integrations/supabase/client";
 import {
