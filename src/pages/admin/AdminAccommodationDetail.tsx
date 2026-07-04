@@ -80,6 +80,7 @@ import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodati
 import { CompletionActions } from "@/components/admin/CompletionActions";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
 import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 
 interface LinkedProgram {
   id: string;
