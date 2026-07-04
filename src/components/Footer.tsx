@@ -1,6 +1,8 @@
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
+import { VacationNotice } from "@/components/VacationNotice";
+
 
 export const Footer = () => {
   return (
