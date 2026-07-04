@@ -242,6 +242,15 @@ export const PartnerAccommodationRequestCard = ({
             <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
           </div>
         )}
+
+        <ProjectDocumentsPanel
+          accommodationRequestId={request.id}
+          viewer="partner"
+          canUpload={false}
+          compact
+          title="Documenten van Bureau/klant"
+          emptyHint="Geen documenten gedeeld."
+        />
         {quote?.status === "pending" && quote?.reset_reason && (
           <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
