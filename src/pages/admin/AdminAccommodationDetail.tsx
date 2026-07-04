@@ -792,13 +792,22 @@ export default function AdminAccommodationDetail() {
 
                 <div className="border-t pt-3 mt-2">
                   <GuestDetailsDisplay
-                    guestNames={null}
-                    dietaryNotes={null}
+                    guestNames={(request as any).guest_names ?? null}
+                    dietaryNotes={(request as any).dietary_notes ?? null}
                     roomAssignment={(request as any).room_assignment ?? null}
-                    showDietary={false}
+                    showDietary={true}
                     showRoomAssignment={true}
                     updatedAt={(request as any).guest_details_updated_at ?? null}
                     onEdit={() => setShowGuestDialog(true)}
+                  />
+                </div>
+                <div className="border-t pt-3 mt-2">
+                  <ProjectDocumentsPanel
+                    accommodationRequestId={request.id}
+                    viewer="admin"
+                    canUpload={true}
+                    showVisibilityToggles={true}
+                    title="Documenten"
                   />
                 </div>
               </CardContent>
