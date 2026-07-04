@@ -194,7 +194,7 @@
   </url>
   <url>
     <loc>https://bureauvlieland.nl/activiteit/outdoor-cooking</loc>
-    <lastmod>2026-06-18</lastmod>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -271,12 +271,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/activiteit/grillmaster-zuiver-traiteur</loc>
-    <lastmod>2026-06-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/activiteit/handboog-schieten</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -291,6 +285,12 @@
   <url>
     <loc>https://bureauvlieland.nl/activiteit/lunch-aan-boord-bij-rederij-doeksen</loc>
     <lastmod>2026-06-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/activiteit/grillmaster-zuiver-traiteur</loc>
+    <lastmod>2026-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
