@@ -1,41 +1,57 @@
-# Fix: "Opnieuw versturen" bij e-mails werkt niet meer
+# Fix: "Staffel op groepsgrootte" komt niet mee als onderdeel van een samengestelde bouwsteen
 
-## Probleem (bevestigd)
+## Wat er misgaat
 
-De nieuwe `resend-email` edge function eist `html_body` of `text_body` op de `email_log`-rij. Van de 1008 rijen in `email_log` heeft **geen enkele** deze velden gevuld — alle ~30 sender edge-functions in `supabase/functions/**` roepen `logEmail(...)` zonder `html_body`/`text_body` te geven. Resultaat: elke resend faalt met HTTP 409 "De inhoud van dit bericht is niet bewaard".
+Beach Grill Experience (`strand-bbq`) heeft twee onderdelen met prijssoort **Staffel op groepsgrootte**:
+
+- BBQ-huur (set) — staffels: 1-25 → €70, 26-50 → €140, 51-100 → €210
+- Meubilair voor een catering — staffels: 1-25 → €124,50, 26-50 → €249, 51-100 → €373,50
+
+Bij toevoegen aan een programma van 8 personen komen deze onderdelen binnen als **"Op aanvraag"** (leeg), in plaats van als de staffelprijs voor 1-25 pers. In de database staat voor de zojuist toegevoegde regels: `admin_price_override = NULL`, `quoted_price = NULL`, `price_type = "total"`.
+
+Er zitten drie bugs achter dit gedrag.
+
+### Bug 1 — kind-blokken worden opgehaald zónder `price_extras`
+
+`fetchRequiredChildrenForBlock` in `src/hooks/useBlockComponents.ts` selecteert de kind-bouwstenen zonder `price_extras`. De staffel-configuratie zit juist daar (`price_extras.tiers`). Zonder deze kolom retourneert `calculateTieredTotal(child, …)` altijd `null` → `quoted_price` blijft leeg.
+
+### Bug 2 — verkeerd aantal personen aan de staffel-lookup
+
+In `src/components/admin/AdminAddActivitySheet.tsx` (regel 287) wordt de staffel opgezocht met `qty` (afgeleid uit `quantity_mode/value` van het onderdeel). Een staffel op **groepsgrootte** hoort op het aantal personen van het programma opgezocht te worden, niet op de component-hoeveelheid. Voor de standaard `quantity_mode = "fixed", value = 1` levert dat toevallig altijd tier 1 op, ongeacht de groepsomvang.
+
+### Bug 3 — de customer-add-optional-component edge function gebruikt niet-bestaande kolommen
+
+`supabase/functions/customer-add-optional-component/index.ts` selecteert `tier_min, tier_max, tier_pricing` (bestaan niet in `building_blocks`) en rekent met `child.tier_pricing`. Deze staffel-tak is dus altijd null. Klanten die zelf een optioneel onderdeel met staffelprijs toevoegen krijgen ook "op aanvraag".
 
 ## Aanpak
 
-### 1. Reconstructie-fallback in `resend-email` (voor bestaande rijen)
+### 1. Hook: `src/hooks/useBlockComponents.ts`
+Voeg `price_extras` toe aan de `child:building_blocks!…(…)`-select in `fetchRequiredChildrenForBlock` (en in de `useBlockComponents`-query, voor consistentie).
 
-Verwijder de harde 409-guard. Als `html_body` en `text_body` beide NULL zijn:
-- probeer `email_templates` (op basis van `metadata.template_name` of `email_type`) te renderen met `metadata` als variabelen (zoals de vorige implementatie deed);
-- als er geen template of onvoldoende variabelen zijn, val terug op een minimaal "her-verstuurd bericht"-HTML (subject + waarschuwing dat inhoud niet exact identiek is + originele metadata-preview) zodat de admin altijd kan doorsturen;
-- de admin ziet in de UI (`EmailLogDetailDialog`) alleen "Opnieuw versturen" beschikbaar als er iets te versturen valt — die guard mag blijven, mits we voor legacy-rijen de knop weer inschakelen (zie punt 3).
+### 2. Admin-flow: `src/components/admin/AdminAddActivitySheet.tsx`
+In de tiered-tak (ca. regel 286-292):
+- Bereken de staffel met `numberOfPeople` (groepsgrootte van het programma), niet met `qty`.
+- Zet `override_people = null` (totaalprijs is groep-gebaseerd, `override_people` is alleen zinvol voor per-persoon items).
+- Update de begeleidende comment (regel 274).
 
-### 2. Body persistent opslaan bij nieuwe sends
+### 3. Edge function: `supabase/functions/customer-add-optional-component/index.ts`
+- Vervang de selectie `tier_min, tier_max, tier_pricing` door `price_extras`.
+- Vervang de inline staffel-berekening door een correcte lookup op `price_extras.tiers` (gesorteerd, incl. `tiers_above_max`-gedrag: `"highest"` → hoogste tier, `"on_request"` → `null`), met `people` (groepsgrootte) als input.
+- Redeploy de edge function.
 
-Wijzig alle sender edge-functions die `logEmail(...)` aanroepen (~30 functies, o.a. `send-quote-offer`, `send-items-to-partners`, `accept-quote-proposal`, `approve-quote-item`, `notify-partners-informational`, `send-quote-request`, `send-bureau-invoice-to-customer`, `notify-partner-cancellation`, `notify-partner-item-deletion`, `update-customer-program`, `update-partner-item-status`, `invite-partner`, `bulk-invite-partners`, `send-accommodation-request`, `send-accommodation-quote-request`, `notify-accommodation-quote`, `select-accommodation-quote`, `withdraw-accommodation-quote`, `send-customer-accommodation-message`, `send-partner-customer-message`, `send-project-email`, `send-customer-aftersales`, `send-guest-details-reminder`, `send-arrival-reminder`, `send-partner-headsup-t3`, `send-partner-mailing`, `send-partner-intro-email`, `send-ticket-email`, `send-partner-reset-email`, `resend-partner-invitation`, `admin-reset-partner-password`, `resend-customer-link`, `check-pending-items`, `process-completed-items`, `publish-program-changes`, `cancel-program-request`, `forward-bureau-invoice`, `forward-commission-invoice`, `forward-purchase-invoice`, `forward-purchase-invoice-outlook`, `register-partner-invoice`, `send-commission-invoice-to-partner`, `update-commission-status`, `notify-new-chat`, `notify-new-chat-reply`, `notify-headcount-change-bulk`, `notify-partner-headcount-change`, `notify-customer-price-change`, `notify-partner-price-change`, `notify-partners-missing-invoice-pdf`).
+### 4. Herstel voor het huidige project
+De zojuist toegevoegde regels van Meubilair en BBQ-huur staan al met lege prijs in de DB (Beach Grill Experience, 8 pers). Twee opties:
 
-Voor elk: geef de reeds gebouwde `html`/`text` (die al aan Mailjet gaat) mee als `html_body`/`text_body` aan `logEmail`. Trivialiteit varieert per file (soms is er per-recipient een aparte body binnen dezelfde call).
+- **A (aanbevolen):** ik vul de correcte staffelprijzen na (Meubilair € 124,50, BBQ-huur € 70) op de twee bestaande rijen, zodat je niets hoeft te doen.
+- **B:** je verwijdert beide regels en voegt Beach Grill Experience opnieuw toe; na de fix worden ze dan meteen goed geboekt.
 
-### 3. UI: knop weer beschikbaar maken voor legacy-rijen
+Zeg welke voorkeur je hebt; anders doe ik A.
 
-- `EmailLogDetailDialog`: `disabled={!hasBody && !isLegacy...}` versoepelen — de knop moet altijd klikbaar zijn zolang er een `email_log_id` is; de edge function beslist over de fallback.
-- `PartnerNotificationsCard` en `ResendEmailDialog` hebben geen disable-guard nodig; alleen de foutafhandeling laten staan.
+### 5. Sanity-check
+Na de fix: nieuw testitem toevoegen (Beach Grill Experience op een test-programma van bv. 30 personen) en verifiëren dat Meubilair op € 249 en BBQ-huur op € 140 landt (tier 26-50).
 
-### 4. Tests / verificatie
+## Wat er níét verandert
 
-- Handmatig: 1 oude email (uit vóór de wijziging) resend → moet slagen met fallback.
-- 1 nieuwe email verzenden (bv. via `send-project-email`) → controleer dat `html_body` gevuld is in `email_log`.
-- Resend van die nieuwe email → moet 1:1 dezelfde inhoud versturen.
-
-## Impact / risico
-
-- **Breed maar mechanisch**: veel bestanden, kleine wijziging per bestand (één extra veld aan `logEmail`).
-- Reconstructie-fallback voorkomt dat historische rijen ooit nog blokkeren.
-- Geen schema-wijziging nodig; kolommen bestaan al.
-
-## Levering
-
-1 PR met: `resend-email/index.ts` (fallback), ~30 sender-functies (`html_body`/`text_body` toevoegen), `EmailLogDetailDialog.tsx` (disabled-guard versoepelen). Deploy alle gewijzigde edge-functies.
+- Geen wijziging aan het datamodel of aan `building_block_components`.
+- Geen wijziging aan de staffel-configuratie-UI (`BuildingBlockSheet.tsx`) — die schrijft al correct naar `price_extras.tiers`.
+- Geen wijziging aan de admin-tak waar een tiered-bouwsteen direct (zonder samenstelling) wordt toegevoegd — die werkte al goed via `handleSelectBlock`.
