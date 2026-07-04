@@ -207,6 +207,23 @@ export default function AccommodationQuotes() {
           </section>
         )}
 
+        {/* Documenten */}
+        {request?.id && token && (
+          <section className="mb-8">
+            <div className="border rounded-lg bg-background p-4">
+              <ProjectDocumentsPanel
+                accommodationRequestId={request.id}
+                customerToken={token}
+                viewer="customer"
+                canUpload={true}
+                title="Documenten"
+                emptyHint="Upload hier bijvoorbeeld een gastenlijst of kamerindeling (Word/Excel/PDF)."
+              />
+            </div>
+          </section>
+        )}
+
+
         {/* CTA for activities */}
         {request.wants_activities && (
           <section className="bg-primary/5 border border-primary/20 rounded-lg p-6">
