@@ -87,6 +87,28 @@ export const PracticalView = ({
         />
       )}
 
+      {/* Documenten */}
+      {program.id && program.customer_token && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Documenten
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProjectDocumentsPanel
+              programRequestId={program.id}
+              customerToken={program.customer_token}
+              viewer="customer"
+              canUpload={true}
+              title=""
+              emptyHint="Nog geen documenten. U kunt hier bijvoorbeeld een gastenlijst, kamerindeling (spreadsheet), of andere documenten uploaden."
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tickets (ferry / fietshuur) */}
       {ticketItems.length > 0 && (
         <Card>
