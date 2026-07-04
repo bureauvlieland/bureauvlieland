@@ -1347,8 +1347,10 @@ export default function AdminAccommodationDetail() {
           onOpenChange={setShowGuestDialog}
           scope="accommodation_request"
           recordId={request.id}
+          initialGuestNames={(request as any).guest_names ?? null}
+          initialDietaryNotes={(request as any).dietary_notes ?? null}
           initialRoomAssignment={(request as any).room_assignment ?? null}
-          showDietary={false}
+          showDietary={true}
           showRoomAssignment={true}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] })}
         />
