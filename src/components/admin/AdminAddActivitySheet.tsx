@@ -271,7 +271,7 @@ export const AdminAddActivitySheet = ({
             // Price multiplier semantics:
             // - per_person / per_person_per_day blocks  → override_people = qty
             // - total / on_request blocks               → quoted_price = price × qty
-            // - tiered_total blocks                     → quoted_price = staffel(qty) (qty is people-count)
+            // - tiered_total blocks                     → quoted_price = staffel(groepsgrootte); staffel gaat op programma-personen, niet op component-qty
             const rawChildPriceType = (child.price_type ?? "per_person") as
               | "per_person" | "per_person_per_day" | "total" | "on_request" | "tiered_total";
             const isTieredChild = rawChildPriceType === "tiered_total";
@@ -284,9 +284,10 @@ export const AdminAddActivitySheet = ({
             let adminOverride: number | null = child.price_adult ?? null;
 
             if (isTieredChild) {
-              quotedPrice = calculateTieredTotal(child, qty);
+              // Staffel op groepsgrootte: gebruik programma-personen, niet component-qty.
+              quotedPrice = calculateTieredTotal(child, numberOfPeople);
               adminOverride = null;
-              overridePeople = qty;
+              overridePeople = null;
             } else if (!isPerHead && child.price_adult != null) {
               quotedPrice = Number(child.price_adult) * qty;
             }
