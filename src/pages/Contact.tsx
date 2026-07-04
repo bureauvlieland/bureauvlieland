@@ -64,6 +64,10 @@ const Contact = () => {
                       0562 700 208
                     </a>
                   </CardDescription>
+                  <p className="text-xs text-primary-foreground/70 mt-2">
+                    T/m 20 juli iets minder snel bereikbaar
+                  </p>
+
                 </CardHeader>
               </Card>
 
