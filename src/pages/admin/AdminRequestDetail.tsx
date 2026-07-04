@@ -92,6 +92,7 @@ import {
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { ensureSendItemsTodo } from "@/lib/sendItemsTodo";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 import { 
   itemStatusConfig, 
