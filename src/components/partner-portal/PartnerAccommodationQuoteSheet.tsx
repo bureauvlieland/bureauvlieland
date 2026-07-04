@@ -491,6 +491,15 @@ export const PartnerAccommodationQuoteSheet = ({
                   <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
                 </div>
               )}
+
+              <ProjectDocumentsPanel
+                accommodationRequestId={request.id}
+                viewer="partner"
+                canUpload={false}
+                compact
+                title="Documenten van Bureau/klant"
+                emptyHint="Geen documenten gedeeld."
+              />
             </CardContent>
           </Card>
 
