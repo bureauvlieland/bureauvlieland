@@ -38,6 +38,7 @@ import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
 import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
 import { usePartnerRoomTypes } from "@/hooks/usePartnerRoomTypes";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 
 interface AccommodationRequest {
   id: string;
