@@ -40,6 +40,7 @@ import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { PartnerItem } from "@/types/partner";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { 
   generateTimeSlots, 
   getBlockedTimeSlotsFromPartnerItems, 
