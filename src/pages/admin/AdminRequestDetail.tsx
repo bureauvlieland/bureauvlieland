@@ -3086,6 +3086,23 @@ const AdminRequestDetail = () => {
               />
             </TabsContent>
 
+            {/* Tab: Documenten */}
+            <TabsContent value="documenten">
+              <Card>
+                <CardContent className="pt-6">
+                  <ProjectDocumentsPanel
+                    programRequestId={request.id}
+                    viewer="admin"
+                    canUpload={true}
+                    showVisibilityToggles={true}
+                    title="Projectdocumenten"
+                    emptyHint="Geen documenten. Upload hier bijvoorbeeld een gastenlijst, kamerindeling, plattegrond of extra briefing. Documenten zijn standaard zichtbaar voor betrokken partners en de klant — je kunt dit per document uitzetten."
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+
             {/* Tab: Notificaties */}
             <TabsContent value="notificaties">
               <PartnerNotificationsCard
