@@ -20,7 +20,6 @@ import {
 } from "@/lib/getPartnerProjectsOverview";
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { PartnerCompletenessBanner } from "@/components/partner-portal/PartnerCompletenessBanner";
-import { PartnerShowcaseSection } from "@/components/partner-portal/PartnerShowcaseSection";
 import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
 
 type TabKey = "projecten" | "werkbank";
@@ -270,10 +269,7 @@ const PartnerDashboardContent = () => {
           />
         </div>
       </div>
-
-      <PartnerShowcaseSection />
     </div>
-
   );
 };
 
