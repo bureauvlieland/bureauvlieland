@@ -268,6 +268,7 @@ const PartnerDashboardContent = () => {
             pendingCommission={ytd.pendingCommission}
           />
         </div>
+      </div>
     </div>
   );
 };
