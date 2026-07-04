@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Mail, Phone, MapPin } from "lucide-react";
 import erwinImage from "@/assets/erwin-profile.jpg";
 import { Helmet } from "react-helmet";
+import { VacationNotice } from "@/components/VacationNotice";
+
 
 const Contact = () => {
   return (
