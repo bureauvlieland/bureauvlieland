@@ -1980,6 +1980,7 @@ const AdminRequestDetail = () => {
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
               <TabsTrigger value="financien">Financiën</TabsTrigger>
               <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
+              <TabsTrigger value="documenten">Documenten</TabsTrigger>
               <TabsTrigger value="notificaties">Notificaties</TabsTrigger>
               <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
             </TabsList>
