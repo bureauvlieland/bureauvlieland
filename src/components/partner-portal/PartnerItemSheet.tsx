@@ -445,6 +445,17 @@ export const PartnerItemSheet = ({
             </div>
           )}
 
+          <div className="bg-muted/20 rounded-lg p-3 border">
+            <ProjectDocumentsPanel
+              programRequestId={request.id}
+              viewer="partner"
+              canUpload={false}
+              compact
+              title="Documenten van Bureau/klant"
+              emptyHint="Geen documenten gedeeld."
+            />
+          </div>
+
           <Separator />
 
           {/* Details section */}
