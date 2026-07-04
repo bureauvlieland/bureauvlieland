@@ -67,14 +67,48 @@ Deno.serve(async (req) => {
     }
 
     if (!log.html_body && !log.text_body) {
-      return json(
-        {
-          error:
-            "De inhoud van dit bericht is niet bewaard (verstuurd vóór de opslag-update). Gebruik 'Beantwoorden' om een nieuw bericht op te stellen.",
-        },
-        409,
-      );
+      // Legacy row (verstuurd vóór de body-opslag-update): reconstrueer
+      // best-effort uit email_templates + metadata. Als er geen template is,
+      // val terug op een minimale "her-verstuurd bericht"-HTML.
+      const templateName =
+        (log.metadata as Record<string, unknown> | null)?.template_name as string | undefined ||
+        log.email_type;
+
+      let renderedHtml: string | null = null;
+      const meta = (log.metadata as Record<string, unknown> | null) || {};
+
+      if (templateName) {
+        const { data: tpl } = await admin
+          .from("email_templates")
+          .select("body_html")
+          .eq("id", templateName)
+          .maybeSingle();
+        if (tpl?.body_html) {
+          renderedHtml = String(tpl.body_html);
+          for (const [k, v] of Object.entries(meta)) {
+            if (v == null) continue;
+            const re = new RegExp(`{{\\s*${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*}}`, "g");
+            renderedHtml = renderedHtml.replace(re, String(v));
+          }
+        }
+      }
+
+      if (!renderedHtml) {
+        const previewSource =
+          typeof meta.body_preview === "string"
+            ? String(meta.body_preview)
+            : `Deze e-mail is oorspronkelijk verstuurd op ${log.created_at}. De exacte inhoud is niet meer beschikbaar.`;
+        renderedHtml = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#1e293b;">
+<p style="background:#fef3c7;border:1px solid #fbbf24;padding:12px;border-radius:6px;font-size:13px;">
+<strong>Let op:</strong> dit bericht wordt opnieuw verstuurd. De originele opmaak kon niet exact worden gereproduceerd.
+</p>
+<div>${previewSource.replace(/\n/g, "<br>")}</div>
+</body></html>`;
+      }
+
+      log.html_body = renderedHtml;
     }
+
 
     if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
       return json({ error: "Mailjet is niet geconfigureerd" }, 500);

@@ -164,7 +164,7 @@ export function EmailLogDetailDialog({ open, onOpenChange, communication, onRepl
                 <Reply className="h-4 w-4 mr-1" /> Beantwoorden
               </Button>
             )}
-            {hasBody && emailLogId && (
+            {emailLogId && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -180,9 +180,9 @@ export function EmailLogDetailDialog({ open, onOpenChange, communication, onRepl
             </Button>
             <Button
               size="sm"
-              disabled={!hasBody || !emailLogId || resend.isPending}
+              disabled={!emailLogId || resend.isPending}
               onClick={handleResend}
-              title={!hasBody ? "Bericht-inhoud is niet bewaard" : "Opnieuw versturen"}
+              title={!hasBody ? "Inhoud wordt opnieuw opgebouwd uit het sjabloon" : "Opnieuw versturen"}
             >
               {resend.isPending ? (
                 <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Versturen…</>
@@ -190,6 +190,7 @@ export function EmailLogDetailDialog({ open, onOpenChange, communication, onRepl
                 <><Send className="h-4 w-4 mr-1" /> Opnieuw versturen</>
               )}
             </Button>
+
           </div>
         </DialogFooter>
       </DialogContent>
