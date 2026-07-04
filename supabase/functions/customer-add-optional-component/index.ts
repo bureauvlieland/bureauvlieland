@@ -180,12 +180,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let adminOverride: number | null = child.price_adult ?? null;
 
     if (isTiered) {
-      // Inline tiered calculation
-      const tiers = Array.isArray(child.tier_pricing) ? child.tier_pricing : [];
-      const match = tiers.find((t: any) => qty >= (t.min ?? 0) && qty <= (t.max ?? Infinity));
-      quotedPrice = match?.price != null ? Number(match.price) * (match.per_person ? qty : 1) : null;
+      // Staffel op groepsgrootte — lookup op `people`, niet op qty.
+      const extras = (child.price_extras ?? {}) as Record<string, unknown>;
+      const rawTiers = Array.isArray(extras.tiers) ? extras.tiers as Array<{ min_people: number; max_people: number; price: number }> : [];
+      const tiers = rawTiers
+        .filter((t) => typeof t?.min_people === "number" && typeof t?.max_people === "number" && typeof t?.price === "number")
+        .slice()
+        .sort((a, b) => a.min_people - b.min_people);
+      const aboveMax = extras.tiers_above_max === "on_request" ? "on_request" : "highest";
+      if (tiers.length === 0) {
+        quotedPrice = null;
+      } else {
+        const match = tiers.find((t) => people >= t.min_people && people <= t.max_people)
+          ?? (people < tiers[0].min_people ? tiers[0] : null);
+        if (match) {
+          quotedPrice = match.price;
+        } else {
+          quotedPrice = aboveMax === "on_request" ? null : tiers[tiers.length - 1].price;
+        }
+      }
       adminOverride = null;
-      overridePeople = qty;
+      overridePeople = null;
     } else if (!isPerHead && child.price_adult != null) {
       quotedPrice = Number(child.price_adult) * qty;
     }
