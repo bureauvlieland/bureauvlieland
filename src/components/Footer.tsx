@@ -33,7 +33,15 @@ export const Footer = () => {
                   </a>
                 </p>
               </div>
+              <VacationNotice
+                endDate="2026-07-20"
+                message="Mail blijft gewoon mogelijk; reacties kunnen iets langer duren."
+                compact
+                variant="info"
+                className="mt-3"
+              />
               <div className="flex gap-3 mt-4">
+
                 <a
                   href="https://www.instagram.com/bureau_vlieland/"
                   target="_blank"
