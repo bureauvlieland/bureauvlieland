@@ -92,6 +92,7 @@ import {
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { ensureSendItemsTodo } from "@/lib/sendItemsTodo";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 import { 
   itemStatusConfig, 
@@ -1980,6 +1981,7 @@ const AdminRequestDetail = () => {
               <TabsTrigger value="activiteiten">Activiteiten</TabsTrigger>
               <TabsTrigger value="financien">Financiën</TabsTrigger>
               <TabsTrigger value="communicatie">Communicatie</TabsTrigger>
+              <TabsTrigger value="documenten">Documenten</TabsTrigger>
               <TabsTrigger value="notificaties">Notificaties</TabsTrigger>
               <TabsTrigger value="geschiedenis">Geschiedenis</TabsTrigger>
             </TabsList>
@@ -3083,6 +3085,23 @@ const AdminRequestDetail = () => {
                 }
               />
             </TabsContent>
+
+            {/* Tab: Documenten */}
+            <TabsContent value="documenten">
+              <Card>
+                <CardContent className="pt-6">
+                  <ProjectDocumentsPanel
+                    programRequestId={request.id}
+                    viewer="admin"
+                    canUpload={true}
+                    showVisibilityToggles={true}
+                    title="Projectdocumenten"
+                    emptyHint="Geen documenten. Upload hier bijvoorbeeld een gastenlijst, kamerindeling, plattegrond of extra briefing. Documenten zijn standaard zichtbaar voor betrokken partners en de klant — je kunt dit per document uitzetten."
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
 
             {/* Tab: Notificaties */}
             <TabsContent value="notificaties">

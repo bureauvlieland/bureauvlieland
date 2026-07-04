@@ -40,6 +40,7 @@ import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { PartnerItem } from "@/types/partner";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { 
   generateTimeSlots, 
   getBlockedTimeSlotsFromPartnerItems, 
@@ -443,6 +444,17 @@ export const PartnerItemSheet = ({
               />
             </div>
           )}
+
+          <div className="bg-muted/20 rounded-lg p-3 border">
+            <ProjectDocumentsPanel
+              programRequestId={request.id}
+              viewer="partner"
+              canUpload={false}
+              compact
+              title="Documenten van Bureau/klant"
+              emptyHint="Geen documenten gedeeld."
+            />
+          </div>
 
           <Separator />
 

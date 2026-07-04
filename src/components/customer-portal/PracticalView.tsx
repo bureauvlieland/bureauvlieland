@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GuestDetailsCard } from "./GuestDetailsCard";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -84,6 +85,28 @@ export const PracticalView = ({
           updatedAt={guestDetails.updated_at}
           onEdit={onOpenGuestDetails}
         />
+      )}
+
+      {/* Documenten */}
+      {program.id && program.customer_token && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Documenten
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProjectDocumentsPanel
+              programRequestId={program.id}
+              customerToken={program.customer_token}
+              viewer="customer"
+              canUpload={true}
+              title=""
+              emptyHint="Nog geen documenten. U kunt hier bijvoorbeeld een gastenlijst, kamerindeling (spreadsheet), of andere documenten uploaden."
+            />
+          </CardContent>
+        </Card>
       )}
 
       {/* Tickets (ferry / fietshuur) */}

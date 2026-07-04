@@ -80,6 +80,7 @@ import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodati
 import { CompletionActions } from "@/components/admin/CompletionActions";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
 import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 
 interface LinkedProgram {
   id: string;
@@ -791,13 +792,22 @@ export default function AdminAccommodationDetail() {
 
                 <div className="border-t pt-3 mt-2">
                   <GuestDetailsDisplay
-                    guestNames={null}
-                    dietaryNotes={null}
+                    guestNames={(request as any).guest_names ?? null}
+                    dietaryNotes={(request as any).dietary_notes ?? null}
                     roomAssignment={(request as any).room_assignment ?? null}
-                    showDietary={false}
+                    showDietary={true}
                     showRoomAssignment={true}
                     updatedAt={(request as any).guest_details_updated_at ?? null}
                     onEdit={() => setShowGuestDialog(true)}
+                  />
+                </div>
+                <div className="border-t pt-3 mt-2">
+                  <ProjectDocumentsPanel
+                    accommodationRequestId={request.id}
+                    viewer="admin"
+                    canUpload={true}
+                    showVisibilityToggles={true}
+                    title="Documenten"
                   />
                 </div>
               </CardContent>
@@ -1337,8 +1347,10 @@ export default function AdminAccommodationDetail() {
           onOpenChange={setShowGuestDialog}
           scope="accommodation_request"
           recordId={request.id}
+          initialGuestNames={(request as any).guest_names ?? null}
+          initialDietaryNotes={(request as any).dietary_notes ?? null}
           initialRoomAssignment={(request as any).room_assignment ?? null}
-          showDietary={false}
+          showDietary={true}
           showRoomAssignment={true}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] })}
         />

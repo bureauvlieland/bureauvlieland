@@ -12,6 +12,7 @@ import { AccommodationQuoteCard } from '@/components/accommodation-portal/Accomm
 import { AccommodationQuoteDetailSheet } from '@/components/accommodation-portal/AccommodationQuoteDetailSheet';
 import { SelectQuoteDialog } from '@/components/accommodation-portal/SelectQuoteDialog';
 import type { AccommodationQuote } from '@/types/accommodation';
+import { ProjectDocumentsPanel } from '@/components/shared/ProjectDocumentsPanel';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
 
@@ -205,6 +206,23 @@ export default function AccommodationQuotes() {
             </div>
           </section>
         )}
+
+        {/* Documenten */}
+        {request?.id && token && (
+          <section className="mb-8">
+            <div className="border rounded-lg bg-background p-4">
+              <ProjectDocumentsPanel
+                accommodationRequestId={request.id}
+                customerToken={token}
+                viewer="customer"
+                canUpload={true}
+                title="Documenten"
+                emptyHint="Upload hier bijvoorbeeld een gastenlijst of kamerindeling (Word/Excel/PDF)."
+              />
+            </div>
+          </section>
+        )}
+
 
         {/* CTA for activities */}
         {request.wants_activities && (

@@ -388,9 +388,11 @@ export type Database = {
           customer_phone: string
           customer_token: string
           departure_date: string
+          dietary_notes: string | null
           expires_at: string
           facilities_required: Json | null
           guest_details_updated_at: string | null
+          guest_names: string | null
           id: string
           linked_program_id: string | null
           location_preference: Json | null
@@ -425,9 +427,11 @@ export type Database = {
           customer_phone: string
           customer_token?: string
           departure_date: string
+          dietary_notes?: string | null
           expires_at?: string
           facilities_required?: Json | null
           guest_details_updated_at?: string | null
+          guest_names?: string | null
           id?: string
           linked_program_id?: string | null
           location_preference?: Json | null
@@ -462,9 +466,11 @@ export type Database = {
           customer_phone?: string
           customer_token?: string
           departure_date?: string
+          dietary_notes?: string | null
           expires_at?: string
           facilities_required?: Json | null
           guest_details_updated_at?: string | null
+          guest_names?: string | null
           id?: string
           linked_program_id?: string | null
           location_preference?: Json | null
@@ -3492,6 +3498,91 @@ export type Database = {
           },
         ]
       }
+      project_documents: {
+        Row: {
+          accommodation_request_id: string | null
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_visible_to_customer: boolean
+          is_visible_to_partners: boolean
+          label: string | null
+          mime_type: string | null
+          program_request_id: string | null
+          scope: string
+          updated_at: string
+          uploaded_by: string
+          uploaded_by_name: string | null
+          uploaded_by_partner_id: string | null
+          uploaded_by_user_id: string | null
+        }
+        Insert: {
+          accommodation_request_id?: string | null
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_visible_to_customer?: boolean
+          is_visible_to_partners?: boolean
+          label?: string | null
+          mime_type?: string | null
+          program_request_id?: string | null
+          scope: string
+          updated_at?: string
+          uploaded_by: string
+          uploaded_by_name?: string | null
+          uploaded_by_partner_id?: string | null
+          uploaded_by_user_id?: string | null
+        }
+        Update: {
+          accommodation_request_id?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_visible_to_customer?: boolean
+          is_visible_to_partners?: boolean
+          label?: string | null
+          mime_type?: string | null
+          program_request_id?: string | null
+          scope?: string
+          updated_at?: string
+          uploaded_by?: string
+          uploaded_by_name?: string | null
+          uploaded_by_partner_id?: string | null
+          uploaded_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_accommodation_request_id_fkey"
+            columns: ["accommodation_request_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_accommodation_request_id_fkey"
+            columns: ["accommodation_request_id"]
+            isOneToOne: false
+            referencedRelation: "partner_accommodation_requests_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_program_request_id_fkey"
+            columns: ["program_request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_invoice_inbox: {
         Row: {
           attachment_filename: string | null
@@ -4239,6 +4330,10 @@ export type Database = {
         }[]
       }
       partner_can_view_accommodation_request: {
+        Args: { _request_id: string; _user_id: string }
+        Returns: boolean
+      }
+      partner_can_view_program_request: {
         Args: { _request_id: string; _user_id: string }
         Returns: boolean
       }

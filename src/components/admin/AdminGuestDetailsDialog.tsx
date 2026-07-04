@@ -72,7 +72,9 @@ export const AdminGuestDetailsDialog = ({
         const { error } = await supabase
           .from("accommodation_requests")
           .update({
-            room_assignment: roomAssignment || null,
+            guest_names: guestNames || null,
+            dietary_notes: showDietary ? (dietaryNotes || null) : undefined,
+            room_assignment: showRoomAssignment ? (roomAssignment || null) : undefined,
             guest_details_updated_at: now,
           } as any)
           .eq("id", recordId);
@@ -98,31 +100,28 @@ export const AdminGuestDetailsDialog = ({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          {scope === "program_request" && (
-            <>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Gastenlijst</Label>
-                <Textarea
-                  value={guestNames}
-                  maxLength={MAX}
-                  onChange={(e) => setGuestNames(e.target.value)}
-                  className="min-h-[120px]"
-                />
-              </div>
-              {showDietary && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><UtensilsCrossed className="h-4 w-4" /> Dieetwensen & allergieën</Label>
-                  <Textarea
-                    value={dietaryNotes}
-                    maxLength={MAX}
-                    onChange={(e) => setDietaryNotes(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                </div>
-              )}
-            </>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Gastenlijst</Label>
+            <Textarea
+              value={guestNames}
+              maxLength={MAX}
+              onChange={(e) => setGuestNames(e.target.value)}
+              className="min-h-[120px]"
+              placeholder="Eén naam per regel"
+            />
+          </div>
+          {showDietary && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><UtensilsCrossed className="h-4 w-4" /> Dieetwensen & allergieën</Label>
+              <Textarea
+                value={dietaryNotes}
+                maxLength={MAX}
+                onChange={(e) => setDietaryNotes(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
           )}
-          {scope === "accommodation_request" && (
+          {showRoomAssignment && (
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><BedDouble className="h-4 w-4" /> Kamerindeling</Label>
               <Textarea
@@ -130,6 +129,7 @@ export const AdminGuestDetailsDialog = ({
                 maxLength={MAX}
                 onChange={(e) => setRoomAssignment(e.target.value)}
                 className="min-h-[120px]"
+                placeholder="Voor uitgebreide kamerindelingen kun je een spreadsheet uploaden bij Documenten."
               />
             </div>
           )}
