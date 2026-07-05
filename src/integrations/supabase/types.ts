@@ -4321,6 +4321,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_any_admin_online: { Args: never; Returns: boolean }
       is_partner: { Args: { _user_id: string }; Returns: boolean }
       match_claudia_documents: {
         Args: {
