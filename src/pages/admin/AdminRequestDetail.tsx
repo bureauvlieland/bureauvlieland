@@ -533,22 +533,29 @@ const AdminRequestDetail = () => {
       setSelectedAccommodationQuote(null);
       return;
     }
-    supabase
-      .from("accommodation_quotes")
-      .select("id, price_total, vat_rate, accommodation_name, customer_terms_accepted_at, customer_signature_name")
-      .eq("request_id", request.linked_accommodation_id)
-      .eq("status", "selected")
-      .maybeSingle()
-      .then(({ data }) => {
-        setSelectedAccommodationQuote(data ? {
-          id: data.id,
-          price_total: data.price_total,
-          vat_rate: data.vat_rate ?? 9,
-          accommodation_name: data.accommodation_name,
-          customer_terms_accepted_at: (data as any).customer_terms_accepted_at ?? null,
-          customer_signature_name: (data as any).customer_signature_name ?? null,
-        } : null);
+    (async () => {
+      const { data } = await supabase
+        .from("accommodation_quotes")
+        .select("id, price_total, vat_rate, accommodation_name")
+        .eq("request_id", request.linked_accommodation_id)
+        .eq("status", "selected")
+        .maybeSingle();
+      if (!data) {
+        setSelectedAccommodationQuote(null);
+        return;
+      }
+      // Consent/signature fields are admin-only and fetched via SECURITY DEFINER RPC.
+      const { data: terms } = await supabase.rpc("get_accommodation_quote_terms", { _quote_id: data.id });
+      const t = Array.isArray(terms) ? terms[0] : terms;
+      setSelectedAccommodationQuote({
+        id: data.id,
+        price_total: data.price_total,
+        vat_rate: data.vat_rate ?? 9,
+        accommodation_name: data.accommodation_name,
+        customer_terms_accepted_at: (t as any)?.customer_terms_accepted_at ?? null,
+        customer_signature_name: (t as any)?.customer_signature_name ?? null,
       });
+    })();
   }, [request?.linked_accommodation_id]);
 
   const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);

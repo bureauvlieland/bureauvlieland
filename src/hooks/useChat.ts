@@ -102,12 +102,8 @@ export function useChat(options: UseChatOptions) {
   useEffect(() => {
     if (isVisitor) return; // visitor handled above
     const fetchPresence = async () => {
-      const { data } = await supabase
-        .from("chat_admin_presence")
-        .select("is_online")
-        .eq("is_online", true)
-        .limit(1);
-      setIsAdminOnline(!!data && data.length > 0);
+      const { data } = await supabase.rpc("is_any_admin_online");
+      setIsAdminOnline(!!data);
     };
     fetchPresence();
     const channel = supabase
