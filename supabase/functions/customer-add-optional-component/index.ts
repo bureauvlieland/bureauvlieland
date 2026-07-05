@@ -228,6 +228,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       status: "pending" as const,
       item_quote_status: isBureau ? "bevestigd" : "concept",
       admin_price_override: adminOverride,
+      admin_price_notes: child.description || child.short_description || null,
       price_type: priceType,
       override_people: overridePeople,
       quoted_price: quotedPrice,
