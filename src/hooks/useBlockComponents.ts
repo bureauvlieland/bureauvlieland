@@ -125,7 +125,7 @@ export async function fetchOptionalChildrenForBlock(blockId: string) {
     .select(`
       *,
       child:building_blocks!building_block_components_child_block_id_fkey(
-        id, name, short_description, price_adult, price_type, provider_id,
+        id, name, description, short_description, price_adult, price_type, provider_id,
         provider:partners!building_blocks_provider_id_fkey(id, name)
       )
     `)
