@@ -4270,6 +4270,15 @@ export type Database = {
     }
     Functions: {
       expire_stale_recommendations: { Args: never; Returns: undefined }
+      get_accommodation_quote_terms: {
+        Args: { _quote_id: string }
+        Returns: {
+          customer_signature_name: string
+          customer_terms_accepted_at: string
+          customer_terms_ip: string
+          id: string
+        }[]
+      }
       get_invoicing_mode_for_accommodation: {
         Args: { _accommodation_request_id: string; _user_id: string }
         Returns: string
