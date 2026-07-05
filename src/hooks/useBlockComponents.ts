@@ -14,7 +14,7 @@ export const useBlockComponents = (parentBlockId: string | undefined) => {
         .select(`
           *,
           child:building_blocks!building_block_components_child_block_id_fkey(
-            id, name, short_description, price_adult, price_type, price_extras, block_type,
+            id, name, description, short_description, price_adult, price_type, price_extras, block_type,
             provider_id, category, image_url, image_asset, status, is_active,
             provider:partners!building_blocks_provider_id_fkey(id, name, email)
           )
@@ -104,7 +104,7 @@ export async function fetchRequiredChildrenForBlock(blockId: string) {
     .select(`
       id, parent_block_id, child_block_id, is_required, quantity_mode, quantity_value, sort_order, notes,
       child:building_blocks!building_block_components_child_block_id_fkey(
-        id, name, short_description, price_adult, price_type, price_extras, block_type,
+        id, name, description, short_description, price_adult, price_type, price_extras, block_type,
         provider_id, category, duration, location_lat, location_lng, location_address,
         provider:partners!building_blocks_provider_id_fkey(id, name, email)
       )
@@ -125,7 +125,7 @@ export async function fetchOptionalChildrenForBlock(blockId: string) {
     .select(`
       *,
       child:building_blocks!building_block_components_child_block_id_fkey(
-        id, name, short_description, price_adult, price_type, provider_id,
+        id, name, description, short_description, price_adult, price_type, provider_id,
         provider:partners!building_blocks_provider_id_fkey(id, name)
       )
     `)
