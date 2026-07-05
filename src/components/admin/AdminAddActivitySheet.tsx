@@ -309,6 +309,7 @@ export const AdminAddActivitySheet = ({
               status: "pending" as const,
               item_quote_status: "concept" as const,
               admin_price_override: adminOverride,
+              admin_price_notes: (child as any).description || child.short_description || null,
               price_type: childPriceType,
               override_people: overridePeople,
               quoted_price: quotedPrice,
