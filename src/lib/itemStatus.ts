@@ -194,6 +194,11 @@ interface DeriveContext {
    * itemstatus zien. Default = "customer" voor backwards-compat.
    */
   audience?: "admin" | "customer" | "partner";
+  /**
+   * Drempels waarboven een admin-prijswijziging opnieuw expliciet klant-
+   * akkoord vereist. Ontbreekt → fallback (5% / €25) via portalPricing.
+   */
+  priceReapprovalThresholds?: { pct?: number; absEur?: number };
 }
 
 /**
