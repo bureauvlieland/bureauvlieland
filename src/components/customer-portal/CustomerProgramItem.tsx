@@ -35,7 +35,8 @@ import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/ty
 import { formatTimeHHmm } from "@/lib/timeUtils";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
