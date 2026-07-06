@@ -1,57 +1,57 @@
-# Fix: "Staffel op groepsgrootte" komt niet mee als onderdeel van een samengestelde bouwsteen
 
-## Wat er misgaat
+## Doel
 
-Beach Grill Experience (`strand-bbq`) heeft twee onderdelen met prijssoort **Staffel op groepsgrootte**:
+Wanneer de admin de definitieve prijs van een onderdeel wijzigt **nadat de klant het programma al heeft goedgekeurd**, moet de klant alleen opnieuw akkoord geven bij een **substantiële prijsstijging**. Kleine correcties en elke prijsdaling verlopen stil en blokkeren de facturatie-flow niet.
 
-- BBQ-huur (set) — staffels: 1-25 → €70, 26-50 → €140, 51-100 → €210
-- Meubilair voor een catering — staffels: 1-25 → €124,50, 26-50 → €249, 51-100 → €373,50
+## Regel
 
-Bij toevoegen aan een programma van 8 personen komen deze onderdelen binnen als **"Op aanvraag"** (leeg), in plaats van als de staffelprijs voor 1-25 pers. In de database staat voor de zojuist toegevoegde regels: `admin_price_override = NULL`, `quoted_price = NULL`, `price_type = "total"`.
+- Prijsdaling → geen klantactie, alleen "Prijs bijgewerkt" logregel in de tijdlijn.
+- Prijsstijging **< drempel** (default **5%**) én absolute stijging **< € 25** → geen klantactie, "Prijs bijgewerkt" logregel.
+- Prijsstijging boven **een van beide** drempels → klant moet opnieuw akkoord geven (status blijft `prijs_gewijzigd`).
 
-Er zitten drie bugs achter dit gedrag.
+Drempels worden instelbaar via `app_settings` zodat ze zonder code-wijziging aan te passen zijn.
 
-### Bug 1 — kind-blokken worden opgehaald zónder `price_extras`
+## Wijzigingen
 
-`fetchRequiredChildrenForBlock` in `src/hooks/useBlockComponents.ts` selecteert de kind-bouwstenen zonder `price_extras`. De staffel-configuratie zit juist daar (`price_extras.tiers`). Zonder deze kolom retourneert `calculateTieredTotal(child, …)` altijd `null` → `quoted_price` blijft leeg.
+### 1. Instellingen (nieuw, met defaults 5% en €25)
+- `app_settings`: twee nieuwe keys `price_change_reapproval_pct` (number, default 5) en `price_change_reapproval_abs_eur` (number, default 25), categorie *pricing*.
+- `src/types/appSettings.ts` en `src/lib/appSettings.ts`: types + fallback + helpers `getPriceReapprovalThresholds(settings)`.
+- Admin-instellingenpagina toont beide velden onder Prijzen (kort uitleg-tooltip).
 
-### Bug 2 — verkeerd aantal personen aan de staffel-lookup
+### 2. Kern-logica in `src/lib/portalPricing.ts`
+Nieuwe helper `priceChangeRequiresReapproval(item, programPeople, numberOfDays, thresholds)`:
+- Retourneert `false` als `admin_price_override` gelijk of lager is dan `quoted_price` (effectief totaal).
+- Retourneert `false` als de stijging zowel onder pct- als abs-drempel valt.
+- Anders `true`.
 
-In `src/components/admin/AdminAddActivitySheet.tsx` (regel 287) wordt de staffel opgezocht met `qty` (afgeleid uit `quantity_mode/value` van het onderdeel). Een staffel op **groepsgrootte** hoort op het aantal personen van het programma opgezocht te worden, niet op de component-hoeveelheid. Voor de standaard `quantity_mode = "fixed", value = 1` levert dat toevallig altijd tier 1 op, ongeacht de groepsomvang.
+`hasOpenAdminPriceChange()` blijft ongewijzigd (breed gebruikt voor "prijs gewijzigd sinds partner-ack"), maar wordt niet meer 1-op-1 gekoppeld aan klantactie.
 
-### Bug 3 — de customer-add-optional-component edge function gebruikt niet-bestaande kolommen
+### 3. Statusafleiding `src/lib/itemStatus.ts`
+- `DeriveContext` krijgt optionele `priceReapprovalThresholds`.
+- In het `hasAcceptance`-blok: alleen `"prijs_gewijzigd"` teruggeven wanneer `priceChangeRequiresReapproval(...)` true is. Anders val terug op de bestaande "geaccepteerd / klant_akkoord_wacht_partner / klant_akkoord_bureau".
+- Tests in `src/lib/__tests__/itemStatus.test.ts` uitbreiden: kleine stijging → `geaccepteerd`, grote stijging → `prijs_gewijzigd`, prijsdaling → `geaccepteerd`.
 
-`supabase/functions/customer-add-optional-component/index.ts` selecteert `tier_min, tier_max, tier_pricing` (bestaan niet in `building_blocks`) en rekent met `child.tier_pricing`. Deze staffel-tak is dus altijd null. Klanten die zelf een optioneel onderdeel met staffelprijs toevoegen krijgen ook "op aanvraag".
+### 4. Klantportaal `src/components/customer-portal/CustomerProgramItem.tsx`
+- Gebruik dezelfde threshold-check voor `priceChangeNeedsAttention` en voor het tonen van de badge/knop "Nieuwe prijs goedkeuren".
+- Onder drempel: geen amber banner, geen extra knop; wel een kleine subtiele micro-pill "Prijs bijgewerkt" (grijs, informatief) op dezelfde regel als het bedrag.
+- App-settings via bestaande `useAppSettings` hook doorgeven vanuit `CustomerProgram.tsx` → `DesktopProgramView` / mobile view → item.
 
-## Aanpak
+### 5. Bulk-actie "Alle X onderdelen goedkeuren"
+- `DesktopProgramView.tsx` (regel 440) en mobile equivalent: `customerActionsCount` telt alleen items met echte klantactie (dus mét threshold-check). Zo verdwijnt de misleidende grote groene knop wanneer alle openstaande wijzigingen onder de drempel vallen.
 
-### 1. Hook: `src/hooks/useBlockComponents.ts`
-Voeg `price_extras` toe aan de `child:building_blocks!…(…)`-select in `fetchRequiredChildrenForBlock` (en in de `useBlockComponents`-query, voor consistentie).
+### 6. Historie/logging
+- Bij het opslaan van `admin_price_override` in `AdminRequestDetail.tsx`: voeg een `program_request_history`-entry toe met action `admin_price_updated` (bedrag oud → nieuw, %-verschil). Zo blijft de wijziging traceerbaar, ook zonder klantactie.
 
-### 2. Admin-flow: `src/components/admin/AdminAddActivitySheet.tsx`
-In de tiered-tak (ca. regel 286-292):
-- Bereken de staffel met `numberOfPeople` (groepsgrootte van het programma), niet met `qty`.
-- Zet `override_people = null` (totaalprijs is groep-gebaseerd, `override_people` is alleen zinvol voor per-persoon items).
-- Update de begeleidende comment (regel 274).
+### 7. Buiten scope
+- Bureau-onderdelen: dezelfde regel geldt (dat lost tegelijk het screenshot-geval "Overtocht" op).
+- Wijziging van andere velden (tijd, personen, dag) blijft ongewijzigd — die behouden altijd hun bestaande approval-flow.
+- Geen wijziging aan `partner_price_change_acknowledged_at`-mechaniek richting partners.
 
-### 3. Edge function: `supabase/functions/customer-add-optional-component/index.ts`
-- Vervang de selectie `tier_min, tier_max, tier_pricing` door `price_extras`.
-- Vervang de inline staffel-berekening door een correcte lookup op `price_extras.tiers` (gesorteerd, incl. `tiers_above_max`-gedrag: `"highest"` → hoogste tier, `"on_request"` → `null`), met `people` (groepsgrootte) als input.
-- Redeploy de edge function.
+## Technische notitie
 
-### 4. Herstel voor het huidige project
-De zojuist toegevoegde regels van Meubilair en BBQ-huur staan al met lege prijs in de DB (Beach Grill Experience, 8 pers). Twee opties:
+Effectief totaal wordt op dezelfde manier berekend als in `hasOpenAdminPriceChange` (per_person / per_person_per_day multipliers). Vergelijking gebeurt op `Math.max(adminTotal - quotedPrice, 0)` — dalingen tellen dus nooit mee als "stijging".
 
-- **A (aanbevolen):** ik vul de correcte staffelprijzen na (Meubilair € 124,50, BBQ-huur € 70) op de twee bestaande rijen, zodat je niets hoeft te doen.
-- **B:** je verwijdert beide regels en voegt Beach Grill Experience opnieuw toe; na de fix worden ze dan meteen goed geboekt.
+## Verificatie
 
-Zeg welke voorkeur je hebt; anders doe ik A.
-
-### 5. Sanity-check
-Na de fix: nieuw testitem toevoegen (Beach Grill Experience op een test-programma van bv. 30 personen) en verifiëren dat Meubilair op € 249 en BBQ-huur op € 140 landt (tier 26-50).
-
-## Wat er níét verandert
-
-- Geen wijziging aan het datamodel of aan `building_block_components`.
-- Geen wijziging aan de staffel-configuratie-UI (`BuildingBlockSheet.tsx`) — die schrijft al correct naar `price_extras.tiers`.
-- Geen wijziging aan de admin-tak waar een tiered-bouwsteen direct (zonder samenstelling) wordt toegevoegd — die werkte al goed via `handleSelectBlock`.
+- Unit tests uitbreiden voor `itemStatus` en `portalPricing`.
+- Handmatige check in preview: bestaand project waar klant akkoord is → admin verhoogt met 2% → klant ziet "Prijs bijgewerkt" (grijs) en géén akkoordknop; verhoogt met 20% → klant ziet amber banner + knop.
