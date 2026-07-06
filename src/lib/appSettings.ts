@@ -66,9 +66,7 @@ export function priceChangeExceedsThreshold(
   const pct = settings?.price_change_reapproval_pct ?? FALLBACK_SETTINGS.price_change_reapproval_pct;
   const abs = settings?.price_change_reapproval_abs_eur ?? FALLBACK_SETTINGS.price_change_reapproval_abs_eur;
   const pctDelta = oldTotal > 0 ? (delta / oldTotal) * 100 : Infinity;
-  return pctDelta >= pct && delta >= abs
-    ? true
-    : pctDelta >= pct && delta >= abs; // both must exceed? Nee — plan: één van beide
+  return pctDelta >= pct || delta >= abs;
 }
 
 /** Veilige clamp voor de "actie nodig" drempel: integer tussen 1 en 30 dagen. */
