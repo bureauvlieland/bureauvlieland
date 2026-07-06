@@ -47,7 +47,29 @@ export const FALLBACK_SETTINGS: AppSettingsMap = {
     byType: {},
   },
   todo_due_soon_days: 3,
+  price_change_reapproval_pct: 5,
+  price_change_reapproval_abs_eur: 25,
 };
+
+/**
+ * Beslis of een admin-prijswijziging na eerdere klantgoedkeuring opnieuw
+ * expliciet akkoord van de klant vereist. Klein of dalend → stil doorvoeren.
+ */
+export function priceChangeExceedsThreshold(
+  oldTotal: number | null | undefined,
+  newTotal: number | null | undefined,
+  settings?: Partial<AppSettingsMap>,
+): boolean {
+  if (newTotal == null || oldTotal == null) return false;
+  const delta = newTotal - oldTotal;
+  if (delta <= 0.01) return false; // dalingen en verwaarloosbaar
+  const pct = settings?.price_change_reapproval_pct ?? FALLBACK_SETTINGS.price_change_reapproval_pct;
+  const abs = settings?.price_change_reapproval_abs_eur ?? FALLBACK_SETTINGS.price_change_reapproval_abs_eur;
+  const pctDelta = oldTotal > 0 ? (delta / oldTotal) * 100 : Infinity;
+  return pctDelta >= pct && delta >= abs
+    ? true
+    : pctDelta >= pct && delta >= abs; // both must exceed? Nee — plan: één van beide
+}
 
 /** Veilige clamp voor de "actie nodig" drempel: integer tussen 1 en 30 dagen. */
 export function getTodoDueSoonDays(value: number | undefined | null): number {
