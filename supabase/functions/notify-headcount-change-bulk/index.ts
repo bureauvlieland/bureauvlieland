@@ -8,7 +8,6 @@ import {
   buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -191,10 +190,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
         )
         .in("id", partner_item_ids);
 
-      // Groepeer per partner
+      // Groepeer per partner. Bureau-items (rederij/fietsverhuur/bagagevervoer/
+      // 'bureau') worden bewust MEE-genotificeerd zodat de betrokken partner
+      // (of Bureau zelf, als centrale boeker) een signaal krijgt om de
+      // reservering aan te passen.
       const groups = new Map<string, { partner_id: string; items: typeof items }>();
       for (const it of items || []) {
-        if (isBureauItem(it)) continue;
         const key = it.provider_id || "_no_partner";
         if (!groups.has(key)) groups.set(key, { partner_id: it.provider_id || "", items: [] });
         groups.get(key)!.items!.push(it);

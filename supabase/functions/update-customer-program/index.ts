@@ -258,7 +258,23 @@ Deno.serve(async (req) => {
         updateData.number_of_people = programDetails.numberOfPeople;
         historyNotes.push(`Aantal personen: ${program.number_of_people} → ${programDetails.numberOfPeople}`);
 
+        const oldPeople = program.number_of_people;
+        const newPeople = programDetails.numberOfPeople;
+
+        // Verzamel partner-items (INCLUSIEF bureau-managed: rederij, fietsverhuur,
+        // bagagevervoer, en pure 'bureau'-items) zodat elk betrokken partij een
+        // headcount-notificatie krijgt.
+        const { data: partnerItems } = await supabase
+          .from("program_request_items")
+          .select("id, provider_id, block_type")
+          .eq("request_id", program.id)
+          .neq("status", "cancelled")
+          .not("provider_id", "is", null)
+          .neq("block_type", "self_arranged");
+        const partnerItemIds = (partnerItems || []).map((i: any) => i.id);
+
         // Sync number_of_guests to linked accommodation request
+        let accommodationQuoteIds: string[] = [];
         if (program.linked_accommodation_id) {
           await supabase
             .from("accommodation_requests")
@@ -272,12 +288,12 @@ Deno.serve(async (req) => {
           // Reset ALL accommodation quotes (including selected) back to pending
           const { data: resetQuotes } = await supabase
             .from("accommodation_quotes")
-            .select("id, partner_id, accommodation_name, status, partner:partners(id, name, email, contact_email)")
+            .select("id")
             .eq("request_id", program.linked_accommodation_id)
             .in("status", ["pending", "submitted", "selected"]);
 
           if (resetQuotes && resetQuotes.length > 0) {
-            const quoteIds = resetQuotes.map(q => q.id);
+            accommodationQuoteIds = resetQuotes.map((q: any) => q.id);
             await supabase
               .from("accommodation_quotes")
               .update({
@@ -286,30 +302,50 @@ Deno.serve(async (req) => {
                 selected_at: null,
                 updated_at: new Date().toISOString(),
               })
-              .in("id", quoteIds);
+              .in("id", accommodationQuoteIds);
 
-            console.log(`Reset ${quoteIds.length} accommodation quotes to pending due to people change`);
+            console.log(`Reset ${accommodationQuoteIds.length} accommodation quotes to pending due to people change`);
+          }
+        }
 
-            // GEEN automatische partner-mail meer bij wijziging aantal personen.
-            // Bureau informeert logiespartners handmatig.
-            try {
-              const accommodationNames = resetQuotes.map((q: any) => q.accommodation_name).filter(Boolean);
-              await supabase.from("admin_todos").insert({
-                title: `Klant heeft aantal personen gewijzigd — informeer logiespartners handmatig`,
-                description: `Aantal personen voor ${program.customer_company || program.customer_name} (${program.reference_number || program.id}) is gewijzigd van ${program.number_of_people} naar ${programDetails.numberOfPeople}. ${quoteIds.length} logies-offerte(s) zijn teruggezet naar 'pending'. Betrokken accommodaties: ${accommodationNames.join(", ") || "—"}. Informeer de logiespartners handmatig waar nodig.`,
-                priority: "high",
-                status: "todo",
-                related_request_id: program.id,
-                auto_type: "people_change_accommodation",
-                auto_entity_id: program.id,
-              });
+        // Auto-trigger partner-notificaties (fire-and-forget). Fout leidt tot
+        // fallback admin-todo zodat bureau handmatig kan bijspringen.
+        let notifyOk = false;
+        try {
+          const { data: notifyData, error: notifyErr } = await supabase.functions.invoke(
+            "notify-headcount-change-bulk",
+            {
+              body: {
+                request_id: program.id,
+                old_people: oldPeople,
+                new_people: newPeople,
+                send_customer: false,
+                partner_item_ids: partnerItemIds,
+                accommodation_quote_ids: accommodationQuoteIds,
+                origin,
+              },
+            },
+          );
+          if (notifyErr) throw notifyErr;
+          notifyOk = true;
+          console.log("notify-headcount-change-bulk OK:", notifyData);
+        } catch (notifyErr) {
+          console.error("notify-headcount-change-bulk failed:", notifyErr);
+        }
 
-              // Interne mail vervangen door admin_todo (zie hierboven) —
-              // bureau ziet het in de werkbank, geen extra inbox-ruis.
-
-            } catch (todoErr) {
-              console.error("Failed to create admin todo for people change:", todoErr);
-            }
+        if (!notifyOk) {
+          try {
+            await supabase.from("admin_todos").insert({
+              title: `Partner-notificaties bij aantalwijziging FAALDEN — informeer handmatig`,
+              description: `Aantal personen voor ${program.customer_company || program.customer_name} (${program.reference_number || program.id}) is door de klant gewijzigd van ${oldPeople} naar ${newPeople}. De automatische partner-mails zijn mislukt. Controleer de logs en informeer betrokken partners handmatig via het project.`,
+              priority: "high",
+              status: "todo",
+              related_request_id: program.id,
+              auto_type: "people_change_notify_failed",
+              auto_entity_id: program.id,
+            });
+          } catch (todoErr) {
+            console.error("Failed to create fallback admin todo:", todoErr);
           }
         }
       }
