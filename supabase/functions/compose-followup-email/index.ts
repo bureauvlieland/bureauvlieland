@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       const { data: pr } = await supabase
         .from("program_requests")
         .select(
-          "reference_number, status, customer_name, customer_company, customer_email, number_of_people, selected_dates, customer_token, created_at, quote_sent_at, customer_approved_at, customer_accepted_at, admin_notes",
+          "reference_number, status, customer_name, customer_company, customer_email, number_of_people, selected_dates, customer_token, created_at, quote_sent_at, terms_accepted_at, admin_notes",
         )
         .eq("id", requestId)
         .maybeSingle();
@@ -88,8 +88,7 @@ Deno.serve(async (req) => {
           datums: pr.selected_dates,
           aanvraag_op: pr.created_at,
           offerte_verstuurd_op: pr.quote_sent_at,
-          klant_akkoord_op: pr.customer_approved_at,
-          klant_ondertekend_op: pr.customer_accepted_at,
+          klant_ondertekend_op: pr.terms_accepted_at,
           admin_notitie: pr.admin_notes,
         };
       }
