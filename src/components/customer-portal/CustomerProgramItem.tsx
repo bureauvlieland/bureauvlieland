@@ -182,6 +182,9 @@ export const CustomerProgramItem = ({
                 {priceChangeNeedsAttention && (
                   <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
                 )}
+                {priceChangeInfoOnly && (
+                  <MicroPill tone="slate">Prijs bijgewerkt</MicroPill>
+                )}
 
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
