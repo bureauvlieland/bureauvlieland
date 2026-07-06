@@ -35,7 +35,8 @@ import { type ProgramRequestItem, type ItemStatus, itemStatusConfig } from "@/ty
 import { formatTimeHHmm } from "@/lib/timeUtils";
 import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -89,18 +90,29 @@ export const CustomerProgramItem = ({
   const statusConfig = itemStatusConfig[item.status as ItemStatus];
   const currentDate = selectedDates[item.day_index];
   const isSelfArranged = item.block_type === "self_arranged";
-  // Eén bron van waarheid: hasOpenAdminPriceChange() — admin heeft een prijs gezet
-  // die nieuwer is dan de laatste partner-acknowledge (of dan quoted_at). Alleen dan
-  // tonen we de "Prijs gewijzigd"-badge, amber banner, en knop "Akkoord met nieuwe prijs".
-  // Belangrijk: zodra de klant al akkoord heeft gegeven (customer_accepted_at), is een
-  // latere admin-prijscorrectie een INTERNE actie tussen bureau en partner. De klant
-  // hoeft daar niet opnieuw op te reageren — anders krijg je een verwarrende melding
-  // zonder bijbehorende knop.
+  const { settings: appSettings } = useAppSettings();
+  const priceThresholds = {
+    pct: appSettings.price_change_reapproval_pct,
+    absEur: appSettings.price_change_reapproval_abs_eur,
+  };
+
+  // Een openstaande admin-prijswijziging waar de klant nog niet op heeft
+  // gereageerd — en die groot genoeg is om opnieuw akkoord te vragen.
+  // Kleine correcties en prijsdalingen worden stil doorgevoerd (drempels
+  // configurable via app_settings).
+  const hasOpenPriceChange = !isSelfArranged
+    && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
   const priceChangeNeedsAttention =
     !isSelfArranged
-    && !item.customer_accepted_at
-    && (item.status === "confirmed" || item.status === "alternative")
-    && hasOpenAdminPriceChange(item, numberOfPeople ?? 1, selectedDates.length || 1);
+    && (item.status === "confirmed" || item.status === "alternative" || !!item.customer_accepted_at)
+    && priceChangeRequiresReapproval(
+        item,
+        numberOfPeople ?? 1,
+        selectedDates.length || 1,
+        priceThresholds,
+      );
+  // Kleine/dalende wijziging → alleen informatieve pill, geen actie.
+  const priceChangeInfoOnly = hasOpenPriceChange && !priceChangeNeedsAttention;
 
   // Eén bron voor badge én actieknop. Zo kan een onderdeel niet meer wél
   // "Goedkeuring nodig" tonen, maar géén goedkeurknop krijgen.
@@ -108,6 +120,7 @@ export const CustomerProgramItem = ({
     programPeople: numberOfPeople ?? 1,
     numberOfDays: selectedDates.length || 1,
     quoteStatus: quoteStatus ?? null,
+    priceReapprovalThresholds: priceThresholds,
   });
 
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
@@ -168,6 +181,9 @@ export const CustomerProgramItem = ({
                 <ItemDisplayStatusBadge status={derivedStatus} audience="customer" />
                 {priceChangeNeedsAttention && (
                   <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
+                )}
+                {priceChangeInfoOnly && (
+                  <MicroPill tone="slate">Prijs bijgewerkt</MicroPill>
                 )}
 
               </div>

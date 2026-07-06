@@ -9,7 +9,7 @@
  * stuurmiddel voor edge functions, niet voor UI-labels.
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
-import { hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 
 export type ItemDisplayStatus =
   | "wacht_op_partner"
@@ -194,6 +194,11 @@ interface DeriveContext {
    * itemstatus zien. Default = "customer" voor backwards-compat.
    */
   audience?: "admin" | "customer" | "partner";
+  /**
+   * Drempels waarboven een admin-prijswijziging opnieuw expliciet klant-
+   * akkoord vereist. Ontbreekt → fallback (5% / €25) via portalPricing.
+   */
+  priceReapprovalThresholds?: { pct?: number; absEur?: number };
 }
 
 /**
@@ -249,7 +254,13 @@ export function deriveItemDisplayStatus(
       openPriceChange &&
       item.admin_price_override_updated_at &&
       new Date(item.admin_price_override_updated_at).getTime() >
-        new Date(item.customer_accepted_at!).getTime()
+        new Date(item.customer_accepted_at!).getTime() &&
+      priceChangeRequiresReapproval(
+        item,
+        item.override_people ?? ctx.programPeople,
+        ctx.numberOfDays,
+        ctx.priceReapprovalThresholds,
+      )
     ) {
       return "prijs_gewijzigd";
     }

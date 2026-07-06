@@ -66,6 +66,17 @@ export interface AppSettingsMap {
   todo_age_thresholds: TodoAgeThresholdsConfig;
   /** Aantal dagen vóór deadline waarop een todo als "actie nodig" / due-soon wordt gemarkeerd. */
   todo_due_soon_days: number;
+  /**
+   * Minimale procentuele prijsstijging (t.o.v. laatst goedgekeurde `quoted_price`)
+   * waarboven de klant opnieuw akkoord moet geven na een admin-prijswijziging.
+   * Wijzigingen onder zowel dit percentage als de absolute drempel gaan stil door.
+   */
+  price_change_reapproval_pct: number;
+  /**
+   * Minimale absolute prijsstijging (in EUR, totaalbedrag) waarboven de klant
+   * opnieuw akkoord moet geven na een admin-prijswijziging.
+   */
+  price_change_reapproval_abs_eur: number;
 }
 
 // Setting categories for grouping in admin UI

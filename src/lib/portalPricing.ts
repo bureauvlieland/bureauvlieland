@@ -147,6 +147,47 @@ export function hasOpenAdminPriceChange(
   return true;
 }
 
+/**
+ * Bepaalt of een openstaande admin-prijswijziging groot genoeg is om
+ * opnieuw expliciet klant-akkoord te vragen. Prijsdalingen en kleine
+ * correcties (onder zowel % als abs drempel) → false, zodat de facturatie-
+ * flow niet onnodig wordt geblokkeerd.
+ *
+ * Vereist zowel programPeople als een bestaande `quoted_price` om te
+ * kunnen vergelijken; ontbreekt één van beide → val terug op de brede
+ * `hasOpenAdminPriceChange`-detectie (behoud oude gedrag).
+ */
+export function priceChangeRequiresReapproval(
+  item: {
+    admin_price_override_updated_at?: string | null;
+    partner_price_change_acknowledged_at?: string | null;
+    quoted_at?: string | null;
+    admin_price_override?: number | null;
+    quoted_price?: number | null;
+    price_type?: string | null;
+    override_people?: number | null;
+  },
+  programPeople: number,
+  numberOfDays: number,
+  thresholds?: { pct?: number; absEur?: number },
+): boolean {
+  if (!hasOpenAdminPriceChange(item, programPeople, numberOfDays)) return false;
+  if (item.admin_price_override == null || item.quoted_price == null) {
+    // Geen basis om delta te bepalen → conservatief: opnieuw vragen.
+    return true;
+  }
+  const effectivePeople = getEffectivePeople(item, programPeople);
+  const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
+  const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+  const adminTotal = item.admin_price_override * personMultiplier * dayMultiplier;
+  const delta = adminTotal - item.quoted_price;
+  if (delta <= 0.01) return false; // gelijk of daling
+  const pct = thresholds?.pct ?? 5;
+  const abs = thresholds?.absEur ?? 25;
+  const pctDelta = item.quoted_price > 0 ? (delta / item.quoted_price) * 100 : Infinity;
+  return pctDelta >= pct || delta >= abs;
+}
+
 /** Whether this item should be multiplied by number of people */
 export function isPerPersonItem(item: { price_type?: string | null }): boolean {
   return !item.price_type || item.price_type === "per_person" || item.price_type === "per_person_per_day";
