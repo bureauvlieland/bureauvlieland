@@ -254,7 +254,13 @@ export function deriveItemDisplayStatus(
       openPriceChange &&
       item.admin_price_override_updated_at &&
       new Date(item.admin_price_override_updated_at).getTime() >
-        new Date(item.customer_accepted_at!).getTime()
+        new Date(item.customer_accepted_at!).getTime() &&
+      priceChangeRequiresReapproval(
+        item,
+        item.override_people ?? ctx.programPeople,
+        ctx.numberOfDays,
+        ctx.priceReapprovalThresholds,
+      )
     ) {
       return "prijs_gewijzigd";
     }
