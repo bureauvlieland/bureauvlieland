@@ -9,7 +9,7 @@
  * stuurmiddel voor edge functions, niet voor UI-labels.
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
-import { hasOpenAdminPriceChange } from "@/lib/portalPricing";
+import { hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 
 export type ItemDisplayStatus =
   | "wacht_op_partner"
