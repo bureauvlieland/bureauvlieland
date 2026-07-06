@@ -56,8 +56,8 @@ async function loadProjectActivity(
       .in("id", projectIds),
     supabase
       .from("project_communications")
-      .select("project_id, created_at")
-      .in("project_id", projectIds)
+      .select("request_id, created_at")
+      .in("request_id", projectIds)
       .order("created_at", { ascending: false }),
     supabase
       .from("program_request_items")
@@ -70,8 +70,8 @@ async function loadProjectActivity(
   for (const row of (commsRes.data ?? []) as any[]) {
     const t = new Date(row.created_at).getTime();
     if (!Number.isNaN(t)) {
-      const cur = lastContact.get(row.project_id) ?? 0;
-      if (t > cur) lastContact.set(row.project_id, t);
+      const cur = lastContact.get(row.request_id) ?? 0;
+      if (t > cur) lastContact.set(row.request_id, t);
     }
   }
   for (const row of (itemsRes.data ?? []) as any[]) {
@@ -191,9 +191,9 @@ async function gatherSignals(supabase: ReturnType<typeof createClient>): Promise
   const soonExpire = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: expiring } = await supabase
     .from("program_requests")
-    .select("id, reference_number, customer_name, expires_at, status, customer_approved_at")
+    .select("id, reference_number, customer_name, expires_at, status, terms_accepted_at")
     .eq("status", "active")
-    .is("customer_approved_at", null)
+    .is("terms_accepted_at", null)
     .lte("expires_at", soonExpire)
     .gte("expires_at", now.toISOString())
     .limit(10);

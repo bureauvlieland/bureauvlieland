@@ -133,14 +133,18 @@ Deno.serve(async (req) => {
         ? new Date(ev.time * 1000).toISOString()
         : new Date().toISOString();
 
-      // Find matching log row
-      const { data: row, error: fetchErr } = await supabase
+      // Find matching log row. mailjet_message_id is niet gegarandeerd uniek
+      // (bv. bij re-sends of dubbele logs) — pak de meest recente rij i.p.v.
+      // single() dat crasht bij >1 match.
+      const { data: rows, error: fetchErr } = await supabase
         .from("email_log")
         .select(
           "id, status, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at",
         )
         .eq("mailjet_message_id", messageId)
-        .maybeSingle();
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const row = rows && rows.length > 0 ? rows[0] : null;
 
       if (fetchErr) {
         console.error("Lookup error:", fetchErr);
