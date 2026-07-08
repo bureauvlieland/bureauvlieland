@@ -1,73 +1,90 @@
+# Unit-test audit & hardening plan
 
-# Doel
+## Huidige stand (kort)
 
-Van "we hopen dat het werkt" naar "we bewijzen elke release dat het werkt" voor alle uitgaande communicatie. Drie parallelle sporen + één afsluitende externe check.
+- **src/lib/__tests__**: 11 bestanden, deels Vitest, deels een custom runner die niet in CI faalt.
+- **Edge functions**: alleen tests in `_shared/` (email-logger, mailjet-tracking); geen tests op individuele functions.
+- **E2E**: 1 Playwright happy-path + 1 regressieguard (geen quote-PDF-knop in customer portal).
+- **package.json**: geen `test` script; tests draaien niet automatisch.
 
----
+Conclusie: we zijn **niet** up to date. De dekking ligt laag voor de processen die nu worden verhard (e-mail idempotency, suppressie, workflow-overgangen).
 
-## Spoor 1 — E2E-testsuite voor de kritieke workflows
+## Doel
 
-Playwright-suite die per release de belangrijkste ketens end-to-end doorloopt tegen een schone preview-database. Per keten wordt gecontroleerd: (a) juiste statusovergangen in DB, (b) juiste e-mail-rijen in `email_log` met `mailjet_message_id` en juiste `email_type`, (c) juiste ontvanger(s), (d) geen dubbele sends.
+Alle kritieke communicatie- en prijs/workflow-logica testbaar maken, zodat een release pas groen is als de unit-tests slagen. Focus op regels die al in productie staan en die nu handmatig worden gecontroleerd.
 
-Ketens die we dekken:
-1. **Configurator → self-service submit** (bestaat al, uitbreiden met e-mailassertions)
-2. **Offerte-aanvraag → partnerofferte → klantakkoord → verzendfactuur → aftersales-mail**
-3. **Logies-aanvraag → 3 partneroffertes → auto-reject bij selectie → bevestiging klant + partners**
-4. **Prijs/aantalwijziging na akkoord → notify-customer-price-change + notify-partner-price-change/headcount**
-5. **Partner-wachtwoord reset + intro-email**
-6. **Annulering project → notify-partner-cancellation naar alle betrokken partners**
-7. **Klantcontact via reply-to subaddressing → Mailjet Parse → project_communications**
+## Fasering
 
-E-mails worden **niet echt verzonden** in tests: `MAILJET_TEST_MODE=true` env-var laat `_shared/mailjet-send.ts` de call skippen en een fake MessageID teruggeven, zodat we volledig assertion-based kunnen testen zonder Mailjet-quota te raken.
+### 1. Testinfrastructuur repareren
 
-## Spoor 2 — Content-regressie + idempotency/suppression harden
+- `package.json` script toevoegen: `"test": "vitest run"`.
+- `portalPricing.consistency.test.ts` omzetten naar echte Vitest-tests (`describe` / `it` / `expect`) zodat een falende assertion ook in CI faalt.
+- Vitest-config controleren: `tests/e2e/**` blijft excluded; de e2e-spec en de regressieguard onder `tests/` moeten wel correct meeliften.
 
-**Content-regressie:**
-- Nieuwe testfile `tests/email-templates.snapshot.test.ts` die per email-type de template rendert met vaste `previewData` en de HTML + subject als snapshot vastlegt. Onbedoelde wijziging in copy, variabele-naam of layout → test faalt vóór deploy.
-- Werkt via een klein `renderTemplate(type, data)`-helper die we uit de bestaande template-registry kunnen aanroepen zonder Mailjet.
+### 2. src/lib unit-tests uitbreiden
 
-**Idempotency:**
-- Uitbreiding van `_shared/mailjet-send.ts`: optionele `idempotencyKey` parameter (bijv. `"invoice-{invoiceId}"`). Voor send: query `email_log WHERE idempotency_key = ? AND sent_at > now()-interval '10 min'`. Als hit → skip send, log `status='skipped_duplicate'`. Voorkomt dubbele facturen/bevestigingen bij dubbelklik of retry.
-- Nieuwe kolom `email_log.idempotency_key TEXT` + partial unique index.
-- Toepassen in de ~10 meest kritieke calls (factuur, offerte, akkoord-bevestiging, aftersales).
+High-risk pure functies die nu ongedekt of ondergedekt zijn:
 
-**Suppression:**
-- Nieuwe tabel `email_suppressions (email, reason, created_at, source)`.
-- Mailjet-webhook (`mailjet-event-webhook`) schrijft `bounce`/`spam`/`blocked`/`unsub` automatisch naar deze tabel.
-- `_shared/mailjet-send.ts` doet **pre-flight check** en weigert send naar geblokkeerde adressen; log `status='suppressed'` in `email_log` met reden. Voorkomt reputatieschade richting Mailjet en irritante herhaal-bounces.
-- Beheer-UI: nieuw tabblad in `/admin/email-health` met suppressielijst + handmatig verwijderen.
+- `portalPricing.ts` — reeds gedeeltelijk, maar omzetten naar Vitest + meer randgevallen.
+- `vatCalculation.ts`, `commissionRates.ts`, `invoiceTotals.ts` — commissie ex-BTW, totaal inclusief/exclusief BTW.
+- `itemStatus.ts`, `projectStatus.ts`, `customerQuoteApproval.ts` — status-overgangen, silence=agreement, "customer_approved_at" + "customer_accepted_at".
+- `quoteItemSendStatus.ts`, `projectWorkflow.ts`, `bureauItem.ts` — verzenden, interne items, day_index -1.
+- `programTemplateCopy.ts` — copy-logica zonder live API-afhankelijkheden.
+- `autoTodoCreator.ts` — todo-aanmaakcriteria en sluitcriteria.
+- `purchaseInvoiceDuplicateCheck.ts`, `partnerCompleteness.ts` — duplicaatdetectie en partner-validatie.
 
-## Spoor 3 — Extern QA-audit-rapport
+### 3. Shared edge-function helpers harden
 
-Onafhankelijke doorloop van alle 33 communicatiestromen, uitgevoerd door mij als aparte "auditor-pas" (los van de bouwer-pas), met concreet gap-rapport in `.lovable/audit-communicatie-{datum}.md`. Per stroom:
-- **Trigger** (welke user-actie / cron / webhook)
-- **Ontvanger(s)** en of PII correct is gestript (partner vs klant regels uit memory)
-- **Toon** ('u' vs 'je' — memory `formal-communication-tone`)
-- **Reply-to** correct ingesteld
-- **Test-mail** in preview verstuurd, screenshot in rapport
-- **Bevindingen** met severity (blokkerend / hoog / laag)
+Bestanden onder `supabase/functions/_shared/`:
 
-Levert een prioriteitslijst op waar we daarna gericht op kunnen fixen. Dit is complementair aan de automatische tests: die vangen regressies, dit vangt bestaande gaten die we nog niet kennen.
+- `mailjet-send.ts` — testen: idempotency-skip binnen 10 min, suppressie-blokkade, `MAILJET_TEST_MODE` fake-ID, MessageID extractie, fail-open bij DB-storing.
+- `email-logger.ts` — bestaande tests uitbreiden met `idempotency_key` validatie.
+- `bureau-item.ts`, `project-activity.ts` — logica voor interne items en activiteitslogging.
 
----
+### 4. Deno-tests per kritieke e-mail edge function
 
-## Volgorde
+Per function een `index_test.ts` met stubbed Mailjet-fetch en stubbed Supabase-service-role-client. Functies die minstens gedekt worden:
 
-1. Spoor 2 eerst (kleinste bouw, direct effect): idempotency + suppression + snapshot-tests.
-2. Spoor 1 (grootste bouw): E2E-suite, keten voor keten uitbreiden. Start bij factuur-keten (grootste financiële impact).
-3. Spoor 3 als afsluitende audit nadat 1 en 2 draaien — dan meet de audit ook meteen of de nieuwe guards werken.
+- `send-bureau-invoice-to-customer`
+- `send-commission-invoice-to-partner`
+- `select-accommodation-quote`
+- `send-program-request`
+- `send-accommodation-quote-request`
+- `forward-bureau-invoice`
+- `forward-commission-invoice`
+- `send-customer-aftersales`
+- `send-partner-reset-email`
+- `admin-reset-partner-password`
 
-## Buiten scope
+Te testen gedrag:
 
-- Backfill van de 141 historische rijen zonder `mailjet_message_id` (niet mogelijk).
-- Externe penetratietest / security audit (aparte scope).
-- Load-testing van Mailjet-quota.
+- Idempotency-key zorgt dat tweede call geen mail verstuurt.
+- Suppressie-list blokkeert verzending.
+- `email_log` krijgt `template_name`, `actor`, `mailjet_message_id` (of fake-ID in test mode).
+- Correcte status-overgangen / foutafhandeling bij ontbrekende data.
 
-## Technische details
+### 5. E2E / regressie-uitbreiding
 
-- **Test-DB:** we gebruiken de bestaande preview Supabase (`test_mode`-flag in edge functions herkent dit al) + Playwright met `E2E_BASE_URL=http://localhost:8080`.
-- **Fake Mailjet:** env-var `MAILJET_TEST_MODE=1` in edge functions → `_shared/mailjet-send.ts` returned `{ MessageID: 'test-{uuid}', skipped: true }` zonder HTTP-call.
-- **Snapshot-tests:** vitest built-in `toMatchSnapshot()`, opslag onder `tests/__snapshots__/email-templates/`.
-- **Migratie:** nieuwe kolom + index + tabel via één `supabase--migration` call. Inclusief GRANT + RLS (`email_suppressions`: alleen admin read/write).
-- **Guardrail:** bestaande `_shared/mailjet-tracking.test.ts` uitbreiden zodat alle send-call sites ook `idempotencyKey` meesturen waar van toepassing.
+- Playwright happy-path: factuur → partneroffertes → klantakkoord → factuur → aftersales, met `MAILJET_TEST_MODE=1`.
+- Regressietest: geen offerte-PDF-knop in customer portal (bestaat al, behouden).
+- Toevoegen: idempotency-dubbelklik-regressie en suppressie-workflow.
 
+### 6. CI & runbook
+
+- `bun test` moet groen draaien in de sandbox.
+- `tests/README.md` bijwerken met:
+  - `bun test` voor unit-tests
+  - `supabase--test_edge_functions` voor Deno edge-function tests
+  - Playwright-lokaal instructies (service-role-key nodig)
+
+## Wat we NIET in deze slag doen
+
+- Geen frontend component-tests (React Testing Library) — buiten scope.
+- Geen load-tests of performance-tests.
+- Geen externe penetratietest.
+
+## Acceptatie
+
+- `bun test` slaagt.
+- `supabase--test_edge_functions` slaagt voor de 10 geselecteerde functions.
+- De audit-rapportage in `/admin/email-health` toont minstens één extra test-dekking-indicator (bijv. "X van Y edge functions getest").

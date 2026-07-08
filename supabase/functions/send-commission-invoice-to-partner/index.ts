@@ -38,7 +38,7 @@ const escapeHtml = (str: string) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 
-Deno.serve(async (req) => {
+export async function handler(req: Request): Promise<Response> {
   let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -317,4 +317,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}
+
+Deno.serve(handler);

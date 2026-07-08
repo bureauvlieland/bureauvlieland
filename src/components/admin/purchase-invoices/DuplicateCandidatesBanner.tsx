@@ -151,7 +151,7 @@ export function DuplicateCandidatesBanner() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Button asChild size="sm" variant="outline">
-              <Link to="/admin/inkoop-inbox">Naar inkoop-inbox</Link>
+              <Link to="/admin/inkoopfacturen/inbox">Naar inkoop-inbox</Link>
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setExpanded((v) => !v)}>
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -192,7 +192,7 @@ export function DuplicateCandidatesBanner() {
                 </div>
               </div>
               <Button asChild size="sm" variant="outline" className="shrink-0">
-                <Link to="/admin/inkoop-inbox">Koppel</Link>
+                <Link to="/admin/inkoopfacturen/inbox">Koppel</Link>
               </Button>
             </div>
           ))}

@@ -1,13 +1,4 @@
-/**
- * Route integrity check.
- * Verifies every literal `<Link to="/...">` in the source resolves to a route
- * defined in src/App.tsx. Specifically asserts that links to
- * `/programma-op-maat` and `/voorbeeldprogrammas` exist and resolve.
- *
- * Run: `bun run src/lib/__tests__/routes.test.ts`
- * Exit code 1 on failure.
- */
-// @ts-nocheck
+import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, resolve } from "path";
 
@@ -51,11 +42,8 @@ function extractLinks() {
   const files = walk(SRC);
   const links: Array<{ file: string; to: string; kind: string }> = [];
 
-  // Match: <Link to="/..."> and <Link to={"/..."}>
   const linkRe = /<Link\b[^>]*\bto=\{?["'`]([^"'`{}\n]+)["'`]\}?/g;
-  // Match: <a href="/..."> (intern only — must start with "/")
   const aRe = /<a\b[^>]*\bhref=\{?["'`](\/[^"'`{}\n]*)["'`]\}?/g;
-  // Match: object literal entries like { href: "/..." } / { link: "/..." } / { to: "/..." }
   const objRe = /\b(?:href|link|to|path)\s*:\s*["'`](\/[^"'`{}\n]*)["'`]/g;
 
   for (const f of files) {
@@ -67,7 +55,6 @@ function extractLinks() {
       while ((m = re.exec(src))) {
         const path = m[1].split("?")[0].split("#")[0];
         if (!path.startsWith("/")) continue;
-        // ignore raw asset / api paths
         if (path.startsWith("/api/") || path.startsWith("/assets/")) continue;
         if (/\.[a-z0-9]{2,5}$/i.test(path)) continue;
         links.push({ file: f, to: path, kind });
@@ -77,44 +64,25 @@ function extractLinks() {
   return links;
 }
 
-export function runRouteIntegrityChecks(): void {
+const isResolvable = (p: string, exact: Set<string>, prefixes: string[]) =>
+  exact.has(p) || prefixes.some((pre) => p === pre || p.startsWith(pre + "/"));
+
+describe("Route integrity", () => {
   const { exact, prefixes } = extractRoutes();
   const links = extractLinks();
-  const errors: string[] = [];
 
-  const isResolvable = (p: string) =>
-    exact.has(p) || prefixes.some((pre) => p === pre || p.startsWith(pre + "/"));
+  it("App.tsx bevat de verwachte routes", () => {
+    expect(exact.has("/programma-op-maat")).toBe(true);
+    expect(exact.has("/voorbeeldprogrammas")).toBe(true);
+  });
 
-  if (!exact.has("/programma-op-maat")) errors.push("App.tsx mist route /programma-op-maat");
-  if (!exact.has("/voorbeeldprogrammas")) errors.push("App.tsx mist route /voorbeeldprogrammas");
+  it("elke interne <Link> target lost op naar een gedefinieerde route", () => {
+    const broken = links.filter((l) => !isResolvable(l.to, exact, prefixes));
+    expect(broken).toEqual([]);
+  });
 
-  const checkTarget = (target: string) => {
-    const found = links.filter((l) => l.to === target);
-    if (found.length === 0) errors.push(`Geen <Link to="${target}"> gevonden in code`);
-    for (const l of found) {
-      if (!isResolvable(l.to)) errors.push(`Broken link → ${l.to} in ${l.file.replace(SRC, "src")}`);
-    }
-  };
-  checkTarget("/programma-op-maat");
-  checkTarget("/voorbeeldprogrammas");
-
-  const broken = links.filter((l) => !isResolvable(l.to));
-  for (const b of broken) {
-    errors.push(`Broken internal link: ${b.to} (in ${b.file.replace(SRC, "src")})`);
-  }
-
-  console.log(`✓ ${exact.size} exact routes, ${prefixes.length} dynamic-prefix routes`);
-  console.log(`✓ ${links.length} interne <Link> targets gescand`);
-
-  if (errors.length) {
-    console.error(`\n✗ ${errors.length} probleem(en):`);
-    for (const e of errors) console.error("  - " + e);
-    process.exit(1);
-  }
-  console.log("✓ Alle routes / links OK");
-}
-
-// Auto-run when invoked directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runRouteIntegrityChecks();
-}
+  it("programma-op-maat en voorbeeldprogrammas hebben minstens één link", () => {
+    expect(links.some((l) => l.to === "/programma-op-maat")).toBe(true);
+    expect(links.some((l) => l.to === "/voorbeeldprogrammas")).toBe(true);
+  });
+});
