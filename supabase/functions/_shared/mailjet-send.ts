@@ -131,11 +131,65 @@ export async function sendMailjet(
   const apiKey = Deno.env.get("MAILJET_API_KEY");
   const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
   const source = opts.source ?? "unknown";
+  const testMode = Deno.env.get("MAILJET_TEST_MODE") === "1";
+
+  // Test mode: geen echte call, deterministische fake MessageID zodat
+  // E2E-tests wél de logEmail-rij en downstream logica kunnen asserteren.
+  if (testMode) {
+    const fakeId = `test-${crypto.randomUUID()}`;
+    console.log(`[mailjet-send:${source}] TEST MODE — skipping real send, returning ${fakeId}`);
+    return { ok: true, messageId: fakeId, messageIds: [fakeId], raw: null, skipped: "test_mode" };
+  }
 
   if (!apiKey || !secretKey) {
     console.error(`[mailjet-send:${source}] Mailjet credentials not configured`);
     return { ok: false, error: "Mailjet credentials not configured" };
   }
+
+  // Suppression pre-flight: als één van de To-adressen op de lijst staat,
+  // versturen we niets. Default aan; alleen expliciet uit te schakelen.
+  if (opts.checkSuppression !== false) {
+    for (const msg of opts.messages) {
+      for (const to of msg.To ?? []) {
+        const supp = await checkEmailSuppressed(to.Email);
+        if (supp) {
+          console.warn(
+            `[mailjet-send:${source}] Skipping — recipient ${to.Email} is suppressed (${supp.reason})`,
+          );
+          return {
+            ok: true,
+            messageId: null,
+            messageIds: [],
+            raw: null,
+            skipped: "suppressed",
+            suppressedRecipient: { email: to.Email, reason: supp.reason },
+          };
+        }
+      }
+    }
+  }
+
+  // Idempotency: als recent dezelfde key succesvol is verstuurd, hergebruik
+  // de oude MessageID en sla nieuwe send over. Voorkomt dubbele facturen.
+  if (opts.idempotencyKey) {
+    const prev = await findRecentIdempotentSend(
+      opts.idempotencyKey,
+      opts.idempotencyWindowMinutes ?? 10,
+    );
+    if (prev) {
+      console.warn(
+        `[mailjet-send:${source}] Skipping — idempotency key '${opts.idempotencyKey}' already sent at ${prev.sentAt}`,
+      );
+      return {
+        ok: true,
+        messageId: prev.mailjetMessageId,
+        messageIds: prev.mailjetMessageId ? [prev.mailjetMessageId] : [],
+        raw: null,
+        skipped: "duplicate",
+      };
+    }
+  }
+
 
   let response: Response;
   try {
