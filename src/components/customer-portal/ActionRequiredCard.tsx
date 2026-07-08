@@ -8,9 +8,11 @@ import {
   CheckCircle, 
   PartyPopper,
   ArrowRight,
-  MessageSquareWarning
+  MessageSquareWarning,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getProjectExecutionState } from "@/lib/projectExecutionState";
 
 interface ActionRequiredCardProps {
   statusSummary: {
@@ -36,10 +38,17 @@ interface ActionRequiredCardProps {
   customerActionsCount?: number;
   /** Aantal alternatieven binnen die acties — voor copy. */
   alternativeActionsCount?: number;
+  /** Datums van het project — nodig om te bepalen of uitvoering al voorbij is. */
+  selectedDates?: string[] | null;
+  /** completion_status uit program_requests — nodig voor executie-state. */
+  completionStatus?: string | null;
+  /** cancelled_at uit program_requests — nodig voor executie-state. */
+  cancelledAt?: string | null;
   className?: string;
 }
 
-type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "guest_details" | "complete" | null;
+type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "guest_details" | "complete" | "past_execution" | null;
+
 
 interface ActionConfig {
   type: ActionType;
