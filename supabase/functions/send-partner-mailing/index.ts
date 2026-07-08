@@ -129,6 +129,7 @@ Deno.serve(async (req) => {
       // Replace variables in body
       const personalizedBody = htmlBody.replace(/\{\{partner_name\}\}/g, partner.name);
 
+      let mailjetMessageId: string | null = null;
       try {
         const emailResponse = await fetch("https://api.mailjet.com/v3.1/send", {
           method: "POST",
@@ -138,7 +139,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             Messages: [
-              { TrackClicks: "disabled", TrackOpens: "disabled",
+              {
                 From: {
                   Email: "hallo@bureauvlieland.nl",
                   Name: "Bureau Vlieland",
@@ -156,8 +157,9 @@ Deno.serve(async (req) => {
           console.error(`Mailjet error for ${partner.name}:`, errorText);
           results.push({ partnerId: partner.id, partnerName: partner.name, success: false, error: "Mail verzenden mislukt" });
         } else {
-          await emailResponse.json(); // consume body
-          console.log(`Mailing sent to ${recipientEmail} for ${partner.name}`);
+          const mjJson = await emailResponse.json().catch(() => null);
+          mailjetMessageId = extractMessageIds(mjJson)[0] ?? null;
+          console.log(`Mailing sent to ${recipientEmail} for ${partner.name} (msgId=${mailjetMessageId})`);
           results.push({ partnerId: partner.id, partnerName: partner.name, success: true });
         }
 
@@ -170,6 +172,7 @@ Deno.serve(async (req) => {
           related_partner_id: partner.id,
           status: results[results.length - 1].success ? "sent" : "failed",
           sent_by: "admin",
+          mailjet_message_id: mailjetMessageId,
           metadata: {
             template_name: "partner_mailing",
             actor: "admin → partner (bulk mailing)",
