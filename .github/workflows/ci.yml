@@ -1,0 +1,164 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-tests:
+    name: Frontend unit tests (Vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Vitest with JUnit + JSON reporters
+        run: |
+          mkdir -p reports
+          bunx vitest run \
+            --reporter=default \
+            --reporter=junit --outputFile.junit=reports/vitest-junit.xml \
+            --reporter=json --outputFile.json=reports/vitest.json
+        env:
+          CI: "true"
+
+      - name: Summarise Vitest results
+        if: always()
+        run: |
+          if [ ! -f reports/vitest.json ]; then
+            echo "No Vitest JSON report found." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync("reports/vitest.json","utf8"));
+            const nt = r.numTotalTests ?? 0;
+            const np = r.numPassedTests ?? 0;
+            const nf = r.numFailedTests ?? 0;
+            const ns = r.numPendingTests ?? 0;
+            const s = require("fs");
+            const out = process.env.GITHUB_STEP_SUMMARY;
+            s.appendFileSync(out, `## Vitest\n\n| Total | Passed | Failed | Skipped |\n|---|---|---|---|\n| ${nt} | ${np} | ${nf} | ${ns} |\n`);
+            if (nf > 0) {
+              s.appendFileSync(out, "\n### Failing tests\n\n");
+              for (const suite of r.testResults ?? []) {
+                for (const t of suite.assertionResults ?? []) {
+                  if (t.status === "failed") {
+                    s.appendFileSync(out, `- \`${suite.name}\` › ${t.fullName}\n`);
+                  }
+                }
+              }
+            }
+          '
+
+      - name: Upload Vitest reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-reports
+          path: reports/
+          if-no-files-found: warn
+
+  edge-function-tests:
+    name: Edge function tests (Deno)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Discover edge function test files
+        id: discover
+        run: |
+          mapfile -t files < <(find supabase/functions \
+            \( -name '*_test.ts' -o -name '*.test.ts' \) | sort)
+          echo "count=${#files[@]}" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${files[@]}" > reports_files.txt || true
+          mkdir -p reports
+          printf '%s\n' "${files[@]}" > reports/edge-test-files.txt
+
+      - name: Run Deno tests in parallel
+        run: |
+          mkdir -p reports
+          set -o pipefail
+          deno test \
+            --allow-net --allow-env --allow-read \
+            --parallel \
+            --reporter=junit \
+            --junit-path=reports/deno-junit.xml \
+            supabase/functions/ 2>&1 | tee reports/deno-output.log
+
+      - name: Summarise Deno results
+        if: always()
+        run: |
+          {
+            echo "## Deno edge function tests"
+            echo
+            echo "- Test files discovered: $(wc -l < reports/edge-test-files.txt | tr -d ' ')"
+            if [ -f reports/deno-junit.xml ]; then
+              tests=$(grep -oE 'tests="[0-9]+"'    reports/deno-junit.xml | head -1 | grep -oE '[0-9]+' || echo 0)
+              fails=$(grep -oE 'failures="[0-9]+"' reports/deno-junit.xml | head -1 | grep -oE '[0-9]+' || echo 0)
+              errs=$(grep -oE  'errors="[0-9]+"'   reports/deno-junit.xml | head -1 | grep -oE '[0-9]+' || echo 0)
+              skip=$(grep -oE  'skipped="[0-9]+"'  reports/deno-junit.xml | head -1 | grep -oE '[0-9]+' || echo 0)
+              echo
+              echo "| Total | Failures | Errors | Skipped |"
+              echo "|---|---|---|---|"
+              echo "| ${tests:-0} | ${fails:-0} | ${errs:-0} | ${skip:-0} |"
+            else
+              echo
+              echo "No JUnit report produced — check the raw log artifact."
+            fi
+            if grep -qE '^(FAILED|error:)' reports/deno-output.log 2>/dev/null; then
+              echo
+              echo "### Failure excerpts"
+              echo '```'
+              grep -E '^(FAILED|error:|  at )' reports/deno-output.log | head -80
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Deno reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deno-reports
+          path: reports/
+          if-no-files-found: warn
+
+  ci-status:
+    name: CI status
+    if: always()
+    needs: [frontend-tests, edge-function-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail on any test regression
+        run: |
+          fe='${{ needs.frontend-tests.result }}'
+          ef='${{ needs.edge-function-tests.result }}'
+          {
+            echo "## CI overview"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Frontend (Vitest) | $fe |"
+            echo "| Edge functions (Deno) | $ef |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$fe" != "success" ] || [ "$ef" != "success" ]; then
+            echo "One or more test suites failed."
+            exit 1
+          fi
