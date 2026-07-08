@@ -330,7 +330,7 @@ export const CustomerProgramItem = ({
           )}
 
           {/* Banner: prijs is door Bureau Vlieland aangepast — klant moet opnieuw akkoord geven */}
-          {priceChangeNeedsAttention && !readOnly && (
+          {priceChangeNeedsAttention && needsCustomerAction && !readOnly && (
             <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>
