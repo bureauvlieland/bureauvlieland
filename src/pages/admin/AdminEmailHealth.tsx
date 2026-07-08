@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, RefreshCw, Trash2, ShieldOff } from "lucide-react";
+import { AlertTriangle, RefreshCw, Trash2, ShieldOff, FileText, Download, ExternalLink } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -242,6 +242,8 @@ export default function AdminEmailHealth() {
           </Alert>
         )}
 
+        <AuditReportCard />
+
         {/* KPI-tegels */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard label="Totaal" value={total} />
@@ -409,6 +411,54 @@ function KpiCard({ label, value, sub, tone }: { label: string; value: number; su
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className={`text-2xl font-semibold ${tone === "warn" ? "text-red-600" : ""}`}>{value}</div>
         {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AuditReportCard() {
+  const reportUrl = "/audit-communicatie-email-2026-07-08.md";
+  const reportName = "audit-communicatie-email-2026-07-08.md";
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(reportUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = reportName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Audit-rapport gedownload");
+    } catch {
+      toast.error("Download mislukt");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-blue-500" />
+          Audit-rapport e-mailcommunicatie
+        </CardTitle>
+        <p className="text-xs text-muted-foreground pt-1">
+          Overzicht van de huidige hardening-status: suppressie, idempotency, test-mode en openstaande acties.
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => window.open(reportUrl, "_blank")}>
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Open in nieuw tabblad
+        </Button>
+        <Button onClick={handleDownload}>
+          <Download className="h-4 w-4 mr-2" />
+          Downloaden
+        </Button>
       </CardContent>
     </Card>
   );
