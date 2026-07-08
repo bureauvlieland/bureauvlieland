@@ -245,7 +245,9 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } },
       );
-      const { data: claims, error: claimsErr } = await anonClient.auth.getClaims(token);
+      // getClaims is niet in de bundled types maar wel beschikbaar op runtime
+      // deno-lint-ignore no-explicit-any
+      const { data: claims, error: claimsErr } = await (anonClient.auth as any).getClaims(token);
       if (claimsErr || !claims?.claims) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
