@@ -74,6 +74,8 @@ import {
   TemplateIds,
 } from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logEmail } from "../_shared/email-logger.ts";
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 
 type ProgramRequest = z.infer<typeof ProgramRequestSchema>;
 type BlockItem = z.infer<typeof BlockItemSchema>;
