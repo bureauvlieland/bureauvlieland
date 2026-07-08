@@ -9,6 +9,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -38,6 +39,7 @@ const escapeHtml = (str: string) =>
     .replace(/'/g, "&#039;");
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -199,21 +201,23 @@ Deno.serve(async (req) => {
     };
     if (replyTo) message.ReplyTo = replyTo;
 
+    message.TrackClicks = "disabled";
+    message.TrackOpens = "disabled";
     const mjResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
       },
-      message.TrackClicks = "disabled";
-      message.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [message] }),
     });
+    try { mailjetMessageId = extractMessageIds(await mjResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!mjResponse.ok) {
       const errText = await mjResponse.text();
       console.error("Mailjet error:", errText);
       await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
         email_type: "commission_invoice_sent",
         recipient_email: finalRecipient,
         recipient_name: recipientName,
@@ -272,6 +276,7 @@ Deno.serve(async (req) => {
 
     // Log email
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: "commission_invoice_sent",
       recipient_email: finalRecipient,
       recipient_name: recipientName,

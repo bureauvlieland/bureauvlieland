@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -11,6 +12,7 @@ const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -156,16 +158,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    emailMessage.TrackClicks = "disabled";
+    emailMessage.TrackOpens = "disabled";
     const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
       },
-      emailMessage.TrackClicks = "disabled";
-      emailMessage.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [emailMessage] }),
     });
+    try { mailjetMessageId = extractMessageIds(await mailjetResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!mailjetResponse.ok) {
       const error = await mailjetResponse.text();
@@ -186,6 +189,7 @@ Deno.serve(async (req) => {
       .eq("id", invoiceId);
 
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: "commission_invoice_forward",
       recipient_email: getRecipientEmail(snelstartEmail, origin),
       recipient_name: "Boekhouding",

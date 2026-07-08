@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
 import { getRenderedTemplate, TemplateIds } from "../_shared/email-templates.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
@@ -38,6 +39,7 @@ const FALLBACK_BODY = `
 `;
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -136,6 +138,7 @@ Deno.serve(async (req) => {
             ],
           }),
         });
+        try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
         if (!response.ok) {
           const errText = await response.text();
@@ -143,6 +146,7 @@ Deno.serve(async (req) => {
           errors.push(recipient.email);
 
           await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: "partner_intro_portal",
             subject: emailSubject,
             recipient_email: recipient.email,
@@ -160,6 +164,7 @@ Deno.serve(async (req) => {
         } else {
           sentCount++;
           await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: "partner_intro_portal",
             subject: emailSubject,
             recipient_email: recipient.email,

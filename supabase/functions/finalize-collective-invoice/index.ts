@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -45,6 +46,7 @@ interface FinalizeBody {
 }
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -238,6 +240,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({ Messages: [emailMessage] }),
         });
+        try { mailjetMessageId = extractMessageIds(await mjResp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
         if (mjResp.ok) {
           forwarded = true;

@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
@@ -12,6 +13,7 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -118,6 +120,7 @@ Deno.serve(async (req) => {
         });
 
         await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
           email_type: "accommodation_quote_withdrawn",
           subject,
           recipient_email: partnerEmail,

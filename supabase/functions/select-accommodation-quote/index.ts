@@ -11,6 +11,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -25,6 +26,7 @@ interface SelectQuoteRequest {
 }
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -479,6 +481,7 @@ Deno.serve(async (req) => {
           });
 
           await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
             subject: partnerTemplate?.subject || `Je offerte voor logies is geaccepteerd`,
             recipient_email: partnerEmail,
@@ -497,6 +500,7 @@ Deno.serve(async (req) => {
         } catch (e) {
           console.error("Error sending partner email:", e);
           await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: EmailTypes.ACCOMMODATION_SELECTED_PARTNER,
             subject: `Je offerte voor logies is geaccepteerd`,
             recipient_email: partnerEmail,
@@ -628,6 +632,7 @@ Deno.serve(async (req) => {
           });
 
           await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
             subject: customerTemplate?.subject || `Je logies is bevestigd`,
             recipient_email: customerEmail,
@@ -645,6 +650,7 @@ Deno.serve(async (req) => {
         } catch (e) {
           console.error("Error sending customer email:", e);
           await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
             subject: `Je logies is bevestigd`,
             recipient_email: customerEmail,
@@ -710,6 +716,7 @@ Deno.serve(async (req) => {
             });
 
             await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
               email_type: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
               subject: rejectedTemplate?.subject || `Logiesaanvraag - niet gekozen`,
               recipient_email: rejectedEmail,
@@ -728,6 +735,7 @@ Deno.serve(async (req) => {
           } catch (e) {
             console.error(`Error sending rejection email to ${rqPartner.name}:`, e);
             await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
               email_type: EmailTypes.ACCOMMODATION_REJECTED_PARTNER,
               subject: `Logiesaanvraag - niet gekozen`,
               recipient_email: rejectedEmail,

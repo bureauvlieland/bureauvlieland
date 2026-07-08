@@ -1,6 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 import { 
   getRenderedTemplate, 
   sanitizeHtml, 
@@ -31,6 +32,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
     },
     body: JSON.stringify({ Messages: messages }),
   });
+  try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -147,6 +149,7 @@ function getFallbackCustomerHtml(request: any, typeLabels: Record<string, string
 }
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -246,6 +249,7 @@ Deno.serve(async (req) => {
     ]);
 
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: EmailTypes.ACCOMMODATION_REQUEST_CUSTOMER,
       subject: customerSubject,
       recipient_email: request.customer_email,
