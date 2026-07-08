@@ -216,10 +216,44 @@ Deno.serve(async (req) => {
       );
 
       processed += updates.filter(Boolean).length;
+
+      // Auto-suppress: bij een terminale negatieve gebeurtenis het adres
+      // op de suppressielijst zetten zodat volgende sends direct worden
+      // geweigerd. Voor 'bounce' alleen bij `hard_bounce: true` — een
+      // soft bounce (mailbox vol, tijdelijk onbereikbaar) mag nog wel
+      // opnieuw worden geprobeerd.
+      const suppressReason = (() => {
+        if (eventType === "spam") return "spam";
+        if (eventType === "blocked") return "blocked";
+        if (eventType === "unsub") return "unsub";
+        if (eventType === "bounce" && ev.hard_bounce === true) return "bounce";
+        return null;
+      })();
+
+      if (suppressReason && ev.email) {
+        const { error: suppErr } = await supabase
+          .from("email_suppressions")
+          .upsert(
+            {
+              email: ev.email.trim().toLowerCase(),
+              reason: suppressReason,
+              source: "mailjet-webhook",
+              notes: ev.error ?? null,
+            },
+            { onConflict: "email" },
+          );
+        if (suppErr) {
+          console.error(
+            `Failed to upsert suppression for ${ev.email}:`,
+            suppErr.message,
+          );
+        }
+      }
     } catch (err) {
       console.error("Event processing error:", err);
     }
   }
+
 
 
   return new Response(
