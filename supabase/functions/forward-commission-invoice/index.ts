@@ -158,14 +158,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    emailMessage.TrackClicks = "disabled";
+    emailMessage.TrackOpens = "disabled";
     const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
       },
-      emailMessage.TrackClicks = "disabled";
-      emailMessage.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [emailMessage] }),
     });
     try { mailjetMessageId = extractMessageIds(await mailjetResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
