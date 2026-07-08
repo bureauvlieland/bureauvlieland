@@ -282,6 +282,7 @@ const App = () => {
             <Route path="/admin/instellingen" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminChat />} />
             <Route path="/admin/financieel" element={<AdminFinancialDashboard />} />
+            <Route path="/admin/email-health" element={<AdminEmailHealth />} />
             <Route path="/admin/planning" element={<Navigate to="/admin/projecten?tab=kalender" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
