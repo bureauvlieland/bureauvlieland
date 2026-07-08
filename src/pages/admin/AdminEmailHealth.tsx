@@ -321,7 +321,10 @@ export default function AdminEmailHealth() {
           </CardContent>
         </Card>
 
+        <SuppressionsCard />
+
         {/* Log tabel */}
+
         <Card>
           <CardHeader>
             <CardTitle>Email log</CardTitle>
