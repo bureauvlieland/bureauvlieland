@@ -9,6 +9,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -52,6 +53,7 @@ const splitEmails = (raw: string): string[] =>
     .filter((s) => s.length > 0);
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -254,12 +256,14 @@ Deno.serve(async (req) => {
       message.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [message] }),
     });
+    try { mailjetMessageId = extractMessageIds(await mjRes.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     const mjOk = mjRes.ok;
     const errText = mjOk ? "" : await mjRes.text();
 
     // ─── Log + update items ────────────────────────────────────────────────
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: "ticket_to_customer",
       recipient_email: finalRecipients.join(", "),
       recipient_name: recipientName,

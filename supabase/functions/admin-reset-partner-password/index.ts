@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -42,6 +43,7 @@ function getResetHtml(partnerName: string, setPasswordLink: string): string {
 }
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -138,6 +140,7 @@ Bureau Vlieland`,
           }],
         }),
       });
+      try { mailjetMessageId = extractMessageIds(await emailResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
       if (!emailResponse.ok) {
         emailError = await emailResponse.text();
@@ -150,6 +153,7 @@ Bureau Vlieland`,
     }
 
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: "partner_password_reset",
       subject,
       recipient_email: recipientEmail,

@@ -3,6 +3,7 @@ import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.
 import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -18,6 +19,7 @@ const DEFAULT_CUSTOMER_STATUS_EMAIL_STALE_DAYS = 5;
 const DEFAULT_CUSTOMER_INPUTS_WARNING_DAYS = 14;
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -168,6 +170,7 @@ Deno.serve(async (req) => {
             }],
           }),
         });
+        try { mailjetMessageId = extractMessageIds(await resp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
         const status = resp.ok ? "sent" : "failed";
         if (!resp.ok) console.error(`Failed to send ${opts.logExtra.email_type}:`, await resp.text());
@@ -175,6 +178,7 @@ Deno.serve(async (req) => {
 
         const fullSubject = `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`;
         await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
           email_type: opts.logExtra.email_type,
           subject: fullSubject,
           recipient_email: getRecipientEmail(opts.recipientEmail, req.headers.get("origin") || undefined),
@@ -706,12 +710,14 @@ Deno.serve(async (req) => {
                   }],
                 }),
               });
+              try { mailjetMessageId = extractMessageIds(await emailResp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
               if (emailResp.ok) {
                 console.log(`Sent expired quote email to ${partnerEmail}`);
 
                 // Log email
                 await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
                   email_type: "quote_expired_partner",
                   subject,
                   recipient_email: partnerEmail,

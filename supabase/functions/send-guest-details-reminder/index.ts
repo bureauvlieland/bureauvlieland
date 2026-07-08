@@ -8,12 +8,14 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -104,9 +106,11 @@ Deno.serve(async (req) => {
           }],
         }),
       });
+      try { mailjetMessageId = extractMessageIds(await resp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
       if (resp.ok) {
         await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
           email_type: "guest_details_reminder",
           subject,
           recipient_email: recipientEmail,

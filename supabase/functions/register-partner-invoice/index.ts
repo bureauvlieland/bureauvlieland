@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -46,6 +47,7 @@ async function sendEmailNotification(
         ],
       }),
     });
+    try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!response.ok) {
       const error = await response.text();
@@ -61,6 +63,7 @@ async function sendEmailNotification(
 }
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -395,6 +398,7 @@ Deno.serve(async (req) => {
     );
 
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: "partner_invoice_registered_bureau",
       recipient_email: bureauRecipient,
       recipient_name: "Bureau Vlieland",

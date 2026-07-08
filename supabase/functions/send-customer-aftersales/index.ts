@@ -12,6 +12,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
@@ -148,11 +149,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ],
       }),
     });
+    try { mailjetMessageId = extractMessageIds(await mjRes.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!mjRes.ok) {
       const errTxt = await mjRes.text();
       console.error("Mailjet error:", errTxt);
       await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
         email_type: "customer_aftersales_review",
         subject,
         recipient_email: recipient,
@@ -186,6 +189,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .neq("status", "done");
 
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: "customer_aftersales_review",
       subject,
       recipient_email: recipient,

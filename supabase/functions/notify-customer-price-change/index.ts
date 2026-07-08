@@ -9,6 +9,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
@@ -25,6 +26,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
     headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
     body: JSON.stringify({ Messages: messages }),
   });
+  try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Mailjet API error:", errorText);
@@ -139,6 +141,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ]);
 
     await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
       email_type: EmailTypes.PROGRAM_REQUEST_CUSTOMER,
       subject,
       recipient_email: recipient,

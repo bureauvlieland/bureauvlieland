@@ -10,6 +10,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -22,6 +23,7 @@ interface ProcessResult {
 }
 
 Deno.serve(async (req) => {
+  let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -164,10 +166,12 @@ Deno.serve(async (req) => {
                   }],
                 }),
               });
+              try { mailjetMessageId = extractMessageIds(await emailResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
               if (emailResponse.ok) {
                 // Log email
                 await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
                   email_type: "proforma_commission_notification",
                   subject: `${subjectPrefix}${template.subject}`,
                   recipient_email: recipientEmail,
@@ -336,10 +340,12 @@ Deno.serve(async (req) => {
                   }],
                 }),
               });
+              try { mailjetMessageId = extractMessageIds(await emailResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
               if (emailResponse.ok) {
                 // Log email
                 await logEmail({
+      mailjet_message_id: mailjetMessageId ?? undefined,
                   email_type: "proforma_commission_notification",
                   subject: `${subjectPrefix}${template.subject}`,
                   recipient_email: recipientEmail,
