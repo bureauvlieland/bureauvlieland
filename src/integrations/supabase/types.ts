@@ -201,6 +201,7 @@ export type Database = {
         Row: {
           accommodation_name: string
           actual_invoiced_excl_vat: number | null
+          auto_closed_reason: string | null
           commission_amount: number | null
           commission_invoiced_at: string | null
           commission_percentage: number | null
@@ -248,6 +249,7 @@ export type Database = {
         Insert: {
           accommodation_name: string
           actual_invoiced_excl_vat?: number | null
+          auto_closed_reason?: string | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
@@ -295,6 +297,7 @@ export type Database = {
         Update: {
           accommodation_name?: string
           actual_invoiced_excl_vat?: number | null
+          auto_closed_reason?: string | null
           commission_amount?: number | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
@@ -597,6 +600,7 @@ export type Database = {
           auto_entity_id: string | null
           auto_type: string | null
           completed_at: string | null
+          completion_reason: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -615,6 +619,7 @@ export type Database = {
           auto_entity_id?: string | null
           auto_type?: string | null
           completed_at?: string | null
+          completion_reason?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -633,6 +638,7 @@ export type Database = {
           auto_entity_id?: string | null
           auto_type?: string | null
           completed_at?: string | null
+          completion_reason?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2821,6 +2827,7 @@ export type Database = {
           admin_price_notes: string | null
           admin_price_override: number | null
           admin_price_override_updated_at: string | null
+          auto_closed_reason: string | null
           awaiting_customer_for_partner_send: boolean
           block_category: string
           block_id: string | null
@@ -2921,6 +2928,7 @@ export type Database = {
           admin_price_notes?: string | null
           admin_price_override?: number | null
           admin_price_override_updated_at?: string | null
+          auto_closed_reason?: string | null
           awaiting_customer_for_partner_send?: boolean
           block_category: string
           block_id?: string | null
@@ -3021,6 +3029,7 @@ export type Database = {
           admin_price_notes?: string | null
           admin_price_override?: number | null
           admin_price_override_updated_at?: string | null
+          auto_closed_reason?: string | null
           awaiting_customer_for_partner_send?: boolean
           block_category?: string
           block_id?: string | null
