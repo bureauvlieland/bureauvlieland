@@ -8,13 +8,13 @@ Deno.env.set("MAILJET_SECRET_KEY", "mj");
 const { handler } = await import("./index.ts");
 const url = "http://test-supabase.local/functions/v1/send-items-to-partners";
 
-Deno.test("send-items-to-partners: OPTIONS returns CORS", async () => {
+Deno.test({ name: "send-items-to-partners: OPTIONS returns CORS", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(new Request(url, { method: "OPTIONS" }));
   assertEquals(res.status, 200);
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
 });
 
-Deno.test("send-items-to-partners: 400 zonder request_id", async () => {
+Deno.test({ name: "send-items-to-partners: 400 zonder request_id", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(
     new Request(url, {
       method: "POST",

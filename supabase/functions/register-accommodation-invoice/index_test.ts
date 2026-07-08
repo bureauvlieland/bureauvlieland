@@ -6,12 +6,12 @@ Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "srv");
 const { handler } = await import("./index.ts");
 const url = "http://test-supabase.local/functions/v1/register-accommodation-invoice";
 
-Deno.test("register-accommodation-invoice: OPTIONS returns CORS", async () => {
+Deno.test({ name: "register-accommodation-invoice: OPTIONS returns CORS", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(new Request(url, { method: "OPTIONS" }));
   assertEquals(res.status, 200);
 });
 
-Deno.test("register-accommodation-invoice: 400 bij ontbrekende velden", async () => {
+Deno.test({ name: "register-accommodation-invoice: 400 bij ontbrekende velden", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(
     new Request(url, {
       method: "POST",

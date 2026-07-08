@@ -9,12 +9,12 @@ Deno.env.set("MAILJET_SECRET_KEY", "mj");
 const { handler } = await import("./index.ts");
 const url = "http://test-supabase.local/functions/v1/send-ticket-email";
 
-Deno.test("send-ticket-email: OPTIONS returns CORS", async () => {
+Deno.test({ name: "send-ticket-email: OPTIONS returns CORS", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(new Request(url, { method: "OPTIONS" }));
   assertEquals(res.status, 200);
 });
 
-Deno.test("send-ticket-email: 401 zonder Authorization", async () => {
+Deno.test({ name: "send-ticket-email: 401 zonder Authorization", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(new Request(url, { method: "POST", body: "{}" }));
   assertEquals(res.status, 401);
   await res.text();

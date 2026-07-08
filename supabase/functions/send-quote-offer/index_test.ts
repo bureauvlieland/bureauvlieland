@@ -10,13 +10,13 @@ const { handler } = await import("./index.ts");
 
 const url = "http://test-supabase.local/functions/v1/send-quote-offer";
 
-Deno.test("send-quote-offer: OPTIONS returns CORS", async () => {
+Deno.test({ name: "send-quote-offer: OPTIONS returns CORS", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(new Request(url, { method: "OPTIONS" }));
   assertEquals(res.status, 200);
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
 });
 
-Deno.test("send-quote-offer: 401 zonder Authorization", async () => {
+Deno.test({ name: "send-quote-offer: 401 zonder Authorization", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await handler(new Request(url, { method: "POST", body: "{}" }));
   assertEquals(res.status, 401);
   await res.text();
