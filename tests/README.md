@@ -27,6 +27,16 @@ Deze tests stubben Mailjet, Supabase en storage. Ze bewijzen dat:
 - suppressie en idempotency dubbele verzendingen blokkeren;
 - de twee factuur-functies auth-checken, valideren, verzenden en loggen.
 
+## CI
+
+`.github/workflows/ci.yml` draait Vitest en Deno parallel op elke push/PR:
+
+- **Frontend unit tests** — Vitest met JUnit + JSON reporter; failures verschijnen in de GitHub Actions run-summary.
+- **Edge function tests** — `deno test --parallel --reporter=junit` over `supabase/functions/`; totalen + failure-excerpts in de summary.
+- **CI status** — een gate-job faalt zodra één van beide suites niet slaagt, zodat regressies de merge blokkeren.
+
+Artefacten (`vitest-reports`, `deno-reports`) worden per run geüpload voor lokale inspectie.
+
 ## E2E-tests (Playwright)
 
 Zie `tests/e2e/README.md`. Draaien lokaal met `SUPABASE_SERVICE_ROLE_KEY` en
