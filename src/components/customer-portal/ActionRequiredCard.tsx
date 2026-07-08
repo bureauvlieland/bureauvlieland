@@ -8,9 +8,11 @@ import {
   CheckCircle, 
   PartyPopper,
   ArrowRight,
-  MessageSquareWarning
+  MessageSquareWarning,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getProjectExecutionState } from "@/lib/projectExecutionState";
 
 interface ActionRequiredCardProps {
   statusSummary: {
@@ -36,10 +38,17 @@ interface ActionRequiredCardProps {
   customerActionsCount?: number;
   /** Aantal alternatieven binnen die acties — voor copy. */
   alternativeActionsCount?: number;
+  /** Datums van het project — nodig om te bepalen of uitvoering al voorbij is. */
+  selectedDates?: string[] | null;
+  /** completion_status uit program_requests — nodig voor executie-state. */
+  completionStatus?: string | null;
+  /** cancelled_at uit program_requests — nodig voor executie-state. */
+  cancelledAt?: string | null;
   className?: string;
 }
 
-type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "guest_details" | "complete" | null;
+type ActionType = "alternative" | "counter_proposed" | "pending" | "accommodation" | "billing" | "terms" | "guest_details" | "complete" | "past_execution" | null;
+
 
 interface ActionConfig {
   type: ActionType;
@@ -69,6 +78,9 @@ export const ActionRequiredCard = ({
   onOpenGuestDetails,
   customerActionsCount = 0,
   alternativeActionsCount = 0,
+  selectedDates = null,
+  completionStatus = null,
+  cancelledAt = null,
   className,
 }: ActionRequiredCardProps) => {
   const isPublished = !!programPublishedAt;
@@ -79,7 +91,51 @@ export const ActionRequiredCard = ({
   const isApprovalPhase = quoteStatus === "akkoord_ontvangen"; // fase 3 — partner-fase
   const isFinalPhase = quoteStatus === "definitief_bevestigd"; // fase 4
 
+  const executionState = getProjectExecutionState({
+    selected_dates: selectedDates ?? undefined,
+    completion_status: completionStatus,
+    cancelled_at: cancelledAt,
+  });
+  const isPastExecution = executionState === "past_execution";
+
   const getAction = (): ActionConfig | null => {
+    // Hoogste prioriteit: uitvoering is voorbij. Verberg goedkeur-acties;
+    // focus op wat nog echt moet gebeuren (facturatiegegevens, voorwaarden).
+    if (isPastExecution) {
+      if (!billingComplete) {
+        return {
+          type: "billing",
+          title: "Uw programma is uitgevoerd — laatste stap: facturatiegegevens",
+          description:
+            "Bureau Vlieland maakt uw factuur klaar. Vul nog uw bedrijfsgegevens in zodat wij die aan de factuur kunnen koppelen.",
+          icon: <FileText className="h-5 w-5" />,
+          variant: "warning",
+          cta: { label: "Gegevens invullen", onClick: onOpenBilling },
+        };
+      }
+      if (!termsAccepted) {
+        return {
+          type: "terms",
+          title: "Uw programma is uitgevoerd — accepteer de voorwaarden",
+          description:
+            "Alleen de voorwaarden zijn nog niet ondertekend. Zodra dat is gebeurd kunnen wij de factuur versturen.",
+          icon: <CheckCircle className="h-5 w-5" />,
+          variant: "warning",
+          cta: onScrollToTerms
+            ? { label: "Ondertekenen", onClick: onScrollToTerms }
+            : undefined,
+        };
+      }
+      return {
+        type: "past_execution",
+        title: "Uw programma is uitgevoerd",
+        description:
+          "Wij bereiden nu de facturatie voor. U ontvangt de factuur binnenkort per e-mail. Bedankt voor uw bezoek aan Vlieland!",
+        icon: <CheckCircle2 className="h-5 w-5" />,
+        variant: "success",
+      };
+    }
+
     // FASE 2 — voorstel klaar: handled door ProposalHeroCard (geen duplicaat hier).
     if (isProposalPhase) {
       return null;

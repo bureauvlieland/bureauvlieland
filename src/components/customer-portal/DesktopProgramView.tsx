@@ -314,6 +314,9 @@ export const DesktopProgramView = ({
                   (guestDetails.showRoomAssignment && !guestDetails.room_assignment))
               }
               onOpenGuestDetails={onOpenGuestDetails}
+              selectedDates={(program as any).selected_dates ?? null}
+              completionStatus={(program as any).completion_status ?? null}
+              cancelledAt={(program as any).cancelled_at ?? null}
             />
 
           </>
