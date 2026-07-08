@@ -134,6 +134,7 @@ export const handler = async (req: Request): Promise<Response> => {
     const replyTo = buildReplyTo(request.reference_number);
 
     const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
+    let mailjetMessageId: string | null = null;
     const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
