@@ -108,7 +108,6 @@ export const useAllMapActivities = (
               body: {
                 endpoint: "activities",
                 slug: partner.map_tenant_slug,
-                partnerId: partner.id,
                 params,
               },
             }),
@@ -116,7 +115,6 @@ export const useAllMapActivities = (
               body: {
                 endpoint: "activitytypes",
                 slug: partner.map_tenant_slug,
-                partnerId: partner.id,
               },
             }),
           ]);
