@@ -105,6 +105,7 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
       text_body: entry.text_body || null,
       from_email: entry.from_email || null,
       reply_to: entry.reply_to || null,
+      idempotency_key: entry.idempotency_key || null,
       sent_at: entry.status === "sent" ? new Date().toISOString() : null,
     });
 
