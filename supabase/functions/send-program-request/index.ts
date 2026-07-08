@@ -276,6 +276,45 @@ const handler = async (req: Request): Promise<Response> => {
       }
     ]);
 
+    // Extract MessageIDs so open/click/bounce events kunnen worden gekoppeld.
+    const [bureauMsgId, customerMsgId] = extractMessageIds(emailResponse);
+
+    // Log beide mails — bureau + klantbevestiging — zodat ze in email_log/dashboard verschijnen.
+    await Promise.all([
+      logEmail({
+        email_type: "program_request_bureau",
+        subject: bureauSubject,
+        recipient_email: "erwin@bureauvlieland.nl",
+        recipient_name: "Erwin Soolsma",
+        status: "sent",
+        sent_by: "system",
+        mailjet_message_id: bureauMsgId ?? null,
+        metadata: {
+          template_name: "program_request_bureau",
+          actor: "klant → bureau (aanvraag)",
+          customer_email: safeEmail,
+          number_of_people: requestData.numberOfPeople,
+          test_mode: testMode,
+        },
+      }),
+      logEmail({
+        email_type: "program_request_customer",
+        subject: customerSubject,
+        recipient_email: requestData.email,
+        recipient_name: requestData.name,
+        status: "sent",
+        sent_by: "system",
+        mailjet_message_id: customerMsgId ?? null,
+        metadata: {
+          template_name: "program_request_customer",
+          actor: "system → klant (bevestiging aanvraag)",
+          number_of_people: requestData.numberOfPeople,
+          has_portal_url: !!portalUrl,
+          test_mode: testMode,
+        },
+      }),
+    ]);
+
     console.log("Program request emails sent successfully");
 
     // Create auto-todo for new request
