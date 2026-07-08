@@ -244,6 +244,8 @@ export default function AdminEmailHealth() {
 
         <AuditReportCard />
 
+        <AutoCloseCard />
+
         {/* KPI-tegels */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard label="Totaal" value={total} />
