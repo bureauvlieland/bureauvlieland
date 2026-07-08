@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, RefreshCw } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { AlertTriangle, RefreshCw, Trash2, ShieldOff } from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { toast } from "sonner";
+
 
 type EmailLogRow = {
   id: string;
@@ -319,7 +321,10 @@ export default function AdminEmailHealth() {
           </CardContent>
         </Card>
 
+        <SuppressionsCard />
+
         {/* Log tabel */}
+
         <Card>
           <CardHeader>
             <CardTitle>Email log</CardTitle>
@@ -413,3 +418,175 @@ function pct(part: number, whole: number): string {
   if (whole <= 0) return "";
   return `${Math.round((part / whole) * 100)}%`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Suppressie-lijst: adressen waarnaar we niet meer mogen mailen (bounces,
+// spamklachten, uitschrijvingen, handmatig geblokt).
+// ─────────────────────────────────────────────────────────────────────────
+type SuppressionRow = {
+  id: string;
+  email: string;
+  reason: string;
+  source: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+const REASON_COLORS: Record<string, string> = {
+  bounce: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
+  spam: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200",
+  blocked: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200",
+  unsub: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200",
+  manual: "bg-muted text-muted-foreground",
+};
+
+function SuppressionsCard() {
+  const [newEmail, setNewEmail] = useState("");
+  const [newReason, setNewReason] = useState("manual");
+  const [newNotes, setNewNotes] = useState("");
+
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["email-suppressions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_suppressions")
+        .select("id,email,reason,source,notes,created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return (data ?? []) as SuppressionRow[];
+    },
+    refetchInterval: 60_000,
+  });
+
+  const rows = data ?? [];
+
+  const addSuppression = async () => {
+    const email = newEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      toast.error("Geen geldig e-mailadres");
+      return;
+    }
+    const { error } = await supabase.from("email_suppressions").insert({
+      email,
+      reason: newReason,
+      source: "admin",
+      notes: newNotes || null,
+    });
+    if (error) {
+      toast.error(`Toevoegen mislukt: ${error.message}`);
+      return;
+    }
+    toast.success(`${email} toegevoegd aan suppressielijst`);
+    setNewEmail("");
+    setNewNotes("");
+    refetch();
+  };
+
+  const removeSuppression = async (id: string, email: string) => {
+    if (!confirm(`${email} van suppressielijst verwijderen? Volgende mails naar dit adres worden dan weer verstuurd.`)) return;
+    const { error } = await supabase.from("email_suppressions").delete().eq("id", id);
+    if (error) {
+      toast.error(`Verwijderen mislukt: ${error.message}`);
+      return;
+    }
+    toast.success(`${email} verwijderd`);
+    refetch();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldOff className="h-4 w-4 text-orange-500" />
+          Suppressielijst ({rows.length})
+        </CardTitle>
+        <p className="text-xs text-muted-foreground pt-1">
+          Adressen die niet meer worden gemaild. Wordt automatisch aangevuld door Mailjet-webhook bij
+          hard bounces, spamklachten, uitschrijvingen en blocks.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2 items-end border-b pb-4">
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-muted-foreground">E-mailadres</label>
+            <Input
+              placeholder="voorbeeld@domein.nl"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Reden</label>
+            <Select value={newReason} onValueChange={setNewReason}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">Handmatig</SelectItem>
+                <SelectItem value="bounce">Bounce</SelectItem>
+                <SelectItem value="spam">Spamklacht</SelectItem>
+                <SelectItem value="blocked">Geblokt</SelectItem>
+                <SelectItem value="unsub">Uitgeschreven</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-muted-foreground">Notitie (optioneel)</label>
+            <Input
+              placeholder="Waarom geblokkeerd?"
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
+            />
+          </div>
+          <Button onClick={addSuppression}>Toevoegen</Button>
+          <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Geen geblokte adressen — alle mailboxen accepteren onze mail.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>E-mail</TableHead>
+                <TableHead>Reden</TableHead>
+                <TableHead>Bron</TableHead>
+                <TableHead>Sinds</TableHead>
+                <TableHead>Notitie</TableHead>
+                <TableHead className="w-[60px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-mono text-xs">{r.email}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className={REASON_COLORS[r.reason] ?? "bg-muted"}>
+                      {r.reason}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.source ?? "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {format(new Date(r.created_at), "dd-MM-yyyy", { locale: nl })}
+                  </TableCell>
+                  <TableCell className="text-xs max-w-[280px] truncate" title={r.notes ?? ""}>
+                    {r.notes ?? ""}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => removeSuppression(r.id, r.email)}>
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

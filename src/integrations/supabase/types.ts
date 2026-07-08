@@ -1624,6 +1624,7 @@ export type Database = {
           from_email: string | null
           html_body: string | null
           id: string
+          idempotency_key: string | null
           mailjet_events: Json
           mailjet_message_id: string | null
           metadata: Json | null
@@ -1656,6 +1657,7 @@ export type Database = {
           from_email?: string | null
           html_body?: string | null
           id?: string
+          idempotency_key?: string | null
           mailjet_events?: Json
           mailjet_message_id?: string | null
           metadata?: Json | null
@@ -1688,6 +1690,7 @@ export type Database = {
           from_email?: string | null
           html_body?: string | null
           id?: string
+          idempotency_key?: string | null
           mailjet_events?: Json
           mailjet_message_id?: string | null
           metadata?: Json | null
@@ -1738,6 +1741,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_suppressions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          notes: string | null
+          reason: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          notes?: string | null
+          reason: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          source?: string | null
+        }
+        Relationships: []
       }
       email_templates: {
         Row: {

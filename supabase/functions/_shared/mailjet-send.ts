@@ -50,6 +50,21 @@ export interface SendMailjetOptions {
    * dat je in de edge function logs terugziet welke aanroep faalde.
    */
   source?: string;
+  /**
+   * Als deze key aanwezig is, controleert de helper eerst of dezelfde send
+   * de afgelopen `idempotencyWindowMinutes` (default 10) al succesvol is
+   * uitgevoerd. Zo ja: send wordt overgeslagen en `skipped: 'duplicate'`
+   * geretourneerd — de aanroeper kan dan gewoon `logEmail(status='sent',
+   * mailjet_message_id=<vorige>)` doen zonder dubbele mail te sturen.
+   */
+  idempotencyKey?: string;
+  idempotencyWindowMinutes?: number;
+  /**
+   * Als true, wordt vóór verzending gecheckt of één van de ontvangers op
+   * de suppression-lijst staat. Standaard `true` — alleen uitzetten voor
+   * technische alerts naar admins die altijd door moeten.
+   */
+  checkSuppression?: boolean;
 }
 
 export type SendMailjetResult =
@@ -60,12 +75,17 @@ export type SendMailjetResult =
       /** Alle MessageID's (1 per Message × To combinatie). */
       messageIds: string[];
       raw: unknown;
+      /** Gezet als de send is overgeslagen (dedupe of suppressed). */
+      skipped?: "duplicate" | "suppressed" | "test_mode";
+      /** Bij `skipped='suppressed'`: welk adres + reden. */
+      suppressedRecipient?: { email: string; reason: string };
     }
   | {
       ok: false;
       error: string;
       status?: number;
     };
+
 
 /**
  * Extract Mailjet MessageID uit een geslaagde v3.1 response.
@@ -111,11 +131,65 @@ export async function sendMailjet(
   const apiKey = Deno.env.get("MAILJET_API_KEY");
   const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
   const source = opts.source ?? "unknown";
+  const testMode = Deno.env.get("MAILJET_TEST_MODE") === "1";
+
+  // Test mode: geen echte call, deterministische fake MessageID zodat
+  // E2E-tests wél de logEmail-rij en downstream logica kunnen asserteren.
+  if (testMode) {
+    const fakeId = `test-${crypto.randomUUID()}`;
+    console.log(`[mailjet-send:${source}] TEST MODE — skipping real send, returning ${fakeId}`);
+    return { ok: true, messageId: fakeId, messageIds: [fakeId], raw: null, skipped: "test_mode" };
+  }
 
   if (!apiKey || !secretKey) {
     console.error(`[mailjet-send:${source}] Mailjet credentials not configured`);
     return { ok: false, error: "Mailjet credentials not configured" };
   }
+
+  // Suppression pre-flight: als één van de To-adressen op de lijst staat,
+  // versturen we niets. Default aan; alleen expliciet uit te schakelen.
+  if (opts.checkSuppression !== false) {
+    for (const msg of opts.messages) {
+      for (const to of msg.To ?? []) {
+        const supp = await checkEmailSuppressed(to.Email);
+        if (supp) {
+          console.warn(
+            `[mailjet-send:${source}] Skipping — recipient ${to.Email} is suppressed (${supp.reason})`,
+          );
+          return {
+            ok: true,
+            messageId: null,
+            messageIds: [],
+            raw: null,
+            skipped: "suppressed",
+            suppressedRecipient: { email: to.Email, reason: supp.reason },
+          };
+        }
+      }
+    }
+  }
+
+  // Idempotency: als recent dezelfde key succesvol is verstuurd, hergebruik
+  // de oude MessageID en sla nieuwe send over. Voorkomt dubbele facturen.
+  if (opts.idempotencyKey) {
+    const prev = await findRecentIdempotentSend(
+      opts.idempotencyKey,
+      opts.idempotencyWindowMinutes ?? 10,
+    );
+    if (prev) {
+      console.warn(
+        `[mailjet-send:${source}] Skipping — idempotency key '${opts.idempotencyKey}' already sent at ${prev.sentAt}`,
+      );
+      return {
+        ok: true,
+        messageId: prev.mailjetMessageId,
+        messageIds: prev.mailjetMessageId ? [prev.mailjetMessageId] : [],
+        raw: null,
+        skipped: "duplicate",
+      };
+    }
+  }
+
 
   let response: Response;
   try {
@@ -168,3 +242,85 @@ export async function sendMailjet(
     raw: parsed,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Suppression + idempotency helpers
+// ---------------------------------------------------------------------------
+//
+// Beide helpers maken hun eigen service-role client aan zodat elke edge
+// function ze kan gebruiken zonder een client door te geven. Ze zijn
+// bewust "fail open": als de check zelf een DB-fout gooit, laten we de
+// send doorgaan (beter een dubbele mail dan een gemiste mail). Wel
+// loggen we luid zodat we het in de function-logs terugvinden.
+
+import { createClient as _createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+function serviceClient() {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return _createClient(url, key);
+}
+
+/**
+ * Check of `email` op de suppressielijst staat (bounce/spam/blocked/unsub/
+ * handmatig). Retourneert `null` als het adres mag, of `{ reason }` als
+ * het adres geblokt is. Fail-open bij DB-fouten.
+ */
+export async function checkEmailSuppressed(
+  email: string,
+): Promise<{ reason: string; source?: string | null } | null> {
+  try {
+    const supabase = serviceClient();
+    const { data, error } = await supabase
+      .from("email_suppressions")
+      .select("reason, source")
+      .ilike("email", email.trim())
+      .maybeSingle();
+    if (error) {
+      console.warn("[mailjet-send] suppression lookup failed:", error.message);
+      return null;
+    }
+    return data ? { reason: data.reason, source: data.source } : null;
+  } catch (err) {
+    console.warn("[mailjet-send] suppression lookup threw:", err);
+    return null;
+  }
+}
+
+/**
+ * Idempotency-check: kijkt of er in het `windowMinutes`-venster al een
+ * geslaagde send-rij bestaat met dezelfde `idempotencyKey`. Als dat zo is,
+ * retourneert de bestaande `mailjet_message_id` zodat de aanroeper de send
+ * kan overslaan en toch consistent logt.
+ */
+export async function findRecentIdempotentSend(
+  idempotencyKey: string,
+  windowMinutes = 10,
+): Promise<{ mailjetMessageId: string | null; sentAt: string } | null> {
+  try {
+    const supabase = serviceClient();
+    const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
+    const { data, error } = await supabase
+      .from("email_log")
+      .select("mailjet_message_id, sent_at")
+      .eq("idempotency_key", idempotencyKey)
+      .in("status", ["sent", "delivered", "opened", "clicked"])
+      .gte("sent_at", since)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.warn("[mailjet-send] idempotency lookup failed:", error.message);
+      return null;
+    }
+    if (!data) return null;
+    return {
+      mailjetMessageId: data.mailjet_message_id ?? null,
+      sentAt: data.sent_at,
+    };
+  } catch (err) {
+    console.warn("[mailjet-send] idempotency lookup threw:", err);
+    return null;
+  }
+}
+

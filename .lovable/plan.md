@@ -1,62 +1,73 @@
-## Doel
 
-Twee dingen die je vandaag mist: (1) elke uitgaande mail is traceerbaar tot delivery/open/click/bounce en (2) je hebt één plek om in te zien of alles goed loopt. Na dit plan geldt: als een mail eruit gaat en er komt geen feedback → dat zie je in het dashboard, niet pas als een klant belt.
+# Doel
 
-## Fase 1 — Gaten dichten in edge functions
+Van "we hopen dat het werkt" naar "we bewijzen elke release dat het werkt" voor alle uitgaande communicatie. Drie parallelle sporen + één afsluitende externe check.
 
-**Probleem in cijfers**: 32 edge functions roepen Mailjet aan zonder de response-`MessageID` te loggen. Zolang die ontbreekt, kunnen webhook-events die mail nooit terugkoppelen — open/click/bounce zijn dan blind.
+---
 
-**Wat er gebeurt**:
+## Spoor 1 — E2E-testsuite voor de kritieke workflows
 
-1. Nieuwe helper `_shared/mailjet-send.ts` die de Mailjet-call maakt, MessageID uit de response haalt en teruggeeft aan de caller. Alle logic op één plek: retry, error-parsing, MessageID-extractie.
-2. Alle 32 functions omzetten naar deze helper. Per function:
-   - Response parsen, MessageID extraheren (`response.Messages[0].To[0].MessageID`).
-   - `logEmail()` aanroepen met `mailjet_message_id`, `template_name`, `actor`, `status`, en bij fail met `error_message`.
-   - Loggen bij zowel succes als fail (contract uit `_shared/EMAIL_LOGGING.md`).
-3. Nieuwe repo-test `_shared/email-logger.test.ts` uitbreiden: regex-scan die faalt in CI wanneer een edge function `api.mailjet.com` aanroept zonder `mailjet_message_id` in een `logEmail()`-call binnen dezelfde file. Voorkomt terugval.
-4. Deploy alle aangeraakte functions.
+Playwright-suite die per release de belangrijkste ketens end-to-end doorloopt tegen een schone preview-database. Per keten wordt gecontroleerd: (a) juiste statusovergangen in DB, (b) juiste e-mail-rijen in `email_log` met `mailjet_message_id` en juiste `email_type`, (c) juiste ontvanger(s), (d) geen dubbele sends.
 
-**Verificatie**:
-- Query op `email_log` na deploy: aandeel `status='sent' AND mailjet_message_id IS NULL` moet naar ~0 dalen voor nieuwe rijen.
-- Handmatige steekproef: één test-send per gewijzigde function categorie → controleren dat de rij nu een MessageID heeft.
+Ketens die we dekken:
+1. **Configurator → self-service submit** (bestaat al, uitbreiden met e-mailassertions)
+2. **Offerte-aanvraag → partnerofferte → klantakkoord → verzendfactuur → aftersales-mail**
+3. **Logies-aanvraag → 3 partneroffertes → auto-reject bij selectie → bevestiging klant + partners**
+4. **Prijs/aantalwijziging na akkoord → notify-customer-price-change + notify-partner-price-change/headcount**
+5. **Partner-wachtwoord reset + intro-email**
+6. **Annulering project → notify-partner-cancellation naar alle betrokken partners**
+7. **Klantcontact via reply-to subaddressing → Mailjet Parse → project_communications**
 
-## Fase 2 — /admin/email-health dashboard
+E-mails worden **niet echt verzonden** in tests: `MAILJET_TEST_MODE=true` env-var laat `_shared/mailjet-send.ts` de call skippen en een fake MessageID teruggeven, zodat we volledig assertion-based kunnen testen zonder Mailjet-quota te raken.
 
-Alleen zichtbaar voor admin-rol (bestaande `has_role`-guard). Nieuwe pagina + route in bestaande admin-navigatie.
+## Spoor 2 — Content-regressie + idempotency/suppression harden
 
-**Componenten**:
+**Content-regressie:**
+- Nieuwe testfile `tests/email-templates.snapshot.test.ts` die per email-type de template rendert met vaste `previewData` en de HTML + subject als snapshot vastlegt. Onbedoelde wijziging in copy, variabele-naam of layout → test faalt vóór deploy.
+- Werkt via een klein `renderTemplate(type, data)`-helper die we uit de bestaande template-registry kunnen aanroepen zonder Mailjet.
 
-1. **KPI-tegels (bovenaan)** met filter Laatste 24u / 7d / 30d:
-   - Verzonden (unieke `mailjet_message_id`).
-   - Bezorgd / Geopend / Geklikt (percentage én absoluut).
-   - Bounced / Blocked / Spam.
-   - Failed (geen MessageID of expliciete fout).
-   - **Verdachte mails**: `status='sent'` ouder dan 24u zonder `delivered_at` — dat is de meest bruikbare early-warning.
-2. **Verdachte mails-tabel** (default open): welke templates/ontvangers zitten vast in `sent`. Kolommen: template, ontvanger, tijdstip, laatste bekende status, knop "Details" (opent bestaande `ItemEmailLogPopover`-achtige detail).
-3. **Per-template overzicht**: tabel gegroepeerd op `email_type` met counts per status + deliverability% + gemiddelde tijd tot open. Sortable.
-4. **Recente webhook-events**: laatste 20 rijen uit `email_log.mailjet_events` (JSON) — laat zien dat de webhook echt binnenkomt. Bij 0 events in 24u: rode banner "Geen webhook-events ontvangen — controleer Mailjet configuratie".
-5. **Zoekbalk** op ontvanger-email.
+**Idempotency:**
+- Uitbreiding van `_shared/mailjet-send.ts`: optionele `idempotencyKey` parameter (bijv. `"invoice-{invoiceId}"`). Voor send: query `email_log WHERE idempotency_key = ? AND sent_at > now()-interval '10 min'`. Als hit → skip send, log `status='skipped_duplicate'`. Voorkomt dubbele facturen/bevestigingen bij dubbelklik of retry.
+- Nieuwe kolom `email_log.idempotency_key TEXT` + partial unique index.
+- Toepassen in de ~10 meest kritieke calls (factuur, offerte, akkoord-bevestiging, aftersales).
 
-**Data**: alles via de bestaande `email_log`-tabel. Geen schemawijzigingen. Query's dedupliceren op `mailjet_message_id` (of `id` bij ontbrekende MessageID).
+**Suppression:**
+- Nieuwe tabel `email_suppressions (email, reason, created_at, source)`.
+- Mailjet-webhook (`mailjet-event-webhook`) schrijft `bounce`/`spam`/`blocked`/`unsub` automatisch naar deze tabel.
+- `_shared/mailjet-send.ts` doet **pre-flight check** en weigert send naar geblokkeerde adressen; log `status='suppressed'` in `email_log` met reden. Voorkomt reputatieschade richting Mailjet en irritante herhaal-bounces.
+- Beheer-UI: nieuw tabblad in `/admin/email-health` met suppressielijst + handmatig verwijderen.
 
-**Route**: `/admin/email-health` — link in bestaande admin-sidebar naast Logs.
+## Spoor 3 — Extern QA-audit-rapport
 
-## Fase 3 — Documentatie (klein)
+Onafhankelijke doorloop van alle 33 communicatiestromen, uitgevoerd door mij als aparte "auditor-pas" (los van de bouwer-pas), met concreet gap-rapport in `.lovable/audit-communicatie-{datum}.md`. Per stroom:
+- **Trigger** (welke user-actie / cron / webhook)
+- **Ontvanger(s)** en of PII correct is gestript (partner vs klant regels uit memory)
+- **Toon** ('u' vs 'je' — memory `formal-communication-tone`)
+- **Reply-to** correct ingesteld
+- **Test-mail** in preview verstuurd, screenshot in rapport
+- **Bevindingen** met severity (blokkerend / hoog / laag)
 
-- `.lovable/audit-email-logging.md` bijwerken zodat de lijst met "loggen niet"-functions leeg is.
-- `_shared/EMAIL_LOGGING.md` uitbreiden met de nieuwe helper als verplicht patroon.
+Levert een prioriteitslijst op waar we daarna gericht op kunnen fixen. Dit is complementair aan de automatische tests: die vangen regressies, dit vangt bestaande gaten die we nog niet kennen.
 
-## Buiten scope (bewust)
+---
 
-- **Automatische alerts per mail** (dat was optie 3). Kan als je na 1 week gebruik van het dashboard nog gaten voelt.
-- **Resend-knop per gefaalde mail**: `useResendEmail`-hook bestaat al voor sommige types; niet uitbreiden in deze ronde.
-- **Backfill** van oude "sent zonder MessageID"-rijen: onmogelijk, Mailjet heeft die koppeling niet meer.
-- **Bounce-anomaliedetectie** (0 bounces in 14 dagen is verdacht) — het dashboard maakt dit zichtbaar; verder ingrijpen alleen als het na live-observatie een probleem blijkt.
+## Volgorde
 
-## Volgorde & schatting
+1. Spoor 2 eerst (kleinste bouw, direct effect): idempotency + suppression + snapshot-tests.
+2. Spoor 1 (grootste bouw): E2E-suite, keten voor keten uitbreiden. Start bij factuur-keten (grootste financiële impact).
+3. Spoor 3 als afsluitende audit nadat 1 en 2 draaien — dan meet de audit ook meteen of de nieuwe guards werken.
 
-1. Helper + eerste 5 kritieke functions (`send-bureau-invoice-to-customer`, `send-quote-offer`-achtigen, `send-accommodation-quote-request`, `send-program-request`, `send-partner-mailing`) + repo-guard test → 1 build.
-2. Overige 27 functions in batch → 1 build.
-3. Dashboard → 1 build.
+## Buiten scope
 
-Ik doe stap 1 als eerste zodat je binnen één beurt al kunt zien dat de belangrijkste klantfacing mails weer trackbaar zijn, voordat ik aan de long tail begin.
+- Backfill van de 141 historische rijen zonder `mailjet_message_id` (niet mogelijk).
+- Externe penetratietest / security audit (aparte scope).
+- Load-testing van Mailjet-quota.
+
+## Technische details
+
+- **Test-DB:** we gebruiken de bestaande preview Supabase (`test_mode`-flag in edge functions herkent dit al) + Playwright met `E2E_BASE_URL=http://localhost:8080`.
+- **Fake Mailjet:** env-var `MAILJET_TEST_MODE=1` in edge functions → `_shared/mailjet-send.ts` returned `{ MessageID: 'test-{uuid}', skipped: true }` zonder HTTP-call.
+- **Snapshot-tests:** vitest built-in `toMatchSnapshot()`, opslag onder `tests/__snapshots__/email-templates/`.
+- **Migratie:** nieuwe kolom + index + tabel via één `supabase--migration` call. Inclusief GRANT + RLS (`email_suppressions`: alleen admin read/write).
+- **Guardrail:** bestaande `_shared/mailjet-tracking.test.ts` uitbreiden zodat alle send-call sites ook `idempotencyKey` meesturen waar van toepassing.
+
