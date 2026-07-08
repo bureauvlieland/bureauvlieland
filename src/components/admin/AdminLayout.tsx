@@ -173,6 +173,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
         { title: "Email Templates", url: "/admin/berichten/templates", icon: Mail },
+        { title: "Email health", url: "/admin/email-health", icon: BarChart3 },
       ],
     },
   ];
