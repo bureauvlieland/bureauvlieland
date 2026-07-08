@@ -31,7 +31,7 @@ interface CancellationRequest {
 }
 
 
-Deno.serve(async (req) => {
+export const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -394,9 +394,12 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("Error in notify-partner-cancellation:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+};
+
+Deno.serve(handler);
+

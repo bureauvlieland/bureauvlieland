@@ -127,7 +127,7 @@ function generatePartnerNotificationEmail(
   `;
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+export const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -547,4 +547,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+};
+
+Deno.serve(handler);
+

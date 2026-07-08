@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { z } from "npm:zod@3.22.4";
+import { z } from "https://esm.sh/zod@3.22.4";
 import {
   formatDateNL,
   getPortalBaseUrl,
@@ -56,7 +56,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   return await response.json();
 };
 
-Deno.serve(async (req: Request): Promise<Response> => {
+export const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -331,4 +331,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     );
   }
-});
+};
+
+Deno.serve(handler);
+

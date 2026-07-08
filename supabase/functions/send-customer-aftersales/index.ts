@@ -50,7 +50,7 @@ function formatDateRange(dates: string[] | null | undefined): string {
   return `bezoek van ${formatDateNL(sorted[0])} t/m ${formatDateNL(sorted[sorted.length - 1])}`;
 }
 
-Deno.serve(async (req: Request): Promise<Response> => {
+export const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabase = createClient(
@@ -134,6 +134,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const replyTo = buildReplyTo(request.reference_number);
 
     const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
+    let mailjetMessageId: string | null = null;
     const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
@@ -211,4 +212,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.error("send-customer-aftersales error:", err);
     return json({ error: "Onverwachte fout bij versturen aftersales-mail" }, 500);
   }
-});
+};
+
+Deno.serve(handler);
+
