@@ -30,6 +30,12 @@ export interface EmailLogEntry {
    * The audit popover relies on these fields.
    */
   metadata: { template_name: string; actor: string } & Record<string, unknown>;
+  /**
+   * Optionele deduplicatiesleutel. Zorgt dat `findRecentIdempotentSend`
+   * dubbele verzendingen (bijv. dubbelklik op "Factuur versturen") kan
+   * detecteren. Vorm: `<domein>-<id>-<recipient>`.
+   */
+  idempotency_key?: string;
 }
 
 export class EmailLogValidationError extends Error {
