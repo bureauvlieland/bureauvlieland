@@ -52,7 +52,7 @@ const splitEmails = (raw: string): string[] =>
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-Deno.serve(async (req) => {
+export const handler = async (req: Request): Promise<Response> => {
   let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -304,4 +304,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+};
+
+Deno.serve(handler);
+
