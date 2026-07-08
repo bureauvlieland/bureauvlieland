@@ -414,6 +414,54 @@ function KpiCard({ label, value, sub, tone }: { label: string; value: number; su
   );
 }
 
+function AuditReportCard() {
+  const reportUrl = "/audit-communicatie-email-2026-07-08.md";
+  const reportName = "audit-communicatie-email-2026-07-08.md";
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(reportUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = reportName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Audit-rapport gedownload");
+    } catch {
+      toast.error("Download mislukt");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-blue-500" />
+          Audit-rapport e-mailcommunicatie
+        </CardTitle>
+        <p className="text-xs text-muted-foreground pt-1">
+          Overzicht van de huidige hardening-status: suppressie, idempotency, test-mode en openstaande acties.
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => window.open(reportUrl, "_blank")}>
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Open in nieuw tabblad
+        </Button>
+        <Button onClick={handleDownload}>
+          <Download className="h-4 w-4 mr-2" />
+          Downloaden
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function pct(part: number, whole: number): string {
   if (whole <= 0) return "";
   return `${Math.round((part / whole) * 100)}%`;
