@@ -466,6 +466,109 @@ function AuditReportCard() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Auto-close: sluit acties op projecten met datum in het verleden
+// ─────────────────────────────────────────────────────────────────────────
+function AutoCloseCard() {
+  const [running, setRunning] = useState<null | "dry" | "real">(null);
+  const [lastResult, setLastResult] = useState<
+    | null
+    | {
+        dryRun: boolean;
+        at: string;
+        result: {
+          projects_scanned: number;
+          projects_past_execution: number;
+          items_confirmed: number;
+          quotes_expired: number;
+          todos_closed: number;
+          projects_marked_ready_for_invoice: number;
+          errors: Array<{ project_id: string; error: string }>;
+        };
+      }
+  >(null);
+
+  const run = async (dry: boolean) => {
+    setRunning(dry ? "dry" : "real");
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "auto-close-past-execution",
+        { body: { dryRun: dry } },
+      );
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? "Onbekende fout");
+      setLastResult({ dryRun: dry, at: new Date().toISOString(), result: data.result });
+      toast.success(
+        dry
+          ? `Simulatie klaar — ${data.result.projects_past_execution} projecten in verleden gevonden`
+          : `Auto-close uitgevoerd — ${data.result.todos_closed} todo's afgesloten`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Auto-close mislukt: ${msg}`);
+    } finally {
+      setRunning(null);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4 text-emerald-600" />
+          Auto-close · projecten na uitvoering
+        </CardTitle>
+        <p className="text-xs text-muted-foreground pt-1">
+          Sluit automatisch openstaande goedkeur-acties (items, offertes, todo's)
+          voor projecten waarvan de laatste uitvoeringsdatum voorbij is. Facturatie-,
+          voorwaarden-, commissie- en aftersales-todo's blijven altijd staan.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={!!running} onClick={() => run(true)}>
+            {running === "dry" ? "Bezig…" : "Simuleren (dry run)"}
+          </Button>
+          <Button disabled={!!running} onClick={() => run(false)}>
+            {running === "real" ? "Bezig…" : "Nu draaien"}
+          </Button>
+        </div>
+        {lastResult && (
+          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+            <div className="flex items-center gap-2 font-medium">
+              <span>{lastResult.dryRun ? "Simulatie" : "Uitgevoerd"}</span>
+              <span className="text-muted-foreground">
+                {formatDistanceToNow(new Date(lastResult.at), { addSuffix: true, locale: nl })}
+              </span>
+            </div>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+              <li>Projecten gescand: <strong>{lastResult.result.projects_scanned}</strong></li>
+              <li>In verleden: <strong>{lastResult.result.projects_past_execution}</strong></li>
+              <li>Items → bevestigd: <strong>{lastResult.result.items_confirmed}</strong></li>
+              <li>Offertes → verlopen: <strong>{lastResult.result.quotes_expired}</strong></li>
+              <li>Todo's gesloten: <strong>{lastResult.result.todos_closed}</strong></li>
+              <li>
+                Klaar voor facturatie:{" "}
+                <strong>{lastResult.result.projects_marked_ready_for_invoice}</strong>
+              </li>
+            </ul>
+            {lastResult.result.errors.length > 0 && (
+              <div className="text-red-600 mt-2">
+                <strong>Fouten:</strong>
+                <ul className="list-disc ml-5">
+                  {lastResult.result.errors.map((e, i) => (
+                    <li key={i}>{e.project_id}: {e.error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function pct(part: number, whole: number): string {
   if (whole <= 0) return "";
   return `${Math.round((part / whole) * 100)}%`;
