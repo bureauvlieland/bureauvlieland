@@ -1,57 +1,31 @@
+## Probleem
 
-## Doel
+`mailjet-event-webhook` gebruikt sinds de vorige "fix" `.order(created_at desc).limit(1)` om de `.maybeSingle()`-crash bij dubbele `mailjet_message_id`'s te vermijden. Dat lost de crash op, maar zorgt ervoor dat bij group-mails (één Mailjet-send → meerdere `email_log`-rijen, één per item, zie `.lovable/audit-email-logging.md` en het contract in `_shared/EMAIL_LOGGING.md`) maar één rij het open/click/delivery-event krijgt. De rest blijft leeg.
 
-Wanneer de admin de definitieve prijs van een onderdeel wijzigt **nadat de klant het programma al heeft goedgekeurd**, moet de klant alleen opnieuw akkoord geven bij een **substantiële prijsstijging**. Kleine correcties en elke prijsdaling verlopen stil en blokkeren de facturatie-flow niet.
+Verificatie in de DB: meerdere `mailjet_message_id`'s hebben 2–8 rijen (5 message-ID's hebben er zelfs elk 8). Dat matcht exact het group-mail patroon van `send-items-to-partners`, `notify-partners-informational` en `accept-quote-proposal`.
 
-## Regel
+## Oplossing
 
-- Prijsdaling → geen klantactie, alleen "Prijs bijgewerkt" logregel in de tijdlijn.
-- Prijsstijging **< drempel** (default **5%**) én absolute stijging **< € 25** → geen klantactie, "Prijs bijgewerkt" logregel.
-- Prijsstijging boven **een van beide** drempels → klant moet opnieuw akkoord geven (status blijft `prijs_gewijzigd`).
+`mailjet-event-webhook/index.ts` aanpassen zodat elk binnenkomend Mailjet-event **alle** rijen met dezelfde `mailjet_message_id` bijwerkt, niet alleen de laatste:
 
-Drempels worden instelbaar via `app_settings` zodat ze zonder code-wijziging aan te passen zijn.
+1. Lookup: `.select(...).eq("mailjet_message_id", messageId)` **zonder** `.limit(1)` — alle matches ophalen.
+2. Voor elke matchende rij:
+   - `mailjet_events` aanvullen (append event-object).
+   - Per-event timestamp (`delivered_at`/`opened_at`/…) alleen zetten als hij nog leeg is (blijft per-rij correct).
+   - `open_count` / `click_count` per rij verhogen.
+   - `status` alleen promoveren als de nieuwe status "sterker" is dan de huidige status van die rij (`STATUS_RANK` blijft per-rij vergeleken).
+   - `error_message` zetten bij bounce/blocked.
+3. Updates in één `.in("id", [ids])`-batch waar de update-payload identiek is (append + counters kunnen dat niet, dus per rij updaten in een `Promise.all`).
+4. `processed` verhoogt met het aantal daadwerkelijk bijgewerkte rijen, zodat de response inzichtelijk blijft.
+5. Alle bestaande gedragingen behouden: token-guard, CORS, `unmatched`-telling wanneer geen enkele rij matcht, logging bij fetch/update errors.
 
-## Wijzigingen
+## Verificatie na de fix
 
-### 1. Instellingen (nieuw, met defaults 5% en €25)
-- `app_settings`: twee nieuwe keys `price_change_reapproval_pct` (number, default 5) en `price_change_reapproval_abs_eur` (number, default 25), categorie *pricing*.
-- `src/types/appSettings.ts` en `src/lib/appSettings.ts`: types + fallback + helpers `getPriceReapprovalThresholds(settings)`.
-- Admin-instellingenpagina toont beide velden onder Prijzen (kort uitleg-tooltip).
+- Query vooraf/na: aantal rijen met `opened_at IS NULL` maar `status IN ('sent','delivered')` voor recente group-mails.
+- Log-check op `mailjet-event-webhook`: geen fetch/update-errors, `processed` > 1 bij group-mail events.
+- Steekproef op één bekende dubbele `mailjet_message_id` (bijv. `1152921542493665000`, 8 rijen): na een open/click event op die send moeten alle 8 rijen hun `opened_at`/`open_count` bijgewerkt hebben.
 
-### 2. Kern-logica in `src/lib/portalPricing.ts`
-Nieuwe helper `priceChangeRequiresReapproval(item, programPeople, numberOfDays, thresholds)`:
-- Retourneert `false` als `admin_price_override` gelijk of lager is dan `quoted_price` (effectief totaal).
-- Retourneert `false` als de stijging zowel onder pct- als abs-drempel valt.
-- Anders `true`.
+## Buiten scope
 
-`hasOpenAdminPriceChange()` blijft ongewijzigd (breed gebruikt voor "prijs gewijzigd sinds partner-ack"), maar wordt niet meer 1-op-1 gekoppeld aan klantactie.
-
-### 3. Statusafleiding `src/lib/itemStatus.ts`
-- `DeriveContext` krijgt optionele `priceReapprovalThresholds`.
-- In het `hasAcceptance`-blok: alleen `"prijs_gewijzigd"` teruggeven wanneer `priceChangeRequiresReapproval(...)` true is. Anders val terug op de bestaande "geaccepteerd / klant_akkoord_wacht_partner / klant_akkoord_bureau".
-- Tests in `src/lib/__tests__/itemStatus.test.ts` uitbreiden: kleine stijging → `geaccepteerd`, grote stijging → `prijs_gewijzigd`, prijsdaling → `geaccepteerd`.
-
-### 4. Klantportaal `src/components/customer-portal/CustomerProgramItem.tsx`
-- Gebruik dezelfde threshold-check voor `priceChangeNeedsAttention` en voor het tonen van de badge/knop "Nieuwe prijs goedkeuren".
-- Onder drempel: geen amber banner, geen extra knop; wel een kleine subtiele micro-pill "Prijs bijgewerkt" (grijs, informatief) op dezelfde regel als het bedrag.
-- App-settings via bestaande `useAppSettings` hook doorgeven vanuit `CustomerProgram.tsx` → `DesktopProgramView` / mobile view → item.
-
-### 5. Bulk-actie "Alle X onderdelen goedkeuren"
-- `DesktopProgramView.tsx` (regel 440) en mobile equivalent: `customerActionsCount` telt alleen items met echte klantactie (dus mét threshold-check). Zo verdwijnt de misleidende grote groene knop wanneer alle openstaande wijzigingen onder de drempel vallen.
-
-### 6. Historie/logging
-- Bij het opslaan van `admin_price_override` in `AdminRequestDetail.tsx`: voeg een `program_request_history`-entry toe met action `admin_price_updated` (bedrag oud → nieuw, %-verschil). Zo blijft de wijziging traceerbaar, ook zonder klantactie.
-
-### 7. Buiten scope
-- Bureau-onderdelen: dezelfde regel geldt (dat lost tegelijk het screenshot-geval "Overtocht" op).
-- Wijziging van andere velden (tijd, personen, dag) blijft ongewijzigd — die behouden altijd hun bestaande approval-flow.
-- Geen wijziging aan `partner_price_change_acknowledged_at`-mechaniek richting partners.
-
-## Technische notitie
-
-Effectief totaal wordt op dezelfde manier berekend als in `hasOpenAdminPriceChange` (per_person / per_person_per_day multipliers). Vergelijking gebeurt op `Math.max(adminTotal - quotedPrice, 0)` — dalingen tellen dus nooit mee als "stijging".
-
-## Verificatie
-
-- Unit tests uitbreiden voor `itemStatus` en `portalPricing`.
-- Handmatige check in preview: bestaand project waar klant akkoord is → admin verhoogt met 2% → klant ziet "Prijs bijgewerkt" (grijs) en géén akkoordknop; verhoogt met 20% → klant ziet amber banner + knop.
+- Geen wijziging aan `logEmail()` of aan de group-mail edge functions — die schrijven bewust N rijen met dezelfde `mailjet_message_id`, dat is het contract dat de popover gebruikt.
+- Geen backfill van gemiste opens/clicks uit het verleden (Mailjet stuurt events niet opnieuw). Wel documenteren in de PR-samenvatting.
