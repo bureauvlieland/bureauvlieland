@@ -1,6 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 import { getPortalBaseUrl, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -245,8 +246,13 @@ Deno.serve(async (req) => {
     const mailjetResult = await sendEmailViaMailjet(emailMessages);
     console.log("Mailjet result:", mailjetResult);
 
+    // Extract MessageID per partner (Mailjet returns Messages[] in same order as input).
+    // Fallback: null if extraction fails so logging still works.
+    const mjMessageIds = extractMessageIds(mailjetResult);
+
     // Log emails
-    for (const partner of partners as any[]) {
+    for (let idx = 0; idx < partners.length; idx++) {
+      const partner = partners[idx] as any;
       await logEmail({
         email_type: "accommodation_quote_request_partner",
         subject: email_subject,
@@ -256,6 +262,7 @@ Deno.serve(async (req) => {
         related_partner_id: partner.id,
         status: "sent",
         sent_by: "send-accommodation-quote-request",
+        mailjet_message_id: mjMessageIds[idx] ?? null,
         metadata: {
           template_name: "accommodation_quote_request_partner",
           actor: "admin → partner (offerte-aanvraag)",

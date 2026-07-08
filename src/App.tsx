@@ -118,6 +118,7 @@ const AdminTickets = lazy(() => import("./pages/admin/AdminTickets"));
 const AdminAttribution = lazy(() => import("./pages/admin/AdminAttribution"));
 const AdminSocial = lazy(() => import("./pages/admin/AdminSocial"));
 const AdminSocialSettings = lazy(() => import("./pages/admin/AdminSocialSettings"));
+const AdminEmailHealth = lazy(() => import("./pages/admin/AdminEmailHealth"));
 
 const queryClient = new QueryClient();
 
@@ -281,6 +282,7 @@ const App = () => {
             <Route path="/admin/instellingen" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminChat />} />
             <Route path="/admin/financieel" element={<AdminFinancialDashboard />} />
+            <Route path="/admin/email-health" element={<AdminEmailHealth />} />
             <Route path="/admin/planning" element={<Navigate to="/admin/projecten?tab=kalender" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

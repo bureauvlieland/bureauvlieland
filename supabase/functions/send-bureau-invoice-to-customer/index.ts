@@ -8,6 +8,7 @@ import {
   isTestMode,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -228,8 +229,6 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}`,
       },
-      message.TrackClicks = "disabled";
-      message.TrackOpens = "disabled";
       body: JSON.stringify({ Messages: [message] }),
     });
 
@@ -260,6 +259,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Extract MessageID for webhook tracking (open/click/bounce feedback).
+    const mjJson = await mjResponse.json().catch(() => null);
+    const mailjetMessageId = extractMessageIds(mjJson)[0] ?? null;
+
     // ─── Logging ───────────────────────────────────────────────────────────
     await logEmail({
       email_type: "bureau_invoice_to_customer",
@@ -269,6 +272,7 @@ Deno.serve(async (req) => {
       status: "sent",
       sent_by: user.id,
       related_request_id: body.requestId,
+      mailjet_message_id: mailjetMessageId,
       metadata: {
         template_name: "bureau_invoice_to_customer",
         actor: "admin → klant",
