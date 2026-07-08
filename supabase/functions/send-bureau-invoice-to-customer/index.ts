@@ -8,6 +8,7 @@ import {
   isTestMode,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
