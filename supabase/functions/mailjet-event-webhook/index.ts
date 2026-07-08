@@ -231,24 +231,31 @@ Deno.serve(async (req) => {
       })();
 
       if (suppressReason && ev.email) {
-        const { error: suppErr } = await supabase
+        const normalized = ev.email.trim().toLowerCase();
+        // Skip if adres al geblokt — we werken niet bij, oudste reden blijft leidend.
+        const { data: existing } = await supabase
           .from("email_suppressions")
-          .upsert(
-            {
-              email: ev.email.trim().toLowerCase(),
+          .select("id")
+          .ilike("email", normalized)
+          .maybeSingle();
+        if (!existing) {
+          const { error: suppErr } = await supabase
+            .from("email_suppressions")
+            .insert({
+              email: normalized,
               reason: suppressReason,
               source: "mailjet-webhook",
               notes: ev.error ?? null,
-            },
-            { onConflict: "email" },
-          );
-        if (suppErr) {
-          console.error(
-            `Failed to upsert suppression for ${ev.email}:`,
-            suppErr.message,
-          );
+            });
+          if (suppErr) {
+            console.error(
+              `Failed to insert suppression for ${normalized}:`,
+              suppErr.message,
+            );
+          }
         }
       }
+
     } catch (err) {
       console.error("Event processing error:", err);
     }
