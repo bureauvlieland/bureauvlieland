@@ -133,92 +133,94 @@ Deno.serve(async (req) => {
         ? new Date(ev.time * 1000).toISOString()
         : new Date().toISOString();
 
-      // Find matching log row. mailjet_message_id is niet gegarandeerd uniek
-      // (bv. bij re-sends of dubbele logs) — pak de meest recente rij i.p.v.
-      // single() dat crasht bij >1 match.
+      // Find ALL matching log rows. mailjet_message_id is niet uniek:
+      // group-mails (send-items-to-partners, notify-partners-informational,
+      // accept-quote-proposal) schrijven per item een aparte email_log-rij
+      // met dezelfde mailjet_message_id, zodat de item-popover per rij een
+      // related_item_id kan tonen. Elk Mailjet-event moet ALLE rijen
+      // bijwerken — anders krijgt maar één item zijn open/click/delivered.
       const { data: rows, error: fetchErr } = await supabase
         .from("email_log")
         .select(
-          "id, status, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at",
+          "id, status, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, unsub_at",
         )
-        .eq("mailjet_message_id", messageId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const row = rows && rows.length > 0 ? rows[0] : null;
+        .eq("mailjet_message_id", messageId);
 
       if (fetchErr) {
         console.error("Lookup error:", fetchErr);
         continue;
       }
 
-      if (!row) {
+      if (!rows || rows.length === 0) {
         unmatched++;
         console.log(`No email_log row for MessageID=${messageId} event=${eventType}`);
         continue;
       }
 
-      const eventsHistory = Array.isArray(row.mailjet_events)
-        ? (row.mailjet_events as unknown[])
-        : [];
-      const newHistory = [
-        ...eventsHistory,
-        {
-          event: eventType,
-          time: eventTs,
-          email: ev.email,
-          error: ev.error,
-          error_related_to: ev.error_related_to,
-          hard_bounce: ev.hard_bounce,
-          url: ev.url,
-        },
-      ];
+      const updates = await Promise.all(
+        rows.map(async (row) => {
+          const eventsHistory = Array.isArray(row.mailjet_events)
+            ? (row.mailjet_events as unknown[])
+            : [];
+          const newHistory = [
+            ...eventsHistory,
+            {
+              event: eventType,
+              time: eventTs,
+              email: ev.email,
+              error: ev.error,
+              error_related_to: ev.error_related_to,
+              hard_bounce: ev.hard_bounce,
+              url: ev.url,
+            },
+          ];
 
-      const update: Record<string, unknown> = {
-        mailjet_events: newHistory,
-      };
+          const update: Record<string, unknown> = {
+            mailjet_events: newHistory,
+          };
 
-      // Set the per-event timestamp on first occurrence only
-      if (column) {
-        const existing = (row as Record<string, unknown>)[column];
-        if (!existing) update[column] = eventTs;
-      }
+          if (column) {
+            const existing = (row as Record<string, unknown>)[column];
+            if (!existing) update[column] = eventTs;
+          }
 
-      // Increment counters for engagement events
-      if (eventType === "open") {
-        update.open_count = (row.open_count ?? 0) + 1;
-      } else if (eventType === "click") {
-        update.click_count = (row.click_count ?? 0) + 1;
-      }
+          if (eventType === "open") {
+            update.open_count = (row.open_count ?? 0) + 1;
+          } else if (eventType === "click") {
+            update.click_count = (row.click_count ?? 0) + 1;
+          }
 
-      // Promote status only when the new event is "stronger" than the current one
-      if (newStatus) {
-        const currentRank = STATUS_RANK[row.status as string] ?? 1;
-        const nextRank = STATUS_RANK[newStatus] ?? 1;
-        if (nextRank > currentRank) {
-          update.status = newStatus;
-        }
-      }
+          if (newStatus) {
+            const currentRank = STATUS_RANK[row.status as string] ?? 1;
+            const nextRank = STATUS_RANK[newStatus] ?? 1;
+            if (nextRank > currentRank) {
+              update.status = newStatus;
+            }
+          }
 
-      // Capture error message for failure events
-      if (ev.error && (eventType === "bounce" || eventType === "blocked")) {
-        update.error_message = ev.error;
-      }
+          if (ev.error && (eventType === "bounce" || eventType === "blocked")) {
+            update.error_message = ev.error;
+          }
 
-      const { error: updateErr } = await supabase
-        .from("email_log")
-        .update(update)
-        .eq("id", row.id);
+          const { error: updateErr } = await supabase
+            .from("email_log")
+            .update(update)
+            .eq("id", row.id);
 
-      if (updateErr) {
-        console.error("Update error:", updateErr);
-        continue;
-      }
+          if (updateErr) {
+            console.error(`Update error for row ${row.id}:`, updateErr);
+            return false;
+          }
+          return true;
+        }),
+      );
 
-      processed++;
+      processed += updates.filter(Boolean).length;
     } catch (err) {
       console.error("Event processing error:", err);
     }
   }
+
 
   return new Response(
     JSON.stringify({ ok: true, processed, unmatched, total: events.length }),
