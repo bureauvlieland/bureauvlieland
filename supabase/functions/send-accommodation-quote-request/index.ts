@@ -1,6 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
+import { extractMessageIds } from "../_shared/mailjet-send.ts";
 import { getPortalBaseUrl, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
