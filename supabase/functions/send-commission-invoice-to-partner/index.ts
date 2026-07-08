@@ -9,7 +9,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
-import { extractMessageIds } from "../_shared/mailjet-send.ts";
+import { extractMessageIds, findRecentIdempotentSend } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -203,6 +203,18 @@ Deno.serve(async (req) => {
 
     message.TrackClicks = "disabled";
     message.TrackOpens = "disabled";
+
+    // Idempotency: geen dubbele commissiefactuur naar dezelfde partner binnen 10 min.
+    const idempotencyKey = `commission-invoice-${invoice.id}-${finalRecipient}`;
+    const prevSend = await findRecentIdempotentSend(idempotencyKey, 10);
+    if (prevSend) {
+      console.warn(`[send-commission-invoice-to-partner] Duplicate suppressed for ${idempotencyKey}`);
+      return new Response(
+        JSON.stringify({ success: true, deduped: true, mailjetMessageId: prevSend.mailjetMessageId }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const mjResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
@@ -277,6 +289,7 @@ Deno.serve(async (req) => {
     // Log email
     await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
+      idempotency_key: idempotencyKey,
       email_type: "commission_invoice_sent",
       recipient_email: finalRecipient,
       recipient_name: recipientName,
