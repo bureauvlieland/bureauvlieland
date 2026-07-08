@@ -223,6 +223,17 @@ Deno.serve(async (req) => {
     };
     if (replyTo) message.ReplyTo = replyTo;
 
+    // Idempotency: voorkom dubbele factuur-mail binnen 10 min (bijv. dubbelklik).
+    const idempotencyKey = `bureau-invoice-${body.invoiceId ?? body.invoiceNumber}-${finalRecipient}`;
+    const prevSend = await findRecentIdempotentSend(idempotencyKey, 10);
+    if (prevSend) {
+      console.warn(`[send-bureau-invoice-to-customer] Duplicate suppressed for ${idempotencyKey}`);
+      return new Response(
+        JSON.stringify({ success: true, deduped: true, mailjetMessageId: prevSend.mailjetMessageId }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const mjResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
