@@ -203,6 +203,18 @@ Deno.serve(async (req) => {
 
     message.TrackClicks = "disabled";
     message.TrackOpens = "disabled";
+
+    // Idempotency: geen dubbele commissiefactuur naar dezelfde partner binnen 10 min.
+    const idempotencyKey = `commission-invoice-${invoice.id}-${finalRecipient}`;
+    const prevSend = await findRecentIdempotentSend(idempotencyKey, 10);
+    if (prevSend) {
+      console.warn(`[send-commission-invoice-to-partner] Duplicate suppressed for ${idempotencyKey}`);
+      return new Response(
+        JSON.stringify({ success: true, deduped: true, mailjetMessageId: prevSend.mailjetMessageId }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const mjResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
