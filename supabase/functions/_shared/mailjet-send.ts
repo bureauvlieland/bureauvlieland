@@ -50,6 +50,21 @@ export interface SendMailjetOptions {
    * dat je in de edge function logs terugziet welke aanroep faalde.
    */
   source?: string;
+  /**
+   * Als deze key aanwezig is, controleert de helper eerst of dezelfde send
+   * de afgelopen `idempotencyWindowMinutes` (default 10) al succesvol is
+   * uitgevoerd. Zo ja: send wordt overgeslagen en `skipped: 'duplicate'`
+   * geretourneerd — de aanroeper kan dan gewoon `logEmail(status='sent',
+   * mailjet_message_id=<vorige>)` doen zonder dubbele mail te sturen.
+   */
+  idempotencyKey?: string;
+  idempotencyWindowMinutes?: number;
+  /**
+   * Als true, wordt vóór verzending gecheckt of één van de ontvangers op
+   * de suppression-lijst staat. Standaard `true` — alleen uitzetten voor
+   * technische alerts naar admins die altijd door moeten.
+   */
+  checkSuppression?: boolean;
 }
 
 export type SendMailjetResult =
@@ -60,12 +75,17 @@ export type SendMailjetResult =
       /** Alle MessageID's (1 per Message × To combinatie). */
       messageIds: string[];
       raw: unknown;
+      /** Gezet als de send is overgeslagen (dedupe of suppressed). */
+      skipped?: "duplicate" | "suppressed" | "test_mode";
+      /** Bij `skipped='suppressed'`: welk adres + reden. */
+      suppressedRecipient?: { email: string; reason: string };
     }
   | {
       ok: false;
       error: string;
       status?: number;
     };
+
 
 /**
  * Extract Mailjet MessageID uit een geslaagde v3.1 response.
