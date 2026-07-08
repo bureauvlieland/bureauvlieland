@@ -118,6 +118,7 @@ const AdminTickets = lazy(() => import("./pages/admin/AdminTickets"));
 const AdminAttribution = lazy(() => import("./pages/admin/AdminAttribution"));
 const AdminSocial = lazy(() => import("./pages/admin/AdminSocial"));
 const AdminSocialSettings = lazy(() => import("./pages/admin/AdminSocialSettings"));
+const AdminEmailHealth = lazy(() => import("./pages/admin/AdminEmailHealth"));
 
 const queryClient = new QueryClient();
 
