@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, RefreshCw, Trash2, ShieldOff, FileText, Download, ExternalLink } from "lucide-react";
+import { TestCoverageCard } from "@/components/admin/email-health/TestCoverageCard";
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -244,7 +245,10 @@ export default function AdminEmailHealth() {
 
         <AuditReportCard />
 
+        <TestCoverageCard />
+
         <AutoCloseCard />
+
 
         {/* KPI-tegels */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
