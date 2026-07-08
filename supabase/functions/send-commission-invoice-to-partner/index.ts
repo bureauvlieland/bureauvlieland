@@ -289,6 +289,7 @@ Deno.serve(async (req) => {
     // Log email
     await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
+      idempotency_key: idempotencyKey,
       email_type: "commission_invoice_sent",
       recipient_email: finalRecipient,
       recipient_name: recipientName,
