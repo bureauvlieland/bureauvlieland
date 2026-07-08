@@ -168,3 +168,85 @@ export async function sendMailjet(
     raw: parsed,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Suppression + idempotency helpers
+// ---------------------------------------------------------------------------
+//
+// Beide helpers maken hun eigen service-role client aan zodat elke edge
+// function ze kan gebruiken zonder een client door te geven. Ze zijn
+// bewust "fail open": als de check zelf een DB-fout gooit, laten we de
+// send doorgaan (beter een dubbele mail dan een gemiste mail). Wel
+// loggen we luid zodat we het in de function-logs terugvinden.
+
+import { createClient as _createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+function serviceClient() {
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return _createClient(url, key);
+}
+
+/**
+ * Check of `email` op de suppressielijst staat (bounce/spam/blocked/unsub/
+ * handmatig). Retourneert `null` als het adres mag, of `{ reason }` als
+ * het adres geblokt is. Fail-open bij DB-fouten.
+ */
+export async function checkEmailSuppressed(
+  email: string,
+): Promise<{ reason: string; source?: string | null } | null> {
+  try {
+    const supabase = serviceClient();
+    const { data, error } = await supabase
+      .from("email_suppressions")
+      .select("reason, source")
+      .ilike("email", email.trim())
+      .maybeSingle();
+    if (error) {
+      console.warn("[mailjet-send] suppression lookup failed:", error.message);
+      return null;
+    }
+    return data ? { reason: data.reason, source: data.source } : null;
+  } catch (err) {
+    console.warn("[mailjet-send] suppression lookup threw:", err);
+    return null;
+  }
+}
+
+/**
+ * Idempotency-check: kijkt of er in het `windowMinutes`-venster al een
+ * geslaagde send-rij bestaat met dezelfde `idempotencyKey`. Als dat zo is,
+ * retourneert de bestaande `mailjet_message_id` zodat de aanroeper de send
+ * kan overslaan en toch consistent logt.
+ */
+export async function findRecentIdempotentSend(
+  idempotencyKey: string,
+  windowMinutes = 10,
+): Promise<{ mailjetMessageId: string | null; sentAt: string } | null> {
+  try {
+    const supabase = serviceClient();
+    const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
+    const { data, error } = await supabase
+      .from("email_log")
+      .select("mailjet_message_id, sent_at")
+      .eq("idempotency_key", idempotencyKey)
+      .in("status", ["sent", "delivered", "opened", "clicked"])
+      .gte("sent_at", since)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.warn("[mailjet-send] idempotency lookup failed:", error.message);
+      return null;
+    }
+    if (!data) return null;
+    return {
+      mailjetMessageId: data.mailjet_message_id ?? null,
+      sentAt: data.sent_at,
+    };
+  } catch (err) {
+    console.warn("[mailjet-send] idempotency lookup threw:", err);
+    return null;
+  }
+}
+
