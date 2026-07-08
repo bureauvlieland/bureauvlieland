@@ -284,6 +284,7 @@ Deno.serve(async (req) => {
       sent_by: user.id,
       related_request_id: body.requestId,
       mailjet_message_id: mailjetMessageId,
+      idempotency_key: idempotencyKey,
       metadata: {
         template_name: "bureau_invoice_to_customer",
         actor: "admin → klant",
