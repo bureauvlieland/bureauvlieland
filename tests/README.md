@@ -29,12 +29,22 @@ Deze tests stubben Mailjet, Supabase en storage. Ze bewijzen dat:
 
 ## E2E-tests (Playwright)
 
-Zie `tests/e2e/README.md`. Draaien lokaal met `SUPABASE_SERVICE_ROLE_KEY`.
+Zie `tests/e2e/README.md`. Draaien lokaal met `SUPABASE_SERVICE_ROLE_KEY` en
+— voor de nieuwe suites — `CI_FIXTURE_SECRET` (idempotency-test) en
+`MAILJET_WEBHOOK_TOKEN` (event-webhook-test). Zonder deze secrets slaan de
+bijbehorende tests zichzelf over.
 
 ```bash
 bunx playwright test
 ```
 
+Huidige scope:
+- `self-service-submit.spec.ts` — happy-path configurator.
+- `invoice-idempotency.spec.ts` — bureau-factuur idempotency.
+- `mailjet-webhook.spec.ts` — Mailjet event-webhook auth + hard bounce.
+- `inbound-purchase-invoice.spec.ts` — inbound-factuur zonder PDF.
+
 ## CI-notitie
 
-`bun test` is nu als script in `package.json` opgenomen. Edge-function tests en Playwright vereisen extra secrets / lokale setup en draaien apart.
+`bun test` is als script in `package.json` opgenomen. Edge-function tests en
+Playwright vereisen extra secrets / lokale setup en draaien apart.
