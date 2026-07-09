@@ -82,12 +82,13 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
   accommodations?.forEach(a => accById.set(a.id, a));
 
   // item stats per program_request
-  const stats = new Map<string, { total: number; confirmed: number; notSent: number }>();
+  const stats = new Map<string, { total: number; confirmed: number; notSent: number; autoClosed: number }>();
   items?.forEach(it => {
-    const s = stats.get(it.request_id) ?? { total: 0, confirmed: 0, notSent: 0 };
+    const s = stats.get(it.request_id) ?? { total: 0, confirmed: 0, notSent: 0, autoClosed: 0 };
     s.total++;
     if (it.status === "confirmed") s.confirmed++;
     if (it.skip_partner_notification && it.customer_approved_at) s.notSent++;
+    if ((it as any).auto_closed_reason === "auto_past_execution") s.autoClosed++;
     stats.set(it.request_id, s);
   });
 
