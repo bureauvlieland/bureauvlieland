@@ -554,7 +554,7 @@ export const handler = async (req: Request): Promise<Response> => {
         related_partner_id: partner.id,
         status: sendResult.ok ? "sent" : "failed",
         error_message: sendResult.error || undefined,
-        mailjet_message_id: sendResult.messageId,
+        mailjet_message_id: sendResult.messageId || undefined,
         sent_by: "partner",
         metadata: {
           template_name: TemplateIds.COUNTER_PROPOSAL_RESPONSE,
