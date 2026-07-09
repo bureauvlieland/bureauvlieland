@@ -67,6 +67,7 @@ const getUrgencyScore = (status: string, canInvoice?: boolean): number => {
     unavailable: 0,
     rejected: 0,
     expired: 0,
+    auto_closed: 5,
   };
   return scores[status] ?? 0;
 };
