@@ -1,0 +1,66 @@
+/**
+ * Source-grep contract: elk auto_type dat reconcile-admin-todos afsluit,
+ * moet ergens in check-pending-items ook worden aangemaakt. Voorkomt
+ * typo-drift waarbij een todo eeuwig openstaat omdat de sluit-handler
+ * naar een verkeerde string kijkt.
+ */
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const reconcile = readFileSync(
+  resolve(process.cwd(), "supabase/functions/reconcile-admin-todos/index.ts"),
+  "utf8",
+);
+const creator = readFileSync(
+  resolve(process.cwd(), "supabase/functions/check-pending-items/index.ts"),
+  "utf8",
+);
+
+// Types die reconcile universeel/informatief hanteert zonder dat check-pending-items
+// ze zelf hoeft te creëren (bv. handmatig aangemaakte todos).
+const UNIVERSAL = new Set(["customer_cancellation"]);
+
+function extractSwitchCases(src: string): string[] {
+  const cases = new Set<string>();
+  const re = /case\s+"([a-z_]+)"\s*:/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src)) !== null) cases.add(m[1]);
+  return [...cases];
+}
+
+function extractCreatedTypes(src: string): Set<string> {
+  const created = new Set<string>();
+  const re = /auto_type\s*:\s*["']([a-z_]+)["']/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src)) !== null) created.add(m[1]);
+  return created;
+}
+
+describe("reconcile-admin-todos ↔ check-pending-items", () => {
+  const closed = extractSwitchCases(reconcile).filter((t) => !UNIVERSAL.has(t));
+  const created = extractCreatedTypes(creator);
+
+  it("reconcile heeft ten minste een handvol switch-cases (sanity)", () => {
+    expect(closed.length).toBeGreaterThan(5);
+  });
+
+  it("elk gesloten auto_type wordt ergens in check-pending-items aangemaakt", () => {
+    const missing = closed.filter((t) => !created.has(t));
+    expect(
+      missing,
+      `reconcile sluit types die nooit aangemaakt worden (typo?): ${missing.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("reconcile bevat expliciete lookup-error guards (geen 'silent close on fetch failure')", () => {
+    // Regressie: eerder werden todos gesloten als 'project_deleted' omdat een
+    // lookup faalde. Alle .from(...).select(...).in(...) queries in reconcile
+    // moeten hun .error afvangen met throw.
+    expect(reconcile).toMatch(/if \(reqs\.error\) throw/);
+    expect(reconcile).toMatch(/if \(items\.error\) throw/);
+    expect(reconcile).toMatch(/if \(quotes\.error\) throw/);
+    expect(reconcile).toMatch(/if \(pInvoices\.error\) throw/);
+    expect(reconcile).toMatch(/if \(batches\.error\) throw/);
+  });
+});
