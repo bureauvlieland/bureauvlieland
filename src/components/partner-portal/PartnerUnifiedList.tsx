@@ -221,7 +221,7 @@ export const PartnerUnifiedList = ({
           !item.canInvoice &&
           !item.priceChangePending;
       case "completed":
-        return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed"].includes(item.status) &&
+        return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed", "auto_closed"].includes(item.status) &&
           !item.canInvoice;
       default:
         return true;
