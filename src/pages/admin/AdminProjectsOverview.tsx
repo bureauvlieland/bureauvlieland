@@ -25,6 +25,7 @@ export default function AdminProjectsOverview() {
   const search = params.get("q") ?? "";
   const typeFilter = (params.get("type") as RowKind | "all") ?? "all";
   const archive = params.get("archief") === "1";
+  const autoOnly = params.get("auto") === "1";
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
