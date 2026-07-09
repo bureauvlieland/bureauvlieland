@@ -345,5 +345,63 @@ describe("deriveItemDisplayStatus — pre-offerte fase (concept/in_afstemming)",
   });
 });
 
+/**
+ * Regressie-matrix: prioriteitsvolgorde van terminale toestanden.
+ *
+ * Historische bugs:
+ *   - "auto_closed_reason" werd vóór "executed" en "cancelled" gecheckt,
+ *     waardoor uitgevoerde/geannuleerde items als "afgesloten_automatisch"
+ *     verschenen.
+ *   - "isPostExecution" overschreef "cancelled", waardoor geannuleerde
+ *     items na de uitvoerdatum als "uitgevoerd" verschenen.
+ *
+ * Verwachte volgorde: self_arranged → cancelled → executed/invoiced →
+ * unavailable → auto_past_execution → isPostExecution-fallback.
+ */
+describe("regressie-matrix: prioriteit van terminale toestanden", () => {
+  type MatrixCase = {
+    name: string;
+    item: Record<string, unknown>;
+    ctx?: { isPostExecution?: boolean };
+    expected: string;
+  };
+
+  const cases: MatrixCase[] = [
+    { name: "self_arranged + cancelled → self_arranged (block_type wint)",
+      item: { block_type: "self_arranged", status: "cancelled" }, expected: "self_arranged" },
+    { name: "self_arranged + executed → self_arranged",
+      item: { block_type: "self_arranged", status: "executed" }, expected: "self_arranged" },
+    { name: "cancelled + executed_at → geannuleerd",
+      item: { status: "cancelled", executed_at: "2024-01-01T00:00:00Z" }, expected: "geannuleerd" },
+    { name: "cancelled + auto_closed_reason → geannuleerd",
+      item: { status: "cancelled", auto_closed_reason: "auto_past_execution" }, expected: "geannuleerd" },
+    { name: "cancelled + isPostExecution → geannuleerd",
+      item: { status: "cancelled" }, ctx: { isPostExecution: true }, expected: "geannuleerd" },
+    { name: "executed + auto_closed_reason → uitgevoerd",
+      item: { status: "executed", auto_closed_reason: "auto_past_execution" }, expected: "uitgevoerd" },
+    { name: "invoiced + auto_closed_reason → uitgevoerd",
+      item: { status: "invoiced", auto_closed_reason: "auto_past_execution" }, expected: "uitgevoerd" },
+    { name: "executed + isPostExecution → uitgevoerd",
+      item: { status: "executed" }, ctx: { isPostExecution: true }, expected: "uitgevoerd" },
+    { name: "unavailable + auto_closed_reason → niet_beschikbaar (partner-afwijzing blijft zichtbaar)",
+      item: { status: "unavailable", auto_closed_reason: "auto_past_execution" }, expected: "niet_beschikbaar" },
+    { name: "pending + auto_closed_reason → afgesloten_automatisch",
+      item: { status: "pending", auto_closed_reason: "auto_past_execution" }, expected: "afgesloten_automatisch" },
+    { name: "confirmed + auto_closed_reason → afgesloten_automatisch",
+      item: { status: "confirmed", auto_closed_reason: "auto_past_execution" }, expected: "afgesloten_automatisch" },
+    { name: "pending + isPostExecution (zonder auto_close) → uitgevoerd",
+      item: { status: "pending" }, ctx: { isPostExecution: true }, expected: "uitgevoerd" },
+  ];
+
+  it.each(cases)("$name", ({ item, ctx: ctxOverride, expected }) => {
+    const derived = deriveItemDisplayStatus(
+      makeItem(item as Partial<ProgramRequestItem>),
+      { ...ctx, ...(ctxOverride ?? {}) },
+    );
+    expect(derived).toBe(expected);
+  });
+});
+
+
 
 
