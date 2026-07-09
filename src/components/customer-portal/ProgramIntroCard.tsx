@@ -20,6 +20,7 @@ interface ProgramIntroCardProps {
   programPublishedAt?: string | null;
   allConfirmed?: boolean;
   quotePdfUrl?: string | null;
+  isPostExecution?: boolean;
 }
 
 export const ProgramIntroCard = ({
@@ -34,6 +35,7 @@ export const ProgramIntroCard = ({
   programPublishedAt,
   allConfirmed = false,
   quotePdfUrl,
+  isPostExecution = false,
 }: ProgramIntroCardProps) => {
   const isPublished = !!programPublishedAt;
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +44,10 @@ export const ProgramIntroCard = ({
   const isAwaitingApproval = quoteStatus === "offerte_verstuurd";
   const isBeingPrepared = !!quoteStatus && ["concept", "in_afstemming"].includes(quoteStatus);
   const isConfirmed = (!!termsAcceptedAt || quoteStatus === "definitief_bevestigd") || (quoteStatus === "akkoord_ontvangen" && allConfirmed);
+  if (isPostExecution) {
+    return null;
+  }
+
 
   const validUntil = quoteValidUntil ? new Date(quoteValidUntil) : null;
   const isExpired = validUntil ? validUntil < new Date() : false;
