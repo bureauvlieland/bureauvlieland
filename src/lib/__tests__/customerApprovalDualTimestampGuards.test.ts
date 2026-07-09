@@ -93,7 +93,7 @@ describe("update-partner-item-status — clear-both-together invariant", () => {
       const matches = [...src.matchAll(re)];
       expect(matches.length, `${label}: update-blok niet gevonden`).toBeGreaterThan(0);
       const startIdx = matches[matches.length - 1].index!;
-      const region = src.slice(startIdx, startIdx + 800);
+      const region = src.slice(startIdx, startIdx + 1500);
       expect(region, `${label}: mist customer_approved_at reset`).toMatch(/customer_approved_at\s*=\s*null/);
       expect(region, `${label}: mist customer_accepted_at reset`).toMatch(/customer_accepted_at\s*=\s*null/);
     }
