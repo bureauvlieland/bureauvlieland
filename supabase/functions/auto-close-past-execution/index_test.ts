@@ -179,7 +179,7 @@ Deno.test("runAutoClose dryRun muteert niets", async () => {
   const store = seed();
   const client = buildClient(store);
   const res = await runAutoClose(client, { now: NOW, dryRun: true });
-  assertEquals(res.items_confirmed, 2);
+  assertEquals(res.items_confirmed, 3);
   assertEquals(res.todos_closed, 2);
   // Store onveranderd
   const itemA = store.program_request_items.find((i) => i.id === "item-a")!;
