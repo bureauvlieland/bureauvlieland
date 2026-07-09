@@ -319,6 +319,7 @@ export const MobileProgramView = ({
         customerApprovedCount={customerApprovedCount}
         customerApprovableCount={customerApprovableCount}
         quoteStatus={program.quote_status}
+        isPostExecution={isPostExecution}
         onStepAction={handleStepAction}
       />
 
@@ -360,7 +361,7 @@ export const MobileProgramView = ({
             quoteStatus={program.quote_status}
             programPublishedAt={program.program_published_at}
             customerActionsCount={customerActionsCount}
-            alternativeActionsCount={statusSummary.alternative}
+            alternativeActionsCount={alternativeActionsCount}
             guestDetailsIncomplete={
               !!guestDetails &&
               (!guestDetails.guest_names ||
@@ -473,7 +474,7 @@ export const MobileProgramView = ({
                 <CalendarPlus className="h-3 w-3" />
               </Button>
               {/* Offerte-PDF knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
-              {!termsAccepted && isPublished && (
+              {!termsAccepted && isPublished && !isPostExecution && (
                 <Button
                   size="sm"
                   onClick={(e) => {
@@ -540,7 +541,8 @@ export const MobileProgramView = ({
                          quoteStatus={program.quote_status}
                          isQuoteMode={isQuoteMode}
                         vatRate={getItemVatRate(item)}
-                        readOnly={!isPublished}
+                        readOnly={!isPublished || isPostExecution}
+                        isPostExecution={isPostExecution}
                         hideDay
                         numberOfPeople={program.number_of_people}
                       />
@@ -580,7 +582,8 @@ export const MobileProgramView = ({
                        quoteStatus={program.quote_status}
                        isQuoteMode={isQuoteMode}
                       vatRate={getItemVatRate(item)}
-                      readOnly={!isPublished}
+                      readOnly={!isPublished || isPostExecution}
+                      isPostExecution={isPostExecution}
                       numberOfPeople={program.number_of_people}
                     />
                   )}
@@ -660,7 +663,7 @@ export const MobileProgramView = ({
       {initialSection === "program" && (
         <>
           {/* Floating changes bar — only in program view */}
-          {initialSection === "program" && hasChanges && isPublished && (
+          {initialSection === "program" && hasChanges && isPublished && !isPostExecution && (
             <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
               <div className="flex items-center justify-between gap-4">
                 <div>
