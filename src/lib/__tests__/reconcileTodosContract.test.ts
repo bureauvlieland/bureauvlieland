@@ -5,8 +5,8 @@
  * naar een verkeerde string kijkt.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { resolve, join } from "node:path";
 
 const reconcile = readFileSync(
   resolve(process.cwd(), "supabase/functions/reconcile-admin-todos/index.ts"),
@@ -56,15 +56,15 @@ function extractCreatedTypes(src: string): Set<string> {
   return created;
 }
 
-describe("reconcile-admin-todos ↔ check-pending-items", () => {
+describe("reconcile-admin-todos ↔ auto_type creators", () => {
   const closed = extractSwitchCases(reconcile).filter((t) => !UNIVERSAL.has(t));
-  const created = extractCreatedTypes(creator);
+  const created = collectAllAutoTypes();
 
   it("reconcile heeft ten minste een handvol switch-cases (sanity)", () => {
     expect(closed.length).toBeGreaterThan(5);
   });
 
-  it("elk gesloten auto_type wordt ergens in check-pending-items aangemaakt", () => {
+  it("elk gesloten auto_type wordt ergens in de codebase aangemaakt", () => {
     const missing = closed.filter((t) => !created.has(t));
     expect(
       missing,
