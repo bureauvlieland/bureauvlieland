@@ -399,8 +399,9 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     setReplyOpen(true);
   };
 
-  const filterChips: { key: Origin | "all"; label: string }[] = [
+  const filterChips: { key: ExtendedOrigin; label: string; count?: number }[] = [
     { key: "all", label: "Alles" },
+    { key: "unanswered", label: "Onbeantwoord", count: unansweredGroupCount },
     { key: "inbound", label: "Inkomend" },
     { key: "manual", label: "Handmatig" },
     { key: "automatic", label: "Automatisch" },
