@@ -11,7 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, RefreshCw, Trash2, ShieldOff, FileText, Download, ExternalLink } from "lucide-react";
+import { AlertTriangle, RefreshCw, Trash2, ShieldOff, FileText, Download, ExternalLink, History, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useEffect } from "react";
 import { TestCoverageCard } from "@/components/admin/email-health/TestCoverageCard";
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
