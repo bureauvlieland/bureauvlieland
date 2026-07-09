@@ -28,6 +28,7 @@ const TONE_BY_STATUS: Record<ItemDisplayStatus, MicroPillTone> = {
   geannuleerd: "slate",
   niet_beschikbaar: "red",
   self_arranged: "slate",
+  afgesloten_automatisch: "slate",
 };
 
 const TONE_CLASSES: Record<MicroPillTone, string> = {

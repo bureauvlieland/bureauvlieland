@@ -40,6 +40,7 @@ export interface UnifiedListItem {
   isRecentlyCancelled?: boolean;
   isRecentlyRejected?: boolean;
   priceChangePending?: boolean;
+  isAutoClosed?: boolean;
   originalItem: PartnerItem | PartnerAccommodationQuote;
 }
 
@@ -66,6 +67,7 @@ const getUrgencyScore = (status: string, canInvoice?: boolean): number => {
     unavailable: 0,
     rejected: 0,
     expired: 0,
+    auto_closed: 5,
   };
   return scores[status] ?? 0;
 };
@@ -133,7 +135,14 @@ export const PartnerUnifiedList = ({
       // hangen voor projecten die allang niet meer doorgaan.
       const programCancelled =
         i.program_requests.status === "cancelled" || !!i.program_requests.cancelled_at;
-      const baseStatus = programCancelled ? "cancelled" : i.status;
+      const isAutoClosed =
+        i.auto_closed_reason === "auto_past_execution" &&
+        !["executed", "invoiced", "cancelled"].includes(i.status);
+      const baseStatus = programCancelled
+        ? "cancelled"
+        : isAutoClosed
+          ? "auto_closed"
+          : i.status;
       const effectiveStatus = (baseStatus === "confirmed" && hasCustomerAccepted) ? "accepted" : baseStatus;
       
       const awaitingTerms = hasCustomerAccepted && 
@@ -146,6 +155,7 @@ export const PartnerUnifiedList = ({
       const numDays = getNumberOfDays(i.program_requests.selected_dates);
       const priceChangePending =
         !programCancelled &&
+        !isAutoClosed &&
         !!i.quoted_price &&
         !i.invoiced_number &&
         i.status !== "cancelled" &&
@@ -161,13 +171,14 @@ export const PartnerUnifiedList = ({
         status: effectiveStatus,
         urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
         peopleCount: effPeople,
-        isNew: !programCancelled && isNewItem(i),
-        isModified: !programCancelled && isModifiedByCustomer(i),
-        hasCounter: !programCancelled && i.status === "counter_proposed",
-        canInvoice,
+        isNew: !programCancelled && !isAutoClosed && isNewItem(i),
+        isModified: !programCancelled && !isAutoClosed && isModifiedByCustomer(i),
+        hasCounter: !programCancelled && !isAutoClosed && i.status === "counter_proposed",
+        canInvoice: canInvoice && !isAutoClosed,
         awaitingTerms,
         isRecentlyCancelled: effectiveStatus === "cancelled" && isRecentlyUpdated(i.updated_at),
         priceChangePending,
+        isAutoClosed,
         originalItem: i,
       };
     }),
@@ -210,7 +221,7 @@ export const PartnerUnifiedList = ({
           !item.canInvoice &&
           !item.priceChangePending;
       case "completed":
-        return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed"].includes(item.status) &&
+        return ["invoiced", "cancelled", "unavailable", "rejected", "declined", "executed", "auto_closed"].includes(item.status) &&
           !item.canInvoice;
       default:
         return true;
@@ -247,6 +258,7 @@ export const PartnerUnifiedList = ({
     const negativeItems = filteredItems.filter(i => 
       ["cancelled", "unavailable", "rejected", "declined"].includes(i.status)
     );
+    const autoClosedItems = filteredItems.filter(i => i.status === "auto_closed");
 
     return (
       <div className="space-y-6">
@@ -256,6 +268,20 @@ export const PartnerUnifiedList = ({
               Uitgevoerd / Gefactureerd
             </h3>
             {positiveItems.map((item) => (
+              <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
+            ))}
+          </div>
+        )}
+        {autoClosedItems.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1 flex items-center gap-1.5">
+              <Ban className="h-3.5 w-3.5" />
+              Afgesloten (automatisch)
+            </h3>
+            <p className="px-1 text-xs text-muted-foreground">
+              Uitvoerdatum verstreken zonder afronding. Klik op een onderdeel om de status te controleren.
+            </p>
+            {autoClosedItems.map((item) => (
               <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
             ))}
           </div>

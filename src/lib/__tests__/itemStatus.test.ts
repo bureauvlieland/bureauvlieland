@@ -53,6 +53,24 @@ describe("deriveItemDisplayStatus — terminale toestanden", () => {
     expect(deriveItemDisplayStatus(makeItem({ status: "unavailable" } as any), ctx))
       .toBe("niet_beschikbaar");
   });
+
+  it("auto_closed_reason=auto_past_execution op openstaand item → afgesloten_automatisch", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "pending", auto_closed_reason: "auto_past_execution" } as any),
+      ctx,
+    )).toBe("afgesloten_automatisch");
+  });
+
+  it("auto_closed_reason genegeerd zodra item executed of cancelled is", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "executed", auto_closed_reason: "auto_past_execution" } as any),
+      ctx,
+    )).toBe("uitgevoerd");
+    expect(deriveItemDisplayStatus(
+      makeItem({ status: "cancelled", auto_closed_reason: "auto_past_execution" } as any),
+      ctx,
+    )).toBe("geannuleerd");
+  });
 });
 
 describe("deriveItemDisplayStatus — workflow zonder klant-akkoord", () => {

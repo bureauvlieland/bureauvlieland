@@ -21,7 +21,8 @@ export type ItemDisplayStatus =
   | "uitgevoerd"
   | "geannuleerd"
   | "niet_beschikbaar"
-  | "self_arranged";
+  | "self_arranged"
+  | "afgesloten_automatisch";
 
 export interface ItemDisplayStatusInfo {
   /** Label voor admin- en interne views */
@@ -175,6 +176,18 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "ExternalLink",
   },
+  afgesloten_automatisch: {
+    adminLabel: "Afgesloten (automatisch)",
+    customerLabel: "Afgesloten",
+    partnerLabel: "Afgesloten (automatisch)",
+    adminTooltip: "Uitvoerdatum verstreken zonder afronding. Auto-close heeft dit onderdeel administratief gesloten.",
+    customerTooltip: "Dit onderdeel is automatisch afgesloten omdat de uitvoerdatum is verstreken.",
+    partnerTooltip: "De uitvoerdatum is verstreken en dit onderdeel is automatisch afgesloten. Controleer de status en factureer indien nodig.",
+    actor: "geen",
+    color: "text-slate-600 dark:text-slate-400",
+    bgColor: "bg-slate-100 dark:bg-slate-900/50",
+    icon: "Ban",
+  },
 };
 
 interface DeriveContext {
@@ -226,6 +239,7 @@ export function deriveItemDisplayStatus(
   if (item.status === "cancelled") return "geannuleerd";
   if (item.status === "executed" || item.status === "invoiced" || ctx.isPostExecution) return "uitgevoerd";
   if (item.status === "unavailable") return "niet_beschikbaar";
+  if ((item as any).auto_closed_reason === "auto_past_execution") return "afgesloten_automatisch";
 
   // Een eerder gegeven klant-akkoord vervalt zodra de aanbieder een
   // ALTERNATIEF voorstel doet — TENZIJ de klant ná dat alternatief opnieuw

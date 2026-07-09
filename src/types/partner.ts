@@ -90,6 +90,7 @@ export interface PartnerItem {
   commission_percentage: number | null;
   commission_amount: number | null;
   commission_status: string | null;
+  auto_closed_reason?: string | null;
   is_concept?: boolean;
   program_requests: {
     id: string;
