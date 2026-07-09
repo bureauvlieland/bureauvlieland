@@ -85,13 +85,12 @@ describe("update-partner-item-status — clear-both-together invariant", () => {
     // Deze paden gingen historisch stuk: als de partner "alternative" of
     // "unavailable" stuurt, moet klantakkoord op DIT item vervallen zodat het
     // niet meer meetelt in "alles goedgekeurd" en de klant opnieuw kan tekenen.
-    const altBlock = src.match(/if \(status === "alternative"\)[\s\S]{0,600}?\n\s{4}\}/);
-    const unavBlock = src.match(/if \(status === "unavailable"\)[\s\S]{0,400}?\n\s{4}\}/);
-    expect(altBlock).not.toBeNull();
-    expect(unavBlock).not.toBeNull();
-    for (const [label, block] of [["alternative", altBlock![0]], ["unavailable", unavBlock![0]]] as const) {
-      expect(block, `${label}: mist customer_approved_at reset`).toMatch(/customer_approved_at\s*=\s*null/);
-      expect(block, `${label}: mist customer_accepted_at reset`).toMatch(/customer_accepted_at\s*=\s*null/);
+    for (const label of ["alternative", "unavailable"] as const) {
+      const startIdx = src.indexOf(`if (status === "${label}")`);
+      expect(startIdx, `${label}: if-blok niet gevonden`).toBeGreaterThan(-1);
+      const region = src.slice(startIdx, startIdx + 800);
+      expect(region, `${label}: mist customer_approved_at reset`).toMatch(/customer_approved_at\s*=\s*null/);
+      expect(region, `${label}: mist customer_accepted_at reset`).toMatch(/customer_accepted_at\s*=\s*null/);
     }
   });
 });
