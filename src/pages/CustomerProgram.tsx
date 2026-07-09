@@ -13,7 +13,6 @@ import { MobileProgramView } from "@/components/customer-portal/MobileProgramVie
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
-import { getCustomerApprovalStats } from "@/hooks/useProgramStatus";
 import { getCustomerPortalStatus } from "@/lib/customerPortalStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
