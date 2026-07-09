@@ -416,7 +416,7 @@ export const CustomerProgramItem = ({
 
 
           {/* Always-visible action row */}
-          {item.status !== "cancelled" && !readOnly && (
+          {item.status !== "cancelled" && !readOnly && !isPostExecution && (
             <div className={cn(
               "mt-3 flex flex-wrap gap-2",
               needsCustomerAction ? "justify-stretch" : "justify-end",
@@ -531,7 +531,7 @@ export const CustomerProgramItem = ({
           )}
 
           {/* Optionele extra's (bouwsteen-componenten) — alleen op hoofd-items */}
-          {!(item as any).parent_item_id && (
+          {!(item as any).parent_item_id && !isPostExecution && (
             <OptionalAddOnsStrip
               item={item}
               allItems={allItems}
