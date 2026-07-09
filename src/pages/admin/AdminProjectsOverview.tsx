@@ -159,6 +159,23 @@ export default function AdminProjectsOverview() {
                   )}
                   <Button
                     size="sm"
+                    variant={autoOnly ? "default" : "outline"}
+                    onClick={() => setParam("auto", autoOnly ? null : "1")}
+                    className="gap-1.5"
+                    title="Toon alleen projecten met automatisch afgehandelde onderdelen"
+                  >
+                    Auto-afgehandeld
+                    {autoCount > 0 && (
+                      <span className={cn(
+                        "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                        autoOnly ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground",
+                      )}>
+                        {autoCount}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
                     variant={archive ? "default" : "outline"}
                     onClick={() => setParam("archief", archive ? null : "1")}
                     className="gap-1.5"
