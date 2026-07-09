@@ -209,7 +209,7 @@ export const CustomerProgramItem = ({
                 aria-label={isOpen ? "Details verbergen" : "Details, tijd en opmerkingen aanpassen"}
               >
                 <span className="text-sm font-medium">
-                  {isOpen ? "Minder details" : "Details & aanpassen"}
+                  {isOpen ? "Minder details" : readOnly || isPostExecution ? "Details" : "Details & aanpassen"}
                 </span>
                 {isOpen ? (
                   <ChevronUp className="h-4 w-4" />
