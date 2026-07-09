@@ -21,6 +21,8 @@ export interface OverviewRow {
   programId: string | null;
   accommodationId: string | null;
   isNew?: boolean;
+  /** Waar zodra minstens één item van dit programma auto_closed_reason='auto_past_execution' heeft. */
+  autoClosed?: boolean;
 
 }
 
