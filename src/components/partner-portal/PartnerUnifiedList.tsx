@@ -132,9 +132,14 @@ export const PartnerUnifiedList = ({
       // Als het hele project is geannuleerd, telt dit item ook als "geannuleerd" —
       // ongeacht zijn eigen item-status. Anders blijven oude pendings in de actie-tab
       // hangen voor projecten die allang niet meer doorgaan.
-      const programCancelled =
-        i.program_requests.status === "cancelled" || !!i.program_requests.cancelled_at;
-      const baseStatus = programCancelled ? "cancelled" : i.status;
+      const isAutoClosed =
+        i.auto_closed_reason === "auto_past_execution" &&
+        !["executed", "invoiced", "cancelled"].includes(i.status);
+      const baseStatus = programCancelled
+        ? "cancelled"
+        : isAutoClosed
+          ? "auto_closed"
+          : i.status;
       const effectiveStatus = (baseStatus === "confirmed" && hasCustomerAccepted) ? "accepted" : baseStatus;
       
       const awaitingTerms = hasCustomerAccepted && 
@@ -147,6 +152,7 @@ export const PartnerUnifiedList = ({
       const numDays = getNumberOfDays(i.program_requests.selected_dates);
       const priceChangePending =
         !programCancelled &&
+        !isAutoClosed &&
         !!i.quoted_price &&
         !i.invoiced_number &&
         i.status !== "cancelled" &&
@@ -162,13 +168,14 @@ export const PartnerUnifiedList = ({
         status: effectiveStatus,
         urgencyScore: getUrgencyScore(effectiveStatus, canInvoice) + (priceChangePending ? 80 : 0),
         peopleCount: effPeople,
-        isNew: !programCancelled && isNewItem(i),
-        isModified: !programCancelled && isModifiedByCustomer(i),
-        hasCounter: !programCancelled && i.status === "counter_proposed",
-        canInvoice,
+        isNew: !programCancelled && !isAutoClosed && isNewItem(i),
+        isModified: !programCancelled && !isAutoClosed && isModifiedByCustomer(i),
+        hasCounter: !programCancelled && !isAutoClosed && i.status === "counter_proposed",
+        canInvoice: canInvoice && !isAutoClosed,
         awaitingTerms,
         isRecentlyCancelled: effectiveStatus === "cancelled" && isRecentlyUpdated(i.updated_at),
         priceChangePending,
+        isAutoClosed,
         originalItem: i,
       };
     }),
