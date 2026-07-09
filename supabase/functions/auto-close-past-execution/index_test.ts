@@ -102,6 +102,7 @@ function seed() {
     program_request_items: [
       { id: "item-a", request_id: "past-1", status: "pending", auto_closed_reason: null },
       { id: "item-b", request_id: "past-1", status: "alternative", auto_closed_reason: null },
+      { id: "item-b2", request_id: "past-1", status: "counter_proposed", auto_closed_reason: null },
       { id: "item-c", request_id: "past-1", status: "confirmed", auto_closed_reason: null },
       { id: "item-d", request_id: "future-1", status: "pending", auto_closed_reason: null },
     ],
@@ -133,7 +134,8 @@ Deno.test("runAutoClose sluit pre-executie items/quotes/todos, respecteert factu
   const res = await runAutoClose(client, { now: NOW });
 
   assertEquals(res.projects_past_execution, 1, "alleen past-1 is past_execution");
-  assertEquals(res.items_confirmed, 2, "item-a + item-b geforceerd naar confirmed");
+  assertEquals(res.items_confirmed, 3, "item-a + item-b + item-b2 geforceerd naar confirmed");
+  assertEquals(res.items_by_status, { pending: 1, alternative: 1, counter_proposed: 1 });
   assertEquals(res.quotes_expired, 1, "alleen q-1 (submitted) — q-2 (selected) blijft");
   assertEquals(res.todos_closed, 2, "quote_pending_partner + customer_inputs_missing");
   assertEquals(res.projects_marked_ready_for_invoice, 1);
@@ -154,6 +156,11 @@ Deno.test("runAutoClose sluit pre-executie items/quotes/todos, respecteert factu
   const futItem = store.program_request_items.find((i) => i.id === "item-d")!;
   assertEquals(futItem.status, "pending");
   assertEquals(futItem.auto_closed_reason, null);
+
+  const closedCounter = store.program_request_items.find((i) => i.id === "item-b2")!;
+  assertEquals(closedCounter.status, "confirmed");
+  assertEquals(closedCounter.status_updated_by, "auto_close_past_execution");
+  assertEquals(closedCounter.status_note, "Automatisch afgerond na uitvoering; klaar voor facturatie.");
 });
 
 Deno.test("runAutoClose is idempotent — tweede run raakt niets meer aan", async () => {
