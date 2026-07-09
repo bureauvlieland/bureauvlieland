@@ -258,6 +258,7 @@ export const PartnerUnifiedList = ({
     const negativeItems = filteredItems.filter(i => 
       ["cancelled", "unavailable", "rejected", "declined"].includes(i.status)
     );
+    const autoClosedItems = filteredItems.filter(i => i.status === "auto_closed");
 
     return (
       <div className="space-y-6">
@@ -267,6 +268,20 @@ export const PartnerUnifiedList = ({
               Uitgevoerd / Gefactureerd
             </h3>
             {positiveItems.map((item) => (
+              <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
+            ))}
+          </div>
+        )}
+        {autoClosedItems.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-1 flex items-center gap-1.5">
+              <Ban className="h-3.5 w-3.5" />
+              Afgesloten (automatisch)
+            </h3>
+            <p className="px-1 text-xs text-muted-foreground">
+              Uitvoerdatum verstreken zonder afronding. Klik op een onderdeel om de status te controleren.
+            </p>
+            {autoClosedItems.map((item) => (
               <ItemCard key={`${item.type}-${item.id}`} item={item} onSelectItem={onSelectItem} onSelectQuote={onSelectQuote} />
             ))}
           </div>
