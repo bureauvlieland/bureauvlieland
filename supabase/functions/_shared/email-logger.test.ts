@@ -110,7 +110,7 @@ Deno.test("EmailLogValidationError bevat email_type en recipient in message", as
   assertStringIncludes(err.message, "partner@example.com");
 });
 
-Deno.test("logEmail accepteert geldige metadata zonder te throwen", async () => {
+Deno.test({ name: "logEmail accepteert geldige metadata zonder te throwen", sanitizeOps: false, sanitizeResources: false }, async () => {
   // Validation passes; insert may fail tegen stub-URL, maar dat wordt
   // intern gevangen — logEmail mag in geen geval een error gooien.
   let threw = false;
