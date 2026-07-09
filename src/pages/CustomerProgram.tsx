@@ -13,7 +13,7 @@ import { MobileProgramView } from "@/components/customer-portal/MobileProgramVie
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
-import { getCustomerApprovalStats } from "@/hooks/useProgramStatus";
+import { getCustomerPortalStatus } from "@/lib/customerPortalStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEventMode } from "@/hooks/useEventMode";
@@ -500,21 +500,20 @@ const CustomerProgram = () => {
       {/* Compute tab badges */}
       {(() => null)()}
       {(() => {
-        const termsAccepted = !!(program as any).terms_accepted_at;
-        const quoteStatus = (program as any).quote_status as string | null | undefined;
-        const { customerActionsCount } = getCustomerApprovalStats(program.items, quoteStatus);
+        const portalStatus = getCustomerPortalStatus({
+          program: program as any,
+          items: program.items,
+          accommodationQuotes,
+          selectedDates,
+          hasAccommodationRequest: !!accommodation,
+          guestDetails,
+        });
+        const { termsAccepted, customerActionsCount, isPostExecution } = portalStatus;
         const hasNewAccommodationQuote = accommodationQuotes.some((q) => q.status === "submitted")
           && !accommodationQuotes.some((q) => q.status === "selected");
         const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");
-        const guestIncomplete = !!guestDetails && (
-          !guestDetails.guest_names ||
-          (guestDetails.showDietary && !guestDetails.dietary_notes) ||
-          (guestDetails.showRoomAssignment && !guestDetails.room_assignment)
-        );
-        const allConfirmed = statusSummary.total > 0
-          && statusSummary.pending === 0
-          && statusSummary.alternative === 0
-          && (statusSummary.counter_proposed || 0) === 0;
+        const guestIncomplete = portalStatus.guestDetailsIncomplete;
+        const allConfirmed = portalStatus.allConfirmed;
         const badges = {
           accommodation: hasNewAccommodationQuote
             ? { label: "Nieuw", variant: "default" as const }
@@ -523,7 +522,9 @@ const CustomerProgram = () => {
             : undefined,
           // Amber 'default' i.p.v. rood 'destructive': klantactie is geen alarm.
           // Het programma is gewoon klaar om te beoordelen.
-          program: customerActionsCount > 0
+          program: isPostExecution
+            ? { label: "Uitgevoerd", variant: "secondary" as const }
+            : customerActionsCount > 0
             ? { label: `${customerActionsCount} goed te keuren`, variant: "default" as const }
             : undefined,
           practical: guestIncomplete
@@ -531,7 +532,7 @@ const CustomerProgram = () => {
             : undefined,
           accept: termsAccepted
             ? { label: "✓", variant: "secondary" as const }
-            : allConfirmed
+            : allConfirmed && !isPostExecution
             ? { label: "Klaar", variant: "default" as const }
             : undefined,
         };
@@ -647,13 +648,14 @@ const CustomerProgram = () => {
           }
           onChange={(v) => handleNavigate(v)}
           badges={{
-            program: program.items.some(
-              (i: any) =>
-                i.block_type !== "self_arranged" &&
-                i.status !== "cancelled" &&
-                (i.status === "confirmed" || i.status === "alternative") &&
-                !i.customer_approved_at,
-            ),
+            program: getCustomerPortalStatus({
+              program: program as any,
+              items: program.items,
+              accommodationQuotes,
+              selectedDates,
+              hasAccommodationRequest: !!accommodation,
+              guestDetails,
+            }).customerActionsCount > 0,
           }}
         />
       )}

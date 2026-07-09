@@ -90,7 +90,7 @@ function buildClient(store: Record<string, Row[]>, log: string[] = []) {
 }
 
 // ── Test data helpers ────────────────────────────────────────────────────
-function seed() {
+function seed(): Record<string, Row[]> {
   return {
     program_requests: [
       { id: "past-1", selected_dates: ["2026-07-01", "2026-07-02"], cancelled_at: null, completion_status: "in_progress" },
@@ -100,8 +100,9 @@ function seed() {
       { id: "past-2-nodates", selected_dates: [], cancelled_at: null, completion_status: "in_progress" },
     ],
     program_request_items: [
-      { id: "item-a", request_id: "past-1", status: "pending", auto_closed_reason: null },
-      { id: "item-b", request_id: "past-1", status: "alternative", auto_closed_reason: null },
+      { id: "item-a", request_id: "past-1", status: "pending", auto_closed_reason: null, quoted_at: null },
+      { id: "item-b", request_id: "past-1", status: "alternative", auto_closed_reason: null, quoted_at: "2026-06-01T10:00:00Z" },
+      { id: "item-b2", request_id: "past-1", status: "counter_proposed", auto_closed_reason: null, partner_price_change_acknowledged_at: "2026-06-01T10:00:00Z" },
       { id: "item-c", request_id: "past-1", status: "confirmed", auto_closed_reason: null },
       { id: "item-d", request_id: "future-1", status: "pending", auto_closed_reason: null },
     ],
@@ -133,7 +134,9 @@ Deno.test("runAutoClose sluit pre-executie items/quotes/todos, respecteert factu
   const res = await runAutoClose(client, { now: NOW });
 
   assertEquals(res.projects_past_execution, 1, "alleen past-1 is past_execution");
-  assertEquals(res.items_confirmed, 2, "item-a + item-b geforceerd naar confirmed");
+  assertEquals(res.items_confirmed, 2, "item-b + item-b2 mogen naar confirmed");
+  assertEquals(res.items_marked_handled, 1, "item-a wordt alleen als afgehandeld gemarkeerd");
+  assertEquals(res.items_by_status, { pending: 1, alternative: 1, counter_proposed: 1 });
   assertEquals(res.quotes_expired, 1, "alleen q-1 (submitted) — q-2 (selected) blijft");
   assertEquals(res.todos_closed, 2, "quote_pending_partner + customer_inputs_missing");
   assertEquals(res.projects_marked_ready_for_invoice, 1);
@@ -154,6 +157,16 @@ Deno.test("runAutoClose sluit pre-executie items/quotes/todos, respecteert factu
   const futItem = store.program_request_items.find((i) => i.id === "item-d")!;
   assertEquals(futItem.status, "pending");
   assertEquals(futItem.auto_closed_reason, null);
+
+  const closedCounter = store.program_request_items.find((i) => i.id === "item-b2")!;
+  assertEquals(closedCounter.status, "confirmed");
+  assertEquals(closedCounter.status_updated_by, "auto_close_past_execution");
+  assertEquals(closedCounter.status_note, "Automatisch afgerond na uitvoering; klaar voor facturatie.");
+
+  const markedPending = store.program_request_items.find((i) => i.id === "item-a")!;
+  assertEquals(markedPending.status, "pending");
+  assertEquals(markedPending.auto_closed_reason, "auto_past_execution");
+  assertEquals(markedPending.status_note, "Automatisch afgehandeld na uitvoering; niet meer als klantactie getoond.");
 });
 
 Deno.test("runAutoClose is idempotent — tweede run raakt niets meer aan", async () => {
@@ -173,10 +186,35 @@ Deno.test("runAutoClose dryRun muteert niets", async () => {
   const client = buildClient(store);
   const res = await runAutoClose(client, { now: NOW, dryRun: true });
   assertEquals(res.items_confirmed, 2);
+  assertEquals(res.items_marked_handled, 1);
   assertEquals(res.todos_closed, 2);
   // Store onveranderd
   const itemA = store.program_request_items.find((i) => i.id === "item-a")!;
   assertEquals(itemA.status, "pending");
   const past = store.program_requests.find((p) => p.id === "past-1")!;
   assertEquals(past.completion_status, "in_progress");
+});
+
+Deno.test("runAutoClose normaliseert projecten die al klaar voor facturatie zijn", async () => {
+  const store = seed();
+  store.program_requests.push({
+    id: "ready-1",
+    selected_dates: ["2026-12-01"],
+    cancelled_at: null,
+    completion_status: "ready_for_invoice",
+  });
+  store.program_request_items.push({
+    id: "ready-alt",
+    request_id: "ready-1",
+    status: "alternative",
+    auto_closed_reason: null,
+    quoted_at: "2026-06-01T10:00:00Z",
+  });
+  const client = buildClient(store);
+  const res = await runAutoClose(client, { now: NOW });
+
+  assertEquals(res.projects_past_execution, 2);
+  const readyItem = store.program_request_items.find((i) => i.id === "ready-alt")!;
+  assertEquals(readyItem.status, "confirmed");
+  assertEquals(readyItem.auto_closed_reason, "auto_past_execution");
 });

@@ -4,7 +4,7 @@
 // verleden ligt. Deze functie is idempotent en veilig om vaker per dag te draaien.
 //
 // Wat er gebeurt per project (past_execution én niet cancelled, niet fully_invoiced):
-//  1. program_request_items met status 'pending' of 'alternative'
+//  1. program_request_items met status 'pending', 'alternative' of 'counter_proposed'
 //     → status='confirmed', auto_closed_reason='auto_past_execution'
 //  2. accommodation_quotes met status 'pending'/'submitted' voor deze aanvraag
 //     → status='expired', auto_closed_reason='auto_past_execution'
@@ -44,9 +44,11 @@ export interface AutoCloseResult {
   projects_scanned: number;
   projects_past_execution: number;
   items_confirmed: number;
+  items_marked_handled: number;
   quotes_expired: number;
   todos_closed: number;
   projects_marked_ready_for_invoice: number;
+  items_by_status: Record<string, number>;
   errors: Array<{ project_id: string; error: string }>;
 }
 
@@ -86,9 +88,11 @@ export async function runAutoClose(
     projects_scanned: 0,
     projects_past_execution: 0,
     items_confirmed: 0,
+    items_marked_handled: 0,
     quotes_expired: 0,
     todos_closed: 0,
     projects_marked_ready_for_invoice: 0,
+    items_by_status: {},
     errors: [],
   };
 
@@ -104,6 +108,10 @@ export async function runAutoClose(
   result.projects_scanned = projects?.length ?? 0;
   const pastProjects: Array<{ id: string; completion_status: string | null }> = [];
   for (const p of projects ?? []) {
+    if (p.completion_status === "ready_for_invoice" || p.completion_status === "partially_invoiced") {
+      pastProjects.push({ id: p.id, completion_status: p.completion_status });
+      continue;
+    }
     const last = lastValidDate(p.selected_dates ?? null);
     if (!last) continue;
     if (startOfDay(last).getTime() < today.getTime()) {
@@ -119,23 +127,69 @@ export async function runAutoClose(
   {
     const { data: items, error } = await supabase
       .from("program_request_items")
-      .select("id, request_id")
+      .select("id, request_id, status, provider_id, block_type, block_category, quoted_at, partner_price_change_acknowledged_at")
       .in("request_id", ids)
-      .in("status", ["pending", "alternative"])
+      .in("status", ["pending", "alternative", "counter_proposed"])
       .is("auto_closed_reason", null);
     if (error) result.errors.push({ project_id: "*", error: `load items: ${error.message}` });
     else if (items && items.length && !dryRun) {
+      for (const item of items as Array<{ status: string }>) {
+        result.items_by_status[item.status] = (result.items_by_status[item.status] ?? 0) + 1;
+      }
+      const confirmable = (items as Array<Record<string, unknown>>).filter((item) =>
+        item.provider_id === "bureau" ||
+        item.provider_id === "bureau-vlieland" ||
+        (item.block_type === "bureau" &&
+          ["rederij", "fietsverhuur", "bagagevervoer-vlieland"].includes(String(item.provider_id)) &&
+          item.block_category === "vervoer") ||
+        !!item.quoted_at ||
+        !!item.partner_price_change_acknowledged_at
+      );
+      const markOnly = (items as Array<Record<string, unknown>>).filter(
+        (item) => !confirmable.some((c) => c.id === item.id),
+      );
+
+      if (confirmable.length > 0) {
       const { error: uErr } = await supabase
         .from("program_request_items")
         .update({
           status: "confirmed",
           auto_closed_reason: "auto_past_execution",
+          status_updated_at: now.toISOString(),
+          status_updated_by: "auto_close_past_execution",
+          status_note: "Automatisch afgerond na uitvoering; klaar voor facturatie.",
         })
-        .in("id", items.map((i: { id: string }) => i.id));
+        .in("id", confirmable.map((i) => i.id));
       if (uErr) result.errors.push({ project_id: "*", error: `update items: ${uErr.message}` });
-      else result.items_confirmed = items.length;
+        else result.items_confirmed = confirmable.length;
+      }
+      if (markOnly.length > 0) {
+        const { error: markErr } = await supabase
+          .from("program_request_items")
+          .update({
+            auto_closed_reason: "auto_past_execution",
+            status_updated_at: now.toISOString(),
+            status_updated_by: "auto_close_past_execution",
+            status_note: "Automatisch afgehandeld na uitvoering; niet meer als klantactie getoond.",
+          })
+          .in("id", markOnly.map((i) => i.id));
+        if (markErr) result.errors.push({ project_id: "*", error: `mark items: ${markErr.message}` });
+        else result.items_marked_handled = markOnly.length;
+      }
     } else if (items) {
-      result.items_confirmed = items.length;
+      for (const item of items as Array<{ status: string }>) {
+        result.items_by_status[item.status] = (result.items_by_status[item.status] ?? 0) + 1;
+      }
+      result.items_confirmed = items.filter((item: Record<string, unknown>) =>
+        item.provider_id === "bureau" ||
+        item.provider_id === "bureau-vlieland" ||
+        (item.block_type === "bureau" &&
+          ["rederij", "fietsverhuur", "bagagevervoer-vlieland"].includes(String(item.provider_id)) &&
+          item.block_category === "vervoer") ||
+        !!item.quoted_at ||
+        !!item.partner_price_change_acknowledged_at
+      ).length;
+      result.items_marked_handled = items.length - result.items_confirmed;
     }
   }
 

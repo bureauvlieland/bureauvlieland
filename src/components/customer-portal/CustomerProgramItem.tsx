@@ -54,6 +54,7 @@ interface CustomerProgramItemProps {
   isPreApproval?: boolean;
   isQuoteMode?: boolean;
   quoteStatus?: string | null;
+  isPostExecution?: boolean;
   readOnly?: boolean;
   hideDay?: boolean;
   numberOfPeople?: number;
@@ -75,6 +76,7 @@ export const CustomerProgramItem = ({
   isPreApproval = false,
   isQuoteMode = false,
   quoteStatus,
+  isPostExecution = false,
   readOnly = false,
   hideDay = false,
   numberOfPeople,
@@ -121,6 +123,7 @@ export const CustomerProgramItem = ({
     numberOfDays: selectedDates.length || 1,
     quoteStatus: quoteStatus ?? null,
     priceReapprovalThresholds: priceThresholds,
+    isPostExecution,
   });
 
   // Een onderdeel vraagt om klantactie wanneer het zowel operationeel beschikbaar is
@@ -143,6 +146,7 @@ export const CustomerProgramItem = ({
     && (item.quoted_price != null || !!(item as any).quoted_at || !!(item as any).partner_price_change_acknowledged_at);
 
   const needsCustomerAction = !isSelfArranged
+    && !isPostExecution
     && isApprovalPhase
     && (derivedStatus === "wacht_op_klant" || derivedStatus === "prijs_gewijzigd");
 
@@ -205,7 +209,7 @@ export const CustomerProgramItem = ({
                 aria-label={isOpen ? "Details verbergen" : "Details, tijd en opmerkingen aanpassen"}
               >
                 <span className="text-sm font-medium">
-                  {isOpen ? "Minder details" : "Details & aanpassen"}
+                  {isOpen ? "Minder details" : readOnly || isPostExecution ? "Details" : "Details & aanpassen"}
                 </span>
                 {isOpen ? (
                   <ChevronUp className="h-4 w-4" />
@@ -412,7 +416,7 @@ export const CustomerProgramItem = ({
 
 
           {/* Always-visible action row */}
-          {item.status !== "cancelled" && !readOnly && (
+          {item.status !== "cancelled" && !readOnly && !isPostExecution && (
             <div className={cn(
               "mt-3 flex flex-wrap gap-2",
               needsCustomerAction ? "justify-stretch" : "justify-end",
@@ -527,7 +531,7 @@ export const CustomerProgramItem = ({
           )}
 
           {/* Optionele extra's (bouwsteen-componenten) — alleen op hoofd-items */}
-          {!(item as any).parent_item_id && (
+          {!(item as any).parent_item_id && !isPostExecution && (
             <OptionalAddOnsStrip
               item={item}
               allItems={allItems}

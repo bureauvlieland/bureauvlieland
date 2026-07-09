@@ -25,6 +25,7 @@ interface BuildArgs {
    * goedkeuren — daarvoor werkt Bureau Vlieland nog aan het voorstel.
    */
   quoteStatus?: string | null;
+  isPostExecution?: boolean;
 }
 
 type TabHeaderConfig = Pick<TabHeaderProps, "icon" | "title" | "subtitle" | "badge">;
@@ -44,6 +45,7 @@ export function buildTabHeader({
   customerApprovableCount,
   customerActionsCount,
   quoteStatus,
+  isPostExecution = false,
 }: BuildArgs): TabHeaderConfig {
   switch (section) {
     case "accommodation": {
@@ -68,6 +70,15 @@ export function buildTabHeader({
       };
     }
     case "program": {
+      if (isPostExecution) {
+        return {
+          icon: Calendar,
+          title: "Uw programma",
+          subtitle: "Het programma is uitgevoerd. De resterende acties staan bij facturatie en voorwaarden.",
+          badge: { label: "Uitgevoerd", variant: "default" as const },
+        };
+      }
+
       const isPreOfferte =
         quoteStatus === "concept" || quoteStatus === "in_afstemming";
       const allConfirmed =

@@ -65,6 +65,7 @@ export interface ProgramStepperProps {
   customerApprovedCount: number;
   customerApprovableCount: number;
   quoteStatus?: string | null;
+  isPostExecution?: boolean;
   onStepAction?: (stepId: StepId) => void;
   className?: string;
   variant?: "horizontal" | "vertical";
@@ -132,7 +133,23 @@ function buildProgramTrack(
   customerApprovedCount: number,
   customerApprovableCount: number,
   quoteStatus?: string | null,
+  isPostExecution = false,
 ): TrackViewModel {
+  if (isPostExecution) {
+    return {
+      id: "program",
+      tone: "program",
+      title: "Programma",
+      subtitle: "Activiteiten & beleving",
+      steps: [
+        { label: "Programma uitgevoerd", icon: ThumbsUp, state: "done" },
+        { label: "Aanbieders afgerond", icon: Users, state: "done" },
+      ],
+      statusLine: "Het programma is uitgevoerd. Bureau Vlieland bereidt de facturatie voor.",
+      done: true,
+    };
+  }
+
   const isPreOfferte =
     quoteStatus === "concept" || quoteStatus === "in_afstemming";
   const approveDone =
@@ -564,6 +581,7 @@ export const ProgramStepper = ({
   customerApprovedCount,
   customerApprovableCount,
   quoteStatus,
+  isPostExecution = false,
   onStepAction,
   className,
   variant = "horizontal",
@@ -582,6 +600,7 @@ export const ProgramStepper = ({
     customerApprovedCount,
     customerApprovableCount,
     quoteStatus,
+    isPostExecution,
   );
   const billingTrack = buildBillingTrack(billingComplete, termsAccepted);
 
@@ -596,6 +615,11 @@ export const ProgramStepper = ({
 
   const statusBadge = allDone
     ? { label: "Definitief", tone: "bg-primary/10 text-primary border-primary/20" }
+    : isPostExecution
+      ? {
+          label: "Facturatie",
+          tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+        }
     : programTrack.done && billingTrack.done
       ? {
           label: "Bijna klaar",

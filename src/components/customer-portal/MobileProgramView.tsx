@@ -91,6 +91,9 @@ interface MobileProgramViewProps {
     // Program description
     program_description?: string | null;
     program_published_at?: string | null;
+    selected_dates?: string[] | null;
+    completion_status?: string | null;
+    cancelled_at?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -197,9 +200,11 @@ export const MobileProgramView = ({
     isMultiDay,
     hasSelectedAccommodation,
     isPreApproval,
+    alternativeActionsCount,
     customerActionsCount,
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
+    isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -218,14 +223,14 @@ export const MobileProgramView = ({
 
   // Get next action for mobile sticky bar
   const getNextAction = () => {
-    if (isProposalPhase && hasUnapprovedItems) {
+    if (!isPostExecution && isProposalPhase && hasUnapprovedItems) {
       return {
         label: "Goedkeuren",
         onClick: () =>
           document.getElementById("proposal-akkoord-checkbox")?.scrollIntoView({ behavior: "smooth", block: "center" }),
       };
     }
-    if (customerActionsCount > 0) {
+    if (!isPostExecution && customerActionsCount > 0) {
       return {
         label: "Goedkeuren",
         onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }),
@@ -281,6 +286,7 @@ export const MobileProgramView = ({
     customerApprovableCount,
     customerActionsCount,
     quoteStatus: program.quote_status,
+    isPostExecution,
   });
 
   return (
@@ -313,6 +319,7 @@ export const MobileProgramView = ({
         customerApprovedCount={customerApprovedCount}
         customerApprovableCount={customerApprovableCount}
         quoteStatus={program.quote_status}
+        isPostExecution={isPostExecution}
         onStepAction={handleStepAction}
       />
 
@@ -332,6 +339,7 @@ export const MobileProgramView = ({
           quoteStatus={program.quote_status as any}
           quoteValidUntil={program.quote_valid_until}
           termsAcceptedAt={program.terms_accepted_at}
+          completionStatus={(program as any).completion_status ?? null}
           programDescription={program.program_description}
           onEdit={onOpenEdit}
           hasPendingItems={statusSummary.pending > 0}
@@ -354,7 +362,7 @@ export const MobileProgramView = ({
             quoteStatus={program.quote_status}
             programPublishedAt={program.program_published_at}
             customerActionsCount={customerActionsCount}
-            alternativeActionsCount={statusSummary.alternative}
+            alternativeActionsCount={alternativeActionsCount}
             guestDetailsIncomplete={
               !!guestDetails &&
               (!guestDetails.guest_names ||
@@ -417,6 +425,7 @@ export const MobileProgramView = ({
           programPublishedAt={program.program_published_at}
           allConfirmed={allConfirmed}
           quotePdfUrl={(program as any).quote_pdf_url}
+          isPostExecution={isPostExecution}
         />
       )}
 
@@ -467,7 +476,7 @@ export const MobileProgramView = ({
                 <CalendarPlus className="h-3 w-3" />
               </Button>
               {/* Offerte-PDF knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
-              {!termsAccepted && isPublished && (
+              {!termsAccepted && isPublished && !isPostExecution && (
                 <Button
                   size="sm"
                   onClick={(e) => {
@@ -534,7 +543,8 @@ export const MobileProgramView = ({
                          quoteStatus={program.quote_status}
                          isQuoteMode={isQuoteMode}
                         vatRate={getItemVatRate(item)}
-                        readOnly={!isPublished}
+                        readOnly={!isPublished || isPostExecution}
+                        isPostExecution={isPostExecution}
                         hideDay
                         numberOfPeople={program.number_of_people}
                       />
@@ -574,7 +584,8 @@ export const MobileProgramView = ({
                        quoteStatus={program.quote_status}
                        isQuoteMode={isQuoteMode}
                       vatRate={getItemVatRate(item)}
-                      readOnly={!isPublished}
+                      readOnly={!isPublished || isPostExecution}
+                      isPostExecution={isPostExecution}
                       numberOfPeople={program.number_of_people}
                     />
                   )}
@@ -654,7 +665,7 @@ export const MobileProgramView = ({
       {initialSection === "program" && (
         <>
           {/* Floating changes bar — only in program view */}
-          {initialSection === "program" && hasChanges && isPublished && (
+          {initialSection === "program" && hasChanges && isPublished && !isPostExecution && (
             <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
               <div className="flex items-center justify-between gap-4">
                 <div>
