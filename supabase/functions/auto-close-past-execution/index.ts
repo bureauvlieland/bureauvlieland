@@ -270,26 +270,32 @@ export async function runAutoClose(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
 
-    // Optioneel: admin JWT check als er authorization header meekomt. Cron call
-    // draait zonder user token — dan is service role al genoeg.
+  let dryRun = false;
+  let triggeredBy = "unknown";
+
+  try {
     const authHeader = req.headers.get("Authorization");
-    let dryRun = false;
     if (req.method === "POST") {
       try {
         const body = await req.json();
         dryRun = !!body?.dryRun;
+        if (body?.triggeredBy) triggeredBy = String(body.triggeredBy);
       } catch {
         // no body — dat is prima
       }
     } else if (req.method === "GET") {
       const url = new URL(req.url);
       dryRun = url.searchParams.get("dryRun") === "1";
+      const t = url.searchParams.get("triggeredBy");
+      if (t) triggeredBy = t;
+    }
+    if (triggeredBy === "unknown") {
+      triggeredBy = authHeader?.startsWith("Bearer ") ? "admin" : "cron";
     }
 
     if (authHeader?.startsWith("Bearer ")) {
@@ -299,7 +305,6 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } },
       );
-      // getClaims is niet in de bundled types maar wel beschikbaar op runtime
       // deno-lint-ignore no-explicit-any
       const { data: claims, error: claimsErr } = await (anonClient.auth as any).getClaims(token);
       if (claimsErr || !claims?.claims) {
@@ -310,10 +315,54 @@ Deno.serve(async (req) => {
       }
     }
 
-    const result = await runAutoClose(supabase, { dryRun });
-    return new Response(JSON.stringify({ ok: true, dryRun, result }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Log start (alleen voor echte runs — dry runs vervuilen de historie niet)
+    let runId: string | null = null;
+    if (!dryRun) {
+      const { data: runRow, error: runErr } = await supabase
+        .from("auto_close_run_log")
+        .insert({ status: "running", dry_run: false, triggered_by: triggeredBy })
+        .select("id")
+        .single();
+      if (runErr) {
+        console.error("[auto-close-past-execution] kon run niet loggen:", runErr.message);
+      } else {
+        runId = runRow?.id ?? null;
+      }
+    }
+
+    try {
+      const result = await runAutoClose(supabase, { dryRun });
+      if (runId) {
+        const hasErrors = result.errors.length > 0;
+        await supabase
+          .from("auto_close_run_log")
+          .update({
+            finished_at: new Date().toISOString(),
+            status: hasErrors ? "error" : "success",
+            result,
+            error_message: hasErrors
+              ? result.errors.map((e) => `${e.project_id}: ${e.error}`).join("; ")
+              : null,
+          })
+          .eq("id", runId);
+      }
+      return new Response(JSON.stringify({ ok: true, dryRun, result, runId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (innerErr) {
+      const msg = innerErr instanceof Error ? innerErr.message : String(innerErr);
+      if (runId) {
+        await supabase
+          .from("auto_close_run_log")
+          .update({
+            finished_at: new Date().toISOString(),
+            status: "error",
+            error_message: msg,
+          })
+          .eq("id", runId);
+      }
+      throw innerErr;
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[auto-close-past-execution] failed:", msg);
@@ -323,3 +372,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
