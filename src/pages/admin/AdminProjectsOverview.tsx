@@ -68,8 +68,12 @@ export default function AdminProjectsOverview() {
     });
   };
 
-  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search]);
-  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search]);
+  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search, autoOnly]);
+  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search, autoOnly]);
+  const autoCount = useMemo(
+    () => (tab === "logies" ? logiesRows : projectRows)?.filter(r => r.autoClosed).length ?? 0,
+    [tab, projectRows, logiesRows],
+  );
 
   return (
     <>
