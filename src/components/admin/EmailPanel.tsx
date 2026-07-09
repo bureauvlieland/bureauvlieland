@@ -259,6 +259,7 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
   }
 
   return Array.from(groups.values())
+    .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .map((g) => ({
       ...g,
       items: g.items.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")),
