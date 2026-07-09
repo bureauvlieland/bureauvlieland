@@ -588,6 +588,329 @@ function AutoCloseCard() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Historische auto-close backfill: veilig handmatig draaien over alle projecten
+// waarvan de uitvoerdatum in het verleden ligt. Twee-staps flow (simulatie →
+// bevestiging → uitvoering) met persistente run-historie in localStorage.
+// ─────────────────────────────────────────────────────────────────────────
+type BackfillResult = {
+  projects_scanned: number;
+  projects_past_execution: number;
+  items_confirmed: number;
+  items_marked_handled?: number;
+  quotes_expired: number;
+  todos_closed: number;
+  projects_marked_ready_for_invoice: number;
+  errors: Array<{ project_id: string; error: string }>;
+};
+
+type BackfillRun = {
+  id: string;
+  at: string;
+  dryRun: boolean;
+  durationMs: number;
+  result: BackfillResult;
+};
+
+const BACKFILL_STORAGE_KEY = "admin.autoclose.backfill.runs";
+const MAX_RUN_HISTORY = 10;
+
+function loadBackfillHistory(): BackfillRun[] {
+  try {
+    const raw = localStorage.getItem(BACKFILL_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_RUN_HISTORY) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveBackfillHistory(runs: BackfillRun[]) {
+  try {
+    localStorage.setItem(
+      BACKFILL_STORAGE_KEY,
+      JSON.stringify(runs.slice(0, MAX_RUN_HISTORY)),
+    );
+  } catch {
+    /* quota / disabled — negeer */
+  }
+}
+
+function HistoricalBackfillCard() {
+  const [running, setRunning] = useState<null | "dry" | "real">(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmChecked, setConfirmChecked] = useState(false);
+  const [history, setHistory] = useState<BackfillRun[]>(() => loadBackfillHistory());
+  const [preview, setPreview] = useState<BackfillRun | null>(null);
+
+  // Loop een timer terwijl er iets draait zodat de gebruiker voortgang ziet.
+  useEffect(() => {
+    if (!running || !startedAt) return;
+    const tick = () => setElapsed(Date.now() - startedAt);
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [running, startedAt]);
+
+  const latestReal = useMemo(() => history.find((r) => !r.dryRun) ?? null, [history]);
+
+  const runBackfill = async (dry: boolean) => {
+    setRunning(dry ? "dry" : "real");
+    setStartedAt(Date.now());
+    setElapsed(0);
+    const start = Date.now();
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "auto-close-past-execution",
+        { body: { dryRun: dry } },
+      );
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? "Onbekende fout");
+      const run: BackfillRun = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        at: new Date().toISOString(),
+        dryRun: dry,
+        durationMs: Date.now() - start,
+        result: data.result as BackfillResult,
+      };
+      const next = [run, ...history].slice(0, MAX_RUN_HISTORY);
+      setHistory(next);
+      saveBackfillHistory(next);
+      if (dry) setPreview(run);
+      toast.success(
+        dry
+          ? `Simulatie klaar — ${run.result.projects_past_execution} projecten zouden worden bijgewerkt`
+          : `Backfill uitgevoerd — ${run.result.projects_marked_ready_for_invoice} projecten op ready_for_invoice gezet`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Backfill mislukt: ${msg}`);
+    } finally {
+      setRunning(null);
+      setStartedAt(null);
+    }
+  };
+
+  const startConfirmed = async () => {
+    setConfirmOpen(false);
+    setConfirmChecked(false);
+    await runBackfill(false);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    saveBackfillHistory([]);
+    setPreview(null);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <History className="h-4 w-4 text-amber-600" />
+          Historische auto-close backfill
+        </CardTitle>
+        <p className="text-xs text-muted-foreground pt-1">
+          Draait de auto-close over <strong>alle</strong> historische projecten waarvan de
+          uitvoerdatum voorbij is. Idempotent — projecten die al klaar zijn worden overgeslagen.
+          Voer altijd eerst de simulatie uit en controleer de aantallen voordat je écht draait.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={!!running}
+            onClick={() => runBackfill(true)}
+          >
+            {running === "dry" ? (
+              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Simuleren…</>
+            ) : (
+              "Simuleren (dry run)"
+            )}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!!running || !preview}
+            onClick={() => setConfirmOpen(true)}
+            title={!preview ? "Voer eerst een simulatie uit" : undefined}
+          >
+            {running === "real" ? (
+              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Backfill draait…</>
+            ) : (
+              "Historische backfill draaien"
+            )}
+          </Button>
+          {history.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearHistory} disabled={!!running}>
+              <Trash2 className="h-4 w-4 mr-1" />
+              Historie wissen
+            </Button>
+          )}
+        </div>
+
+        {running && (
+          <div className="rounded-md border bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 p-3 text-xs flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-amber-700 dark:text-amber-400" />
+            <span>
+              {running === "dry" ? "Simulatie" : "Backfill"} bezig — {(elapsed / 1000).toFixed(1)}s
+              verstreken. Sluit dit tabblad niet af.
+            </span>
+          </div>
+        )}
+
+        {preview && !running && (
+          <Alert>
+            <AlertTitle className="flex items-center gap-2">
+              Simulatie-resultaat
+              <Badge variant="outline">dry run</Badge>
+            </AlertTitle>
+            <AlertDescription className="text-xs">
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1">
+                <li>Projecten gescand: <strong>{preview.result.projects_scanned}</strong></li>
+                <li>In verleden: <strong>{preview.result.projects_past_execution}</strong></li>
+                <li>Items → bevestigd: <strong>{preview.result.items_confirmed}</strong></li>
+                <li>Items → afgehandeld: <strong>{preview.result.items_marked_handled ?? 0}</strong></li>
+                <li>Offertes → verlopen: <strong>{preview.result.quotes_expired}</strong></li>
+                <li>Todo's gesloten: <strong>{preview.result.todos_closed}</strong></li>
+                <li>Ready for invoice: <strong>{preview.result.projects_marked_ready_for_invoice}</strong></li>
+                <li>Fouten: <strong>{preview.result.errors.length}</strong></li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {latestReal && (
+          <div className="rounded-md border bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 p-3 text-xs">
+            <div className="flex items-center gap-2 font-medium text-emerald-900 dark:text-emerald-200">
+              Laatste echte backfill
+              <span className="text-emerald-800/70 dark:text-emerald-300/70 font-normal">
+                {formatDistanceToNow(new Date(latestReal.at), { addSuffix: true, locale: nl })}
+              </span>
+            </div>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1">
+              <li>Projecten in verleden: <strong>{latestReal.result.projects_past_execution}</strong></li>
+              <li>Ready for invoice: <strong>{latestReal.result.projects_marked_ready_for_invoice}</strong></li>
+              <li>Items bevestigd: <strong>{latestReal.result.items_confirmed}</strong></li>
+              <li>Todo's gesloten: <strong>{latestReal.result.todos_closed}</strong></li>
+              <li>Offertes verlopen: <strong>{latestReal.result.quotes_expired}</strong></li>
+              <li>Duur: <strong>{(latestReal.durationMs / 1000).toFixed(1)}s</strong></li>
+            </ul>
+            {latestReal.result.errors.length > 0 && (
+              <div className="text-red-600 mt-2">
+                <strong>Fouten ({latestReal.result.errors.length}):</strong>
+                <ul className="list-disc ml-5 max-h-32 overflow-auto">
+                  {latestReal.result.errors.slice(0, 20).map((e, i) => (
+                    <li key={i}>{e.project_id}: {e.error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {history.length > 0 && (
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Run-historie ({history.length})
+            </summary>
+            <div className="mt-2 rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="h-8">Wanneer</TableHead>
+                    <TableHead className="h-8">Type</TableHead>
+                    <TableHead className="h-8 text-right">In verleden</TableHead>
+                    <TableHead className="h-8 text-right">Bevestigd</TableHead>
+                    <TableHead className="h-8 text-right">Todo's</TableHead>
+                    <TableHead className="h-8 text-right">Ready</TableHead>
+                    <TableHead className="h-8 text-right">Duur</TableHead>
+                    <TableHead className="h-8 text-right">Fouten</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="py-1.5">
+                        {format(new Date(r.at), "d MMM HH:mm", { locale: nl })}
+                      </TableCell>
+                      <TableCell className="py-1.5">
+                        {r.dryRun ? (
+                          <Badge variant="outline">simulatie</Badge>
+                        ) : (
+                          <Badge>uitgevoerd</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right">{r.result.projects_past_execution}</TableCell>
+                      <TableCell className="py-1.5 text-right">{r.result.items_confirmed}</TableCell>
+                      <TableCell className="py-1.5 text-right">{r.result.todos_closed}</TableCell>
+                      <TableCell className="py-1.5 text-right">{r.result.projects_marked_ready_for_invoice}</TableCell>
+                      <TableCell className="py-1.5 text-right">{(r.durationMs / 1000).toFixed(1)}s</TableCell>
+                      <TableCell className="py-1.5 text-right">
+                        {r.result.errors.length > 0 ? (
+                          <span className="text-red-600">{r.result.errors.length}</span>
+                        ) : (
+                          "0"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </details>
+        )}
+      </CardContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Historische backfill definitief draaien?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Deze actie werkt data bij op basis van de laatste simulatie:{" "}
+                  <strong>{preview?.result.projects_past_execution ?? 0}</strong> projecten
+                  worden bijgewerkt, <strong>{preview?.result.items_confirmed ?? 0}</strong>{" "}
+                  items op bevestigd gezet en{" "}
+                  <strong>{preview?.result.todos_closed ?? 0}</strong> todo's afgesloten.
+                </p>
+                <p>
+                  De operatie is idempotent, maar zet wel status­velden en{" "}
+                  <code>auto_closed_reason</code> op de rijen. Facturatie- en
+                  aftersales-todo's blijven ongemoeid.
+                </p>
+                <label className="flex items-center gap-2 pt-2 cursor-pointer">
+                  <Checkbox
+                    checked={confirmChecked}
+                    onCheckedChange={(v) => setConfirmChecked(v === true)}
+                  />
+                  <span>Ik heb de simulatie bekeken en wil doorgaan.</span>
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmChecked(false)}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!confirmChecked}
+              onClick={startConfirmed}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Ja, backfill draaien
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  );
+}
+
+
+
 function pct(part: number, whole: number): string {
   if (whole <= 0) return "";
   return `${Math.round((part / whole) * 100)}%`;
