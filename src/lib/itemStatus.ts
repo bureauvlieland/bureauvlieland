@@ -239,6 +239,7 @@ export function deriveItemDisplayStatus(
   if (item.status === "cancelled") return "geannuleerd";
   if (item.status === "executed" || item.status === "invoiced" || ctx.isPostExecution) return "uitgevoerd";
   if (item.status === "unavailable") return "niet_beschikbaar";
+  if ((item as any).auto_closed_reason === "auto_past_execution") return "afgesloten_automatisch";
 
   // Een eerder gegeven klant-akkoord vervalt zodra de aanbieder een
   // ALTERNATIEF voorstel doet — TENZIJ de klant ná dat alternatief opnieuw
