@@ -208,7 +208,7 @@ const generateFallbackStatusEmailHtml = (
   `;
 };
 
-Deno.serve(async (req) => {
+export const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -233,12 +233,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Require price for confirmed status, require note for alternative status
-    // Require proposed time for both confirmed and alternative
-    // (acknowledge_price_change skips this — the time was already confirmed earlier)
-    if ((status === "confirmed" || status === "alternative") && !proposedTime) {
+    // Require price for confirmed status, require note/time for alternative status.
+    // Confirming the customer's request must also work when no preferred time was
+    // provided yet (e.g. ferry requests where the partner confirms availability
+    // but the exact departure still needs to be filled later).
+    if (status === "alternative" && !proposedTime) {
       return new Response(
-        JSON.stringify({ error: "Proposed time is required when confirming or proposing alternative" }),
+        JSON.stringify({ error: "Proposed time is required when proposing alternative" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -553,7 +554,7 @@ Deno.serve(async (req) => {
         related_partner_id: partner.id,
         status: sendResult.ok ? "sent" : "failed",
         error_message: sendResult.error || undefined,
-        mailjet_message_id: sendResult.messageId,
+        mailjet_message_id: sendResult.messageId || undefined,
         sent_by: "partner",
         metadata: {
           template_name: TemplateIds.COUNTER_PROPOSAL_RESPONSE,
@@ -779,4 +780,6 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+};
+
+Deno.serve(handler);
