@@ -141,6 +141,15 @@ function Row({ row }: { row: OverviewRow }) {
                 Nieuw
               </Badge>
             )}
+            {row.autoClosed && (
+              <Badge
+                variant="outline"
+                className="h-4 border-slate-300 bg-slate-100 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300"
+                title="Eén of meer onderdelen zijn automatisch afgehandeld na uitvoering"
+              >
+                Auto-afgehandeld
+              </Badge>
+            )}
           </div>
 
           {row.customerCompany && (
