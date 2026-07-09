@@ -24,6 +24,7 @@ interface ProgramOverviewCardProps {
   quoteStatus?: QuoteStatus | null;
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string | null;
+  completionStatus?: string | null;
   // Program description
   programDescription?: string | null;
   // Edit callback
@@ -45,6 +46,7 @@ export const ProgramOverviewCard = ({
   quoteStatus,
   quoteValidUntil,
   termsAcceptedAt,
+  completionStatus,
   programDescription,
   onEdit,
   hasPendingItems,
@@ -53,6 +55,7 @@ export const ProgramOverviewCard = ({
   // Fase 5: alle projecten doorlopen dezelfde quote-pipeline. Het type-onderscheid
   // bestaat alleen nog voor micro-copy (maatwerk-varianten gebruiken iets andere woorden).
   const isMaatwerk = isMaatwerkProject({ origin: origin ?? programType });
+  const isPostExecution = ["ready_for_invoice", "partially_invoiced", "fully_invoiced", "completed"].includes(completionStatus ?? "");
 
   // Calculate quote validity
   const validUntilDate = quoteValidUntil ? new Date(quoteValidUntil) : null;
@@ -61,6 +64,7 @@ export const ProgramOverviewCard = ({
 
   // Determine program type label (status-driven, niet type-driven)
   const getProgramTypeLabel = () => {
+    if (isPostExecution) return "Uitgevoerd";
     if (termsAcceptedAt) return "Boeking bevestigd";
     if (quoteStatus === "akkoord_ontvangen" || quoteStatus === "definitief_bevestigd") return "Alles goedgekeurd";
     if (isMaatwerk) return "Maatwerk";
@@ -69,6 +73,9 @@ export const ProgramOverviewCard = ({
 
   // Determine quote status for display
   const getQuoteDisplayStatus = () => {
+    if (isPostExecution) {
+      return { label: "Klaar voor facturatie", variant: "success" as const, icon: CheckCircle2 };
+    }
     if (termsAcceptedAt) {
       return { label: "Definitief", variant: "success" as const, icon: CheckCircle2 };
     }
