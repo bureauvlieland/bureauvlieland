@@ -435,6 +435,18 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                 )}
               >
                 {c.label}
+                {typeof c.count === "number" && c.count > 0 && (
+                  <span
+                    className={cn(
+                      "ml-1 inline-flex items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+                      originFilter === c.key
+                        ? "bg-white/20 text-primary-foreground"
+                        : "bg-red-600 text-white",
+                    )}
+                  >
+                    {c.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
