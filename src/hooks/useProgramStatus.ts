@@ -4,8 +4,6 @@ import type { AccommodationQuote } from "@/types/accommodation";
 import {
   getCustomerApprovalStats as getCanonicalCustomerApprovalStats,
   getCustomerPortalStatus,
-  hasLiveCustomerApproval,
-  isCustomerActionableCandidate,
   type CustomerPortalGuestDetailsLike,
 } from "@/lib/customerPortalStatus";
 
