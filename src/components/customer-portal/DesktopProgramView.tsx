@@ -93,6 +93,9 @@ interface DesktopProgramViewProps {
     // Program description
     program_description?: string | null;
     program_published_at?: string | null;
+    selected_dates?: string[] | null;
+    completion_status?: string | null;
+    cancelled_at?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -208,6 +211,7 @@ export const DesktopProgramView = ({
     customerActionsCount,
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
+    isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -253,6 +257,7 @@ export const DesktopProgramView = ({
     customerApprovableCount,
     customerActionsCount,
     quoteStatus: program.quote_status,
+    isPostExecution,
   });
 
   return (
@@ -306,7 +311,7 @@ export const DesktopProgramView = ({
               quoteStatus={program.quote_status}
               programPublishedAt={program.program_published_at}
               customerActionsCount={customerActionsCount}
-              alternativeActionsCount={statusSummary.alternative}
+              alternativeActionsCount={alternativeActionsCount}
               guestDetailsIncomplete={
                 !!guestDetails &&
                 (!guestDetails.guest_names ||
@@ -428,7 +433,7 @@ export const DesktopProgramView = ({
                         </Tooltip>
                       </TooltipProvider>
                       {/* Bekijk-offerte knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
-                      {customerActionsCount > 0 && onBulkApproveQuoteItems && (
+                      {!isPostExecution && customerActionsCount > 0 && onBulkApproveQuoteItems && (
                         <Button
                           size="sm"
                           variant="default"
@@ -443,7 +448,7 @@ export const DesktopProgramView = ({
                             : `Alle ${customerActionsCount} onderdelen goedkeuren`}
                         </Button>
                       )}
-                      {!termsAccepted && isPublished && (
+                      {!termsAccepted && isPublished && !isPostExecution && (
                         <Button
                           size="sm"
                           onClick={() => setIsAddActivityOpen(true)}
@@ -505,7 +510,8 @@ export const DesktopProgramView = ({
                                    quoteStatus={program.quote_status}
                                    isQuoteMode={isQuoteMode}
                                   vatRate={getItemVatRate(item)}
-                                  readOnly={!isPublished}
+                                   readOnly={!isPublished || isPostExecution}
+                                  isPostExecution={isPostExecution}
                                   hideDay
                                   numberOfPeople={program.number_of_people}
                                 />
@@ -545,7 +551,8 @@ export const DesktopProgramView = ({
                            quoteStatus={program.quote_status}
                            isQuoteMode={isQuoteMode}
                           vatRate={getItemVatRate(item)}
-                          readOnly={!isPublished}
+                          readOnly={!isPublished || isPostExecution}
+                          isPostExecution={isPostExecution}
                           numberOfPeople={program.number_of_people}
                         />
                       )}
@@ -559,7 +566,7 @@ export const DesktopProgramView = ({
 
 
             {/* Floating changes bar */}
-            {hasChanges && isPublished && (
+            {hasChanges && isPublished && !isPostExecution && (
               <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -655,6 +662,7 @@ export const DesktopProgramView = ({
         isMultiDay={isMultiDay}
          isPreApproval={isPreApproval}
          quoteStatus={program.quote_status}
+            isPostExecution={isPostExecution}
         totalCost={totalCost}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
@@ -670,6 +678,7 @@ export const DesktopProgramView = ({
             customerApprovedCount={customerApprovedCount}
             customerApprovableCount={customerApprovableCount}
             quoteStatus={program.quote_status}
+            isPostExecution={isPostExecution}
             onStepAction={handleStepAction}
           />
         }
