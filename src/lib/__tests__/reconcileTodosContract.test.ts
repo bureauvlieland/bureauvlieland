@@ -12,10 +12,29 @@ const reconcile = readFileSync(
   resolve(process.cwd(), "supabase/functions/reconcile-admin-todos/index.ts"),
   "utf8",
 );
-const creator = readFileSync(
-  resolve(process.cwd(), "supabase/functions/check-pending-items/index.ts"),
-  "utf8",
-);
+
+// auto_type kan door meerdere creators worden aangemaakt (check-pending-items,
+// autoTodoCreator, individuele edge functions). We verzamelen alle strings
+// project-breed zodat de contract-test niet false-positives geeft.
+function collectAllAutoTypes(): Set<string> {
+  const roots = ["supabase/functions", "src/lib", "src/pages"];
+  const found = new Set<string>();
+  const re = /auto_type\s*[:=]\s*["']([a-z_]+)["']/g;
+  function walk(dir: string) {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      const st = statSync(p);
+      if (st.isDirectory()) walk(p);
+      else if (/\.(ts|tsx)$/.test(name)) {
+        const src = readFileSync(p, "utf8");
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(src)) !== null) found.add(m[1]);
+      }
+    }
+  }
+  for (const r of roots) walk(resolve(process.cwd(), r));
+  return found;
+}
 
 // Types die reconcile universeel/informatief hanteert zonder dat check-pending-items
 // ze zelf hoeft te creëren (bv. handmatig aangemaakte todos).
