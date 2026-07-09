@@ -99,6 +99,7 @@ const AdminMessages = () => {
   const activeTab =
     tabParam === "verzonden" ? "verzonden" : tabParam === "chat" ? "chat" : "inbox";
   const highlightedInboxId = searchParams.get("inbox");
+  const inboxFilter = searchParams.get("filter");
   const initialConversationId = searchParams.get("conversation");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
