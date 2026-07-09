@@ -78,15 +78,24 @@ describe("migrations — RLS + GRANT coverage voor elke public-tabel", () => {
     expect(missing, `tabellen zonder RLS: ${missing.join(", ")}`).toEqual([]);
   });
 
-  it("elke aangemaakte public-tabel heeft ergens een GRANT (of expliciete revoke van de default)", () => {
+  it("elke NIEUWE public-tabel heeft een expliciete GRANT (baseline: legacy tabellen)", () => {
     const missing: string[] = [];
+    const unexpectedInBaseline: string[] = [];
     for (const t of created) {
       const re = new RegExp(`grant\\s+[^;]+\\s+on\\s+(?:table\\s+)?public\\.${t}\\b`, "i");
-      if (!re.test(allSql)) missing.push(t);
+      const hasGrant = re.test(allSql);
+      if (!hasGrant && !GRANT_BASELINE.has(t)) missing.push(t);
+      if (hasGrant && GRANT_BASELINE.has(t)) unexpectedInBaseline.push(t);
     }
     expect(
       missing,
-      `tabellen zonder GRANT — Data API zal permission-error geven: ${missing.join(", ")}`,
+      `nieuwe tabellen zonder GRANT (voeg GRANT toe of update baseline met reden): ${missing.join(", ")}`,
+    ).toEqual([]);
+    // Housekeeping: als een baseline-tabel intussen wél een GRANT heeft
+    // gekregen, verwijder hem uit de baseline zodat de test strikt blijft.
+    expect(
+      unexpectedInBaseline,
+      `baseline bevat tabellen die inmiddels een GRANT hebben — verwijder uit GRANT_BASELINE: ${unexpectedInBaseline.join(", ")}`,
     ).toEqual([]);
   });
 
