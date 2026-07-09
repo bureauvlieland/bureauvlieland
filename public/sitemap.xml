@@ -397,19 +397,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/activiteit/watertaxi-harlingen-vlieland</loc>
-    <lastmod>2026-06-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/activiteit/watertaxi-harlingen-vlieland-met-snelle-rib</loc>
-    <lastmod>2026-06-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://bureauvlieland.nl/activiteit/watertaxi-vlieland-harlingen</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -423,6 +411,18 @@
   <url>
     <loc>https://bureauvlieland.nl/activiteit/vliehors-expres</loc>
     <lastmod>2026-06-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/activiteit/watertaxi-harlingen-vlieland</loc>
+    <lastmod>2026-07-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://bureauvlieland.nl/activiteit/watertaxi-vlieland-harlingen</loc>
+    <lastmod>2026-07-09</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
