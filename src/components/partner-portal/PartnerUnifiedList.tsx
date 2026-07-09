@@ -40,6 +40,7 @@ export interface UnifiedListItem {
   isRecentlyCancelled?: boolean;
   isRecentlyRejected?: boolean;
   priceChangePending?: boolean;
+  isAutoClosed?: boolean;
   originalItem: PartnerItem | PartnerAccommodationQuote;
 }
 
