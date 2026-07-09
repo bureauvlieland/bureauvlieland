@@ -111,13 +111,24 @@ const AdminMessages = () => {
   const { data: unansweredEmailCount = 0 } = useQuery({
     queryKey: ["inbox-unanswered-count"],
     queryFn: async () => {
-      const { count, error } = await supabase
+      // Match EmailPanel visibility: negeer gearchiveerde e-mails én e-mails
+      // gekoppeld aan een gearchiveerd project/logies-aanvraag. Zonder deze
+      // filters wees de tab-badge naar berichten die in de lijst verborgen zijn
+      // (staan pas in beeld met "Toon archief" aan).
+      const { data, error } = await supabase
         .from("project_communications")
-        .select("id", { count: "exact", head: true })
+        .select(
+          "id, request:program_requests(archived_at), accommodation:accommodation_requests(archived_at)",
+        )
         .eq("direction", "inbound")
-        .is("answered_at", null);
+        .is("answered_at", null)
+        .is("archived_at", null);
       if (error) throw error;
-      return count ?? 0;
+      return (data ?? []).filter((row: any) => {
+        if (row.request?.archived_at) return false;
+        if (row.accommodation?.archived_at) return false;
+        return true;
+      }).length;
     },
     refetchInterval: 60_000,
   });
