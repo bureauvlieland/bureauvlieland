@@ -203,6 +203,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       programId: prog.id,
       accommodationId: linkedAcc?.id ?? null,
       isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
+      autoClosed: !!s && s.autoClosed > 0,
     });
 
   });
