@@ -197,10 +197,10 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
   return [...commItems, ...logItems];
 }
 
-function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all"): ThreadGroup[] {
+function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all" | "unanswered"): ThreadGroup[] {
   const groups = new Map<string, ThreadGroup>();
   for (const e of items) {
-    if (originFilter !== "all" && e.origin !== originFilter) continue;
+    if (originFilter !== "all" && originFilter !== "unanswered" && e.origin !== originFilter) continue;
 
     let key: string;
     let kind: ThreadGroup["kind"];
