@@ -48,7 +48,7 @@ Deno.test("elke edge function die Mailjet gebruikt moet MessageID loggen", async
     const entry of walk(FUNCTIONS_DIR, {
       exts: [".ts"],
       includeDirs: false,
-      skip: [/\/node_modules\//, /\.test\.ts$/],
+      skip: [/\/node_modules\//, /\.test\.ts$/, /_test\.ts$/],
     })
   ) {
     const rel = relative(FUNCTIONS_DIR, entry.path).replaceAll("\\", "/");
