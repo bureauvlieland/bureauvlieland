@@ -21,7 +21,8 @@ export type ItemDisplayStatus =
   | "uitgevoerd"
   | "geannuleerd"
   | "niet_beschikbaar"
-  | "self_arranged";
+  | "self_arranged"
+  | "afgesloten_automatisch";
 
 export interface ItemDisplayStatusInfo {
   /** Label voor admin- en interne views */
