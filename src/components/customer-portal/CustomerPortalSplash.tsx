@@ -41,6 +41,9 @@ interface CustomerPortalSplashProps {
     origin?: string | null;
     quote_status?: string | null;
     invoicing_mode?: string | null;
+    selected_dates?: string[] | null;
+    completion_status?: string | null;
+    cancelled_at?: string | null;
     items?: ProgramRequestItem[];
     billing_company_name?: string;
     billing_address_street?: string;
@@ -68,8 +71,15 @@ export const CustomerPortalSplash = ({
   onShareWithParticipants,
 }: CustomerPortalSplashProps) => {
   const items = program.items ?? [];
-  const { termsAccepted, billingComplete } = useProgramStatus(
+  const {
+    termsAccepted,
+    billingComplete,
+    customerApprovedCount,
+    customerApprovableTotal: customerApprovableCount,
+    isPostExecution,
+  } = useProgramStatus(
     {
+      ...program,
       terms_accepted_at: program.terms_accepted_at,
       billing_company_name: program.billing_company_name,
       billing_address_street: program.billing_address_street,
@@ -82,11 +92,12 @@ export const CustomerPortalSplash = ({
     accommodationQuotes,
     statusSummary,
     selectedDates,
+    { hasAccommodationRequest: !!accommodation },
   );
 
   const isMaatwerk = isMaatwerkProject(program);
   const isQuoteAwaitingApproval =
-    program.quote_status === "offerte_verstuurd" && !termsAccepted;
+    !isPostExecution && program.quote_status === "offerte_verstuurd" && !termsAccepted;
   const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
 
   const accommodationStatus: "none" | "requested" | "selected" =
@@ -95,16 +106,6 @@ export const CustomerPortalSplash = ({
       : accommodation
         ? "requested"
         : "none";
-  const customerApprovedCount = items.filter(
-    (i) =>
-      i.block_type !== "self_arranged" &&
-      i.status !== "cancelled" &&
-      !!i.customer_approved_at,
-  ).length;
-  const customerApprovableCount = items.filter(
-    (i) => i.block_type !== "self_arranged" && i.status !== "cancelled",
-  ).length;
-
   const handleStepAction = (stepId: StepId) => {
     if (stepId === "lodging") onNavigate("accommodation");
     else if (stepId === "providers" || stepId === "approve") onNavigate("program");
@@ -217,7 +218,11 @@ export const CustomerPortalSplash = ({
         <div className="flex items-start gap-3 p-3 sm:p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
           <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            {isQuoteAwaitingApproval ? (
+            {isPostExecution ? (
+              <>
+                <strong>Uw programma is uitgevoerd.</strong> Bureau Vlieland bereidt de facturatie voor. Vul eventueel nog ontbrekende gegevens aan.
+              </>
+            ) : isQuoteAwaitingApproval ? (
               <>
                 <strong>Uw offerte staat klaar.</strong> Open het programma om de onderdelen te
                 bekijken en akkoord te geven.
@@ -256,6 +261,7 @@ export const CustomerPortalSplash = ({
           customerApprovedCount={customerApprovedCount}
           customerApprovableCount={customerApprovableCount}
           quoteStatus={program.quote_status}
+          isPostExecution={isPostExecution}
           onStepAction={handleStepAction}
         />
       </div>
