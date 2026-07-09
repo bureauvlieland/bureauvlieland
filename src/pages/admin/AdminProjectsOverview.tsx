@@ -54,6 +54,7 @@ export default function AdminProjectsOverview() {
       if (!archive && ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
       if (archive && !ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
       if (typeFilter !== "all" && r.kind !== typeFilter) return false;
+      if (autoOnly && !r.autoClosed) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const hay = [
