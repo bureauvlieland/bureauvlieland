@@ -69,7 +69,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
 
     supabase
       .from("program_request_items")
-      .select("request_id, status, skip_partner_notification, customer_approved_at"),
+      .select("request_id, status, skip_partner_notification, customer_approved_at, auto_closed_reason"),
     supabase
       .from("accommodation_quotes")
       .select("request_id, status"),
