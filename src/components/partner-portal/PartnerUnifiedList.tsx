@@ -132,6 +132,8 @@ export const PartnerUnifiedList = ({
       // Als het hele project is geannuleerd, telt dit item ook als "geannuleerd" —
       // ongeacht zijn eigen item-status. Anders blijven oude pendings in de actie-tab
       // hangen voor projecten die allang niet meer doorgaan.
+      const programCancelled =
+        i.program_requests.status === "cancelled" || !!i.program_requests.cancelled_at;
       const isAutoClosed =
         i.auto_closed_reason === "auto_past_execution" &&
         !["executed", "invoiced", "cancelled"].includes(i.status);
