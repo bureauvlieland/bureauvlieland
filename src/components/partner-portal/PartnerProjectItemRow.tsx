@@ -294,6 +294,19 @@ export const PartnerProjectItemRow = ({
         </div>
       )}
 
+      {/* Auto-closed hint */}
+      {item.auto_closed_reason === "auto_past_execution" && mode === "idle" && (
+        <div className="mx-4 mb-3 -mt-1 rounded-md border border-slate-200 bg-slate-50 dark:bg-slate-900/40 dark:border-slate-800 px-3 py-2 text-xs">
+          <p className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">
+            Afgesloten (automatisch)
+          </p>
+          <p className="text-slate-700 dark:text-slate-300">
+            De uitvoerdatum is verstreken zonder afronding. Controleer of dit onderdeel nog gefactureerd
+            moet worden of neem contact op met Bureau Vlieland als de status niet klopt.
+          </p>
+        </div>
+      )}
+
       {/* Partner instruction from Bureau Vlieland (prominent) */}
       {item.partner_instructions && mode === "idle" && (
         <div className="mx-4 mb-3 -mt-1 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs">
