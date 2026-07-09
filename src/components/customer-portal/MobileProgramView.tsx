@@ -91,6 +91,9 @@ interface MobileProgramViewProps {
     // Program description
     program_description?: string | null;
     program_published_at?: string | null;
+    selected_dates?: string[] | null;
+    completion_status?: string | null;
+    cancelled_at?: string | null;
   };
   history: ProgramRequestHistory[];
   selectedDates: Date[];
@@ -197,9 +200,11 @@ export const MobileProgramView = ({
     isMultiDay,
     hasSelectedAccommodation,
     isPreApproval,
+    alternativeActionsCount,
     customerActionsCount,
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
+    isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
@@ -218,14 +223,14 @@ export const MobileProgramView = ({
 
   // Get next action for mobile sticky bar
   const getNextAction = () => {
-    if (isProposalPhase && hasUnapprovedItems) {
+    if (!isPostExecution && isProposalPhase && hasUnapprovedItems) {
       return {
         label: "Goedkeuren",
         onClick: () =>
           document.getElementById("proposal-akkoord-checkbox")?.scrollIntoView({ behavior: "smooth", block: "center" }),
       };
     }
-    if (customerActionsCount > 0) {
+    if (!isPostExecution && customerActionsCount > 0) {
       return {
         label: "Goedkeuren",
         onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }),
@@ -281,6 +286,7 @@ export const MobileProgramView = ({
     customerApprovableCount,
     customerActionsCount,
     quoteStatus: program.quote_status,
+    isPostExecution,
   });
 
   return (
