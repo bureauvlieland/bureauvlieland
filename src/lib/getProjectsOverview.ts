@@ -23,7 +23,8 @@ export interface OverviewRow {
   isNew?: boolean;
   /** Waar zodra minstens één item van dit programma auto_closed_reason='auto_past_execution' heeft. */
   autoClosed?: boolean;
-
+  /** Waar zodra het project actief gesnoozed is (snoozed_until > now). */
+  snoozed?: boolean;
 }
 
 interface FetchOptions {
@@ -57,7 +58,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       .select(`
         id, reference_number, customer_name, customer_company, number_of_people,
         selected_dates, status, terms_accepted_at, linked_accommodation_id,
-        quote_status, completion_status, created_at, origin
+        quote_status, completion_status, created_at, origin, snoozed_until
       `)
       .neq("status", "deleted"),
     supabase
