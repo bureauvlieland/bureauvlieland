@@ -90,7 +90,7 @@ function buildClient(store: Record<string, Row[]>, log: string[] = []) {
 }
 
 // ── Test data helpers ────────────────────────────────────────────────────
-function seed() {
+function seed(): Record<string, Row[]> {
   return {
     program_requests: [
       { id: "past-1", selected_dates: ["2026-07-01", "2026-07-02"], cancelled_at: null, completion_status: "in_progress" },
