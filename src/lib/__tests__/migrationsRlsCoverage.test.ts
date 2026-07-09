@@ -26,6 +26,28 @@ const RLS_WHITELIST = new Set<string>([
   // (leeg — voeg alleen toe met duidelijke motivatie in code review)
 ]);
 
+// Legacy-tabellen zonder expliciete GRANT in de migration-historie. Zij
+// werken omdat Supabase in de begintijd default-privileges op `public`
+// verleende. Nieuwe tabellen MOETEN een GRANT hebben (zie
+// public-schema-grants regel) — daarom staat de test op strikt: alleen
+// tabellen in deze baseline mogen zonder GRANT bestaan. Voeg nooit
+// nieuwe items toe zonder review.
+const GRANT_BASELINE = new Set<string>([
+  "shared_programs", "partners", "user_roles", "admin_todos",
+  "admin_activity_log", "building_blocks", "bureau_invoices",
+  "accommodation_requests", "accommodation_quotes", "email_log",
+  "email_templates", "app_settings", "accepted_terms_log",
+  "partner_unavailability", "program_templates", "program_template_items",
+  "accommodation_quote_extras", "partner_room_types", "project_communications",
+  "chat_conversations", "chat_messages", "chat_admin_presence", "map_bookings",
+  "accommodation_quote_history", "purchase_invoice_inbox",
+  "purchase_invoice_lines", "program_item_billing_lines",
+  "partner_purchase_invoice_allocations", "commission_invoices",
+  "commission_invoice_lines", "ai_chat_conversations", "ai_chat_messages",
+  "claudia_documents", "admin_recommendations", "claudia_run_log",
+  "program_change_log",
+]);
+
 // Match `CREATE TABLE [IF NOT EXISTS] public.<naam>` (case-insensitief).
 const createRe = /create\s+table\s+(?:if\s+not\s+exists\s+)?public\.([a-z_][a-z0-9_]*)/gi;
 
