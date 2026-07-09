@@ -282,7 +282,7 @@ const AdminMessages = () => {
             </TabsList>
 
             <TabsContent value="inbox" className="mt-4">
-              <EmailPanel initialOpenId={highlightedInboxId} />
+              <EmailPanel initialOpenId={highlightedInboxId} initialFilter={inboxFilter} />
             </TabsContent>
 
 
