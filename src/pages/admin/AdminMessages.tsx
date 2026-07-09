@@ -252,12 +252,12 @@ const AdminMessages = () => {
               <TabsTrigger value="inbox" className="gap-2">
                 <Mail className="h-4 w-4" />
                 E-mail
-                {unansweredCount > 0 && (
+                {unansweredEmailCount > 0 && (
                   <Badge
                     variant="secondary"
                     className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
                   >
-                    {unansweredCount}
+                    {unansweredEmailCount}
                   </Badge>
                 )}
               </TabsTrigger>
