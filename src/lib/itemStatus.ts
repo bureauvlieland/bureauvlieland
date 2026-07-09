@@ -199,6 +199,8 @@ interface DeriveContext {
    * akkoord vereist. Ontbreekt → fallback (5% / €25) via portalPricing.
    */
   priceReapprovalThresholds?: { pct?: number; absEur?: number };
+  /** Na uitvoering/facturatie zijn klant-goedkeuracties niet meer relevant. */
+  isPostExecution?: boolean;
 }
 
 /**
@@ -222,7 +224,7 @@ export function deriveItemDisplayStatus(
 ): ItemDisplayStatus {
   if (item.block_type === "self_arranged") return "self_arranged";
   if (item.status === "cancelled") return "geannuleerd";
-  if (item.status === "executed" || item.status === "invoiced") return "uitgevoerd";
+  if (item.status === "executed" || item.status === "invoiced" || ctx.isPostExecution) return "uitgevoerd";
   if (item.status === "unavailable") return "niet_beschikbaar";
 
   // Een eerder gegeven klant-akkoord vervalt zodra de aanbieder een
