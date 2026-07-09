@@ -21,6 +21,8 @@ export interface OverviewRow {
   programId: string | null;
   accommodationId: string | null;
   isNew?: boolean;
+  /** Waar zodra minstens één item van dit programma auto_closed_reason='auto_past_execution' heeft. */
+  autoClosed?: boolean;
 
 }
 
@@ -67,7 +69,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
 
     supabase
       .from("program_request_items")
-      .select("request_id, status, skip_partner_notification, customer_approved_at"),
+      .select("request_id, status, skip_partner_notification, customer_approved_at, auto_closed_reason"),
     supabase
       .from("accommodation_quotes")
       .select("request_id, status"),
@@ -80,12 +82,13 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
   accommodations?.forEach(a => accById.set(a.id, a));
 
   // item stats per program_request
-  const stats = new Map<string, { total: number; confirmed: number; notSent: number }>();
+  const stats = new Map<string, { total: number; confirmed: number; notSent: number; autoClosed: number }>();
   items?.forEach(it => {
-    const s = stats.get(it.request_id) ?? { total: 0, confirmed: 0, notSent: 0 };
+    const s = stats.get(it.request_id) ?? { total: 0, confirmed: 0, notSent: 0, autoClosed: 0 };
     s.total++;
     if (it.status === "confirmed") s.confirmed++;
     if (it.skip_partner_notification && it.customer_approved_at) s.notSent++;
+    if ((it as any).auto_closed_reason === "auto_past_execution") s.autoClosed++;
     stats.set(it.request_id, s);
   });
 
@@ -136,6 +139,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         programId: program?.id ?? null,
         accommodationId: acc.id,
         isNew: isFresh(acc.created_at) && !program,
+        autoClosed: program ? ((stats.get(program.id)?.autoClosed ?? 0) > 0) : false,
       });
 
     });
@@ -200,6 +204,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       programId: prog.id,
       accommodationId: linkedAcc?.id ?? null,
       isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
+      autoClosed: !!s && s.autoClosed > 0,
     });
 
   });

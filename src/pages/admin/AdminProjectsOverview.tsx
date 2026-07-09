@@ -25,6 +25,7 @@ export default function AdminProjectsOverview() {
   const search = params.get("q") ?? "";
   const typeFilter = (params.get("type") as RowKind | "all") ?? "all";
   const archive = params.get("archief") === "1";
+  const autoOnly = params.get("auto") === "1";
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
@@ -53,6 +54,7 @@ export default function AdminProjectsOverview() {
       if (!archive && ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
       if (archive && !ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
       if (typeFilter !== "all" && r.kind !== typeFilter) return false;
+      if (autoOnly && !r.autoClosed) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const hay = [
@@ -66,8 +68,12 @@ export default function AdminProjectsOverview() {
     });
   };
 
-  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search]);
-  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search]);
+  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search, autoOnly]);
+  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search, autoOnly]);
+  const autoCount = useMemo(
+    () => (tab === "logies" ? logiesRows : projectRows)?.filter(r => r.autoClosed).length ?? 0,
+    [tab, projectRows, logiesRows],
+  );
 
   return (
     <>
@@ -151,6 +157,23 @@ export default function AdminProjectsOverview() {
                       ))}
                     </div>
                   )}
+                  <Button
+                    size="sm"
+                    variant={autoOnly ? "default" : "outline"}
+                    onClick={() => setParam("auto", autoOnly ? null : "1")}
+                    className="gap-1.5"
+                    title="Toon alleen projecten met automatisch afgehandelde onderdelen"
+                  >
+                    Auto-afgehandeld
+                    {autoCount > 0 && (
+                      <span className={cn(
+                        "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                        autoOnly ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground",
+                      )}>
+                        {autoCount}
+                      </span>
+                    )}
+                  </Button>
                   <Button
                     size="sm"
                     variant={archive ? "default" : "outline"}
