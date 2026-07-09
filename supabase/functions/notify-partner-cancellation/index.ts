@@ -401,5 +401,5 @@ export const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-Deno.serve(handler);
+if (import.meta.main) Deno.serve(handler);
 
