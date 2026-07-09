@@ -23,13 +23,14 @@ const src = readFileSync(resolve(process.cwd(), "src/lib/partialItemSave.ts"), "
 describe("partialItemSave — concurrency guards", () => {
   it("bevat expliciete concept-branch (pending_added === true → live kolom)", () => {
     expect(src).toMatch(/pending_added\s*===\s*true/);
-    // De concept-branch schrijft direct naar de live-kolom via [field]: value
-    // en gebruikt daarna een early return, zodat de pending-flow niet ook nog
-    // een keer loopt.
-    const conceptBlock = src.match(/pending_added\s*===\s*true[\s\S]{0,600}?return;/);
-    expect(conceptBlock, "concept-branch niet gevonden").not.toBeNull();
-    expect(conceptBlock![0]).toMatch(/\{\s*\[field\]:\s*value\s*\}/);
-    // Concept-branch mag geen pending_-kolom updaten
+    // De concept-branch schrijft direct naar de live-kolom via [field]: value.
+    // We pakken de hele if-block met een generic slice tot en met de tweede
+    // return; en verifiëren dat de update daar zit én geen pending_-kolom
+    // aanraakt.
+    const conceptBlock = src.match(
+      /pending_added\s*===\s*true[\s\S]*?\.update\(\s*\{\s*\[field\]:\s*value\s*\}[\s\S]*?return;/,
+    );
+    expect(conceptBlock, "concept-branch met live-update niet gevonden").not.toBeNull();
     expect(conceptBlock![0]).not.toMatch(/pending_[a-z_]+:\s*(pendingValue|value)\b/);
   });
 
