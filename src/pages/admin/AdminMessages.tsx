@@ -117,16 +117,28 @@ const AdminMessages = () => {
       // (staan pas in beeld met "Toon archief" aan).
       const { data, error } = await supabase
         .from("project_communications")
-        .select(
-          "id, request:program_requests(archived_at), accommodation:accommodation_requests(archived_at)",
-        )
+        .select("id, request_id, accommodation_id")
         .eq("direction", "inbound")
         .is("answered_at", null)
         .is("archived_at", null);
       if (error) throw error;
-      return (data ?? []).filter((row: any) => {
-        if (row.request?.archived_at) return false;
-        if (row.accommodation?.archived_at) return false;
+      const rows = data ?? [];
+      const reqIds = Array.from(new Set(rows.map((r) => r.request_id).filter(Boolean))) as string[];
+      const accIds = Array.from(new Set(rows.map((r) => r.accommodation_id).filter(Boolean))) as string[];
+
+      const [reqRes, accRes] = await Promise.all([
+        reqIds.length
+          ? supabase.from("program_requests").select("id").in("id", reqIds).not("archived_at", "is", null)
+          : Promise.resolve({ data: [] as { id: string }[], error: null }),
+        accIds.length
+          ? supabase.from("accommodation_requests").select("id").in("id", accIds).not("archived_at", "is", null)
+          : Promise.resolve({ data: [] as { id: string }[], error: null }),
+      ]);
+      const archivedReq = new Set((reqRes.data ?? []).map((r: any) => r.id));
+      const archivedAcc = new Set((accRes.data ?? []).map((r: any) => r.id));
+      return rows.filter((r) => {
+        if (r.request_id && archivedReq.has(r.request_id)) return false;
+        if (r.accommodation_id && archivedAcc.has(r.accommodation_id)) return false;
         return true;
       }).length;
     },
