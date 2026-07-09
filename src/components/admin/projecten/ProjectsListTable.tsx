@@ -150,6 +150,15 @@ function Row({ row }: { row: OverviewRow }) {
                 Auto-afgehandeld
               </Badge>
             )}
+            {row.snoozed && (
+              <Badge
+                variant="outline"
+                className="h-4 border-indigo-300 bg-indigo-100 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                title="Dit project staat op snooze"
+              >
+                zzzz
+              </Badge>
+            )}
           </div>
 
           {row.customerCompany && (

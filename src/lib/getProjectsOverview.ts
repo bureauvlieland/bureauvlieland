@@ -23,7 +23,8 @@ export interface OverviewRow {
   isNew?: boolean;
   /** Waar zodra minstens één item van dit programma auto_closed_reason='auto_past_execution' heeft. */
   autoClosed?: boolean;
-
+  /** Waar zodra het project actief gesnoozed is (snoozed_until > now). */
+  snoozed?: boolean;
 }
 
 interface FetchOptions {
@@ -44,6 +45,13 @@ function isFresh(createdAt: string | null | undefined): boolean {
   return Date.now() - t < 24 * 60 * 60 * 1000;
 }
 
+function isSnoozed(snoozedUntil: string | null | undefined): boolean {
+  if (!snoozedUntil) return false;
+  const t = new Date(snoozedUntil).getTime();
+  if (isNaN(t)) return false;
+  return t > Date.now();
+}
+
 
 export async function fetchProjectsOverview({ logiesView = false }: FetchOptions = {}): Promise<OverviewRow[]> {
   const [
@@ -57,7 +65,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       .select(`
         id, reference_number, customer_name, customer_company, number_of_people,
         selected_dates, status, terms_accepted_at, linked_accommodation_id,
-        quote_status, completion_status, created_at, origin
+        quote_status, completion_status, created_at, origin, snoozed_until
       `)
       .neq("status", "deleted"),
     supabase
@@ -140,6 +148,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         accommodationId: acc.id,
         isNew: isFresh(acc.created_at) && !program,
         autoClosed: program ? ((stats.get(program.id)?.autoClosed ?? 0) > 0) : false,
+        snoozed: isSnoozed((program as any)?.snoozed_until),
       });
 
     });
@@ -205,6 +214,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       accommodationId: linkedAcc?.id ?? null,
       isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
       autoClosed: !!s && s.autoClosed > 0,
+      snoozed: isSnoozed((prog as any).snoozed_until),
     });
 
   });
