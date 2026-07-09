@@ -271,14 +271,19 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
 
 interface EmailPanelProps {
   initialOpenId?: string | null;
+  initialFilter?: string | null;
   heightClassName?: string;
 }
 
-export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220px)]" }: EmailPanelProps) {
+type ExtendedOrigin = Origin | "all" | "unanswered";
+
+export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-[calc(100vh-220px)]" }: EmailPanelProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [showArchived, setShowArchived] = useState(false);
-  const [originFilter, setOriginFilter] = useState<Origin | "all">("all");
+  const [originFilter, setOriginFilter] = useState<ExtendedOrigin>(
+    initialFilter === "unanswered" ? "unanswered" : "all",
+  );
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyContext, setReplyContext] = useState<{
@@ -295,6 +300,10 @@ export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220
   });
 
   const groups = useMemo(() => buildGroups(items, showArchived, originFilter), [items, showArchived, originFilter]);
+  const unansweredGroupCount = useMemo(
+    () => buildGroups(items, showArchived, "unanswered").length,
+    [items, showArchived],
+  );
 
   useEffect(() => {
     if (!initialOpenId || activeKey) return;
