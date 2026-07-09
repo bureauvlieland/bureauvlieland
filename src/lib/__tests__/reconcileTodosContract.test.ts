@@ -48,13 +48,6 @@ function extractSwitchCases(src: string): string[] {
   return [...cases];
 }
 
-function extractCreatedTypes(src: string): Set<string> {
-  const created = new Set<string>();
-  const re = /auto_type\s*:\s*["']([a-z_]+)["']/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src)) !== null) created.add(m[1]);
-  return created;
-}
 
 describe("reconcile-admin-todos ↔ auto_type creators", () => {
   const closed = extractSwitchCases(reconcile).filter((t) => !UNIVERSAL.has(t));
