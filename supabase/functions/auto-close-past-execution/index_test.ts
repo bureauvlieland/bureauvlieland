@@ -187,3 +187,26 @@ Deno.test("runAutoClose dryRun muteert niets", async () => {
   const past = store.program_requests.find((p) => p.id === "past-1")!;
   assertEquals(past.completion_status, "in_progress");
 });
+
+Deno.test("runAutoClose normaliseert projecten die al klaar voor facturatie zijn", async () => {
+  const store = seed();
+  store.program_requests.push({
+    id: "ready-1",
+    selected_dates: ["2026-12-01"],
+    cancelled_at: null,
+    completion_status: "ready_for_invoice",
+  });
+  store.program_request_items.push({
+    id: "ready-alt",
+    request_id: "ready-1",
+    status: "alternative",
+    auto_closed_reason: null,
+  });
+  const client = buildClient(store);
+  const res = await runAutoClose(client, { now: NOW });
+
+  assertEquals(res.projects_past_execution, 2);
+  const readyItem = store.program_request_items.find((i) => i.id === "ready-alt")!;
+  assertEquals(readyItem.status, "confirmed");
+  assertEquals(readyItem.auto_closed_reason, "auto_past_execution");
+});
