@@ -294,6 +294,7 @@ export const DesktopProgramView = ({
               quoteStatus={program.quote_status as any}
               quoteValidUntil={program.quote_valid_until}
               termsAcceptedAt={program.terms_accepted_at}
+              completionStatus={(program as any).completion_status ?? null}
               programDescription={program.program_description}
               onEdit={onOpenEdit}
               hasPendingItems={statusSummary.pending > 0}
@@ -376,6 +377,7 @@ export const DesktopProgramView = ({
               programPublishedAt={program.program_published_at}
               allConfirmed={allConfirmed}
               quotePdfUrl={(program as any).quote_pdf_url}
+              isPostExecution={isPostExecution}
             />
 
 
