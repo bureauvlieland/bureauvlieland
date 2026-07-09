@@ -261,7 +261,10 @@ export default function AdminEmailHealth() {
 
         <AutoCloseCard />
 
+        <AutoCloseMonitorCard />
+
         <HistoricalBackfillCard />
+
 
 
 
@@ -1087,3 +1090,220 @@ function SuppressionsCard() {
   );
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// Auto-close monitor: bewaakt de cron en alert bij ontbrekende / mislukte
+// runs. Toont laatste run + health-status en biedt een test-alert knop.
+// ─────────────────────────────────────────────────────────────────────────
+type MonitorRun = {
+  id: string;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "success" | "error";
+  dry_run: boolean;
+  triggered_by: string | null;
+  result: {
+    projects_scanned?: number;
+    projects_past_execution?: number;
+    items_confirmed?: number;
+    quotes_expired?: number;
+    todos_closed?: number;
+    projects_marked_ready_for_invoice?: number;
+    errors?: Array<{ project_id: string; error: string }>;
+  } | null;
+  error_message: string | null;
+  alerted_at: string | null;
+};
+
+type MonitorResponse = {
+  ok: boolean;
+  health: "healthy" | "missing_run" | "errors" | "stuck";
+  latest: MonitorRun | null;
+  alertSent: boolean;
+  alertSkipped: string | null;
+  thresholds: { staleHours: number; stuckMinutes: number; dedupeHours: number };
+};
+
+function AutoCloseMonitorCard() {
+  const [checking, setChecking] = useState<null | "check" | "test">(null);
+  const [monitor, setMonitor] = useState<MonitorResponse | null>(null);
+
+  const { data: recent, refetch: refetchRecent, isFetching } = useQuery({
+    queryKey: ["auto-close-run-log"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("auto_close_run_log")
+        .select("id, started_at, finished_at, status, dry_run, triggered_by, error_message, alerted_at, result")
+        .order("started_at", { ascending: false })
+        .limit(15);
+      if (error) throw error;
+      return (data ?? []) as MonitorRun[];
+    },
+    refetchInterval: 60_000,
+  });
+
+  const runCheck = async (test = false) => {
+    setChecking(test ? "test" : "check");
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-close-monitor", {
+        body: test ? { testAlert: true } : {},
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? "Onbekende fout");
+      setMonitor(data as MonitorResponse);
+      toast.success(
+        test
+          ? "Test-alert verstuurd"
+          : (data.health === "healthy"
+            ? "Monitor: gezond ✓"
+            : `Monitor: ${data.health} — ${data.alertSent ? "alert verstuurd" : (data.alertSkipped ?? "geen alert")}`),
+      );
+      refetchRecent();
+    } catch (err) {
+      toast.error(`Monitor faalde: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setChecking(null);
+    }
+  };
+
+  const latest = monitor?.latest ?? recent?.find((r) => !r.dry_run && r.triggered_by !== "monitor-missing") ?? null;
+  const health: MonitorResponse["health"] = monitor?.health ?? (() => {
+    if (!latest) return "missing_run";
+    const ageH = (Date.now() - new Date(latest.started_at).getTime()) / 3600_000;
+    if (ageH > 26) return "missing_run";
+    if (latest.status === "error" || (latest.result?.errors?.length ?? 0) > 0) return "errors";
+    if (latest.status === "running" && ageH > 0.5) return "stuck";
+    return "healthy";
+  })();
+
+  const badgeTone: Record<MonitorResponse["health"], string> = {
+    healthy: "bg-emerald-100 text-emerald-800",
+    missing_run: "bg-red-100 text-red-800",
+    errors: "bg-red-100 text-red-800",
+    stuck: "bg-amber-100 text-amber-900",
+  };
+  const label: Record<MonitorResponse["health"], string> = {
+    healthy: "Gezond",
+    missing_run: "Geen recente run",
+    errors: "Errors in laatste run",
+    stuck: "Run vastgelopen",
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <AlertTriangle className={`h-4 w-4 ${health === "healthy" ? "text-emerald-600" : "text-red-500"}`} />
+          Auto-close monitor
+          <Badge className={badgeTone[health]}>{label[health]}</Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground pt-1">
+          Bewaakt de dagelijkse auto-close-cron. Alert per e-mail naar het admin-adres als
+          de laatste run &gt;26u geleden was, errors bevatte, of langer dan 30 min op
+          <em> running</em> staat. Cron voor deze monitor kan elk uur draaien.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" disabled={!!checking} onClick={() => runCheck(false)}>
+            {checking === "check" ? "Bezig…" : "Check nu"}
+          </Button>
+          <Button variant="outline" disabled={!!checking} onClick={() => runCheck(true)}>
+            {checking === "test" ? "Bezig…" : "Stuur test-alert"}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => refetchRecent()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+
+        {latest ? (
+          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+            <div className="font-medium">
+              Laatste run —{" "}
+              <span className="text-muted-foreground">
+                {formatDistanceToNow(new Date(latest.started_at), { addSuffix: true, locale: nl })}
+                {" · "}
+                {format(new Date(latest.started_at), "dd-MM-yyyy HH:mm", { locale: nl })}
+              </span>
+            </div>
+            <div>Status: <strong>{latest.status}</strong> · Trigger: {latest.triggered_by ?? "—"}</div>
+            {latest.result && (
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                <li>Projecten in verleden: <strong>{latest.result.projects_past_execution ?? 0}</strong></li>
+                <li>Items bevestigd: <strong>{latest.result.items_confirmed ?? 0}</strong></li>
+                <li>Todo's gesloten: <strong>{latest.result.todos_closed ?? 0}</strong></li>
+                <li>Klaar voor facturatie: <strong>{latest.result.projects_marked_ready_for_invoice ?? 0}</strong></li>
+              </ul>
+            )}
+            {latest.error_message && (
+              <div className="text-red-600 mt-1"><strong>Fout:</strong> {latest.error_message}</div>
+            )}
+            {latest.alerted_at && (
+              <div className="text-amber-700">
+                Alert verstuurd op {format(new Date(latest.alerted_at), "dd-MM-yyyy HH:mm", { locale: nl })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Nog geen enkele run geregistreerd</AlertTitle>
+            <AlertDescription>
+              De cron heeft nog nooit gedraaid sinds deze monitoring actief is. Draai eerst
+              handmatig via "Nu draaien" hierboven of controleer de cron.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {recent && recent.length > 0 && (
+          <div>
+            <div className="text-xs font-medium mb-1">Laatste runs</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Gestart</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Trigger</TableHead>
+                  <TableHead>Duur</TableHead>
+                  <TableHead>Todo's</TableHead>
+                  <TableHead>Fout</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recent.map((r) => {
+                  const dur = r.finished_at
+                    ? Math.max(0, Math.round((new Date(r.finished_at).getTime() - new Date(r.started_at).getTime()) / 1000))
+                    : null;
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {format(new Date(r.started_at), "dd-MM HH:mm", { locale: nl })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            r.status === "success" ? "bg-emerald-100 text-emerald-800"
+                              : r.status === "error" ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-900"
+                          }
+                        >
+                          {r.status}{r.dry_run ? " (dry)" : ""}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{r.triggered_by ?? "—"}</TableCell>
+                      <TableCell className="text-xs">{dur === null ? "—" : `${dur}s`}</TableCell>
+                      <TableCell className="text-xs">{r.result?.todos_closed ?? "—"}</TableCell>
+                      <TableCell className="text-xs text-red-600 max-w-[240px] truncate" title={r.error_message ?? ""}>
+                        {r.error_message ?? ""}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -771,6 +771,45 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_close_run_log: {
+        Row: {
+          alerted_at: string | null
+          created_at: string
+          dry_run: boolean
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          result: Json | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          alerted_at?: string | null
+          created_at?: string
+          dry_run?: boolean
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          result?: Json | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          alerted_at?: string | null
+          created_at?: string
+          dry_run?: boolean
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          result?: Json | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       bank_statement_lines: {
         Row: {
           amount: number
