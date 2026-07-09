@@ -86,8 +86,13 @@ describe("update-partner-item-status — clear-both-together invariant", () => {
     // "unavailable" stuurt, moet klantakkoord op DIT item vervallen zodat het
     // niet meer meetelt in "alles goedgekeurd" en de klant opnieuw kan tekenen.
     for (const label of ["alternative", "unavailable"] as const) {
-      const startIdx = src.indexOf(`if (status === "${label}")`);
-      expect(startIdx, `${label}: if-blok niet gevonden`).toBeGreaterThan(-1);
+      // Zoek het update-blok (niet de validatie-guards eerder in de file):
+      // dat is de laatste `if (status === "<label>") {` gevolgd door een
+      // updateData-toewijzing binnen ~500 chars.
+      const re = new RegExp(`if \\(status === "${label}"\\)\\s*\\{[^}]*updateData\\.`, "g");
+      const matches = [...src.matchAll(re)];
+      expect(matches.length, `${label}: update-blok niet gevonden`).toBeGreaterThan(0);
+      const startIdx = matches[matches.length - 1].index!;
       const region = src.slice(startIdx, startIdx + 800);
       expect(region, `${label}: mist customer_approved_at reset`).toMatch(/customer_approved_at\s*=\s*null/);
       expect(region, `${label}: mist customer_accepted_at reset`).toMatch(/customer_accepted_at\s*=\s*null/);
