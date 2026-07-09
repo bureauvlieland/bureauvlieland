@@ -261,7 +261,10 @@ export default function AdminEmailHealth() {
 
         <AutoCloseCard />
 
+        <AutoCloseMonitorCard />
+
         <HistoricalBackfillCard />
+
 
 
 
