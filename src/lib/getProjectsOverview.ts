@@ -139,6 +139,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         programId: program?.id ?? null,
         accommodationId: acc.id,
         isNew: isFresh(acc.created_at) && !program,
+        autoClosed: program ? ((stats.get(program.id)?.autoClosed ?? 0) > 0) : false,
       });
 
     });
