@@ -36,9 +36,13 @@ function collectAllAutoTypes(): Set<string> {
   return found;
 }
 
-// Types die reconcile universeel/informatief hanteert zonder dat check-pending-items
-// ze zelf hoeft te creëren (bv. handmatig aangemaakte todos).
-const UNIVERSAL = new Set(["customer_cancellation"]);
+// Types die reconcile universeel/informatief hanteert of alleen als legacy-alias
+// nog afsluit (oude naam blijft ondersteund voor bestaande open todos).
+const UNIVERSAL = new Set([
+  "customer_cancellation",
+  "new_program_request", // legacy-alias van new_request_received
+  "stale_pending_change", // legacy: oude naam, huidige creator gebruikt andere flag
+]);
 
 function extractSwitchCases(src: string): string[] {
   const cases = new Set<string>();

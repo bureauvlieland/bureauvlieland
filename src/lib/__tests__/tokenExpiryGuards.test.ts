@@ -41,7 +41,9 @@ describe("token-functies geven een foutrespons bij ongeldig/verlopen token", () 
       const path = resolve(process.cwd(), `supabase/functions/${fn}/index.ts`);
       if (!existsSync(path)) return;
       const src = readFileSync(path, "utf8");
-      const hasErrorPath = /status:\s*(400|401|403|404|410|500)/.test(src);
+      const hasErrorPath =
+        /status:\s*(400|401|403|404|410|500)/.test(src) ||
+        /\bjson\s*\(\s*(400|401|403|404|410|500)/.test(src);
       expect(
         hasErrorPath,
         `${fn} heeft geen expliciet foutstatus-pad`,
