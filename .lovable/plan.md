@@ -1,107 +1,33 @@
-## Doel
-De klantweergave `/mijn-programma/:token` moet niet langer tegenstrijdige meldingen tonen over “goed te keuren”, “wacht op partners”, “akkoord” en “facturatie”. Voor projecten die al in `completion_status = ready_for_invoice` staan of waarvan de uitvoeringsdatum voorbij is, verschuift de focus naar facturatie/voorwaarden en verdwijnen goedkeur-acties uit klantnavigatie, stepper, badges, sticky bar en itemkaarten.
+## Probleem
+Op `/admin/berichten` toont de tab **E-mail** een badge "3", terwijl er maar 1 chatmelding en (in dit geval) 2 onbeantwoorde inkomende e-mails zijn. Oorzaken:
 
-## Gevonden oorzaak bij dit project
-Voor token `vXnYKZsgNzrY` staat het project in de database op:
+1. **Verkeerde optelling** in `src/pages/admin/AdminMessages.tsx` (regel 126):
+   `unansweredCount = unansweredEmailCount + chatTotalUnread` — de chat-teller wordt bij de e-mail-badge opgeteld én apart op de Chat-tab getoond (dubbeltelling).
+2. **Geen directe manier om de onbeantwoorde e-mails te vinden**: `EmailPanel` heeft filterchips voor Alles/Inkomend/Handmatig/Automatisch, maar niet voor "Onbeantwoord". De 3 zitten verstopt in 25 gesprekken.
 
-- `completion_status = ready_for_invoice`
-- `quote_status = akkoord_ontvangen`
-- facturatiegegevens ontbreken
-- voorwaarden ontbreken
-- één item heeft nog `status = alternative`, maar heeft al `customer_approved_at` en `customer_accepted_at`
+## Wijzigingen
 
-De hoofdkaart herkent inmiddels deels “uitgevoerd / facturatie”, maar andere UI-stukken rekenen nog los op itemstatussen en klant-approval-tellingen. Daardoor kan dezelfde pagina tegelijk zeggen: klaar voor facturatie, nog akkoord nodig, alternatief open, of wacht op partners.
+### 1. Badge E-mail-tab correct maken
+`src/pages/admin/AdminMessages.tsx`
+- Toon op de E-mail-tab uitsluitend `unansweredEmailCount` (onbeantwoorde inbound project_communications).
+- Verwijder `unansweredCount` (opgeteld) of hernoem, en gebruik alleen de twee losse counters op hun eigen tab.
 
-## Plan
+### 2. Filterchip "Onbeantwoord" in EmailPanel
+`src/components/admin/EmailPanel.tsx`
+- Filterchips uitbreiden met een extra chip **"Onbeantwoord"** (naast Alles/Inkomend/Handmatig/Automatisch).
+- Wanneer actief: toon alleen gesprekken met minstens één item waar `origin === "inbound"` en `!answered_at && !archived_at` (dezelfde conditie als `isUnread` op regel 233).
+- Chip toont hetzelfde getal als de tab-badge, zodat de admin direct van "3 in de badge" naar "3 in de lijst" kan klikken.
+- Optioneel: chip automatisch selecteren als de gebruiker via een `?filter=unanswered` URL binnenkomt (b.v. door op de tab-badge te klikken).
 
-### 1. Eén centrale portal-status maken
-Introduceer een centrale helper voor het klantportaal, bijvoorbeeld `getCustomerPortalStatus(program, items, accommodationQuotes, selectedDates)`, die in één object teruggeeft:
+### 3. Tab-badge klikbaar naar filter (klein)
+`src/pages/admin/AdminMessages.tsx`
+- Als de gebruiker op de E-mail-tab klikt en er zijn onbeantwoorde e-mails, zet `?tab=inbox&filter=unanswered` zodat `EmailPanel` initieel op de nieuwe chip staat. (Alleen bij eerste activatie; daarna respecteert het de handmatige chipkeuze.)
 
-- `executionState`: future / in_progress / past_execution / invoicing
-- `billingComplete`
-- `termsAccepted`
-- `guestDetailsIncomplete`
-- `customerActionsCount`
-- `customerApprovedCount`
-- `customerApprovableCount`
-- `programTrackDone`
-- `showApprovalActions`
-- `showPartnerWaiting`
-- `primaryNextAction`
-- labels/badges voor programma, akkoord, facturatie en stepper
+## Technische details
+- `useAdminInbox` blijft ongewijzigd; alleen de weergave in `AdminMessages.tsx` verandert.
+- `EmailPanel` heeft al alle benodigde data (`answered_at`, `archived_at`, `origin`); er hoeft geen extra query bij.
+- Geen backend-/RLS-wijzigingen.
 
-Belangrijke regel:
-
-```text
-Als completion_status = ready_for_invoice|partially_invoiced|fully_invoiced
-of executionState = past_execution:
-  - geen klant-goedkeuracties meer tonen
-  - geen “wacht op partners” meer tonen
-  - programma-track is afgerond/uitgevoerd
-  - facturatiegegevens en voorwaarden mogen wel open blijven
-```
-
-### 2. Bestaande losse berekeningen vervangen
-Vervang in deze plekken de eigen tellingen door de centrale portal-status:
-
-- `CustomerProgram.tsx` navigatiebadges
-- `CustomerPortalSplash.tsx` traject-lint en intro-copy
-- `DesktopProgramView.tsx`
-- `MobileProgramView.tsx`
-- `ActionRequiredCard.tsx`
-- `ProgramStepper.tsx` input/tracklogica
-- `tabHeaderConfig.ts`
-- `MobileStickyStatus.tsx`
-
-Daarmee krijgt desktop, mobiel, splash, tabheader, sticky bar en hoofdkaart exact dezelfde waarheid.
-
-### 3. Itemkaarten blokkeren tegen oude akkoord-acties
-Pas `CustomerProgramItem` / `deriveItemDisplayStatus` aan zodat een item in een facturatie- of post-execution-project niet meer terugvalt naar “Goedkeuring nodig” op basis van `status = alternative` of oude approvalvelden.
-
-Voor klantweergave wordt dan bijvoorbeeld:
-
-- uitgevoerd/facturatiefase: “Uitgevoerd” of “Afgerond voor facturatie”
-- geen knop “Wijziging goedkeuren”
-- geen bulkknop “Alle X onderdelen goedkeuren”
-- geen “Andere tijd” als uitvoering al voorbij/facturatiefase is
-
-### 4. Data-correctie voor bestaande projecten
-Maak een veilige backend data-update voor projecten die al `ready_for_invoice` zijn of waarvan uitvoering voorbij is:
-
-- open `program_request_items.status in ('pending','alternative','counter_proposed')` sluiten naar een consistente eindstatus
-- `auto_closed_reason = 'auto_past_execution'` zetten waar passend
-- `customer_approved_at` / `customer_accepted_at` niet wissen, maar niet meer als open actie interpreteren
-- open pre-execution admin-todos sluiten
-- facturatie-/voorwaarden-/gastgegevens-taken open laten
-
-Voor dit concrete project betekent dat: het overgebleven `alternative` item wordt niet meer als open klantactie gezien.
-
-### 5. Auto-close functie uitbreiden
-Breid `auto-close-past-execution` uit zodat toekomstige regressies worden voorkomen:
-
-- ook `counter_proposed` sluiten als pre-execution status
-- ook projecten met `completion_status = ready_for_invoice` normaliseren, niet alleen datum-past
-- `status_updated_at` en `status_note` expliciet zetten bij auto-close
-- resultaatrapportage uitbreiden met aantallen per status
-
-### 6. Regressietests toevoegen
-Voeg tests toe voor de statushelper en auto-close:
-
-- project `ready_for_invoice` + item `alternative` + accepted timestamps → 0 klantacties, facturatie-focus
-- past execution + pending items → geen goedkeur-badges, wel billing-task indien incompleet
-- future/offerte_verstuurd → goedkeuracties blijven zichtbaar
-- akkoord_ontvangen + confirmed partner response vóór uitvoering → per-item goedkeuring blijft zichtbaar
-- billing incomplete na uitvoering → facturatie blijft primaire actie
-- terms incomplete na uitvoering → voorwaarden blijven zichtbaar na facturatiegegevens
-
-### 7. Verificatie op de echte route
-Na implementatie controleer ik `/mijn-programma/vXnYKZsgNzrY` visueel in de browser:
-
-- geen “goed te keuren” badge meer
-- geen itemknop “Wijziging goedkeuren”
-- geen steppertekst “Bekijk en keur onderdelen goed”
-- primaire melding focust op facturatiegegevens
-- akkoord/voorwaarden blijft alleen open waar dat functioneel nog nodig is
-
-## Verwacht resultaat
-De klant ziet één consistente status: programma uitgevoerd / klaar voor facturatie, met alleen nog relevante acties. Oude partner- of goedkeurstatussen kunnen niet meer doorlekken in labels, badges of knoppen zodra het project in facturatie/post-execution zit.
+## Niet in scope
+- Wijzigingen aan hoe `answered_at` wordt gezet (dat blijft de bestaande "Beantwoorden"/"Archiveer"-logica).
+- Wijzigingen aan de Chat-badgeberekening zelf.

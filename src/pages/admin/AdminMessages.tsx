@@ -99,6 +99,7 @@ const AdminMessages = () => {
   const activeTab =
     tabParam === "verzonden" ? "verzonden" : tabParam === "chat" ? "chat" : "inbox";
   const highlightedInboxId = searchParams.get("inbox");
+  const inboxFilter = searchParams.get("filter");
   const initialConversationId = searchParams.get("conversation");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -123,7 +124,6 @@ const AdminMessages = () => {
   const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
   const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
   const chatTotalUnread = chatUnreadConversations + liveChatUnreadTotal;
-  const unansweredCount = unansweredEmailCount + chatTotalUnread;
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
@@ -253,12 +253,12 @@ const AdminMessages = () => {
               <TabsTrigger value="inbox" className="gap-2">
                 <Mail className="h-4 w-4" />
                 E-mail
-                {unansweredCount > 0 && (
+                {unansweredEmailCount > 0 && (
                   <Badge
                     variant="secondary"
                     className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
                   >
-                    {unansweredCount}
+                    {unansweredEmailCount}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -282,7 +282,7 @@ const AdminMessages = () => {
             </TabsList>
 
             <TabsContent value="inbox" className="mt-4">
-              <EmailPanel initialOpenId={highlightedInboxId} />
+              <EmailPanel initialOpenId={highlightedInboxId} initialFilter={inboxFilter} />
             </TabsContent>
 
 

@@ -197,10 +197,10 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
   return [...commItems, ...logItems];
 }
 
-function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all"): ThreadGroup[] {
+function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all" | "unanswered"): ThreadGroup[] {
   const groups = new Map<string, ThreadGroup>();
   for (const e of items) {
-    if (originFilter !== "all" && e.origin !== originFilter) continue;
+    if (originFilter !== "all" && originFilter !== "unanswered" && e.origin !== originFilter) continue;
 
     let key: string;
     let kind: ThreadGroup["kind"];
@@ -259,6 +259,7 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
   }
 
   return Array.from(groups.values())
+    .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .map((g) => ({
       ...g,
       items: g.items.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")),
@@ -271,14 +272,19 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
 
 interface EmailPanelProps {
   initialOpenId?: string | null;
+  initialFilter?: string | null;
   heightClassName?: string;
 }
 
-export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220px)]" }: EmailPanelProps) {
+type ExtendedOrigin = Origin | "all" | "unanswered";
+
+export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-[calc(100vh-220px)]" }: EmailPanelProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [showArchived, setShowArchived] = useState(false);
-  const [originFilter, setOriginFilter] = useState<Origin | "all">("all");
+  const [originFilter, setOriginFilter] = useState<ExtendedOrigin>(
+    initialFilter === "unanswered" ? "unanswered" : "all",
+  );
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyContext, setReplyContext] = useState<{
@@ -295,6 +301,10 @@ export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220
   });
 
   const groups = useMemo(() => buildGroups(items, showArchived, originFilter), [items, showArchived, originFilter]);
+  const unansweredGroupCount = useMemo(
+    () => buildGroups(items, showArchived, "unanswered").length,
+    [items, showArchived],
+  );
 
   useEffect(() => {
     if (!initialOpenId || activeKey) return;
@@ -389,8 +399,9 @@ export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220
     setReplyOpen(true);
   };
 
-  const filterChips: { key: Origin | "all"; label: string }[] = [
+  const filterChips: { key: ExtendedOrigin; label: string; count?: number }[] = [
     { key: "all", label: "Alles" },
+    { key: "unanswered", label: "Onbeantwoord", count: unansweredGroupCount },
     { key: "inbound", label: "Inkomend" },
     { key: "manual", label: "Handmatig" },
     { key: "automatic", label: "Automatisch" },
@@ -424,6 +435,18 @@ export function EmailPanel({ initialOpenId, heightClassName = "h-[calc(100vh-220
                 )}
               >
                 {c.label}
+                {typeof c.count === "number" && c.count > 0 && (
+                  <span
+                    className={cn(
+                      "ml-1 inline-flex items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+                      originFilter === c.key
+                        ? "bg-white/20 text-primary-foreground"
+                        : "bg-red-600 text-white",
+                    )}
+                  >
+                    {c.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
