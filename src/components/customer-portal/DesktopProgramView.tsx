@@ -209,6 +209,7 @@ export const DesktopProgramView = ({
     isPreApproval,
     totalCost,
     customerActionsCount,
+    alternativeActionsCount,
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
     isPostExecution,
@@ -662,7 +663,6 @@ export const DesktopProgramView = ({
         isMultiDay={isMultiDay}
          isPreApproval={isPreApproval}
          quoteStatus={program.quote_status}
-            isPostExecution={isPostExecution}
         totalCost={totalCost}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
