@@ -4,7 +4,7 @@
 // verleden ligt. Deze functie is idempotent en veilig om vaker per dag te draaien.
 //
 // Wat er gebeurt per project (past_execution én niet cancelled, niet fully_invoiced):
-//  1. program_request_items met status 'pending' of 'alternative'
+//  1. program_request_items met status 'pending', 'alternative' of 'counter_proposed'
 //     → status='confirmed', auto_closed_reason='auto_past_execution'
 //  2. accommodation_quotes met status 'pending'/'submitted' voor deze aanvraag
 //     → status='expired', auto_closed_reason='auto_past_execution'
@@ -47,6 +47,7 @@ export interface AutoCloseResult {
   quotes_expired: number;
   todos_closed: number;
   projects_marked_ready_for_invoice: number;
+  items_by_status: Record<string, number>;
   errors: Array<{ project_id: string; error: string }>;
 }
 
@@ -89,6 +90,7 @@ export async function runAutoClose(
     quotes_expired: 0,
     todos_closed: 0,
     projects_marked_ready_for_invoice: 0,
+    items_by_status: {},
     errors: [],
   };
 
@@ -104,6 +106,10 @@ export async function runAutoClose(
   result.projects_scanned = projects?.length ?? 0;
   const pastProjects: Array<{ id: string; completion_status: string | null }> = [];
   for (const p of projects ?? []) {
+    if (p.completion_status === "ready_for_invoice" || p.completion_status === "partially_invoiced") {
+      pastProjects.push({ id: p.id, completion_status: p.completion_status });
+      continue;
+    }
     const last = lastValidDate(p.selected_dates ?? null);
     if (!last) continue;
     if (startOfDay(last).getTime() < today.getTime()) {
@@ -119,22 +125,31 @@ export async function runAutoClose(
   {
     const { data: items, error } = await supabase
       .from("program_request_items")
-      .select("id, request_id")
+      .select("id, request_id, status")
       .in("request_id", ids)
-      .in("status", ["pending", "alternative"])
+      .in("status", ["pending", "alternative", "counter_proposed"])
       .is("auto_closed_reason", null);
     if (error) result.errors.push({ project_id: "*", error: `load items: ${error.message}` });
     else if (items && items.length && !dryRun) {
+      for (const item of items as Array<{ status: string }>) {
+        result.items_by_status[item.status] = (result.items_by_status[item.status] ?? 0) + 1;
+      }
       const { error: uErr } = await supabase
         .from("program_request_items")
         .update({
           status: "confirmed",
           auto_closed_reason: "auto_past_execution",
+          status_updated_at: now.toISOString(),
+          status_updated_by: "auto_close_past_execution",
+          status_note: "Automatisch afgerond na uitvoering; klaar voor facturatie.",
         })
         .in("id", items.map((i: { id: string }) => i.id));
       if (uErr) result.errors.push({ project_id: "*", error: `update items: ${uErr.message}` });
       else result.items_confirmed = items.length;
     } else if (items) {
+      for (const item of items as Array<{ status: string }>) {
+        result.items_by_status[item.status] = (result.items_by_status[item.status] ?? 0) + 1;
+      }
       result.items_confirmed = items.length;
     }
   }
