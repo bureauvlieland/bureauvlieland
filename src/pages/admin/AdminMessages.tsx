@@ -123,7 +123,6 @@ const AdminMessages = () => {
   const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
   const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
   const chatTotalUnread = chatUnreadConversations + liveChatUnreadTotal;
-  const unansweredCount = unansweredEmailCount + chatTotalUnread;
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
