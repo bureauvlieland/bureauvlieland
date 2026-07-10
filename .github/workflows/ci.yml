@@ -140,16 +140,72 @@ jobs:
           path: reports/
           if-no-files-found: warn
 
+  e2e-smoke:
+    name: Pre-productie smoke (Playwright, dev backend)
+    # Draait alleen op push naar main (en handmatig), niet op elke PR — deze
+    # test praat met de dev-backend (preview environment) en muteert daar
+    # kortstondig data. Op forks/PR's zonder secrets slaat Playwright de
+    # test zichzelf over.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Start dev server
+        run: bun run dev &
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+
+      - name: Wait for dev server
+        run: |
+          for i in {1..60}; do
+            if curl -sSf http://localhost:8080 > /dev/null; then
+              echo "Dev server ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Dev server did not start in time"; exit 1
+
+      - name: Run full-flow smoke test
+        run: bunx playwright test tests/e2e/full-flow-smoke.spec.ts --reporter=list
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CI_FIXTURE_SECRET: ${{ secrets.CI_FIXTURE_SECRET }}
+
+      - name: Upload Playwright trace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-trace
+          path: test-results/
+          if-no-files-found: ignore
+
   ci-status:
     name: CI status
     if: always()
-    needs: [frontend-tests, edge-function-tests]
+    needs: [frontend-tests, edge-function-tests, e2e-smoke]
     runs-on: ubuntu-latest
     steps:
       - name: Fail on any test regression
         run: |
           fe='${{ needs.frontend-tests.result }}'
           ef='${{ needs.edge-function-tests.result }}'
+          sm='${{ needs.e2e-smoke.result }}'
           {
             echo "## CI overview"
             echo
@@ -157,8 +213,15 @@ jobs:
             echo "|---|---|"
             echo "| Frontend (Vitest) | $fe |"
             echo "| Edge functions (Deno) | $ef |"
+            echo "| Pre-prod smoke (Playwright) | $sm |"
           } >> "$GITHUB_STEP_SUMMARY"
+          # Smoke mag 'skipped' zijn op PR's (draait alleen op push naar main).
           if [ "$fe" != "success" ] || [ "$ef" != "success" ]; then
             echo "One or more test suites failed."
             exit 1
           fi
+          if [ "$sm" != "success" ] && [ "$sm" != "skipped" ]; then
+            echo "Smoke test failed."
+            exit 1
+          fi
+
