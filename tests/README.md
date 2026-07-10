@@ -53,6 +53,7 @@ Huidige scope:
 - `invoice-idempotency.spec.ts` — bureau-factuur idempotency.
 - `mailjet-webhook.spec.ts` — Mailjet event-webhook auth + hard bounce.
 - `inbound-purchase-invoice.spec.ts` — inbound-factuur zonder PDF.
+- `full-flow-smoke.spec.ts` — **pre-productie smoke**: configurator → programma → offerte → partner-accept → factuur. Draait automatisch op elke push naar `main` via de CI-job `e2e-smoke` (Playwright + dev-backend). Blokkeert de merge/deploy als de kritieke pipeline stuk is.
 
 ## CI-notitie
 
