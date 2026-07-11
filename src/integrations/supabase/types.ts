@@ -4394,6 +4394,18 @@ export type Database = {
           invoicing_mode: string
         }[]
       }
+      get_shared_program: {
+        Args: { _share_code: string }
+        Returns: {
+          cart_items: Json
+          created_at: string
+          expires_at: string
+          id: string
+          number_of_people: number
+          selected_date: string
+          share_code: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
