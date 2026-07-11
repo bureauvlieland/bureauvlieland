@@ -49,11 +49,11 @@ const SharedProgram = () => {
       }
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('shared_programs')
-          .select('*')
-          .eq('share_code', shareCode)
-          .maybeSingle();
+        const { data: rows, error: fetchError } = await supabase
+          .rpc('get_shared_program', { _share_code: shareCode });
+        const data = Array.isArray(rows) ? rows[0] ?? null : rows;
+
+
 
         if (fetchError) throw fetchError;
 
