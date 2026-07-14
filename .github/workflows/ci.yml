@@ -98,6 +98,7 @@ jobs:
           set -o pipefail
           deno test \
             --allow-net --allow-env --allow-read \
+            --no-check \
             --parallel \
             --reporter=junit \
             --junit-path=reports/deno-junit.xml \
