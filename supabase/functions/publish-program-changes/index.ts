@@ -269,6 +269,18 @@ Deno.serve(async (req) => {
       .in("id", partnerIds);
     const partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
 
+    // Approval-gate: partners horen alleen wijzigingsmails te ontvangen voor
+    // onderdelen die de klant reeds heeft goedgekeurd (customer_approved_at
+    // of customer_accepted_at is gevuld). Onderdelen die nog "in offerte"
+    // staan bij de klant worden intern wél gepubliceerd, maar er gaat geen
+    // partner-mail uit — zodra de klant later akkoord geeft, loopt de
+    // gebruikelijke offerte-flow alsnog naar de partner.
+    const approvedItemIds = new Set<string>(
+      items
+        .filter((i: any) => i.customer_approved_at || i.customer_accepted_at)
+        .map((i: any) => i.id),
+    );
+
     const changeRows: ChangeRow[] = [];
     const logRows: any[] = [];
     const nowIso = new Date().toISOString();
