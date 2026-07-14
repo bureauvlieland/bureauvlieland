@@ -58,6 +58,8 @@ const CustomerProgram = () => {
     addItem,
     getPendingChanges,
     submitChanges,
+    pendingRemovals,
+    isPendingRemoval,
     updateProgramDetails,
     updateGuestDetails,
     updateBillingDetails,
@@ -77,6 +79,7 @@ const CustomerProgram = () => {
     billingLinesByItem,
     blockVatRates,
   } = useCustomerProgram(token || "");
+
 
   const [activeDay, setActiveDay] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
