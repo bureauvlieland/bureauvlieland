@@ -193,20 +193,24 @@ export function formatCurrencyNL(amount: number): string {
 }
 
 /**
- * Get the base URL for portals based on environment
+ * Get the base URL for portals based on environment.
+ *
+ * Always returns the canonical production domain `https://bureauvlieland.nl` for
+ * customer- and partner-facing links, ongeacht of de trigger vanaf de Lovable-
+ * preview of het gepubliceerde `bureauvlieland.lovable.app` komt. Zo landen
+ * eindgebruikers nooit per ongeluk in de Lovable-editor-shell (waar ze een
+ * "Verzoek toegang"-knop zien staan).
+ *
+ * Uitzondering: bij lokale ontwikkeling (`localhost` / `127.0.0.1`) wordt de
+ * origin zelf teruggegeven zodat local dev nog werkt.
  */
 export function getPortalBaseUrl(origin?: string): string {
-  // In production, always use the production domain
-  if (origin?.includes("bureauvlieland.nl")) {
-    return "https://bureauvlieland.nl";
-  }
-  // For lovable preview
-  if (origin?.includes("lovable.app")) {
+  if (origin?.includes("localhost") || origin?.includes("127.0.0.1")) {
     return origin;
   }
-  // Default to production
   return "https://bureauvlieland.nl";
 }
+
 
 /**
  * Check if we're in test mode (preview/dev), based on the request origin.
