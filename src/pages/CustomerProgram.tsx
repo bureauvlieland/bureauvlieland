@@ -409,9 +409,12 @@ const CustomerProgram = () => {
     getItemsForDay,
     pendingChanges,
     hasChanges,
+    pendingRemovals,
+    isPendingRemoval,
     onUpdateItem: updateItem,
     onRemoveItem: removeItem,
     onAcceptItem: acceptItem,
+
     onCounterProposal: submitCounterProposal,
     onOpenBilling: () => setShowBillingDialog(true),
     onOpenEdit: () => setShowEditDialog(true),
