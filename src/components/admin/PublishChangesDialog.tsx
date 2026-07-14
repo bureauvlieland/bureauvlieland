@@ -179,6 +179,22 @@ export function PublishChangesDialog({
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);
 
+  // Approval-gate mirror van de edge function: partner-mails gaan alleen uit
+  // voor onderdelen die de klant al heeft goedgekeurd. Zolang dat nog niet
+  // zo is, worden wijzigingen intern wél gepubliceerd maar krijgt de partner
+  // geen mail — de reguliere offerte-flow neemt het over zodra de klant
+  // akkoord geeft.
+  const approvedItemIds = useMemo(
+    () =>
+      new Set(
+        pendingItems
+          .filter((i) => i.customer_approved_at || i.customer_accepted_at)
+          .map((i) => i.id),
+      ),
+    [pendingItems],
+  );
+  const unapprovedCount = pendingItems.length - approvedItemIds.size;
+
   // Waarschuwingen vóór publicatie:
   // - blocking: providerwijziging waarbij naam/ID niet samen zijn bijgewerkt
   //   (edge function blokkeert dit met 400 → toon hier vooraf)
