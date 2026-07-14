@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+//
 // Contract-tests voor de verwijder-flow in het klantportaal.
 //
 // Kernregel: als een klant op "Verwijderen" klikt is dat een LOKALE, nog niet
@@ -11,8 +13,9 @@
 // status="cancelled" werden gezet en gefilterd — waardoor de klant niet wist
 // dat er nog iets opgeslagen moest worden. Zie /.lovable/plan.md.
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
+
 
 // Mock de supabase client BEFORE hook import.
 const mockFunctionsInvoke = vi.fn().mockResolvedValue({ error: null });
