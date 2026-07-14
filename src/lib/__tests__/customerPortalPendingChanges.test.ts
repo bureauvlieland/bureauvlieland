@@ -166,5 +166,3 @@ afterAll(() => {
   global.fetch = originalFetch;
 });
 
-// vitest globals
-declare const afterAll: (fn: () => void) => void;
