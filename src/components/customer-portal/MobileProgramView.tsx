@@ -111,8 +111,11 @@ interface MobileProgramViewProps {
   getItemsForDay: (dayIndex: number) => ProgramRequestItem[];
   pendingChanges: { itemId: string }[];
   hasChanges: boolean;
+  pendingRemovals?: Set<string>;
+  isPendingRemoval?: (itemId: string) => boolean;
   onUpdateItem: (itemId: string, updates: Partial<ProgramRequestItem>) => void;
   onRemoveItem: (itemId: string) => void;
+
   onAcceptItem: (itemId: string) => Promise<boolean>;
   onCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   onOpenBilling: () => void;
