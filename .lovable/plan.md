@@ -1,49 +1,67 @@
 ## Bevindingen
 
-Uit een sweep van alle notify-/publish-flows blijkt dat de rest van het notificatie-landschap grotendeels correct is (annulering, item-verwijdering, logies-offertes — die informeren terecht partners die al betrokken zijn). Er zit echter één **actief gat** en twee **dode-code-risico's** die dezelfde structurele fout hebben als de net-gefixte headcount-flow.
+Grondige sweep is klaar. Goede nieuws: alle 106 edge functions worden nog gebruikt (na de recente `notify-*-price-change` opschoning was er niets vergelijkbaars meer). De rest is vooral **oude versies die bewust zijn vervangen** door nieuwere componenten — geen "per ongeluk losgekoppelde" features die gereanimeerd moeten worden. Twee twijfelgevallen leg ik voor.
 
-### 1. `publish-program-changes` (actief, hoogste impact)
-`supabase/functions/publish-program-changes/index.ts:769-830` stuurt bulk-mail naar aangevinkte partners over pending wijzigingen (tijd, prijs, aantal, locatie, uitvoerder, etc.). Er is **geen** filter op `customer_approved_at` / `customer_accepted_at`. Consequentie: een item dat nog nooit door de klant is goedgekeurd (nog concept / offerte-fase) kan alsnog een "wijziging gepubliceerd"-mail naar de partner triggeren. Zelfde patroon dat we net dichttimmerden voor headcount.
+Onderverdeeld in vier categorieën.
 
-De bijbehorende UI (`src/components/admin/PublishChangesDialog.tsx`, `PendingChangeItem` regel 22-57) laadt deze velden niet, dus de admin kán niet eens zien dat een item nog niet goedgekeurd is.
+### A. Config-vervuiling (klein, veilig, hoge signaal-waarde)
 
-### 2. `notify-partner-price-change` (dode code)
-`supabase/functions/notify-partner-price-change/index.ts:50-93` — geen approval-check. Wordt nergens meer vanuit `src/` aangeroepen (alleen in `edgeFunctionTestCoverage.ts`); vervangen door `publish-program-changes`. Latente bug als hij ooit weer wordt gekoppeld.
+Deze staan in de config maar de code bestaat niet meer → verwarrend voor toekomstige debugging.
 
-### 3. `notify-customer-price-change` (dode code)
-`supabase/functions/notify-customer-price-change/index.ts:49-80` — idem. Niet meer aangeroepen vanuit `src/`.
+1. `supabase/config.toml` regels 14/16/169 — entries voor `quote-chat`, `send-wedding-inquiry`, `ensure-smoke-test-fixture` waarvan de bijbehorende `supabase/functions/<naam>/` map niet bestaat. **Weghalen.**
+2. `src/lib/edgeFunctionTestCoverage.ts:91` — registry-entry `"mailjet-tracking"` bestaat niet als functie (hernoemd naar `mailjet-event-webhook`, regel 87). **Weghalen** — nu vervuilt hij het `/admin/email-health`-overzicht met een permanente "ontbrekend"-waarschuwing.
 
-### Bewust NIET gefixt (correct gedrag)
-- `notify-partner-item-deletion` — bevat al de juiste gate (`skip_partner_notification && !customer_approved_at && status=pending` → skip).
-- `notify-partner-cancellation` / `cancel-program-request` — annulering moet elke betrokken partner bereiken, ook zonder klant-akkoord.
-- `notify-accommodation-quote` — eerste aankondiging van een quote, geen wijziging.
-- `override-item-status`, `update-partner-item-status` — geen premature-mail-scenario.
-- Geen DB-triggers gevonden die notify-functies buiten expliciete acties om aanroepen.
+### B. Dode admin-pagina + dode import
 
-## Wijzigingen
+3. `src/pages/admin/AdminPartners.tsx` — pagina is verwijderd uit de router (`App.tsx:259` heeft expliciet comment "AdminPartners removed — /admin/partners redirects to /admin/crm?tab=partners"), maar de `lazy()`-import op `App.tsx:87` staat er nog. **Import weghalen + pagina-bestand verwijderen** (redirect blijft werken via de bestaande `<Navigate>` op regel 246).
 
-### A. `supabase/functions/publish-program-changes/index.ts` — approval-gate toevoegen
+### C. Oude configurator / partner-portal / customer-portal componenten (24 stuks)
 
-Rond het opbouwen van `changeRows` en `notifyPartnerIds` (regel 769-830): filter items zodat alleen `customer_approved_at IS NOT NULL || customer_accepted_at IS NOT NULL` in de partner-mail worden meegenomen. Items zonder klant-akkoord worden intern nog steeds gepubliceerd (DB-update van pending changes blijft draaien), maar de partner krijgt geen mail — pas bij goedkeuring gaan die items sowieso als reguliere offerte-aanvraag naar de partner.
+Deze zijn aantoonbaar bewust vervangen door nieuwere bestanden:
 
-Return-payload uitbreiden met `skipped_not_approved: [itemId,…]` per partner, zodat de UI kan tonen "X items niet gemaild — klant heeft ze nog niet goedgekeurd".
+- Meerdere bestanden bevatten expliciete "removed / not rendered anymore"-comments (`ExtrasSection.tsx:2`, `ProgramSidebar.tsx:1`).
+- Voor elk oud bestand bestaat een nieuwer, wél-gebruikt vervangend bestand (bv. `AiErwinChat` → `AiErwinDialog`; oude `ConfiguratorWizard` → `ProgramBuilderView` + `BasicsForm` + `CheckoutStepIndicator`; oude partner-dashboard-tegels → nieuwe `PartnerDashboard`).
+- 0 importers, geen `React.lazy`, geen dynamische string-lookup.
 
-### B. `src/components/admin/PublishChangesDialog.tsx` — UI-signalering
+**Voorstel: in bulk verwijderen (één commit, makkelijk terug te draaien als het toch stuk gaat).**
 
-- `PendingChangeItem` uitbreiden met `customer_approved_at` en `customer_accepted_at` (bron: bestaande fetch die deze velden al beschikbaar heeft in AdminRequestDetail).
-- Bij het opbouwen van de "wie krijgt een mail?"-lijst per partner: items zonder klant-akkoord tonen met badge "wacht op klant" en uitsluiten van de partner-mail-telling.
-- Hint boven de partner-sectie: "Partners worden alleen gemaild voor onderdelen die de klant al heeft goedgekeurd — offerte-onderdelen volgen automatisch bij goedkeuring."
-- Toast na versturen: als backend `skipped_not_approved > 0` teruggeeft, extra regel "N onderdelen overgeslagen — nog niet goedgekeurd door klant".
+Componenten (allen in `src/components/`):
 
-### C. Dode code opruimen
+- `BootticketBanner.tsx`, `FietsverhuurBanner.tsx`, `ExtraServices.tsx`, `FerryScheduleCard.tsx`
+- `admin/InvoicingModeSelector.tsx`, `admin/NextStepBanner.tsx`, `admin/WorkOverview.tsx`
+- `catering/CateringWizard.tsx`
+- `configurator/AddToCartDialog.tsx`, `AiErwinChat.tsx`, `BuildingBlockCard.tsx`, `BuildingBlockListItem.tsx`, `ConfiguratorCart.tsx`, `ConfiguratorWizard.tsx`, `RequestFormModal.tsx`, `SupportCTA.tsx`, `ViewToggle.tsx`
+- `customer-portal/AcceptProposalCard.tsx`, `AcceptQuoteProposalCard.tsx`, `ExtrasSection.tsx`, `NextStepsCard.tsx`, `StatusSummary.tsx`
+- `map/MapBookingDialog.tsx`
+- `partner-portal/ConfirmCommissionCard.tsx`, `PartnerAccommodationTable.tsx`, `PartnerActionBanner.tsx`, `PartnerChangesSinceBanner.tsx`, `PartnerCompactStats.tsx`, `PartnerDashboardHeader.tsx`, `PartnerFinancialSummary.tsx`, `PartnerItemCard.tsx`, `PartnerItemRow.tsx`, `PartnerProjectsList.tsx`, `PartnerShowcaseSection.tsx`, `PartnerStatsGrid.tsx`, `PartnerUnifiedList.tsx`, `PartnerUpcomingActivities.tsx`, `StatusUpdateDialog.tsx`
 
-`notify-partner-price-change` en `notify-customer-price-change` verwijderen via `supabase--delete_edge_functions` (functies zijn niet meer aangeroepen; `publish-program-changes` heeft de rol overgenomen). Verwijzingen in `src/lib/edgeFunctionTestCoverage.ts` weghalen.
+Werkwijze: per bestand `rg` op de exportnaam om zeker te zijn dat geen laatste importer over het hoofd is gezien (subagent heeft dit al gedaan, maar we bevestigen tijdens uitvoer per file), dan `rm`.
 
-### D. Kleine test
+### D. Dode media-assets (11 stuks)
 
-Utility uitbreiden of tweede utility toevoegen (`shouldPublishPartnerChangeMail`) die dezelfde regel toepast, met unit-tests voor de vier gevallen (approved, accepted, neither, cancelled). Hergebruikt de regel uit `shouldNotifyPartnerOfHeadcountChange` waar mogelijk.
+Geen enkele referentie in `src/**`:
 
-## Buiten scope
-- Product-intentie van "publiceren zonder klant-akkoord" (open vraag uit onderzoek): we gaan uit van de reeds vastgestelde regel — partners horen pas na klant-akkoord ingelicht te worden over wijzigingen. Als je wél wilt kunnen publiceren zonder akkoord (bv. om een tegenvoorstel te maken), zeg dat dan expliciet en we voegen een override-checkbox toe.
-- Refactor van `publish-program-changes` structuur zelf.
-- Aanpassingen aan cancellation / deletion / logies flows — die zijn correct.
+- `src/assets/ferry-doeksen.jpg`
+- `src/assets/hero-vlieland-editorial.jpg`
+- `src/assets/lexence-1.jpg` t/m `lexence-6.jpg` (6 bestanden — oude versie vóór de `lexence/` submap)
+- `src/assets/programmas/regina-andrea-hero.jpg`, `regina-andrea.jpg`
+
+**Weghalen.** Bespaart repo-grootte en voorkomt "welke van deze is nu de juiste?"-verwarring.
+
+### Bewust NIET aanpakken
+
+- **DB trigger-functies**: 32 SQL-functies leken op grep "ongebruikt" maar bleken allemaal via `CREATE TRIGGER` gekoppeld. Geen actie, wel gedocumenteerd voor toekomstige sweeps.
+- `**src/assets/lexence/*.asset.json**`: Lovable-platform-metadata die buiten reguliere imports gebruikt kan worden. Niet aanraken zonder bevestiging (zie open vraag).
+- **Volledige `ts-prune`/`knip`-scan** op losse utility-exports in `src/lib/**`: buiten scope van deze sweep — nu geen bewijs dat het dood is, wél buiten bereik van grep-gebaseerd onderzoek. Kan als aparte follow-up.
+
+### Twee vragen vooraf
+
+1. `**src/pages/admin/AdminPlanning.tsx**` — dit is een aparte planning-pagina die nergens aan een route hangt. Naast `WeekPlanningView.tsx` die wél gebruikt wordt (geïntegreerd in `/admin/projecten`). Twee opties:
+  - **Weg**: als `WeekPlanningView` functioneel gelijkwaardig is en dit gewoon een oude versie is.
+  - **Reanimeren**: als de bedoeling ooit was een aparte planning-URL te hebben (bv. `/admin/planning`) naast de projecten-view.
+   Weet je uit je hoofd of je zelf ooit een aparte planning-pagina hebt gebouwd? Zo nee → weg.
+2. `**src/assets/lexence-*.jpg` (los in `src/assets/`)** vs. de map `src/assets/lexence/` met `.asset.json`'s. De losse jpgs worden nergens geïmporteerd. Mag ik ervan uitgaan dat de map-versie de canonieke is en de losse bestanden weg mogen?
+
+Zeg "beide weg" (of geef aan wat je wél wilt bewaren) en ik voer A t/m D uit.
+
+Beide weg
