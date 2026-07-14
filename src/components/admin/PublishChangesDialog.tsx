@@ -25,6 +25,9 @@ export interface PendingChangeItem {
   provider_id: string | null;
   provider_name: string | null;
   block_type: string;
+  // Klant-akkoordstatus — bepaalt of partner-mails al mogen uitgaan
+  customer_approved_at: string | null;
+  customer_accepted_at: string | null;
   // Live waardes
   preferred_time: string | null;
   day_index: number;
@@ -176,6 +179,22 @@ export function PublishChangesDialog({
     return partners.filter((p) => ids.has(p.id));
   }, [pendingItems, partners]);
 
+  // Approval-gate mirror van de edge function: partner-mails gaan alleen uit
+  // voor onderdelen die de klant al heeft goedgekeurd. Zolang dat nog niet
+  // zo is, worden wijzigingen intern wél gepubliceerd maar krijgt de partner
+  // geen mail — de reguliere offerte-flow neemt het over zodra de klant
+  // akkoord geeft.
+  const approvedItemIds = useMemo(
+    () =>
+      new Set(
+        pendingItems
+          .filter((i) => i.customer_approved_at || i.customer_accepted_at)
+          .map((i) => i.id),
+      ),
+    [pendingItems],
+  );
+  const unapprovedCount = pendingItems.length - approvedItemIds.size;
+
   // Waarschuwingen vóór publicatie:
   // - blocking: providerwijziging waarbij naam/ID niet samen zijn bijgewerkt
   //   (edge function blokkeert dit met 400 → toon hier vooraf)
@@ -261,11 +280,22 @@ export function PublishChangesDialog({
         throw new Error(serverMsg ?? error.message ?? "Onbekende fout");
       }
       const sent = (data as any)?.emails_sent ?? 0;
-      toast.success(
+      const skippedMap = ((data as any)?.skipped_not_approved ?? {}) as Record<string, string[]>;
+      const skippedTotal = Object.values(skippedMap).reduce(
+        (n, arr) => n + (Array.isArray(arr) ? arr.length : 0),
+        0,
+      );
+      const base =
         sent > 0
           ? `${pendingItems.length} wijziging(en) gepubliceerd · ${sent} mail(s) verstuurd`
-          : `${pendingItems.length} wijziging(en) gepubliceerd (zonder mail)`,
-      );
+          : `${pendingItems.length} wijziging(en) gepubliceerd (zonder mail)`;
+      if (skippedTotal > 0) {
+        toast.success(base, {
+          description: `${skippedTotal} onderdeel${skippedTotal !== 1 ? "en" : ""} niet naar partner gemaild — klant heeft ze nog niet goedgekeurd. Volgt automatisch bij goedkeuring.`,
+        });
+      } else {
+        toast.success(base);
+      }
       onPublished();
       onOpenChange(false);
       setAdminNote("");
@@ -491,29 +521,57 @@ export function PublishChangesDialog({
               )}
               {involvedPartners.map((p) => {
                 const mail = p.contact_email || p.email;
-                const disabled = !mail;
+                // Tel alleen wijzigingen op reeds klant-goedgekeurde items —
+                // dat is wat de partner daadwerkelijk gemaild krijgt.
+                const partnerItems = pendingItems.filter(
+                  (i) =>
+                    (i.provider_id === p.id ||
+                      (i.pending_provider_id ?? null) === p.id) &&
+                    !isBureauItem(i),
+                );
+                const approvedForPartner = partnerItems.filter((i) =>
+                  approvedItemIds.has(i.id),
+                ).length;
+                const unapprovedForPartner = partnerItems.length - approvedForPartner;
+                const disabled = !mail || approvedForPartner === 0;
                 return (
-                  <div key={p.id} className="flex items-center gap-2">
+                  <div key={p.id} className="flex items-start gap-2">
                     <Checkbox
                       id={`notify-${p.id}`}
                       disabled={disabled}
-                      checked={!!notifyPartners[p.id]}
+                      checked={!!notifyPartners[p.id] && approvedForPartner > 0}
                       onCheckedChange={(v) =>
                         setNotifyPartners((s) => ({ ...s, [p.id]: !!v }))
                       }
+                      className="mt-0.5"
                     />
                     <Label
                       htmlFor={`notify-${p.id}`}
-                      className={`cursor-pointer text-sm ${disabled ? "text-muted-foreground" : ""}`}
+                      className={`cursor-pointer text-sm leading-snug ${disabled ? "text-muted-foreground" : ""}`}
                     >
                       {p.name}{" "}
                       <span className="text-muted-foreground">
                         ({mail || "geen e-mail bekend"})
                       </span>
+                      {unapprovedForPartner > 0 && (
+                        <div className="text-xs text-amber-700 dark:text-amber-400">
+                          {unapprovedForPartner} onderdeel
+                          {unapprovedForPartner !== 1 ? "en" : ""} nog niet door klant
+                          goedgekeurd — wordt niet gemaild
+                          {approvedForPartner === 0 ? " (geen mail mogelijk)" : ""}.
+                        </div>
+                      )}
                     </Label>
                   </div>
                 );
               })}
+              {unapprovedCount > 0 && involvedPartners.length > 0 && (
+                <p className="pt-1 text-xs text-muted-foreground">
+                  Partners worden alleen gemaild over onderdelen die de klant al
+                  heeft goedgekeurd. Offerte-onderdelen volgen automatisch bij
+                  goedkeuring.
+                </p>
+              )}
             </div>
           </div>
 

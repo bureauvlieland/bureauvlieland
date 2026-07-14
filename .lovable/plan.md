@@ -1,38 +1,49 @@
-## Probleem
+## Bevindingen
 
-Zolang een project bij de klant op status "Offerte" staat, is het programma nog niet goedgekeurd. Pas ná klantgoedkeuring gaan onderdelen ter beoordeling naar partners. Op dit moment sturen we echter aantal-wijziging-mails naar partners ongeacht die status — zie Trattoria Oliva die een "Aantal gasten gewijzigd" mail kreeg voor BV-2606-0028, terwijl het item in hun portal nog op "Offerte" staat (`customer_approved_at` = null).
+Uit een sweep van alle notify-/publish-flows blijkt dat de rest van het notificatie-landschap grotendeels correct is (annulering, item-verwijdering, logies-offertes — die informeren terecht partners die al betrokken zijn). Er zit echter één **actief gat** en twee **dode-code-risico's** die dezelfde structurele fout hebben als de net-gefixte headcount-flow.
 
-## Regel
+### 1. `publish-program-changes` (actief, hoogste impact)
+`supabase/functions/publish-program-changes/index.ts:769-830` stuurt bulk-mail naar aangevinkte partners over pending wijzigingen (tijd, prijs, aantal, locatie, uitvoerder, etc.). Er is **geen** filter op `customer_approved_at` / `customer_accepted_at`. Consequentie: een item dat nog nooit door de klant is goedgekeurd (nog concept / offerte-fase) kan alsnog een "wijziging gepubliceerd"-mail naar de partner triggeren. Zelfde patroon dat we net dichttimmerden voor headcount.
 
-Aantal-wijziging-mails (item + logies) alleen versturen voor onderdelen/quotes die al door de klant zijn goedgekeurd. Vóór klantgoedkeuring is er nog geen boeking en wordt een nieuwe headcount automatisch meegenomen zodra de klant alsnog akkoord geeft.
+De bijbehorende UI (`src/components/admin/PublishChangesDialog.tsx`, `PendingChangeItem` regel 22-57) laadt deze velden niet, dus de admin kán niet eens zien dat een item nog niet goedgekeurd is.
 
-Concreet per record:
+### 2. `notify-partner-price-change` (dode code)
+`supabase/functions/notify-partner-price-change/index.ts:50-93` — geen approval-check. Wordt nergens meer vanuit `src/` aangeroepen (alleen in `edgeFunctionTestCoverage.ts`); vervangen door `publish-program-changes`. Latente bug als hij ooit weer wordt gekoppeld.
 
-- **Programma-item**: `customer_approved_at IS NOT NULL` OF `customer_accepted_at IS NOT NULL`.
-- **Logies-quote**: `status = 'selected'` (klant heeft partij gekozen). `submitted` / `forwarded` = nog geen keuze → geen mail.
+### 3. `notify-customer-price-change` (dode code)
+`supabase/functions/notify-customer-price-change/index.ts:49-80` — idem. Niet meer aangeroepen vanuit `src/`.
+
+### Bewust NIET gefixt (correct gedrag)
+- `notify-partner-item-deletion` — bevat al de juiste gate (`skip_partner_notification && !customer_approved_at && status=pending` → skip).
+- `notify-partner-cancellation` / `cancel-program-request` — annulering moet elke betrokken partner bereiken, ook zonder klant-akkoord.
+- `notify-accommodation-quote` — eerste aankondiging van een quote, geen wijziging.
+- `override-item-status`, `update-partner-item-status` — geen premature-mail-scenario.
+- Geen DB-triggers gevonden die notify-functies buiten expliciete acties om aanroepen.
 
 ## Wijzigingen
 
-### 1. `supabase/functions/update-customer-program/index.ts` (auto-flow bij klantwijziging aantal)
-Filter bij het ophalen van `partnerItems` uitbreiden met `customer_approved_at NOT NULL OR customer_accepted_at NOT NULL`. Voor logies: alleen quotes met `status='selected'` doorgeven aan de mail-flow. De interne reset van submitted quotes naar `pending` blijft ongewijzigd (workflow), alleen zonder partner-mail.
+### A. `supabase/functions/publish-program-changes/index.ts` — approval-gate toevoegen
 
-### 2. `supabase/functions/notify-headcount-change-bulk/index.ts` (server-side guard)
-Bij het inladen van items ook `customer_approved_at, customer_accepted_at` selecteren en items zonder een van beide overslaan met reden `not_customer_approved`. Voor `accommodation_quote_ids`: alleen mailen als quote-status `selected` is. Zo blijft de regel gelden ook als ergens verouderde item-id's worden meegegeven.
+Rond het opbouwen van `changeRows` en `notifyPartnerIds` (regel 769-830): filter items zodat alleen `customer_approved_at IS NOT NULL || customer_accepted_at IS NOT NULL` in de partner-mail worden meegenomen. Items zonder klant-akkoord worden intern nog steeds gepubliceerd (DB-update van pending changes blijft draaien), maar de partner krijgt geen mail — pas bij goedkeuring gaan die items sowieso als reguliere offerte-aanvraag naar de partner.
 
-### 3. `supabase/functions/notify-partner-headcount-change/index.ts` (single-item admin-actie)
-Zelfde guard: item overslaan als beide velden `null`. Response: `{ success: true, new_total, email_skipped: "not_customer_approved" }` zodat de admin-UI geen fout toont; wél toast "geen mail nodig — nog niet goedgekeurd door klant".
+Return-payload uitbreiden met `skipped_not_approved: [itemId,…]` per partner, zodat de UI kan tonen "X items niet gemaild — klant heeft ze nog niet goedgekeurd".
 
-### 4. `src/components/admin/NotifyHeadcountChangeDialog.tsx` (admin UI)
-- Ook `customer_approved_at, customer_accepted_at` ophalen.
-- Items zonder klant-akkoord filteren uit de lijst (met tekstuele hint boven de partner-sectie: "Alleen onderdelen die de klant al heeft goedgekeurd — offerte-items volgen automatisch bij goedkeuring.").
-- Logies-quotes query beperken tot `status='selected'`.
-- Default-selectie (alle overgebleven aan) blijft.
+### B. `src/components/admin/PublishChangesDialog.tsx` — UI-signalering
 
-### 5. Tests
-Kleine utility `shouldNotifyPartnerOfHeadcountChange(item)` in `src/lib/` toevoegen die de regel uitwoont, met unit-tests voor: not-approved → false, customer_approved_at gezet → true, customer_accepted_at gezet → true, cancelled item → false, bureau-item → false. Hergebruik dezelfde regel in de edge functions (dupliceren als plain check, want edge functions delen geen code met src/lib).
+- `PendingChangeItem` uitbreiden met `customer_approved_at` en `customer_accepted_at` (bron: bestaande fetch die deze velden al beschikbaar heeft in AdminRequestDetail).
+- Bij het opbouwen van de "wie krijgt een mail?"-lijst per partner: items zonder klant-akkoord tonen met badge "wacht op klant" en uitsluiten van de partner-mail-telling.
+- Hint boven de partner-sectie: "Partners worden alleen gemaild voor onderdelen die de klant al heeft goedgekeurd — offerte-onderdelen volgen automatisch bij goedkeuring."
+- Toast na versturen: als backend `skipped_not_approved > 0` teruggeeft, extra regel "N onderdelen overgeslagen — nog niet goedgekeurd door klant".
+
+### C. Dode code opruimen
+
+`notify-partner-price-change` en `notify-customer-price-change` verwijderen via `supabase--delete_edge_functions` (functies zijn niet meer aangeroepen; `publish-program-changes` heeft de rol overgenomen). Verwijzingen in `src/lib/edgeFunctionTestCoverage.ts` weghalen.
+
+### D. Kleine test
+
+Utility uitbreiden of tweede utility toevoegen (`shouldPublishPartnerChangeMail`) die dezelfde regel toepast, met unit-tests voor de vier gevallen (approved, accepted, neither, cancelled). Hergebruikt de regel uit `shouldNotifyPartnerOfHeadcountChange` waar mogelijk.
 
 ## Buiten scope
-
-- Prijswijziging-mails en item-verwijdering-mails (aparte flows, niet aan de orde).
-- Definitie van `customer_approved_at` / de "Offerte → Definitief" overgang.
-- Partner-portaal copy of status-labels.
+- Product-intentie van "publiceren zonder klant-akkoord" (open vraag uit onderzoek): we gaan uit van de reeds vastgestelde regel — partners horen pas na klant-akkoord ingelicht te worden over wijzigingen. Als je wél wilt kunnen publiceren zonder akkoord (bv. om een tegenvoorstel te maken), zeg dat dan expliciet en we voegen een override-checkbox toe.
+- Refactor van `publish-program-changes` structuur zelf.
+- Aanpassingen aan cancellation / deletion / logies flows — die zijn correct.

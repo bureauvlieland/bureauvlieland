@@ -3208,6 +3208,8 @@ const AdminRequestDetail = () => {
           provider_id: i.provider_id,
           provider_name: i.provider_name,
           block_type: i.block_type,
+          customer_approved_at: i.customer_approved_at ?? null,
+          customer_accepted_at: i.customer_accepted_at ?? null,
           preferred_time: i.preferred_time,
           day_index: i.day_index,
           customer_notes: i.customer_notes,

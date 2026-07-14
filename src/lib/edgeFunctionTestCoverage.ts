@@ -102,7 +102,7 @@ const REGISTRY: Row[] = [
   { name: "send-ticket-email", category: "customer_email", critical: true },
   { name: "resend-customer-link", category: "customer_email", critical: false },
   { name: "resend-email", category: "customer_email", critical: false },
-  { name: "notify-customer-price-change", category: "customer_email", critical: true },
+  
   { name: "notify-new-chat", category: "customer_email", critical: false },
   { name: "notify-new-chat-reply", category: "customer_email", critical: false },
 
@@ -120,7 +120,7 @@ const REGISTRY: Row[] = [
   { name: "notify-partner-cancellation", category: "partner_email", critical: true },
   { name: "notify-partner-headcount-change", category: "partner_email", critical: true },
   { name: "notify-partner-item-deletion", category: "partner_email", critical: true },
-  { name: "notify-partner-price-change", category: "partner_email", critical: true },
+  
   { name: "notify-partners-informational", category: "partner_email", critical: false },
   { name: "notify-headcount-change-bulk", category: "partner_email", critical: false },
   { name: "invite-partner", category: "partner_email", critical: true },
