@@ -90,7 +90,7 @@ export function NotifyHeadcountChangeDialog({
         const { data: items } = await supabase
           .from("program_request_items")
           .select(
-            "id, block_name, provider_id, provider_name, provider_email, block_type, price_type, override_people, status",
+            "id, block_name, provider_id, provider_name, provider_email, block_type, price_type, override_people, status, customer_approved_at, customer_accepted_at",
           )
           .eq("request_id", requestId)
           .neq("status", "cancelled");
@@ -98,7 +98,10 @@ export function NotifyHeadcountChangeDialog({
         const relevant = ((items || []) as PartnerItem[]).filter((i) => {
           if (isBureau(i)) return false;
           // Only items whose totals depend on the headcount
-          return i.price_type === "per_person" || i.price_type === "per_person_per_day";
+          if (i.price_type !== "per_person" && i.price_type !== "per_person_per_day") return false;
+          // Alleen items die de klant al heeft goedgekeurd — offerte-items
+          // volgen automatisch bij klantgoedkeuring.
+          return !!(i.customer_approved_at || i.customer_accepted_at);
         });
 
         const groupsMap = new Map<string, PartnerGroup>();
