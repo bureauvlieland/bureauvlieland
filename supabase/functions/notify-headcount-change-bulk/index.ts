@@ -186,12 +186,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ---------------- Partner-onderdelen ----------------
     if (partner_item_ids.length > 0) {
-      const { data: items } = await supabase
+      const { data: rawItems } = await supabase
         .from("program_request_items")
         .select(
-          "id, block_name, provider_id, provider_name, block_type, block_category, provider_email, price_type, admin_price_override, quoted_price, override_people",
+          "id, block_name, status, provider_id, provider_name, block_type, block_category, provider_email, price_type, admin_price_override, quoted_price, override_people, customer_approved_at, customer_accepted_at",
         )
         .in("id", partner_item_ids);
+
+      // Server-side guard: alleen door de klant goedgekeurde items krijgen
+      // een aantal-wijziging-mail. Zolang een item nog in offerte staat
+      // (customer_approved_at én customer_accepted_at leeg) heeft de klant
+      // het programma nog niet definitief gemaakt.
+      const items = (rawItems || []).filter((it: any) => {
+        if (it.status === "cancelled") return false;
+        return !!(it.customer_approved_at || it.customer_accepted_at);
+      });
+      const skippedNotApproved = (rawItems || []).filter(
+        (it: any) => it.status !== "cancelled" && !it.customer_approved_at && !it.customer_accepted_at,
+      );
+      for (const it of skippedNotApproved) {
+        (results.partners as unknown[]).push({
+          item_id: it.id,
+          partner_id: it.provider_id,
+          sent: false,
+          reason: "not_customer_approved",
+        });
+      }
 
       // Groepeer per partner. Bureau-items (rederij/fietsverhuur/bagagevervoer/
       // 'bureau') worden bewust MEE-genotificeerd zodat de betrokken partner
@@ -320,6 +340,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .in("id", accommodation_quote_ids);
 
       for (const q of quotes || []) {
+        // Alleen door de klant gekozen logies-partner krijgt een aantal-
+        // wijziging-mail. `submitted`/`forwarded`/`pending` = nog geen keuze.
+        if (q.status !== "selected") {
+          (results.accommodations as unknown[]).push({
+            quote_id: q.id,
+            sent: false,
+            reason: "not_customer_selected",
+          });
+          continue;
+        }
         const { data: partner } = await supabase
           .from("partners")
           .select("id, name, email, contact_email")

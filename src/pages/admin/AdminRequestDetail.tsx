@@ -2451,11 +2451,16 @@ const AdminRequestDetail = () => {
                                               onSave={(price, notes, pt) => handleItemPriceUpdate(item.id, price, notes, pt)}
                                               onSyncTotalToOverride={async (newTotal) => {
                                                 try {
-                                                  const { error } = await supabase.functions.invoke("notify-partner-headcount-change", {
+                                                  const { data, error } = await supabase.functions.invoke("notify-partner-headcount-change", {
                                                     body: { item_id: item.id, origin: window.location.origin },
                                                   });
                                                   if (error) throw error;
-                                                  toast.success(`Totaal aangepast naar €${newTotal.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} en partner geïnformeerd`);
+                                                  const formatted = `€${newTotal.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                                  if ((data as any)?.email_skipped === "not_customer_approved") {
+                                                    toast.success(`Totaal aangepast naar ${formatted} — geen mail, klant heeft dit onderdeel nog niet goedgekeurd`);
+                                                  } else {
+                                                    toast.success(`Totaal aangepast naar ${formatted} en partner geïnformeerd`);
+                                                  }
                                                   fetchRequestData({ silent: true });
                                                 } catch (err) {
                                                   console.error(err);

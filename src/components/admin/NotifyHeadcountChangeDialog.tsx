@@ -27,6 +27,8 @@ interface PartnerItem {
   price_type: string | null;
   override_people: number | null;
   status: string | null;
+  customer_approved_at: string | null;
+  customer_accepted_at: string | null;
 }
 
 interface AccommodationQuoteRow {
@@ -88,7 +90,7 @@ export function NotifyHeadcountChangeDialog({
         const { data: items } = await supabase
           .from("program_request_items")
           .select(
-            "id, block_name, provider_id, provider_name, provider_email, block_type, price_type, override_people, status",
+            "id, block_name, provider_id, provider_name, provider_email, block_type, price_type, override_people, status, customer_approved_at, customer_accepted_at",
           )
           .eq("request_id", requestId)
           .neq("status", "cancelled");
@@ -96,7 +98,10 @@ export function NotifyHeadcountChangeDialog({
         const relevant = ((items || []) as PartnerItem[]).filter((i) => {
           if (isBureau(i)) return false;
           // Only items whose totals depend on the headcount
-          return i.price_type === "per_person" || i.price_type === "per_person_per_day";
+          if (i.price_type !== "per_person" && i.price_type !== "per_person_per_day") return false;
+          // Alleen items die de klant al heeft goedgekeurd — offerte-items
+          // volgen automatisch bij klantgoedkeuring.
+          return !!(i.customer_approved_at || i.customer_accepted_at);
         });
 
         const groupsMap = new Map<string, PartnerGroup>();
@@ -135,7 +140,8 @@ export function NotifyHeadcountChangeDialog({
           a.partner_name.localeCompare(b.partner_name),
         );
 
-        // Logies-partners (geselecteerde + verstuurde quotes)
+        // Logies-partners: alleen de door de klant geselecteerde partij krijgt
+        // een aantal-wijziging-mail (nog niet gekozen = nog geen boeking).
         let quotes: AccommodationQuoteRow[] = [];
         if (linkedAccommodationId) {
           const { data: q } = await supabase
@@ -144,7 +150,7 @@ export function NotifyHeadcountChangeDialog({
               "id, partner_id, accommodation_name, status, partners(id, name, contact_email, email)",
             )
             .eq("request_id", linkedAccommodationId)
-            .in("status", ["selected", "submitted", "forwarded"]);
+            .eq("status", "selected");
           quotes = (q || []) as AccommodationQuoteRow[];
         }
 
@@ -280,6 +286,9 @@ export function NotifyHeadcountChangeDialog({
             <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">
               Partners met p.p.-onderdelen
             </h4>
+            <p className="text-xs text-muted-foreground mb-2">
+              Alleen onderdelen die de klant al heeft goedgekeurd — offerte-items volgen automatisch bij goedkeuring.
+            </p>
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-14" />
@@ -287,7 +296,7 @@ export function NotifyHeadcountChangeDialog({
               </div>
             ) : partnerGroups.length === 0 ? (
               <div className="text-sm text-muted-foreground italic">
-                Geen relevante partner-onderdelen.
+                Geen door de klant goedgekeurde partner-onderdelen — niets te mailen.
               </div>
             ) : (
               <div className="space-y-2">

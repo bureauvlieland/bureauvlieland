@@ -264,13 +264,19 @@ Deno.serve(async (req) => {
         // Verzamel partner-items (INCLUSIEF bureau-managed: rederij, fietsverhuur,
         // bagagevervoer, en pure 'bureau'-items) zodat elk betrokken partij een
         // headcount-notificatie krijgt.
+        // Alleen partner-items die de klant al heeft goedgekeurd krijgen een
+        // aantal-wijziging-mail. Zolang een item nog "in offerte" staat
+        // (customer_approved_at én customer_accepted_at leeg) is er nog geen
+        // definitieve boeking om aan te passen — de nieuwe headcount wordt
+        // automatisch meegenomen zodra de klant alsnog akkoord geeft.
         const { data: partnerItems } = await supabase
           .from("program_request_items")
-          .select("id, provider_id, block_type")
+          .select("id, provider_id, block_type, customer_approved_at, customer_accepted_at")
           .eq("request_id", program.id)
           .neq("status", "cancelled")
           .not("provider_id", "is", null)
-          .neq("block_type", "self_arranged");
+          .neq("block_type", "self_arranged")
+          .or("customer_approved_at.not.is.null,customer_accepted_at.not.is.null");
         const partnerItemIds = (partnerItems || []).map((i: any) => i.id);
 
         // Sync number_of_guests to linked accommodation request
@@ -288,12 +294,18 @@ Deno.serve(async (req) => {
           // Reset ALL accommodation quotes (including selected) back to pending
           const { data: resetQuotes } = await supabase
             .from("accommodation_quotes")
-            .select("id")
+            .select("id, status")
             .eq("request_id", program.linked_accommodation_id)
             .in("status", ["pending", "submitted", "selected"]);
 
           if (resetQuotes && resetQuotes.length > 0) {
-            accommodationQuoteIds = resetQuotes.map((q: any) => q.id);
+            const allResetIds = resetQuotes.map((q: any) => q.id);
+            // Alleen de door de klant geselecteerde logies-partner krijgt een
+            // aantal-wijziging-mail; overige quotes worden wel intern gereset
+            // maar zonder notificatie.
+            accommodationQuoteIds = resetQuotes
+              .filter((q: any) => q.status === "selected")
+              .map((q: any) => q.id);
             await supabase
               .from("accommodation_quotes")
               .update({
@@ -302,9 +314,9 @@ Deno.serve(async (req) => {
                 selected_at: null,
                 updated_at: new Date().toISOString(),
               })
-              .in("id", accommodationQuoteIds);
+              .in("id", allResetIds);
 
-            console.log(`Reset ${accommodationQuoteIds.length} accommodation quotes to pending due to people change`);
+            console.log(`Reset ${allResetIds.length} accommodation quotes to pending due to people change (${accommodationQuoteIds.length} previously selected → notify)`);
           }
         }
 
