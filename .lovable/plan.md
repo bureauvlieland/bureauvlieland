@@ -1,75 +1,97 @@
-## Wat is er aan de hand bij Scherp (BV-2606-0004)
+# Maatwerk-offerteaanvraag via portal
 
-Ik heb met de klant-token van Nancy ingelogd op het portaal en het gedrag exact gereproduceerd:
+## Uitgangspunt
 
-- Nancy heeft het portaal vandaag (14 juli, 13:13) opnieuw bekeken maar er staat **geen enkele wijziging in de historie** — geen `removed`, geen `day_changed`, geen `time_changed`.
-- Als ik in het portaal op **"Verwijderen"** klik verdwijnt het onderdeel meteen uit beeld. Onderin verschijnt een sticky balk met knop **"Doorvoeren"**. Pas als je díe klikt gaat de wijziging via de edge function `update-customer-program` naar de database.
-- Refresht Nancy vóór "Doorvoeren", dan is de lokale state weg en komt het onderdeel terug uit de database. **De klacht klopt dus feitelijk**, en het is inderdaad kwalijk: de UX suggereert dat verwijderen direct werkt.
+Op basis van je feedback: geen losse entiteit, maar een **ad-hoc `program_request_item`** dat via de bestaande partner-flow loopt. Nieuw is dat de partner **regel voor regel** een gespecificeerde offerte indient (net als een echte offerte-PDF), met **eigen BTW per regel**. Bureau Vlieland houdt de commissie (10% over ex-BTW totaal), centrale facturatie blijft ongewijzigd.
 
-Er is dus geen echte data-corruptie of RLS-bug — het is een gebrekkige "staged changes"-flow die aanvoelt als "opgeslagen". Nancy heeft simpelweg de bevestig-balk onderin nooit ingedrukt. Op een lang programma met 8 items en veel scrollen valt die balk ook makkelijk buiten beeld.
+## Flow (end-to-end)
 
-## Grondige fix
+```text
+BV admin                  Partner (portal)              Klant
+--------                  ----------------              -----
+1. "+ Maatwerk-item"  ->  2. Ziet aanvraag met
+   in projectdetail          vrije-tekst briefing
+   - titel, dag,          -> 3. Voegt N regels toe:
+   - vrije briefing,         omschrijving, aantal,
+   - partner, dag,           eenheidsprijs, BTW%
+   - deadline             -> 4. Dient in            ->  5. Ziet één regel in
+                                                          programma met totaal
+                             partner ziet later          + uitklapbare specificatie
+                             admin-akkoord           ->  6. Accepteert / vraagt
+                                                          aanpassing
+```
 
-### 1. Verwijderde items blijven zichtbaar als "wordt verwijderd" (i.p.v. gewoon weg)
+## Datamodel (minimaal)
 
-In `useCustomerProgram.removeItem` en `getItemsForDay` / `filter(status !== "cancelled")`:
-- Bestaande items niet lokaal op `status: cancelled` zetten en verstoppen, maar in een aparte `pendingRemovals: Set<itemId>` bijhouden.
-- Onderdeel blijft in de tijdlijn staan met:
-  - Doorgestreepte titel
-  - Rood badge "Wordt verwijderd — nog niet opgeslagen"
-  - Knop **"Verwijderen ongedaan maken"** in plaats van "Verwijderen"
-- `getPendingChanges()` blijft hetzelfde type `removed` change genereren op basis van deze set.
+Nieuwe tabel `program_request_item_quote_lines`:
+- `program_request_item_id` (fk)
+- `sort_order`, `description`, `quantity`, `unit`, `unit_price_incl_vat`, `vat_rate`
+- `created_by_partner_id`, timestamps
 
-### 2. Onopgeslagen-wijzigingen kunnen niet stilletjes verloren gaan
+Uitbreiding `program_request_items`:
+- `is_custom_quote boolean default false` — markeert maatwerk-item
+- `custom_briefing text` — vrije tekst van BV richting partner
+- bestaande `quoted_price` = som van regels incl. BTW (auto-berekend via trigger of app-code, in lijn met huidige pricing rules)
 
-- `beforeunload`-handler in `CustomerProgram.tsx` die de browser een confirm laat tonen zodra `pendingChanges.length > 0`. Tekst: *"U heeft nog niet-opgeslagen wijzigingen. Weet u zeker dat u de pagina wilt verlaten?"*
-- Bij tab-navigatie binnen het portaal (Onderdelen ↔ Logies ↔ Akkoord) toont een dialog dezelfde waarschuwing als er onopgeslagen wijzigingen zijn.
+Geen nieuwe workflow-status: hergebruikt bestaande `pending` → `quoted` → `accepted` op het item.
 
-### 3. Sterkere call-to-action-balk
+## UI-wijzigingen
 
-In `DesktopProgramView.tsx` en `MobileProgramView.tsx`:
-- Balk krijgt gele/oranje "warning" styling in plaats van neutraal wit — zo dringt hij door.
-- Kop wordt: **"U heeft X niet-opgeslagen wijziging(en)"**
-- Ondertitel: *"Klik op 'Opslaan' om ze door te voeren. Zonder opslaan gaan uw wijzigingen verloren."*
-- Knoptekst: **"Wijzigingen opslaan"** i.p.v. "Doorvoeren".
-- Op mobiel dezelfde balk (nu ook onderin, boven de bottom nav) en niet meer scrollbaar-weg.
+**Admin projectdetail** — nieuwe knop "Maatwerk-item toevoegen":
+- Sheet met: titel, dag, partner-select, briefing (rich text), deadline
+- Bij opslaan: `program_request_item` (is_custom_quote=true) + bestaande partner-notify edge function (hergebruik `notify-partner-quote-request` template met briefing-veld)
 
-### 4. Statushistorie ook loggen op klant-portaal-actie
+**Partner portal** — bestaande "openstaande offerte-aanvraag" krijgt bij `is_custom_quote=true`:
+- Briefing bovenaan (readonly)
+- Regel-editor: tabel met rijen (+ knop, verwijder-knop) — omschrijving, aantal, eenheidsprijs incl. BTW, BTW% dropdown (0/9/21)
+- Live totaal ex/incl BTW onderaan
+- "Offerte indienen" knop — schrijft regels + zet `quoted_price` + `partner_status='quoted'`
+- Stupid-simple: één scherm, geen tabs, mobile-first, autosave-draft
 
-De historie liet Nancy's klik(ken) niet zien omdat er nooit een submit was. Om in de toekomst te kunnen bewijzen wat een klant wél/niet heeft gedaan:
-- Nieuwe entry `customer_portal_action` met `action: "remove_started"` / `"remove_undone"` in `program_request_history` op elke lokale klik. Dit gaat via een lichte edge-call (fire-and-forget) zodat we in het admin-log kunnen zien "klant heeft geprobeerd te verwijderen op tijdstip X maar niet opgeslagen".
+**Admin akkoord** — in bestaande partner-quote-review UI: toon regeltabel, akkoord-knop hergebruikt
 
-### 5. Grondige tests
+**Klantportaal (`CustomerProgramItem`)** — bij accepted maatwerk-item:
+- Toon één regel met titel + totaal
+- Uitklap "Specificatie" met de regels (zonder BTW-uitsplitsing — consistent met huidige formal weergave; BTW-breakdown alleen op factuur-PDF)
 
-**Unit / contract tests** (`src/lib/__tests__/`):
-- `customerPortalPendingChanges.test.ts`: `removeItem` op bestaand item ⇒ item blijft in `program.items`, verschijnt in `getPendingChanges()` als `removed`, `pendingRemovals` bevat het id.
-- Undo: tweede `removeItem` op zelfde id ⇒ verwijdert uit `pendingRemovals`, verdwijnt uit `getPendingChanges()`.
-- `submitChanges` roept edge function met correcte `changes`-payload aan (mock supabase client), en pas dan wordt `pendingRemovals` geleegd na `fetchProgram`.
-- Testen dat `getItemsForDay` cancelled items uit database wél verstopt (bestaand gedrag) maar `pendingRemovals`-items juist toont.
+## Facturatie & commissie
 
-**E2E-test** (`tests/e2e/customer-portal-remove-item.spec.ts`):
-- Zet test-project op met 2 items via test-fixture, open klantportaal-URL.
-- Klik Verwijderen → item krijgt strike-through, balk verschijnt.
-- Refresh pagina → beforeunload confirm wordt bevestigd → na reload staat item weer normaal (want niet opgeslagen).
-- Klik nogmaals Verwijderen → klik Opslaan → refresh → item is nu écht weg uit DB.
+- Commissie 10% over som van (regel.excl_btw): geen wijziging in `program_item_billing_lines` logica, alleen inputbron
+- Purchase-invoice matching en bureau-facturatie ongewijzigd — item gedraagt zich als elk ander partner-item
 
-### 6. Release
+## Edge functions
 
-- Migratie hoeft niet (alleen frontend + optioneel edge-log-endpoint).
-- Nieuwe edge-function `log-customer-portal-action` alleen als we punt 4 meenemen (aparte, zeer kleine functie).
-- Deploy via normale publish-flow. Ik test na deploy zelf de flow op Nancy's token één keer end-to-end (alleen kijken, niet klikken op Opslaan) en meld het resultaat.
+- Hergebruik `notify-partner-quote-request` (uitbreiden met `custom_briefing` in template)
+- Hergebruik `notify-admin-quote-received` bij indienen
+- Geen nieuwe function
 
-## Communicatie richting Nancy
+## Tests
 
-Na deploy stuur ik een korte mail-suggestie ter goedkeuring waarin je uitlegt: *"We hebben de portaal zo aangepast dat verwijderde onderdelen zichtbaar blijven tot je op 'Wijzigingen opslaan' klikt, en dat we waarschuwen als je de pagina wilt verlaten zonder op te slaan. Wil je het opnieuw proberen? Anders pas ik het handmatig aan volgens jouw planning."*
+Unit tests:
+- `customQuoteLines.test.ts` — totaal ex/incl BTW berekening, gemengde BTW-tarieven, negatieve/lege input-guards
+- `customQuoteCommission.test.ts` — 10% commissie over ex-BTW som
+- Uitbreiding `customerPortalPendingChanges.test.ts` — accept/reject van maatwerk-item
 
-## Technische samenvatting
+Manual QA (via preview):
+1. Admin maakt maatwerk-item in BV-2606-0004 voor Zuiver Traiteur
+2. Partner logt in, ziet briefing, voegt 3 regels toe (0%, 9%, 21%), dient in
+3. Admin ziet regels, accordeert
+4. Klant ziet item + specificatie, accepteert
+5. Facturatie-preview toont juiste bureau-factuur incl. commissie
 
-Files:
-- `src/hooks/useCustomerProgram.ts` — nieuwe `pendingRemovals` state, aangepaste `removeItem`/`getPendingChanges`/`submitChanges`.
-- `src/pages/CustomerProgram.tsx` — `beforeunload`-guard, navigatie-guard, prop `pendingRemovals` doorgeven.
-- `src/components/customer-portal/CustomerProgramItem.tsx` — visuele "wordt verwijderd" state + Undo-knop.
-- `src/components/customer-portal/DesktopProgramView.tsx` + `MobileProgramView.tsx` — nieuwe warning-balk styling en copy.
-- `src/lib/__tests__/customerPortalPendingChanges.test.ts` — nieuw.
-- `tests/e2e/customer-portal-remove-item.spec.ts` — nieuw.
-- (optioneel) `supabase/functions/log-customer-portal-action/index.ts` — nieuw voor auditlog.
+## Buiten scope (bewust)
+
+- Publiceren van maatwerk-item als herbruikbare `building_block` — kan later manueel via bestaande "concept-blok" flow
+- Bijlagen bij offerteregels (kan v2)
+- Onderhandelings-tegenvoorstel op regelniveau (klant kan wel hele item afwijzen met opmerking, bestaande flow)
+
+## Bestanden (indicatief)
+
+- migration: nieuwe tabel + 2 kolommen op `program_request_items` + GRANTs + RLS (partner ziet alleen eigen regels via item)
+- `src/components/admin/AdminAddCustomItemSheet.tsx` (nieuw)
+- `src/components/partner-portal/PartnerCustomQuoteEditor.tsx` (nieuw)
+- `src/components/partner-portal/PartnerBlockSheet.tsx` (branch voor custom)
+- `src/components/customer-portal/CustomerProgramItem.tsx` (specificatie-uitklap)
+- `src/pages/admin/AdminRequestDetail.tsx` (knop + regeltabel bij review)
+- edge function `notify-partner-quote-request` (template uitbreiden)
+- tests zoals hierboven
