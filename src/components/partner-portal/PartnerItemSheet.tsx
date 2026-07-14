@@ -51,6 +51,7 @@ import {
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
+import { PartnerCustomQuoteEditor } from "./PartnerCustomQuoteEditor";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
@@ -153,7 +154,8 @@ export const PartnerItemSheet = ({
     request.terms_accepted_at === null;
 
   // Can respond if pending, alternative, or counter_proposed status
-  const canRespond = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
+  const isCustomQuote = !!(item as any).is_custom_quote;
+  const canRespond = !isCustomQuote && (item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed");
 
   // ===== Open admin price change detection =====
   const effectivePeopleForItem = item.override_people ?? request.number_of_people;
@@ -456,7 +458,28 @@ export const PartnerItemSheet = ({
             />
           </div>
 
+          {isCustomQuote && (item.status === "pending" || item.status === "alternative") && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Maatwerk-offerte opstellen
+                </h3>
+                <PartnerCustomQuoteEditor
+                  itemId={item.id}
+                  partnerId={item.provider_id}
+                  briefing={(item as any).custom_briefing || item.customer_notes}
+                  onSubmitted={async (total, notes) => {
+                    return await onStatusUpdate("confirmed", undefined, total, notes || undefined);
+                  }}
+                />
+              </div>
+            </>
+          )}
+
           <Separator />
+
+
 
           {/* Details section */}
           <div className="space-y-3">

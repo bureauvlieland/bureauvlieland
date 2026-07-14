@@ -145,6 +145,7 @@ import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
+import { AdminAddCustomItemSheet } from "@/components/admin/AdminAddCustomItemSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
 import { NotifyHeadcountChangeDialog } from "@/components/admin/NotifyHeadcountChangeDialog";
@@ -341,6 +342,7 @@ const AdminRequestDetail = () => {
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
   
   const [addActivityOpen, setAddActivityOpen] = useState(false);
+  const [addCustomItemOpen, setAddCustomItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProgramRequestItem | null>(null);
   const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
   const [copyFromProgramOpen, setCopyFromProgramOpen] = useState(false);
@@ -2089,6 +2091,10 @@ const AdminRequestDetail = () => {
                         Alles verwijderen
                       </Button>
                     )}
+                    <Button variant="outline" onClick={() => setAddCustomItemOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Maatwerk-item
+                    </Button>
                     <Button onClick={() => setAddActivityOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Activiteit toevoegen
@@ -3318,6 +3324,17 @@ const AdminRequestDetail = () => {
           numberOfPeople={request.number_of_people}
         />
       )}
+
+      {request && (
+        <AdminAddCustomItemSheet
+          isOpen={addCustomItemOpen}
+          onClose={() => setAddCustomItemOpen(false)}
+          requestId={request.id}
+          selectedDates={request.selected_dates as string[]}
+          onCreated={fetchRequestData}
+        />
+      )}
+
 
       {/* Edit activity sheet */}
       {request && (

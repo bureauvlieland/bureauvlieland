@@ -92,6 +92,8 @@ export interface PartnerItem {
   commission_status: string | null;
   auto_closed_reason?: string | null;
   is_concept?: boolean;
+  is_custom_quote?: boolean;
+  custom_briefing?: string | null;
   program_requests: {
     id: string;
     customer_name: string;

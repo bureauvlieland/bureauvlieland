@@ -582,6 +582,32 @@ export const CustomerProgramItem = ({
                 {(item as any).block_description}
               </p>
             )}
+            {/* Maatwerk-specificatie */}
+            {Array.isArray((item as any).quote_lines) && (item as any).quote_lines.length > 0 && (
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Specificatie
+                </div>
+                <ul className="space-y-1 text-sm">
+                  {(item as any).quote_lines.map((l: any) => {
+                    const qty = Number(l.quantity) || 0;
+                    const unit = l.unit ? ` ${l.unit}` : "";
+                    const total = qty * (Number(l.unit_price_incl_vat) || 0);
+                    return (
+                      <li key={l.id} className="flex justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {qty}{unit} × {l.description}
+                        </span>
+                        <span className="tabular-nums">
+                          €{total.toFixed(2).replace(".", ",")}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-[11px] text-muted-foreground mt-2">Bedragen incl. BTW.</p>
+              </div>
+            )}
             {/* Location with navigation link */}
             {item.location_address && (
               <a
