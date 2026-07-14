@@ -88,7 +88,6 @@ const REGISTRY: Row[] = [
   { name: "inbound-email", category: "webhook", critical: true },
   { name: "inbound-purchase-invoice", category: "webhook", critical: true },
   { name: "whatsapp-webhook", category: "webhook", critical: false },
-  { name: "mailjet-tracking", category: "webhook", critical: false },
 
   // ── Customer email flows ────────────────────────────────────────────────
   { name: "send-quote-offer", category: "customer_email", critical: true },

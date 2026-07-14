@@ -84,7 +84,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminCRM = lazy(() => import("./pages/admin/AdminCRM"));
 
 const AdminRequestDetail = lazy(() => import("./pages/admin/AdminRequestDetail"));
-const AdminPartners = lazy(() => import("./pages/admin/AdminPartners"));
+
 const AdminPartnerDetail = lazy(() => import("./pages/admin/AdminPartnerDetail"));
 const AdminTodos = lazy(() => import("./pages/admin/AdminTodos"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
