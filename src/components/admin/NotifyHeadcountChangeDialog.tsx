@@ -140,7 +140,8 @@ export function NotifyHeadcountChangeDialog({
           a.partner_name.localeCompare(b.partner_name),
         );
 
-        // Logies-partners (geselecteerde + verstuurde quotes)
+        // Logies-partners: alleen de door de klant geselecteerde partij krijgt
+        // een aantal-wijziging-mail (nog niet gekozen = nog geen boeking).
         let quotes: AccommodationQuoteRow[] = [];
         if (linkedAccommodationId) {
           const { data: q } = await supabase
@@ -149,7 +150,7 @@ export function NotifyHeadcountChangeDialog({
               "id, partner_id, accommodation_name, status, partners(id, name, contact_email, email)",
             )
             .eq("request_id", linkedAccommodationId)
-            .in("status", ["selected", "submitted", "forwarded"]);
+            .eq("status", "selected");
           quotes = (q || []) as AccommodationQuoteRow[];
         }
 
