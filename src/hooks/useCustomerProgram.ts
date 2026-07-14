@@ -498,8 +498,13 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         });
       }
 
-      // Check for cancellation (removal)
-      if (item.status === "cancelled" && original.status !== "cancelled") {
+      // Check for cancellation (removal) via pendingRemovals set.
+      // We keep the legacy status-flip check too so ander code dat toch nog
+      // status='cancelled' zet niet stilletjes stopt met werken.
+      const markedForRemoval =
+        pendingRemovals.has(item.id) ||
+        (item.status === "cancelled" && original.status !== "cancelled");
+      if (markedForRemoval) {
         changes.push({
           type: "removed",
           itemId: item.id,
@@ -511,7 +516,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     });
 
     return changes;
-  }, [program, originalItems, addedItems]);
+  }, [program, originalItems, addedItems, pendingRemovals]);
 
   const submitChanges = useCallback(async (): Promise<boolean> => {
     if (!program) return false;
@@ -519,27 +524,39 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     const changes = getPendingChanges();
     if (changes.length === 0) return true;
 
+    // Zorg dat de items-payload die naar de edge function gaat de
+    // pending-removals correct als status='cancelled' toont — de bestaande
+    // edge function-logica leest zowel change.type als de item-status.
+    const itemsForPayload = program.items.map((item) =>
+      pendingRemovals.has(item.id)
+        ? { ...item, status: "cancelled" as const }
+        : item,
+    );
+
     try {
       // Call edge function to update items and send notifications
       const { error } = await supabase.functions.invoke("update-customer-program", {
         body: {
           token: token,
           changes: changes,
-          items: program.items,
+          items: itemsForPayload,
           origin: window.location.origin, // For test mode detection
         },
       });
 
       if (error) throw error;
 
-      // Refetch to get updated data
+      // Clear pending removals — refetch levert de gecancelde items met de
+      // echte status='cancelled' terug uit de database.
+      setPendingRemovals(new Set());
       await fetchProgram();
       return true;
     } catch (err) {
       console.error("Error submitting changes:", err);
       return false;
     }
-  }, [program, token, getPendingChanges, fetchProgram]);
+  }, [program, token, getPendingChanges, fetchProgram, pendingRemovals]);
+
 
   const updateProgramDetails = useCallback(async (updates: { 
     selectedDates?: Date[]; 
