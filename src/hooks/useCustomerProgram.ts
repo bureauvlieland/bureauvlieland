@@ -41,6 +41,11 @@ interface UseCustomerProgramReturn {
   addItem: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
+  /** Item-ids die de klant lokaal heeft aangeklikt om te verwijderen, maar
+   *  waarvoor nog niet op "Wijzigingen opslaan" is geklikt. Het onderdeel
+   *  blijft zichtbaar in de tijdlijn met een "wordt verwijderd"-badge. */
+  pendingRemovals: Set<string>;
+  isPendingRemoval: (itemId: string) => boolean;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
   updateGuestDetails: (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
@@ -63,6 +68,7 @@ interface UseCustomerProgramReturn {
   blockVatRates: Record<string, number>;
   extrasByQuoteId: Record<string, any[]>;
 }
+
 
 
 export interface PendingChange {
