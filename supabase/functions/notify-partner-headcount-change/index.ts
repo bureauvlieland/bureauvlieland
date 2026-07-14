@@ -71,6 +71,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // Alleen door de klant goedgekeurde items krijgen een aantal-wijziging-
+    // mail. Zolang het item nog in offerte staat, is er geen boeking om aan
+    // te passen en volgt de nieuwe headcount automatisch bij klant-akkoord.
+    const customerApproved = !!(item.customer_approved_at || item.customer_accepted_at);
+    if (!customerApproved || item.status === "cancelled") {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          email_skipped: "not_customer_approved",
+          message: "Item is nog niet door de klant goedgekeurd — geen partner-mail nodig.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (item.admin_price_override == null) {
       return new Response(
         JSON.stringify({ error: "Geen p.p.-prijs bekend om totaal opnieuw te berekenen" }),
