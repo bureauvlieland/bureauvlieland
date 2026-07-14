@@ -2860,6 +2860,70 @@ export type Database = {
           },
         ]
       }
+      program_request_item_quote_lines: {
+        Row: {
+          created_at: string
+          created_by_partner_id: string | null
+          description: string
+          id: string
+          item_id: string
+          quantity: number
+          sort_order: number
+          unit: string | null
+          unit_price_incl_vat: number
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          created_at?: string
+          created_by_partner_id?: string | null
+          description: string
+          id?: string
+          item_id: string
+          quantity?: number
+          sort_order?: number
+          unit?: string | null
+          unit_price_incl_vat?: number
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          created_at?: string
+          created_by_partner_id?: string | null
+          description?: string
+          id?: string
+          item_id?: string
+          quantity?: number
+          sort_order?: number
+          unit?: string | null
+          unit_price_incl_vat?: number
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_request_item_quote_lines_created_by_partner_id_fkey"
+            columns: ["created_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_request_item_quote_lines_created_by_partner_id_fkey"
+            columns: ["created_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_request_item_quote_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       program_request_items: {
         Row: {
           actual_invoiced_excl_vat: number | null
@@ -2886,6 +2950,7 @@ export type Database = {
           commission_status: string | null
           confirmed_time: string | null
           created_at: string
+          custom_briefing: string | null
           customer_accepted_at: string | null
           customer_approved_at: string | null
           customer_counter_at: string | null
@@ -2903,6 +2968,7 @@ export type Database = {
           invoiced_date: string | null
           invoiced_file_path: string | null
           invoiced_number: string | null
+          is_custom_quote: boolean
           item_quote_status: string | null
           location_address: string | null
           location_lat: number | null
@@ -2987,6 +3053,7 @@ export type Database = {
           commission_status?: string | null
           confirmed_time?: string | null
           created_at?: string
+          custom_briefing?: string | null
           customer_accepted_at?: string | null
           customer_approved_at?: string | null
           customer_counter_at?: string | null
@@ -3004,6 +3071,7 @@ export type Database = {
           invoiced_date?: string | null
           invoiced_file_path?: string | null
           invoiced_number?: string | null
+          is_custom_quote?: boolean
           item_quote_status?: string | null
           location_address?: string | null
           location_lat?: number | null
@@ -3088,6 +3156,7 @@ export type Database = {
           commission_status?: string | null
           confirmed_time?: string | null
           created_at?: string
+          custom_briefing?: string | null
           customer_accepted_at?: string | null
           customer_approved_at?: string | null
           customer_counter_at?: string | null
@@ -3105,6 +3174,7 @@ export type Database = {
           invoiced_date?: string | null
           invoiced_file_path?: string | null
           invoiced_number?: string | null
+          is_custom_quote?: boolean
           item_quote_status?: string | null
           location_address?: string | null
           location_lat?: number | null
