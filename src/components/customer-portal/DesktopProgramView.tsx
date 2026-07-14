@@ -519,11 +519,13 @@ export const DesktopProgramView = ({
                                    quoteStatus={program.quote_status}
                                    isQuoteMode={isQuoteMode}
                                   vatRate={getItemVatRate(item)}
-                                   readOnly={!isPublished || isPostExecution}
-                                  isPostExecution={isPostExecution}
-                                  hideDay
-                                  numberOfPeople={program.number_of_people}
-                                />
+                                    readOnly={!isPublished || isPostExecution}
+                                   isPostExecution={isPostExecution}
+                                   hideDay
+                                   numberOfPeople={program.number_of_people}
+                                   isPendingRemoval={isPendingRemoval ? isPendingRemoval(item.id) : false}
+                                 />
+
                               )}
                             </CustomerTimeline>
                             {dayPricedItems.length > 0 && (
