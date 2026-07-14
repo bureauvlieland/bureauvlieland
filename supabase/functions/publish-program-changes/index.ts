@@ -796,7 +796,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Partner-mails — alleen voor geselecteerde partners en alleen relevante rijen
+    // Partner-mails — alleen voor geselecteerde partners en alleen relevante rijen.
+    // Onderdelen zonder klant-akkoord worden overgeslagen (partner hoort pas na
+    // klant-akkoord over wijzigingen te horen); we tellen ze wel om terug te
+    // rapporteren aan de UI.
+    const skippedNotApprovedByPartner: Record<string, string[]> = {};
     for (const pid of notifyPartnerIds) {
       const partner = partnerMap.get(pid);
       if (!partner) continue;
@@ -809,9 +813,18 @@ Deno.serve(async (req) => {
           .filter((i: any) => i.provider_id === pid || i.pending_provider_id === pid)
           .map((i: any) => i.id),
       );
-      const rows = changeRows.filter(
+      const allRows = changeRows.filter(
         (r) => r.providerId === pid || (r.itemId && itemIdsForPartner.has(r.itemId)),
       );
+      const rows = allRows.filter((r) => !r.itemId || approvedItemIds.has(r.itemId));
+      const skippedItemIds = [
+        ...new Set(
+          allRows
+            .filter((r) => r.itemId && !approvedItemIds.has(r.itemId))
+            .map((r) => r.itemId!),
+        ),
+      ];
+      if (skippedItemIds.length > 0) skippedNotApprovedByPartner[pid] = skippedItemIds;
       if (rows.length === 0) continue;
 
       // Template wrapt {{changes_list}} al in <ul>...</ul> → enkel <li>-items leveren.
@@ -854,6 +867,7 @@ Deno.serve(async (req) => {
             template_name: TemplateIds.ITEM_CHANGES_PARTNER,
             actor: "admin → partner (gebundelde publicatie)",
             change_count: rows.length,
+            skipped_not_approved: skippedItemIds.length,
           },
         },
       });
