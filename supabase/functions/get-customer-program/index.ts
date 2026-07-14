@@ -126,6 +126,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4b) Maatwerk quote lines grouped by item_id
+    let quoteLinesByItem: Record<string, any[]> = {};
+    if (itemIds.length > 0) {
+      const { data: qLines } = await supabase
+        .from("program_request_item_quote_lines")
+        .select("id, item_id, sort_order, description, quantity, unit, unit_price_incl_vat, vat_rate")
+        .in("item_id", itemIds)
+        .order("sort_order", { ascending: true });
+      for (const line of qLines || []) {
+        const arr = quoteLinesByItem[(line as any).item_id] || [];
+        arr.push(line);
+        quoteLinesByItem[(line as any).item_id] = arr;
+      }
+    }
+    // Attach lines onto enriched items so the customer portal can render specificatie inline
+    for (const it of enrichedItems as any[]) {
+      it.quote_lines = quoteLinesByItem[it.id] || [];
+    }
+
     // 5) History
     const { data: historyData } = await supabase
       .from("program_request_history")
@@ -236,6 +255,7 @@ Deno.serve(async (req) => {
         rawItems: itemList,
         history: historyData || [],
         billingLinesByItem,
+        quoteLinesByItem,
         blockVatRates,
         linkedAccommodation,
         accommodationQuotes,
