@@ -45,3 +45,25 @@ Deno.test("cron (geen origin): behandeld als productie", () => {
   assertEquals(getRecipientEmail(CUSTOMER, undefined), CUSTOMER);
   assertEquals(getSubjectPrefix(undefined), "");
 });
+
+Deno.test("getPortalBaseUrl: alle origins → productie-domein, behalve localhost", () => {
+  // Klant- en partnermails moeten altijd naar bureauvlieland.nl wijzen, ook
+  // als een admin de trigger vanaf de Lovable-preview afvuurt. Anders landen
+  // eindgebruikers in de Lovable-editor-shell (met "Verzoek toegang"-knop).
+  for (const origin of [
+    "https://bureauvlieland.nl",
+    "https://www.bureauvlieland.nl",
+    "https://bureauvlieland.lovable.app",
+    "https://id-preview--abc.lovable.app",
+    "https://foo.lovable.app",
+    "https://random-domain.example.com",
+    undefined,
+    "",
+  ]) {
+    assertEquals(getPortalBaseUrl(origin), "https://bureauvlieland.nl", `origin=${origin}`);
+  }
+  // Uitzondering: lokale dev.
+  assertEquals(getPortalBaseUrl("http://localhost:8080"), "http://localhost:8080");
+  assertEquals(getPortalBaseUrl("http://127.0.0.1:5173"), "http://127.0.0.1:5173");
+});
+
