@@ -58,6 +58,9 @@ interface CustomerProgramItemProps {
   readOnly?: boolean;
   hideDay?: boolean;
   numberOfPeople?: number;
+  /** True als de klant dit onderdeel lokaal heeft gemarkeerd om te
+   *  verwijderen, maar de wijziging nog niet heeft opgeslagen. */
+  isPendingRemoval?: boolean;
 }
 
 export const CustomerProgramItem = ({
@@ -80,7 +83,9 @@ export const CustomerProgramItem = ({
   readOnly = false,
   hideDay = false,
   numberOfPeople,
+  isPendingRemoval = false,
 }: CustomerProgramItemProps) => {
+
   const [isOpen, setIsOpen] = useState(false);
   const { token: customerToken } = useParams<{ token: string }>();
 
