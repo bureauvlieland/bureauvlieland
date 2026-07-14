@@ -553,7 +553,9 @@ export const MobileProgramView = ({
                         isPostExecution={isPostExecution}
                         hideDay
                         numberOfPeople={program.number_of_people}
+                        isPendingRemoval={isPendingRemoval ? isPendingRemoval(item.id) : false}
                       />
+
                     )}
                   </CustomerTimeline>
                 </div>
