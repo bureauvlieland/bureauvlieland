@@ -25,6 +25,9 @@ export interface PendingChangeItem {
   provider_id: string | null;
   provider_name: string | null;
   block_type: string;
+  // Klant-akkoordstatus — bepaalt of partner-mails al mogen uitgaan
+  customer_approved_at: string | null;
+  customer_accepted_at: string | null;
   // Live waardes
   preferred_time: string | null;
   day_index: number;
