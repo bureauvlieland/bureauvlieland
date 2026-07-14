@@ -284,7 +284,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   }, []);
 
   const removeItem = useCallback((itemId: string) => {
-    // If it's a temp item (added but not submitted), remove from addedItems
+    // If it's a temp item (added but not submitted), remove from addedItems entirely
     if (itemId.startsWith(TEMP_ID_PREFIX)) {
       setAddedItems((prev) => prev.filter((item) => item.tempId !== itemId));
       setProgram((prev) => {
@@ -296,18 +296,29 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       });
       return;
     }
-    
-    // For existing items, mark as cancelled
-    setProgram((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        items: prev.items.map((item) =>
-          item.id === itemId ? { ...item, status: "cancelled" as const } : item
-        ),
-      };
+
+    // For existing items: toggle membership in pendingRemovals. We do NOT
+    // mutate the local item status to "cancelled" anymore — the item blijft
+    // zichtbaar in de tijdlijn met een "wordt verwijderd"-banner totdat de
+    // klant expliciet op "Wijzigingen opslaan" klikt. Zo kan de klant nooit
+    // meer denken dat het al opgeslagen is en het bij refresh terug zien
+    // komen zonder dat duidelijk was dat het nog niet was doorgevoerd.
+    setPendingRemovals((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
     });
   }, []);
+
+  const isPendingRemoval = useCallback(
+    (itemId: string) => pendingRemovals.has(itemId),
+    [pendingRemovals],
+  );
+
 
   const addItem = useCallback(async (
     blockId: string, 
