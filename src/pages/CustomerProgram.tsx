@@ -58,6 +58,8 @@ const CustomerProgram = () => {
     addItem,
     getPendingChanges,
     submitChanges,
+    pendingRemovals,
+    isPendingRemoval,
     updateProgramDetails,
     updateGuestDetails,
     updateBillingDetails,
@@ -77,6 +79,7 @@ const CustomerProgram = () => {
     billingLinesByItem,
     blockVatRates,
   } = useCustomerProgram(token || "");
+
 
   const [activeDay, setActiveDay] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -100,6 +103,21 @@ const CustomerProgram = () => {
     window.addEventListener("customer-program:refresh", handler);
     return () => window.removeEventListener("customer-program:refresh", handler);
   }, [refetch]);
+
+  // Voorkom dat de klant per ongeluk een verwijdering/verplaatsing/tijd-wijziging
+  // verliest door de tab te sluiten of te refreshen zonder op "Wijzigingen
+  // opslaan" te klikken. De browser toont zelf een generieke bevestiging.
+  useEffect(() => {
+    if (!hasChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasChanges]);
+
 
   // Parse dates, with defensive check for items beyond the date array
   const selectedDates = useMemo(() => {
@@ -391,9 +409,12 @@ const CustomerProgram = () => {
     getItemsForDay,
     pendingChanges,
     hasChanges,
+    pendingRemovals,
+    isPendingRemoval,
     onUpdateItem: updateItem,
     onRemoveItem: removeItem,
     onAcceptItem: acceptItem,
+
     onCounterProposal: submitCounterProposal,
     onOpenBilling: () => setShowBillingDialog(true),
     onOpenEdit: () => setShowEditDialog(true),

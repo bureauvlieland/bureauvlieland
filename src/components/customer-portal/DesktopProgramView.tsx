@@ -47,7 +47,9 @@ import {
   CalendarPlus,
   Sparkles,
   ThumbsUp,
+  AlertTriangle,
 } from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,8 +115,11 @@ interface DesktopProgramViewProps {
   getItemsForDay: (dayIndex: number) => ProgramRequestItem[];
   pendingChanges: { itemId: string }[];
   hasChanges: boolean;
+  pendingRemovals?: Set<string>;
+  isPendingRemoval?: (itemId: string) => boolean;
   onUpdateItem: (itemId: string, updates: Partial<ProgramRequestItem>) => void;
   onRemoveItem: (itemId: string) => void;
+
   onAcceptItem: (itemId: string) => Promise<boolean>;
   onCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   onOpenBilling: () => void;
@@ -162,10 +167,13 @@ export const DesktopProgramView = ({
   getItemsForDay,
   pendingChanges,
   hasChanges,
+  pendingRemovals,
+  isPendingRemoval,
   onUpdateItem,
   onRemoveItem,
   onAcceptItem,
   onCounterProposal,
+
   onOpenBilling,
   onOpenEdit,
   onOpenCancel,
@@ -513,11 +521,13 @@ export const DesktopProgramView = ({
                                    quoteStatus={program.quote_status}
                                    isQuoteMode={isQuoteMode}
                                   vatRate={getItemVatRate(item)}
-                                   readOnly={!isPublished || isPostExecution}
-                                  isPostExecution={isPostExecution}
-                                  hideDay
-                                  numberOfPeople={program.number_of_people}
-                                />
+                                    readOnly={!isPublished || isPostExecution}
+                                   isPostExecution={isPostExecution}
+                                   hideDay
+                                   numberOfPeople={program.number_of_people}
+                                   isPendingRemoval={isPendingRemoval ? isPendingRemoval(item.id) : false}
+                                 />
+
                               )}
                             </CustomerTimeline>
                             {dayPricedItems.length > 0 && (
@@ -557,7 +567,9 @@ export const DesktopProgramView = ({
                           readOnly={!isPublished || isPostExecution}
                           isPostExecution={isPostExecution}
                           numberOfPeople={program.number_of_people}
+                          isPendingRemoval={isPendingRemoval ? isPendingRemoval(item.id) : false}
                         />
+
                       )}
                     </CustomerTimeline>
                   )}
@@ -570,23 +582,27 @@ export const DesktopProgramView = ({
 
             {/* Floating changes bar */}
             {hasChanges && isPublished && !isPostExecution && (
-              <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium">
-                      {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Aanbieders worden op de hoogte gesteld
-                    </p>
+              <div className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl ring-2 ring-amber-200 dark:ring-amber-900/50">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-900 dark:text-amber-100">
+                        U heeft {pendingChanges.length} niet-opgeslagen wijziging{pendingChanges.length > 1 ? "en" : ""}
+                      </p>
+                      <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
+                        Klik op <strong>"Wijzigingen opslaan"</strong> om ze door te voeren. Zonder opslaan gaan uw wijzigingen bij een refresh verloren.
+                      </p>
+                    </div>
                   </div>
-                  <Button onClick={onSubmitChanges}>
+                  <Button onClick={onSubmitChanges} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold shrink-0">
                     <Send className="h-4 w-4 mr-2" />
-                    Doorvoeren
+                    Wijzigingen opslaan
                   </Button>
                 </div>
               </div>
             )}
+
           </>
         )}
 

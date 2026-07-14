@@ -58,6 +58,9 @@ interface CustomerProgramItemProps {
   readOnly?: boolean;
   hideDay?: boolean;
   numberOfPeople?: number;
+  /** True als de klant dit onderdeel lokaal heeft gemarkeerd om te
+   *  verwijderen, maar de wijziging nog niet heeft opgeslagen. */
+  isPendingRemoval?: boolean;
 }
 
 export const CustomerProgramItem = ({
@@ -80,7 +83,9 @@ export const CustomerProgramItem = ({
   readOnly = false,
   hideDay = false,
   numberOfPeople,
+  isPendingRemoval = false,
 }: CustomerProgramItemProps) => {
+
   const [isOpen, setIsOpen] = useState(false);
   const { token: customerToken } = useParams<{ token: string }>();
 
@@ -162,8 +167,19 @@ export const CustomerProgramItem = ({
       "transition-all rounded-lg border bg-card p-4",
       hasChanges && "ring-2 ring-primary/50",
       item.status === "cancelled" && "opacity-60",
-      needsCustomerAction && "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
+      isPendingRemoval && "border-red-400 dark:border-red-700 bg-red-50/60 dark:bg-red-950/20 ring-2 ring-red-300",
+      needsCustomerAction && !isPendingRemoval && "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
     )}>
+      {isPendingRemoval && (
+        <div className="mb-3 flex items-start gap-2 p-2.5 rounded-md bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
+          <Trash2 className="h-4 w-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Wordt verwijderd</strong> — nog niet opgeslagen. Klik onderaan
+            op <strong>"Wijzigingen opslaan"</strong> om dit door te voeren, of gebruik
+            de knop hieronder om het terug te zetten.
+          </span>
+        </div>
+      )}
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Header row */}
           <div className="flex items-start gap-3">
@@ -172,13 +188,13 @@ export const CustomerProgramItem = ({
               <img
                 src={thumbnailSrc}
                 alt={item.block_name}
-                className="w-12 h-12 md:w-16 md:h-16 rounded-md object-cover shrink-0"
+                className={cn("w-12 h-12 md:w-16 md:h-16 rounded-md object-cover shrink-0", isPendingRemoval && "grayscale opacity-60")}
               />
             )}
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-medium">{item.block_name}</h4>
+                <h4 className={cn("font-medium", isPendingRemoval && "line-through text-muted-foreground")}>{item.block_name}</h4>
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
@@ -191,6 +207,7 @@ export const CustomerProgramItem = ({
                 )}
 
               </div>
+
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isSelfArranged ? "Zelf te boeken en betalen" : item.provider_name}
               </p>
@@ -417,6 +434,19 @@ export const CustomerProgramItem = ({
 
           {/* Always-visible action row */}
           {item.status !== "cancelled" && !readOnly && !isPostExecution && (
+            isPendingRemoval ? (
+              <div className="mt-3 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40"
+                  onClick={onRemove}
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-1.5" />
+                  Verwijderen ongedaan maken
+                </Button>
+              </div>
+            ) : (
             <div className={cn(
               "mt-3 flex flex-wrap gap-2",
               needsCustomerAction ? "justify-stretch" : "justify-end",
@@ -528,7 +558,9 @@ export const CustomerProgramItem = ({
                 Verwijderen
               </Button>
             </div>
+            )
           )}
+
 
           {/* Optionele extra's (bouwsteen-componenten) — alleen op hoofd-items */}
           {!(item as any).parent_item_id && !isPostExecution && (

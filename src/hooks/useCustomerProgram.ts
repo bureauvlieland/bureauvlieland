@@ -41,6 +41,11 @@ interface UseCustomerProgramReturn {
   addItem: (blockId: string, dayIndex: number, preferredTime: string | null, notes: string) => void;
   getPendingChanges: () => PendingChange[];
   submitChanges: () => Promise<boolean>;
+  /** Item-ids die de klant lokaal heeft aangeklikt om te verwijderen, maar
+   *  waarvoor nog niet op "Wijzigingen opslaan" is geklikt. Het onderdeel
+   *  blijft zichtbaar in de tijdlijn met een "wordt verwijderd"-badge. */
+  pendingRemovals: Set<string>;
+  isPendingRemoval: (itemId: string) => boolean;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
   updateGuestDetails: (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
@@ -63,6 +68,7 @@ interface UseCustomerProgramReturn {
   blockVatRates: Record<string, number>;
   extrasByQuoteId: Record<string, any[]>;
 }
+
 
 
 export interface PendingChange {
@@ -107,8 +113,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [billingLinesByItem, setBillingLinesByItem] = useState<Record<string, any[]>>({});
   const [blockVatRates, setBlockVatRates] = useState<Record<string, number>>({});
   const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, any[]>>({});
+  const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
 
   const fetchProgram = useCallback(async () => {
 
@@ -276,7 +284,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   }, []);
 
   const removeItem = useCallback((itemId: string) => {
-    // If it's a temp item (added but not submitted), remove from addedItems
+    // If it's a temp item (added but not submitted), remove from addedItems entirely
     if (itemId.startsWith(TEMP_ID_PREFIX)) {
       setAddedItems((prev) => prev.filter((item) => item.tempId !== itemId));
       setProgram((prev) => {
@@ -288,18 +296,29 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       });
       return;
     }
-    
-    // For existing items, mark as cancelled
-    setProgram((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        items: prev.items.map((item) =>
-          item.id === itemId ? { ...item, status: "cancelled" as const } : item
-        ),
-      };
+
+    // For existing items: toggle membership in pendingRemovals. We do NOT
+    // mutate the local item status to "cancelled" anymore — the item blijft
+    // zichtbaar in de tijdlijn met een "wordt verwijderd"-banner totdat de
+    // klant expliciet op "Wijzigingen opslaan" klikt. Zo kan de klant nooit
+    // meer denken dat het al opgeslagen is en het bij refresh terug zien
+    // komen zonder dat duidelijk was dat het nog niet was doorgevoerd.
+    setPendingRemovals((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
     });
   }, []);
+
+  const isPendingRemoval = useCallback(
+    (itemId: string) => pendingRemovals.has(itemId),
+    [pendingRemovals],
+  );
+
 
   const addItem = useCallback(async (
     blockId: string, 
@@ -479,8 +498,13 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         });
       }
 
-      // Check for cancellation (removal)
-      if (item.status === "cancelled" && original.status !== "cancelled") {
+      // Check for cancellation (removal) via pendingRemovals set.
+      // We keep the legacy status-flip check too so ander code dat toch nog
+      // status='cancelled' zet niet stilletjes stopt met werken.
+      const markedForRemoval =
+        pendingRemovals.has(item.id) ||
+        (item.status === "cancelled" && original.status !== "cancelled");
+      if (markedForRemoval) {
         changes.push({
           type: "removed",
           itemId: item.id,
@@ -492,7 +516,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     });
 
     return changes;
-  }, [program, originalItems, addedItems]);
+  }, [program, originalItems, addedItems, pendingRemovals]);
 
   const submitChanges = useCallback(async (): Promise<boolean> => {
     if (!program) return false;
@@ -500,27 +524,39 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     const changes = getPendingChanges();
     if (changes.length === 0) return true;
 
+    // Zorg dat de items-payload die naar de edge function gaat de
+    // pending-removals correct als status='cancelled' toont — de bestaande
+    // edge function-logica leest zowel change.type als de item-status.
+    const itemsForPayload = program.items.map((item) =>
+      pendingRemovals.has(item.id)
+        ? { ...item, status: "cancelled" as const }
+        : item,
+    );
+
     try {
       // Call edge function to update items and send notifications
       const { error } = await supabase.functions.invoke("update-customer-program", {
         body: {
           token: token,
           changes: changes,
-          items: program.items,
+          items: itemsForPayload,
           origin: window.location.origin, // For test mode detection
         },
       });
 
       if (error) throw error;
 
-      // Refetch to get updated data
+      // Clear pending removals — refetch levert de gecancelde items met de
+      // echte status='cancelled' terug uit de database.
+      setPendingRemovals(new Set());
       await fetchProgram();
       return true;
     } catch (err) {
       console.error("Error submitting changes:", err);
       return false;
     }
-  }, [program, token, getPendingChanges, fetchProgram]);
+  }, [program, token, getPendingChanges, fetchProgram, pendingRemovals]);
+
 
   const updateProgramDetails = useCallback(async (updates: { 
     selectedDates?: Date[]; 
@@ -962,6 +998,9 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     addItem,
     getPendingChanges,
     submitChanges,
+    pendingRemovals,
+    isPendingRemoval,
+
     updateProgramDetails,
     updateGuestDetails,
     updateBillingDetails,
