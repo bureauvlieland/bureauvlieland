@@ -595,7 +595,9 @@ export const MobileProgramView = ({
                       readOnly={!isPublished || isPostExecution}
                       isPostExecution={isPostExecution}
                       numberOfPeople={program.number_of_people}
+                      isPendingRemoval={isPendingRemoval ? isPendingRemoval(item.id) : false}
                     />
+
                   )}
                 </CustomerTimeline>
         )}
