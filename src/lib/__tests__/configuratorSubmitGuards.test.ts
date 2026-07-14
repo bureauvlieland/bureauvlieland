@@ -16,7 +16,6 @@ import { resolve } from "path";
  */
 const CONFIGURATOR_FILES = [
   "src/components/configurator/CheckoutContactForm.tsx",
-  "src/components/configurator/RequestFormModal.tsx",
 ];
 
 const read = (rel: string) =>
