@@ -27,6 +27,8 @@ interface PartnerItem {
   price_type: string | null;
   override_people: number | null;
   status: string | null;
+  customer_approved_at: string | null;
+  customer_accepted_at: string | null;
 }
 
 interface AccommodationQuoteRow {
