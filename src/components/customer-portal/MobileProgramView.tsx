@@ -161,10 +161,13 @@ export const MobileProgramView = ({
   getItemsForDay,
   pendingChanges,
   hasChanges,
+  pendingRemovals,
+  isPendingRemoval,
   onUpdateItem,
   onRemoveItem,
   onAcceptItem,
   onCounterProposal,
+
   onOpenBilling,
   onOpenEdit,
   onOpenCancel,
