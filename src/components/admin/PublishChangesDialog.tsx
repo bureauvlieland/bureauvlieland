@@ -280,11 +280,22 @@ export function PublishChangesDialog({
         throw new Error(serverMsg ?? error.message ?? "Onbekende fout");
       }
       const sent = (data as any)?.emails_sent ?? 0;
-      toast.success(
+      const skippedMap = ((data as any)?.skipped_not_approved ?? {}) as Record<string, string[]>;
+      const skippedTotal = Object.values(skippedMap).reduce(
+        (n, arr) => n + (Array.isArray(arr) ? arr.length : 0),
+        0,
+      );
+      const base =
         sent > 0
           ? `${pendingItems.length} wijziging(en) gepubliceerd · ${sent} mail(s) verstuurd`
-          : `${pendingItems.length} wijziging(en) gepubliceerd (zonder mail)`,
-      );
+          : `${pendingItems.length} wijziging(en) gepubliceerd (zonder mail)`;
+      if (skippedTotal > 0) {
+        toast.success(base, {
+          description: `${skippedTotal} onderdeel${skippedTotal !== 1 ? "en" : ""} niet naar partner gemaild — klant heeft ze nog niet goedgekeurd. Volgt automatisch bij goedkeuring.`,
+        });
+      } else {
+        toast.success(base);
+      }
       onPublished();
       onOpenChange(false);
       setAdminNote("");
