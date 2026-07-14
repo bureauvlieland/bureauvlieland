@@ -509,6 +509,7 @@ Deno.serve(async (req) => {
         partnerName?: string;
         email: string;
         change_count: number;
+        skipped_not_approved?: number;
       }> = [];
       if (notifyCustomer && program.customer_email && changeRows.length > 0) {
         previewRecipients.push({
