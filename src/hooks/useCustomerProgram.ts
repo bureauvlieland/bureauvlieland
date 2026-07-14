@@ -998,6 +998,9 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     addItem,
     getPendingChanges,
     submitChanges,
+    pendingRemovals,
+    isPendingRemoval,
+
     updateProgramDetails,
     updateGuestDetails,
     updateBillingDetails,
