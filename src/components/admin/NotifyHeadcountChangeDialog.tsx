@@ -286,6 +286,9 @@ export function NotifyHeadcountChangeDialog({
             <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">
               Partners met p.p.-onderdelen
             </h4>
+            <p className="text-xs text-muted-foreground mb-2">
+              Alleen onderdelen die de klant al heeft goedgekeurd — offerte-items volgen automatisch bij goedkeuring.
+            </p>
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-14" />
@@ -293,7 +296,7 @@ export function NotifyHeadcountChangeDialog({
               </div>
             ) : partnerGroups.length === 0 ? (
               <div className="text-sm text-muted-foreground italic">
-                Geen relevante partner-onderdelen.
+                Geen door de klant goedgekeurde partner-onderdelen — niets te mailen.
               </div>
             ) : (
               <div className="space-y-2">
