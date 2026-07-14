@@ -7,7 +7,9 @@ import {
   getRecipientEmail,
   isTestMode,
   getSubjectPrefix,
+  getPortalBaseUrl,
 } from "./email-templates.ts";
+
 
 const CUSTOMER = "klant@example.com";
 const TEST_EMAIL = "erwin@bureauvlieland.nl";
