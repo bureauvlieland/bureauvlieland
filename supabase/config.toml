@@ -141,8 +141,8 @@ verify_jwt = false
 
 [functions.mailjet-event-webhook]
 verify_jwt = false
-[functions.ensure-smoke-test-fixture]
-verify_jwt = false
+
+
 
 [functions.mint-ci-admin-jwt]
 verify_jwt = false
