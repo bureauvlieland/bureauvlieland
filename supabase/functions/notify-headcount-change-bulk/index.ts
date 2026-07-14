@@ -340,6 +340,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .in("id", accommodation_quote_ids);
 
       for (const q of quotes || []) {
+        // Alleen door de klant gekozen logies-partner krijgt een aantal-
+        // wijziging-mail. `submitted`/`forwarded`/`pending` = nog geen keuze.
+        if (q.status !== "selected") {
+          (results.accommodations as unknown[]).push({
+            quote_id: q.id,
+            sent: false,
+            reason: "not_customer_selected",
+          });
+          continue;
+        }
         const { data: partner } = await supabase
           .from("partners")
           .select("id, name, email, contact_email")
