@@ -434,6 +434,19 @@ export const CustomerProgramItem = ({
 
           {/* Always-visible action row */}
           {item.status !== "cancelled" && !readOnly && !isPostExecution && (
+            isPendingRemoval ? (
+              <div className="mt-3 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40"
+                  onClick={onRemove}
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-1.5" />
+                  Verwijderen ongedaan maken
+                </Button>
+              </div>
+            ) : (
             <div className={cn(
               "mt-3 flex flex-wrap gap-2",
               needsCustomerAction ? "justify-stretch" : "justify-end",
@@ -545,7 +558,9 @@ export const CustomerProgramItem = ({
                 Verwijderen
               </Button>
             </div>
+            )
           )}
+
 
           {/* Optionele extra's (bouwsteen-componenten) — alleen op hoofd-items */}
           {!(item as any).parent_item_id && !isPostExecution && (
