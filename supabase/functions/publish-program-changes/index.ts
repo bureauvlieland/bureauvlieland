@@ -527,16 +527,33 @@ Deno.serve(async (req) => {
             .filter((i: any) => i.provider_id === pid || i.pending_provider_id === pid)
             .map((i: any) => i.id),
         );
-        const rows = changeRows.filter(
+        const allRows = changeRows.filter(
           (r) => r.providerId === pid || (r.itemId && itemIdsForPartner.has(r.itemId)),
         );
-        if (rows.length === 0) continue;
+        // Alleen items met klant-akkoord tellen mee voor partner-mail.
+        const rows = allRows.filter((r) => !r.itemId || approvedItemIds.has(r.itemId));
+        const skippedRows = allRows.filter((r) => r.itemId && !approvedItemIds.has(r.itemId));
+        const skippedItemIds = [...new Set(skippedRows.map((r) => r.itemId!))];
+        if (rows.length === 0) {
+          if (skippedItemIds.length > 0) {
+            previewRecipients.push({
+              kind: "partner",
+              partnerId: pid,
+              partnerName: partner.name,
+              email: recipientFor(partnerEmail, origin),
+              change_count: 0,
+              skipped_not_approved: skippedItemIds.length,
+            });
+          }
+          continue;
+        }
         previewRecipients.push({
           kind: "partner",
           partnerId: pid,
           partnerName: partner.name,
           email: recipientFor(partnerEmail, origin),
           change_count: rows.length,
+          skipped_not_approved: skippedItemIds.length,
         });
       }
       return new Response(
