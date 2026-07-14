@@ -907,6 +907,7 @@ Deno.serve(async (req) => {
         published: items.length,
         emails_sent: emailMessages.length,
         notified: notifiedEmails,
+        skipped_not_approved: skippedNotApprovedByPartner,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
