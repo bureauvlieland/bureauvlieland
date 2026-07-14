@@ -32,3 +32,13 @@ export function shouldNotifyPartnerOfHeadcountChange(
   if (item.provider_id && BUREAU_PROVIDER_IDS.has(item.provider_id)) return false;
   return !!(item.customer_approved_at || item.customer_accepted_at);
 }
+
+/**
+ * Alias — dezelfde regel geldt voor élke publish-time partner-mail over
+ * wijzigingen aan een bestaand onderdeel (tijd, prijs, aantal, locatie,
+ * uitvoerder, …). Zolang de klant het onderdeel nog niet heeft goedgekeurd,
+ * hoort de partner nergens over een wijziging te horen — de reguliere
+ * offerte-flow neemt het over zodra de klant akkoord geeft.
+ */
+export const shouldPublishPartnerChangeMail = shouldNotifyPartnerOfHeadcountChange;
+
