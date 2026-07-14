@@ -676,23 +676,27 @@ export const MobileProgramView = ({
         <>
           {/* Floating changes bar — only in program view */}
           {initialSection === "program" && hasChanges && isPublished && !isPostExecution && (
-            <div className="sticky bottom-4 left-0 right-0 z-50 bg-background/95 backdrop-blur border rounded-lg p-4 shadow-lg mx-2">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium">
-                    {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Aanbieders worden op de hoogte gesteld
-                  </p>
+            <div className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl mx-2 ring-2 ring-amber-200 dark:ring-amber-900/50">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-amber-900 dark:text-amber-100">
+                      {pendingChanges.length} niet-opgeslagen wijziging{pendingChanges.length > 1 ? "en" : ""}
+                    </p>
+                    <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
+                      Zonder opslaan gaan uw wijzigingen bij een refresh verloren.
+                    </p>
+                  </div>
                 </div>
-                <Button onClick={onSubmitChanges}>
+                <Button onClick={onSubmitChanges} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold">
                   <Send className="h-4 w-4 mr-2" />
-                  Doorvoeren
+                  Wijzigingen opslaan
                 </Button>
               </div>
             </div>
           )}
+
 
           {/* Secondary options — only in program view */}
           {initialSection === "program" && (
