@@ -113,8 +113,10 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [billingLinesByItem, setBillingLinesByItem] = useState<Record<string, any[]>>({});
   const [blockVatRates, setBlockVatRates] = useState<Record<string, number>>({});
   const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, any[]>>({});
+  const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
 
   const fetchProgram = useCallback(async () => {
 
