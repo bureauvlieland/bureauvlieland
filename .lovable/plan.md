@@ -1,97 +1,38 @@
-# Maatwerk-offerteaanvraag via portal
+## Probleem
 
-## Uitgangspunt
+Zolang een project bij de klant op status "Offerte" staat, is het programma nog niet goedgekeurd. Pas ná klantgoedkeuring gaan onderdelen ter beoordeling naar partners. Op dit moment sturen we echter aantal-wijziging-mails naar partners ongeacht die status — zie Trattoria Oliva die een "Aantal gasten gewijzigd" mail kreeg voor BV-2606-0028, terwijl het item in hun portal nog op "Offerte" staat (`customer_approved_at` = null).
 
-Op basis van je feedback: geen losse entiteit, maar een **ad-hoc `program_request_item`** dat via de bestaande partner-flow loopt. Nieuw is dat de partner **regel voor regel** een gespecificeerde offerte indient (net als een echte offerte-PDF), met **eigen BTW per regel**. Bureau Vlieland houdt de commissie (10% over ex-BTW totaal), centrale facturatie blijft ongewijzigd.
+## Regel
 
-## Flow (end-to-end)
+Aantal-wijziging-mails (item + logies) alleen versturen voor onderdelen/quotes die al door de klant zijn goedgekeurd. Vóór klantgoedkeuring is er nog geen boeking en wordt een nieuwe headcount automatisch meegenomen zodra de klant alsnog akkoord geeft.
 
-```text
-BV admin                  Partner (portal)              Klant
---------                  ----------------              -----
-1. "+ Maatwerk-item"  ->  2. Ziet aanvraag met
-   in projectdetail          vrije-tekst briefing
-   - titel, dag,          -> 3. Voegt N regels toe:
-   - vrije briefing,         omschrijving, aantal,
-   - partner, dag,           eenheidsprijs, BTW%
-   - deadline             -> 4. Dient in            ->  5. Ziet één regel in
-                                                          programma met totaal
-                             partner ziet later          + uitklapbare specificatie
-                             admin-akkoord           ->  6. Accepteert / vraagt
-                                                          aanpassing
-```
+Concreet per record:
 
-## Datamodel (minimaal)
+- **Programma-item**: `customer_approved_at IS NOT NULL` OF `customer_accepted_at IS NOT NULL`.
+- **Logies-quote**: `status = 'selected'` (klant heeft partij gekozen). `submitted` / `forwarded` = nog geen keuze → geen mail.
 
-Nieuwe tabel `program_request_item_quote_lines`:
-- `program_request_item_id` (fk)
-- `sort_order`, `description`, `quantity`, `unit`, `unit_price_incl_vat`, `vat_rate`
-- `created_by_partner_id`, timestamps
+## Wijzigingen
 
-Uitbreiding `program_request_items`:
-- `is_custom_quote boolean default false` — markeert maatwerk-item
-- `custom_briefing text` — vrije tekst van BV richting partner
-- bestaande `quoted_price` = som van regels incl. BTW (auto-berekend via trigger of app-code, in lijn met huidige pricing rules)
+### 1. `supabase/functions/update-customer-program/index.ts` (auto-flow bij klantwijziging aantal)
+Filter bij het ophalen van `partnerItems` uitbreiden met `customer_approved_at NOT NULL OR customer_accepted_at NOT NULL`. Voor logies: alleen quotes met `status='selected'` doorgeven aan de mail-flow. De interne reset van submitted quotes naar `pending` blijft ongewijzigd (workflow), alleen zonder partner-mail.
 
-Geen nieuwe workflow-status: hergebruikt bestaande `pending` → `quoted` → `accepted` op het item.
+### 2. `supabase/functions/notify-headcount-change-bulk/index.ts` (server-side guard)
+Bij het inladen van items ook `customer_approved_at, customer_accepted_at` selecteren en items zonder een van beide overslaan met reden `not_customer_approved`. Voor `accommodation_quote_ids`: alleen mailen als quote-status `selected` is. Zo blijft de regel gelden ook als ergens verouderde item-id's worden meegegeven.
 
-## UI-wijzigingen
+### 3. `supabase/functions/notify-partner-headcount-change/index.ts` (single-item admin-actie)
+Zelfde guard: item overslaan als beide velden `null`. Response: `{ success: true, new_total, email_skipped: "not_customer_approved" }` zodat de admin-UI geen fout toont; wél toast "geen mail nodig — nog niet goedgekeurd door klant".
 
-**Admin projectdetail** — nieuwe knop "Maatwerk-item toevoegen":
-- Sheet met: titel, dag, partner-select, briefing (rich text), deadline
-- Bij opslaan: `program_request_item` (is_custom_quote=true) + bestaande partner-notify edge function (hergebruik `notify-partner-quote-request` template met briefing-veld)
+### 4. `src/components/admin/NotifyHeadcountChangeDialog.tsx` (admin UI)
+- Ook `customer_approved_at, customer_accepted_at` ophalen.
+- Items zonder klant-akkoord filteren uit de lijst (met tekstuele hint boven de partner-sectie: "Alleen onderdelen die de klant al heeft goedgekeurd — offerte-items volgen automatisch bij goedkeuring.").
+- Logies-quotes query beperken tot `status='selected'`.
+- Default-selectie (alle overgebleven aan) blijft.
 
-**Partner portal** — bestaande "openstaande offerte-aanvraag" krijgt bij `is_custom_quote=true`:
-- Briefing bovenaan (readonly)
-- Regel-editor: tabel met rijen (+ knop, verwijder-knop) — omschrijving, aantal, eenheidsprijs incl. BTW, BTW% dropdown (0/9/21)
-- Live totaal ex/incl BTW onderaan
-- "Offerte indienen" knop — schrijft regels + zet `quoted_price` + `partner_status='quoted'`
-- Stupid-simple: één scherm, geen tabs, mobile-first, autosave-draft
+### 5. Tests
+Kleine utility `shouldNotifyPartnerOfHeadcountChange(item)` in `src/lib/` toevoegen die de regel uitwoont, met unit-tests voor: not-approved → false, customer_approved_at gezet → true, customer_accepted_at gezet → true, cancelled item → false, bureau-item → false. Hergebruik dezelfde regel in de edge functions (dupliceren als plain check, want edge functions delen geen code met src/lib).
 
-**Admin akkoord** — in bestaande partner-quote-review UI: toon regeltabel, akkoord-knop hergebruikt
+## Buiten scope
 
-**Klantportaal (`CustomerProgramItem`)** — bij accepted maatwerk-item:
-- Toon één regel met titel + totaal
-- Uitklap "Specificatie" met de regels (zonder BTW-uitsplitsing — consistent met huidige formal weergave; BTW-breakdown alleen op factuur-PDF)
-
-## Facturatie & commissie
-
-- Commissie 10% over som van (regel.excl_btw): geen wijziging in `program_item_billing_lines` logica, alleen inputbron
-- Purchase-invoice matching en bureau-facturatie ongewijzigd — item gedraagt zich als elk ander partner-item
-
-## Edge functions
-
-- Hergebruik `notify-partner-quote-request` (uitbreiden met `custom_briefing` in template)
-- Hergebruik `notify-admin-quote-received` bij indienen
-- Geen nieuwe function
-
-## Tests
-
-Unit tests:
-- `customQuoteLines.test.ts` — totaal ex/incl BTW berekening, gemengde BTW-tarieven, negatieve/lege input-guards
-- `customQuoteCommission.test.ts` — 10% commissie over ex-BTW som
-- Uitbreiding `customerPortalPendingChanges.test.ts` — accept/reject van maatwerk-item
-
-Manual QA (via preview):
-1. Admin maakt maatwerk-item in BV-2606-0004 voor Zuiver Traiteur
-2. Partner logt in, ziet briefing, voegt 3 regels toe (0%, 9%, 21%), dient in
-3. Admin ziet regels, accordeert
-4. Klant ziet item + specificatie, accepteert
-5. Facturatie-preview toont juiste bureau-factuur incl. commissie
-
-## Buiten scope (bewust)
-
-- Publiceren van maatwerk-item als herbruikbare `building_block` — kan later manueel via bestaande "concept-blok" flow
-- Bijlagen bij offerteregels (kan v2)
-- Onderhandelings-tegenvoorstel op regelniveau (klant kan wel hele item afwijzen met opmerking, bestaande flow)
-
-## Bestanden (indicatief)
-
-- migration: nieuwe tabel + 2 kolommen op `program_request_items` + GRANTs + RLS (partner ziet alleen eigen regels via item)
-- `src/components/admin/AdminAddCustomItemSheet.tsx` (nieuw)
-- `src/components/partner-portal/PartnerCustomQuoteEditor.tsx` (nieuw)
-- `src/components/partner-portal/PartnerBlockSheet.tsx` (branch voor custom)
-- `src/components/customer-portal/CustomerProgramItem.tsx` (specificatie-uitklap)
-- `src/pages/admin/AdminRequestDetail.tsx` (knop + regeltabel bij review)
-- edge function `notify-partner-quote-request` (template uitbreiden)
-- tests zoals hierboven
+- Prijswijziging-mails en item-verwijdering-mails (aparte flows, niet aan de orde).
+- Definitie van `customer_approved_at` / de "Offerte → Definitief" overgang.
+- Partner-portaal copy of status-labels.
