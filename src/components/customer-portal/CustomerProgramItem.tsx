@@ -195,6 +195,9 @@ export const CustomerProgramItem = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className={cn("font-medium", isPendingRemoval && "line-through text-muted-foreground")}>{item.block_name}</h4>
+                {(item as any).is_custom_quote && (
+                  <MicroPill tone="amber">Maatwerk</MicroPill>
+                )}
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
