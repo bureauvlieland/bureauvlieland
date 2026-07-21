@@ -37,6 +37,7 @@ import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { resolveCustomerItemDescription } from "@/lib/customerItemDescription";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -195,6 +196,9 @@ export const CustomerProgramItem = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className={cn("font-medium", isPendingRemoval && "line-through text-muted-foreground")}>{item.block_name}</h4>
+                {(item as any).is_custom_quote && (
+                  <MicroPill tone="amber">Maatwerk</MicroPill>
+                )}
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
@@ -577,11 +581,12 @@ export const CustomerProgramItem = ({
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
             {/* Full description */}
-            {(item as any).block_description && (
-              <p className="text-sm text-muted-foreground whitespace-pre-line">
-                {(item as any).block_description}
-              </p>
-            )}
+            {(() => {
+              const desc = resolveCustomerItemDescription(item as any);
+              return desc ? (
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{desc}</p>
+              ) : null;
+            })()}
             {/* Maatwerk-specificatie */}
             {Array.isArray((item as any).quote_lines) && (item as any).quote_lines.length > 0 && (
               <div className="rounded-lg border bg-muted/30 p-3">

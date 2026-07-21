@@ -15,7 +15,8 @@ export type PartialSaveField =
   | "block_name"
   | "admin_price_notes"
   | "customer_notes"
-  | "partner_instructions";
+  | "partner_instructions"
+  | "custom_briefing";
 
 interface PartialItem {
   id: string;
@@ -24,6 +25,7 @@ interface PartialItem {
   admin_price_notes?: string | null;
   customer_notes?: string | null;
   partner_instructions?: string | null;
+  custom_briefing?: string | null;
   pending_block_name?: string | null;
   pending_admin_price_notes?: string | null;
   pending_customer_notes?: string | null;
@@ -31,7 +33,7 @@ interface PartialItem {
   pending_changed_at?: string | null;
 }
 
-const PENDING_FIELDS: Record<PartialSaveField, string> = {
+const PENDING_FIELDS: Record<Exclude<PartialSaveField, "custom_briefing">, string> = {
   block_name: "pending_block_name",
   admin_price_notes: "pending_admin_price_notes",
   customer_notes: "pending_customer_notes",
@@ -47,6 +49,20 @@ export async function savePartialItemField(
   rawValue: string,
 ): Promise<void> {
   const value = rawValue.trim() === "" ? null : rawValue;
+
+  // custom_briefing zit niet in de pending/publish-flow: schrijf direct live.
+  // Klant ziet 'm als beschrijving (fallback), partner in de offerte-editor.
+  if (field === "custom_briefing") {
+    const liveVal = (item.custom_briefing ?? null) as string | null;
+    if ((liveVal ?? null) === (value ?? null)) return;
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ custom_briefing: value } as any)
+      .eq("id", item.id);
+    if (error) throw error;
+    return;
+  }
+
   const liveValue = (item[field] ?? null) as string | null;
 
   // Concept item → schrijf direct live
@@ -61,7 +77,7 @@ export async function savePartialItemField(
   }
 
   // Live item → pending flow
-  const pendingCol = PENDING_FIELDS[field];
+  const pendingCol = PENDING_FIELDS[field as Exclude<PartialSaveField, "custom_briefing">];
   const samenAlsLive = (liveValue ?? null) === (value ?? null);
   const pendingValue = samenAlsLive ? null : value;
 

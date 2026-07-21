@@ -76,6 +76,8 @@ interface ProgramRequestItem {
   location_address?: string | null;
   pending_added?: boolean | null;
   pending_marked_for_removal?: boolean | null;
+  is_custom_quote?: boolean | null;
+  custom_briefing?: string | null;
 }
 
 interface AdminEditActivitySheetProps {
@@ -114,6 +116,7 @@ export const AdminEditActivitySheet = ({
   const [partnerInstructions, setPartnerInstructions] = useState(
     item?.pending_partner_instructions ?? item?.partner_instructions ?? ""
   );
+  const [customBriefing, setCustomBriefing] = useState(item?.custom_briefing ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(item?.location_lat ?? null);
@@ -159,8 +162,15 @@ export const AdminEditActivitySheet = ({
     initialValue: autoInstrInitial,
     disabled: !open || !item,
   });
+  const briefingSave = useAutoSaveField({
+    item,
+    field: "custom_briefing",
+    value: customBriefing,
+    initialValue: item?.custom_briefing ?? "",
+    disabled: !open || !item || !item?.is_custom_quote,
+  });
 
-  const anyAutoSaveBusy = [nameSave, descSave, notesSave, instrSave].some(
+  const anyAutoSaveBusy = [nameSave, descSave, notesSave, instrSave, briefingSave].some(
     (s) => s.status === "saving" || s.isDirty,
   );
 
@@ -194,6 +204,7 @@ export const AdminEditActivitySheet = ({
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
       setLocationAddress(item.location_address || "");
+      setCustomBriefing(item.custom_briefing ?? "");
     }
   }, [item]);
 
@@ -507,6 +518,29 @@ export const AdminEditActivitySheet = ({
         </SheetHeader>
 
         <div className="flex-1 overflow-auto p-6 space-y-6">
+          {/* Maatwerk-briefing (alleen voor maatwerk-items) */}
+          {item?.is_custom_quote && (
+            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/60 p-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <Label htmlFor="editBriefing" className="text-amber-900">
+                  Maatwerk-briefing
+                </Label>
+                <FieldSaveIndicator status={briefingSave.status} savedAt={briefingSave.savedAt} error={briefingSave.error} />
+              </div>
+              <Textarea
+                id="editBriefing"
+                value={customBriefing}
+                onChange={(e) => setCustomBriefing(e.target.value)}
+                onBlur={() => briefingSave.flush()}
+                rows={6}
+                placeholder="Beschrijf zo concreet mogelijk wat je nodig hebt (aantallen, tijd, locatie, wensen)."
+              />
+              <p className="text-xs text-amber-800/80">
+                De partner ziet deze briefing in zijn offerte-editor. Fallback voor de klant als er nog geen "Beschrijving voor klant" is ingevuld.
+              </p>
+            </div>
+          )}
+
           {/* Custom name */}
           <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-3">

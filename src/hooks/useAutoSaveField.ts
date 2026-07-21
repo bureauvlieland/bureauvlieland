@@ -11,6 +11,7 @@ interface UseAutoSaveFieldArgs {
     admin_price_notes?: string | null;
     customer_notes?: string | null;
     partner_instructions?: string | null;
+    custom_briefing?: string | null;
   } | null;
   field: PartialSaveField;
   value: string;
