@@ -108,6 +108,10 @@ export interface PurchaseInvoiceInsert {
   allocations?: PurchaseInvoiceAllocation[];
   /** When true, skip the duplicate (partner_id + invoice_number) check. */
   allowDuplicate?: boolean;
+  /** Uitgelezen totaalbedrag incl. BTW van de originele PDF, voor verificatie tegen line-rows. */
+  pdf_total_incl_vat?: number | null;
+  /** Reden waarom een afwijking tussen onze berekening en het PDF-totaal geaccepteerd is. */
+  amount_mismatch_reason?: string | null;
 }
 
 
