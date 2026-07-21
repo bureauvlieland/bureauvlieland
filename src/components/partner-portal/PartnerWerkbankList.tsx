@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -9,6 +9,7 @@ import {
   Receipt,
   CalendarCheck,
   ArrowRight,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,9 +20,12 @@ import type {
   PartnerDashboardData,
 } from "@/types/partner";
 import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
+import { DismissInvoiceDialog } from "./DismissInvoiceDialog";
+import { canPartnerDismissInvoiceItem } from "@/lib/partnerInvoiceDismiss";
 
 interface Props {
   data: PartnerDashboardData;
+  onDismissed?: () => void;
 }
 
 type Bucket = "review" | "changes" | "schedule" | "invoice";
@@ -35,6 +39,7 @@ interface WerkbankRow {
   date: Date | null;
   itemLabel: string;
   hint: string;
+  dismissable?: boolean;
 }
 
 const BUCKET_META: Record<Bucket, { label: string; description: string; icon: React.ReactNode; tone: string }> = {
@@ -58,7 +63,7 @@ const BUCKET_META: Record<Bucket, { label: string; description: string; icon: Re
   },
   invoice: {
     label: "Factureren",
-    description: "Uitgevoerd — factuur registreren.",
+    description: "Uitgevoerd — factuur registreren of sluiten als er geen factuur volgt.",
     icon: <Receipt className="h-4 w-4" />,
     tone: "text-emerald-700",
   },
@@ -70,8 +75,9 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
   const rows: WerkbankRow[] = [];
 
   data.items.forEach(i => {
-    if (i.is_concept) return; // concepts are read-only previews, no action yet
-    if (i.executed_at || i.invoiced_number || i.status === "executed" || i.status === "invoiced") return;
+    if (i.is_concept) return;
+    if (i.invoiced_number || i.status === "invoiced") return;
+    if ((i as any).partner_dismissed_at) return;
     const req = i.program_requests;
     if (req.cancelled_at || req.status === "cancelled" || i.status === "cancelled" || i.status === "unavailable") return;
 
@@ -93,9 +99,10 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
       return;
     }
 
+    // Skip further buckets once uitgevoerd/gefactureerd staat vast, behalve invoice.
     const effPeople = i.override_people ?? req.number_of_people ?? 1;
     const numDays = getNumberOfDays(dates);
-    if (hasOpenAdminPriceChange(i as any, effPeople, numDays)) {
+    if (!i.executed_at && i.status !== "executed" && hasOpenAdminPriceChange(i as any, effPeople, numDays)) {
       rows.push({ ...base, bucket: "changes", hint: "Bureau Vlieland heeft de prijs/aantallen aangepast." });
       return;
     }
@@ -103,7 +110,6 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
     const customerOk = i.customer_accepted_at || i.customer_approved_at;
     const isConfirmed = i.status === "confirmed" || i.status === "accepted";
     if (isConfirmed && customerOk && !i.executed_at && req.terms_accepted_at) {
-      // Could be "schedule" if no confirmed time/date yet
       if (!i.confirmed_time && !i.proposed_time) {
         rows.push({ ...base, bucket: "schedule", hint: "Plan tijd in en bevestig." });
         return;
@@ -111,11 +117,16 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
     }
 
     const canInvoice =
-      (i.status === "accepted" || (i.status === "confirmed" && customerOk)) &&
+      (i.status === "accepted" || i.status === "executed" || (i.status === "confirmed" && customerOk)) &&
       !i.invoiced_number &&
       req.terms_accepted_at;
     if (canInvoice) {
-      rows.push({ ...base, bucket: "invoice", hint: "Registreer uw factuur." });
+      const dismissable = canPartnerDismissInvoiceItem({
+        status: i.status,
+        invoiced_number: i.invoiced_number ?? null,
+        partner_dismissed_at: (i as any).partner_dismissed_at ?? null,
+      });
+      rows.push({ ...base, bucket: "invoice", hint: "Registreer uw factuur.", dismissable });
     }
   });
 
@@ -153,10 +164,12 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
   });
 }
 
-export function PartnerWerkbankList({ data }: Props) {
+export function PartnerWerkbankList({ data, onDismissed }: Props) {
   const [searchParams] = useSearchParams();
   const impersonate = searchParams.get("impersonate");
   const urlSuffix = impersonate ? `?impersonate=${impersonate}` : "";
+  const [dismissTarget, setDismissTarget] = useState<{ id: string; label: string } | null>(null);
+  const partnerToken = (data.partner as any).partner_token as string | undefined;
 
   const grouped = useMemo(() => {
     const rows = buildRows(data);
@@ -199,12 +212,11 @@ export function PartnerWerkbankList({ data }: Props) {
             </div>
             <Card className="divide-y">
               {items.map(row => (
-                <Link
+                <div
                   key={`${row.bucket}-${row.id}`}
-                  to={`${row.href}${urlSuffix}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
                 >
-                  <div className="min-w-0 flex-1">
+                  <Link to={`${row.href}${urlSuffix}`} className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{row.itemLabel}</span>
                       {row.reference && (
@@ -216,16 +228,48 @@ export function PartnerWerkbankList({ data }: Props) {
                       {row.date && ` · ${format(row.date, "EEE d MMM", { locale: nl })}`}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
-                  </div>
-                  <Button variant="ghost" size="sm" className="shrink-0">
-                    Openen <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </Link>
+                  </Link>
+                  {row.bucket === "invoice" && row.dismissable && partnerToken && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDismissTarget({ id: row.id, label: row.itemLabel });
+                      }}
+                      title="Geen factuur — sluiten"
+                    >
+                      <XCircle className="mr-1 h-3.5 w-3.5" />
+                      Geen factuur
+                    </Button>
+                  )}
+                  <Link to={`${row.href}${urlSuffix}`} className="shrink-0">
+                    <Button variant="ghost" size="sm">
+                      Openen <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
               ))}
             </Card>
           </section>
         );
       })}
+      {dismissTarget && partnerToken && (
+        <DismissInvoiceDialog
+          open
+          onOpenChange={(o) => !o && setDismissTarget(null)}
+          itemId={dismissTarget.id}
+          itemLabel={dismissTarget.label}
+          partnerToken={partnerToken}
+          onDismissed={() => {
+            setDismissTarget(null);
+            onDismissed?.();
+          }}
+        />
+      )}
     </div>
   );
 }
+

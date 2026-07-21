@@ -138,6 +138,8 @@ Deno.serve(async (req) => {
 
     const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
     const activeItems = (items || []).filter(item => {
+      // Partner heeft factureren zelf gesloten → uit werkbank halen.
+      if (item.partner_dismissed_at) return false;
       const req = item.program_requests;
       const reqCancelled = req?.status === "cancelled" || !!req?.cancelled_at;
       const itemCancelled = item.status === "cancelled" || item.status === "unavailable";
@@ -378,6 +380,7 @@ Deno.serve(async (req) => {
           id: partner.id,
           name: partner.name,
           email: partner.email,
+          partner_token: partner.partner_token,
           commission_percentage: partner.commission_percentage,
           accommodation_commission_percentage: partner.accommodation_commission_percentage,
           partner_type: partnerType,

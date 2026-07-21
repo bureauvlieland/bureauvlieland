@@ -2975,6 +2975,8 @@ export type Database = {
           location_lng: number | null
           override_people: number | null
           parent_item_id: string | null
+          partner_dismissed_at: string | null
+          partner_dismissed_reason: string | null
           partner_instructions: string | null
           partner_price_change_acknowledged_at: string | null
           partner_purchase_price: number | null
@@ -3078,6 +3080,8 @@ export type Database = {
           location_lng?: number | null
           override_people?: number | null
           parent_item_id?: string | null
+          partner_dismissed_at?: string | null
+          partner_dismissed_reason?: string | null
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           partner_purchase_price?: number | null
@@ -3181,6 +3185,8 @@ export type Database = {
           location_lng?: number | null
           override_people?: number | null
           parent_item_id?: string | null
+          partner_dismissed_at?: string | null
+          partner_dismissed_reason?: string | null
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           partner_purchase_price?: number | null
