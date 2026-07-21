@@ -76,6 +76,8 @@ interface ProgramRequestItem {
   location_address?: string | null;
   pending_added?: boolean | null;
   pending_marked_for_removal?: boolean | null;
+  is_custom_quote?: boolean | null;
+  custom_briefing?: string | null;
 }
 
 interface AdminEditActivitySheetProps {
