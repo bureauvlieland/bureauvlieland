@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
       .from("partner_purchase_invoices")
       .select(`
         id, invoice_number, invoice_date, amount_incl_vat, description, payment_batch_id, status,
+        refund_pending_at,
         partners!inner(id, name, iban, bic, pays_by_direct_debit),
         program_requests!inner(reference_number)
       `)
@@ -159,6 +160,9 @@ Deno.serve(async (req) => {
       if (inv.payment_batch_id) {
         errors.push(`Factuur ${inv.invoice_number} zit al in een batch`);
       }
+      if (inv.refund_pending_at) {
+        errors.push(`Factuur ${inv.invoice_number} (${inv.partners?.name}) staat gemarkeerd als terug te vorderen en mag niet opnieuw betaald worden`);
+      }
       if (inv.partners?.pays_by_direct_debit) {
         errors.push(`Partner ${inv.partners?.name} betaalt via automatische incasso en hoort niet in een betaalbatch`);
       }
@@ -167,6 +171,29 @@ Deno.serve(async (req) => {
       else if (!validateIban(ibanRaw)) errors.push(`Ongeldig IBAN voor ${inv.partners?.name}: ${ibanRaw}`);
       if (Number(inv.amount_incl_vat || 0) <= 0) errors.push(`Bedrag ongeldig op factuur ${inv.invoice_number}`);
     }
+
+    // Duplicate guard: same (partner + normalized invoice number) mag maar 1x in de selectie zitten.
+    const normalizeInvNr = (v: string | null | undefined) =>
+      (v || "").replace(/[\s\-_.]/g, "").toUpperCase();
+    const dupBuckets = new Map<string, any[]>();
+    for (const inv of invoices as any[]) {
+      const partnerId = inv.partners?.id || "";
+      const nr = normalizeInvNr(inv.invoice_number);
+      if (!partnerId || !nr) continue;
+      const key = `${partnerId}::${nr}`;
+      const arr = dupBuckets.get(key) || [];
+      arr.push(inv);
+      dupBuckets.set(key, arr);
+    }
+    for (const [, group] of dupBuckets) {
+      if (group.length > 1) {
+        const first = group[0];
+        errors.push(
+          `Factuur ${first.invoice_number} (${first.partners?.name}) staat ${group.length}× in de selectie — controleer of het niet per ongeluk dubbel is geregistreerd`,
+        );
+      }
+    }
+
     if (errors.length > 0) {
       return new Response(JSON.stringify({ error: errors.join("; ") }), {
         status: 400,

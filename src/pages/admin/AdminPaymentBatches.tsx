@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Banknote, Download, AlertTriangle, Loader2, FileDown, ChevronDown, ChevronRight } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { findDuplicatesInSelection } from "@/lib/paymentBatchGuards";
 
 function nextWorkingDay(): string {
   const d = new Date();
@@ -42,6 +44,7 @@ function BatchTransactions({ batchId }: { batchId: string }) {
         .from("partner_purchase_invoices")
         .select(`
           id, invoice_number, invoice_date, amount_incl_vat, description,
+          refund_pending_at, refund_reason,
           partners(id, name, iban),
           program_requests(reference_number)
         `)
@@ -59,8 +62,23 @@ function BatchTransactions({ batchId }: { batchId: string }) {
     return <div className="py-4 text-sm text-muted-foreground">Geen gekoppelde transacties gevonden.</div>;
   }
   const total = data.reduce((s, r: any) => s + Number(r.amount_incl_vat || 0), 0);
+  const refunds = data.filter((r: any) => r.refund_pending_at);
   return (
     <div className="rounded-md border bg-muted/30 my-2">
+      {refunds.length > 0 && (
+        <Alert variant="destructive" className="rounded-b-none border-b-0">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{refunds.length} regel(s) terug te vorderen</AlertTitle>
+          <AlertDescription>
+            {refunds.map((r: any) => (
+              <div key={r.id} className="text-xs mt-1">
+                <span className="font-medium">{r.invoice_number}</span> — {r.partners?.name} — €
+                {Number(r.amount_incl_vat).toFixed(2)}: {r.refund_reason || "reden onbekend"}
+              </div>
+            ))}
+          </AlertDescription>
+        </Alert>
+      )}
       <Table>
         <TableHeader>
           <TableRow>
@@ -73,12 +91,17 @@ function BatchTransactions({ batchId }: { batchId: string }) {
         </TableHeader>
         <TableBody>
           {data.map((r: any) => (
-            <TableRow key={r.id}>
+            <TableRow key={r.id} className={r.refund_pending_at ? "bg-red-50/60" : undefined}>
               <TableCell className="font-medium">
                 {r.invoice_number}
                 <div className="text-xs text-muted-foreground">
                   {format(new Date(r.invoice_date), "d MMM yyyy", { locale: nl })}
                 </div>
+                {r.refund_pending_at && (
+                  <Badge variant="destructive" className="mt-1 text-[10px]">
+                    Terug te vorderen
+                  </Badge>
+                )}
               </TableCell>
               <TableCell>{r.partners?.name || "-"}</TableCell>
               <TableCell className="font-mono text-xs">{r.partners?.iban || "-"}</TableCell>
@@ -124,6 +147,7 @@ export default function AdminPaymentBatches() {
         .eq("status", "forwarded")
         .eq("partners.pays_by_direct_debit", false)
         .is("payment_batch_id", null)
+        .is("refund_pending_at", null)
         .order("invoice_date", { ascending: true });
       if (error) throw error;
       return data || [];
@@ -157,9 +181,19 @@ export default function AdminPaymentBatches() {
   const selectedRows = (candidates || []).filter((c: any) => selected.includes(c.id));
   const selectedTotal = selectedRows.reduce((s, r: any) => s + Number(r.amount_incl_vat || 0), 0);
 
+  const duplicatesInSelection = useMemo(
+    () => findDuplicatesInSelection(selectedRows as any),
+    [selectedRows],
+  );
+  const hasDuplicates = duplicatesInSelection.length > 0;
+
   const handleGenerate = async () => {
     if (selected.length === 0) {
       toast.error("Selecteer minstens één factuur");
+      return;
+    }
+    if (hasDuplicates) {
+      toast.error("Los eerst de dubbele facturen in de selectie op");
       return;
     }
     setIsGenerating(true);
@@ -266,11 +300,34 @@ export default function AdminPaymentBatches() {
                     </div>
                     <div className="text-xs text-muted-foreground">{selected.length} transacties</div>
                   </div>
-                  <Button onClick={handleGenerate} disabled={isGenerating || selected.length === 0}>
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || selected.length === 0 || hasDuplicates}
+                    title={hasDuplicates ? "Er staan dubbele facturen in de selectie" : undefined}
+                  >
                     {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
                     Genereer SEPA-bestand
                   </Button>
                 </div>
+
+                {hasDuplicates && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Dubbele facturen in selectie</AlertTitle>
+                    <AlertDescription>
+                      <div className="space-y-1 mt-1">
+                        {duplicatesInSelection.map((d) => (
+                          <div key={`${d.partnerId}-${d.normalized}`} className="text-sm">
+                            <span className="font-medium">{d.invoiceNumber}</span> van{" "}
+                            <span className="font-medium">{d.partnerName}</span> staat{" "}
+                            {d.ids.length}× aangevinkt. Vink één regel uit of markeer een van beide
+                            als terug te vorderen voordat je de batch genereert.
+                          </div>
+                        ))}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {isLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Laden…</div>
