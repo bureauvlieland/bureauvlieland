@@ -902,6 +902,8 @@ export function AddPurchaseInvoiceDialog({
         lines: validExtras.length === 0 && validLines.length > 0 ? validLines : undefined,
         allocations: validAllocations.length > 0 ? validAllocations : undefined,
         allowDuplicate: acceptDuplicate,
+        pdf_total_incl_vat: pdfTotalNum ?? undefined,
+        amount_mismatch_reason: amountMismatchReason.trim() || undefined,
       });
 
       // Create one purchase invoice per extra project (shared invoice_number + file_path)
