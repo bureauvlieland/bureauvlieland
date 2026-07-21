@@ -300,11 +300,34 @@ export default function AdminPaymentBatches() {
                     </div>
                     <div className="text-xs text-muted-foreground">{selected.length} transacties</div>
                   </div>
-                  <Button onClick={handleGenerate} disabled={isGenerating || selected.length === 0}>
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || selected.length === 0 || hasDuplicates}
+                    title={hasDuplicates ? "Er staan dubbele facturen in de selectie" : undefined}
+                  >
                     {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
                     Genereer SEPA-bestand
                   </Button>
                 </div>
+
+                {hasDuplicates && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Dubbele facturen in selectie</AlertTitle>
+                    <AlertDescription>
+                      <div className="space-y-1 mt-1">
+                        {duplicatesInSelection.map((d) => (
+                          <div key={`${d.partnerId}-${d.normalized}`} className="text-sm">
+                            <span className="font-medium">{d.invoiceNumber}</span> van{" "}
+                            <span className="font-medium">{d.partnerName}</span> staat{" "}
+                            {d.ids.length}× aangevinkt. Vink één regel uit of markeer een van beide
+                            als terug te vorderen voordat je de batch genereert.
+                          </div>
+                        ))}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {isLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Laden…</div>
