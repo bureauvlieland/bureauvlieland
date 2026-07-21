@@ -380,6 +380,7 @@ Deno.serve(async (req) => {
           id: partner.id,
           name: partner.name,
           email: partner.email,
+          partner_token: partner.partner_token,
           commission_percentage: partner.commission_percentage,
           accommodation_commission_percentage: partner.accommodation_commission_percentage,
           partner_type: partnerType,
