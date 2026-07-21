@@ -1922,6 +1922,83 @@ export function AddPurchaseInvoiceDialog({
               />
             </div>
 
+            {/* PDF-totaal verificatie */}
+            {(() => {
+              const computed =
+                lineTotals?.totalIncl ??
+                (Number.isFinite(parseFloat(amountIncl)) && parseFloat(amountIncl) > 0
+                  ? parseFloat(amountIncl)
+                  : (parseFloat(amountExcl) || 0) * (1 + (parseFloat(vatRate) || 0) / 100));
+              const pdfNum = pdfTotalIncl.trim() === "" ? null : parseFloat(pdfTotalIncl);
+              const g = evaluateSaveGuard({
+                computedInclVat: computed,
+                pdfInclVat: pdfNum,
+                mismatchReason: amountMismatchReason,
+                manuallyConfirmed: manuallyConfirmedNoPdfTotal,
+              });
+              const isMismatch = g.match.status === "mismatch";
+              const isMatch = g.match.status === "match";
+              const noPdf = g.match.status === "no_pdf_total";
+              return (
+                <div
+                  className={cn(
+                    "rounded-md border px-3 py-3 space-y-2 text-sm",
+                    isMismatch
+                      ? "border-destructive/40 bg-destructive/5"
+                      : isMatch
+                        ? "border-emerald-300 bg-emerald-50"
+                        : "border-amber-300 bg-amber-50",
+                  )}
+                >
+                  <div className="font-medium text-foreground">
+                    Verificatie tegen PDF-totaal
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 items-center">
+                    <Label className="text-xs">Totaal incl. BTW volgens PDF</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={pdfTotalIncl}
+                      onChange={(e) => setPdfTotalIncl(e.target.value)}
+                      placeholder="bv. 546.70"
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Onze berekening: €{computed.toFixed(2)}</span>
+                    {pdfNum != null && (
+                      <span>
+                        Verschil: €{g.match.difference.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  {isMismatch && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-destructive">
+                        Verschil van €{g.match.absoluteDifference.toFixed(2)} — corrigeer de regels, óf geef een reden op:
+                      </Label>
+                      <Textarea
+                        rows={2}
+                        value={amountMismatchReason}
+                        onChange={(e) => setAmountMismatchReason(e.target.value)}
+                        placeholder="bv. 'Prijs op PDF is incl. BTW — regels aangepast' of 'Partner stuurt correctiefactuur'"
+                      />
+                    </div>
+                  )}
+                  {noPdf && (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={manuallyConfirmedNoPdfTotal}
+                        onChange={(e) => setManuallyConfirmedNoPdfTotal(e.target.checked)}
+                      />
+                      <span>Ik heb het bedrag zelf tegen de PDF gecontroleerd</span>
+                    </label>
+                  )}
+                </div>
+              );
+            })()}
+
+
             {scanFailed && file && (
               <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
                 <AlertCircle className="h-4 w-4 mt-0.5" />
