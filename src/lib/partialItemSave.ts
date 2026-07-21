@@ -49,6 +49,20 @@ export async function savePartialItemField(
   rawValue: string,
 ): Promise<void> {
   const value = rawValue.trim() === "" ? null : rawValue;
+
+  // custom_briefing zit niet in de pending/publish-flow: schrijf direct live.
+  // Klant ziet 'm als beschrijving (fallback), partner in de offerte-editor.
+  if (field === "custom_briefing") {
+    const liveVal = (item.custom_briefing ?? null) as string | null;
+    if ((liveVal ?? null) === (value ?? null)) return;
+    const { error } = await supabase
+      .from("program_request_items")
+      .update({ custom_briefing: value } as any)
+      .eq("id", item.id);
+    if (error) throw error;
+    return;
+  }
+
   const liveValue = (item[field] ?? null) as string | null;
 
   // Concept item → schrijf direct live
