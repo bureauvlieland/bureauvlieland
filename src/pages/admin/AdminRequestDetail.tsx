@@ -294,6 +294,8 @@ interface ProgramRequestItem {
   bureau_guide_contact?: string | null;
   bureau_arranged_at?: string | null;
   bureau_arranged_notes?: string | null;
+  is_custom_quote?: boolean | null;
+  custom_briefing?: string | null;
 }
 
 
