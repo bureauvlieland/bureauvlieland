@@ -37,7 +37,7 @@ export function DismissInvoiceDialog({
 
   const handleSubmit = async () => {
     const valid = validateDismissReason(reason);
-    if (!valid.ok) {
+    if (valid.ok === false) {
       toast({ title: "Reden ontbreekt", description: valid.error, variant: "destructive" });
       return;
     }
