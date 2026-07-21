@@ -44,6 +44,7 @@ function BatchTransactions({ batchId }: { batchId: string }) {
         .from("partner_purchase_invoices")
         .select(`
           id, invoice_number, invoice_date, amount_incl_vat, description,
+          refund_pending_at, refund_reason,
           partners(id, name, iban),
           program_requests(reference_number)
         `)
@@ -61,8 +62,23 @@ function BatchTransactions({ batchId }: { batchId: string }) {
     return <div className="py-4 text-sm text-muted-foreground">Geen gekoppelde transacties gevonden.</div>;
   }
   const total = data.reduce((s, r: any) => s + Number(r.amount_incl_vat || 0), 0);
+  const refunds = data.filter((r: any) => r.refund_pending_at);
   return (
     <div className="rounded-md border bg-muted/30 my-2">
+      {refunds.length > 0 && (
+        <Alert variant="destructive" className="rounded-b-none border-b-0">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{refunds.length} regel(s) terug te vorderen</AlertTitle>
+          <AlertDescription>
+            {refunds.map((r: any) => (
+              <div key={r.id} className="text-xs mt-1">
+                <span className="font-medium">{r.invoice_number}</span> — {r.partners?.name} — €
+                {Number(r.amount_incl_vat).toFixed(2)}: {r.refund_reason || "reden onbekend"}
+              </div>
+            ))}
+          </AlertDescription>
+        </Alert>
+      )}
       <Table>
         <TableHeader>
           <TableRow>
@@ -75,12 +91,17 @@ function BatchTransactions({ batchId }: { batchId: string }) {
         </TableHeader>
         <TableBody>
           {data.map((r: any) => (
-            <TableRow key={r.id}>
+            <TableRow key={r.id} className={r.refund_pending_at ? "bg-red-50/60" : undefined}>
               <TableCell className="font-medium">
                 {r.invoice_number}
                 <div className="text-xs text-muted-foreground">
                   {format(new Date(r.invoice_date), "d MMM yyyy", { locale: nl })}
                 </div>
+                {r.refund_pending_at && (
+                  <Badge variant="destructive" className="mt-1 text-[10px]">
+                    Terug te vorderen
+                  </Badge>
+                )}
               </TableCell>
               <TableCell>{r.partners?.name || "-"}</TableCell>
               <TableCell className="font-mono text-xs">{r.partners?.iban || "-"}</TableCell>
