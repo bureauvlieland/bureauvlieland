@@ -1,87 +1,103 @@
-## Wat is er echt gebeurd
+## Wat is er gebeurd bij factuur 202702
 
-Correctie: BATCH-2607-0001 is **wél al naar ING verstuurd**, dus de dubbele betaling van €225 aan Zuiver Traiteur (factuur T-261008) is feitelijk uitgevoerd of staat ingepland bij de bank. Dat verandert het herstel: we kunnen de batch niet meer "annuleren en opnieuw genereren". We moeten:
-1. De dubbele betaling terugvorderen buiten het systeem om (dat doet Erwin bij Zuiver Traiteur / via de bank).
-2. In de administratie de dubbele factuur en de dubbele batch-regel correct afboeken zodat de rapportage klopt.
-3. Zorgen dat dit **nooit meer kan gebeuren**.
+**Feit vanuit de data:**
+- Onze DB, SEPA-XML en batch-totaal bevatten allemaal €595,90 voor deze inkoopfactuur.
+- Berekening: 11 × €49,70 = €546,70 → +9% BTW = €595,90 incl.
 
-## Herstel van deze concrete situatie (in-app)
+**Feit vanuit jouw uitleg van de PDF:**
+- "11 ritten à €49,70 p.p. **incl.** 9% BTW" — de eenheidsprijs op de PDF is **al inclusief** BTW.
+- Correcte totaal = 11 × €49,70 = **€546,70 incl**, waarvan excl = €501,56 en 9% BTW = €45,14.
 
-### A. Boekhoudkundig sluitend maken
-- Factuur `f07d8390-2f26-4a58-8c79-8d2494692b2f` (T-261008, 8 juni-versie) krijgt status `paid` (want ING heeft betaald) én een extra kolom `dispute_note` = *"Dubbel geregistreerd, terug te vorderen bij Zuiver Traiteur — zie originele factuur 5ffa39a1"*.
-- Nieuwe status-waarde `refund_pending` toevoegen aan `partner_purchase_invoices.status` óf een aparte flag `refund_pending_at timestamptz` + `refund_reason text`. Ik kies voor een aparte flag; status blijft `paid`, refund-flag maakt het zichtbaar in de UI.
-- In `AdminPaymentBatches` bij de batch-detail: rood label "1 terug te vorderen" met tooltip + link naar de factuur.
-- In `AdminRequestDetail` voor het bijbehorende project: banner "Dubbele inkoopfactuur — terug te vorderen bij partner" met bedrag en link.
+**Overpayment: €49,20** (het verschil tussen onze berekening en het werkelijke PDF-totaal).
 
-### B. Todo voor Erwin
-Auto-todo `refund_recovery` aanmaken:
-- Titel: *"Vorder €225,00 terug bij Zuiver Traiteur — dubbele T-261008 in BATCH-2607-0001"*
-- Sluit-criterium: `refund_pending_at` gecleared (Erwin drukt "Terugbetaling ontvangen" op de factuur).
+**Oorzaak (onbevestigd, moet stap 1 zijn):** de PDF-scanner (`parse-partner-invoice`) heeft €49,70 geclassificeerd als **excl.**-tarief en er 9% BTW bovenop gerekend, terwijl het tarief incl. was. In `AddPurchaseInvoiceDialog` is dat vervolgens ongewijzigd doorgezet naar `amount_incl_vat`. Er is nu geen enkele check die het door ons berekende totaal vergelijkt met het feitelijk op de PDF gedrukte totaalbedrag.
 
-## Voorkomen dat dit nog eens gebeurt
+---
 
-### 1. Blokkeer aan de bron — DB-constraint
-Migratie op `partner_purchase_invoices`:
-- Generated column `invoice_number_normalized` (uppercase, zonder `[\s\-_.]`).
-- Unique index op `(partner_id, invoice_number_normalized)` waar `invoice_number IS NOT NULL AND status <> 'rejected'`.
-- Vóór de index: markeer `f07d8390…` als `rejected` — dat maakt de index geldig én sluit hem uit van nieuwe batches, terwijl de refund-tracking op de andere velden blijft draaien.
+## Plan
 
-Hierdoor kan geen enkel codepad (admin-dialog, `register-partner-invoice`, inbox-promotie, import) hetzelfde factuurnummer twee keer voor dezelfde leverancier registreren.
+### Stap 1 — Bevestig oorzaak (blokkerend)
+- Download de originele PDF en verifieer visueel: (a) de "Totaal te betalen"-regel, (b) of €49,70 daadwerkelijk incl. of excl. staat vermeld.
+- Sla de bevindingen op als notitie op de invoice. Alleen bij bevestiging doorgaan met de volgende stappen.
 
-### 2. Batch-generatie zelf ook laten dedupliceren (defense in depth)
-In `supabase/functions/generate-payment-batch/index.ts` vóór het inserten van de batch:
-- Groepeer geselecteerde facturen op `(partner_id, normalized(invoice_number))`.
-- Bij >1 → 400 met melding: *"Factuur X (Partner Y) staat 2× in de selectie. Controleer of het niet per ongeluk dubbel is geregistreerd."*
-- Ook waarschuwen (400) als exacte match op `(partner_id, invoice_date, amount_incl_vat)` — dat vangt getallenfouten waarbij het factuurnummer per ongeluk anders is.
+### Stap 2 — Detectie-sweep over alle inkoopfacturen
+Bouw een read-only rapport dat voor elke `partner_purchase_invoices`-rij het PDF-totaal opnieuw parseert en vergelijkt met `amount_incl_vat`:
+1. Nieuwe edge function `reconcile-purchase-invoice-totals` die alle invoices met een `file_path` afloopt, de PDF-tekst extraheert (`pdftotext`/pdfjs), en een lijst met "totaal-kandidaten" haalt (`Totaal`, `Te betalen`, `Totaalbedrag`, `Grand total`).
+2. Vergelijking:
+   - **Match binnen €0,02** → OK.
+   - **Afwijking** → schrijf naar nieuwe tabel `purchase_invoice_reconciliation_findings` (invoice_id, stored_incl, pdf_incl_candidates, difference, severity, batch_id, status).
+3. Admin-scherm `/admin/facturen/afwijkingen` dat de findings toont, met per rij:
+   - Vlag als "in batch verzonden" of "nog niet verzonden".
+   - Actieknop "Markeer als terug te vorderen" (zet `refund_pending_at` + `refund_reason`).
+   - Actieknop "Corrigeer bedrag" (opent AddPurchaseInvoiceDialog in edit-mode — vereist eerst dat batch/forwarded-status wordt onderzocht).
+4. Reken bij factuur 202702 alvast handmatig af: markeer `refund_pending_at` met reden "BTW-interpretatiefout: PDF-tarief was incl., ons systeem berekende excl.+9% → €49,20 teruggevorderd".
 
-### 3. UI-guard vóór de "Genereer batch"-knop
-In `AdminPaymentBatches.tsx`:
-- Client-side dedupe check op de aangevinkte facturen (hergebruik `normalizeInvoiceNumber`).
-- Rode inline-waarschuwing per duplicaat met link naar de facturen.
-- Knop `disabled` zolang duplicaten geselecteerd zijn.
+### Stap 3 — Structurele guard in de invoerflow (voorkomen)
+**In `parse-partner-invoice`:**
+- Naast line-items ook altijd een `pdf_total_incl_vat_candidates: number[]` teruggeven (regels waar `totaal|te betalen|grand total|totaalbedrag` in staat, met bijbehorend bedrag).
+- Zet daarnaast een `pdf_total_incl_vat: number | null` (de meest waarschijnlijke totaalregel, of `null` bij twijfel).
 
-### 4. Achteraf-audit
-Nieuwe edge function `audit-payment-batch-duplicates` die dagelijks via `pg_cron` (of bij openen van de batch-pagina) checkt of bestaande **verzonden** batches duplicaten bevatten → maakt een `refund_recovery`-todo aan zodat Erwin het altijd ziet, ook als het via een ander pad binnenkomt.
+**In `AddPurchaseInvoiceDialog`:**
+- Boven de "Opslaan"-knop een verplichte vergelijkingscomponent tonen:
+  ```
+  PDF-totaal (uit factuur):   € 546,70
+  Onze berekening (som rijen): € 595,90
+  Verschil:                    € 49,20  ⚠️
+  ```
+- Bij verschil > €0,02: knop "Opslaan" disabled. Twee opties:
+  1. **Corrigeer regels** (BTW-modus toggle: "Eenheidsprijs is incl. BTW" → herbereken excl door /1,09).
+  2. **Forceer opslaan** — vereist reden in vrij tekstveld (opgeslagen in nieuwe kolom `amount_mismatch_reason`).
+- Wanneer PDF-totaal niet betrouwbaar geëxtraheerd kon worden (`pdf_total_incl_vat === null`), toon een gele banner "Kon totaal niet automatisch verifiëren — controleer handmatig" en verplicht handmatige bevestiging via checkbox.
 
-### 5. Regressie-tests
-- Vitest `paymentBatchDuplicateGuard.test.ts`: selectie met identieke, met-genormaliseerde en met-verschillende factuurnummers.
-- Vitest `refundPendingWorkflow.test.ts`: refund-flag correct getoond en gesloten.
-- Deno-test op `generate-payment-batch`: dedupe blokkeert dubbele selectie.
+**Toggle "incl./excl. BTW" per regel:**
+- Elke line-row krijgt een radio-groep `Eenheidsprijs is: [ ] excl. BTW  [x] incl. BTW`.
+- Standaard: incl. BTW (past bij hoe NL-horeca/dagrecreatie meestal factureert). Bij "incl." wordt excl herrekend als `unit / (1 + rate/100)`.
+- Scanner-output krijgt een veld `unit_price_is_inclusive: boolean` en zet de radio automatisch — bij Manege De Seeruyter, isla-vlieland, etc. is dit meestal true.
+
+### Stap 4 — Extra guard in `generate-payment-batch`
+Voeg voor elke geselecteerde invoice deze checks toe:
+- Weiger als `amount_mismatch_reason IS NOT NULL AND refund_pending_at IS NULL` (mismatch niet opgelost).
+- Weiger als er een openstaande finding in `purchase_invoice_reconciliation_findings` bestaat met status `open`.
+- Foutmelding lijst per invoice welke check faalde.
+
+### Stap 5 — Contract-tests
+- `purchaseInvoiceInclExclGuard.test.ts`: test `computeLineTotals` met incl-toggle voor beide modi + fixtures 11×€49,70@9%.
+- `purchaseInvoiceMismatchGuard.test.ts`: test dat "Opslaan" alleen doorkomt bij match of expliciete reden.
+- `generatePaymentBatchMismatchGuard.test.ts`: test dat een invoice met unresolved mismatch niet in de batch komt.
+- `reconcilePurchaseInvoiceTotals.test.ts`: unit-test voor de PDF-totaal-parser met 5 varianten (Nederlands "Totaal", "Te betalen", "Totaalbedrag incl. BTW", Engelse "Grand total", en een PDF zonder totaalregel).
+
+### Stap 6 — Terugvordering-workflow (afronding)
+- Op de refund-vlag komt een aparte lijst in `/admin/betaalbatches` sectie "Terug te vorderen bedragen" met per regel: partner, factuur, verschil, reden, datum toegevoegd, contactknop.
+- Zodra terugbetaling binnen is: knop "Terugbetaling ontvangen" clear `refund_pending_at` en logt in `project_communications`.
+
+---
 
 ## Technische details
 
-- **Migratie 1 (data-fix)**:
-  ```sql
-  ALTER TABLE partner_purchase_invoices
-    ADD COLUMN refund_pending_at timestamptz,
-    ADD COLUMN refund_reason text;
+**Nieuwe DB-kolommen (`partner_purchase_invoices`):**
+- `amount_mismatch_reason TEXT` — reden van geforceerde afwijking bij invoer.
+- `pdf_total_incl_vat NUMERIC(10,2)` — cache van geparseerd PDF-totaal voor later verificatie.
+- `unit_price_is_inclusive BOOLEAN DEFAULT FALSE` (optioneel, per line via `purchase_invoice_lines`).
 
-  UPDATE partner_purchase_invoices
-     SET refund_pending_at = now(),
-         refund_reason = 'Dubbele registratie T-261008 — betaald via BATCH-2607-0001, terug te vorderen bij Zuiver Traiteur',
-         status = 'rejected'
-   WHERE id = 'f07d8390-2f26-4a58-8c79-8d2494692b2f';
-  ```
+**Nieuwe tabel `purchase_invoice_reconciliation_findings`:**
+```
+id, invoice_id (FK), stored_incl, pdf_incl_extracted, difference, severity,
+in_batch_id (nullable), status ('open'|'resolved'|'ignored'),
+resolved_by, resolved_at, resolution_note, created_at, updated_at
+```
+- RLS: admin-only (has_role admin).
+- GRANT SELECT/INSERT/UPDATE aan authenticated + service_role.
 
-- **Migratie 2 (constraint)**:
-  ```sql
-  ALTER TABLE partner_purchase_invoices
-    ADD COLUMN invoice_number_normalized text
-    GENERATED ALWAYS AS (
-      upper(regexp_replace(coalesce(invoice_number,''), '[\s\-_.]', '', 'g'))
-    ) STORED;
+**Bestanden die aangepast worden:**
+- `supabase/functions/parse-partner-invoice/index.ts` — extra totaal-extractie.
+- `supabase/functions/generate-payment-batch/index.ts` — mismatch-guard.
+- `supabase/functions/reconcile-purchase-invoice-totals/index.ts` — nieuw.
+- `src/components/admin/AddPurchaseInvoiceDialog.tsx` — vergelijkingsblok, incl/excl toggle, forceer-reden.
+- `src/pages/admin/AdminPurchaseInvoiceFindings.tsx` — nieuw scherm.
+- `src/lib/purchaseInvoiceTotalMatch.ts` — helpers + tests.
 
-  CREATE UNIQUE INDEX ppi_partner_invnr_unique
-    ON partner_purchase_invoices (partner_id, invoice_number_normalized)
-    WHERE invoice_number IS NOT NULL AND status <> 'rejected';
-  ```
+**Migraties:** twee migraties (kolommen + nieuwe tabel), beide met verplichte GRANTs en RLS.
 
-- **Edge function**: `normalizeInvoiceNumber` (4 regels) dupliceren in Deno; identiek aan `src/lib/purchaseInvoiceDuplicateCheck.ts`.
+**Data-fix voor 202702:** één `UPDATE` via insert-tool nadat oorzaak in stap 1 is bevestigd.
 
-- **Auto-todo**: hergebruik bestaande `admin_todos` met nieuw type `refund_recovery`; sluit-criterium in `reconcile-admin-todos` = `refund_pending_at IS NULL`.
-
-- **Types**: `PurchaseInvoice` + `PurchaseInvoiceWithRelations` uitbreiden met `refund_pending_at` en `refund_reason`; `PurchaseInvoiceStatus` ongewijzigd.
-
-## Buiten scope
-- Automatische SEPA-recall (R-transacties bij ING) — dat moet Erwin handmatig bij de bank doen als de batch nog terug te halen valt; wij faciliteren alleen de administratie.
-- Aanpassing van `AdminBankStatements` matching-flow — de refund-inkomst wordt straks als gewone bank-lijn geboekt en gekoppeld aan de gemarkeerde factuur.
+Wil je dat ik dit zo bouw?
