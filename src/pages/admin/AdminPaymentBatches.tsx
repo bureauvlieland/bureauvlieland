@@ -181,9 +181,19 @@ export default function AdminPaymentBatches() {
   const selectedRows = (candidates || []).filter((c: any) => selected.includes(c.id));
   const selectedTotal = selectedRows.reduce((s, r: any) => s + Number(r.amount_incl_vat || 0), 0);
 
+  const duplicatesInSelection = useMemo(
+    () => findDuplicatesInSelection(selectedRows as any),
+    [selectedRows],
+  );
+  const hasDuplicates = duplicatesInSelection.length > 0;
+
   const handleGenerate = async () => {
     if (selected.length === 0) {
       toast.error("Selecteer minstens één factuur");
+      return;
+    }
+    if (hasDuplicates) {
+      toast.error("Los eerst de dubbele facturen in de selectie op");
       return;
     }
     setIsGenerating(true);
