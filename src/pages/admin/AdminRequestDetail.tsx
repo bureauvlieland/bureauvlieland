@@ -296,6 +296,8 @@ interface ProgramRequestItem {
   bureau_arranged_notes?: string | null;
   is_custom_quote?: boolean | null;
   custom_briefing?: string | null;
+  partner_dismissed_at?: string | null;
+  partner_dismissed_reason?: string | null;
 }
 
 
@@ -2203,6 +2205,25 @@ const AdminRequestDetail = () => {
                                         {item.is_custom_quote && item.custom_briefing && (
                                           <div className="text-xs text-amber-800/80 italic mt-1 line-clamp-2" title={item.custom_briefing}>
                                             Briefing: {item.custom_briefing}
+                                          </div>
+                                        )}
+                                        {item.partner_dismissed_at && (
+                                          <div className="mt-1 text-xs rounded border border-slate-300 bg-slate-50 px-2 py-1 flex items-start gap-2">
+                                            <span className="font-medium text-slate-700 shrink-0">Partner: geen factuur</span>
+                                            <span className="text-slate-600 flex-1 min-w-0">{item.partner_dismissed_reason || "Geen reden opgegeven"}</span>
+                                            <button
+                                              type="button"
+                                              className="text-[11px] underline text-slate-600 hover:text-slate-900"
+                                              onClick={async () => {
+                                                await supabase
+                                                  .from("program_request_items")
+                                                  .update({ partner_dismissed_at: null, partner_dismissed_reason: null })
+                                                  .eq("id", item.id);
+                                                fetchRequestData();
+                                              }}
+                                            >
+                                              Heropen
+                                            </button>
                                           </div>
                                         )}
                                         {item.admin_price_notes && (
