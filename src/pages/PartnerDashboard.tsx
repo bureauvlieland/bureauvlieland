@@ -259,7 +259,7 @@ const PartnerDashboardContent = () => {
             <PartnerProjectsTable rows={visibleRows} />
           </TabsContent>
           <TabsContent value="werkbank" className="mt-4">
-            <PartnerWerkbankList data={data} />
+            <PartnerWerkbankList data={data} onDismissed={refetch} />
           </TabsContent>
         </Tabs>
         <div className="space-y-4">
