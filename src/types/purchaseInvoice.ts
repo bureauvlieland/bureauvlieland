@@ -28,6 +28,8 @@ export interface PurchaseInvoice {
   payment_batch_id: string | null;
   supplier_commission_excl_vat?: number | null;
   supplier_commission_vat?: number | null;
+  refund_pending_at?: string | null;
+  refund_reason?: string | null;
 }
 
 export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
