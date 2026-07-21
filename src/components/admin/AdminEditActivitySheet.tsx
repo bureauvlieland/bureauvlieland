@@ -162,8 +162,15 @@ export const AdminEditActivitySheet = ({
     initialValue: autoInstrInitial,
     disabled: !open || !item,
   });
+  const briefingSave = useAutoSaveField({
+    item,
+    field: "custom_briefing",
+    value: customBriefing,
+    initialValue: item?.custom_briefing ?? "",
+    disabled: !open || !item || !item?.is_custom_quote,
+  });
 
-  const anyAutoSaveBusy = [nameSave, descSave, notesSave, instrSave].some(
+  const anyAutoSaveBusy = [nameSave, descSave, notesSave, instrSave, briefingSave].some(
     (s) => s.status === "saving" || s.isDirty,
   );
 
