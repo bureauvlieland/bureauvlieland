@@ -580,9 +580,9 @@ export const CustomerProgramItem = ({
           {/* Expanded content */}
           <CollapsibleContent className="mt-4 pt-4 border-t space-y-4">
             {/* Full description */}
-            {(item as any).block_description && (
+            {((item as any).block_description || ((item as any).is_custom_quote && (item as any).custom_briefing)) && (
               <p className="text-sm text-muted-foreground whitespace-pre-line">
-                {(item as any).block_description}
+                {(item as any).block_description || (item as any).custom_briefing}
               </p>
             )}
             {/* Maatwerk-specificatie */}
