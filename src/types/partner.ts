@@ -94,6 +94,8 @@ export interface PartnerItem {
   is_concept?: boolean;
   is_custom_quote?: boolean;
   custom_briefing?: string | null;
+  partner_dismissed_at?: string | null;
+  partner_dismissed_reason?: string | null;
   program_requests: {
     id: string;
     customer_name: string;
