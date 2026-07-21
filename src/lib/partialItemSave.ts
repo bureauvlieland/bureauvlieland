@@ -15,7 +15,8 @@ export type PartialSaveField =
   | "block_name"
   | "admin_price_notes"
   | "customer_notes"
-  | "partner_instructions";
+  | "partner_instructions"
+  | "custom_briefing";
 
 interface PartialItem {
   id: string;
@@ -24,6 +25,7 @@ interface PartialItem {
   admin_price_notes?: string | null;
   customer_notes?: string | null;
   partner_instructions?: string | null;
+  custom_briefing?: string | null;
   pending_block_name?: string | null;
   pending_admin_price_notes?: string | null;
   pending_customer_notes?: string | null;
@@ -31,7 +33,7 @@ interface PartialItem {
   pending_changed_at?: string | null;
 }
 
-const PENDING_FIELDS: Record<PartialSaveField, string> = {
+const PENDING_FIELDS: Record<Exclude<PartialSaveField, "custom_briefing">, string> = {
   block_name: "pending_block_name",
   admin_price_notes: "pending_admin_price_notes",
   customer_notes: "pending_customer_notes",
