@@ -213,10 +213,18 @@ function computeLineTotals(line: LineRow) {
   const qty = parseFloat(line.quantity) || 0;
   const unit = parseFloat(line.unit_price) || 0;
   const rate = parseFloat(line.vat_rate) || 0;
-  const excl = qty * unit;
-  // Als de scanner een exacte BTW van de PDF heeft meegegeven en de
-  // gebruiker excl/qty niet aangepast heeft, gebruik die override
-  // zodat ons totaal exact matcht met de leveranciersfactuur.
+
+  // Als de admin heeft aangevinkt dat de eenheidsprijs INCL. BTW is,
+  // dan reken we excl uit als unit/(1+rate/100). Dit is de nieuwe safeguard
+  // die voorkomt dat 11×€49,70 incl. per ongeluk als excl. verwerkt wordt.
+  const unitIsIncl = line.unit_price_is_inclusive === true;
+  const grossPerUnit = unit;
+  const netPerUnit = unitIsIncl ? unit / (1 + rate / 100) : unit;
+  const excl = qty * netPerUnit;
+  const inclFromToggle = unitIsIncl ? qty * grossPerUnit : excl * (1 + rate / 100);
+
+  // Overrides uit de scanner (BTW-bedrag of totaal-incl per regel) hebben voorrang
+  // wanneer ze intern consistent zijn met het aantal × prijs excl. dat we hebben.
   const overrideVat =
     line.vat_amount_override != null && line.vat_amount_override !== ""
       ? parseFloat(line.vat_amount_override)
@@ -226,11 +234,12 @@ function computeLineTotals(line: LineRow) {
       ? parseFloat(line.amount_incl_override)
       : null;
   const useOverride =
+    !unitIsIncl &&
     overrideVat != null &&
     !Number.isNaN(overrideVat) &&
     Math.abs(excl - (overrideIncl != null ? overrideIncl - overrideVat : excl)) < 0.02;
-  const vat = useOverride ? (overrideVat as number) : excl * (rate / 100);
-  const incl = useOverride && overrideIncl != null ? overrideIncl : excl + vat;
+  const vat = useOverride ? (overrideVat as number) : (unitIsIncl ? inclFromToggle - excl : excl * (rate / 100));
+  const incl = useOverride && overrideIncl != null ? overrideIncl : (unitIsIncl ? inclFromToggle : excl + vat);
   return {
     amount_excl_vat: Math.round(excl * 100) / 100,
     vat_amount: Math.round(vat * 100) / 100,
@@ -238,6 +247,7 @@ function computeLineTotals(line: LineRow) {
     vat_rate: rate,
   };
 }
+
 
 
 export function AddPurchaseInvoiceDialog({
