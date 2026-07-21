@@ -2239,11 +2239,14 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          invoice_number_normalized: string | null
           is_collective: boolean
           item_id: string | null
           paid_at: string | null
           partner_id: string
           payment_batch_id: string | null
+          refund_pending_at: string | null
+          refund_reason: string | null
           registered_by: string
           request_id: string | null
           status: string
@@ -2266,11 +2269,14 @@ export type Database = {
           id?: string
           invoice_date: string
           invoice_number: string
+          invoice_number_normalized?: string | null
           is_collective?: boolean
           item_id?: string | null
           paid_at?: string | null
           partner_id: string
           payment_batch_id?: string | null
+          refund_pending_at?: string | null
+          refund_reason?: string | null
           registered_by?: string
           request_id?: string | null
           status?: string
@@ -2293,11 +2299,14 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          invoice_number_normalized?: string | null
           is_collective?: boolean
           item_id?: string | null
           paid_at?: string | null
           partner_id?: string
           payment_batch_id?: string | null
+          refund_pending_at?: string | null
+          refund_reason?: string | null
           registered_by?: string
           request_id?: string | null
           status?: string
