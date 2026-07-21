@@ -1,4 +1,7 @@
-import { normalizeInvoiceNumber } from "./purchaseInvoiceDuplicateCheck";
+// Kept dependency-free (no supabase client import) so it loads in node/vitest without JSDOM.
+function normalizeInvoiceNumber(value: string | null | undefined): string {
+  return (value || "").replace(/[\s\-_.]/g, "").toUpperCase();
+}
 
 export interface BatchCandidate {
   id: string;
