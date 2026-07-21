@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       .from("partner_purchase_invoices")
       .select(`
         id, invoice_number, invoice_date, amount_incl_vat, description, payment_batch_id, status,
-        refund_pending_at,
+        refund_pending_at, amount_mismatch_reason, pdf_total_incl_vat,
         partners!inner(id, name, iban, bic, pays_by_direct_debit),
         program_requests!inner(reference_number)
       `)
@@ -154,6 +154,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check open findings voor deze facturen
+    const { data: openFindings } = await supabase
+      .from("purchase_invoice_reconciliation_findings")
+      .select("invoice_id, difference, pdf_incl_extracted, stored_incl")
+      .in("invoice_id", invoiceIds)
+      .eq("status", "open");
+    const findingsByInvoice = new Map<string, any>();
+    (openFindings || []).forEach((f: any) => findingsByInvoice.set(f.invoice_id, f));
+
     // Validate
     const errors: string[] = [];
     for (const inv of invoices as any[]) {
@@ -163,6 +172,18 @@ Deno.serve(async (req) => {
       if (inv.refund_pending_at) {
         errors.push(`Factuur ${inv.invoice_number} (${inv.partners?.name}) staat gemarkeerd als terug te vorderen en mag niet opnieuw betaald worden`);
       }
+      if (findingsByInvoice.has(inv.id)) {
+        const f = findingsByInvoice.get(inv.id);
+        errors.push(
+          `Factuur ${inv.invoice_number} (${inv.partners?.name}) heeft een openstaande bedragafwijking (€${Number(f.difference).toFixed(2)} verschil met PDF) — los eerst op onder /admin/facturen/afwijkingen`,
+        );
+      }
+      if (inv.amount_mismatch_reason && !inv.refund_pending_at) {
+        // mismatch bij invoer is genoteerd maar niet als refund afgehandeld — extra bevestiging vereist
+        errors.push(
+          `Factuur ${inv.invoice_number} (${inv.partners?.name}) is met een handmatige afwijkingsreden opgeslagen. Bevestig dat het bedrag klopt (los de finding op) voordat de batch gegenereerd wordt`,
+        );
+      }
       if (inv.partners?.pays_by_direct_debit) {
         errors.push(`Partner ${inv.partners?.name} betaalt via automatische incasso en hoort niet in een betaalbatch`);
       }
@@ -171,6 +192,7 @@ Deno.serve(async (req) => {
       else if (!validateIban(ibanRaw)) errors.push(`Ongeldig IBAN voor ${inv.partners?.name}: ${ibanRaw}`);
       if (Number(inv.amount_incl_vat || 0) <= 0) errors.push(`Bedrag ongeldig op factuur ${inv.invoice_number}`);
     }
+
 
     // Duplicate guard: same (partner + normalized invoice number) mag maar 1x in de selectie zitten.
     const normalizeInvNr = (v: string | null | undefined) =>
