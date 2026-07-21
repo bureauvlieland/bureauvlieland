@@ -204,6 +204,7 @@ export const AdminEditActivitySheet = ({
       setLocationLat(item.location_lat ?? null);
       setLocationLng(item.location_lng ?? null);
       setLocationAddress(item.location_address || "");
+      setCustomBriefing(item.custom_briefing ?? "");
     }
   }, [item]);
 
