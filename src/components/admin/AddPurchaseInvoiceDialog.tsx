@@ -88,6 +88,8 @@ interface LineRow {
   /** Optionele override uit de PDF/scanner zodat we vat niet hoeven te herrekenen. */
   vat_amount_override?: string;
   amount_incl_override?: string;
+  /** Interpretatie van de eenheidsprijs (default excl.). Als true wordt excl herrekend als unit/(1+rate/100). */
+  unit_price_is_inclusive?: boolean;
 }
 
 interface AddPurchaseInvoiceDialogProps {
@@ -101,6 +103,7 @@ interface AddPurchaseInvoiceDialogProps {
 type Step = "upload" | "scanning" | "verify";
 
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
+
 
 
 /**
