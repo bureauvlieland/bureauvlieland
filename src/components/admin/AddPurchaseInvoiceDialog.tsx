@@ -629,6 +629,25 @@ export function AddPurchaseInvoiceDialog({
       );
     }
 
+    // PDF-totaal verificatie: voorkomt de "Manege Seeruyter" bug waarbij een tarief
+    // dat op de PDF incl. BTW is, ten onrechte als excl. wordt geregistreerd.
+    const computedInclForGuard =
+      lineTotals?.totalIncl ??
+      (Number.isFinite(parseFloat(amountIncl)) && parseFloat(amountIncl) > 0
+        ? parseFloat(amountIncl)
+        : (parseFloat(amountExcl) || 0) * (1 + (parseFloat(vatRate) || 0) / 100));
+    const pdfTotalNum = pdfTotalIncl.trim() === "" ? null : parseFloat(pdfTotalIncl);
+    const guard = evaluateSaveGuard({
+      computedInclVat: computedInclForGuard,
+      pdfInclVat: pdfTotalNum,
+      mismatchReason: amountMismatchReason,
+      manuallyConfirmed: manuallyConfirmedNoPdfTotal,
+    });
+    if (!guard.canSave) {
+      return toast.error(guard.blockers.join(" • "));
+    }
+
+
 
     // Validate allocations if any are set
     const validAllocations = allocations
