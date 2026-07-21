@@ -404,12 +404,16 @@ export function AddPurchaseInvoiceDialog({
       setVatRate(result?.vat_rate != null ? String(result.vat_rate) : "21");
       setVatAmount("");
       setAmountIncl("");
+      setPdfTotalIncl(result?.amount_incl_vat != null ? String(result.amount_incl_vat) : "");
+      setAmountMismatchReason("");
+      setManuallyConfirmedNoPdfTotal(false);
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
       setExtraProjects([]);
       setLodgingEnabled(false);
       setLodgingQuoteId(null);
       setLodgingAllocations([]);
+
     } else {
       setStep("upload");
       setFile(null);
