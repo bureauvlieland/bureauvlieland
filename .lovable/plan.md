@@ -1,40 +1,49 @@
-## Probleem
+## Doel
+Partner kan een executed-item met "Registreer uw factuur" zelf uit de werkbank verwijderen als er geen factuur (meer) volgt — bijvoorbeeld omdat het buiten Bureau Vlieland om is afgehandeld, gratis was, of vervallen is. Admin behoudt volledig zicht.
 
-Bij het aanmaken van een maatwerk-item (AdminAddCustomItemSheet) wordt de briefing opgeslagen in `program_request_items.custom_briefing`. Die kolom wordt momenteel alléén gelezen door `PartnerItemSheet` (offerte-editor van de partner). Admin ziet 'm niet terug in "Activiteit bewerken" of in de activiteitenlijst; klant ziet 'm ook niet. Daardoor lijkt de invoer verloren.
+## Aanpak
 
-## Oplossing
+### 1. Database (migratie)
+Nieuwe kolommen op `program_request_items`:
+- `partner_dismissed_at timestamptz` — wanneer partner het item wegklikte
+- `partner_dismissed_reason text` — vrije-tekst reden (max 500 tekens)
 
-Briefing blijft in `custom_briefing` (single source of truth), maar wordt op drie extra plekken zichtbaar en bewerkbaar gemaakt.
+Geen aparte tabel; audit-spoor blijft binnen het item.
 
-### 1. Admin — "Activiteit bewerken" (AdminEditActivitySheet)
+### 2. Edge function
+Nieuwe function `dismiss-partner-invoice-item`:
+- Input: `partnerToken`, `itemId`, `reason` (verplicht, ≥ 3 tekens)
+- Valideert dat het item bij deze partner hoort én status `executed` heeft én nog géén `invoiced_number`
+- Zet `partner_dismissed_at = now()`, `partner_dismissed_reason = reason`
+- Logt regel in `project_communications` (type `partner_note`, zichtbaar voor admin) met de reden
+- Sluit bijbehorende open admin-todos van type `partner_invoice_pending` voor dit item
 
-- Voor items met `is_custom_quote = true` extra sectie **"Maatwerk-briefing"** bovenaan (boven Omschrijving), met een Textarea + auto-save indicator, gekoppeld aan `custom_briefing`.
-- Hergebruikt de bestaande `useAutoSaveField`-flow. Update pending/diff-logica zoals de andere velden.
-- Kleine hint: *"Deze briefing ziet de partner in zijn offerte-editor."*
+### 3. Filter in `get-partner-dashboard`
+`activeItems`-filter uitbreiden: items met `partner_dismissed_at != null` niet meer teruggeven.
 
-### 2. Admin — Activiteitenlijst (AdminRequestDetail)
+### 4. UI partner-werkbank
+In de "Factureren"-sectie, per rij:
+- Extra secundaire knop **"Geen factuur — sluiten"** naast "Openen"
+- Opent dialog: verplicht reden-veld + waarschuwingstekst dat admin dit ziet en het onderdeel daarna niet meer in de werkbank staat
+- Na bevestigen: refetch dashboard, item verdwijnt
 
-- Onder de rij-titel van een maatwerk-item een grijze one-liner tonen: eerste ~120 tekens van `custom_briefing` met een "…" fade als hij langer is. Alleen zichtbaar voor `is_custom_quote`.
+### 5. Admin-zichtbaarheid
+In `AdminRequestDetail` bij het item-blok: als `partner_dismissed_at` is gezet → duidelijke amber banner "Partner heeft factureren gesloten op [datum] — reden: [tekst]" + knop "Heropenen" (zet velden op null) zodat admin het kan corrigeren.
 
-### 3. Klant — CustomerProgramItem
+### 6. Tests
+- Vitest: guard-tests op nieuwe helper `canPartnerDismissInvoiceItem` (status executed, geen invoiced_number, geen dismiss al gezet)
+- Deno: unit-test op edge function happy-path + rejection bij verkeerde partner / verkeerde status
 
-- Als item `is_custom_quote` én `custom_description` leeg is, `custom_briefing` gebruiken als omschrijving (fallback). Zo ziet de klant meteen waar het over gaat.
-- Als admin later `custom_description` invult, wint die (bestaand gedrag blijft leidend).
-- Optioneel: subtiele "Maatwerk"-badge naast de titel, hergebruik bestaande badge-styling.
+## Bestanden
+- **Nieuw**: `supabase/functions/dismiss-partner-invoice-item/index.ts`
+- **Nieuw**: `src/lib/partnerInvoiceDismiss.ts` + test
+- **Nieuw**: `src/components/partner/DismissInvoiceDialog.tsx`
+- **Wijzig**: `supabase/functions/get-partner-dashboard/index.ts` (filter + select van nieuwe kolommen)
+- **Wijzig**: `src/pages/PartnerDashboard.tsx` of het Werkbank-component (knop + dialog inhaken)
+- **Wijzig**: `src/hooks/usePartnerDashboard.ts` (dismiss-actie)
+- **Wijzig**: `src/pages/admin/AdminRequestDetail.tsx` (banner + heropenen)
+- **Migratie**: kolommen toevoegen (geen policy-wijziging nodig; RLS staat al goed)
 
-### 4. Partner (geen wijziging)
-
-Bestaande PartnerItemSheet leest al `custom_briefing || customer_notes` — blijft werken.
-
-## Technische details
-
-- Bestanden: `AdminEditActivitySheet.tsx` (nieuwe sectie + save-hook), `AdminRequestDetail.tsx` (preview onder titel), `CustomerProgramItem.tsx` (fallback + badge), `useCustomerProgram.ts`/edge function `get-customer-program` (zorg dat `custom_briefing` + `is_custom_quote` meegestuurd worden — checken en zo nodig toevoegen).
-- Types (`src/types/partner.ts`, `programRequest.ts`) hebben `custom_briefing?` en `is_custom_quote?` al — geen migratie nodig.
-- 1 nieuwe unit-test: `customerProgramItem` fallback-logica (briefing → description als description leeg).
-- Terugwerkende kracht: bestaand item BV-2607-0002 wordt automatisch correct getoond zodra de code live is (data staat al in `custom_briefing`).
-
-## Verificatie
-
-1. `bun x tsgo` moet clean draaien.
-2. Vitest suite (incl. nieuwe test) groen.
-3. Handmatig in BV-2607-0002: briefing verschijnt in edit-sheet (bewerkbaar), in lijst-preview en klantportaal.
+## Buiten scope
+- Automatisch verbergen na X maanden — bewust niet, jij koos handmatig
+- Reminder-mails naar partner — kunnen later apart
