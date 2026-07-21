@@ -2191,8 +2191,20 @@ const AdminRequestDetail = () => {
                                   <TableRow key={item.id} className="group">
                                     <TableCell>
                                       <div>
-                                        <div className="font-medium">{item.block_name}</div>
+                                        <div className="font-medium flex items-center gap-1.5">
+                                          {item.block_name}
+                                          {item.is_custom_quote && (
+                                            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                                              Maatwerk
+                                            </span>
+                                          )}
+                                        </div>
                                         <div className="text-xs text-slate-500">{item.block_category}</div>
+                                        {item.is_custom_quote && item.custom_briefing && (
+                                          <div className="text-xs text-amber-800/80 italic mt-1 line-clamp-2" title={item.custom_briefing}>
+                                            Briefing: {item.custom_briefing}
+                                          </div>
+                                        )}
                                         {item.admin_price_notes && (
                                           <div className="text-xs text-muted-foreground italic mt-1">{item.admin_price_notes}</div>
                                         )}
