@@ -77,7 +77,7 @@ export async function savePartialItemField(
   }
 
   // Live item → pending flow
-  const pendingCol = PENDING_FIELDS[field];
+  const pendingCol = PENDING_FIELDS[field as Exclude<PartialSaveField, "custom_briefing">];
   const samenAlsLive = (liveValue ?? null) === (value ?? null);
   const pendingValue = samenAlsLive ? null : value;
 
