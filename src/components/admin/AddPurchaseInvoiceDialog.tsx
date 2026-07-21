@@ -291,9 +291,14 @@ export function AddPurchaseInvoiceDialog({
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptDuplicate, setAcceptDuplicate] = useState(false);
+  // PDF-totaal verificatie (voorkomt de "Manege Seeruyter" bug: incl-vs-excl fout)
+  const [pdfTotalIncl, setPdfTotalIncl] = useState<string>("");
+  const [amountMismatchReason, setAmountMismatchReason] = useState<string>("");
+  const [manuallyConfirmedNoPdfTotal, setManuallyConfirmedNoPdfTotal] = useState(false);
   // Default ON: kosten van inkoopfactuur worden direct overgenomen als
   // verkoopfactuurregels, zodat ze gegarandeerd op de klantfactuur landen.
   const [copyToBillingLines, setCopyToBillingLines] = useState(true);
+
 
   // Duplicate check (same partner + invoice number)
   const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
