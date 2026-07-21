@@ -1,33 +1,40 @@
-## Situatie
+## Probleem
 
-Je hebt in GitHub secrets gezet:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_PROJECT_ID`
+Bij het aanmaken van een maatwerk-item (AdminAddCustomItemSheet) wordt de briefing opgeslagen in `program_request_items.custom_briefing`. Die kolom wordt momenteel alléén gelezen door `PartnerItemSheet` (offerte-editor van de partner). Admin ziet 'm niet terug in "Activiteit bewerken" of in de activiteitenlijst; klant ziet 'm ook niet. Daardoor lijkt de invoer verloren.
 
-De `e2e-smoke` job heeft daarnaast ook `SUPABASE_SERVICE_ROLE_KEY` en `CI_FIXTURE_SECRET` nodig. De **service role key is op Lovable Cloud niet beschikbaar** in de UI — die kun je dus niet in GitHub zetten. Zonder die key kan de smoke-test niet mint-en/seeden via service role en faalt hij sowieso.
+## Oplossing
 
-## Voorstel
+Briefing blijft in `custom_briefing` (single source of truth), maar wordt op drie extra plekken zichtbaar en bewerkbaar gemaakt.
 
-De `e2e-smoke` job uit `.github/workflows/ci.yml` verwijderen (inclusief de referentie in de `ci-status` job). De echte dekking blijft overeind:
+### 1. Admin — "Activiteit bewerken" (AdminEditActivitySheet)
 
-- **Vitest** (frontend unit tests) — dekt logica, guards, portal-status, financials, workflow.
-- **Deno edge function tests** — dekt edge functions in isolatie.
-- De smoke-test was een "bonus" pre-prod check die alleen op `main` draaide en de dev-backend muteerde. Nuttig, maar niet kritiek — en niet uitvoerbaar zonder service role key.
+- Voor items met `is_custom_quote = true` extra sectie **"Maatwerk-briefing"** bovenaan (boven Omschrijving), met een Textarea + auto-save indicator, gekoppeld aan `custom_briefing`.
+- Hergebruikt de bestaande `useAutoSaveField`-flow. Update pending/diff-logica zoals de andere velden.
+- Kleine hint: *"Deze briefing ziet de partner in zijn offerte-editor."*
 
-## Wijzigingen
+### 2. Admin — Activiteitenlijst (AdminRequestDetail)
 
-**`.github/workflows/ci.yml`:**
-1. Verwijder de volledige `e2e-smoke:` job (regels ~87–133).
-2. In `ci-status`:
-   - `needs: [frontend-tests, edge-function-tests, e2e-smoke]` → `needs: [frontend-tests, edge-function-tests]`
-   - Verwijder de `sm=` regel, de smoke-rij in de tabel, en het smoke-status-check blok onderaan.
+- Onder de rij-titel van een maatwerk-item een grijze one-liner tonen: eerste ~120 tekens van `custom_briefing` met een "…" fade als hij langer is. Alleen zichtbaar voor `is_custom_quote`.
 
-## Gevolgen
+### 3. Klant — CustomerProgramItem
 
-- CI slaagt zodra Vitest + Deno groen zijn (probleem 1 en 2 uit de vorige ronde zijn al gefixt).
-- Pre-productie smoke draait niet meer automatisch. Wil je 'm later terug, dan moet er een pad zijn om de service role key veilig aan CI te geven (bijv. via een aparte staging-Supabase die je zelf beheert, buiten Lovable Cloud).
+- Als item `is_custom_quote` én `custom_description` leeg is, `custom_briefing` gebruiken als omschrijving (fallback). Zo ziet de klant meteen waar het over gaat.
+- Als admin later `custom_description` invult, wint die (bestaand gedrag blijft leidend).
+- Optioneel: subtiele "Maatwerk"-badge naast de titel, hergebruik bestaande badge-styling.
 
-## Alternatief
+### 4. Partner (geen wijziging)
 
-Als je de smoke wél wilt houden: we kunnen 'm behouden maar met `if: false` uitschakelen, zodat het skelet in de repo blijft staan voor later. Zeg het maar.
+Bestaande PartnerItemSheet leest al `custom_briefing || customer_notes` — blijft werken.
+
+## Technische details
+
+- Bestanden: `AdminEditActivitySheet.tsx` (nieuwe sectie + save-hook), `AdminRequestDetail.tsx` (preview onder titel), `CustomerProgramItem.tsx` (fallback + badge), `useCustomerProgram.ts`/edge function `get-customer-program` (zorg dat `custom_briefing` + `is_custom_quote` meegestuurd worden — checken en zo nodig toevoegen).
+- Types (`src/types/partner.ts`, `programRequest.ts`) hebben `custom_briefing?` en `is_custom_quote?` al — geen migratie nodig.
+- 1 nieuwe unit-test: `customerProgramItem` fallback-logica (briefing → description als description leeg).
+- Terugwerkende kracht: bestaand item BV-2607-0002 wordt automatisch correct getoond zodra de code live is (data staat al in `custom_briefing`).
+
+## Verificatie
+
+1. `bun x tsgo` moet clean draaien.
+2. Vitest suite (incl. nieuwe test) groen.
+3. Handmatig in BV-2607-0002: briefing verschijnt in edit-sheet (bewerkbaar), in lijst-preview en klantportaal.
