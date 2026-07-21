@@ -172,6 +172,7 @@ export interface PartnerDashboardData {
     commission_percentage: number;
     accommodation_commission_percentage?: number;
     partner_type?: string;
+    partner_token?: string;
   };
   items: PartnerItem[];
   summary: {
