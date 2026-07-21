@@ -34,6 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { evaluateSaveGuard } from "@/lib/purchaseInvoiceTotalMatch";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +89,8 @@ interface LineRow {
   /** Optionele override uit de PDF/scanner zodat we vat niet hoeven te herrekenen. */
   vat_amount_override?: string;
   amount_incl_override?: string;
+  /** Interpretatie van de eenheidsprijs (default excl.). Als true wordt excl herrekend als unit/(1+rate/100). */
+  unit_price_is_inclusive?: boolean;
 }
 
 interface AddPurchaseInvoiceDialogProps {
@@ -101,6 +104,7 @@ interface AddPurchaseInvoiceDialogProps {
 type Step = "upload" | "scanning" | "verify";
 
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
+
 
 
 /**
@@ -210,10 +214,18 @@ function computeLineTotals(line: LineRow) {
   const qty = parseFloat(line.quantity) || 0;
   const unit = parseFloat(line.unit_price) || 0;
   const rate = parseFloat(line.vat_rate) || 0;
-  const excl = qty * unit;
-  // Als de scanner een exacte BTW van de PDF heeft meegegeven en de
-  // gebruiker excl/qty niet aangepast heeft, gebruik die override
-  // zodat ons totaal exact matcht met de leveranciersfactuur.
+
+  // Als de admin heeft aangevinkt dat de eenheidsprijs INCL. BTW is,
+  // dan reken we excl uit als unit/(1+rate/100). Dit is de nieuwe safeguard
+  // die voorkomt dat 11×€49,70 incl. per ongeluk als excl. verwerkt wordt.
+  const unitIsIncl = line.unit_price_is_inclusive === true;
+  const grossPerUnit = unit;
+  const netPerUnit = unitIsIncl ? unit / (1 + rate / 100) : unit;
+  const excl = qty * netPerUnit;
+  const inclFromToggle = unitIsIncl ? qty * grossPerUnit : excl * (1 + rate / 100);
+
+  // Overrides uit de scanner (BTW-bedrag of totaal-incl per regel) hebben voorrang
+  // wanneer ze intern consistent zijn met het aantal × prijs excl. dat we hebben.
   const overrideVat =
     line.vat_amount_override != null && line.vat_amount_override !== ""
       ? parseFloat(line.vat_amount_override)
@@ -223,11 +235,12 @@ function computeLineTotals(line: LineRow) {
       ? parseFloat(line.amount_incl_override)
       : null;
   const useOverride =
+    !unitIsIncl &&
     overrideVat != null &&
     !Number.isNaN(overrideVat) &&
     Math.abs(excl - (overrideIncl != null ? overrideIncl - overrideVat : excl)) < 0.02;
-  const vat = useOverride ? (overrideVat as number) : excl * (rate / 100);
-  const incl = useOverride && overrideIncl != null ? overrideIncl : excl + vat;
+  const vat = useOverride ? (overrideVat as number) : (unitIsIncl ? inclFromToggle - excl : excl * (rate / 100));
+  const incl = useOverride && overrideIncl != null ? overrideIncl : (unitIsIncl ? inclFromToggle : excl + vat);
   return {
     amount_excl_vat: Math.round(excl * 100) / 100,
     vat_amount: Math.round(vat * 100) / 100,
@@ -235,6 +248,7 @@ function computeLineTotals(line: LineRow) {
     vat_rate: rate,
   };
 }
+
 
 
 export function AddPurchaseInvoiceDialog({
@@ -278,9 +292,14 @@ export function AddPurchaseInvoiceDialog({
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptDuplicate, setAcceptDuplicate] = useState(false);
+  // PDF-totaal verificatie (voorkomt de "Manege Seeruyter" bug: incl-vs-excl fout)
+  const [pdfTotalIncl, setPdfTotalIncl] = useState<string>("");
+  const [amountMismatchReason, setAmountMismatchReason] = useState<string>("");
+  const [manuallyConfirmedNoPdfTotal, setManuallyConfirmedNoPdfTotal] = useState(false);
   // Default ON: kosten van inkoopfactuur worden direct overgenomen als
   // verkoopfactuurregels, zodat ze gegarandeerd op de klantfactuur landen.
   const [copyToBillingLines, setCopyToBillingLines] = useState(true);
+
 
   // Duplicate check (same partner + invoice number)
   const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
@@ -386,12 +405,16 @@ export function AddPurchaseInvoiceDialog({
       setVatRate(result?.vat_rate != null ? String(result.vat_rate) : "21");
       setVatAmount("");
       setAmountIncl("");
+      setPdfTotalIncl(result?.amount_incl_vat != null ? String(result.amount_incl_vat) : "");
+      setAmountMismatchReason("");
+      setManuallyConfirmedNoPdfTotal(false);
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
       setExtraProjects([]);
       setLodgingEnabled(false);
       setLodgingQuoteId(null);
       setLodgingAllocations([]);
+
     } else {
       setStep("upload");
       setFile(null);
@@ -605,6 +628,25 @@ export function AddPurchaseInvoiceDialog({
         `Factuurnummer ${duplicateInvoice.invoice_number} is al geregistreerd voor deze leverancier. Vink "Toch opslaan" aan om door te gaan.`,
       );
     }
+
+    // PDF-totaal verificatie: voorkomt de "Manege Seeruyter" bug waarbij een tarief
+    // dat op de PDF incl. BTW is, ten onrechte als excl. wordt geregistreerd.
+    const computedInclForGuard =
+      lineTotals?.totalIncl ??
+      (Number.isFinite(parseFloat(amountIncl)) && parseFloat(amountIncl) > 0
+        ? parseFloat(amountIncl)
+        : (parseFloat(amountExcl) || 0) * (1 + (parseFloat(vatRate) || 0) / 100));
+    const pdfTotalNum = pdfTotalIncl.trim() === "" ? null : parseFloat(pdfTotalIncl);
+    const guard = evaluateSaveGuard({
+      computedInclVat: computedInclForGuard,
+      pdfInclVat: pdfTotalNum,
+      mismatchReason: amountMismatchReason,
+      manuallyConfirmed: manuallyConfirmedNoPdfTotal,
+    });
+    if (!guard.canSave) {
+      return toast.error(guard.blockers.join(" • "));
+    }
+
 
 
     // Validate allocations if any are set
@@ -860,6 +902,8 @@ export function AddPurchaseInvoiceDialog({
         lines: validExtras.length === 0 && validLines.length > 0 ? validLines : undefined,
         allocations: validAllocations.length > 0 ? validAllocations : undefined,
         allowDuplicate: acceptDuplicate,
+        pdf_total_incl_vat: pdfTotalNum ?? undefined,
+        amount_mismatch_reason: amountMismatchReason.trim() || undefined,
       });
 
       // Create one purchase invoice per extra project (shared invoice_number + file_path)
@@ -1877,6 +1921,83 @@ export function AddPurchaseInvoiceDialog({
                 rows={2}
               />
             </div>
+
+            {/* PDF-totaal verificatie */}
+            {(() => {
+              const computed =
+                lineTotals?.totalIncl ??
+                (Number.isFinite(parseFloat(amountIncl)) && parseFloat(amountIncl) > 0
+                  ? parseFloat(amountIncl)
+                  : (parseFloat(amountExcl) || 0) * (1 + (parseFloat(vatRate) || 0) / 100));
+              const pdfNum = pdfTotalIncl.trim() === "" ? null : parseFloat(pdfTotalIncl);
+              const g = evaluateSaveGuard({
+                computedInclVat: computed,
+                pdfInclVat: pdfNum,
+                mismatchReason: amountMismatchReason,
+                manuallyConfirmed: manuallyConfirmedNoPdfTotal,
+              });
+              const isMismatch = g.match.status === "mismatch";
+              const isMatch = g.match.status === "match";
+              const noPdf = g.match.status === "no_pdf_total";
+              return (
+                <div
+                  className={cn(
+                    "rounded-md border px-3 py-3 space-y-2 text-sm",
+                    isMismatch
+                      ? "border-destructive/40 bg-destructive/5"
+                      : isMatch
+                        ? "border-emerald-300 bg-emerald-50"
+                        : "border-amber-300 bg-amber-50",
+                  )}
+                >
+                  <div className="font-medium text-foreground">
+                    Verificatie tegen PDF-totaal
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 items-center">
+                    <Label className="text-xs">Totaal incl. BTW volgens PDF</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={pdfTotalIncl}
+                      onChange={(e) => setPdfTotalIncl(e.target.value)}
+                      placeholder="bv. 546.70"
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Onze berekening: €{computed.toFixed(2)}</span>
+                    {pdfNum != null && (
+                      <span>
+                        Verschil: €{g.match.difference.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  {isMismatch && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-destructive">
+                        Verschil van €{g.match.absoluteDifference.toFixed(2)} — corrigeer de regels, óf geef een reden op:
+                      </Label>
+                      <Textarea
+                        rows={2}
+                        value={amountMismatchReason}
+                        onChange={(e) => setAmountMismatchReason(e.target.value)}
+                        placeholder="bv. 'Prijs op PDF is incl. BTW — regels aangepast' of 'Partner stuurt correctiefactuur'"
+                      />
+                    </div>
+                  )}
+                  {noPdf && (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={manuallyConfirmedNoPdfTotal}
+                        onChange={(e) => setManuallyConfirmedNoPdfTotal(e.target.checked)}
+                      />
+                      <span>Ik heb het bedrag zelf tegen de PDF gecontroleerd</span>
+                    </label>
+                  )}
+                </div>
+              );
+            })()}
+
 
             {scanFailed && file && (
               <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">

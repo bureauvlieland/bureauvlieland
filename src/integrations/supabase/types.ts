@@ -2229,6 +2229,7 @@ export type Database = {
         Row: {
           amount_excl_vat: number
           amount_incl_vat: number
+          amount_mismatch_reason: string | null
           approved_at: string | null
           bank_line_id: string | null
           created_at: string
@@ -2245,6 +2246,7 @@ export type Database = {
           paid_at: string | null
           partner_id: string
           payment_batch_id: string | null
+          pdf_total_incl_vat: number | null
           refund_pending_at: string | null
           refund_reason: string | null
           registered_by: string
@@ -2259,6 +2261,7 @@ export type Database = {
         Insert: {
           amount_excl_vat: number
           amount_incl_vat: number
+          amount_mismatch_reason?: string | null
           approved_at?: string | null
           bank_line_id?: string | null
           created_at?: string
@@ -2275,6 +2278,7 @@ export type Database = {
           paid_at?: string | null
           partner_id: string
           payment_batch_id?: string | null
+          pdf_total_incl_vat?: number | null
           refund_pending_at?: string | null
           refund_reason?: string | null
           registered_by?: string
@@ -2289,6 +2293,7 @@ export type Database = {
         Update: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          amount_mismatch_reason?: string | null
           approved_at?: string | null
           bank_line_id?: string | null
           created_at?: string
@@ -2305,6 +2310,7 @@ export type Database = {
           paid_at?: string | null
           partner_id?: string
           payment_batch_id?: string | null
+          pdf_total_incl_vat?: number | null
           refund_pending_at?: string | null
           refund_reason?: string | null
           registered_by?: string
@@ -3866,6 +3872,72 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "purchase_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_invoice_reconciliation_findings: {
+        Row: {
+          created_at: string
+          difference: number
+          id: string
+          in_batch_id: string | null
+          invoice_id: string
+          pdf_incl_candidates: Json | null
+          pdf_incl_extracted: number | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          stored_incl: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          difference: number
+          id?: string
+          in_batch_id?: string | null
+          invoice_id: string
+          pdf_incl_candidates?: Json | null
+          pdf_incl_extracted?: number | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          stored_incl: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          difference?: number
+          id?: string
+          in_batch_id?: string | null
+          invoice_id?: string
+          pdf_incl_candidates?: Json | null
+          pdf_incl_extracted?: number | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          stored_incl?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoice_reconciliation_findings_in_batch_id_fkey"
+            columns: ["in_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payment_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_reconciliation_findings_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "partner_purchase_invoices"
