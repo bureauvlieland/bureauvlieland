@@ -37,6 +37,7 @@ import { timeSlots } from "@/types/buildingBlock";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { resolveCustomerItemDescription } from "@/lib/customerItemDescription";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
