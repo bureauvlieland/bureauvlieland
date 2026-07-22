@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       if (findingsByInvoice.has(inv.id)) {
         const f = findingsByInvoice.get(inv.id);
         errors.push(
-          `Factuur ${inv.invoice_number} (${inv.partners?.name}) heeft een openstaande bedragafwijking (€${Number(f.difference).toFixed(2)} verschil met PDF) — los eerst op onder /admin/facturen/afwijkingen`,
+          `Factuur ${inv.invoice_number} (${inv.partners?.name}) heeft een openstaande bedragafwijking (€${Number(f.difference).toFixed(2)} verschil met PDF) — markeer als 'terug te vorderen' of corrigeer het bedrag voordat de batch gegenereerd wordt`,
         );
       }
       // Note: amount_mismatch_reason is een admin-notitie bij opslag (bewuste bevestiging van afwijking).
