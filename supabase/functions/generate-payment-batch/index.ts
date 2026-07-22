@@ -178,12 +178,8 @@ Deno.serve(async (req) => {
           `Factuur ${inv.invoice_number} (${inv.partners?.name}) heeft een openstaande bedragafwijking (€${Number(f.difference).toFixed(2)} verschil met PDF) — los eerst op onder /admin/facturen/afwijkingen`,
         );
       }
-      if (inv.amount_mismatch_reason && !inv.refund_pending_at) {
-        // mismatch bij invoer is genoteerd maar niet als refund afgehandeld — extra bevestiging vereist
-        errors.push(
-          `Factuur ${inv.invoice_number} (${inv.partners?.name}) is met een handmatige afwijkingsreden opgeslagen. Bevestig dat het bedrag klopt (los de finding op) voordat de batch gegenereerd wordt`,
-        );
-      }
+      // Note: amount_mismatch_reason is een admin-notitie bij opslag (bewuste bevestiging van afwijking).
+      // Blokkeert de batch NIET — echte openstaande afwijkingen worden via purchase_invoice_reconciliation_findings gevangen (zie hierboven).
       if (inv.partners?.pays_by_direct_debit) {
         errors.push(`Partner ${inv.partners?.name} betaalt via automatische incasso en hoort niet in een betaalbatch`);
       }
