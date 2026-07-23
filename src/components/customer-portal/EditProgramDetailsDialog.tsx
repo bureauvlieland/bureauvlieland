@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format, isBefore, startOfDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { CalendarIcon, X, AlertTriangle, Users, Loader2, FileText } from "lucide-react";
+import { findCapacityIssues, describeCapacityIssue, type CapacityItem } from "@/lib/capacityCheck";
 
 const MAX_DAYS = 7;
 
@@ -27,6 +28,7 @@ interface EditProgramDetailsDialogProps {
   numberOfPeople: number;
   programDescription?: string | null;
   hasActiveAccommodation?: boolean;
+  capacityItems?: CapacityItem[];
   onSave: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
 }
 
