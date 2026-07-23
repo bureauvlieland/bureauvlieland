@@ -92,19 +92,42 @@ export function NotifyHeadcountChangeDialog({
         const { data: items } = await supabase
           .from("program_request_items")
           .select(
-            "id, block_name, provider_id, provider_name, provider_email, block_type, price_type, override_people, status, customer_approved_at, customer_accepted_at",
+            "id, block_id, block_name, provider_id, provider_name, provider_email, block_type, price_type, override_people, status, customer_approved_at, customer_accepted_at",
           )
           .eq("request_id", requestId)
           .neq("status", "cancelled");
 
-        const relevant = ((items || []) as PartnerItem[]).filter((i) => {
-          if (isBureau(i)) return false;
-          // Only items whose totals depend on the headcount
+        // Capaciteit-lookup: haal min/max_people op voor alle betrokken blocks,
+        // zodat we admin kunnen waarschuwen als de nieuwe groepsgrootte niet
+        // binnen een block past (bijv. Watertaxi Vlieland-Harlingen, max 12).
+        const allItems = ((items || []) as any[]);
+        const blockIds = Array.from(new Set(allItems.map((i) => i.block_id).filter(Boolean)));
+        let blockMap: Record<string, { min: number | null; max: number | null }> = {};
+        if (blockIds.length > 0) {
+          const { data: blocks } = await supabase
+            .from("building_blocks")
+            .select("id, min_people, max_people")
+            .in("id", blockIds);
+          blockMap = Object.fromEntries(
+            (blocks || []).map((b: any) => [b.id, { min: b.min_people ?? null, max: b.max_people ?? null }]),
+          );
+        }
+        setCapacityItems(
+          allItems.map((i) => ({
+            itemId: i.id,
+            itemName: i.block_name,
+            minPeople: blockMap[i.block_id]?.min ?? null,
+            maxPeople: blockMap[i.block_id]?.max ?? null,
+            overridePeople: i.override_people,
+            status: i.status,
+          })),
+        );
+
+        const relevant = allItems.filter((i) => {
+          if (isBureau(i as PartnerItem)) return false;
           if (i.price_type !== "per_person" && i.price_type !== "per_person_per_day") return false;
-          // Alleen items die de klant al heeft goedgekeurd — offerte-items
-          // volgen automatisch bij klantgoedkeuring.
           return !!(i.customer_approved_at || i.customer_accepted_at);
-        });
+        }) as PartnerItem[];
 
         const groupsMap = new Map<string, PartnerGroup>();
         for (const it of relevant) {
