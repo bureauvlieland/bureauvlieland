@@ -238,6 +238,24 @@ export const EditProgramDetailsDialog = ({
               </AlertDescription>
             </Alert>
           )}
+
+          {capacityIssues.length > 0 && (
+            <Alert variant="default" className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200 space-y-1">
+                <p className="font-medium">Let op: capaciteit onderdelen</p>
+                <p className="text-xs">
+                  Bij {people} personen passen niet alle onderdelen binnen hun capaciteit:
+                </p>
+                <ul className="text-xs list-disc pl-5">
+                  {capacityIssues.map((r) => (
+                    <li key={r.itemId}>{describeCapacityIssue(r)}</li>
+                  ))}
+                </ul>
+                <p className="text-xs">Bureau Vlieland neemt hierover contact met u op om een passende oplossing te vinden.</p>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter>
