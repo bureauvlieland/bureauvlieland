@@ -755,6 +755,43 @@ export const AdminEditActivitySheet = ({
             })()}
           </div>
 
+          {/* Capaciteit-waarschuwing */}
+          {blockCapacity && (blockCapacity.min != null || blockCapacity.max != null) && (() => {
+            const result = checkCapacity(
+              {
+                itemId: item.id,
+                itemName: item.block_name,
+                minPeople: blockCapacity.min,
+                maxPeople: blockCapacity.max,
+                overridePeople: item.override_people ?? null,
+              },
+              numberOfPeople,
+            );
+            if (result.status !== "over" && result.status !== "under") {
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Capaciteit bouwblok: {blockCapacity.min ?? "?"}–{blockCapacity.max ?? "?"} personen · effectief {result.effectivePeople}.
+                </p>
+              );
+            }
+            return (
+              <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 p-3 text-sm">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-amber-800">
+                  <p className="font-medium">
+                    {result.status === "over" ? "Groep te groot" : "Groep te klein"} voor dit onderdeel
+                  </p>
+                  <p className="text-xs">
+                    Effectief {result.effectivePeople} personen; bouwblok {item.block_name} accepteert
+                    {" "}{blockCapacity.min ?? "?"}–{blockCapacity.max ?? "?"}.
+                    {" "}Overweeg een eigen aantal (override) of overleg met de partner.
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
+
           {/* Location */}
           <div className="space-y-2">
             <Label>Locatie (optioneel)</Label>
