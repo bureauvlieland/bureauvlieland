@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 
 interface ProgramIntroCardProps {
-  programType?: string;
+  programType?: string | null;
   quoteStatus?: string | null;
   quoteValidUntil?: string | null;
   termsAcceptedAt?: string;

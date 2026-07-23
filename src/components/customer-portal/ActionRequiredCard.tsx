@@ -29,7 +29,7 @@ interface ActionRequiredCardProps {
   onOpenBilling: () => void;
   onScrollToTerms?: () => void;
   onScrollToAccommodation?: () => void;
-  programType?: string;
+  programType?: string | null;
   quoteStatus?: string | null;
   programPublishedAt?: string | null;
   guestDetailsIncomplete?: boolean;
