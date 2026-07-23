@@ -288,6 +288,24 @@ export function NotifyHeadcountChangeDialog({
         </DialogHeader>
 
         <div className="space-y-5 py-2 max-h-[60vh] overflow-y-auto">
+          {(() => {
+            const issues = findCapacityIssues(capacityItems, newPeople);
+            if (issues.length === 0) return null;
+            return (
+              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+                  <p className="font-medium">Capaciteit-conflict bij {newPeople} personen</p>
+                  <ul className="text-xs list-disc pl-5">
+                    {issues.map((r) => (
+                      <li key={r.itemId}>{describeCapacityIssue(r)}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs">Overleg met de betrokken partner(s) of stel een alternatief voor.</p>
+                </div>
+              </div>
+            );
+          })()}
           {/* Klant */}
           <section>
             <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Klant</h4>
