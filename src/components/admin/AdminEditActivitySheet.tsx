@@ -126,6 +126,33 @@ export const AdminEditActivitySheet = ({
   const [selectedProviderId, setSelectedProviderId] = useState(item?.provider_id ?? "bureau");
   const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [showDirtyConfirm, setShowDirtyConfirm] = useState(false);
+  const [blockCapacity, setBlockCapacity] = useState<{ min: number | null; max: number | null } | null>(null);
+
+  // Laad min/max_people van het onderliggende bouwblok, zodat we admin
+  // kunnen waarschuwen als het aantal deelnemers niet past (bijv. Watertaxi
+  // Vlieland-Harlingen: max 12). Voorheen ging dit stilzwijgend voorbij.
+  useEffect(() => {
+    let cancelled = false;
+    if (!open || !item?.block_id) {
+      setBlockCapacity(null);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("building_blocks")
+        .select("min_people, max_people")
+        .eq("id", item.block_id)
+        .maybeSingle();
+      if (cancelled) return;
+      setBlockCapacity({
+        min: (data as any)?.min_people ?? null,
+        max: (data as any)?.max_people ?? null,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, item?.block_id]);
 
   // --- Auto-save voor de tekstvelden zonder validatie. Schrijft naar
   // pending_<col> met debounce; status zichtbaar onder elk veld zodat
