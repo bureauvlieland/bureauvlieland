@@ -95,7 +95,7 @@ interface AccommodationExtraData {
 }
 
 const AdminQuotePreview = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const pdfRef = useRef<HTMLDivElement>(null);
   const [templateLoading, setTemplateLoading] = useState(false);
