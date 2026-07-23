@@ -133,7 +133,7 @@ const generatePartnerId = (name: string): string => {
 };
 
 const AdminPartnerDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = id === "nieuw";
 
