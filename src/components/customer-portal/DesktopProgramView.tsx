@@ -707,7 +707,7 @@ export const DesktopProgramView = ({
       <AddActivitySheet
         open={isAddActivityOpen}
         onOpenChange={setIsAddActivityOpen}
-        existingBlockIds={program.items.map((item) => item.block_id)}
+        existingBlockIds={program.items.map((item) => item.block_id).filter((id): id is string => id !== null)}
         onAddActivity={(blockId) => onAddActivity(blockId)}
       />
     </div>
