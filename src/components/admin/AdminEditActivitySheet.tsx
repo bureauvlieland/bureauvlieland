@@ -42,6 +42,7 @@ import { getPriceTypeSuffix } from "@/lib/portalPricing";
 import { useAutoSaveField } from "@/hooks/useAutoSaveField";
 import { FieldSaveIndicator } from "@/components/admin/FieldSaveIndicator";
 import { formatTimeHHmm } from "@/lib/timeUtils";
+import { checkCapacity } from "@/lib/capacityCheck";
 
 interface PartnerOption {
   id: string;
