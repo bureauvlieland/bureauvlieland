@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     if (blockIds.length > 0) {
       const { data: blocks } = await supabase
         .from("building_blocks")
-        .select("id, image_url, image_asset, short_description, description, external_url, vat_rate")
+        .select("id, image_url, image_asset, short_description, description, external_url, vat_rate, min_people, max_people")
         .in("id", blockIds);
       blockMap = Object.fromEntries((blocks || []).map((b: any) => [b.id, b]));
     }
@@ -104,6 +104,8 @@ Deno.serve(async (req) => {
         block_short_description: block?.short_description || null,
         block_description: block?.description || null,
         external_url: block?.external_url || item.external_url || null,
+        block_min_people: block?.min_people ?? null,
+        block_max_people: block?.max_people ?? null,
       };
     });
     const blockVatRates: Record<string, number> = {};
