@@ -170,7 +170,7 @@ function generateStatusEmailBody(
 }
 
 export default function AdminAccommodationDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id = "" } = useParams<{ id: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedPartners, setSelectedPartners] = useState<string[]>([]);

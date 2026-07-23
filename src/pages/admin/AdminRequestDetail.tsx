@@ -321,7 +321,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 const AdminRequestDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [request, setRequest] = useState<ProgramRequest | null>(null);
@@ -535,7 +535,8 @@ const AdminRequestDetail = () => {
   } | null>(null);
 
   useEffect(() => {
-    if (!request?.linked_accommodation_id) {
+    const accommodationId = request?.linked_accommodation_id;
+    if (!accommodationId) {
       setSelectedAccommodationQuote(null);
       return;
     }
@@ -543,7 +544,7 @@ const AdminRequestDetail = () => {
       const { data } = await supabase
         .from("accommodation_quotes")
         .select("id, price_total, vat_rate, accommodation_name")
-        .eq("request_id", request.linked_accommodation_id)
+        .eq("request_id", accommodationId)
         .eq("status", "selected")
         .maybeSingle();
       if (!data) {
@@ -3360,7 +3361,7 @@ const AdminRequestDetail = () => {
           onOpenChange={setAddActivityOpen}
           requestId={request.id}
           selectedDates={request.selected_dates as string[]}
-          existingBlockIds={items.map(item => item.block_id)}
+          existingBlockIds={items.map(item => item.block_id).filter((id): id is string => id !== null)}
           onSuccess={fetchRequestData}
           invoicingMode={request.invoicing_mode}
           numberOfPeople={request.number_of_people}
