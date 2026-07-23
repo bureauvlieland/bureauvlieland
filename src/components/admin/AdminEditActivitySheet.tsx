@@ -42,6 +42,7 @@ import { getPriceTypeSuffix } from "@/lib/portalPricing";
 import { useAutoSaveField } from "@/hooks/useAutoSaveField";
 import { FieldSaveIndicator } from "@/components/admin/FieldSaveIndicator";
 import { formatTimeHHmm } from "@/lib/timeUtils";
+import { checkCapacity } from "@/lib/capacityCheck";
 
 interface PartnerOption {
   id: string;
@@ -125,6 +126,33 @@ export const AdminEditActivitySheet = ({
   const [selectedProviderId, setSelectedProviderId] = useState(item?.provider_id ?? "bureau");
   const [partners, setPartners] = useState<PartnerOption[]>([]);
   const [showDirtyConfirm, setShowDirtyConfirm] = useState(false);
+  const [blockCapacity, setBlockCapacity] = useState<{ min: number | null; max: number | null } | null>(null);
+
+  // Laad min/max_people van het onderliggende bouwblok, zodat we admin
+  // kunnen waarschuwen als het aantal deelnemers niet past (bijv. Watertaxi
+  // Vlieland-Harlingen: max 12). Voorheen ging dit stilzwijgend voorbij.
+  useEffect(() => {
+    let cancelled = false;
+    if (!open || !item?.block_id) {
+      setBlockCapacity(null);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("building_blocks")
+        .select("min_people, max_people")
+        .eq("id", item.block_id)
+        .maybeSingle();
+      if (cancelled) return;
+      setBlockCapacity({
+        min: (data as any)?.min_people ?? null,
+        max: (data as any)?.max_people ?? null,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, item?.block_id]);
 
   // --- Auto-save voor de tekstvelden zonder validatie. Schrijft naar
   // pending_<col> met debounce; status zichtbaar onder elk veld zodat
@@ -726,6 +754,43 @@ export const AdminEditActivitySheet = ({
               );
             })()}
           </div>
+
+          {/* Capaciteit-waarschuwing */}
+          {blockCapacity && (blockCapacity.min != null || blockCapacity.max != null) && (() => {
+            const result = checkCapacity(
+              {
+                itemId: item.id,
+                itemName: item.block_name,
+                minPeople: blockCapacity.min,
+                maxPeople: blockCapacity.max,
+                overridePeople: item.override_people ?? null,
+              },
+              numberOfPeople,
+            );
+            if (result.status !== "over" && result.status !== "under") {
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Capaciteit bouwblok: {blockCapacity.min ?? "?"}–{blockCapacity.max ?? "?"} personen · effectief {result.effectivePeople}.
+                </p>
+              );
+            }
+            return (
+              <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-300 p-3 text-sm">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-amber-800">
+                  <p className="font-medium">
+                    {result.status === "over" ? "Groep te groot" : "Groep te klein"} voor dit onderdeel
+                  </p>
+                  <p className="text-xs">
+                    Effectief {result.effectivePeople} personen; bouwblok {item.block_name} accepteert
+                    {" "}{blockCapacity.min ?? "?"}–{blockCapacity.max ?? "?"}.
+                    {" "}Overweeg een eigen aantal (override) of overleg met de partner.
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
 
           {/* Location */}
           <div className="space-y-2">

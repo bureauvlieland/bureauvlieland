@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format, isBefore, startOfDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { CalendarIcon, X, AlertTriangle, Users, Loader2, FileText } from "lucide-react";
+import { findCapacityIssues, describeCapacityIssue, type CapacityItem } from "@/lib/capacityCheck";
 
 const MAX_DAYS = 7;
 
@@ -27,6 +28,7 @@ interface EditProgramDetailsDialogProps {
   numberOfPeople: number;
   programDescription?: string | null;
   hasActiveAccommodation?: boolean;
+  capacityItems?: CapacityItem[];
   onSave: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
 }
 
@@ -37,11 +39,13 @@ export const EditProgramDetailsDialog = ({
   numberOfPeople: initialPeople,
   programDescription: initialDescription,
   hasActiveAccommodation = false,
+  capacityItems = [],
   onSave,
 }: EditProgramDetailsDialogProps) => {
   const [dates, setDates] = useState<Date[]>(initialDates);
   const [people, setPeople] = useState(initialPeople);
   const [description, setDescription] = useState(initialDescription || "");
+  const capacityIssues = findCapacityIssues(capacityItems, people);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -231,6 +235,24 @@ export const EditProgramDetailsDialog = ({
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 dark:text-amber-200">
                 De aanbieders worden op de hoogte gesteld van de wijziging.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {capacityIssues.length > 0 && (
+            <Alert variant="default" className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200 space-y-1">
+                <p className="font-medium">Let op: capaciteit onderdelen</p>
+                <p className="text-xs">
+                  Bij {people} personen passen niet alle onderdelen binnen hun capaciteit:
+                </p>
+                <ul className="text-xs list-disc pl-5">
+                  {capacityIssues.map((r) => (
+                    <li key={r.itemId}>{describeCapacityIssue(r)}</li>
+                  ))}
+                </ul>
+                <p className="text-xs">Bureau Vlieland neemt hierover contact met u op om een passende oplossing te vinden.</p>
               </AlertDescription>
             </Alert>
           )}

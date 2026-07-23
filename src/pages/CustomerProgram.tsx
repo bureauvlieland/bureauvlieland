@@ -703,6 +703,16 @@ const CustomerProgram = () => {
         numberOfPeople={program.number_of_people}
         programDescription={program.program_description}
         hasActiveAccommodation={!!accommodation}
+        capacityItems={(program.items || [])
+          .filter((i: any) => i.status !== "cancelled")
+          .map((i: any) => ({
+            itemId: i.id,
+            itemName: i.block_name,
+            minPeople: i.block_min_people,
+            maxPeople: i.block_max_people,
+            overridePeople: i.override_people,
+            status: i.status,
+          }))}
         onSave={handleSaveDetails}
       />
 
