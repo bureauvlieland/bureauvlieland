@@ -39,11 +39,13 @@ export const EditProgramDetailsDialog = ({
   numberOfPeople: initialPeople,
   programDescription: initialDescription,
   hasActiveAccommodation = false,
+  capacityItems = [],
   onSave,
 }: EditProgramDetailsDialogProps) => {
   const [dates, setDates] = useState<Date[]>(initialDates);
   const [people, setPeople] = useState(initialPeople);
   const [description, setDescription] = useState(initialDescription || "");
+  const capacityIssues = findCapacityIssues(capacityItems, people);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
