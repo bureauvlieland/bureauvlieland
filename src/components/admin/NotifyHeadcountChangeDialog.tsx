@@ -14,8 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Users } from "lucide-react";
+import { Users, AlertTriangle } from "lucide-react";
 import { isBureauItem } from "@/lib/bureauItem";
+import { findCapacityIssues, describeCapacityIssue } from "@/lib/capacityCheck";
 
 interface PartnerItem {
   id: string;
