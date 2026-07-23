@@ -78,6 +78,7 @@ export function NotifyHeadcountChangeDialog({
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
+  const [capacityItems, setCapacityItems] = useState<Array<{ itemId: string; itemName: string; minPeople: number | null; maxPeople: number | null; overridePeople: number | null; status: string | null }>>([]);
 
   useEffect(() => {
     if (!open) return;
