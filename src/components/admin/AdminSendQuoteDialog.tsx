@@ -84,7 +84,9 @@ Programmadetails:
 - Aantal personen: ${numberOfPeople || ""}
 - Geldig tot: ${validUntilFormatted}
 
-U kunt het volledige voorstel bekijken en akkoord geven via onderstaande knop. Uiteraard kunnen we het programma qua onderdelen en tijden nog aanpassen.
+U kunt het programma bekijken en goedkeuren via onderstaande knop. Uiteraard kunnen we onderdelen en tijden vooraf nog aanpassen.
+
+Let op: de prijzen op onderdeelniveau zijn voorlopig. De onderdelen staan onder voorbehoud van beschikbaarheid en worden voorlopig voor u genoteerd. Zodra u het programma heeft goedgekeurd, zetten wij de uitvragen richting onze partners uit, bevestigen we de reservering en worden de definitieve prijzen bekend.
 
 Heeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.
 
