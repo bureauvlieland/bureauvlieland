@@ -1040,7 +1040,7 @@ const AdminInvoicePreview = () => {
               {(() => {
                 const matchedExisting = priorInvoices.find((p) => p.invoice_number === invoiceNumber);
                 const wantNewTermijn = searchParams.get("new") === "1";
-                if (matchedExisting && !wantNewTermijn) {
+                if (matchedExisting && !wantNewTermijn && !isExistingInvoiceView) {
                   return (
                     <Button
                       variant="outline"
@@ -1090,7 +1090,7 @@ const AdminInvoicePreview = () => {
             </div>
           </div>
 
-          {canOfferSlotMode && (
+          {canOfferSlotMode && !isExistingInvoiceView && (
             <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <span className="font-medium mr-1">Factuurmodus:</span>
               <Button
