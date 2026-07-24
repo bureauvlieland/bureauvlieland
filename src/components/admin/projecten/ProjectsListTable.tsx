@@ -150,15 +150,24 @@ function Row({ row }: { row: OverviewRow }) {
                 Auto-afgehandeld
               </Badge>
             )}
-            {row.snoozed && (
-              <Badge
-                variant="outline"
-                className="h-4 border-indigo-300 bg-indigo-100 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
-                title="Dit project staat op snooze"
-              >
-                zzzz
-              </Badge>
-            )}
+            {row.snoozedUntil && (() => {
+              const expired = row.snoozedUntil.getTime() <= Date.now();
+              const dateStr = row.snoozedUntil.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+              return (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "h-4 px-1.5 text-[10px] font-semibold uppercase tracking-wide",
+                    expired
+                      ? "border-red-300 bg-red-100 text-red-700 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300"
+                      : "border-indigo-300 bg-indigo-100 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+                  )}
+                  title={expired ? `Snooze verlopen op ${dateStr}` : `Op snooze tot ${dateStr}`}
+                >
+                  zzzz · {dateStr}
+                </Badge>
+              );
+            })()}
           </div>
 
           {row.customerCompany && (
