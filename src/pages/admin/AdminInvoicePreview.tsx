@@ -818,10 +818,15 @@ const AdminInvoicePreview = () => {
       0,
     );
   const netDueIncl = Math.max(0, totals.totalInclVat - priorSumExcludingCurrent);
-  // Slot-mode is deprecated: vervolgfacturen tonen altijd de volledige
-  // projectspecificatie met "Reeds gefactureerd" eronder.
-  const isSlotMode = false;
-  const canOfferSlotMode = false;
+  // Slot-mode: bij een NIEUWE termijn na eerdere facturen registreren en
+  // versturen we uitsluitend het restant (netDueIncl) — niet nogmaals het
+  // volledige projecttotaal. De PDF-layout blijft ongewijzigd en toont de
+  // volledige specificatie met "Reeds gefactureerd" eronder; alleen de
+  // effectieve bedragen die naar bureau_invoices/SendDialog gaan schalen mee.
+  const hasPriorInvoices = priorSumExcludingCurrent > 0.005 || hasPriorOtherThanCurrent;
+  const wantNewTermijnParam = searchParams.get("new") === "1";
+  const canOfferSlotMode = hasPriorInvoices && wantNewTermijnParam && netDueIncl > 0.005;
+  const isSlotMode = canOfferSlotMode && modeParam !== "full";
 
   const setMode = (next: "slot" | "full") => {
     const params = new URLSearchParams(searchParams);

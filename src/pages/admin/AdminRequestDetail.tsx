@@ -3348,8 +3348,16 @@ const AdminRequestDetail = () => {
         suggestedExclVat={invoiceVatSuggestion?.totalExclVat}
         suggestedVatAmount={invoiceVatSuggestion?.totalVat}
         suggestedVatGroups={invoiceVatSuggestion?.vatGroups}
+        outstandingAmount={calculateOutstandingAmount()}
+        projectTotal={invoiceVatSuggestion?.grandTotalInclVat}
+        alreadyInvoiced={
+          invoiceVatSuggestion?.grandTotalInclVat != null
+            ? Math.max(0, invoiceVatSuggestion.grandTotalInclVat - calculateOutstandingAmount())
+            : undefined
+        }
         onSuccess={fetchRequestData}
       />
+
 
       {/* Forward to accounting happens on the InvoicePreview page where the
           PDF can be generated and attached. We navigate there with
