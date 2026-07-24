@@ -25,6 +25,8 @@ export interface OverviewRow {
   autoClosed?: boolean;
   /** Waar zodra het project actief gesnoozed is (snoozed_until > now). */
   snoozed?: boolean;
+  /** Ruwe snoozed_until (kan in het verleden liggen → verlopen). */
+  snoozedUntil?: Date | null;
 }
 
 interface FetchOptions {
