@@ -567,7 +567,18 @@ export const FinancialOverviewCard = ({
                     <div key={invoice.id} className="flex items-start justify-between text-sm gap-2">
                       <div className="flex flex-col gap-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium">{invoice.invoice_number}</span>
+                          <button
+                            type="button"
+                            className="font-medium text-left underline decoration-dotted underline-offset-2 hover:text-primary hover:decoration-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                            onClick={() =>
+                              navigate(
+                                `/admin/aanvragen/${requestId}/factuur?invoiceId=${invoice.id}`,
+                              )
+                            }
+                            title="Open factuur preview"
+                          >
+                            {invoice.invoice_number}
+                          </button>
                           <span className="text-muted-foreground whitespace-nowrap">
                             ({format(new Date(invoice.invoice_date), "EEE d MMM", { locale: nl })})
                           </span>
