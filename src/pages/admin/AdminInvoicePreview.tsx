@@ -41,6 +41,7 @@ import {
 } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
+import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 
 interface ProgramRequest {
   id: string;
@@ -80,6 +81,68 @@ interface ProgramItem {
   status: string;
   booking_reference?: string | null;
 }
+
+interface LoadedBureauInvoice {
+  id: string;
+  invoice_number: string;
+  invoice_date: string;
+  amount_excl_vat: number;
+  vat_amount: number;
+  amount_incl_vat: number;
+  invoice_type: InvoiceType | string;
+  description: string | null;
+}
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+const buildScaledVatTotals = (
+  vatLines: { rate: number; exclVat: number; vatAmount: number }[],
+  targetExclVat: number,
+  targetVat: number,
+) => {
+  const sign = targetExclVat + targetVat < 0 ? -1 : 1;
+  const absTargetExcl = Math.abs(targetExclVat);
+  const absTargetVat = Math.abs(targetVat);
+  const baseExcl = vatLines.reduce((sum, line) => sum + Math.abs(line.exclVat), 0);
+  const baseVat = vatLines.reduce((sum, line) => sum + Math.abs(line.vatAmount), 0);
+
+  if (vatLines.length === 0 || baseExcl + baseVat <= 0.005) {
+    const fallbackRate = absTargetExcl > 0 ? round2((absTargetVat / absTargetExcl) * 100) : 0;
+    return {
+      totalExclVat: round2(targetExclVat),
+      totalVat: round2(targetVat),
+      totalInclVat: round2(targetExclVat + targetVat),
+      vatLines: [{ rate: fallbackRate, exclVat: round2(targetExclVat), vatAmount: round2(targetVat) }],
+    };
+  }
+
+  const exclFactor = absTargetExcl / baseExcl;
+  const vatFactor = baseVat > 0 ? absTargetVat / baseVat : 0;
+  const scaled = vatLines.map((line) => ({
+    rate: line.rate,
+    exclVat: round2(Math.abs(line.exclVat) * exclFactor),
+    vatAmount: round2(Math.abs(line.vatAmount) * vatFactor),
+  }));
+
+  const diffExcl = round2(absTargetExcl - scaled.reduce((sum, line) => sum + line.exclVat, 0));
+  const diffVat = round2(absTargetVat - scaled.reduce((sum, line) => sum + line.vatAmount, 0));
+  const correctionIndex = Math.max(0, scaled.findIndex((line) => line.rate > 0));
+  if (scaled[correctionIndex]) {
+    scaled[correctionIndex].exclVat = round2(scaled[correctionIndex].exclVat + diffExcl);
+    scaled[correctionIndex].vatAmount = round2(scaled[correctionIndex].vatAmount + diffVat);
+  }
+
+  return {
+    totalExclVat: round2(targetExclVat),
+    totalVat: round2(targetVat),
+    totalInclVat: round2(targetExclVat + targetVat),
+    vatLines: scaled.map((line) => ({
+      rate: line.rate,
+      exclVat: round2(line.exclVat * sign),
+      vatAmount: round2(line.vatAmount * sign),
+    })),
+  };
+};
 
 interface AccommodationQuoteData {
   id: string;
@@ -129,6 +192,7 @@ const AdminInvoicePreview = () => {
   const [vatRateMap, setVatRateMap] = useState<Record<string, number>>({});
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
+  const [loadedInvoice, setLoadedInvoice] = useState<LoadedBureauInvoice | null>(null);
   const [priorInvoices, setPriorInvoices] = useState<Array<{ id: string; invoice_number: string; invoice_date: string; amount_incl_vat: number; invoice_type: string }>>([]);
 
   // Load billing lines per item (definitive lines override quoted_price)
@@ -172,7 +236,11 @@ const AdminInvoicePreview = () => {
   useEffect(() => {
     const action = searchParams.get("action");
     const invoiceId = searchParams.get("invoiceId");
-    if (!invoiceId || !request) return;
+    if (!invoiceId) {
+      setLoadedInvoice(null);
+      return;
+    }
+    if (!request) return;
     // Only skip refetch when this same invoice is already loaded for forward flow;
     // for the "open existing invoice" flow we still want to hydrate invoiceNumber/date.
     if (action === "forward" && forwardInvoice?.id === invoiceId) return;
@@ -187,19 +255,23 @@ const AdminInvoicePreview = () => {
         toast.error("Factuur niet gevonden");
         return;
       }
+      const normalizedInvoice: LoadedBureauInvoice = {
+        id: data.id,
+        invoice_number: data.invoice_number,
+        invoice_date: data.invoice_date,
+        amount_excl_vat: Number(data.amount_excl_vat),
+        vat_amount: Number(data.vat_amount),
+        amount_incl_vat:
+          data.amount_incl_vat != null
+            ? Number(data.amount_incl_vat)
+            : Number(data.amount_excl_vat) + Number(data.vat_amount),
+        invoice_type: data.invoice_type,
+        description: data.description,
+      };
+      setLoadedInvoice(normalizedInvoice);
       if (action === "forward") {
         setForwardInvoice({
-          id: data.id,
-          invoice_number: data.invoice_number,
-          invoice_date: data.invoice_date,
-          amount_excl_vat: Number(data.amount_excl_vat),
-          vat_amount: Number(data.vat_amount),
-          amount_incl_vat:
-            data.amount_incl_vat != null
-              ? Number(data.amount_incl_vat)
-              : Number(data.amount_excl_vat) + Number(data.vat_amount),
-          invoice_type: data.invoice_type,
-          description: data.description,
+          ...normalizedInvoice,
           customer_label: request.billing_company_name || request.customer_company || request.customer_name,
           reference_number: request.reference_number,
         });
@@ -207,8 +279,8 @@ const AdminInvoicePreview = () => {
       // Make sure the rendered invoice number matches the one we're viewing/forwarding.
       // This is critical: without it, invoiceNumber stays empty and the current
       // invoice is (incorrectly) counted as "reeds gefactureerd", inflating the total.
-      setInvoiceNumber(data.invoice_number);
-      if (data.invoice_date) setInvoiceDate(new Date(data.invoice_date));
+      setInvoiceNumber(normalizedInvoice.invoice_number);
+      if (normalizedInvoice.invoice_date) setInvoiceDate(new Date(normalizedInvoice.invoice_date));
     })();
   }, [searchParams, request, forwardInvoice?.id]);
 
