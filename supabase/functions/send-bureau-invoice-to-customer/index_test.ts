@@ -46,7 +46,7 @@ function makeFetch(options: { duplicateIdempotency?: boolean } = {}) {
       );
     }
     if (url.includes("/rest/v1/email_log") && method === "GET") {
-      if (options.duplicateIdempotency && url.includes("idempotency_key=eq.bureau-invoice-FV-2026-0001-test")) {
+      if (options.duplicateIdempotency) {
         return new Response(
           JSON.stringify([{ mailjet_message_id: "existing-123", sent_at: new Date().toISOString() }]),
           { status: 200, headers: { "Content-Type": "application/json" } },
