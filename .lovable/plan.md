@@ -1,39 +1,42 @@
-## Probleem
-`building_blocks.min_people` / `max_people` staan wel in de database en worden getoond in Bouwstenen/ActiviteitDetail, maar er is **nergens** een validatie of waarschuwing als het werkelijke aantal deelnemers buiten die range valt. Gevolg: Watertaxi (max 12) is in BV-2606-0028 met 15 pers in het programma opgenomen zonder signaal.
+## Plan — Vervolgfacturen alleen voor het restant + herstel BV-2605-0001
 
-## Plan — capaciteits-check invoeren op elke plek waar het aantal personen bepaald wordt
+### 1. Herstel BV-2605-0001 (klant heeft FV-002 al ontvangen)
 
-### 1. Centrale helper
-Nieuwe module `src/lib/capacityCheck.ts` met:
-- `getEffectivePeople(item, projectPeople)` → `override_people ?? projectPeople`.
-- `checkCapacity({ people, min, max })` → `{ status: 'ok' | 'below_min' | 'above_max', message }`.
-- Unit tests (`capacityCheck.test.ts`) inclusief edge cases (min/max null, exact op grens, override vs project-people).
+Omdat FV-BV-2605-0001-002 (€1.932,15) al bij de klant ligt: creditnota + aanvullende factuur, met begeleidende excuusmail.
 
-### 2. Blokkeer + waarschuw in de klantportal
-Waar de klant het totale aantal personen aanpast én waar een activiteit wordt toegevoegd:
-- **Waarschuwing (niet blokkerend) als aantal > max_people** van één of meer geselecteerde items. Toon een inline banner met de lijst overschreden activiteiten + "pas het aantal aan of verwijder de activiteit".
-- Bij "toevoegen activiteit"-picker: max-vol activiteiten krijgen een badge "Max X pers." en zijn selecteerbaar met bevestigingsmodal.
-- Onder min: informatieve melding ("minimaal X personen — neem contact op voor kleiner gezelschap"), niet blokkerend.
+- **Creditnota FV-BV-2605-0001-C002** — €1.932,15 credit, verwijst expliciet naar FV-002.
+- **Nieuwe factuur FV-BV-2605-0001-003** — €407,40 incl. BTW (€1.932,15 grand total − €1.524,75 reeds gefactureerd via FV-001). Pro-rata BTW-uitsplitsing op basis van de bestaande VAT-groepen van het projecttotaal, zodat 9%/21% sluitend blijft.
+- Beide records registreren via de bestaande `bureau_invoices`-tabel (invoice_type `credit` resp. `partial`).
+- Ik zet géén automatische mail klaar. U beoordeelt zelf wanneer u de creditnota + nieuwe factuur met een korte excuustekst naar de klant stuurt via de bestaande "Verstuur naar klant"-knop op elk van de twee facturen.
 
-### 3. Waarschuwing in admin
-- `AdminEditActivitySheet` en waar `override_people` wordt gezet: real-time badge naast het personen-veld ("⚠ overschrijdt max 12 van deze bouwsteen"). Save is toegestaan maar vereist bevestiging in een dialog met vrij reden-veld dat wordt gelogd in `program_request_history` (action `capacity_override`).
-- Projectdetail: sectie met alle items waarvan `effective_people` buiten de bouwsteen-range valt, bovenaan zichtbaar zodat je in één blik ziet welke onderdelen misschien handmatig geregeld moeten worden.
+### 2. Structurele fix — Factuur Maken laat vervolgfacturen alleen het restant registreren
 
-### 4. Configurator
-Bij initiële selectie in de configurator: activiteiten met `max_people < gekozen groepsgrootte` tonen als "op aanvraag" met disclaimer, en `min_people > groepsgrootte` idem. Blokkeert niet, maar zet automatisch `custom_briefing`-notitie klaar zodat de admin weet dat capaciteit besproken moet worden.
+In `src/pages/admin/AdminInvoicePreview.tsx`:
 
-### 5. Data-check retro-actief
-Eenmalige SELECT-query om alle bestaande `program_request_items` met `effective_people > block.max_people` (of < min) in een rapport te tonen, zodat we (handmatig) kunnen beoordelen of ze aangepast moeten worden. Alleen rapport, geen data-mutatie.
+- `isSlotMode` afleiden uit "er bestaan al bureau_invoices voor dit project én de gebruiker maakt een nieuwe termijn aan" (op basis van `priorInvoices` en `searchParams.get("new") === "1"`), in plaats van de hardgecodeerde `false`.
+- Bij `isSlotMode`: `effectiveTotalExclVat/Vat/InclVat` komen uit de bestaande `slotTotals`-berekening (pro-rata verdeling van `netDueIncl` over de VAT-groepen). Deze bedragen gaan naar zowel de registratie in `bureau_invoices` als naar `SendBureauInvoiceToCustomerDialog`.
+- PDF-layout ongewijzigd: volledige projectspecificatie blijft zichtbaar met "Reeds gefactureerd −€…" en "Te betalen €…" onderaan (die totaal-regel gebruikt al `netDueIncl` bij `!isSlotMode` op regel 1536, dus daar is niets nodig).
+- `canOfferSlotMode` weer inschakelen zodat de toggle "Slotfactuur openstaand / Termijn met regels" zichtbaar is als er prior invoices zijn. Default op slot-mode bij `?new=1`.
 
-### 6. Tests
-- Unit-tests op `capacityCheck` (zie punt 1).
-- Component-test: klantportal toont waarschuwingsbanner bij personen-wijziging boven max.
-- Component-test: admin-sheet vereist reden bij opslaan buiten capaciteit.
-- Regressietest: bestaande items zonder min/max blijven zonder waarschuwing.
+### 3. Extra vangnet — RegisterBureauInvoiceDialog krijgt volledige context
 
-## Technische details
-- Geen schemawijziging nodig — velden bestaan al.
-- `program_request_history` krijgt nieuwe action-key `capacity_override` (alleen data, geen enum-migratie).
-- Alle waarschuwingsteksten formeel ("u") in klantportal, informeel ("je") in admin/partner conform tone-of-voice.
+In `src/pages/admin/AdminRequestDetail.tsx` (regel 3343-3352): naast `suggestedAmount` ook `outstandingAmount`, `projectTotal` en `alreadyInvoiced` doorgeven. Het dialoog heeft al de "bedrag overschrijdt openstaand"-blokkade (regel 170-174), die nu aanslaat en handmatig registreren van een dubbel bedrag voorkomt.
 
-**Openstaande keuze:** hard blokkeren of alleen waarschuwen bij overschrijding in de klantportal? Advies: waarschuwen + bevestigen, niet hard blokkeren (er kunnen extra ritten/units geregeld worden — bijv. twee watertaxi-runs). Akkoord?
+### 4. Regressietest
+
+Nieuwe test `src/lib/__tests__/followUpInvoiceRestOnly.test.ts`: gegeven een project met grand total €1.932,15 en één bestaande `partial` van €1.524,75, controleert dat een tweede `partial` alleen €407,40 registreert (excl./BTW/incl. pro-rata). Zo wordt deze klasse fouten voortaan door CI opgevangen.
+
+### 5. Wijzigingen
+
+| Bestand | Wijziging |
+|---|---|
+| Insert-query op `bureau_invoices` | Credit FV-BV-2605-0001-C002 (−€1.932,15) + nieuwe partial FV-BV-2605-0001-003 (€407,40); beide met verwijzing in `description` |
+| `src/pages/admin/AdminInvoicePreview.tsx` | `isSlotMode`/`canOfferSlotMode` afleiden uit prior invoices + `new=1`; slot-mode als default bij nieuwe termijn |
+| `src/pages/admin/AdminRequestDetail.tsx` | `outstandingAmount`, `projectTotal`, `alreadyInvoiced` doorgeven aan RegisterBureauInvoiceDialog |
+| `src/lib/__tests__/followUpInvoiceRestOnly.test.ts` | Nieuwe testcase |
+
+### Buiten scope
+
+- E-mailen namens u: creditnota + nieuwe factuur stuurt u zelf via de bestaande verzendknop, met eigen excuustekst.
+- Snelstart-doorsturen van FV-002: u besluit zelf of u die creditnota + nieuwe factuur ook naar Snelstart stuurt. Zolang FV-002 niet doorgestuurd is (screenshot: "Nog niet doorgestuurd") volstaat het om FV-002 niet meer door te sturen.
+- Wijzigingen aan de PDF-layout: die is al correct.
