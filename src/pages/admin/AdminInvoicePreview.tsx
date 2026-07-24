@@ -823,19 +823,8 @@ const AdminInvoicePreview = () => {
   // volledige projecttotaal. De PDF-layout blijft ongewijzigd en toont de
   // volledige specificatie met "Reeds gefactureerd" eronder; alleen de
   // effectieve bedragen die naar bureau_invoices/SendDialog gaan schalen mee.
-  const priorSum = priorInvoices
-    .filter((p) => p.invoice_number !== invoiceNumber)
-    .reduce(
-      (s, p) =>
-        s +
-        (p.invoice_type === "credit"
-          ? -Number(p.amount_incl_vat)
-          : Number(p.amount_incl_vat)),
-      0,
-    );
-  const hasPriorInvoices = priorSum > 0.005;
+  const hasPriorInvoices = priorSumExcludingCurrent > 0.005 || hasPriorOtherThanCurrent;
   const wantNewTermijnParam = searchParams.get("new") === "1";
-  const modeParam = searchParams.get("mode");
   const canOfferSlotMode = hasPriorInvoices && wantNewTermijnParam && netDueIncl > 0.005;
   const isSlotMode = canOfferSlotMode && modeParam !== "full";
 
