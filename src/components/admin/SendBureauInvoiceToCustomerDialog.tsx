@@ -30,6 +30,8 @@ interface SendBureauInvoiceToCustomerDialogProps {
   vatAmount: number;
   invoiceType?: InvoiceType;
   description?: string;
+  /** Existing registered invoice to send; when set, do not insert a duplicate row. */
+  existingInvoiceId?: string | null;
   /** Async; resolves with the PDF blob to send. */
   onGeneratePdf: () => Promise<Blob | null>;
   onSent?: () => void;
@@ -60,6 +62,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
   vatAmount,
   invoiceType = "partial",
   description,
+  existingInvoiceId = null,
   onGeneratePdf,
   onSent,
 }: SendBureauInvoiceToCustomerDialogProps) => {
@@ -82,9 +85,9 @@ export const SendBureauInvoiceToCustomerDialog = ({
           `Wij verzoeken u vriendelijk het bedrag binnen de vermelde betaaltermijn over te maken ` +
           `onder vermelding van het factuurnummer.\n\nMet vriendelijke groet,\nBureau Vlieland`
       );
-      setAlsoRegister(true);
+      setAlsoRegister(!existingInvoiceId);
     }
-  }, [isOpen, defaultRecipient, recipientName, invoiceNumber]);
+  }, [isOpen, defaultRecipient, recipientName, invoiceNumber, existingInvoiceId]);
 
   const totalInclVat = amountExclVat + vatAmount;
 
@@ -106,8 +109,8 @@ export const SendBureauInvoiceToCustomerDialog = ({
       const base64 = await blobToBase64(blob);
 
       // 2. Optionally register the invoice first → returns id we can pass along
-      let invoiceId: string | null = null;
-      if (alsoRegister) {
+      let invoiceId: string | null = existingInvoiceId;
+      if (!existingInvoiceId && alsoRegister) {
         const { data: session } = await supabase.auth.getSession();
         const { data: inserted, error: insertError } = await supabase
           .from("bureau_invoices")
@@ -266,22 +269,28 @@ export const SendBureauInvoiceToCustomerDialog = ({
             </div>
           </div>
 
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="alsoRegister"
-              checked={alsoRegister}
-              onCheckedChange={(v) => setAlsoRegister(!!v)}
-              disabled={isSubmitting}
-            />
-            <div className="space-y-0.5">
-              <Label htmlFor="alsoRegister" className="cursor-pointer">
-                Factuur ook registreren in administratie
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Voegt de factuur toe aan het Financieel Overzicht zodat je 'm later naar Snelstart kunt doorsturen.
-              </p>
+          {existingInvoiceId ? (
+            <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
+              Deze factuur is al geregistreerd; er wordt geen dubbele factuurregel aangemaakt.
             </div>
-          </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="alsoRegister"
+                checked={alsoRegister}
+                onCheckedChange={(v) => setAlsoRegister(!!v)}
+                disabled={isSubmitting}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="alsoRegister" className="cursor-pointer">
+                  Factuur ook registreren in administratie
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Voegt de factuur toe aan het Financieel Overzicht zodat je 'm later naar Snelstart kunt doorsturen.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
