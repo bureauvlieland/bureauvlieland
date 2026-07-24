@@ -218,6 +218,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
       autoClosed: !!s && s.autoClosed > 0,
       snoozed: isSnoozed((prog as any).snoozed_until),
+      snoozedUntil: toDate((prog as any).snoozed_until ?? null),
     });
 
   });
