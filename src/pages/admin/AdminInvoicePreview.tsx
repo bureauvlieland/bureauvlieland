@@ -824,8 +824,11 @@ const AdminInvoicePreview = () => {
   // volledige specificatie met "Reeds gefactureerd" eronder; alleen de
   // effectieve bedragen die naar bureau_invoices/SendDialog gaan schalen mee.
   const hasPriorInvoices = priorSumExcludingCurrent > 0.005 || hasPriorOtherThanCurrent;
-  const wantNewTermijnParam = searchParams.get("new") === "1";
-  const canOfferSlotMode = hasPriorInvoices && wantNewTermijnParam && netDueIncl > 0.005;
+  // Slot mode wordt automatisch afgeleid uit bestaande facturen: zodra er
+  // eerdere (niet-gecrediteerde) facturen bestaan én er nog een restant
+  // openstaat, factureren we standaard alleen het restant. De admin kan
+  // expliciet naar "volledig" schakelen via ?mode=full.
+  const canOfferSlotMode = hasPriorInvoices && netDueIncl > 0.005;
   const isSlotMode = canOfferSlotMode && modeParam !== "full";
 
   const setMode = (next: "slot" | "full") => {
