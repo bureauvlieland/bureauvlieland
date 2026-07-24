@@ -25,6 +25,8 @@ export interface OverviewRow {
   autoClosed?: boolean;
   /** Waar zodra het project actief gesnoozed is (snoozed_until > now). */
   snoozed?: boolean;
+  /** Ruwe snoozed_until (kan in het verleden liggen → verlopen). */
+  snoozedUntil?: Date | null;
 }
 
 interface FetchOptions {
@@ -149,6 +151,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         isNew: isFresh(acc.created_at) && !program,
         autoClosed: program ? ((stats.get(program.id)?.autoClosed ?? 0) > 0) : false,
         snoozed: isSnoozed((program as any)?.snoozed_until),
+        snoozedUntil: toDate((program as any)?.snoozed_until ?? null),
       });
 
     });
@@ -215,6 +218,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       isNew: isFresh(prog.created_at) && (!s || s.confirmed === 0) && !prog.terms_accepted_at,
       autoClosed: !!s && s.autoClosed > 0,
       snoozed: isSnoozed((prog as any).snoozed_until),
+      snoozedUntil: toDate((prog as any).snoozed_until ?? null),
     });
 
   });
