@@ -599,11 +599,15 @@ const AdminInvoicePreview = () => {
     const fmt = (n: number) =>
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
-    // Slot-mode is deprecated: vervolgfacturen tonen altijd het volledige
-    // projectoverzicht met "Reeds gefactureerd" eronder. Dit is voor de
-    // klantadministratie de juiste vorm (zie plan: BTW pro-rata over restant).
+    const loadedInvoiceForPdf = loadedInvoice?.invoice_number === invoiceNumber ? loadedInvoice : null;
+    const selectedTotalsLocal = loadedInvoiceForPdf
+      ? buildScaledVatTotals(
+          totalsLocal.vatLines,
+          Number(loadedInvoiceForPdf.amount_excl_vat),
+          Number(loadedInvoiceForPdf.vat_amount),
+        )
+      : totalsLocal;
     const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
-    const isSlot = false;
 
 
     // ── Build categorized line rows
@@ -611,7 +615,26 @@ const AdminInvoicePreview = () => {
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
 
 
-    {
+    if (loadedInvoiceForPdf) {
+      const typeLabel =
+        invoiceTypeLabels[loadedInvoiceForPdf.invoice_type as InvoiceType] ||
+        String(loadedInvoiceForPdf.invoice_type);
+      const amountIncl = Number(loadedInvoiceForPdf.amount_incl_vat);
+      categories.push({
+        label: typeLabel,
+        rows: [
+          {
+            description: `${typeLabel} ${loadedInvoiceForPdf.invoice_number}`,
+            subDescription:
+              loadedInvoiceForPdf.description ||
+              `Project ${request.reference_number ?? request.customer_name}`,
+            qty: "1",
+            unitPrice: fmt(amountIncl),
+            amount: fmt(amountIncl),
+          },
+        ],
+      });
+    } else {
 
 
     for (const cat of sortedCategories) {
@@ -814,13 +837,13 @@ const AdminInvoicePreview = () => {
       },
       categories,
       totals: {
-        totalExclVat: totalsLocal.totalExclVat,
-        totalVat: totalsLocal.totalVat,
-        totalInclVat: totalsLocal.totalInclVat,
-        vatLines: totalsLocal.vatLines,
+        totalExclVat: selectedTotalsLocal.totalExclVat,
+        totalVat: selectedTotalsLocal.totalVat,
+        totalInclVat: selectedTotalsLocal.totalInclVat,
+        vatLines: selectedTotalsLocal.vatLines,
       },
-      notes: notes || undefined,
-      priorInvoices: priorOtherLocal.map((p) => ({
+      notes: notes || loadedInvoiceForPdf?.description || undefined,
+      priorInvoices: loadedInvoiceForPdf ? [] : priorOtherLocal.map((p) => ({
         invoiceNumber: p.invoice_number,
         invoiceDate: new Date(p.invoice_date),
         amountInclVat:
@@ -870,6 +893,10 @@ const AdminInvoicePreview = () => {
   if (!request) return null;
 
   const totals = calculateTotals();
+  const viewedInvoiceId = searchParams.get("invoiceId");
+  const isExistingInvoiceView = Boolean(
+    viewedInvoiceId && loadedInvoice && loadedInvoice.invoice_number === invoiceNumber,
+  );
   const billingName = request.billing_company_name || request.customer_company || request.customer_name;
   const billingAddress = [
     request.billing_address_street,
@@ -923,7 +950,7 @@ const AdminInvoicePreview = () => {
   // Pro-rata uitsplitsing van het openstaand bedrag over de bestaande
   // BTW-tarieven, zodat BTW-aangifte sluitend blijft over de hele projectreeks.
   const slotTotals = (() => {
-    if (!isSlotMode) return null;
+    if (!isSlotMode || isExistingInvoiceView) return null;
     const fullIncl = totals.totalInclVat;
     if (fullIncl <= 0) return null;
     const factor = netDueIncl / fullIncl;
@@ -955,10 +982,26 @@ const AdminInvoicePreview = () => {
     };
   })();
 
-  const effectiveTotalExclVat = slotTotals?.totalExclVat ?? totals.totalExclVat;
-  const effectiveTotalVat = slotTotals?.totalVat ?? totals.totalVat;
-  const effectiveTotalInclVat = slotTotals?.totalInclVat ?? totals.totalInclVat;
-  const effectiveVatLines = slotTotals?.vatLines ?? totals.vatLines;
+  const existingInvoiceTotals = loadedInvoice
+    ? buildScaledVatTotals(
+        totals.vatLines,
+        Number(loadedInvoice.amount_excl_vat),
+        Number(loadedInvoice.vat_amount),
+      )
+    : null;
+
+  const effectiveTotalExclVat = isExistingInvoiceView && existingInvoiceTotals
+    ? existingInvoiceTotals.totalExclVat
+    : slotTotals?.totalExclVat ?? totals.totalExclVat;
+  const effectiveTotalVat = isExistingInvoiceView && existingInvoiceTotals
+    ? existingInvoiceTotals.totalVat
+    : slotTotals?.totalVat ?? totals.totalVat;
+  const effectiveTotalInclVat = isExistingInvoiceView && existingInvoiceTotals
+    ? existingInvoiceTotals.totalInclVat
+    : slotTotals?.totalInclVat ?? totals.totalInclVat;
+  const effectiveVatLines = isExistingInvoiceView && existingInvoiceTotals
+    ? existingInvoiceTotals.vatLines
+    : slotTotals?.vatLines ?? totals.vatLines;
 
   const priorRefList = priorInvoices
     .filter((p) => p.invoice_number !== invoiceNumber)
@@ -1024,6 +1067,22 @@ const AdminInvoicePreview = () => {
                 )}
                 Download PDF
               </Button>
+              {isExistingInvoiceView && loadedInvoice && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setForwardInvoice({
+                      ...loadedInvoice,
+                      customer_label: request.billing_company_name || request.customer_company || request.customer_name,
+                      reference_number: request.reference_number,
+                    })
+                  }
+                  disabled={isGenerating || isAppSettingsLoading || !invoiceNumber}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Doorsturen naar Snelstart
+                </Button>
+              )}
               <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || isAppSettingsLoading || !invoiceNumber}>
                 <Mail className="h-4 w-4 mr-2" />
                 Verstuur naar klant
@@ -1055,7 +1114,7 @@ const AdminInvoicePreview = () => {
             const matchedExisting = priorInvoices.find((p) => p.invoice_number === invoiceNumber);
             const wantNewTermijn = searchParams.get("new") === "1";
             const hasPrior = priorInvoices.length > 0;
-            if (matchedExisting) {
+            if (matchedExisting && isExistingInvoiceView) {
               return (
                 <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                   Je bekijkt de reeds geregistreerde factuur <strong>{matchedExisting.invoice_number}</strong>
@@ -1066,7 +1125,7 @@ const AdminInvoicePreview = () => {
                 </div>
               );
             }
-            if (isSlotMode) {
+            if (isSlotMode && !isExistingInvoiceView) {
               return (
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
                   Je maakt een <strong>slotfactuur</strong> ({invoiceNumber}) voor het openstaande bedrag van <strong>{formatCurrency(netDueIncl)}</strong>.
@@ -1264,7 +1323,32 @@ const AdminInvoicePreview = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {isSlotMode ? (
+                          {isExistingInvoiceView && loadedInvoice ? (
+                            <>
+                              <tr>
+                                <td
+                                  colSpan={4}
+                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
+                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
+                                >
+                                  {invoiceTypeLabels[loadedInvoice.invoice_type as InvoiceType] || loadedInvoice.invoice_type}
+                                </td>
+                              </tr>
+                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td className="py-1.5 px-2">
+                                  <p className="font-medium">
+                                    {(invoiceTypeLabels[loadedInvoice.invoice_type as InvoiceType] || loadedInvoice.invoice_type)} {loadedInvoice.invoice_number}
+                                  </p>
+                                  <p className="text-[9px] text-gray-500">
+                                    {loadedInvoice.description || `Project ${request.reference_number ?? ""}`.trim()}
+                                  </p>
+                                </td>
+                                <td className="py-1.5 px-2 text-right">1</td>
+                                <td className="py-1.5 px-2 text-right">{formatCurrency(Number(loadedInvoice.amount_incl_vat))}</td>
+                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(Number(loadedInvoice.amount_incl_vat))}</td>
+                              </tr>
+                            </>
+                          ) : isSlotMode ? (
                             <>
                               <tr>
                                 <td
@@ -1571,7 +1655,7 @@ const AdminInvoicePreview = () => {
                             <span>Totaal incl. BTW</span>
                             <span>{formatCurrency(effectiveTotalInclVat)}</span>
                           </div>
-                          {!isSlotMode && (() => {
+                          {!isSlotMode && !isExistingInvoiceView && (() => {
                             const relevantPrior = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
                             if (relevantPrior.length === 0) return null;
                             const priorSum = relevantPrior.reduce(
@@ -1619,7 +1703,11 @@ const AdminInvoicePreview = () => {
                           (s, p) => s + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
                           0,
                         );
-                        const netDue = isSlotMode ? netDueIncl : totals.totalInclVat - priorSum;
+                        const netDue = isExistingInvoiceView
+                          ? effectiveTotalInclVat
+                          : isSlotMode
+                            ? netDueIncl
+                            : totals.totalInclVat - priorSum;
                         return (
                           <div className="p-3 rounded mb-5 text-[10.5px]" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
                             <p className="font-semibold mb-1">Betalingsgegevens</p>
@@ -1687,8 +1775,9 @@ const AdminInvoicePreview = () => {
         invoiceDate={invoiceDate}
         amountExclVat={Math.round(effectiveTotalExclVat * 100) / 100}
         vatAmount={Math.round(effectiveTotalVat * 100) / 100}
-        invoiceType="partial"
-        description={notes}
+        invoiceType={(loadedInvoice?.invoice_type as InvoiceType | undefined) || "partial"}
+        description={notes || loadedInvoice?.description || undefined}
+        existingInvoiceId={isExistingInvoiceView ? loadedInvoice?.id ?? null : null}
         onGeneratePdf={buildPdfBlob}
         onSent={() => navigate(`/admin/projecten/${request.id}`)}
       />
@@ -1701,7 +1790,6 @@ const AdminInvoicePreview = () => {
           // Strip the action params from the URL so it doesn't reopen on refresh
           const next = new URLSearchParams(searchParams);
           next.delete("action");
-          next.delete("invoiceId");
           setSearchParams(next, { replace: true });
         }}
       />
