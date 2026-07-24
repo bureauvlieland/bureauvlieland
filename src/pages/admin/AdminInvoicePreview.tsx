@@ -172,8 +172,10 @@ const AdminInvoicePreview = () => {
   useEffect(() => {
     const action = searchParams.get("action");
     const invoiceId = searchParams.get("invoiceId");
-    if (action !== "forward" || !invoiceId || !request) return;
-    if (forwardInvoice?.id === invoiceId) return;
+    if (!invoiceId || !request) return;
+    // Only skip refetch when this same invoice is already loaded for forward flow;
+    // for the "open existing invoice" flow we still want to hydrate invoiceNumber/date.
+    if (action === "forward" && forwardInvoice?.id === invoiceId) return;
 
     (async () => {
       const { data, error } = await supabase
@@ -185,22 +187,26 @@ const AdminInvoicePreview = () => {
         toast.error("Factuur niet gevonden");
         return;
       }
-      setForwardInvoice({
-        id: data.id,
-        invoice_number: data.invoice_number,
-        invoice_date: data.invoice_date,
-        amount_excl_vat: Number(data.amount_excl_vat),
-        vat_amount: Number(data.vat_amount),
-        amount_incl_vat:
-          data.amount_incl_vat != null
-            ? Number(data.amount_incl_vat)
-            : Number(data.amount_excl_vat) + Number(data.vat_amount),
-        invoice_type: data.invoice_type,
-        description: data.description,
-        customer_label: request.billing_company_name || request.customer_company || request.customer_name,
-        reference_number: request.reference_number,
-      });
-      // Make sure the rendered invoice number matches the one we're forwarding
+      if (action === "forward") {
+        setForwardInvoice({
+          id: data.id,
+          invoice_number: data.invoice_number,
+          invoice_date: data.invoice_date,
+          amount_excl_vat: Number(data.amount_excl_vat),
+          vat_amount: Number(data.vat_amount),
+          amount_incl_vat:
+            data.amount_incl_vat != null
+              ? Number(data.amount_incl_vat)
+              : Number(data.amount_excl_vat) + Number(data.vat_amount),
+          invoice_type: data.invoice_type,
+          description: data.description,
+          customer_label: request.billing_company_name || request.customer_company || request.customer_name,
+          reference_number: request.reference_number,
+        });
+      }
+      // Make sure the rendered invoice number matches the one we're viewing/forwarding.
+      // This is critical: without it, invoiceNumber stays empty and the current
+      // invoice is (incorrectly) counted as "reeds gefactureerd", inflating the total.
       setInvoiceNumber(data.invoice_number);
       if (data.invoice_date) setInvoiceDate(new Date(data.invoice_date));
     })();
