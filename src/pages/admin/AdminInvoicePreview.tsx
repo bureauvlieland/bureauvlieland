@@ -276,6 +276,9 @@ const AdminInvoicePreview = () => {
           reference_number: request.reference_number,
         });
       }
+      if (action === "send") {
+        setSendDialogOpen(true);
+      }
       // Make sure the rendered invoice number matches the one we're viewing/forwarding.
       // This is critical: without it, invoiceNumber stays empty and the current
       // invoice is (incorrectly) counted as "reeds gefactureerd", inflating the total.
@@ -1012,6 +1015,14 @@ const AdminInvoicePreview = () => {
     ? `Restant na reeds gefactureerde termijn${priorInvoices.length > 2 ? "en" : ""}: ${priorRefList}`
     : "Restant openstaand bedrag";
 
+  const closeSendDialog = () => {
+    setSendDialogOpen(false);
+    if (searchParams.get("action") !== "send") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  };
+
 
   return (
     <>
@@ -1085,7 +1096,7 @@ const AdminInvoicePreview = () => {
               )}
               <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || isAppSettingsLoading || !invoiceNumber}>
                 <Mail className="h-4 w-4 mr-2" />
-                Verstuur naar klant
+                {isExistingInvoiceView ? "Opnieuw naar klant" : "Verstuur naar klant"}
               </Button>
             </div>
           </div>
@@ -1120,7 +1131,7 @@ const AdminInvoicePreview = () => {
                   Je bekijkt de reeds geregistreerde factuur <strong>{matchedExisting.invoice_number}</strong>
                   {" "}van {format(new Date(matchedExisting.invoice_date), "d MMMM yyyy", { locale: nl })}
                   {" "}(€{Number(matchedExisting.amount_incl_vat).toFixed(2)}).
-                  De PDF en bestandsnaam gebruiken dit bestaande nummer.
+                  De PDF en bestandsnaam gebruiken dit bestaande nummer. Met <strong>Opnieuw naar klant</strong> verstuur je dezelfde factuur nogmaals zonder dubbele registratie.
                   Klik op <strong>Nieuwe termijn aanmaken</strong> alleen wanneer dit project een aanvullende termijn nodig heeft.
                 </div>
               );
@@ -1767,7 +1778,7 @@ const AdminInvoicePreview = () => {
 
       <SendBureauInvoiceToCustomerDialog
         isOpen={sendDialogOpen}
-        onClose={() => setSendDialogOpen(false)}
+        onClose={closeSendDialog}
         requestId={request.id}
         defaultRecipient={request.billing_contact_email || request.customer_email}
         recipientName={request.billing_contact_name || request.customer_name}

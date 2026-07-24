@@ -627,18 +627,34 @@ export const FinancialOverviewCard = ({
                           {formatCurrency(invoice.amount_incl_vat)}
                         </span>
                         {onForwardInvoice && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => onForwardInvoice(invoice)}
-                            title={isForwarded
-                              ? "Opnieuw doorsturen naar Snelstart"
-                              : "Doorsturen naar Snelstart (bureauvlieland@boekhouding.nl)"}
-                          >
-                            <Mail className="h-3 w-3 mr-1" />
-                            {isForwarded ? "Opnieuw doorsturen" : "Doorsturen"}
-                          </Button>
+                          <div className="flex flex-col items-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() =>
+                                navigate(
+                                  `/admin/aanvragen/${requestId}/factuur?action=send&invoiceId=${invoice.id}`,
+                                )
+                              }
+                              title={customerSentAt ? "Opnieuw naar klant versturen" : "Naar klant versturen"}
+                            >
+                              <Mail className="h-3 w-3 mr-1" />
+                              {customerSentAt ? "Opnieuw naar klant" : "Naar klant"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => onForwardInvoice(invoice)}
+                              title={isForwarded
+                                ? "Opnieuw doorsturen naar Snelstart"
+                                : "Doorsturen naar Snelstart (bureauvlieland@boekhouding.nl)"}
+                            >
+                              <ArrowRight className="h-3 w-3 mr-1" />
+                              {isForwarded ? "Opnieuw Snelstart" : "Snelstart"}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>

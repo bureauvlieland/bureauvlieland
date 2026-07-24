@@ -46,7 +46,7 @@ function makeFetch(options: { duplicateIdempotency?: boolean } = {}) {
       );
     }
     if (url.includes("/rest/v1/email_log") && method === "GET") {
-      if (options.duplicateIdempotency && url.includes("idempotency_key=eq.bureau-invoice-FV-2026-0001-test")) {
+      if (options.duplicateIdempotency) {
         return new Response(
           JSON.stringify([{ mailjet_message_id: "existing-123", sent_at: new Date().toISOString() }]),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -178,6 +178,44 @@ Deno.test({
     assertEquals(json.deduped, true);
     assertEquals(json.mailjetMessageId, "existing-123");
     assertEquals(mailjetCalls, 0);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+Deno.test({
+  name: "send-bureau-invoice-to-customer: forceResend stuurt bestaande factuur ondanks recente send",
+  sanitizeOps: false,
+  sanitizeResources: false,
+}, async () => {
+  const original = globalThis.fetch;
+  let mailjetCalls = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = input.toString();
+    if (url === "https://api.mailjet.com/v3.1/send") mailjetCalls++;
+    return makeFetch({ duplicateIdempotency: true })(input, init);
+  };
+  try {
+    const res = await handler(
+      createRequest(
+        {
+          requestId: "req-1",
+          pdfBase64: "BASE64",
+          pdfFilename: "factuur.pdf",
+          invoiceNumber: "FV-2026-0001",
+          invoiceDate: "2026-07-01",
+          amountInclVat: 1210,
+          invoiceId: "existing-invoice-1",
+          forceResend: true,
+        },
+        { auth: "token" },
+      ),
+    );
+    assertEquals(res.status, 200);
+    const json = await res.json();
+    assertEquals(json.success, true);
+    assertEquals(json.deduped, undefined);
+    assertEquals(mailjetCalls, 1);
   } finally {
     globalThis.fetch = original;
   }
