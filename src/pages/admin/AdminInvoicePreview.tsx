@@ -276,6 +276,9 @@ const AdminInvoicePreview = () => {
           reference_number: request.reference_number,
         });
       }
+      if (action === "send") {
+        setSendDialogOpen(true);
+      }
       // Make sure the rendered invoice number matches the one we're viewing/forwarding.
       // This is critical: without it, invoiceNumber stays empty and the current
       // invoice is (incorrectly) counted as "reeds gefactureerd", inflating the total.
@@ -1011,6 +1014,14 @@ const AdminInvoicePreview = () => {
   const slotSubDescription = priorRefList
     ? `Restant na reeds gefactureerde termijn${priorInvoices.length > 2 ? "en" : ""}: ${priorRefList}`
     : "Restant openstaand bedrag";
+
+  const closeSendDialog = () => {
+    setSendDialogOpen(false);
+    if (searchParams.get("action") !== "send") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  };
 
 
   return (
@@ -1767,7 +1778,7 @@ const AdminInvoicePreview = () => {
 
       <SendBureauInvoiceToCustomerDialog
         isOpen={sendDialogOpen}
-        onClose={() => setSendDialogOpen(false)}
+        onClose={closeSendDialog}
         requestId={request.id}
         defaultRecipient={request.billing_contact_email || request.customer_email}
         recipientName={request.billing_contact_name || request.customer_name}
