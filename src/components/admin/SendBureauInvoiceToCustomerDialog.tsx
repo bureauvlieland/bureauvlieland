@@ -162,6 +162,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
             invoiceDate: format(invoiceDate, "yyyy-MM-dd"),
             amountInclVat: totalInclVat,
             invoiceId,
+            forceResend: Boolean(existingInvoiceId),
             recipientEmail: recipient.trim(),
             customSubject: subject.trim() || undefined,
             customMessage: message.trim() || undefined,
@@ -271,7 +272,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
 
           {existingInvoiceId ? (
             <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
-              Deze factuur is al geregistreerd; er wordt geen dubbele factuurregel aangemaakt.
+              Deze factuur is al geregistreerd; hij wordt opnieuw naar de klant verstuurd zonder dubbele factuurregel.
             </div>
           ) : (
             <div className="flex items-start gap-2">

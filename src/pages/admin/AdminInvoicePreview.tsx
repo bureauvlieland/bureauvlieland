@@ -1085,7 +1085,7 @@ const AdminInvoicePreview = () => {
               )}
               <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || isAppSettingsLoading || !invoiceNumber}>
                 <Mail className="h-4 w-4 mr-2" />
-                Verstuur naar klant
+                {isExistingInvoiceView ? "Opnieuw naar klant" : "Verstuur naar klant"}
               </Button>
             </div>
           </div>
@@ -1120,7 +1120,7 @@ const AdminInvoicePreview = () => {
                   Je bekijkt de reeds geregistreerde factuur <strong>{matchedExisting.invoice_number}</strong>
                   {" "}van {format(new Date(matchedExisting.invoice_date), "d MMMM yyyy", { locale: nl })}
                   {" "}(€{Number(matchedExisting.amount_incl_vat).toFixed(2)}).
-                  De PDF en bestandsnaam gebruiken dit bestaande nummer.
+                  De PDF en bestandsnaam gebruiken dit bestaande nummer. Met <strong>Opnieuw naar klant</strong> verstuur je dezelfde factuur nogmaals zonder dubbele registratie.
                   Klik op <strong>Nieuwe termijn aanmaken</strong> alleen wanneer dit project een aanvullende termijn nodig heeft.
                 </div>
               );
