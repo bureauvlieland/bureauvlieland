@@ -603,13 +603,27 @@ const AdminInvoicePreview = () => {
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
     const loadedInvoiceForPdf = loadedInvoice?.invoice_number === invoiceNumber ? loadedInvoice : null;
-    const selectedTotalsLocal = loadedInvoiceForPdf
+    const isCreditPdf = loadedInvoiceForPdf?.invoice_type === "credit";
+    const pdfSign = isCreditPdf ? -1 : 1;
+    const scaledTotals = loadedInvoiceForPdf
       ? buildScaledVatTotals(
           totalsLocal.vatLines,
           Number(loadedInvoiceForPdf.amount_excl_vat),
           Number(loadedInvoiceForPdf.vat_amount),
         )
       : totalsLocal;
+    const selectedTotalsLocal = loadedInvoiceForPdf && isCreditPdf
+      ? {
+          totalExclVat: -scaledTotals.totalExclVat,
+          totalVat: -scaledTotals.totalVat,
+          totalInclVat: -scaledTotals.totalInclVat,
+          vatLines: scaledTotals.vatLines.map((l) => ({
+            ...l,
+            exclVat: -l.exclVat,
+            vatAmount: -l.vatAmount,
+          })),
+        }
+      : scaledTotals;
     const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
 
 
@@ -622,7 +636,7 @@ const AdminInvoicePreview = () => {
       const typeLabel =
         invoiceTypeLabels[loadedInvoiceForPdf.invoice_type as InvoiceType] ||
         String(loadedInvoiceForPdf.invoice_type);
-      const amountIncl = Number(loadedInvoiceForPdf.amount_incl_vat);
+      const amountIncl = pdfSign * Number(loadedInvoiceForPdf.amount_incl_vat);
       categories.push({
         label: typeLabel,
         rows: [
@@ -638,6 +652,7 @@ const AdminInvoicePreview = () => {
         ],
       });
     } else {
+
 
 
     for (const cat of sortedCategories) {
@@ -985,6 +1000,9 @@ const AdminInvoicePreview = () => {
     };
   })();
 
+  const isCreditView = isExistingInvoiceView && loadedInvoice?.invoice_type === "credit";
+  const creditSign = isCreditView ? -1 : 1;
+
   const existingInvoiceTotals = loadedInvoice
     ? buildScaledVatTotals(
         totals.vatLines,
@@ -993,18 +1011,32 @@ const AdminInvoicePreview = () => {
       )
     : null;
 
-  const effectiveTotalExclVat = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.totalExclVat
+  const signedExistingTotals = existingInvoiceTotals && isCreditView
+    ? {
+        totalExclVat: -existingInvoiceTotals.totalExclVat,
+        totalVat: -existingInvoiceTotals.totalVat,
+        totalInclVat: -existingInvoiceTotals.totalInclVat,
+        vatLines: existingInvoiceTotals.vatLines.map((l) => ({
+          ...l,
+          exclVat: -l.exclVat,
+          vatAmount: -l.vatAmount,
+        })),
+      }
+    : existingInvoiceTotals;
+
+  const effectiveTotalExclVat = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.totalExclVat
     : slotTotals?.totalExclVat ?? totals.totalExclVat;
-  const effectiveTotalVat = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.totalVat
+  const effectiveTotalVat = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.totalVat
     : slotTotals?.totalVat ?? totals.totalVat;
-  const effectiveTotalInclVat = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.totalInclVat
+  const effectiveTotalInclVat = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.totalInclVat
     : slotTotals?.totalInclVat ?? totals.totalInclVat;
-  const effectiveVatLines = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.vatLines
+  const effectiveVatLines = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.vatLines
     : slotTotals?.vatLines ?? totals.vatLines;
+
 
   const priorRefList = priorInvoices
     .filter((p) => p.invoice_number !== invoiceNumber)
@@ -1355,9 +1387,10 @@ const AdminInvoicePreview = () => {
                                   </p>
                                 </td>
                                 <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">{formatCurrency(Number(loadedInvoice.amount_incl_vat))}</td>
-                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(Number(loadedInvoice.amount_incl_vat))}</td>
+                                <td className="py-1.5 px-2 text-right">{formatCurrency(creditSign * Number(loadedInvoice.amount_incl_vat))}</td>
+                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(creditSign * Number(loadedInvoice.amount_incl_vat))}</td>
                               </tr>
+
                             </>
                           ) : isSlotMode ? (
                             <>
