@@ -1372,9 +1372,10 @@ const AdminInvoicePreview = () => {
                                   </p>
                                 </td>
                                 <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">{formatCurrency(Number(loadedInvoice.amount_incl_vat))}</td>
-                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(Number(loadedInvoice.amount_incl_vat))}</td>
+                                <td className="py-1.5 px-2 text-right">{formatCurrency(creditSign * Number(loadedInvoice.amount_incl_vat))}</td>
+                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(creditSign * Number(loadedInvoice.amount_incl_vat))}</td>
                               </tr>
+
                             </>
                           ) : isSlotMode ? (
                             <>
