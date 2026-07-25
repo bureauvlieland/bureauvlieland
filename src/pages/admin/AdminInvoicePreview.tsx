@@ -603,13 +603,27 @@ const AdminInvoicePreview = () => {
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
     const loadedInvoiceForPdf = loadedInvoice?.invoice_number === invoiceNumber ? loadedInvoice : null;
-    const selectedTotalsLocal = loadedInvoiceForPdf
+    const isCreditPdf = loadedInvoiceForPdf?.invoice_type === "credit";
+    const pdfSign = isCreditPdf ? -1 : 1;
+    const scaledTotals = loadedInvoiceForPdf
       ? buildScaledVatTotals(
           totalsLocal.vatLines,
           Number(loadedInvoiceForPdf.amount_excl_vat),
           Number(loadedInvoiceForPdf.vat_amount),
         )
       : totalsLocal;
+    const selectedTotalsLocal = loadedInvoiceForPdf && isCreditPdf
+      ? {
+          totalExclVat: -scaledTotals.totalExclVat,
+          totalVat: -scaledTotals.totalVat,
+          totalInclVat: -scaledTotals.totalInclVat,
+          vatLines: scaledTotals.vatLines.map((l) => ({
+            ...l,
+            exclVat: -l.exclVat,
+            vatAmount: -l.vatAmount,
+          })),
+        }
+      : scaledTotals;
     const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
 
 
@@ -622,7 +636,7 @@ const AdminInvoicePreview = () => {
       const typeLabel =
         invoiceTypeLabels[loadedInvoiceForPdf.invoice_type as InvoiceType] ||
         String(loadedInvoiceForPdf.invoice_type);
-      const amountIncl = Number(loadedInvoiceForPdf.amount_incl_vat);
+      const amountIncl = pdfSign * Number(loadedInvoiceForPdf.amount_incl_vat);
       categories.push({
         label: typeLabel,
         rows: [
@@ -638,6 +652,7 @@ const AdminInvoicePreview = () => {
         ],
       });
     } else {
+
 
 
     for (const cat of sortedCategories) {
