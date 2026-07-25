@@ -985,6 +985,9 @@ const AdminInvoicePreview = () => {
     };
   })();
 
+  const isCreditView = isExistingInvoiceView && loadedInvoice?.invoice_type === "credit";
+  const creditSign = isCreditView ? -1 : 1;
+
   const existingInvoiceTotals = loadedInvoice
     ? buildScaledVatTotals(
         totals.vatLines,
@@ -993,18 +996,32 @@ const AdminInvoicePreview = () => {
       )
     : null;
 
-  const effectiveTotalExclVat = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.totalExclVat
+  const signedExistingTotals = existingInvoiceTotals && isCreditView
+    ? {
+        totalExclVat: -existingInvoiceTotals.totalExclVat,
+        totalVat: -existingInvoiceTotals.totalVat,
+        totalInclVat: -existingInvoiceTotals.totalInclVat,
+        vatLines: existingInvoiceTotals.vatLines.map((l) => ({
+          ...l,
+          exclVat: -l.exclVat,
+          vatAmount: -l.vatAmount,
+        })),
+      }
+    : existingInvoiceTotals;
+
+  const effectiveTotalExclVat = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.totalExclVat
     : slotTotals?.totalExclVat ?? totals.totalExclVat;
-  const effectiveTotalVat = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.totalVat
+  const effectiveTotalVat = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.totalVat
     : slotTotals?.totalVat ?? totals.totalVat;
-  const effectiveTotalInclVat = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.totalInclVat
+  const effectiveTotalInclVat = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.totalInclVat
     : slotTotals?.totalInclVat ?? totals.totalInclVat;
-  const effectiveVatLines = isExistingInvoiceView && existingInvoiceTotals
-    ? existingInvoiceTotals.vatLines
+  const effectiveVatLines = isExistingInvoiceView && signedExistingTotals
+    ? signedExistingTotals.vatLines
     : slotTotals?.vatLines ?? totals.vatLines;
+
 
   const priorRefList = priorInvoices
     .filter((p) => p.invoice_number !== invoiceNumber)
