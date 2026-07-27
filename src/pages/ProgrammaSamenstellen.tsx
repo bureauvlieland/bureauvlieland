@@ -11,16 +11,22 @@ import { CheckoutContactForm } from "@/components/configurator/CheckoutContactFo
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { ExitIntentDraftDialog } from "@/components/configurator/ExitIntentDraftDialog";
+import { TransportBikesStep } from "@/components/configurator/TransportBikesStep";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { CartItemDetail } from "@/types/buildingBlock";
+import {
+  planTransportCartOps,
+  type TransportPreferences,
+  FERRY_HEEN_ID,
+  FERRY_TERUG_ID,
+  FIETS_STANDAARD_ID,
+  FIETS_EBIKE_ID,
+} from "@/lib/programWizardCart";
 import heroImage from "@/assets/beach-signs.jpg";
 
-const FERRY_HEEN_ID = "boot-enkel-heen";
-const FERRY_TERUG_ID = "boot-enkel-terug";
-const FIETS_ID = "fiets-huur";
-const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_ID]);
+const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_STANDAARD_ID, FIETS_EBIKE_ID]);
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
@@ -55,6 +61,10 @@ const ProgrammaSamenstellen = () => {
   const [customerToken, setCustomerToken] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const handledBlockRef = useRef<string | null>(null);
+  const [transportPrefs, setTransportPrefs] = useState<TransportPreferences>({
+    ferryIncluded: true,
+    bikeChoice: "standaard",
+  });
 
   const templateSlug = searchParams.get("template");
   const { data: templateData } = useTemplateWithItems(templateSlug);
@@ -68,15 +78,6 @@ const ProgrammaSamenstellen = () => {
     }
   }, [hasPendingDraft, pendingDraft, templateSlug]);
 
-  // Auto-add default blocks when entering program phase
-  useEffect(() => {
-    if (phase === "program") {
-      const lastDay = Math.max(0, selectedDates.length - 1);
-      if (!isInCart(FERRY_HEEN_ID)) addToCart(FERRY_HEEN_ID, 0);
-      if (!isInCart(FERRY_TERUG_ID)) addToCart(FERRY_TERUG_ID, lastDay);
-      if (!isInCart(FIETS_ID)) addToCart(FIETS_ID, 0);
-    }
-  }, [phase]);
 
   // Handle ?block=<id> deep link from /bouwstenen — auto-add and jump to program phase
   useEffect(() => {
@@ -114,20 +115,31 @@ const ProgrammaSamenstellen = () => {
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
     clearCart();
     if (templateData && data.selectedDates.length > 0) {
-      // Load full template starting from the chosen first date
+      // Load full template starting from the chosen first date — skip transport step
       loadFromTemplate(templateData, data.selectedDates[0], data.numberOfPeople);
-      // Strip ?template from URL so refresh / draft doesn't re-trigger
       searchParams.delete("template");
       setSearchParams(searchParams, { replace: true });
+      setPhase("program");
     } else {
       setNumberOfPeople(data.numberOfPeople);
       data.selectedDates.forEach((date, i) => {
         if (i === 0) setSelectedDate(date);
         else addDate(date);
       });
+      setPhase("transport");
     }
-    setPhase("program");
   }, [clearCart, setNumberOfPeople, setSelectedDate, addDate, templateData, loadFromTemplate, searchParams, setSearchParams]);
+
+  const handleTransportSubmit = useCallback((prefs: TransportPreferences) => {
+    setTransportPrefs(prefs);
+    const ops = planTransportCartOps(cartItems, prefs, Math.max(1, selectedDates.length));
+    ops.forEach((op) => {
+      if (op.action === "add") addToCart(op.blockId, op.dayIndex);
+      else removeFromCart(op.blockId);
+    });
+    setPhase("program");
+  }, [cartItems, selectedDates.length, addToCart, removeFromCart]);
+
 
   const handleAddItem = useCallback((blockId: string, dayIndex: number) => {
     const added = addToCart(blockId, dayIndex);
@@ -168,7 +180,7 @@ const ProgrammaSamenstellen = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showHero = phase === "basics" || phase === "program";
+  const showHero = phase === "basics" || phase === "transport" || phase === "program";
 
   return (
     <div className="min-h-screen bg-background">
@@ -218,6 +230,15 @@ const ProgrammaSamenstellen = () => {
                 onSubmit={handleBasicsSubmit}
                 templateName={templateData?.name ?? null}
                 templateDurationDays={templateData?.duration_days ?? null}
+              />
+            )}
+
+            {phase === "transport" && (
+              <TransportBikesStep
+                initial={transportPrefs}
+                numberOfPeople={numberOfPeople}
+                onBack={() => setPhase("basics")}
+                onSubmit={handleTransportSubmit}
               />
             )}
 

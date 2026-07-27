@@ -14,11 +14,11 @@ interface Route {
 
 const routes: Route[] = [
   {
-    title: "Losse activiteit(en)",
-    href: "/snel-aanvragen",
-    duration: "± 3 min",
-    description: "U weet wat u wilt en heeft één of een paar losse onderdelen nodig.",
-    bestFor: "Eén of meerdere activiteiten",
+    title: "Losse activiteiten direct boeken",
+    href: "/activiteiten-boeken",
+    duration: "± 2 min",
+    description: "Bekijk beschikbaarheid en boek activiteiten direct online.",
+    bestFor: "Direct boeken, geen offerte",
     icon: Zap,
   },
   {
@@ -32,9 +32,9 @@ const routes: Route[] = [
   {
     title: "Stel uw programma samen",
     href: "/programma-samenstellen",
-    duration: "± 10 min",
-    description: "Klik uw eigen dag of meerdaags programma bij elkaar.",
-    bestFor: "Compleet programma, u kiest",
+    duration: "± 5–10 min",
+    description: "Van één losse activiteit tot een compleet meerdaags programma — inclusief boot en fietsen.",
+    bestFor: "Losse activiteit óf compleet programma",
     icon: LayoutGrid,
     highlight: true,
   },

@@ -1,45 +1,86 @@
-## Plan — Terminologie in maatwerk-offertemail aanpassen
 
-De standaard e-mailtekst in het "Offerte versturen"-dialoog gebruikt "akkoord geven", laat onvermeld dat prijzen op onderdelen nog voorlopig zijn, én dat de uitvragen naar partners pas ná goedkeuring worden uitgezet. Dit sluit niet aan bij de klantportal, waar consequent van **goedkeuren** wordt gesproken.
+# Programma-flow vereenvoudigen
 
-### Nieuwe intro-tekst (default)
+## Doel
+Klanten sturen op één duidelijke ingang per intentie, en de programma-configurator wordt geschikt voor zowel losse activiteiten (via ons geboekt) als meerdaagse programma's, met een makkelijke vervoer/fietsen-stap en optionele templates.
 
+## Homepage RoutePicker (`/`)
+
+Wordt 5 tegels, met herverdeling van wat elke tegel doet:
+
+| Tegel | Voor wie | Doel-URL |
+|---|---|---|
+| **Losse activiteiten direct boeken** | Weet wat je wilt, boekt zelf realtime bij aanbieder | `/activiteiten-boeken` (MAP) |
+| **Catering aanvragen** | Alleen eten/drinken | `/catering-aanvragen` |
+| **Stel uw programma samen** ⭐ meest gekozen | Één dag óf meerdaags — losse activiteit via ons, of compleet programma incl. boot/fietsen/logies | `/programma-samenstellen` |
+| **Programma op maat** | Advies vooraf, wij stellen samen | `/maatwerk` |
+| **Logies aanvragen** | Alleen overnachting | `/logies-aanvragen` |
+
+Veranderingen t.o.v. huidige tegels:
+- "Losse activiteit(en)" → **"Losse activiteiten direct boeken"** (tekst + subkopij verduidelijken dat dit realtime MAP-boekingen zijn, niet via Bureau Vlieland).
+- De oude route "losse activiteit via ons laten regelen" (`/snel-aanvragen`) verdwijnt als aparte homepage-tegel en wordt onderdeel van "Stel uw programma samen".
+- "Stel uw programma samen" krijgt subkopij: *"Van één losse activiteit tot een compleet meerdaags programma — wij regelen boot, fietsen, activiteiten en logies."*
+
+## Wizard `/programma-samenstellen`
+
+Nu: BasicsForm → ProgramBuilder → Contact.
+Wordt:
+
+```text
+1. Basics (datum, personen)  ── bestaand
+2. Vervoer & fietsen         ── NIEUW, optioneel te overslaan
+3. Snelstart (optioneel)     ── NIEUW: template of leeg
+4. ProgramBuilder            ── bestaand, met auto-toegevoegde items
+5. Contact + verzenden       ── bestaand
 ```
-Beste {klantnaam},
 
-Hierbij ontvangt u ons maatwerkvoorstel voor uw evenement op Vlieland.
-Wij hebben dit programma speciaal voor {bedrijf} samengesteld.
+### Stap 2 — Vervoer & fietsen
+Compacte kaart met drie ja/nee-vragen:
+- **Boot heen & terug regelen?** ja/nee — bij ja: heen-tijd + terug-tijd via bestaande Doeksen-API-selects (pinned op dag 1 / laatste dag zoals nu).
+- **Fietsen nodig?** ja/nee — bij ja: aantal (default = aantal personen) + type (**versnellingsfiets** / **e-bike**).
+- **Bagagevervoer?** ja/nee (Isla Vlieland, optioneel).
 
-Programmadetails:
-- Data: {data}
-- Aantal personen: {aantal}
-- Geldig tot: {geldigTot}
+Uitkomst wordt bij confirm meteen als items in de cart gezet (day_index -1 voor boot heen, laatste dag voor terug, fiets p.p.p.d over hele duur). Klant ziet ze in stap 4 al staan en kan er nog uit.
 
-U kunt het programma bekijken en goedkeuren via onderstaande knop.
-Uiteraard kunnen we onderdelen en tijden vooraf nog aanpassen.
+### Stap 3 — Snelstart (optioneel)
+Twee opties naast elkaar:
+- **Leeg beginnen** → direct door naar builder.
+- **Voorbeeldprogramma kiezen** → 2-4 templates (bijv. "Actieve teamdag", "Ontspannen bedrijfsuitje", "Meerdaags familieweekend"). Bij kiezen worden template-items toegevoegd bovenop de vervoer/fietsen uit stap 2.
 
-Let op: de prijzen op onderdeelniveau zijn voorlopig. De onderdelen
-staan onder voorbehoud van beschikbaarheid en worden voorlopig
-voor u genoteerd. Zodra u het programma heeft goedgekeurd, zetten
-wij de uitvragen richting onze partners uit, bevestigen we de
-reservering en worden de definitieve prijzen bekend.
+Templates komen uit bestaande `program_templates` tabel (geen nieuwe backend nodig). Klant kan in stap 4 alles nog wijzigen.
 
-Heeft u vragen? Neem contact op via hallo@bureauvlieland.nl of 0562 700 208.
+### Stap 4 — ProgramBuilder
+Ongewijzigd, behalve:
+- Kleine contextuele hint onderaan: *"Zoekt u alleen catering? → /catering-aanvragen · Alleen overnachting? → /logies-aanvragen"* (fallback voor mensen die op de verkeerde plek zijn beland).
+- Pinned boot/fietsen-items zijn al aanwezig als klant dat in stap 2 heeft aangegeven.
 
-Met vriendelijke groet,
-Erwin Soolsma
-Bureau Vlieland
-```
+## Wat blijft ongewijzigd
 
-### Wijzigingen
+- **Catering-flow** (`/catering-aanvragen`) — eigen wizard, blijft los.
+- **Logies-flow** (`/logies-aanvragen`) — eigen partner-flow, blijft los.
+- **Maatwerk** (`/maatwerk`) — intake-formulier, blijft los.
+- **MAP realtime boekingen** (`/activiteiten-boeken`) — blijft ongewijzigd.
+- Pricing, tourist tax, commissie, ferry-API-koppeling, partner-portal: allemaal ongewijzigd.
 
-| Bestand | Wat |
-|---|---|
-| `src/components/admin/AdminSendQuoteDialog.tsx` (`getDefaultIntro`, regel 73-94) | "akkoord geven" → "goedkeuren"; nieuwe alinea over voorlopige prijzen + voorbehoud beschikbaarheid + uitvragen naar partners na goedkeuring |
-| `src/pages/admin/AdminQuotePreview.tsx` (regel 569, `plainText` fallback) | Zelfde tekst gelijkgetrokken, zodat de fallback in de preview-flow synchroon loopt |
+## Technische details
 
-Geen wijzigingen aan de edge function (`send-quote-offer`) of aan opgeslagen templates — u bewerkt de tekst nog steeds per verzending, dit past alleen de default aan.
+**Nieuw / gewijzigd:**
+- `src/components/routepicker/RoutePicker.tsx` — tegel-labels/kopij + link "Losse activiteit(en)" bijwerken naar MAP.
+- `src/pages/programma-samenstellen/*` — nieuwe wizard-stappen `TransportBikesStep.tsx` en `TemplatePickerStep.tsx`, plus step-navigatie state in bestaande wizard-container.
+- `src/lib/programWizardCart.ts` (bestaand of nieuw) — helpers `addFerryItemsToCart()`, `addBikeItemsToCart()`, `applyTemplateToCart()` — gebruikt bestaande item-shapes zodat ProgramBuilder ze onveranderd toont.
+- Cart-handoff via bestaande `CART_HANDOFF_KEY` (memory).
 
-### Buiten scope
-- Wijzigingen aan bestaande projecten waar deze mail al is verstuurd.
-- Terminologie in andere e-mail templates (klantportal-mails, partner-uitvragen).
+**Verwijderen / afvoeren:**
+- Route `/snel-aanvragen` blijft technisch bestaan (backwards compat), maar wordt niet meer gelinkt vanaf homepage.
+
+**Nieuwe tests:**
+- `programWizardCart.test.ts` — ferry pinning op day_index -1 / laatste dag, fiets p.p.p.d over duur, template-merge zonder duplicaten.
+- Uitbreiding `capacityCheck.test.ts` — vervoer-stap respecteert Watertaxi max-personen.
+
+**Geen backend-migraties nodig.**
+
+## Verificatie na build
+1. Homepage: 5 tegels, links kloppen, "Losse activiteiten direct boeken" gaat naar MAP.
+2. `/programma-samenstellen` met 1 dag → boot heen&terug + 4 fietsen aanvinken → template "Actieve teamdag" → builder toont boot pinned, fietsen p.p.p.d, template-activiteiten.
+3. `/programma-samenstellen` met leeg beginnen zonder vervoer → builder start leeg, hint naar catering/logies zichtbaar.
+4. Vitest suites groen.
