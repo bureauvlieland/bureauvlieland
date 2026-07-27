@@ -115,20 +115,31 @@ const ProgrammaSamenstellen = () => {
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
     clearCart();
     if (templateData && data.selectedDates.length > 0) {
-      // Load full template starting from the chosen first date
+      // Load full template starting from the chosen first date — skip transport step
       loadFromTemplate(templateData, data.selectedDates[0], data.numberOfPeople);
-      // Strip ?template from URL so refresh / draft doesn't re-trigger
       searchParams.delete("template");
       setSearchParams(searchParams, { replace: true });
+      setPhase("program");
     } else {
       setNumberOfPeople(data.numberOfPeople);
       data.selectedDates.forEach((date, i) => {
         if (i === 0) setSelectedDate(date);
         else addDate(date);
       });
+      setPhase("transport");
     }
-    setPhase("program");
   }, [clearCart, setNumberOfPeople, setSelectedDate, addDate, templateData, loadFromTemplate, searchParams, setSearchParams]);
+
+  const handleTransportSubmit = useCallback((prefs: TransportPreferences) => {
+    setTransportPrefs(prefs);
+    const ops = planTransportCartOps(cartItems, prefs, Math.max(1, selectedDates.length));
+    ops.forEach((op) => {
+      if (op.action === "add") addToCart(op.blockId, op.dayIndex);
+      else removeFromCart(op.blockId);
+    });
+    setPhase("program");
+  }, [cartItems, selectedDates.length, addToCart, removeFromCart]);
+
 
   const handleAddItem = useCallback((blockId: string, dayIndex: number) => {
     const added = addToCart(blockId, dayIndex);
