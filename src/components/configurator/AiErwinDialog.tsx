@@ -65,7 +65,8 @@ export const AiErwinDialog = ({
 
       if (error) throw error;
 
-      const suggestions: { block_id: string; day_index: number }[] = data?.suggestions || [];
+      const suggestions: { block_id: string; day_index: number; preferred_time?: string | null }[] =
+        data?.suggestions || [];
 
       if (suggestions.length === 0) {
         toast({
@@ -76,9 +77,16 @@ export const AiErwinDialog = ({
         return;
       }
 
+      const normalizeTime = (raw: string | null | undefined): string | null => {
+        if (!raw) return null;
+        const trimmed = raw.trim();
+        // Accept HH:MM (24h). Reject anything else to keep downstream displays clean.
+        return /^([01]\d|2[0-3]):[0-5]\d$/.test(trimmed) ? trimmed : null;
+      };
+
       const cartItems: CartItemDetail[] = suggestions.map((s) => ({
         blockId: s.block_id,
-        preferredTime: null,
+        preferredTime: normalizeTime(s.preferred_time),
         notes: "",
         dayIndex: s.day_index,
       }));

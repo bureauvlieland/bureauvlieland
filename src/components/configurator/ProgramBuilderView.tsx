@@ -194,6 +194,28 @@ export const ProgramBuilderView = ({
   const [editDates, setEditDates] = useState(false);
   const [tempPeople, setTempPeople] = useState(numberOfPeople);
   const [ferryErrors, setFerryErrors] = useState<Set<string>>(new Set());
+  const [templateBannerDismissed, setTemplateBannerDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("bv:templateBannerDismissed") === "1";
+  });
+
+  const TRANSPORT_BLOCK_IDS = new Set([
+    "boot-enkel-heen",
+    "boot-enkel-terug",
+    "boot-retour",
+    "fiets-huur",
+    "fiets-huur-kopie-2",
+  ]);
+  const nonTransportCount = cartItems.filter((i) => !TRANSPORT_BLOCK_IDS.has(i.blockId)).length;
+  const showTemplateBanner =
+    templates.length > 0 && nonTransportCount < 2 && !templateBannerDismissed;
+
+  const dismissTemplateBanner = () => {
+    setTemplateBannerDismissed(true);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("bv:templateBannerDismissed", "1");
+    }
+  };
 
   // Validate ferry blocks have a selected time before submit
   const handleSubmitWithValidation = useCallback(() => {
@@ -345,8 +367,40 @@ export const ProgramBuilderView = ({
         </div>
       </div>
 
+      {/* Prominent nudge: use a template as starting point */}
+      {showTemplateBanner && (
+        <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="relative shrink-0">
+              <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping" aria-hidden />
+              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <BookOpen className="h-4 w-4" />
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base">
+                Snel starten met een voorbeeldprogramma?
+              </h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Kies een kant-en-klaar programma van Bureau Vlieland en pas het aan naar uw wensen — u bespaart tijd en mist niets essentieels.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Button size="sm" className="gap-1.5" onClick={() => setIsTemplatesOpen(true)}>
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Bekijk voorbeeldprogramma's
+                </Button>
+                <Button size="sm" variant="ghost" onClick={dismissTemplateBanner}>
+                  Nee, ik stel zelf samen
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Day tabs + timeline */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+
         <DayTabs
           selectedDates={selectedDates}
           activeDay={activeDay}
