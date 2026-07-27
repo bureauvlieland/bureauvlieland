@@ -40,9 +40,12 @@ interface ShareProgramDialogProps {
 
 function generateShareCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  // 20 chars from a 32-char alphabet = ~100 bits of entropy, unguessable.
+  const bytes = new Uint32Array(20);
+  crypto.getRandomValues(bytes);
   let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 20; i++) {
+    code += chars.charAt(bytes[i] % chars.length);
   }
   return code;
 }
