@@ -1,10 +1,11 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ConfigPhase = "basics" | "program" | "contact" | "success";
+export type ConfigPhase = "basics" | "transport" | "program" | "contact" | "success";
 
 const STEPS: { key: ConfigPhase; label: string }[] = [
   { key: "basics", label: "Basisgegevens" },
+  { key: "transport", label: "Vervoer & fietsen" },
   { key: "program", label: "Programma" },
   { key: "contact", label: "Gegevens" },
   { key: "success", label: "Versturen" },
