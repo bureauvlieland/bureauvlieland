@@ -125,12 +125,12 @@ const ProgrammaOpMaat = () => {
 
       if (insertError) throw insertError;
 
-      await supabase.from("program_request_history").insert({
-        request_id: requestId,
-        action: "created",
-        actor: "customer",
-        actor_name: formData.name,
-        new_value: {
+      await supabase.rpc("append_customer_program_history", {
+        p_request_id: requestId,
+        p_customer_token: token,
+        p_action: "created",
+        p_actor_name: formData.name,
+        p_new_value: {
           type: "maatwerk",
           origin: programType,
           wants_accommodation: wantsAccommodation,
