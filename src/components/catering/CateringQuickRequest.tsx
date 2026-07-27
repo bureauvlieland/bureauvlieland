@@ -99,12 +99,12 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
       } as any);
       if (insErr) throw insErr;
 
-      await supabase.from("program_request_history").insert({
-        request_id: requestId,
-        action: "created",
-        actor: "customer",
-        actor_name: name,
-        new_value: { kind: "catering_only", quick_request: true },
+      await supabase.rpc("append_customer_program_history", {
+        p_request_id: requestId,
+        p_customer_token: token,
+        p_action: "created",
+        p_actor_name: name,
+        p_new_value: { kind: "catering_only", quick_request: true },
       });
 
       const { data: refRow } = await supabase
