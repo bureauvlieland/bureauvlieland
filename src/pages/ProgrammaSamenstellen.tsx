@@ -11,16 +11,22 @@ import { CheckoutContactForm } from "@/components/configurator/CheckoutContactFo
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { ExitIntentDraftDialog } from "@/components/configurator/ExitIntentDraftDialog";
+import { TransportBikesStep } from "@/components/configurator/TransportBikesStep";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { CartItemDetail } from "@/types/buildingBlock";
+import {
+  planTransportCartOps,
+  type TransportPreferences,
+  FERRY_HEEN_ID,
+  FERRY_TERUG_ID,
+  FIETS_STANDAARD_ID,
+  FIETS_EBIKE_ID,
+} from "@/lib/programWizardCart";
 import heroImage from "@/assets/beach-signs.jpg";
 
-const FERRY_HEEN_ID = "boot-enkel-heen";
-const FERRY_TERUG_ID = "boot-enkel-terug";
-const FIETS_ID = "fiets-huur";
-const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_ID]);
+const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_STANDAARD_ID, FIETS_EBIKE_ID]);
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
