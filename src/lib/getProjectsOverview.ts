@@ -27,6 +27,10 @@ export interface OverviewRow {
   snoozed?: boolean;
   /** Ruwe snoozed_until (kan in het verleden liggen → verlopen). */
   snoozedUntil?: Date | null;
+  /** Offerte-status (bijv. offerte_verstuurd). */
+  quoteStatus?: string | null;
+  /** Verloopdatum van de offerte (quote_valid_until). */
+  quoteValidUntil?: Date | null;
 }
 
 interface FetchOptions {
@@ -67,7 +71,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       .select(`
         id, reference_number, customer_name, customer_company, number_of_people,
         selected_dates, status, terms_accepted_at, linked_accommodation_id,
-        quote_status, completion_status, created_at, origin, snoozed_until
+        quote_status, completion_status, created_at, origin, snoozed_until, quote_valid_until
       `)
       .neq("status", "deleted"),
     supabase
@@ -152,6 +156,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         autoClosed: program ? ((stats.get(program.id)?.autoClosed ?? 0) > 0) : false,
         snoozed: isSnoozed((program as any)?.snoozed_until),
         snoozedUntil: toDate((program as any)?.snoozed_until ?? null),
+        quoteStatus: (program as any)?.quote_status ?? null,
+        quoteValidUntil: toDate((program as any)?.quote_valid_until ?? null),
       });
 
     });
@@ -219,6 +225,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       autoClosed: !!s && s.autoClosed > 0,
       snoozed: isSnoozed((prog as any).snoozed_until),
       snoozedUntil: toDate((prog as any).snoozed_until ?? null),
+      quoteStatus: prog.quote_status ?? null,
+      quoteValidUntil: toDate((prog as any).quote_valid_until ?? null),
     });
 
   });

@@ -168,6 +168,24 @@ function Row({ row }: { row: OverviewRow }) {
                 </Badge>
               );
             })()}
+            {row.quoteValidUntil && row.quoteStatus === "offerte_verstuurd" && (() => {
+              const expired = row.quoteValidUntil.getTime() <= Date.now();
+              const dateStr = row.quoteValidUntil.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+              return (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "h-4 px-1.5 text-[10px] font-semibold uppercase tracking-wide",
+                    expired
+                      ? "border-red-300 bg-red-100 text-red-700 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300"
+                      : "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                  )}
+                  title={expired ? `Offerte verlopen op ${dateStr}` : `Offerte geldig t/m ${dateStr}`}
+                >
+                  {expired ? "Offerte verlopen" : "Offerte t/m"} · {dateStr}
+                </Badge>
+              );
+            })()}
           </div>
 
           {row.customerCompany && (
