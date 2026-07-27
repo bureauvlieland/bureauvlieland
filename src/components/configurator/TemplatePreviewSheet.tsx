@@ -79,7 +79,14 @@ export const TemplatePreviewSheet = ({
                     {getDayLabel(parseInt(dayIndex))}
                   </h3>
                   <div className="space-y-3">
-                    {items?.sort((a, b) => a.sort_order - b.sort_order).map((item) => (
+                    {items?.slice().sort((a, b) => {
+                      const ta = a.preferred_time?.trim() || "";
+                      const tb = b.preferred_time?.trim() || "";
+                      if (ta && tb) return ta.localeCompare(tb);
+                      if (ta) return -1;
+                      if (tb) return 1;
+                      return a.sort_order - b.sort_order;
+                    }).map((item) => (
                       <div
                         key={item.id}
                         className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
