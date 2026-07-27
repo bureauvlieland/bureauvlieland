@@ -27,6 +27,10 @@ export interface OverviewRow {
   snoozed?: boolean;
   /** Ruwe snoozed_until (kan in het verleden liggen → verlopen). */
   snoozedUntil?: Date | null;
+  /** Offerte-status (bijv. offerte_verstuurd). */
+  quoteStatus?: string | null;
+  /** Verloopdatum van de offerte (quote_valid_until). */
+  quoteValidUntil?: Date | null;
 }
 
 interface FetchOptions {
