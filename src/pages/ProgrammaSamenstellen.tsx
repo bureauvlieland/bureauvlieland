@@ -180,7 +180,7 @@ const ProgrammaSamenstellen = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showHero = phase === "basics" || phase === "program";
+  const showHero = phase === "basics" || phase === "transport" || phase === "program";
 
   return (
     <div className="min-h-screen bg-background">
