@@ -4507,6 +4507,16 @@ export type Database = {
       }
     }
     Functions: {
+      append_customer_program_history: {
+        Args: {
+          p_action: string
+          p_actor_name: string
+          p_customer_token: string
+          p_new_value: Json
+          p_request_id: string
+        }
+        Returns: undefined
+      }
       expire_stale_recommendations: { Args: never; Returns: undefined }
       get_accommodation_quote_terms: {
         Args: { _quote_id: string }
