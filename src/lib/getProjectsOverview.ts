@@ -225,6 +225,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       autoClosed: !!s && s.autoClosed > 0,
       snoozed: isSnoozed((prog as any).snoozed_until),
       snoozedUntil: toDate((prog as any).snoozed_until ?? null),
+      quoteStatus: prog.quote_status ?? null,
+      quoteValidUntil: toDate((prog as any).quote_valid_until ?? null),
     });
 
   });
