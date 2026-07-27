@@ -233,6 +233,15 @@ const ProgrammaSamenstellen = () => {
               />
             )}
 
+            {phase === "transport" && (
+              <TransportBikesStep
+                initial={transportPrefs}
+                numberOfPeople={numberOfPeople}
+                onBack={() => setPhase("basics")}
+                onSubmit={handleTransportSubmit}
+              />
+            )}
+
             {phase === "program" && (
               <ProgramBuilderView
                 cartItems={cartItems}
