@@ -61,6 +61,10 @@ const ProgrammaSamenstellen = () => {
   const [customerToken, setCustomerToken] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const handledBlockRef = useRef<string | null>(null);
+  const [transportPrefs, setTransportPrefs] = useState<TransportPreferences>({
+    ferryIncluded: true,
+    bikeChoice: "standaard",
+  });
 
   const templateSlug = searchParams.get("template");
   const { data: templateData } = useTemplateWithItems(templateSlug);
@@ -74,15 +78,6 @@ const ProgrammaSamenstellen = () => {
     }
   }, [hasPendingDraft, pendingDraft, templateSlug]);
 
-  // Auto-add default blocks when entering program phase
-  useEffect(() => {
-    if (phase === "program") {
-      const lastDay = Math.max(0, selectedDates.length - 1);
-      if (!isInCart(FERRY_HEEN_ID)) addToCart(FERRY_HEEN_ID, 0);
-      if (!isInCart(FERRY_TERUG_ID)) addToCart(FERRY_TERUG_ID, lastDay);
-      if (!isInCart(FIETS_ID)) addToCart(FIETS_ID, 0);
-    }
-  }, [phase]);
 
   // Handle ?block=<id> deep link from /bouwstenen — auto-add and jump to program phase
   useEffect(() => {
