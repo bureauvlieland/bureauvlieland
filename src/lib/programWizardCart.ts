@@ -7,7 +7,7 @@
 export const FERRY_HEEN_ID = "boot-enkel-heen";
 export const FERRY_TERUG_ID = "boot-enkel-terug";
 export const FIETS_STANDAARD_ID = "fiets-huur";
-export const FIETS_EBIKE_ID = "fiets-huur-kopie";
+export const FIETS_EBIKE_ID = "fiets-huur-kopie-2";
 
 export type BikeChoice = "geen" | "standaard" | "ebike";
 
@@ -34,7 +34,7 @@ export interface PlannedCartOp {
  * The rules:
  * - Ferry heen is added on day 0, terug on the last day, only if `ferryIncluded`.
  *   If `ferryIncluded` is false, any existing ferry rows should be removed.
- * - Bikes: at most one of `fiets-huur` (standaard) or `fiets-huur-kopie` (ebike)
+ * - Bikes: at most one of `fiets-huur` (standaard) or `fiets-huur-kopie-2` (ebike)
  *   is in the cart. If the user chose "geen", both are removed. When switching
  *   between types the previous choice is removed before adding the new one.
  */

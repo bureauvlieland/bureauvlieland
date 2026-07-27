@@ -20,9 +20,13 @@ export const ProgramTimeline = ({ template }: ProgramTimelineProps) => {
 
   Object.keys(itemsByDay).forEach((day) => {
     itemsByDay[Number(day)].sort((a, b) => {
-      if (a.preferred_time && b.preferred_time) {
-        return a.preferred_time.localeCompare(b.preferred_time);
-      }
+      // Items with a preferred_time always come before items without.
+      const aHas = Boolean(a.preferred_time);
+      const bHas = Boolean(b.preferred_time);
+      if (aHas && bHas) return a.preferred_time!.localeCompare(b.preferred_time!);
+      if (aHas) return -1;
+      if (bHas) return 1;
+      // Neither has a time — fall back to explicit sort_order.
       return (a.sort_order || 0) - (b.sort_order || 0);
     });
   });
