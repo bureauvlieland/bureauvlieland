@@ -194,6 +194,28 @@ export const ProgramBuilderView = ({
   const [editDates, setEditDates] = useState(false);
   const [tempPeople, setTempPeople] = useState(numberOfPeople);
   const [ferryErrors, setFerryErrors] = useState<Set<string>>(new Set());
+  const [templateBannerDismissed, setTemplateBannerDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("bv:templateBannerDismissed") === "1";
+  });
+
+  const TRANSPORT_BLOCK_IDS = new Set([
+    "boot-enkel-heen",
+    "boot-enkel-terug",
+    "boot-retour",
+    "fiets-huur",
+    "fiets-huur-kopie-2",
+  ]);
+  const nonTransportCount = cartItems.filter((i) => !TRANSPORT_BLOCK_IDS.has(i.blockId)).length;
+  const showTemplateBanner =
+    templates.length > 0 && nonTransportCount < 2 && !templateBannerDismissed;
+
+  const dismissTemplateBanner = () => {
+    setTemplateBannerDismissed(true);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("bv:templateBannerDismissed", "1");
+    }
+  };
 
   // Validate ferry blocks have a selected time before submit
   const handleSubmitWithValidation = useCallback(() => {
