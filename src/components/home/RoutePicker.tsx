@@ -32,9 +32,9 @@ const routes: Route[] = [
   {
     title: "Stel uw programma samen",
     href: "/programma-samenstellen",
-    duration: "± 10 min",
-    description: "Klik uw eigen dag of meerdaags programma bij elkaar.",
-    bestFor: "Compleet programma, u kiest",
+    duration: "± 5–10 min",
+    description: "Van één losse activiteit tot een compleet meerdaags programma — inclusief boot en fietsen.",
+    bestFor: "Losse activiteit óf compleet programma",
     icon: LayoutGrid,
     highlight: true,
   },
