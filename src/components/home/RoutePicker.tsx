@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
 import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, BedDouble, ArrowRight, Clock, Sparkles } from "lucide-react";
+import beachActivity from "@/assets/beach-activity.jpg";
+import vlielandGroup from "@/assets/vlieland-group.jpg";
+import erwinProfile from "@/assets/erwin-profile.jpg";
 
 
 interface Route {
@@ -10,6 +13,9 @@ interface Route {
   bestFor: string;
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
+  image?: string;
+  imageAlt?: string;
+  imagePosition?: string;
 }
 
 const primaryRoutes: Route[] = [
@@ -20,6 +26,8 @@ const primaryRoutes: Route[] = [
     description: "Bekijk beschikbaarheid en boek activiteiten direct online.",
     bestFor: "Direct boeken, geen offerte",
     icon: Zap,
+    image: beachActivity,
+    imageAlt: "Activiteit op het strand van Vlieland",
   },
   {
     title: "Stel uw programma samen",
@@ -29,6 +37,8 @@ const primaryRoutes: Route[] = [
     bestFor: "Losse activiteit óf compleet programma",
     icon: LayoutGrid,
     highlight: true,
+    image: vlielandGroup,
+    imageAlt: "Groep geniet van een dag op Vlieland",
   },
   {
     title: "Programma op maat",
@@ -37,6 +47,9 @@ const primaryRoutes: Route[] = [
     description: "U vertelt wat u zoekt, wij stellen het voor u samen.",
     bestFor: "Maatwerk, advies vooraf",
     icon: MessageSquareHeart,
+    image: erwinProfile,
+    imageAlt: "Erwin van Bureau Vlieland",
+    imagePosition: "object-top",
   },
 ];
 
@@ -61,48 +74,78 @@ const secondaryRoutes: Route[] = [
 
 const RouteCard = ({ route }: { route: Route }) => {
   const Icon = route.icon;
+  const hasImage = Boolean(route.image);
   return (
     <Link
       to={route.href}
-      className={`group relative flex flex-col rounded-lg border p-6 lg:p-7 transition-all hover:shadow-md hover:-translate-y-0.5 ${
+      className={`group relative flex flex-col overflow-hidden rounded-lg border transition-all hover:shadow-lg hover:-translate-y-0.5 ${
         route.highlight
           ? "border-primary/40 bg-primary/[0.03] shadow-sm"
           : "border-border bg-card hover:border-primary/30"
       }`}
     >
       {route.highlight && (
-        <span className="absolute -top-2.5 left-6 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] uppercase tracking-wider font-semibold">
+        <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] uppercase tracking-wider font-semibold shadow-sm">
           Meest gekozen
         </span>
       )}
-      <div className="flex items-center justify-between mb-5">
-        <span
-          className={`inline-flex h-11 w-11 items-center justify-center rounded-md ${
-            route.highlight ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-          }`}
-        >
-          <Icon className="h-5 w-5" />
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          {route.duration}
-        </span>
-      </div>
-      <h3 className="font-display text-xl font-semibold text-foreground mb-2 leading-tight">
-        {route.title}
-      </h3>
-      <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-        {route.description}
-      </p>
-      <div className="pt-4 border-t border-border/60 flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground/80">Voor:</span> {route.bestFor}
-        </span>
-        <ArrowRight className="h-4 w-4 text-primary translate-x-0 group-hover:translate-x-1 transition-transform" />
+
+      {hasImage && (
+        <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+          <img
+            src={route.image}
+            alt={route.imageAlt ?? ""}
+            loading="lazy"
+            className={`absolute inset-0 h-full w-full object-cover ${route.imagePosition ?? ""} transition-transform duration-700 group-hover:scale-105`}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+          <span
+            className={`absolute bottom-3 left-3 inline-flex h-10 w-10 items-center justify-center rounded-md backdrop-blur-sm shadow-sm ${
+              route.highlight ? "bg-primary text-primary-foreground" : "bg-background/90 text-primary"
+            }`}
+          >
+            <Icon className="h-5 w-5" />
+          </span>
+          <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+            <Clock className="h-3 w-3" />
+            {route.duration}
+          </span>
+        </div>
+      )}
+
+      <div className="flex flex-col flex-1 p-6 lg:p-7">
+        {!hasImage && (
+          <div className="flex items-center justify-between mb-5">
+            <span
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-md ${
+                route.highlight ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              {route.duration}
+            </span>
+          </div>
+        )}
+        <h3 className="font-display text-xl font-semibold text-foreground mb-2 leading-tight">
+          {route.title}
+        </h3>
+        <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
+          {route.description}
+        </p>
+        <div className="pt-4 border-t border-border/60 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">Voor:</span> {route.bestFor}
+          </span>
+          <ArrowRight className="h-4 w-4 text-primary translate-x-0 group-hover:translate-x-1 transition-transform" />
+        </div>
       </div>
     </Link>
   );
 };
+
 
 
 export const RoutePicker = () => {
