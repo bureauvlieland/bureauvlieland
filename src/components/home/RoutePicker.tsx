@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, BedDouble, ArrowRight, Clock, Sparkles } from "lucide-react";
 import beachActivity from "@/assets/beach-activity.jpg";
 import vlielandGroup from "@/assets/vlieland-group.jpg";
-import erwinProfile from "@/assets/erwin-profile.jpg";
+import sunsetDinner from "@/assets/sunset-dinner.jpg";
 
 
 interface Route {
@@ -26,8 +26,8 @@ const primaryRoutes: Route[] = [
     description: "Bekijk beschikbaarheid en boek activiteiten direct online.",
     bestFor: "Direct boeken, geen offerte",
     icon: Zap,
-    image: beachActivity,
-    imageAlt: "Activiteit op het strand van Vlieland",
+    image: vlielandGroup,
+    imageAlt: "Groep geniet van een dag op Vlieland",
   },
   {
     title: "Stel uw programma samen",
@@ -37,8 +37,8 @@ const primaryRoutes: Route[] = [
     bestFor: "Losse activiteit óf compleet programma",
     icon: LayoutGrid,
     highlight: true,
-    image: vlielandGroup,
-    imageAlt: "Groep geniet van een dag op Vlieland",
+    image: beachActivity,
+    imageAlt: "Activiteit op het strand van Vlieland",
   },
   {
     title: "Programma op maat",
@@ -47,9 +47,8 @@ const primaryRoutes: Route[] = [
     description: "U vertelt wat u zoekt, wij stellen het voor u samen.",
     bestFor: "Maatwerk, advies vooraf",
     icon: MessageSquareHeart,
-    image: erwinProfile,
-    imageAlt: "Erwin van Bureau Vlieland",
-    imagePosition: "object-top",
+    image: sunsetDinner,
+    imageAlt: "Sfeervol diner bij zonsondergang op Vlieland",
   },
 ];
 
