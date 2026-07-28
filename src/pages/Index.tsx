@@ -49,16 +49,17 @@ const Index = () => {
       <CookieConsent />
       <Navigation />
       <main id="main-content">
-        <HeroEditorial />
-        <RoutePicker />
-        <UpcomingActivitiesFeed />
-        <CateringHighlight />
-        <ActivitiesShowcase />
-        <ProgramTemplatesPreview />
-        <ErwinManifesto />
-        <Testimonials />
-        <FinalCTA />
+        <div data-analytics-section="hero"><HeroEditorial /></div>
+        <div data-analytics-section="routes"><RoutePicker /></div>
+        <div data-analytics-section="upcoming"><UpcomingActivitiesFeed /></div>
+        <div data-analytics-section="catering"><CateringHighlight /></div>
+        <div data-analytics-section="activities"><ActivitiesShowcase /></div>
+        <div data-analytics-section="templates"><ProgramTemplatesPreview /></div>
+        <div data-analytics-section="manifesto"><ErwinManifesto /></div>
+        <div data-analytics-section="testimonials"><Testimonials /></div>
+        <div data-analytics-section="final-cta"><FinalCTA /></div>
       </main>
+      <StickyMobileCTA />
       <Footer />
     </div>
   );
