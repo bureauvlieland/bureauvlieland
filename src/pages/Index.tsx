@@ -14,9 +14,12 @@ import { ErwinManifesto } from "@/components/home/ErwinManifesto";
 import { FinalCTA } from "@/components/home/FinalCTA";
 import { RoutePicker } from "@/components/home/RoutePicker";
 import { CateringHighlight } from "@/components/home/CateringHighlight";
+import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
+import { useHomepageAnalytics } from "@/hooks/useHomepageAnalytics";
 
 const Index = () => {
   const location = useLocation();
+  useHomepageAnalytics();
 
   useEffect(() => {
     if (location.hash === "#routes") {
@@ -46,16 +49,17 @@ const Index = () => {
       <CookieConsent />
       <Navigation />
       <main id="main-content">
-        <HeroEditorial />
-        <RoutePicker />
-        <UpcomingActivitiesFeed />
-        <CateringHighlight />
-        <ActivitiesShowcase />
-        <ProgramTemplatesPreview />
-        <ErwinManifesto />
-        <Testimonials />
-        <FinalCTA />
+        <div data-analytics-section="hero"><HeroEditorial /></div>
+        <div data-analytics-section="routes"><RoutePicker /></div>
+        <div data-analytics-section="upcoming"><UpcomingActivitiesFeed /></div>
+        <div data-analytics-section="catering"><CateringHighlight /></div>
+        <div data-analytics-section="activities"><ActivitiesShowcase /></div>
+        <div data-analytics-section="templates"><ProgramTemplatesPreview /></div>
+        <div data-analytics-section="manifesto"><ErwinManifesto /></div>
+        <div data-analytics-section="testimonials"><Testimonials /></div>
+        <div data-analytics-section="final-cta"><FinalCTA /></div>
       </main>
+      <StickyMobileCTA />
       <Footer />
     </div>
   );

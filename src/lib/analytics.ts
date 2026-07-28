@@ -237,3 +237,24 @@ export const trackViewItem = (item: {
     }],
   });
 };
+
+/**
+ * Track scroll depth thresholds (25/50/75/100) once per page load.
+ */
+export const trackScrollDepth = (percent: 25 | 50 | 75 | 100, page?: string) => {
+  trackEvent('scroll_depth', {
+    percent,
+    page: page || (typeof window !== 'undefined' ? window.location.pathname : null),
+  });
+};
+
+/**
+ * Track when a named homepage/section becomes visible (>=50%).
+ * Fires once per section per page load.
+ */
+export const trackSectionView = (section: string, page?: string) => {
+  trackEvent('section_view', {
+    section,
+    page: page || (typeof window !== 'undefined' ? window.location.pathname : null),
+  });
+};
