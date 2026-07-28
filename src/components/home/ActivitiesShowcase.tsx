@@ -30,7 +30,7 @@ export const ActivitiesShowcase = () => {
     (async () => {
       const { data } = await supabase
         .from("building_blocks")
-        .select("id, name, short_description, category, image_url")
+        .select("id, slug, name, short_description, category, image_url")
         .eq("status", "published")
         .in("category", ["outdoor", "excursies", "entertainment"])
         .order("sort_order")
