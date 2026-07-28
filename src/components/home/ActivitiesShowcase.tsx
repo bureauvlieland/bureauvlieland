@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface Activity {
   id: string;
+  slug: string | null;
   name: string;
   short_description: string | null;
   category: string;
@@ -14,12 +15,12 @@ interface Activity {
 }
 
 const FALLBACK: Activity[] = [
-  { id: "zeehondentocht", name: "Zeehondentocht", short_description: "Spot zeehonden in hun natuurlijke habitat", category: "excursies", image_url: null },
-  { id: "vliehors-expres", name: "Vliehors Expres", short_description: "Ontdek de Sahara van het Noorden", category: "excursies", image_url: null },
-  { id: "voc-blokarten", name: "Blokarten", short_description: "Racen over het strand met windkracht", category: "outdoor", image_url: null },
-  { id: "surfen", name: "Surfles", short_description: "Surfles voor beginners en gevorderden", category: "outdoor", image_url: null },
-  { id: "vliegeren", name: "Powerkiten", short_description: "Spectaculair vliegeren op het strand", category: "outdoor", image_url: null },
-  { id: "vuurtoren", name: "Vuurtorenbezoek", short_description: "Adembenemend uitzicht", category: "excursies", image_url: null },
+  { id: "zeehondentocht", slug: "zeehondentocht", name: "Zeehondentocht", short_description: "Spot zeehonden in hun natuurlijke habitat", category: "excursies", image_url: null },
+  { id: "vliehors-expres", slug: "vliehors-expres", name: "Vliehors Expres", short_description: "Ontdek de Sahara van het Noorden", category: "excursies", image_url: null },
+  { id: "voc-blokarten", slug: "voc-blokarten", name: "Blokarten", short_description: "Racen over het strand met windkracht", category: "outdoor", image_url: null },
+  { id: "surfen", slug: "surfen", name: "Surfles", short_description: "Surfles voor beginners en gevorderden", category: "outdoor", image_url: null },
+  { id: "vliegeren", slug: "vliegeren", name: "Powerkiten", short_description: "Spectaculair vliegeren op het strand", category: "outdoor", image_url: null },
+  { id: "vuurtoren", slug: "vuurtoren", name: "Vuurtorenbezoek", short_description: "Adembenemend uitzicht", category: "excursies", image_url: null },
 ];
 
 export const ActivitiesShowcase = () => {
