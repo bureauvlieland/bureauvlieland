@@ -82,7 +82,7 @@ export const ProgramTemplatesPreview = () => {
               className={i % 2 === 1 ? "md:translate-y-12" : ""}
             >
               <Link
-                to={`/programma-samenstellen?template=${tpl.id}`}
+                to={`/voorbeeldprogrammas/${tpl.id}`}
                 className="group block"
               >
                 <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-muted shadow-medium hover:shadow-dramatic transition-shadow duration-500">
