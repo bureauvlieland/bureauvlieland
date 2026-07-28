@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, BedDouble, ArrowRight, Clock, Sparkles } from "lucide-react";
 import beachActivity from "@/assets/beach-activity.jpg";
 import vlielandGroup from "@/assets/vlieland-group.jpg";
-import erwinProfile from "@/assets/erwin-profile.jpg";
+import sunsetDinner from "@/assets/sunset-dinner.jpg";
 
 
 interface Route {
