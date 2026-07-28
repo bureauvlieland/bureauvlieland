@@ -101,6 +101,16 @@ export const HeroEditorial = () => {
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </a>
+            <div className="flex items-center gap-2 text-sm text-sand/90 lg:justify-end">
+              <span className="flex items-center gap-0.5 text-sunset" aria-label="Beoordeling 4,9 uit 5">
+                {[0,1,2,3,4].map((i) => (
+                  <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                ))}
+              </span>
+              <span className="font-medium text-primary-foreground">4,9</span>
+              <span className="text-sand/70">·</span>
+              <span>200+ groepen sinds 2017</span>
+            </div>
             <p className="text-sm text-sand/80 lg:text-right">
               Liever volledig op maat?{" "}
               <Link
