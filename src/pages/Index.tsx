@@ -19,6 +19,7 @@ import { useHomepageAnalytics } from "@/hooks/useHomepageAnalytics";
 
 const Index = () => {
   const location = useLocation();
+  useHomepageAnalytics();
 
   useEffect(() => {
     if (location.hash === "#routes") {
