@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface Activity {
   id: string;
+  slug: string | null;
   name: string;
   short_description: string | null;
   category: string;
@@ -14,12 +15,12 @@ interface Activity {
 }
 
 const FALLBACK: Activity[] = [
-  { id: "zeehondentocht", name: "Zeehondentocht", short_description: "Spot zeehonden in hun natuurlijke habitat", category: "excursies", image_url: null },
-  { id: "vliehors-expres", name: "Vliehors Expres", short_description: "Ontdek de Sahara van het Noorden", category: "excursies", image_url: null },
-  { id: "voc-blokarten", name: "Blokarten", short_description: "Racen over het strand met windkracht", category: "outdoor", image_url: null },
-  { id: "surfen", name: "Surfles", short_description: "Surfles voor beginners en gevorderden", category: "outdoor", image_url: null },
-  { id: "vliegeren", name: "Powerkiten", short_description: "Spectaculair vliegeren op het strand", category: "outdoor", image_url: null },
-  { id: "vuurtoren", name: "Vuurtorenbezoek", short_description: "Adembenemend uitzicht", category: "excursies", image_url: null },
+  { id: "zeehondentocht", slug: "zeehondentocht", name: "Zeehondentocht", short_description: "Spot zeehonden in hun natuurlijke habitat", category: "excursies", image_url: null },
+  { id: "vliehors-expres", slug: "vliehors-expres", name: "Vliehors Expres", short_description: "Ontdek de Sahara van het Noorden", category: "excursies", image_url: null },
+  { id: "voc-blokarten", slug: "voc-blokarten", name: "Blokarten", short_description: "Racen over het strand met windkracht", category: "outdoor", image_url: null },
+  { id: "surfen", slug: "surfen", name: "Surfles", short_description: "Surfles voor beginners en gevorderden", category: "outdoor", image_url: null },
+  { id: "vliegeren", slug: "vliegeren", name: "Powerkiten", short_description: "Spectaculair vliegeren op het strand", category: "outdoor", image_url: null },
+  { id: "vuurtoren", slug: "vuurtoren", name: "Vuurtorenbezoek", short_description: "Adembenemend uitzicht", category: "excursies", image_url: null },
 ];
 
 export const ActivitiesShowcase = () => {
@@ -29,7 +30,7 @@ export const ActivitiesShowcase = () => {
     (async () => {
       const { data } = await supabase
         .from("building_blocks")
-        .select("id, name, short_description, category, image_url")
+        .select("id, slug, name, short_description, category, image_url")
         .eq("status", "published")
         .in("category", ["outdoor", "excursies", "entertainment"])
         .order("sort_order")
@@ -79,39 +80,49 @@ export const ActivitiesShowcase = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.6, delay: i * 0.08 }}
-                className={`group relative overflow-hidden rounded-sm bg-muted ${layouts[i]}`}
+                className={layouts[i]}
               >
-                {activity.image_url ? (
-                  <img
-                    src={activity.image_url}
-                    alt={activity.name}
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-ocean" />
-                )}
-
-                <div className="absolute inset-0 bg-ocean-deep/15" />
-                <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/70 to-ocean-deep/10" />
-
-                <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end pr-12 lg:pr-14">
-                  <div className="text-[10px] uppercase tracking-[0.25em] text-sunset mb-2 font-medium">
-                    {activity.category === "outdoor" ? "Outdoor" : activity.category === "excursies" ? "Excursie" : "Beleving"}
-                  </div>
-                  <h3 className="font-display text-2xl lg:text-3xl text-primary-foreground font-light mb-2 break-words">
-                    {activity.name}
-                  </h3>
-                  {activity.short_description && (
-                    <p className="text-sm text-sand/85 max-w-md line-clamp-2 font-light">
-                      {activity.short_description}
-                    </p>
+                <Link
+                  to={`/activiteit/${activity.slug ?? activity.id}`}
+                  className={`group relative block h-full w-full overflow-hidden rounded-sm bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+                  aria-label={`Bekijk ${activity.name}`}
+                >
+                  {activity.image_url ? (
+                    <img
+                      src={activity.image_url}
+                      alt={activity.name}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-ocean" />
                   )}
-                </div>
 
-                <div className="absolute top-4 right-4 lg:top-6 lg:right-6 h-10 w-10 rounded-full bg-primary-foreground/10 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-0 -translate-x-2">
-                  <ArrowUpRight className="h-4 w-4 text-primary-foreground" />
-                </div>
+                  <div className="absolute inset-0 bg-ocean-deep/15" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/70 to-ocean-deep/10" />
+
+                  <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end pr-12 lg:pr-14">
+                    <div className="text-[10px] uppercase tracking-[0.25em] text-sunset mb-2 font-medium">
+                      {activity.category === "outdoor" ? "Outdoor" : activity.category === "excursies" ? "Excursie" : "Beleving"}
+                    </div>
+                    <h3 className="font-display text-2xl lg:text-3xl text-primary-foreground font-light mb-2 break-words">
+                      {activity.name}
+                    </h3>
+                    {activity.short_description && (
+                      <p className="text-sm text-sand/85 max-w-md line-clamp-2 font-light">
+                        {activity.short_description}
+                      </p>
+                    )}
+                    <div className="mt-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-sunset font-medium opacity-90 group-hover:gap-3 transition-all">
+                      <span>Bekijk bouwsteen</span>
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+
+                  <div className="absolute top-4 right-4 lg:top-6 lg:right-6 h-10 w-10 rounded-full bg-primary-foreground/10 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-0 -translate-x-2">
+                    <ArrowUpRight className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                </Link>
               </motion.div>
             );
           })}
