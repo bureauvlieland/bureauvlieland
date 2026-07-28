@@ -134,53 +134,22 @@ export const RoutePicker = () => {
         </div>
 
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-4">
-          {routes.map((route) => {
-            const Icon = route.icon;
-            return (
-              <Link
-                key={route.href}
-                to={route.href}
-                className={`group relative flex flex-col rounded-lg border p-6 lg:p-7 transition-all hover:shadow-md hover:-translate-y-0.5 ${
-                  route.highlight
-                    ? "border-primary/40 bg-primary/[0.03] shadow-sm"
-                    : "border-border bg-card hover:border-primary/30"
-                }`}
-              >
-                {route.highlight && (
-                  <span className="absolute -top-2.5 left-6 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] uppercase tracking-wider font-semibold">
-                    Meest gekozen
-                  </span>
-                )}
-
-                <div className="flex items-center justify-between mb-5">
-                  <span className={`inline-flex h-11 w-11 items-center justify-center rounded-md ${
-                    route.highlight ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                  }`}>
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    {route.duration}
-                  </span>
-                </div>
-
-                <h3 className="font-display text-xl font-semibold text-foreground mb-2 leading-tight">
-                  {route.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                  {route.description}
-                </p>
-
-                <div className="pt-4 border-t border-border/60 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground/80">Voor:</span> {route.bestFor}
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-primary translate-x-0 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            );
-          })}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {primaryRoutes.map((route) => (
+              <RouteCard key={route.href} route={route} />
+            ))}
+          </div>
+          <div className="pt-2">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
+              Losse onderdelen
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {secondaryRoutes.map((route) => (
+                <RouteCard key={route.href} route={route} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
