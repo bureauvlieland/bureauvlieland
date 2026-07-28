@@ -14,6 +14,8 @@ import { ErwinManifesto } from "@/components/home/ErwinManifesto";
 import { FinalCTA } from "@/components/home/FinalCTA";
 import { RoutePicker } from "@/components/home/RoutePicker";
 import { CateringHighlight } from "@/components/home/CateringHighlight";
+import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
+import { useHomepageAnalytics } from "@/hooks/useHomepageAnalytics";
 
 const Index = () => {
   const location = useLocation();
