@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { CartProvider } from "@/contexts/CartContext";
-import { GlobalCartDrawer } from "@/components/configurator/GlobalCartDrawer";
+import { PreSalesChatWidget } from "@/components/site/PreSalesChatWidget";
 import { FeatureGate } from "@/components/FeatureGate";
 import { recordEntryPage } from "@/lib/entryPageTracker";
 
@@ -136,7 +136,7 @@ const App = () => {
         <BrowserRouter>
         <CartProvider>
           <ScrollToTop />
-          <GlobalCartDrawer />
+          <PreSalesChatWidget />
           <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
