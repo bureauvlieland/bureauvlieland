@@ -150,7 +150,7 @@ export const PROGRAM_TEMPLATE_COPY: Record<string, ProgramTemplateCopy> = {
     ],
   },
 
-  katalys: {
+  "eilandbeleving-compleet": {
     hook: "Drie dagen Vlieland — avontuur, cultuur en culinaire hoogtepunten in één belevenis.",
     story: [
       "Drie volle dagen waarin u Vlieland in al zijn facetten leert kennen. U fietst, raft, eet, lacht, danst en ontspant — er is ruimte voor alles.",
