@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, ChevronDown } from "lucide-react";
+import { Menu, ChevronDown, ShoppingCart } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
@@ -12,6 +12,7 @@ import {
   navItems,
 } from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
+import { useCartSafe } from "@/contexts/CartContext";
 
 const watWeOrganiserenHrefs = [
   ...navItems.watWeOrganiserenItems.map((i) => i.href),
