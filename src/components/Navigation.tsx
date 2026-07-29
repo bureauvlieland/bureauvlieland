@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, ChevronDown } from "lucide-react";
+import { Menu, ChevronDown, ShoppingCart } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.png";
@@ -12,6 +12,7 @@ import {
   navItems,
 } from "./navigation/MegaDropdown";
 import { MobileNav } from "./navigation/MobileNav";
+import { useCartSafe } from "@/contexts/CartContext";
 
 const watWeOrganiserenHrefs = [
   ...navItems.watWeOrganiserenItems.map((i) => i.href),
@@ -48,6 +49,9 @@ export const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cart = useCartSafe();
+  const cartCount = cart?.cartItems.length ?? 0;
+  const cartPulse = cart?.itemJustAdded;
 
   const programmasClass = useNavItemClass(watWeOrganiserenHrefs);
   const inspiratieClass = useNavItemClass(inspiratieHrefs);
@@ -126,16 +130,43 @@ export const Navigation = () => {
                   Start uw aanvraag
                 </Button>
               </Link>
+
+              {cartCount > 0 && (
+                <Link
+                  to="/programma-samenstellen"
+                  aria-label={`Uw programma (${cartCount})`}
+                  className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <ShoppingCart className={`h-5 w-5 ${cartPulse ? "animate-cart-pulse" : ""}`} />
+                  <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center ${cartPulse ? "animate-badge-pop" : ""}`}>
+                    {cartCount}
+                  </span>
+                </Link>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              className="lg:hidden p-2 text-foreground"
-              aria-label="Open menu"
-            >
-              <Menu size={24} />
-            </button>
+            <div className="lg:hidden flex items-center gap-1">
+              {cartCount > 0 && (
+                <Link
+                  to="/programma-samenstellen"
+                  aria-label={`Uw programma (${cartCount})`}
+                  className="relative inline-flex items-center justify-center h-10 w-10 rounded-md text-foreground"
+                >
+                  <ShoppingCart className={`h-5 w-5 ${cartPulse ? "animate-cart-pulse" : ""}`} />
+                  <span className={`absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center ${cartPulse ? "animate-badge-pop" : ""}`}>
+                    {cartCount}
+                  </span>
+                </Link>
+              )}
+              <button
+                onClick={() => setIsMenuOpen(true)}
+                className="p-2 text-foreground"
+                aria-label="Open menu"
+              >
+                <Menu size={24} />
+              </button>
+            </div>
           </div>
         </nav>
       </header>
