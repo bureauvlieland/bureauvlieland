@@ -1,39 +1,79 @@
-## Vier fixes voor de programma-configurator
+## Doel
 
-### 1. E-bike wordt niet toegevoegd — verkeerde block-ID
-**Oorzaak (bevestigd via DB):** `src/lib/programWizardCart.ts` hardcodeert `FIETS_EBIKE_ID = "fiets-huur-kopie"`, maar dat is een oud concept (`is_published=false`). Het echte gepubliceerde e-bike-blok heet **`fiets-huur-kopie-2`** ("Fietshuur (E-bike)", published/active).
+Floating "Uw programma"-knop rechtsonder vervangen door een **pre-sales chat-widget** die aansluit op de bestaande WhatsApp/chat-infrastructuur. Winkelmand-icoon verhuist naar de navigatiebalk. Er komt een aparte **FAQ-pagina**.
 
-**Fix:**
-- `FIETS_EBIKE_ID` in `src/lib/programWizardCart.ts` aanpassen naar `"fiets-huur-kopie-2"`.
-- Bijbehorende Vitest test (`programWizardCart.test.ts`) meebijwerken zodat de nieuwe ID de asserties dekt.
-- Opschoning: de ongebruikte oude conceptrij `fiets-huur-kopie` verwijderen uit `building_blocks` (voorkomt verwarring). Alleen doen als geen enkele bestaande cart/template/request ernaar verwijst — dat check ik eerst.
+## Waarom in-app i.p.v. wa.me
 
-### 2. Volgorde in "Gebruik dit programma"-preview klopt niet altijd
-**Oorzaak (geverifieerd):** `src/components/programmas/ProgramTimeline.tsx` sorteert alleen op `preferred_time` wanneer *beide* items een tijd hebben, anders puur op `sort_order`. Bij gemengde dagen (deel met tijd, deel zonder) klopt de volgorde niet.
+De app heeft al:
+- `whatsapp-send` / `whatsapp-webhook` (Twilio) voor uitgaande + inkomende WhatsApp
+- `chat-visitor-send` + `chat_conversations` voor anonieme site-chat
+- Admin-inbox op `/admin/chat` die beide bronnen (`customer_portal` en `whatsapp`) verzamelt
 
-**Fix:** één stabiele sort — items mét tijd chronologisch eerst, items zonder tijd erna op `sort_order`. Zelfde helper hergebruiken waar nodig.
+Een externe `wa.me`-link zou berichten buiten dit dossier plaatsen. Beter: bezoeker chat direct in een floating widget; het bericht landt in dezelfde admin inbox. Wil de bezoeker per se WhatsApp, dan tonen we in dezelfde widget een "Doorgaan via WhatsApp"-knop die dan wél `wa.me/<Twilio-nummer>` opent (met een geprefabriceerd bericht) — best of both.
 
-### 3. Erwin's voorstel bevat geen tijden
-**Oorzaak (geverifieerd):** de edge function `generate-program-suggestion` retourneert wél `preferred_time`, maar `src/components/configurator/AiErwinDialog.tsx` (regel 79-84) zet `preferredTime: null` bij het mappen naar cart-items.
+## Wijzigingen
 
-**Fix:** in `AiErwinDialog.tsx` het `preferred_time` veld uit de suggestie doorzetten naar `preferredTime` (met normalisatie: leeg/invalid → `null`, formaat `HH:MM`).
+### 1. Floating pre-sales chat-widget
 
-### 4. Voorbeeldprogramma's duidelijker aanbieden
-Op `/programma-samenstellen` (fase "program") staat de template-picker verstopt. Uitbreiden met:
-- Een prominente **"Snel starten met een voorbeeldprogramma"**-banner bovenaan de `ProgramBuilderView`, zichtbaar zolang de klant nog geen echte inhoud heeft toegevoegd (alleen ferry/bikes in de cart).
-- Subtiele pulse-animatie (Tailwind `animate-pulse`) op een badge/icoon naast de CTA — niet de hele knop.
-- Verdwijnt zodra ≥2 niet-transport items in de cart staan, óf na expliciete "Verberg"-klik (localstorage-vlag per sessie).
+Nieuw component `src/components/site/PreSalesChatWidget.tsx` (vervangt `GlobalCartDrawer` in `App.tsx`):
 
-### Technische details
+- Floating knop rechtsonder: bubbel-icoon (`MessageCircle`) + label "Hulp nodig?".
+- Klik → opent een klein popover-paneel met:
+  - Korte intro "Stel uw vraag — we reageren snel tijdens kantooruren."
+  - Formulier: naam + e-mail + bericht.
+  - Verzendknop → `supabase.functions.invoke("chat-visitor-send", …)`.
+    - Bezoekers zonder `customer_token` hebben nu geen source-token. Kleine backend-uitbreiding: `chat-visitor-send` accepteert ook `source: "presales"` zonder token, met rate-limiting op IP/e-mail (max 5 berichten per uur). Zie technisch onderdeel.
+  - Bevestiging: "Verzonden — we mailen zodra we reageren."
+  - Aparte secundaire knop: "Liever WhatsApp?" → opent `wa.me/<TwilioNummer>?text=…` in nieuw tabblad.
+  - Link "Bekijk veelgestelde vragen" → `/veelgestelde-vragen`.
+- Zichtbaar op alle publieke pagina's, verborgen op `/admin/*`, `/partner*`, klantportalen (zelfde exclusion-lijst als huidige `GlobalCartDrawer`).
+- Analytics-events: `presales_widget_open`, `presales_message_sent`, `presales_whatsapp_click`.
 
-**Bestanden om aan te passen:**
-- `src/lib/programWizardCart.ts` — ID-constante
-- `src/lib/__tests__/programWizardCart.test.ts` — testverwachtingen
-- `src/components/programmas/ProgramTimeline.tsx` — sortering
-- `src/components/configurator/AiErwinDialog.tsx` — preferred_time doorzetten
-- `src/components/configurator/ProgramBuilderView.tsx` — nieuwe banner
-- Migration/insert: oude `fiets-huur-kopie` opruimen (alleen na references-check)
+### 2. Backend: `chat-visitor-send` uitbreiden met pre-sales flow
 
-**Nog te verifiëren tijdens uitvoering:**
-- Of `fiets-huur-kopie` (oud concept) nog gerefereerd wordt vanuit `program_template_items`, `program_request_items`, of ergens in de code — anders laten staan en alleen negeren.
-- Of de admin-preview van templates (`AdminTemplates`) dezelfde `ProgramTimeline` gebruikt (dan lift die automatisch mee).
+`supabase/functions/chat-visitor-send/index.ts`:
+
+- Nieuwe `source: "presales"` naast `customer_portal`.
+- Voor `presales`: geen `sourceToken` verplicht; wel `visitorName` + `visitorEmail` (basisvalidatie) + `content`.
+- Rate-limit: max 5 inserts per uur per e-mail én per IP (Deno KV of simpele query op `chat_conversations` + `chat_messages` van laatste 60 min).
+- Maakt `chat_conversations` met `source='presales'` (nieuwe waarde toevoegen aan enum via migratie) of hergebruikt bestaande open conversation op e-mail.
+- Trigger dezelfde `notify-new-chat` mail zodat kantoor direct notificatie krijgt.
+- Migratie: check-constraint / enum op `chat_conversations.source` uitbreiden met `'presales'`; RLS-policies aanpassen zodat admin de nieuwe rijen kan lezen.
+
+### 3. Winkelmand-icoon in de navigatie
+
+`src/components/Navigation.tsx` en `src/components/navigation/MobileNav.tsx`:
+
+- Klein `ShoppingCart`-icoon met badge naast/voor de CTA "Start uw aanvraag".
+- Alleen zichtbaar als `useCartSafe()` bestaat en `cartItems.length > 0`.
+- Linkt naar `/programma-samenstellen`, gebruikt bestaande `itemJustAdded` pulse.
+- Op mobiel als link bovenaan het menu of als los icoon in de header naast het hamburger-menu.
+
+### 4. FAQ-pagina
+
+Nieuwe pagina `src/pages/VeelgesteldeVragen.tsx` op route `/veelgestelde-vragen`:
+
+- 8–12 vragen in shadcn `Accordion`, gegroepeerd (Boeken & wijzigen, Programma & activiteiten, Prijzen & facturatie, Op het eiland, Praktisch).
+- CTA-blok onderaan: chat-widget openen + WhatsApp + telefoon + link naar `/contact`.
+- SEO: `<title>`, meta description, JSON-LD `FAQPage` schema.
+- Toegevoegd aan `public/sitemap.xml` (via `scripts/generate-sitemap.ts`), `Footer` en `MegaDropdown` ("Over ons" of "Contact").
+
+### 5. Opruimen
+
+- `App.tsx`: `<GlobalCartDrawer />` → `<PreSalesChatWidget />`.
+- `GlobalCartDrawer.tsx` verwijderen zodra nav-cart werkt (en eventuele tests updaten).
+
+## Technische details
+
+- Widget in Tailwind + shadcn `Popover`; toegankelijk (`aria-label`, focus trap in het paneel, ESC sluit).
+- WhatsApp fallback-URL: gebruikt Twilio-nummer uit publieke config (nieuwe `VITE_PUBLIC_WHATSAPP_NUMBER` in `.env`, in E.164 zonder `+`, bijv. `31562700208`). Als je een apart mobiel nummer wilt, geef je dat aan; anders gebruik ik het huidige kantoornummer.
+- Rate-limit query op `chat_messages` (join `chat_conversations` op source='presales', filter op visitor_email of ip het laatste uur). IP via `req.headers.get("x-forwarded-for")`.
+- Migratie: `ALTER TYPE chat_source ADD VALUE 'presales'` (of tabel-check aanpassen — afhankelijk van huidige schema).
+- Tests:
+  - `chat-visitor-send` Deno test voor `source='presales'` (happy path + rate-limit).
+  - React test voor widget: open/close, submit call, WhatsApp-link href correct.
+- FAQ JSON-LD via inline `<script type="application/ld+json">` in de pagina; content is statisch (later via Cloud te editen indien gewenst).
+
+## Open punt
+
+Welk telefoonnummer moet de "Doorgaan via WhatsApp"-knop bellen? Twilio-WhatsApp gebruikt normaliter een specifiek zakelijk nummer — is dat gelijk aan `0562700208`, of is er een mobiel/business-nummer dat aan Twilio hangt? Laat je het leeg, dan gebruik ik `0562700208` als default en zet ik het in één constante zodat je later gemakkelijk kunt aanpassen.
