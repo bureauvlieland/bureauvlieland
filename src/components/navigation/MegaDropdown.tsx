@@ -9,6 +9,7 @@ import {
   PartyPopper,
   Lightbulb,
   ClipboardList,
+  HelpCircle,
 } from "lucide-react";
 
 interface NavItem {
@@ -78,6 +79,12 @@ const inspiratieItems: NavItem[] = [
     href: "/programma-op-maat",
     description: "Liever dat wij het voor u uitwerken? Vraag maatwerk aan",
     icon: MessageSquareHeart,
+  },
+  {
+    label: "Veelgestelde vragen",
+    href: "/veelgestelde-vragen",
+    description: "Antwoord op vragen over prijzen, offerte en logistiek",
+    icon: HelpCircle,
   },
 ];
 
