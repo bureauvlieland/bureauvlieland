@@ -192,6 +192,7 @@ export const Footer = () => {
             <Link to="/partners" className="hover:text-primary transition-colors">Partners</Link>
             <Link to="/samenwerken" className="hover:text-primary transition-colors">Samenwerken</Link>
             <Link to="/contact" className="hover:text-primary transition-colors">Contact</Link>
+            <Link to="/veelgestelde-vragen" className="hover:text-primary transition-colors">Veelgestelde vragen</Link>
             <Link to="/sitemap" className="hover:text-primary transition-colors">Sitemap</Link>
             <Link to="/algemene-voorwaarden" className="hover:text-primary transition-colors">Algemene voorwaarden</Link>
             <Link to="/partner/login" className="hover:text-primary transition-colors">Partner login</Link>
