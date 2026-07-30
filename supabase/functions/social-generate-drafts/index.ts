@@ -224,8 +224,15 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
 
       // PII scrub: vervang voornaam-achternaam tokens door 'een groep' (zachte verdediging)
       const safeCaption = scrubPii(aiOutput.caption);
-      const cta = defaultCtas.default ?? "https://www.bureauvlieland.nl";
+      const rawCta =
+        defaultCtas[c.source_type] ??
+        (c.source_type === "building_block" ? defaultCtas.bouwstenen : undefined) ??
+        defaultCtas.default ??
+        defaultCtas.programma ??
+        "/";
+      const cta = withUtm(rawCta, c.source_type);
       const finalCaption = `${safeCaption}\n\n${cta}`;
+
 
       await supabase.from("social_posts").insert({
         status: "draft",
