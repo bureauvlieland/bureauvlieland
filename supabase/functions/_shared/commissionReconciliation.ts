@@ -18,6 +18,13 @@ export type ReconStatus =
   | "match"
   | "exempt";
 
+/** Soort regel in de werklijst. */
+export type ReconItemType = "activity" | "accommodation" | "purchase_invoice";
+
+/** Grondslag voor de commissieberekening. */
+export type CommissionBasis = "purchase" | "sales";
+
+
 export interface ReconSettings {
   /** Absolute tolerantie in euro's (ex btw). */
   toleranceEur: number;
