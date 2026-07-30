@@ -119,7 +119,9 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
   const sinceIso = new Date(Date.now() - 90 * 86400000).toISOString();
 
   // 1) project_communications: alle e-mail types
-  let commQuery = supabase
+  // 1) project_communications: alle e-mail types (incl. gearchiveerde, zodat we
+  //    per gesprek kunnen bepalen of het volledig gearchiveerd is)
+  const commQuery = supabase
     .from("project_communications")
     .select(
       `id, subject, content, contact_name, contact_email, communication_date, direction, communication_type,
@@ -130,8 +132,7 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
     .in("communication_type", ["email", "email_in", "email_out"])
     .gte("communication_date", sinceIso)
     .order("communication_date", { ascending: false })
-    .limit(500);
-  if (!showArchived) commQuery = commQuery.is("archived_at", null);
+    .limit(800);
 
   // 2) email_log: alleen succesvol verzonden + met project-koppeling
   const logQuery = supabase
