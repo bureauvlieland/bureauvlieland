@@ -158,6 +158,8 @@ const App = () => {
             <Route path="/voorbeeldprogrammas/:slug" element={<VoorbeeldprogrammaDetail />} />
             <Route path="/veelgestelde-vragen" element={<VeelgesteldeVragen />} />
             <Route path="/faq" element={<Navigate to="/veelgestelde-vragen" replace />} />
+            <Route path="/links" element={<LinksPage />} />
+
             <Route path="/partners" element={<Partners />} />
             <Route path="/catering" element={<Catering />} />
             <Route path="/catering-aanvragen" element={<CateringAanvragen />} />
