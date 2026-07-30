@@ -1711,8 +1711,11 @@ Deno.serve(async (req) => {
       const itemChangesCustomerTemplate = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
         customer_name: sanitizeHtml(program.customer_name),
         changes_list: customerChangesHtml,
+        changes_summary: `<ul>${customerChangesHtml}</ul>`,
+        reference_number: sanitizeHtml(program.reference_number || ""),
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
+
 
       const itemChangesCustomerSubject = itemChangesCustomerTemplate?.subject || "Wijzigingen in je programma bevestigd";
       const itemChangesCustomerBody = itemChangesCustomerTemplate?.body || `
