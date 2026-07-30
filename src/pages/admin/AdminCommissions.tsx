@@ -399,15 +399,6 @@ export default function AdminCommissions() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant={viewMode === "match" ? "default" : "outline"}
-              onClick={() =>
-                setViewMode(viewMode === "match" ? "commissions" : "match")
-              }
-            >
-              <Scale className="h-4 w-4 mr-2" />
-              {viewMode === "match" ? "Terug naar commissies" : "Match & controle"}
-            </Button>
             <Button variant="outline" onClick={() => navigate("/admin/commissies/facturen")}>
               <FileText className="h-4 w-4 mr-2" />
               Commissiefacturen
@@ -420,10 +411,8 @@ export default function AdminCommissions() {
           </div>
         </div>
 
-        {viewMode === "match" ? (
-          <CommissionReconciliationPanel partnerId={partnerFilter} />
-        ) : (
         <>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
