@@ -349,13 +349,19 @@ const ActiviteitDetail = () => {
               )}
             </section>
 
-            <FaqSection
-              title={`Veelgestelde vragen over ${block.name.toLowerCase()}`}
-              items={extra.faq}
-              schemaId={`activiteit-${block.slug ?? block.id}`}
-            />
           </>
         )}
+
+        {/* FAQ met FAQPage JSON-LD — redactioneel of feitelijk uit de database */}
+        {faqItems.length > 0 && (
+          <FaqSection
+            title={`Veelgestelde vragen over ${block.name.toLowerCase()}`}
+            items={faqItems}
+            schemaId={`activiteit-${block.slug ?? block.id}`}
+          />
+        )}
+
+
 
 
         {/* Bekijk ook: redactionele links naar andere activiteitenpagina's */}
