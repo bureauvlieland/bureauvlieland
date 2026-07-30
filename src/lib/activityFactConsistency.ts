@@ -175,3 +175,70 @@ export const formatViolations = (violations: FactViolation[]): string =>
         `Toegestaan: ${v.allowed.length ? v.allowed.join(", ") : "(geen enkele waarde van dit type)"}.`,
     )
     .join("\n");
+
+/* -------------------------------------------------------------------------
+ * Consistentie tussen `activityContent` en de opgeslagen activiteitdata
+ * (`activityFactsSource`, snapshot van tabel `building_blocks`).
+ * ---------------------------------------------------------------------- */
+
+export type SourceFacts = {
+  durationMinutes: number | null;
+  prices: number[];
+  minPeople: number | null;
+  maxPeople: number | null;
+  allowExtra?: { durations?: number[]; prices?: number[]; groupSizes?: number[] };
+};
+
+/** Toegestane waarden per feittype, afgeleid uit de databasesnapshot. */
+export const allowedFromSource = (source: SourceFacts): Record<FactKind, number[]> => ({
+  duur: [
+    ...(source.durationMinutes !== null ? [source.durationMinutes] : []),
+    ...(source.allowExtra?.durations ?? []),
+  ],
+  prijs: [...source.prices, ...(source.allowExtra?.prices ?? [])],
+  groepsgrootte: [
+    ...(source.minPeople !== null ? [source.minPeople] : []),
+    ...(source.maxPeople !== null ? [source.maxPeople] : []),
+    ...(source.allowExtra?.groupSizes ?? []),
+  ],
+});
+
+/**
+ * Controleert of elke duur, prijs en groepsgrootte in de redactionele content
+ * terug te voeren is op de opgeslagen activiteitdata.
+ */
+export const findContentSourceViolations = (
+  slug: string,
+  canonicalText: string,
+  source: SourceFacts,
+): FactViolation[] => {
+  const allowedByKind = allowedFromSource(source);
+  const violations: FactViolation[] = [];
+
+  (Object.keys(EXTRACTORS) as FactKind[]).forEach((kind) => {
+    const allowed = new Set(allowedByKind[kind].map(round));
+    const found = new Set(EXTRACTORS[kind](canonicalText));
+    found.forEach((value) => {
+      if (!allowed.has(value)) {
+        violations.push({
+          file: "src/content/activityContent.ts",
+          slug,
+          kind,
+          value: LABELS[kind](value),
+          allowed: [...allowed].sort((a, b) => a - b).map(LABELS[kind]),
+        });
+      }
+    });
+  });
+
+  return violations;
+};
+
+export const formatSourceViolations = (violations: FactViolation[]): string =>
+  violations
+    .map(
+      (v) =>
+        `activityContent["${v.slug}"]: ${v.kind} "${v.value}" staat niet in de opgeslagen ` +
+        `activiteitdata. Toegestaan: ${v.allowed.length ? v.allowed.join(", ") : "(geen enkele waarde van dit type)"}.`,
+    )
+    .join("\n");

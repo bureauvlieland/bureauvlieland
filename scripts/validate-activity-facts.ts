@@ -12,9 +12,12 @@ import {
   canonicalTextFor,
   findFactViolations,
   formatViolations,
+  findContentSourceViolations,
+  formatSourceViolations,
   type FactViolation,
 } from "../src/lib/activityFactConsistency";
 import { activityContent } from "../src/content/activityContent";
+import { activityFactsSource } from "../src/content/activityFactsSource";
 
 const root = resolve(import.meta.dirname ?? ".", "..");
 
@@ -30,6 +33,26 @@ for (const { file, slug } of ACTIVITY_PAGE_MAP) {
   violations.push(...findFactViolations(file, slug, source, canonicalTextFor(entry)));
 }
 
+const sourceViolations: FactViolation[] = [];
+
+for (const [slug, entry] of Object.entries(activityContent)) {
+  const source = activityFactsSource[slug];
+  if (!source) {
+    console.error(
+      `[activity-facts] Geen databasesnapshot voor activityContent["${slug}"] — vul src/content/activityFactsSource.ts aan.`,
+    );
+    process.exit(1);
+  }
+  sourceViolations.push(...findContentSourceViolations(slug, canonicalTextFor(entry), source));
+}
+
+if (sourceViolations.length > 0) {
+  console.error("\n[activity-facts] Content wijkt af van de opgeslagen activiteitdata:\n");
+  console.error(formatSourceViolations(sourceViolations));
+  console.error("\nCorrigeer de content, of werk de snapshot bij als de bouwsteen is gewijzigd.\n");
+  process.exit(1);
+}
+
 if (violations.length > 0) {
   console.error("\n[activity-facts] Feiten op landingspagina's wijken af van activityContent:\n");
   console.error(formatViolations(violations));
@@ -37,4 +60,7 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log(`[activity-facts] OK — ${ACTIVITY_PAGE_MAP.length} landingspagina's consistent.`);
+console.log(
+  `[activity-facts] OK — ${Object.keys(activityContent).length} activiteiten consistent met de ` +
+    `opgeslagen data en ${ACTIVITY_PAGE_MAP.length} landingspagina's consistent met de content.`,
+);
