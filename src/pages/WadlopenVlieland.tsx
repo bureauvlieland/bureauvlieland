@@ -58,7 +58,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Hoe lang duurt een wadexcursie?",
-    a: "Een wadexcursie op Vlieland duurt ongeveer 1,5 uur.",
+    a: "De duur hangt af van het getij en de route die de gids kiest; wij leggen de exacte tijden vooraf vast in uw programma.",
   },
   {
     q: "Wat moet ik meenemen?",
@@ -70,7 +70,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Wat kost een wadexcursie op Vlieland?",
-    a: "Voor volwassenen ligt de prijs rond €17,50 tot €20. De exacte actuele prijs en beschikbaarheid zie je bij het boeken of aanvragen.",
+    a: "De prijs is €17,50 per volwassene en €12,50 per kind van 4 t/m 12 jaar. De actuele beschikbaarheid zie je bij het boeken of aanvragen.",
   },
 ];
 
@@ -177,10 +177,10 @@ const WadlopenVlieland = () => {
         </section>
 
         <KeyFacts
-          summary="Een wadexcursie op Vlieland is een begeleide wandeling van circa 1,5 uur over het drooggevallen wad rond het eiland, altijd rond laag water (van ongeveer één uur vóór tot één uur ná laagwater). Laarzen zijn inbegrepen, de excursie is geschikt voor alle leeftijden en kost circa €17,50 tot €20 per volwassene. Wadlopen vanaf het vasteland naar Vlieland is niet mogelijk: de geulen zijn ook bij eb te diep."
+          summary="Een wadexcursie op Vlieland is een begeleide wandeling over het drooggevallen wad rond het eiland, altijd rond laag water. De gids bepaalt starttijd, route en duur aan de hand van het getij. De excursie kost €17,50 per volwassene en €12,50 per kind (4 t/m 12 jaar). Wadlopen vanaf het vasteland naar Vlieland is niet mogelijk: de geulen zijn ook bij eb te diep."
           facts={[
-            { icon: Clock, label: "Duur", value: "Ongeveer 1,5 uur" },
-            { icon: Euro, label: "Richtprijs", value: "€17,50–€20 p.p." },
+            { icon: Clock, label: "Duur", value: "Bepaald door het getij" },
+            { icon: Euro, label: "Prijs", value: "€17,50 p.p., kind €12,50" },
             { icon: CalendarDays, label: "Wanneer", value: "Rond laag water, hele jaar" },
             { icon: Footprints, label: "Inbegrepen", value: "Laarzen en lokale gids" },
           ]}
@@ -284,7 +284,7 @@ const WadlopenVlieland = () => {
           <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-8 text-center">Praktisch</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Clock, title: "Duur", text: "Ongeveer 1,5 uur." },
+              { icon: Clock, title: "Duur", text: "Bepaald door het getij; de gids kiest route en tijdsduur." },
               { icon: Clock, title: "Wanneer", text: "Alleen rond laagwater: van 1 uur vóór tot 1 uur ná laag tij." },
               { icon: MapPin, title: "Vertrekpunt", text: "Varieert per excursie — je krijgt het startpunt bij je boeking door." },
               { icon: Footprints, title: "Laarzen inbegrepen", text: "Geen waterschoenen nodig — wij zorgen voor laarzen." },
@@ -326,7 +326,7 @@ const WadlopenVlieland = () => {
               Kies je datum en boek direct online, of voeg de excursie toe aan je programma op Vlieland.
             </p>
             <p className="text-foreground mb-6">
-              <strong>Volwassenen vanaf €17,50</strong> <span className="text-muted-foreground">(richtprijs €17,50–€20, laarzen inbegrepen)</span>
+              <strong>Volwassenen €17,50</strong> <span className="text-muted-foreground">(kinderen 4 t/m 12 jaar €12,50)</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
