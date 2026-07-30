@@ -28,11 +28,18 @@ const links = [
     icon: Sparkles,
   },
   {
+    to: "/programma-op-maat",
+    label: "Programma op maat",
+    description: "Grotere of complexere groep? Wij bouwen het voor u",
+    icon: Sparkles,
+  },
+  {
     to: "/activiteiten-vlieland",
     label: "Activiteiten op Vlieland",
     description: "Van zeehondentocht tot Vliehors Expres",
     icon: Waves,
   },
+
   {
     to: "/catering",
     label: "Catering",
