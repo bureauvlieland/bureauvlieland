@@ -318,6 +318,11 @@ function PublishedCard({ post }: { post: SocialPost }) {
           )}
           <div className="min-w-0">
             <p className="text-sm font-medium line-clamp-1">{post.caption}</p>
+            {extractCtaFromCaption(post.caption) && (
+              <p className="text-[11px] text-slate-400 truncate" title={extractCtaFromCaption(post.caption)!}>
+                CTA: {extractCtaFromCaption(post.caption)}
+              </p>
+            )}
             {failed ? (
               <p className="text-xs text-destructive line-clamp-1">{post.error_message}</p>
             ) : (
@@ -327,6 +332,7 @@ function PublishedCard({ post }: { post: SocialPost }) {
             )}
           </div>
         </div>
+
         <div className="flex gap-2">
           {post.permalinks &&
             Object.entries(post.permalinks).map(([ch, url]) => (
