@@ -19,7 +19,10 @@ export interface ActivityPartner {
   name: string;
   email: string | null;
   item_names: string[];
+  /** 'sent' = aanvraag verstuurd, 'responded' = partner heeft geoffreerd/bevestigd */
+  approach_status?: "sent" | "responded" | null;
 }
+
 
 export interface AccommodationPartner {
   partner_id: string;
