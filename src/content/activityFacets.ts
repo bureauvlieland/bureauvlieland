@@ -57,7 +57,7 @@ export const activityFacets: Record<string, ActivityFacets> = {
   },
   "powerkiten-vliegeren": {
     seasons: ["voorjaar", "zomer", "najaar"],
-    duration: "halve-dag",
+    duration: "kort",
     suitability: ["kinderen", "groepen"],
   },
   surfles: {
@@ -67,7 +67,7 @@ export const activityFacets: Record<string, ActivityFacets> = {
   },
   blokarten: {
     seasons: ["voorjaar", "zomer", "najaar"],
-    duration: "halve-dag",
+    duration: "kort",
     suitability: ["kinderen", "groepen"],
   },
   vuurtorenbezoek: {
@@ -77,7 +77,7 @@ export const activityFacets: Record<string, ActivityFacets> = {
   },
   "fietstocht-met-begeleiding": {
     seasons: ["voorjaar", "zomer", "najaar"],
-    duration: "dagdeel-plus",
+    duration: "halve-dag",
     suitability: ["kinderen", "groepen"],
   },
   "bezoek-het-bunkermuseum": {
