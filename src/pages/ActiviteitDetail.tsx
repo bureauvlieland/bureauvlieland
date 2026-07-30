@@ -210,6 +210,8 @@ const ActiviteitDetail = () => {
           <ol className="flex items-center gap-1 flex-wrap">
             <li><Link to="/" className="hover:text-foreground">Home</Link></li>
             <li><ChevronRight className="h-3.5 w-3.5" /></li>
+            <li><Link to="/activiteiten-vlieland" className="hover:text-foreground">Activiteiten</Link></li>
+            <li><ChevronRight className="h-3.5 w-3.5" /></li>
             <li><Link to="/bouwstenen" className="hover:text-foreground">Bouwstenen</Link></li>
             <li><ChevronRight className="h-3.5 w-3.5" /></li>
             <li className="text-foreground truncate max-w-[60vw]" aria-current="page">{block.name}</li>
