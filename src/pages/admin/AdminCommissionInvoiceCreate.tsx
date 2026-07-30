@@ -162,7 +162,7 @@ export default function AdminCommissionInvoiceCreate() {
   }, [settingPaymentTermDays]);
 
   useEffect(() => {
-    if (itemIds.length === 0 && quoteIds.length === 0) {
+    if (itemIds.length === 0 && quoteIds.length === 0 && invoiceIds.length === 0) {
       toast.error("Geen items geselecteerd");
       navigate("/admin/commissies");
       return;
@@ -176,12 +176,14 @@ export default function AdminCommissionInvoiceCreate() {
     try {
       let activityRows: any[] = [];
       let quoteRows: any[] = [];
+      let purchaseInvoiceRows: any[] = [];
 
       if (itemIds.length > 0) {
         const { data, error } = await supabase
           .from("program_request_items")
           .select(`
             id, block_name, invoiced_amount, invoiced_number, invoiced_date,
+            quoted_price, vat_rate,
             commission_percentage, commission_amount, commission_status,
             provider_id, provider_name,
             program_requests!inner(id, customer_name, customer_company, selected_dates, reference_number)
@@ -190,6 +192,20 @@ export default function AdminCommissionInvoiceCreate() {
         if (error) throw error;
         activityRows = data || [];
       }
+
+      if (invoiceIds.length > 0) {
+        const { data, error } = await supabase
+          .from("partner_purchase_invoices")
+          .select(`
+            id, partner_id, request_id, invoice_number, invoice_date,
+            amount_excl_vat, amount_incl_vat, description,
+            program_requests(id, customer_name, customer_company, reference_number)
+          `)
+          .in("id", invoiceIds);
+        if (error) throw error;
+        purchaseInvoiceRows = data || [];
+      }
+
 
       if (quoteIds.length > 0) {
         const { data, error } = await supabase
