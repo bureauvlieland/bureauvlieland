@@ -64,7 +64,14 @@ const staticEntries: SitemapEntry[] = [
   { path: "/activiteiten-vlieland", changefreq: "weekly", priority: "0.9" },
   { path: "/algemene-voorwaarden", changefreq: "yearly", priority: "0.3" },
   { path: "/partner-voorwaarden", changefreq: "yearly", priority: "0.3" },
-].map((e) => ({ ...e, lastmod: today }));
+  { path: "/veelgestelde-vragen", changefreq: "monthly", priority: "0.7" },
+  { path: "/programma-samenstellen", changefreq: "weekly", priority: "0.9" },
+  { path: "/programma-op-maat", changefreq: "monthly", priority: "0.8" },
+  { path: "/logies-vlieland", changefreq: "monthly", priority: "0.7" },
+  { path: "/activiteiten-boeken", changefreq: "weekly", priority: "0.8" },
+  { path: "/offerte", changefreq: "monthly", priority: "0.8" },
+];
+
 
 async function fetchBuildingBlockSlugs(): Promise<Array<{ slug: string; updated_at: string }>> {
   try {

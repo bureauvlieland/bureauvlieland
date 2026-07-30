@@ -1,79 +1,52 @@
-## Doel
+## Uitgangssituatie (gemeten, niet aangenomen)
 
-Floating "Uw programma"-knop rechtsonder vervangen door een **pre-sales chat-widget** die aansluit op de bestaande WhatsApp/chat-infrastructuur. Winkelmand-icoon verhuist naar de navigatiebalk. Er komt een aparte **FAQ-pagina**.
+Semrush (database NL) voor bureauvlieland.nl: **229 organische zoekwoorden, ~31 bezoeken/maand geschat**. Dat is een schatting van alleen Google-organisch; je echte verkeer ligt hoger. Sterke posities: `incentive vlieland` (4), `evenementen vlieland` (5), `trouwen vlieland` (5), `agenda vlieland` (6). Net naast de top-10, met veel volume: `zeehondentocht vlieland` (11-12, 260/mnd), `activiteiten op vlieland` (16, 390/mnd), `vlieland wadlopen` (12).
 
-## Waarom in-app i.p.v. wa.me
+Technische basis is al goed: sitemap met 83 pagina's, robots.txt correct, `/llms.txt` aanwezig, gestructureerde data (Service, FAQPage, LocalBusiness) en pre-rendering staan aan. Een verse SEO-scan draait nu.
 
-De app heeft al:
-- `whatsapp-send` / `whatsapp-webhook` (Twilio) voor uitgaande + inkomende WhatsApp
-- `chat-visitor-send` + `chat_conversations` voor anonieme site-chat
-- Admin-inbox op `/admin/chat` die beide bronnen (`customer_portal` en `whatsapp`) verzamelt
+Twee concrete problemen die ik in de code zag:
+1. `index.html` bevat **twee sets** `og:title` / `og:description` / `twitter:*` (regels 15-28 én 47-50) met verschillende teksten — Facebook en LinkedIn kiezen dan willekeurig, wat je social previews onbetrouwbaar maakt.
+2. Google Search Console is niet gekoppeld, dus er is geen zicht op vertoningen, klikken en indexering.
 
-Een externe `wa.me`-link zou berichten buiten dit dossier plaatsen. Beter: bezoeker chat direct in een floating widget; het bericht landt in dezelfde admin inbox. Wil de bezoeker per se WhatsApp, dan tonen we in dezelfde widget een "Doorgaan via WhatsApp"-knop die dan wél `wa.me/<Twilio-nummer>` opent (met een geprefabriceerd bericht) — best of both.
+## Wat ik ga doen
 
-## Wijzigingen
+### 1. Technische opschoning
+- Dubbele Open Graph/Twitter-tags in `index.html` verwijderen; één consistente set overhouden met de scherpste propositie ("één partij, één factuur").
+- Titels boven 60 tekens inkorten (homepage, Onze werkwijze) en de fallback-meta-description terugbrengen naar ±155 tekens.
+- Search Console koppelen, eigendom verifiëren en de sitemap indienen, zodat we voortaan op data sturen in plaats van aannames.
 
-### 1. Floating pre-sales chat-widget
+### 2. Zoekwoorden waar je bijna scoort
+Per thema de bestaande pagina uitbouwen tot een echte antwoordpagina in plaats van een bouwsteen-overzicht:
+- **Zeehondentocht/robbentocht** — nu ranken op `/bouwstenen` (positie 11-12 bij 260/mnd). De bestaande pagina `/zeehondentochten-vlieland` wordt de doelpagina: praktische info (duur, vertrek, seizoen, geschikt voor welke groepen), FAQ-blok en interne links vanaf bouwstenen.
+- **Activiteiten op Vlieland** (390/mnd, positie 16) — `/activiteiten-vlieland` uitbreiden met categorie-indeling, seizoensinformatie en verwijzingen naar detailpagina's.
+- **Wadlopen Vlieland** — eigen inhoudsblok/pagina in plaats van bouwsteen-vermelding.
+- **Agenda/evenementen Vlieland** — je scoort hier al goed vanaf de homepage; dit verdient een eigen agenda-pagina zodat de homepage vrijkomt voor je kernpropositie.
 
-Nieuw component `src/components/site/PreSalesChatWidget.tsx` (vervangt `GlobalCartDrawer` in `App.tsx`):
+### 3. Vindbaarheid in AI-assistenten (ChatGPT, Claude, Perplexity)
+AI-modellen citeren pagina's die een vraag letterlijk en feitelijk beantwoorden.
+- `/llms.txt` uitbreiden met de nieuwe contentpagina's en met een compact "feiten"-blok (wie, waar, wat kost het ongeveer, hoe werkt de boeking).
+- FAQ-schema uitbreiden op de belangrijkste landingspagina's, met vragen zoals mensen ze aan een AI stellen ("wat kost een bedrijfsuitje op Vlieland voor 25 personen?", "hoe kom ik met een groep op Vlieland?").
+- Op elke commerciële pagina een kort, feitelijk samenvattingsblok bovenaan (aantallen, duur, seizoen, prijsindicatie) — dat is precies het formaat dat AI-antwoorden overnemen.
+- Organization/LocalBusiness-schema aanvullen met `sameAs`-links naar je Facebook- en Instagram-profielen, zodat je merk als entiteit herkend wordt.
 
-- Floating knop rechtsonder: bubbel-icoon (`MessageCircle`) + label "Hulp nodig?".
-- Klik → opent een klein popover-paneel met:
-  - Korte intro "Stel uw vraag — we reageren snel tijdens kantooruren."
-  - Formulier: naam + e-mail + bericht.
-  - Verzendknop → `supabase.functions.invoke("chat-visitor-send", …)`.
-    - Bezoekers zonder `customer_token` hebben nu geen source-token. Kleine backend-uitbreiding: `chat-visitor-send` accepteert ook `source: "presales"` zonder token, met rate-limiting op IP/e-mail (max 5 berichten per uur). Zie technisch onderdeel.
-  - Bevestiging: "Verzonden — we mailen zodra we reageren."
-  - Aparte secundaire knop: "Liever WhatsApp?" → opent `wa.me/<TwilioNummer>?text=…` in nieuw tabblad.
-  - Link "Bekijk veelgestelde vragen" → `/veelgestelde-vragen`.
-- Zichtbaar op alle publieke pagina's, verborgen op `/admin/*`, `/partner*`, klantportalen (zelfde exclusion-lijst als huidige `GlobalCartDrawer`).
-- Analytics-events: `presales_widget_open`, `presales_message_sent`, `presales_whatsapp_click`.
+### 4. Social (Facebook & Instagram)
+Je hebt al een social publisher voor IG+FB met AI-concepten en handmatige goedkeuring. Die maken we effectiever:
+- **Deelbare previews**: één consistente og-afbeelding en heldere titels, zodat een link in een FB-post er verzorgd uitziet.
+- **UTM-tagging** in de gedeelde links vanuit de publisher, zodat je in analytics ziet welke posts bezoekers en aanvragen opleveren.
+- **Content-koppeling**: de publisher put nu uit nieuwe bouwstenen en partners. Ik voeg voorbeeldprogramma's en de nieuwe contentpagina's toe als bron, zodat social en website dezelfde verhalen vertellen en verkeer naar de nieuwe pagina's sturen.
+- **Link-in-bio-pagina** voor Instagram (Instagram staat geen links in posts toe): één compacte pagina met de drie routes (losse activiteiten / programma samenstellen / maatwerk) plus WhatsApp-contact.
 
-### 2. Backend: `chat-visitor-send` uitbreiden met pre-sales flow
-
-`supabase/functions/chat-visitor-send/index.ts`:
-
-- Nieuwe `source: "presales"` naast `customer_portal`.
-- Voor `presales`: geen `sourceToken` verplicht; wel `visitorName` + `visitorEmail` (basisvalidatie) + `content`.
-- Rate-limit: max 5 inserts per uur per e-mail én per IP (Deno KV of simpele query op `chat_conversations` + `chat_messages` van laatste 60 min).
-- Maakt `chat_conversations` met `source='presales'` (nieuwe waarde toevoegen aan enum via migratie) of hergebruikt bestaande open conversation op e-mail.
-- Trigger dezelfde `notify-new-chat` mail zodat kantoor direct notificatie krijgt.
-- Migratie: check-constraint / enum op `chat_conversations.source` uitbreiden met `'presales'`; RLS-policies aanpassen zodat admin de nieuwe rijen kan lezen.
-
-### 3. Winkelmand-icoon in de navigatie
-
-`src/components/Navigation.tsx` en `src/components/navigation/MobileNav.tsx`:
-
-- Klein `ShoppingCart`-icoon met badge naast/voor de CTA "Start uw aanvraag".
-- Alleen zichtbaar als `useCartSafe()` bestaat en `cartItems.length > 0`.
-- Linkt naar `/programma-samenstellen`, gebruikt bestaande `itemJustAdded` pulse.
-- Op mobiel als link bovenaan het menu of als los icoon in de header naast het hamburger-menu.
-
-### 4. FAQ-pagina
-
-Nieuwe pagina `src/pages/VeelgesteldeVragen.tsx` op route `/veelgestelde-vragen`:
-
-- 8–12 vragen in shadcn `Accordion`, gegroepeerd (Boeken & wijzigen, Programma & activiteiten, Prijzen & facturatie, Op het eiland, Praktisch).
-- CTA-blok onderaan: chat-widget openen + WhatsApp + telefoon + link naar `/contact`.
-- SEO: `<title>`, meta description, JSON-LD `FAQPage` schema.
-- Toegevoegd aan `public/sitemap.xml` (via `scripts/generate-sitemap.ts`), `Footer` en `MegaDropdown` ("Over ons" of "Contact").
-
-### 5. Opruimen
-
-- `App.tsx`: `<GlobalCartDrawer />` → `<PreSalesChatWidget />`.
-- `GlobalCartDrawer.tsx` verwijderen zodra nav-cart werkt (en eventuele tests updaten).
+## Wat dit niet doet
+Per-pagina social previews (een eigen afbeelding per landingspagina bij delen op Facebook) vragen server-side rendering; die kan de huidige opzet niet betrouwbaar leveren.
 
 ## Technische details
+- `index.html`: dedupliceren van `og:*` en `twitter:*`, titel/description inkorten.
+- Nieuwe/uitgebreide contentsecties in bestaande pagina's onder `src/pages/` (Zeehondentochten, Activiteiten, Wadlopen, Agenda) met JSON-LD via Helmet.
+- `public/llms.txt` en `public/sitemap.xml` (via `scripts/generate-sitemap.ts`) bijwerken met nieuwe routes.
+- `StructuredData.tsx`: `sameAs` met FB/IG-profielen.
+- Social publisher: UTM-parameters bij linkopbouw in de edge function, extra bronprioriteit voor voorbeeldprogramma's.
+- Nieuwe route `/links` voor Instagram-bio, uitgesloten van indexering noch geblokkeerd — gewoon een lichte pagina.
 
-- Widget in Tailwind + shadcn `Popover`; toegankelijk (`aria-label`, focus trap in het paneel, ESC sluit).
-- WhatsApp fallback-URL: gebruikt Twilio-nummer uit publieke config (nieuwe `VITE_PUBLIC_WHATSAPP_NUMBER` in `.env`, in E.164 zonder `+`, bijv. `31562700208`). Als je een apart mobiel nummer wilt, geef je dat aan; anders gebruik ik het huidige kantoornummer.
-- Rate-limit query op `chat_messages` (join `chat_conversations` op source='presales', filter op visitor_email of ip het laatste uur). IP via `req.headers.get("x-forwarded-for")`.
-- Migratie: `ALTER TYPE chat_source ADD VALUE 'presales'` (of tabel-check aanpassen — afhankelijk van huidige schema).
-- Tests:
-  - `chat-visitor-send` Deno test voor `source='presales'` (happy path + rate-limit).
-  - React test voor widget: open/close, submit call, WhatsApp-link href correct.
-- FAQ JSON-LD via inline `<script type="application/ld+json">` in de pagina; content is statisch (later via Cloud te editen indien gewenst).
+Ik heb hiervoor je Facebook- en Instagram-profiel-URL's nodig; die kun je bij de uitvoering aanleveren of ik haal ze uit de social-instellingen.
 
-## Open punt
-
-Welk telefoonnummer moet de "Doorgaan via WhatsApp"-knop bellen? Twilio-WhatsApp gebruikt normaliter een specifiek zakelijk nummer — is dat gelijk aan `0562700208`, of is er een mobiel/business-nummer dat aan Twilio hangt? Laat je het leeg, dan gebruik ik `0562700208` als default en zet ik het in één constante zodat je later gemakkelijk kunt aanpassen.
+De verse scan draait nu; resultaten verschijnen in het SEO-tabblad.
