@@ -374,8 +374,7 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Status</TableHead>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Project / onderdeel</TableHead>
+                  <TableHead>Klant / project / onderdeel</TableHead>
                   <TableHead className="text-right">Verkoop ex btw</TableHead>
                   <TableHead className="text-right">Inkoop ex btw</TableHead>
                   <TableHead className="text-right">Verschil</TableHead>
@@ -385,23 +384,51 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => {
-                  const meta = statusMeta[row.status];
-                  return (
-                    <TableRow key={row.key}>
-                      <TableCell>
-                        <Badge variant="secondary" className={meta.className} title={meta.description}>
-                          {meta.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{row.partnerName}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">{row.label}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {row.projectReference ?? "Geen project"}
-                          {row.invoiceNumber ? ` · factuur ${row.invoiceNumber}` : ""}
-                        </div>
-                      </TableCell>
+                {partnerGroups.flatMap((group) => [
+                  <TableRow key={`group:${group.partnerId}`} className="bg-muted/60 hover:bg-muted/60">
+                    <TableCell colSpan={6} className="font-semibold">
+                      {group.partnerName}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        {group.rows.length} regel{group.rows.length === 1 ? "" : "s"}
+                      </span>
+                    </TableCell>
+                    <TableCell colSpan={2} className="text-right text-xs text-muted-foreground">
+                      commissie in risico: {euro(group.commissionAtRisk)}
+                    </TableCell>
+                  </TableRow>,
+                  ...group.rows.map((row) => {
+                    const meta = statusMeta[row.status];
+                    const customerLabel = row.projectLabel ?? row.customerName;
+                    const showContact =
+                      row.customerName && row.projectLabel && row.customerName !== row.projectLabel;
+                    return (
+                      <TableRow key={row.key}>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={meta.className}
+                            title={meta.description}
+                          >
+                            {meta.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-medium">
+                            {customerLabel ?? "Onbekende klant"}
+                            {showContact && (
+                              <span className="font-normal text-muted-foreground">
+                                {" "}
+                                ({row.customerName})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm">{row.label}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {row.projectReference ?? "Geen project"}
+                            {row.invoiceNumber ? ` · factuur ${row.invoiceNumber}` : ""}
+                          </div>
+                        </TableCell>
+
                       <TableCell className="text-right">{euro(row.salesExclVat)}</TableCell>
                       <TableCell className="text-right">{euro(row.purchaseExclVat)}</TableCell>
                       <TableCell
