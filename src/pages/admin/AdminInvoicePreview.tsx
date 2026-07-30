@@ -1021,14 +1021,6 @@ const AdminInvoicePreview = () => {
     };
   })();
 
-  const outgoingInvoiceType = isExistingInvoiceView && displayLoadedInvoiceType
-    ? displayLoadedInvoiceType
-    : resolveBureauInvoiceType({
-        invoiceAmountInclVat: effectiveTotalInclVat,
-        projectTotalInclVat: totals.totalInclVat,
-        outstandingAmountInclVat: netDueIncl,
-        alreadyInvoicedInclVat: priorSumExcludingCurrent,
-      });
   const isCreditView = isExistingInvoiceView && displayLoadedInvoiceType === "credit";
   const creditSign = isCreditView ? -1 : 1;
 
@@ -1065,6 +1057,15 @@ const AdminInvoicePreview = () => {
   const effectiveVatLines = isExistingInvoiceView && signedExistingTotals
     ? signedExistingTotals.vatLines
     : slotTotals?.vatLines ?? totals.vatLines;
+
+  const outgoingInvoiceType = isExistingInvoiceView && displayLoadedInvoiceType
+    ? displayLoadedInvoiceType
+    : resolveBureauInvoiceType({
+        invoiceAmountInclVat: effectiveTotalInclVat,
+        projectTotalInclVat: totals.totalInclVat,
+        outstandingAmountInclVat: netDueIncl,
+        alreadyInvoicedInclVat: priorSumExcludingCurrent,
+      });
 
 
   const priorRefList = priorInvoices
