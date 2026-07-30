@@ -125,6 +125,7 @@ export const Footer = () => {
               <li><Link to="/groepsweekend-vlieland" className="hover:text-primary transition-colors">Groepsweekend</Link></li>
               <li><Link to="/jubileum-vlieland" className="hover:text-primary transition-colors">Jubileum vieren</Link></li>
               <li><Link to="/familieweekend-vlieland" className="hover:text-primary transition-colors">Familieweekend</Link></li>
+              <li><Link to="/voor-wie" className="hover:text-primary transition-colors font-medium text-foreground">Alle doelgroepen</Link></li>
             </ul>
           </div>
 
