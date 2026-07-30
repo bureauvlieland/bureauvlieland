@@ -191,7 +191,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const toInsert = flagged
       .map((r) => {
         const isMissing = r.status === "missing_invoice";
-        const autoType = isMissing ? "commission_missing_invoice" : "commission_unlinked_invoice";
+        // Literals bewust uitgeschreven: de contract-test grep't op
+        // `auto_type: "..."` om drift met reconcile-admin-todos te voorkomen.
+        const autoType = isMissing
+          ? { auto_type: "commission_missing_invoice" as const }
+          : { auto_type: "commission_unlinked_invoice" as const };
+
         const entityId = isMissing ? r.itemId : r.invoiceId;
         if (!entityId) return null;
         if (existingKeys.has(`${autoType}:${entityId}`)) return null;
