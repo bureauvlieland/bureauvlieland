@@ -236,8 +236,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       location_lat: child.location_lat ?? null,
       location_lng: child.location_lng ?? null,
       location_address: child.location_address ?? null,
-      image_url: child.image_url ?? null,
-      image_asset: child.image_asset ?? null,
+      // image_url/image_asset bestaan niet op program_request_items
+
       external_url: child.external_url ?? null,
       skip_partner_notification: true, // partner-uitvraag pas na klant-akkoord
       awaiting_customer_for_partner_send: !isBureau,
