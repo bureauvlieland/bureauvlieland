@@ -41,9 +41,16 @@ const DEFAULTS: Settings = {
   cadence_per_week: 3,
   posting_days: ["ma", "wo", "vr"],
   posting_time: "10:00",
-  sources_enabled: { building_blocks: true, partners: true, assets: true, partner_spotlight: true },
+  sources_enabled: {
+    building_blocks: true,
+    program_templates: true,
+    partners: true,
+    assets: true,
+    partner_spotlight: true,
+  },
   hashtag_sets: { default: ["#vlieland", "#waddeneilanden", "#bureauvlieland"] },
-  default_ctas: { default: "https://www.bureauvlieland.nl" },
+  default_ctas: { ...DEFAULT_PILLAR_ROUTES },
+
   tone_of_voice: "warm, eilandelijk, professioneel, niet schreeuwerig",
   meta_page_id: null,
   meta_ig_user_id: null,
