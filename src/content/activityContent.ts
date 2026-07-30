@@ -71,16 +71,16 @@ export const activityContent: Record<string, ActivityContent> = {
 
   wadloopexcursie: {
     summary:
-      "Een begeleide wadloopexcursie op Vlieland gaat onder leiding van een ervaren gids het drooggevallen wad rond het eiland op, duurt ongeveer 1,5 uur en start op een tijdstip dat door het getij wordt bepaald. De richtprijs is €17,50 tot €20 per volwassene; laarzen zijn inbegrepen.",
+      "Een begeleide wadloopexcursie op Vlieland gaat onder leiding van een ervaren gids het drooggevallen wad rond het eiland op en start op een tijdstip dat door het getij wordt bepaald. De prijs is €17,50 per volwassene en €12,50 per kind.",
     paragraphs: [
       "Wadlopen is de enige manier om het werelderfgoed Waddenzee letterlijk onder je voeten te voelen. Bij laagwater valt een landschap droog dat er twee keer per dag anders uitziet: geulen, slikvlaktes, mosselbanken en priel na priel. Een gids laat zien wat er leeft — wadpieren, kokkels, garnalen, krabben — en legt uit waarom dit gebied zo bijzonder is dat het op de UNESCO-lijst staat.",
       "Zonder gids is het wad levensgevaarlijk: het tij komt sneller op dan mensen inschatten en mist kan binnen minuten het zicht wegnemen. Daarom werken wij uitsluitend met gecertificeerde wadgidsen die het gebied rond Vlieland dagelijks kennen. Zij bepalen route en starttijd op basis van de getijdentabel en de actuele weersverwachting.",
       "Voor groepen is wadlopen een verrassend sterke teamactiviteit. Je loopt in een tempo waarin iedereen mee kan, je helpt elkaar door de geulen en je praat onderweg anders dan in een vergaderzaal. Veel bedrijven combineren de excursie daarom met een lunch of borrel erna — modder eerst, verhalen daarna.",
     ],
     practical: [
-      { label: "Duur", value: "Ongeveer 1,5 uur" },
-      { label: "Richtprijs", value: "€17,50 tot €20 per volwassene" },
-      { label: "Inbegrepen", value: "Laarzen en begeleiding door een lokale gids" },
+      { label: "Duur", value: "In overleg met de gids; het getij bepaalt route en tijdsduur" },
+      { label: "Prijs", value: "€17,50 per volwassene, €12,50 per kind (4 t/m 12 jaar)" },
+      { label: "Inbegrepen", value: "Begeleiding door een gecertificeerde wadgids" },
       { label: "Starttijd", value: "Bepaald door het getij, niet vrij te kiezen" },
       { label: "Seizoen", value: "Circa april t/m oktober" },
       { label: "Conditie", value: "Redelijke basisconditie vereist; het lopen kost energie" },
@@ -93,9 +93,9 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     faq: [
       {
-        question: "Kun je vanaf Vlieland wadlopen?",
+        question: "Wat kost een wadloopexcursie op Vlieland?",
         answer:
-          "Ja, er worden begeleide wadexcursies over de wadplaten rond het eiland georganiseerd. Doorlopen naar het vasteland is vanaf Vlieland niet mogelijk; het gaat om excursies op en rond de platen.",
+          "€17,50 per volwassene en €12,50 per kind van 4 t/m 12 jaar, inclusief begeleiding door een gecertificeerde wadgids. Doorlopen naar het vasteland is vanaf Vlieland niet mogelijk; het gaat om excursies op en rond de platen.",
       },
       {
         question: "Hoe zwaar is een wadloopexcursie?",
@@ -103,9 +103,9 @@ export const activityContent: Record<string, ActivityContent> = {
           "Lopen door slik kost meer energie dan lopen over een pad. Een redelijke basisconditie volstaat; de gids houdt het tempo van de langzaamste deelnemer aan.",
       },
       {
-        question: "Waarom staat de starttijd niet vast?",
+        question: "Waarom staan starttijd en duur niet vast?",
         answer:
-          "Het wad valt alleen rond laagwater droog en dat verschuift elke dag ongeveer vijftig minuten. De gids bepaalt de starttijd aan de hand van de getijdentabel; wij bouwen het programma daaromheen.",
+          "Het wad valt alleen rond laagwater droog en dat schuift elke dag op. De gids bepaalt starttijd, route en daarmee de duur aan de hand van de getijdentabel; wij bouwen het programma daaromheen en leggen de tijden vooraf met u vast.",
       },
       {
         question: "Wat moet ik aantrekken?",
@@ -121,14 +121,15 @@ export const activityContent: Record<string, ActivityContent> = {
     paragraphs: [
       "De Vliehors is het grootste zandstrand van Europa en normaal gesproken niet zomaar toegankelijk: het gebied wordt deels gebruikt als militair oefenterrein en is verder beschermd natuurgebied. Met de Vliehors Expres — een oude legertruck met ramen — rijd je er wél overheen, onder begeleiding van een chauffeur-gids die het terrein op zijn duimpje kent.",
       "Onderweg passeer je de wrakstukken en de betonnen doelen van het schietterrein, kom je langs plekken waar zeehonden op de zandbanken liggen en rijd je naar de Posthuys-zijde van het eiland. De gids vertelt over strandingen, over de verdwenen dorpen van West-Vlieland en over hoe wind en zee dit landschap elk jaar opnieuw vormgeven.",
-      "Omdat het gebied leeg en weids is, werkt de rit uitstekend als opening van een groepsdag: iedereen zit samen in één truck, er is niets dat afleidt, en aan het eindpunt kun je uitstappen voor een strandwandeling. Voor gezelschappen die het exclusief willen, is er een variant waarbij de hele truck voor uw groep alleen rijdt.",
+      "Omdat het gebied leeg en weids is, werkt de rit uitstekend als opening van een groepsdag: iedereen zit samen in één truck, er is niets dat afleidt, en aan het eindpunt kun je uitstappen voor een strandwandeling. De rit vertrekt vanaf Badweg 6 en wordt geboekt voor gezelschappen van 15 tot 50 personen.",
     ],
     practical: [
       { label: "Duur", value: "Circa 2 uur" },
-      { label: "Vertrekpunt", value: "Oost-Vlieland, in overleg" },
+      { label: "Vertrekpunt", value: "Badweg 6, Vlieland" },
+      { label: "Prijs", value: "€30,00 per persoon" },
+      { label: "Groepsgrootte", value: "15 tot 50 personen" },
       { label: "Seizoen", value: "Het hele jaar door, weersafhankelijk" },
       { label: "Toegankelijkheid", value: "Instappen vergt een opstapje; meld beperkingen vooraf" },
-      { label: "Groepen", value: "Ook exclusief te boeken voor één gezelschap" },
     ],
     goodToKnow: [
       "De Vliehors is militair oefenterrein; op oefendagen kan de route worden aangepast.",
@@ -149,7 +150,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Is de rit geschikt voor grote groepen?",
         answer:
-          "Ja. De truck neemt een flinke groep tegelijk mee en kan voor gezelschappen exclusief worden ingezet, zodat de gids het verhaal helemaal op uw groep afstemt.",
+          "Ja. De rit wordt geboekt vanaf 15 personen, met maximaal 50 deelnemers per truck, voor €30,00 per persoon. Grotere gezelschappen verdelen wij over meerdere ritten.",
       },
       {
         question: "Gaat de tocht bij regen door?",
@@ -165,14 +166,15 @@ export const activityContent: Record<string, ActivityContent> = {
     paragraphs: [
       "Op het brede Noordzeestrand van Vlieland staat vrijwel altijd wind, en dat maakt het eiland een van de betere plekken in Nederland om te powerkiten. Je begint met een kleine kite om het stuurgevoel te pakken te krijgen, en werkt op naar een groter model dat je echt over het zand trekt. De instructeur legt eerst het windvenster uit: waar in de lucht de kite kracht maakt en waar juist niet.",
       "Het aantrekkelijke van powerkiten als groepsactiviteit is dat de leercurve steil is. Binnen een kwartier stuurt iedereen zijn eigen kite, en na een half uur staan de eerste deelnemers te slippen over het strand. Dat levert precies de mix van spanning en gelach op waar teamdagen om vragen — zonder dat je sportief hoeft te zijn.",
-      "De activiteit is uitstekend te combineren met blokarten of branding raften op hetzelfde stuk strand; het materiaal en de begeleiding staan dan al klaar. Wij plannen dat als één blok in het dagprogramma, inclusief het fietsen naar het strand en terug.",
+      "De activiteit is uitstekend te combineren met blokarten op hetzelfde stuk strand ter hoogte van bushalte Ankerplaats; het materiaal en de begeleiding staan dan al klaar. Houd er rekening mee dat er op die locatie geen toiletvoorzieningen zijn. Wij plannen het als één blok in het dagprogramma, inclusief het fietsen naar het strand en terug.",
     ],
     practical: [
       { label: "Duur", value: "Circa 1,5 uur inclusief instructie" },
-      { label: "Locatie", value: "Noordzeestrand Vlieland" },
+      { label: "Locatie", value: "Strand t.h.v. bushalte Ankerplaats, Oost-Vlieland" },
+      { label: "Prijs", value: "€35,00 per persoon" },
+      { label: "Groepsgrootte", value: "10 tot 40 personen" },
       { label: "Voorkennis", value: "Niet nodig — beginners zijn welkom" },
-      { label: "Seizoen", value: "Het hele jaar, mits er voldoende wind staat" },
-      { label: "Combineert met", value: "Blokarten, branding raften, strandspektakel" },
+      { label: "Voorzieningen", value: "Op de locatie zijn geen toiletvoorzieningen aanwezig" },
     ],
     goodToKnow: [
       "Bij windstilte of juist storm gaat de activiteit niet door; de instructeur beslist ter plekke.",
@@ -191,30 +193,31 @@ export const activityContent: Record<string, ActivityContent> = {
           "Er is een lichte tot matige wind nodig. Bij windstilte kan er niet gevlogen worden en bij storm is het onveilig; in beide gevallen verplaatsen we de activiteit.",
       },
       {
-        question: "Vanaf welke leeftijd kan powerkiten?",
+        question: "Wat kost powerkiten en voor welke groepen is het geschikt?",
         answer:
-          "Kinderen vanaf ongeveer tien jaar kunnen met een kleinere kite meedoen. De instructeur past de maat van de kite aan op gewicht en ervaring.",
+          "Powerkiten kost €35,00 per persoon en wordt geboekt voor groepen van 10 tot 40 personen. De instructeur past de maat van de kite aan op gewicht en ervaring van de deelnemer.",
       },
     ],
   },
 
   surfles: {
     summary:
-      "Surfles op Vlieland duurt ongeveer 2,5 uur, is inclusief wetsuit en board, en wordt gegeven op het Noordzeestrand door instructeurs voor zowel beginners als gevorderden.",
+      "Surfles op Vlieland duurt ongeveer 2,5 uur, kost €55,00 per persoon en wordt op het strand ter hoogte van bushalte Ankerplaats gegeven aan groepen van 6 tot 20 personen, voor zowel beginners als gevorderden.",
     paragraphs: [
       "Het Noordzeestrand van Vlieland loopt flauw af, waardoor de golven relatief ver uit de kust al breken. Dat is ideaal voor beginners: je staat lang op stahoogte en hoeft niet ver te peddelen om een golf te pakken. De les begint op het droge met de pop-up, de veiligheidsregels en de stroming, en gaat daarna het water in.",
-      "Een groep wordt opgesplitst naar niveau, zodat wie al eens gesurft heeft niet hoeft te wachten op de eerste pop-up van de rest. Wetsuits zijn inbegrepen — ook in het voorjaar en najaar is het water met een goed pak prima te doen.",
+      "Een groep wordt opgesplitst naar niveau, zodat wie al eens gesurft heeft niet hoeft te wachten op de eerste pop-up van de rest. De les wordt geboekt voor 6 tot 20 personen; welk materiaal de aanbieder meelevert, bevestigen wij vooraf bij de reservering.",
       "Voor bedrijfsgroepen is surfles een activiteit waarbij hiërarchie snel verdwijnt: iedereen valt evenveel om. Plan er wel voldoende tijd omheen in: omkleden, douchen en warm worden kost samen al gauw een half uur extra. Wij houden daar in het programma rekening mee.",
     ],
     practical: [
       { label: "Duur", value: "Circa 2,5 uur inclusief instructie" },
-      { label: "Inbegrepen", value: "Wetsuit en surfboard" },
+      { label: "Locatie", value: "Strand t.h.v. bushalte Ankerplaats, Oost-Vlieland" },
+      { label: "Prijs", value: "€55,00 per persoon" },
+      { label: "Groepsgrootte", value: "6 tot 20 personen" },
       { label: "Niveau", value: "Beginners en gevorderden, in aparte groepjes" },
-      { label: "Seizoen", value: "Voorjaar t/m najaar" },
-      { label: "Zwemvaardigheid", value: "Vereist — deelnemers moeten kunnen zwemmen" },
+      { label: "Voorzieningen", value: "Op de locatie zijn geen toiletvoorzieningen aanwezig" },
     ],
     goodToKnow: [
-      "Neem een handdoek, badkleding voor onder het pak en droge kleding mee.",
+      "Neem een handdoek, badkleding en droge kleding mee; op de locatie zijn geen toiletvoorzieningen.",
       "Reken op een half uur extra voor omkleden en opwarmen na afloop.",
       "Bij onweer of een gevaarlijke stroming besluit de instructeur de les te verplaatsen.",
     ],
@@ -225,9 +228,9 @@ export const activityContent: Record<string, ActivityContent> = {
           "Ja. Het strand loopt flauw af, waardoor je lang op stahoogte staat. De les start op het droge met de basistechniek voordat u het water in gaat.",
       },
       {
-        question: "Wordt een wetsuit geleverd?",
+        question: "Wat kost surfles en hoe groot mag de groep zijn?",
         answer:
-          "Ja, wetsuit en board zijn bij de les inbegrepen. Neem zelf badkleding, een handdoek en droge kleding mee.",
+          "Surfles kost €55,00 per persoon en wordt gegeven aan groepen van 6 tot 20 personen. Neem zelf badkleding, een handdoek en droge kleding mee; welk materiaal is inbegrepen bevestigen wij bij de reservering.",
       },
       {
         question: "Moet je kunnen zwemmen?",
@@ -239,39 +242,40 @@ export const activityContent: Record<string, ActivityContent> = {
 
   blokarten: {
     summary:
-      "Blokarten op Vlieland is strandzeilen in een driewielige kar met zeil; een sessie duurt ongeveer een uur, inclusief instructie, en is te doen zonder ervaring.",
+      "Blokarten op Vlieland is strandzeilen in een driewielige kar met zeil; een sessie duurt ongeveer 1 uur, kost €32,50 per persoon en wordt geboekt voor groepen van 8 tot 16 personen.",
     paragraphs: [
-      "Een blokart is een lage driewieler met een zeil, waarmee je over het harde, natte zand langs de vloedlijn racet. Sturen doe je met je voeten, snelheid regel je met het touw waarmee je het zeil aantrekt of laat vieren. Dat klinkt technisch, maar in de praktijk rijdt vrijwel iedereen na tien minuten instructie zelfstandig een baan.",
-      "Doordat je vlak boven het zand zit, voelt vijfentwintig kilometer per uur als het dubbele. Er zit een natuurlijke competitie in: de baan wordt met pylonen uitgezet en groepen gaan onherroepelijk tijden vergelijken. Voor teamdagen is dat een sterke motor — het is fysiek licht maar mentaal fanatiek.",
-      "Blokarten vraagt wind én een strand dat breed genoeg is. Op Vlieland is dat op de meeste dagen geen probleem, maar rond springtij of bij aanhoudende windstilte kan de activiteit worden verschoven. De instructeur beslist dat op de dag zelf; wij zorgen dan voor een passend alternatief in hetzelfde tijdvak.",
+      "Een blokart is een lage driewieler met een zeil, waarmee je over het harde, natte zand langs de vloedlijn racet. Sturen doe je met je voeten, snelheid regel je met het touw waarmee je het zeil aantrekt of laat vieren. Dat klinkt technisch, maar in de praktijk rijdt vrijwel iedereen na een korte instructie zelfstandig een baan.",
+      "Doordat je vlak boven het zand zit, voelt de snelheid als het dubbele. Er zit een natuurlijke competitie in: groepen gaan onherroepelijk tijden vergelijken. Voor teamdagen is dat een sterke motor — het is fysiek licht maar mentaal fanatiek.",
+      "Blokarten kan alleen bij laag water en met pal aanlandige wind. Er is minimaal windkracht 3 (8 tot 10 knopen) nodig; windkracht 4 tot 6 geeft de beste omstandigheden. Bij te weinig of juist te veel wind kan de activiteit worden verschoven. De instructeur beslist dat op de dag zelf; wij zorgen dan voor een passend alternatief in hetzelfde tijdvak.",
     ],
     practical: [
       { label: "Duur", value: "Circa 1 uur" },
-      { label: "Locatie", value: "Hard zand langs de vloedlijn, Noordzeestrand" },
-      { label: "Voorkennis", value: "Niet nodig" },
-      { label: "Fysieke belasting", value: "Laag — je zit in de kar" },
-      { label: "Weersafhankelijk", value: "Ja, er is wind én voldoende strandbreedte nodig" },
+      { label: "Locatie", value: "Strand t.h.v. bushalte Ankerplaats, Oost-Vlieland" },
+      { label: "Prijs", value: "€32,50 per persoon" },
+      { label: "Groepsgrootte", value: "8 tot 16 personen" },
+      { label: "Voorwaarden", value: "Laag water en pal aanlandige wind, minimaal windkracht 3" },
+      { label: "Voorzieningen", value: "Op de locatie zijn geen toiletvoorzieningen aanwezig" },
     ],
     goodToKnow: [
       "Draag een zonnebril of sportbril: opspattend zand is het enige echte ongemak.",
-      "Helm en instructie zijn onderdeel van de activiteit.",
+      "Instructie door een begeleider hoort bij de activiteit.",
       "Ook geschikt voor deelnemers die niet sportief zijn — je zit, je rent niet.",
     ],
     faq: [
       {
         question: "Wat is blokarten precies?",
         answer:
-          "Blokarten is strandzeilen in een lage driewielige kar met een zeil. U stuurt met de voeten en regelt de snelheid met het zeiltouw. Een sessie duurt ongeveer een uur inclusief instructie.",
+          "Blokarten is strandzeilen in een lage driewielige kar met een zeil. U stuurt met de voeten en regelt de snelheid met het zeiltouw. Een sessie duurt ongeveer 1 uur inclusief instructie en kost €32,50 per persoon.",
       },
       {
-        question: "Hoe hard ga je met een blokart?",
+        question: "Wanneer kan er geblokart worden?",
         answer:
-          "Afhankelijk van de wind haalt u al snel twintig tot dertig kilometer per uur. Doordat u vlak boven het zand zit, voelt dat aanzienlijk sneller.",
+          "Alleen bij laag water en pal aanlandige wind. Er is minimaal windkracht 3 nodig; windkracht 4 tot 6 geeft de beste omstandigheden. De instructeur beoordeelt dat op de dag zelf.",
       },
       {
         question: "Is blokarten gevaarlijk?",
         answer:
-          "Nee, mits u de instructie volgt. U draagt een helm, de baan is met pylonen afgezet en de instructeur houdt toezicht. Het zwaartepunt van de kar ligt zeer laag.",
+          "Nee, mits u de instructie van de begeleider volgt. Het zwaartepunt van de kar ligt zeer laag en de activiteit gaat alleen door bij geschikte wind- en waterstand. Blokarten wordt geboekt voor 8 tot 16 personen.",
       },
     ],
   },
@@ -286,9 +290,10 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     practical: [
       { label: "Duur", value: "Circa 1 uur" },
-      { label: "Locatie", value: "Hoogste duin bij Oost-Vlieland" },
+      { label: "Locatie", value: "Liesbeth Listpad, Oost-Vlieland" },
+      { label: "Prijs", value: "Op aanvraag; richtprijs €8,00 per persoon" },
+      { label: "Groepsgrootte", value: "10 tot 25 personen" },
       { label: "Toegankelijkheid", value: "Alleen via trap, geen lift" },
-      { label: "Groepen", value: "Boven beperkte ruimte; in clusters naar boven" },
       { label: "Beste moment", value: "Helder weer; begin van het verblijf" },
     ],
     goodToKnow: [
@@ -310,7 +315,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Is het bezoek geschikt voor grote groepen?",
         answer:
-          "Boven is de ruimte beperkt, dus grote gezelschappen gaan in kleinere groepjes naar boven. Wij verwerken die tijdsblokken in uw programma.",
+          "Het bezoek wordt geboekt voor 10 tot 25 personen en boven is de ruimte beperkt, dus gezelschappen gaan in kleinere groepjes naar boven. De prijs is op aanvraag, met een richtprijs van €8,00 per persoon. Wij verwerken de tijdsblokken in uw programma.",
       },
     ],
   },
@@ -321,14 +326,15 @@ export const activityContent: Record<string, ActivityContent> = {
     paragraphs: [
       "Vlieland is autoluw en telt tientallen kilometers fietspad, dus de fiets is hier geen alternatief maar het normale vervoermiddel. Tijdens een begeleide tocht rijd je in rustig tempo van het dorp naar het bos, langs de duinen en naar uitzichtpunten die je met een kaartje in de hand zelden vindt.",
       "Wat de tocht onderscheidt van zelf rondfietsen is het verhaal. De gids vertelt over het verdwenen dorp West-Vlieland dat door de zee is opgeslokt, over de bosaanplant die het stuifzand moest vastleggen, en over hoe een eiland met ruim duizend inwoners in de zomer tienduizenden gasten opvangt. Daar hoort ook de minder romantische kant bij: drinkwater, afvalverwerking en woningnood op een eiland.",
-      "De route wordt afgestemd op de groep. Met een gezelschap dat stevig doortrapt gaan we verder het eiland op; met een gemengde groep blijven we dichter bij het dorp en lassen we meer stops in. E-bikes zijn beschikbaar, wat het verschil in tempo binnen een groep grotendeels wegneemt.",
+      "De route wordt afgestemd op de groep en start bij de Waddendijk ter hoogte van Willem de Vlamingh. Met een gezelschap dat stevig doortrapt gaan we verder het eiland op; met een gemengde groep blijven we dichter bij het dorp en lassen we meer stops in. E-bikes zijn los bij te boeken, wat het verschil in tempo binnen een groep grotendeels wegneemt.",
     ],
     practical: [
       { label: "Duur", value: "Circa 2 uur" },
-      { label: "Afstand", value: "Ongeveer 12 tot 18 km, aan te passen op de groep" },
-      { label: "Ondergrond", value: "Verharde fietspaden" },
+      { label: "Startpunt", value: "Waddendijk, bij Willem de Vlamingh, Oost-Vlieland" },
+      { label: "Prijs", value: "€19,00 per persoon" },
+      { label: "Groepsgrootte", value: "10 tot 30 personen" },
       { label: "Fietsen", value: "Huurfietsen en e-bikes los bij te boeken" },
-      { label: "Seizoen", value: "Het hele jaar door" },
+      { label: "Ondergrond", value: "Verharde fietspaden" },
     ],
     goodToKnow: [
       "Regen op Vlieland komt zijdelings — een winddichte jas werkt beter dan een paraplu.",
@@ -339,7 +345,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Hoe lang duurt een begeleide fietstocht op Vlieland?",
         answer:
-          "Ongeveer twee uur, met een afstand van grofweg twaalf tot achttien kilometer. De route wordt aangepast op het tempo van de groep.",
+          "Circa 2 uur. De tocht start bij de Waddendijk ter hoogte van Willem de Vlamingh en de route wordt aangepast op het tempo van de groep.",
       },
       {
         question: "Zijn er fietsen inbegrepen?",
@@ -349,7 +355,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Kan de fietstocht met een grote groep?",
         answer:
-          "Ja. Bij grotere gezelschappen zetten we meerdere gidsen in, zodat elke subgroep het verhaal goed kan volgen en de groep niet uitwaaiert over het fietspad.",
+          "De tocht wordt geboekt voor 10 tot 30 personen, voor €19,00 per persoon. Bij grotere gezelschappen zetten we meerdere gidsen en meerdere vertrekmomenten in, zodat de groep niet uitwaaiert over het fietspad.",
       },
     ],
   },
@@ -364,9 +370,10 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     practical: [
       { label: "Duur", value: "Circa 1,5 uur" },
-      { label: "Locatie", value: "Steunpunt Wn 12H, in de duinen bij Oost-Vlieland" },
+      { label: "Locatie", value: "Kantonnierspad 1, Oost-Vlieland" },
+      { label: "Prijs", value: "€8,00 per volwassene, €5,50 per kind (4 t/m 12 jaar)" },
       { label: "Open sinds", value: "Voorjaar 2020, na restauratie door vrijwilligers" },
-      { label: "Binnen", value: "Krappe, koele ruimtes; groepen in delen naar binnen" },
+      { label: "Te zien", value: "Tentoonstelling, korte film, loopgraven, elf bunkers en buitenmuseum" },
       { label: "Weer", value: "Grotendeels binnen — ook een goede optie bij regen" },
     ],
     goodToKnow: [
@@ -383,7 +390,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Hoe lang duurt een bezoek?",
         answer:
-          "Reken op ongeveer anderhalf uur inclusief de rondleiding. Bij grotere groepen gaan bezoekers in delen naar binnen.",
+          "Reken op circa 1,5 uur inclusief de rondleiding door de tentoonstelling, de loopgraven en de bunkers. Een bezoek kost €8,00 per volwassene en €5,50 per kind van 4 t/m 12 jaar.",
       },
       {
         question: "Is het bunkermuseum een goede optie bij slecht weer?",
@@ -395,18 +402,18 @@ export const activityContent: Record<string, ActivityContent> = {
 
   strandspektakel: {
     summary:
-      "Het Strandspektakel bij Vlieland Outdoor Centrum combineert in één dagdeel meerdere strandactiviteiten — zoals blokarten, powerkiten, branding raften en beach golf — waarbij groepen in rondes langs de onderdelen rouleren.",
+      "Het Strandspektakel bij Vlieland Outdoor Center combineert in één dagdeel meer dan veertig strandactiviteiten waaruit uw groep zelf kiest, voor €32,50 per persoon, op het strand ter hoogte van bushalte Ankerplaats.",
     paragraphs: [
       "In plaats van één activiteit te kiezen, doet uw groep bij het Strandspektakel meerdere onderdelen achter elkaar. De begeleiders zetten op het strand een aantal posten uit en de deelnemers rouleren in subgroepen langs die posten. Zo probeert iedereen alles, en hoeft niemand een half uur te wachten tot hij aan de beurt is.",
-      "De samenstelling van de onderdelen hangt af van wind, getij en groepsgrootte. Bij stevige wind komen blokarten en powerkiten naar voren; bij weinig wind verschuift het accent naar branding raften, beach golf, boogschieten of lasergamen in de duinen. Die flexibiliteit is precies de reden dat dit format zo betrouwbaar is: het gaat vrijwel altijd door, alleen de invulling varieert.",
+      "De samenstelling van de onderdelen bepaalt u zelf, in overleg met de instructeurs. Bij stevige wind komen de windafhankelijke onderdelen naar voren; bij weinig wind verschuift het accent naar onderdelen die daar niet van afhankelijk zijn. Die flexibiliteit is precies de reden dat dit format zo betrouwbaar is: het gaat vrijwel altijd door, alleen de invulling varieert.",
       "Voor bedrijfsuitjes werkt het roulatiesysteem ook sociaal goed. Door de subgroepen door elkaar te zetten, praten collega's die elkaar normaal weinig spreken automatisch bij. Wij verdelen de groepen vooraf in overleg met u, en plannen aansluitend een borrel of beach grill op hetzelfde strand.",
     ],
     practical: [
-      { label: "Vorm", value: "Meerdere strandactiviteiten in roulatie" },
-      { label: "Duur", value: "Een dagdeel, afhankelijk van het aantal posten" },
-      { label: "Locatie", value: "Noordzeestrand, Vlieland Outdoor Centrum" },
-      { label: "Groepsgrootte", value: "Bij uitstek geschikt voor grotere gezelschappen" },
-      { label: "Weer", value: "Programma wordt aangepast aan wind en getij" },
+      { label: "Vorm", value: "Meer dan veertig strandactiviteiten onder begeleiding, zelf samen te stellen" },
+      { label: "Duur", value: "Een dagdeel, in overleg met de instructeurs" },
+      { label: "Locatie", value: "Strand t.h.v. bushalte Ankerplaats, Oost-Vlieland" },
+      { label: "Prijs", value: "€32,50 per persoon" },
+      { label: "Voorzieningen", value: "Op de locatie zijn geen toiletvoorzieningen aanwezig" },
     ],
     goodToKnow: [
       "Wij verdelen de subgroepen vooraf in overleg met u — dat scheelt tijd op het strand.",
@@ -417,17 +424,17 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Welke activiteiten zitten er in het Strandspektakel?",
         answer:
-          "Een combinatie van strandactiviteiten zoals blokarten, powerkiten, branding raften, beach golf en boogschieten. De exacte samenstelling hangt af van wind, getij en de grootte van de groep.",
+          "Er staan meer dan veertig activiteiten klaar, van sportief tot denkpuzzels en van creatief tot spektakel op zee. U bepaalt zelf welke onderdelen u doet; de invulling kan ook ter plekke met de instructeurs worden afgestemd. Deelname kost €32,50 per persoon.",
       },
       {
         question: "Hoe groot mag de groep zijn?",
         answer:
-          "Het roulatiesysteem is juist bedoeld voor grotere gezelschappen: de groep wordt in subgroepen verdeeld die langs de posten wisselen. Wij stemmen de indeling vooraf met u af.",
+          "Het roulatiesysteem is juist bedoeld voor grotere gezelschappen: de groep wordt in subgroepen verdeeld die langs de posten wisselen. Wij stemmen de indeling vooraf met u af; voor deze activiteit geldt geen vaste minimum- of maximumgroep.",
       },
       {
         question: "Gaat het Strandspektakel door bij minder goed weer?",
         answer:
-          "Vrijwel altijd. Bij weinig wind of ruwe zee verschuiven de begeleiders naar onderdelen die daar niet van afhankelijk zijn, zoals beach golf, boogschieten of lasergamen in de duinen.",
+          "Vrijwel altijd. Er zijn meer dan veertig onderdelen beschikbaar, dus bij weinig wind of ruwe zee stemmen de instructeurs de invulling af op onderdelen die daar niet van afhankelijk zijn.",
       },
     ],
   },
