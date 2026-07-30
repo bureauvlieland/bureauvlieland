@@ -313,22 +313,6 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
   }
 });
 
-const SITE_ORIGIN = "https://bureauvlieland.nl";
-
-/** Maakt van een pad of URL een volledige URL met UTM-tagging voor social. */
-function withUtm(target: string, sourceType: string): string {
-  let url: URL;
-  try {
-    url = new URL(target, SITE_ORIGIN);
-  } catch {
-    url = new URL("/", SITE_ORIGIN);
-  }
-  url.searchParams.set("utm_source", "meta");
-  url.searchParams.set("utm_medium", "organic_social");
-  url.searchParams.set("utm_campaign", "bureau_vlieland_social");
-  url.searchParams.set("utm_content", sourceType);
-  return url.toString();
-}
 
 function scrubPii(text: string): string {
 
