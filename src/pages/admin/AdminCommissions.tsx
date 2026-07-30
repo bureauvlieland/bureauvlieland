@@ -53,6 +53,8 @@ import {
   CalendarDays,
   AlertCircle,
   ArrowRight,
+  Scale,
+
 } from "lucide-react";
 
 interface CommissionItem {
