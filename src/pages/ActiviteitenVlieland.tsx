@@ -23,6 +23,8 @@ import {
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
+import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
+import { featuredActivities } from "@/content/activityLinks";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
 import { KeyFacts } from "@/components/seo/KeyFacts";
 
@@ -79,12 +81,12 @@ const themas: Thema[] = [
       },
       {
         label: "Blokarten op het strand",
-        to: "/bouwstenen",
+        to: "/activiteit/blokarten",
         description: "Zeilen op wielen over het Vliehors-strand.",
       },
       {
         label: "Vuurtoren beklimmen",
-        to: "/bouwstenen",
+        to: "/activiteit/vuurtorenbezoek",
         description: "Honderden treden naar het hoogste punt van het eiland.",
       },
     ],
@@ -338,6 +340,14 @@ const ActiviteitenVlieland = () => {
             ))}
           </div>
         </section>
+
+        {/* Alle verdiepte activiteitenpagina's — directe interne links */}
+        <SeeAlsoActivities
+          title="Activiteiten in detail"
+          links={featuredActivities}
+        />
+
+
 
         {/* Plan een dag */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
