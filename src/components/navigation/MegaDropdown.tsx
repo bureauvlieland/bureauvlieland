@@ -54,6 +54,15 @@ const watWeOrganiserenItems: NavItem[] = [
   },
 ];
 
+// "Populair op Vlieland" — long-tail landingspagina's, ook vanuit het menu bereikbaar.
+const populairItems: NavItem[] = [
+  { label: "Activiteiten Vlieland", href: "/activiteiten-vlieland" },
+  { label: "Zeehondentochten", href: "/zeehondentochten-vlieland" },
+  { label: "Wadlopen", href: "/wadlopen-vlieland" },
+  { label: "Losse activiteiten", href: "/activiteiten-boeken" },
+  { label: "Catering aanvragen", href: "/catering-aanvragen" },
+];
+
 // "Inspiratie" — oriëntatie, geen directe aanvraag.
 const inspiratieItems: NavItem[] = [
   {
