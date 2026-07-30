@@ -175,7 +175,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .select(
         "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
           "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
-          "accommodation_requests!inner(id, customer_name, customer_company, arrival_date)",
+          "accommodation_requests!inner(id, reference_number, customer_name, customer_company, arrival_date)",
       )
       .eq("status", "selected");
 
@@ -206,7 +206,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (request) {
         accommodationProjects.push({
           id: request.id,
-          reference_number: null,
+          reference_number: request.reference_number ?? null,
           customer_name: request.customer_name,
           customer_company: request.customer_company,
           selected_dates: request.arrival_date ? [request.arrival_date] : null,
