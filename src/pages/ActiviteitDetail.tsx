@@ -276,6 +276,15 @@ const ActiviteitDetail = () => {
           </div>
         </section>
 
+        {/* Samenvatting in één zin — citeerbaar voor AI-assistenten */}
+        {extra?.summary && (
+          <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+            <p className="rounded-lg border-l-4 border-primary bg-muted/40 p-5 text-base md:text-lg text-foreground">
+              {extra.summary}
+            </p>
+          </section>
+        )}
+
         {/* Long description */}
         {block.description && (
           <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-8">
@@ -287,6 +296,55 @@ const ActiviteitDetail = () => {
             </div>
           </section>
         )}
+
+        {/* Verdiepende, unieke content (top-activiteiten) */}
+        {extra && (
+          <>
+            <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl pb-8 space-y-4">
+              {extra.paragraphs.map((p, i) => (
+                <p key={i} className="text-base leading-relaxed text-foreground">
+                  {p}
+                </p>
+              ))}
+            </section>
+
+            <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-8">
+              <h2 className="font-display text-2xl font-semibold text-foreground mb-4">
+                Praktische informatie
+              </h2>
+              <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-4 rounded-xl border border-border bg-card p-6">
+                {extra.practical.map(({ label, value }) => (
+                  <div key={label}>
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {label}
+                    </dt>
+                    <dd className="text-sm font-medium text-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {extra.goodToKnow && extra.goodToKnow.length > 0 && (
+                <>
+                  <h3 className="font-display text-xl font-semibold text-foreground mt-8 mb-3">
+                    Goed om te weten
+                  </h3>
+                  <ul className="list-disc pl-5 space-y-2 text-base text-foreground">
+                    {extra.goodToKnow.map((g, i) => (
+                      <li key={i}>{g}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+
+            <FaqSection
+              title={`Veelgestelde vragen over ${block.name.toLowerCase()}`}
+              items={extra.faq}
+              schemaId={`activiteit-${block.slug ?? block.id}`}
+            />
+          </>
+        )}
+
 
         {/* Related */}
         {related.length > 0 && (
