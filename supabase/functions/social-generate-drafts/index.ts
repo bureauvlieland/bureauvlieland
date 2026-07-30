@@ -271,9 +271,9 @@ function withUtm(target: string, sourceType: string): string {
   } catch {
     url = new URL("/", SITE_ORIGIN);
   }
-  url.searchParams.set("utm_source", "instagram");
-  url.searchParams.set("utm_medium", "social");
-  url.searchParams.set("utm_campaign", "organic");
+  url.searchParams.set("utm_source", "meta");
+  url.searchParams.set("utm_medium", "organic_social");
+  url.searchParams.set("utm_campaign", "bureau_vlieland_social");
   url.searchParams.set("utm_content", sourceType);
   return url.toString();
 }
