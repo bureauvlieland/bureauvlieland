@@ -65,8 +65,32 @@ const links = [
   },
 ];
 
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+
+/** Plakt de binnenkomende UTM-parameters op een interne route. */
+const withUtm = (to: string, params: URLSearchParams) => {
+  const utm = UTM_KEYS.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`);
+  if (utm.length === 0) return to;
+  return `${to}${to.includes("?") ? "&" : "?"}${utm.join("&")}`;
+};
+
 const Links = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Instagram-CTA's linken naar /links?to=/doelpad — direct doorsturen met behoud van UTM's.
+  const redirectTo = searchParams.get("to");
+  const target = useMemo(
+    () => (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null),
+    [redirectTo],
+  );
+
+  useEffect(() => {
+    if (target) navigate(withUtm(target, searchParams), { replace: true });
+  }, [target, navigate, searchParams]);
+
   return (
+
     <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background">
       <Helmet>
         <title>Bureau Vlieland – alle links</title>
