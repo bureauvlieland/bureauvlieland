@@ -42,6 +42,7 @@ import {
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
+import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
 
 interface ProgramRequest {
   id: string;
@@ -603,7 +604,21 @@ const AdminInvoicePreview = () => {
       new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
     const loadedInvoiceForPdf = loadedInvoice?.invoice_number === invoiceNumber ? loadedInvoice : null;
-    const isCreditPdf = loadedInvoiceForPdf?.invoice_type === "credit";
+    const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
+    const priorOtherSumLocal = priorOtherLocal.reduce(
+      (sum, p) => sum + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
+      0,
+    );
+    const loadedInvoiceTypeForPdf = loadedInvoiceForPdf
+      ? resolveBureauInvoiceType({
+          storedType: loadedInvoiceForPdf.invoice_type,
+          invoiceAmountInclVat: Number(loadedInvoiceForPdf.amount_incl_vat),
+          projectTotalInclVat: totalsLocal.totalInclVat,
+          outstandingAmountInclVat: Math.max(0, totalsLocal.totalInclVat - priorOtherSumLocal),
+          alreadyInvoicedInclVat: priorOtherSumLocal,
+        })
+      : null;
+    const isCreditPdf = loadedInvoiceTypeForPdf === "credit";
     const pdfSign = isCreditPdf ? -1 : 1;
     const scaledTotals = loadedInvoiceForPdf
       ? buildScaledVatTotals(
@@ -624,9 +639,6 @@ const AdminInvoicePreview = () => {
           })),
         }
       : scaledTotals;
-    const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
-
-
     // ── Build categorized line rows
     const categories: InvoiceCategory[] = [];
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
@@ -634,8 +646,8 @@ const AdminInvoicePreview = () => {
 
     if (loadedInvoiceForPdf) {
       const typeLabel =
-        invoiceTypeLabels[loadedInvoiceForPdf.invoice_type as InvoiceType] ||
-        String(loadedInvoiceForPdf.invoice_type);
+        invoiceTypeLabels[loadedInvoiceTypeForPdf as InvoiceType] ||
+        String(loadedInvoiceTypeForPdf || loadedInvoiceForPdf.invoice_type);
       const amountIncl = pdfSign * Number(loadedInvoiceForPdf.amount_incl_vat);
       categories.push({
         label: typeLabel,
@@ -915,6 +927,25 @@ const AdminInvoicePreview = () => {
   const isExistingInvoiceView = Boolean(
     viewedInvoiceId && loadedInvoice && loadedInvoice.invoice_number === invoiceNumber,
   );
+  const priorSumExcludingCurrent = priorInvoices
+    .filter((p) => p.invoice_number !== invoiceNumber)
+    .reduce(
+      (s, p) =>
+        s +
+        (p.invoice_type === "credit"
+          ? -Number(p.amount_incl_vat)
+          : Number(p.amount_incl_vat)),
+      0,
+    );
+  const displayLoadedInvoiceType = loadedInvoice
+    ? resolveBureauInvoiceType({
+        storedType: loadedInvoice.invoice_type,
+        invoiceAmountInclVat: Number(loadedInvoice.amount_incl_vat),
+        projectTotalInclVat: totals.totalInclVat,
+        outstandingAmountInclVat: Math.max(0, totals.totalInclVat - priorSumExcludingCurrent),
+        alreadyInvoicedInclVat: priorSumExcludingCurrent,
+      })
+    : null;
   const billingName = request.billing_company_name || request.customer_company || request.customer_name;
   const billingAddress = [
     request.billing_address_street,
@@ -930,16 +961,6 @@ const AdminInvoicePreview = () => {
   const hasPriorOtherThanCurrent = priorInvoices.some(
     (p) => p.invoice_number !== invoiceNumber,
   );
-  const priorSumExcludingCurrent = priorInvoices
-    .filter((p) => p.invoice_number !== invoiceNumber)
-    .reduce(
-      (s, p) =>
-        s +
-        (p.invoice_type === "credit"
-          ? -Number(p.amount_incl_vat)
-          : Number(p.amount_incl_vat)),
-      0,
-    );
   const netDueIncl = Math.max(0, totals.totalInclVat - priorSumExcludingCurrent);
   // Slot-mode: bij een NIEUWE termijn na eerdere facturen registreren en
   // versturen we uitsluitend het restant (netDueIncl) — niet nogmaals het
@@ -1000,7 +1021,7 @@ const AdminInvoicePreview = () => {
     };
   })();
 
-  const isCreditView = isExistingInvoiceView && loadedInvoice?.invoice_type === "credit";
+  const isCreditView = isExistingInvoiceView && displayLoadedInvoiceType === "credit";
   const creditSign = isCreditView ? -1 : 1;
 
   const existingInvoiceTotals = loadedInvoice
@@ -1036,6 +1057,15 @@ const AdminInvoicePreview = () => {
   const effectiveVatLines = isExistingInvoiceView && signedExistingTotals
     ? signedExistingTotals.vatLines
     : slotTotals?.vatLines ?? totals.vatLines;
+
+  const outgoingInvoiceType = isExistingInvoiceView && displayLoadedInvoiceType
+    ? displayLoadedInvoiceType
+    : resolveBureauInvoiceType({
+        invoiceAmountInclVat: effectiveTotalInclVat,
+        projectTotalInclVat: totals.totalInclVat,
+        outstandingAmountInclVat: netDueIncl,
+        alreadyInvoicedInclVat: priorSumExcludingCurrent,
+      });
 
 
   const priorRefList = priorInvoices
@@ -1374,13 +1404,13 @@ const AdminInvoicePreview = () => {
                                   className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
                                   style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
-                                  {invoiceTypeLabels[loadedInvoice.invoice_type as InvoiceType] || loadedInvoice.invoice_type}
+                                  {invoiceTypeLabels[displayLoadedInvoiceType as InvoiceType] || loadedInvoice.invoice_type}
                                 </td>
                               </tr>
                               <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                                 <td className="py-1.5 px-2">
                                   <p className="font-medium">
-                                    {(invoiceTypeLabels[loadedInvoice.invoice_type as InvoiceType] || loadedInvoice.invoice_type)} {loadedInvoice.invoice_number}
+                                    {(invoiceTypeLabels[displayLoadedInvoiceType as InvoiceType] || loadedInvoice.invoice_type)} {loadedInvoice.invoice_number}
                                   </p>
                                   <p className="text-[9px] text-gray-500">
                                     {loadedInvoice.description || `Project ${request.reference_number ?? ""}`.trim()}
@@ -1819,7 +1849,7 @@ const AdminInvoicePreview = () => {
         invoiceDate={invoiceDate}
         amountExclVat={Math.round(effectiveTotalExclVat * 100) / 100}
         vatAmount={Math.round(effectiveTotalVat * 100) / 100}
-        invoiceType={(loadedInvoice?.invoice_type as InvoiceType | undefined) || "partial"}
+        invoiceType={outgoingInvoiceType}
         description={notes || loadedInvoice?.description || undefined}
         existingInvoiceId={isExistingInvoiceView ? loadedInvoice?.id ?? null : null}
         onGeneratePdf={buildPdfBlob}
