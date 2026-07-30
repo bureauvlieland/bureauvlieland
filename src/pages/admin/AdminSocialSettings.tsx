@@ -204,17 +204,41 @@ export default function AdminSocialSettings() {
                 }
               />
             </div>
-            <div>
-              <Label className="text-xs">Standaard CTA-link</Label>
-              <Input
-                value={settings.default_ctas.default ?? ""}
-                onChange={(e) =>
-                  setSettings((s) => ({ ...s, default_ctas: { ...s.default_ctas, default: e.target.value } }))
-                }
-              />
-            </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Landingspagina's & UTM-CTA's</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-slate-500">
+              Elke contentpijler heeft een vaste bestemming. Bij een activiteit of voorbeeldprogramma linkt de post
+              automatisch naar de detailpagina; anders naar de pagina hieronder. Facebook krijgt de directe link,
+              Instagram verwijst naar de link-in-bio pagina <code>/links</code>.
+            </p>
+            {SOCIAL_PILLARS.map((pillar) => (
+              <div key={pillar} className="space-y-1 border-b pb-3 last:border-b-0 last:pb-0">
+                <Label className="text-xs">{PILLAR_LABELS[pillar]}</Label>
+                <Input
+                  value={settings.default_ctas[pillar] ?? DEFAULT_PILLAR_ROUTES[pillar]}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, default_ctas: { ...s.default_ctas, [pillar]: e.target.value } }))
+                  }
+                  placeholder={DEFAULT_PILLAR_ROUTES[pillar]}
+                />
+                <p className="text-[11px] text-slate-500">{PILLAR_DESCRIPTIONS[pillar]}</p>
+                <p className="text-[11px] text-slate-400 break-all">
+                  Facebook: {buildCtaUrl({ pillar, channel: "facebook", overrides: settings.default_ctas })}
+                </p>
+                <p className="text-[11px] text-slate-400 break-all">
+                  Instagram: {buildCtaUrl({ pillar, channel: "instagram", overrides: settings.default_ctas })}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
 
         <Card>
           <CardHeader>
