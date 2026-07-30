@@ -44,7 +44,7 @@ interface SourceItem {
   commission_amount: number | null;
   provider_id: string;
   provider_name: string;
-  item_type: "activity" | "accommodation";
+  item_type: "activity" | "accommodation" | "purchase_invoice";
   vat_rate?: number;
   program_requests: {
     id: string;
