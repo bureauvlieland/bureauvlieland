@@ -121,7 +121,7 @@ const Links = () => {
           {links.map(({ to, label, description, icon: Icon, highlight }) => (
             <Link
               key={to}
-              to={to}
+              to={withUtm(to, searchParams)}
               className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
                 highlight
                   ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
