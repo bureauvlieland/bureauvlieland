@@ -19,6 +19,7 @@ import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
 import { FaqSection } from "@/components/FaqSection";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { getActivityContent } from "@/content/activityContent";
+import { buildFallbackFaq } from "@/lib/activityFallbackFaq";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
@@ -105,6 +106,13 @@ const ActiviteitDetail = () => {
   }, [slug, navigate]);
 
   const extra = getActivityContent(block?.slug ?? block?.id);
+
+  /** Redactionele FAQ als die er is, anders een feitelijke FAQ uit de databasevelden. */
+  const faqItems = useMemo(() => {
+    if (extra?.faq?.length) return extra.faq;
+    return block ? buildFallbackFaq(block) : [];
+  }, [extra, block]);
+
 
   const seo = useMemo(() => {
     if (!block) return null;
@@ -341,13 +349,20 @@ const ActiviteitDetail = () => {
               )}
             </section>
 
-            <FaqSection
-              title={`Veelgestelde vragen over ${block.name.toLowerCase()}`}
-              items={extra.faq}
-              schemaId={`activiteit-${block.slug ?? block.id}`}
-            />
           </>
         )}
+
+        {/* FAQ met FAQPage JSON-LD — redactioneel of feitelijk uit de database */}
+        {faqItems.length > 0 && (
+          <FaqSection
+            title={`Veelgestelde vragen over ${block.name.toLowerCase()}`}
+            items={faqItems}
+            schemaId={`activiteit-${block.slug ?? block.id}`}
+            pageUrl={seo.url}
+          />
+        )}
+
+
 
 
         {/* Bekijk ook: redactionele links naar andere activiteitenpagina's */}
