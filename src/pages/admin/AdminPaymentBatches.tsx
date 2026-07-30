@@ -44,10 +44,11 @@ function BatchTransactions({ batchId }: { batchId: string }) {
         .from("partner_purchase_invoices")
         .select(`
           id, invoice_number, invoice_date, amount_incl_vat, description,
-          refund_pending_at, refund_reason,
+          refund_pending_at, refund_reason, status, paid_at,
           partners(id, name, iban),
           program_requests(reference_number)
         `)
+
         .eq("payment_batch_id", batchId)
         .order("invoice_date", { ascending: true });
       if (error) throw error;
