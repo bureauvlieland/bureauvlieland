@@ -7,7 +7,7 @@
  *  - Coordination fee komt uit tier lookup en telt direct mee.
  *  - `excluded_fees` sluit posten uit (bureau_central override).
  *  - Bureau_central surcharge alleen als invoicing_mode === "bureau_central".
- *  - Aanbetalingen (partial) worden afgetrokken; final vervangt partials.
+ *  - Aanbetalingen en restant-eindfacturen tellen samen mee; credits trekken af.
  *  - Credit-facturen trekken altijd extra af.
  *
  * Commissie zit NIET in factuur-totaal (dat gaat naar partner) — dus we

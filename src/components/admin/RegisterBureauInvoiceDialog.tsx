@@ -176,7 +176,7 @@ export const RegisterBureauInvoiceDialog = ({
         form.setValue("vat_amount", Math.round(totalVat * 100) / 100);
       }
     })();
-  }, [isOpen, requestId, suggestedAmount, suggestedExclVat, suggestedVatAmount, outstandingAmount, projectTotal, alreadyInvoiced, form]);
+  }, [isOpen, requestId, suggestedAmount, suggestedExclVat, suggestedVatAmount, suggestedVatGroups, outstandingAmount, projectTotal, alreadyInvoiced, form]);
 
   useEffect(() => {
     const excl = Math.round(manualVatLines.reduce((sum, line) => sum + Number(line.exclVat || 0), 0) * 100) / 100;
