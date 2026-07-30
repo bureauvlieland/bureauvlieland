@@ -149,7 +149,7 @@ const ActiviteitDetail = () => {
     };
 
     return { url, title, description, absoluteImage, product, breadcrumb };
-  }, [block]);
+  }, [block, extra]);
 
   if (loading) {
     return (
