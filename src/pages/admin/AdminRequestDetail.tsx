@@ -880,17 +880,22 @@ const AdminRequestDetail = () => {
     setIsLoadingRetroCancel(true);
     try {
       // 1) Activiteitenpartners — uit cancelled items, exclusief bureau/self_arranged
+      // en alleen partners die daadwerkelijk benaderd zijn.
       const { data: items } = await supabase
         .from("program_request_items")
-        .select("id, provider_id, provider_name, provider_email, block_name, block_type, status")
+        .select(
+          "id, provider_id, provider_name, provider_email, block_name, block_type, status, skip_partner_notification, quoted_at, partner_price_change_acknowledged_at",
+        )
         .eq("request_id", request.id);
 
       const partnerItems = (items || []).filter(
         (i: any) =>
           i.provider_id &&
           !isBureauItem(i) &&
-          i.block_type !== "self_arranged",
+          i.block_type !== "self_arranged" &&
+          itemWasSentToPartner(i),
       );
+
 
       // Enrich emails from partners table
       const missingIds = [
