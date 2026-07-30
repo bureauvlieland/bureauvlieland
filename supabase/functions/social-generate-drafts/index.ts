@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
 
     const sources = (settings?.sources_enabled ?? {
       building_blocks: true,
+      program_templates: true,
       partners: true,
       assets: true,
       partner_spotlight: true,
@@ -68,9 +69,9 @@ Deno.serve(async (req) => {
     const hashtagSets = (settings?.hashtag_sets as Record<string, string[]>) ?? {
       default: ["#vlieland", "#waddeneilanden", "#bureauvlieland"],
     };
-    const defaultCtas = (settings?.default_ctas as Record<string, string>) ?? {
-      default: "https://www.bureauvlieland.nl",
-    };
+    // Overrides per contentpijler (activiteit / voorbeeldprogramma / partner / behind_scenes / eiland)
+    const ctaOverrides = (settings?.default_ctas as Record<string, string>) ?? {};
+
 
     // Bepaal hoeveel we deze run mogen toevoegen om totaal op ±cadence/week te houden.
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
