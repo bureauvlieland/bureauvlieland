@@ -139,6 +139,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 // Bureau-managed item-check via gedeelde helper (provider_id ∈ BUREAU_PROVIDER_IDS).
 // Eén bron van waarheid samen met supabase/functions/_shared/bureau-item.ts.
 import { isBureauItem } from "@/lib/bureauItem";
+import { itemWasSentToPartner } from "@/lib/partnerWasApproached";
+
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
 import { SaveAsTemplateDialog } from "@/components/admin/SaveAsTemplateDialog";
 import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
