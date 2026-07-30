@@ -284,9 +284,12 @@ Deno.serve(async (req) => {
     // Klant heeft zelf geannuleerd → partners automatisch informeren via
     // notify-partner-cancellation (zelfde mailflow als admin gebruikt). De
     // items zijn hierboven al op 'cancelled' gezet, dus skip_item_cancel=true.
+    // Bij notify_partners=false (admin-flow) gaat er niets uit: de admin kiest
+    // zelf in het bevestigingsvenster wie bericht krijgt.
     let partnersNotifiedCount = 0;
     let accommodationPartnersNotifiedCount = 0;
-    if (providers.size > 0 || accommodationPartners.size > 0) {
+    if (notify_partners && (providers.size > 0 || accommodationPartners.size > 0)) {
+
       try {
         const { data: notifyResult, error: notifyErr } = await supabase.functions.invoke(
           "notify-partner-cancellation",
