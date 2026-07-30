@@ -86,7 +86,11 @@ export interface ReconRow {
   partnerName: string;
   projectId: string | null;
   projectReference: string | null;
+  /** Bedrijfsnaam indien bekend, anders de klantnaam. */
   projectLabel: string | null;
+  /** Naam van de contactpersoon/klant (los van bedrijfsnaam). */
+  customerName: string | null;
+
   itemId: string | null;
   invoiceId: string | null;
   label: string;
