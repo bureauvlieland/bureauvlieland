@@ -34,7 +34,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
-import { CommissionReconciliationPanel } from "@/components/admin/CommissionReconciliationPanel";
+import { CommissionWorklist } from "@/components/admin/CommissionWorklist";
 
 import { format, addMonths, startOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -53,7 +53,6 @@ import {
   CalendarDays,
   AlertCircle,
   ArrowRight,
-  Scale,
 
 } from "lucide-react";
 
@@ -135,7 +134,6 @@ const statusColors: Record<string, string> = {
 
 export default function AdminCommissions() {
   const [statusFilter, setStatusFilter] = useState("expected");
-  const [viewMode, setViewMode] = useState<"commissions" | "match">("commissions");
 
   const [typeFilter, setTypeFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState<string | null>(null);
@@ -399,15 +397,6 @@ export default function AdminCommissions() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant={viewMode === "match" ? "default" : "outline"}
-              onClick={() =>
-                setViewMode(viewMode === "match" ? "commissions" : "match")
-              }
-            >
-              <Scale className="h-4 w-4 mr-2" />
-              {viewMode === "match" ? "Terug naar commissies" : "Match & controle"}
-            </Button>
             <Button variant="outline" onClick={() => navigate("/admin/commissies/facturen")}>
               <FileText className="h-4 w-4 mr-2" />
               Commissiefacturen
@@ -420,10 +409,8 @@ export default function AdminCommissions() {
           </div>
         </div>
 
-        {viewMode === "match" ? (
-          <CommissionReconciliationPanel partnerId={partnerFilter} />
-        ) : (
         <>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -660,8 +647,11 @@ export default function AdminCommissions() {
           </div>
         )}
 
-        {/* Partner Groups */}
-        {data?.byPartner && data.byPartner.length > 0 ? (
+        {/* Werklijst: alle gerealiseerde partnerregels + losse inkoopfacturen */}
+        {statusFilter === "pending" ? (
+          <CommissionWorklist partnerId={partnerFilter} />
+        ) : data?.byPartner && data.byPartner.length > 0 ? (
+
           <div className="space-y-6">
             {data.byPartner.map((group) => (
               <Card key={group.partner?.id || "unknown"} className={isExpectedView ? "border-purple-200" : ""}>
@@ -887,7 +877,7 @@ export default function AdminCommissions() {
           </Card>
         )}
         </>
-        )}
+
 
 
 

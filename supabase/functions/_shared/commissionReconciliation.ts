@@ -18,6 +18,13 @@ export type ReconStatus =
   | "match"
   | "exempt";
 
+/** Soort regel in de werklijst. */
+export type ReconItemType = "activity" | "accommodation" | "purchase_invoice";
+
+/** Grondslag voor de commissieberekening. */
+export type CommissionBasis = "purchase" | "sales";
+
+
 export interface ReconSettings {
   /** Absolute tolerantie in euro's (ex btw). */
   toleranceEur: number;
@@ -47,7 +54,10 @@ export interface ReconItemInput {
   block_type?: string | null;
   /** Datum waarop het onderdeel plaatsvond (yyyy-mm-dd). */
   execution_date?: string | null;
+  /** "activity" (programma-onderdeel) of "accommodation" (logies-offerte). */
+  item_type?: ReconItemType;
 }
+
 
 export interface ReconInvoiceInput {
   id: string;
@@ -60,6 +70,8 @@ export interface ReconInvoiceInput {
   amount_incl_vat: number | null;
   commission_exempt?: boolean | null;
   created_at?: string | null;
+  /** Gezet zodra deze inkoopfactuur op een commissiefactuur is meegenomen. */
+  commission_invoiced_at?: string | null;
   /** item_ids uit partner_purchase_invoice_allocations. */
   allocated_item_ids?: string[];
 }
@@ -93,6 +105,8 @@ export interface ReconRow {
 
   itemId: string | null;
   invoiceId: string | null;
+  /** Soort regel: programma-onderdeel, logies-offerte of losse inkoopfactuur. */
+  itemType: ReconItemType;
   label: string;
   /** Verkoopwaarde ex btw. */
   salesExclVat: number | null;
@@ -103,6 +117,14 @@ export interface ReconRow {
   commissionPercentage: number;
   /** Commissie die we mislopen/verwachten op basis van de beste beschikbare grondslag. */
   commissionAtRisk: number;
+  /** Commissie op basis van onze verkoopwaarde (null als er geen verkoopwaarde is). */
+  salesCommission: number | null;
+  /** Commissie op basis van de inkoopfactuur (null als er geen factuur is). */
+  purchaseCommission: number | null;
+  /** Voorgestelde grondslag: inkoop indien beschikbaar, anders verkoop. */
+  defaultBasis: CommissionBasis;
+  /** True als deze regel commissievrij is (partner of factuur). */
+  commissionExempt: boolean;
   invoiceNumber: string | null;
   invoiceDate: string | null;
   executionDate: string | null;
@@ -111,6 +133,45 @@ export interface ReconRow {
   /** Aantal dagen sinds uitvoering (missing) of registratie (unlinked). */
   ageDays: number | null;
 }
+
+/** Voorgestelde grondslag voor een regel. */
+export function defaultBasisForRow(row: {
+  purchaseExclVat: number | null;
+  commissionBasis?: string | null;
+}): CommissionBasis {
+  if (row.commissionBasis === "sales") return "sales";
+  return row.purchaseExclVat !== null ? "purchase" : "sales";
+}
+
+/** Commissiebedrag voor een gekozen grondslag; valt terug op de andere grondslag als de gekozene ontbreekt. */
+export function commissionForBasis(
+  row: Pick<ReconRow, "salesCommission" | "purchaseCommission">,
+  basis: CommissionBasis,
+): number {
+  const chosen = basis === "sales" ? row.salesCommission : row.purchaseCommission;
+  if (chosen !== null && chosen !== undefined) return chosen;
+  const fallback = basis === "sales" ? row.purchaseCommission : row.salesCommission;
+  return fallback ?? 0;
+}
+
+/** Grondslagbedrag (ex btw) voor een gekozen grondslag. */
+export function basisAmountForBasis(
+  row: Pick<ReconRow, "salesExclVat" | "purchaseExclVat">,
+  basis: CommissionBasis,
+): number {
+  const chosen = basis === "sales" ? row.salesExclVat : row.purchaseExclVat;
+  if (chosen !== null && chosen !== undefined) return chosen;
+  const fallback = basis === "sales" ? row.purchaseExclVat : row.salesExclVat;
+  return fallback ?? 0;
+}
+
+/** Regels die nog gefactureerd moeten worden (commissie niet gefactureerd/betaald en niet commissievrij). */
+export function isBillableRow(row: ReconRow): boolean {
+  if (row.commissionExempt) return false;
+  if (row.commissionStatus && ["invoiced", "paid", "not_applicable"].includes(row.commissionStatus)) return false;
+  return row.commissionPercentage > 0;
+}
+
 
 /** Partners waarvoor commissie principieel niet van toepassing is. */
 export const COMMISSION_FREE_PARTNER_IDS = new Set<string>([
@@ -259,6 +320,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     }
 
     const basisAmount = purchaseExcl ?? salesExcl ?? 0;
+    const exemptItem = status === "exempt";
+    const commissionBasis = item.commission_basis ?? "purchase";
 
     rows.push({
       key: `item:${item.id}`,
@@ -272,17 +335,24 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
       itemId: item.id,
       invoiceId: activeInvoices[0]?.id ?? null,
+      itemType: item.item_type ?? "activity",
       label: item.block_name ?? "Onbekend onderdeel",
       salesExclVat: salesExcl,
       purchaseExclVat: purchaseExcl,
       differenceExclVat: salesExcl !== null && purchaseExcl !== null ? purchaseExcl - salesExcl : null,
       commissionPercentage: commissionPct,
-      commissionAtRisk: status === "exempt" ? 0 : basisAmount * (commissionPct / 100),
+      commissionAtRisk: exemptItem ? 0 : basisAmount * (commissionPct / 100),
+      salesCommission: exemptItem || salesExcl === null ? (exemptItem ? 0 : null) : salesExcl * (commissionPct / 100),
+      purchaseCommission: exemptItem || purchaseExcl === null
+        ? (exemptItem ? 0 : null)
+        : purchaseExcl * (commissionPct / 100),
+      defaultBasis: defaultBasisForRow({ purchaseExclVat: purchaseExcl, commissionBasis }),
+      commissionExempt: exemptItem,
       invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
       invoiceDate: activeInvoices[0]?.invoice_date ?? null,
       executionDate,
       commissionStatus: item.commission_status,
-      commissionBasis: item.commission_basis ?? "purchase",
+      commissionBasis,
       ageDays: daysSince(executionDate, now),
     });
   }
@@ -297,6 +367,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const purchaseExcl = toNumber(inv.amount_excl_vat);
     const commissionPct = toNumber(partner?.commission_percentage) ?? 10;
     const exempt = inv.commission_exempt === true || COMMISSION_FREE_PARTNER_IDS.has(partnerId);
+    const purchaseCommission = exempt ? 0 : (purchaseExcl ?? 0) * (commissionPct / 100);
 
     rows.push({
       key: `invoice:${inv.id}`,
@@ -310,20 +381,26 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
       itemId: null,
       invoiceId: inv.id,
+      itemType: "purchase_invoice",
       label: `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"}`,
       salesExclVat: null,
       purchaseExclVat: purchaseExcl,
       differenceExclVat: null,
       commissionPercentage: commissionPct,
       commissionAtRisk: exempt ? 0 : (purchaseExcl ?? 0) * (commissionPct / 100),
+      salesCommission: null,
+      purchaseCommission,
+      defaultBasis: "purchase",
+      commissionExempt: exempt,
       invoiceNumber: inv.invoice_number,
       invoiceDate: inv.invoice_date,
       executionDate: null,
-      commissionStatus: null,
+      commissionStatus: inv.commission_invoiced_at ? "invoiced" : null,
       commissionBasis: null,
       ageDays: daysSince(inv.invoice_date ?? inv.created_at ?? null, now),
     });
   }
+
 
   return rows;
 }

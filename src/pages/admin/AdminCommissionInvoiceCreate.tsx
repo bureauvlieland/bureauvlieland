@@ -28,6 +28,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { CommissionBasis } from "@/lib/commissionReconciliation";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -44,7 +46,7 @@ interface SourceItem {
   commission_amount: number | null;
   provider_id: string;
   provider_name: string;
-  item_type: "activity" | "accommodation";
+  item_type: "activity" | "accommodation" | "purchase_invoice";
   vat_rate?: number;
   program_requests: {
     id: string;
@@ -81,7 +83,12 @@ interface EditableLine {
   customerLabel: string;
   eventDate: string | null;
   reference: string | null;
+  /** Grondslag: onze verkoopwaarde of de inkoopfactuur van de partner. */
+  basis: CommissionBasis;
+  /** Gevuld bij losse inkoopfacturen zonder gekoppeld programma-onderdeel. */
+  purchaseInvoiceId: string | null;
 }
+
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
@@ -103,8 +110,21 @@ export default function AdminCommissionInvoiceCreate() {
 
   const itemIdsParam = searchParams.get("itemIds") || "";
   const quoteIdsParam = searchParams.get("quoteIds") || "";
+  const invoiceIdsParam = searchParams.get("invoiceIds") || "";
+  const basisParam = searchParams.get("basis") || "";
   const itemIds = useMemo(() => itemIdsParam.split(",").filter(Boolean), [itemIdsParam]);
   const quoteIds = useMemo(() => quoteIdsParam.split(",").filter(Boolean), [quoteIdsParam]);
+  const invoiceIds = useMemo(() => invoiceIdsParam.split(",").filter(Boolean), [invoiceIdsParam]);
+  /** Map van bron-id → gekozen commissiegrondslag (uit de werklijst). */
+  const basisById = useMemo(() => {
+    const map = new Map<string, CommissionBasis>();
+    for (const entry of basisParam.split(",").filter(Boolean)) {
+      const [id, basis] = entry.split(":");
+      if (id && (basis === "sales" || basis === "purchase")) map.set(id, basis);
+    }
+    return map;
+  }, [basisParam]);
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [partner, setPartner] = useState<SourceItem["partner"]>(null);
@@ -142,7 +162,7 @@ export default function AdminCommissionInvoiceCreate() {
   }, [settingPaymentTermDays]);
 
   useEffect(() => {
-    if (itemIds.length === 0 && quoteIds.length === 0) {
+    if (itemIds.length === 0 && quoteIds.length === 0 && invoiceIds.length === 0) {
       toast.error("Geen items geselecteerd");
       navigate("/admin/commissies");
       return;
@@ -156,12 +176,14 @@ export default function AdminCommissionInvoiceCreate() {
     try {
       let activityRows: any[] = [];
       let quoteRows: any[] = [];
+      let purchaseInvoiceRows: any[] = [];
 
       if (itemIds.length > 0) {
         const { data, error } = await supabase
           .from("program_request_items")
           .select(`
             id, block_name, invoiced_amount, invoiced_number, invoiced_date,
+            quoted_price, vat_rate,
             commission_percentage, commission_amount, commission_status,
             provider_id, provider_name,
             program_requests!inner(id, customer_name, customer_company, selected_dates, reference_number)
@@ -171,12 +193,26 @@ export default function AdminCommissionInvoiceCreate() {
         activityRows = data || [];
       }
 
+      if (invoiceIds.length > 0) {
+        const { data, error } = await supabase
+          .from("partner_purchase_invoices")
+          .select(`
+            id, partner_id, request_id, invoice_number, invoice_date,
+            amount_excl_vat, amount_incl_vat, description,
+            program_requests(id, customer_name, customer_company, reference_number)
+          `)
+          .in("id", invoiceIds);
+        if (error) throw error;
+        purchaseInvoiceRows = data || [];
+      }
+
+
       if (quoteIds.length > 0) {
         const { data, error } = await supabase
           .from("accommodation_quotes")
           .select(`
             id, accommodation_name, partner_id,
-            invoiced_amount, invoiced_number, invoiced_date, vat_rate, price_includes_vat,
+            invoiced_amount, invoiced_number, invoiced_date, vat_rate, price_includes_vat, price_total,
             commission_percentage, commission_amount, commission_status,
             accommodation_requests!inner(id, customer_name, customer_company, arrival_date, departure_date, reference_number)
           `)
@@ -189,6 +225,7 @@ export default function AdminCommissionInvoiceCreate() {
       const partnerIds = new Set<string>();
       activityRows.forEach((r) => partnerIds.add(r.provider_id));
       quoteRows.forEach((r) => partnerIds.add(r.partner_id));
+      purchaseInvoiceRows.forEach((r) => partnerIds.add(r.partner_id));
       if (partnerIds.size > 1) {
         toast.error("Geselecteerde items behoren tot meerdere partners");
         navigate("/admin/commissies");
@@ -205,28 +242,39 @@ export default function AdminCommissionInvoiceCreate() {
       setPartner(partnerData as any);
 
       const editable: EditableLine[] = [];
+      /** Verkoopbedrag ex btw uit een incl.-btw verkoopprijs. */
+      const salesExclVat = (inclPrice: unknown, vatRate: unknown) => {
+        const gross = Number(inclPrice) || 0;
+        const rate = Number(vatRate);
+        return gross / (1 + (Number.isFinite(rate) ? rate : 21) / 100);
+      };
 
       for (const row of activityRows) {
         const customerLabel =
           row.program_requests?.customer_company || row.program_requests?.customer_name || "Klant";
         const dates = row.program_requests?.selected_dates as string[] | null;
         const eventDate = Array.isArray(dates) && dates.length > 0 ? dates[0] : null;
-        // Grondslag: invoiced_amount is incl. BTW (sale to customer); we use invoiced_amount excl. VAT (21%)
-        // Convention: partners invoice excl. VAT in NL, but to be safe we use invoiced_amount as-is (treated as excl. VAT for commission base, matching existing logic where commission_amount is computed from amount_excl_vat × pct%).
-        // We back-out the original base from commission_amount/pct if available.
         const pct = Number(row.commission_percentage) || 15;
-        const baseFromCommission = pct > 0 && row.commission_amount
+        // Inkoopgrondslag: het door de partner gefactureerde bedrag (ex btw).
+        const purchaseBase = pct > 0 && row.commission_amount
           ? Number(row.commission_amount) / (pct / 100)
           : Number(row.invoiced_amount) || 0;
+        // Verkoopgrondslag: onze prijs aan de klant, ex btw.
+        const salesBase = salesExclVat(row.quoted_price, row.vat_rate);
+        const basis: CommissionBasis =
+          basisById.get(row.id) ?? (purchaseBase > 0 ? "purchase" : "sales");
+        const base = basis === "sales" ? salesBase : purchaseBase || salesBase;
 
         editable.push({
           source: { ...row, item_type: "activity", partner: partnerData as any, accommodation_requests: null } as any,
           description: `Commissie ${row.block_name} – ${customerLabel}${eventDate ? ` – ${formatDateNL(eventDate)}` : ""}`,
-          baseAmountExclVat: Math.round(baseFromCommission * 100) / 100,
+          baseAmountExclVat: Math.round(base * 100) / 100,
           commissionPct: pct,
           customerLabel,
           eventDate,
           reference: row.program_requests?.reference_number || null,
+          basis,
+          purchaseInvoiceId: null,
         });
       }
 
@@ -235,9 +283,15 @@ export default function AdminCommissionInvoiceCreate() {
           row.accommodation_requests?.customer_company || row.accommodation_requests?.customer_name || "Klant";
         const eventDate = row.accommodation_requests?.arrival_date || null;
         const pct = Number(row.commission_percentage) || 10;
-        const baseFromCommission = pct > 0 && row.commission_amount
+        const purchaseBase = pct > 0 && row.commission_amount
           ? Number(row.commission_amount) / (pct / 100)
           : Number(row.invoiced_amount) || 0;
+        const salesBase = row.price_includes_vat
+          ? salesExclVat(row.price_total, row.vat_rate ?? 9)
+          : Number(row.price_total) || 0;
+        const basis: CommissionBasis =
+          basisById.get(row.id) ?? (purchaseBase > 0 ? "purchase" : "sales");
+        const base = basis === "sales" ? salesBase : purchaseBase || salesBase;
 
         editable.push({
           source: {
@@ -256,13 +310,51 @@ export default function AdminCommissionInvoiceCreate() {
             accommodation_requests: row.accommodation_requests as any,
           },
           description: `Commissie logies ${row.accommodation_name} – ${customerLabel}${eventDate ? ` – ${formatDateNL(eventDate)}` : ""}`,
-          baseAmountExclVat: Math.round(baseFromCommission * 100) / 100,
+          baseAmountExclVat: Math.round(base * 100) / 100,
           commissionPct: pct,
           customerLabel,
           eventDate,
           reference: row.accommodation_requests?.reference_number || null,
+          basis,
+          purchaseInvoiceId: null,
         });
       }
+
+      // Losse inkoopfacturen zonder gekoppeld programma-onderdeel
+      for (const row of purchaseInvoiceRows) {
+        const customerLabel =
+          row.program_requests?.customer_company || row.program_requests?.customer_name || "Onbekende klant";
+        const pct = Number(partnerData?.commission_percentage) || 10;
+        const base = Number(row.amount_excl_vat) || 0;
+        const label = row.description || `inkoopfactuur ${row.invoice_number ?? ""}`.trim();
+
+        editable.push({
+          source: {
+            id: row.id,
+            block_name: label,
+            invoiced_amount: row.amount_excl_vat,
+            invoiced_number: row.invoice_number,
+            invoiced_date: row.invoice_date,
+            commission_percentage: pct,
+            commission_amount: null,
+            provider_id: row.partner_id,
+            provider_name: partnerData?.name || "",
+            item_type: "purchase_invoice",
+            partner: partnerData as any,
+            program_requests: null,
+            accommodation_requests: null,
+          },
+          description: `Commissie ${label} – ${customerLabel}${row.invoice_date ? ` – ${formatDateNL(row.invoice_date)}` : ""}`,
+          baseAmountExclVat: Math.round(base * 100) / 100,
+          commissionPct: pct,
+          customerLabel,
+          eventDate: row.invoice_date || null,
+          reference: row.program_requests?.reference_number || null,
+          basis: "purchase",
+          purchaseInvoiceId: row.id,
+        });
+      }
+
 
       setLines(editable);
 
@@ -347,6 +439,8 @@ export default function AdminCommissionInvoiceCreate() {
         invoice_id: invRow.id,
         item_id: l.source.item_type === "activity" ? l.source.id : null,
         quote_id: l.source.item_type === "accommodation" ? l.source.id : null,
+        purchase_invoice_id: l.purchaseInvoiceId,
+        commission_basis: l.basis,
         item_type: l.source.item_type,
         block_name: l.source.block_name,
         customer_label: l.customerLabel,
@@ -363,6 +457,22 @@ export default function AdminCommissionInvoiceCreate() {
         .from("commission_invoice_lines")
         .insert(lineInserts as any);
       if (linesErr) throw linesErr;
+
+      // Losse inkoopfacturen markeren zodat ze niet dubbel gefactureerd worden
+      const usedInvoiceIds = lines
+        .map((l) => l.purchaseInvoiceId)
+        .filter((id): id is string => !!id);
+      if (usedInvoiceIds.length > 0) {
+        const { error: markErr } = await supabase
+          .from("partner_purchase_invoices")
+          .update({
+            commission_invoiced_at: new Date().toISOString(),
+            commission_invoice_id: invRow.id,
+          } as any)
+          .in("id", usedInvoiceIds);
+        if (markErr) console.error("Kon inkoopfacturen niet markeren:", markErr);
+      }
+
 
       setSavedInvoiceId(invRow.id);
       setSavedInvoiceNumber(invRow.invoice_number);

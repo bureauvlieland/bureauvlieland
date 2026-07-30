@@ -1,53 +1,45 @@
 ## Doel
 
-Eén voorspelbare regel voor de geldigheid van een offerte: **standaard één maand vóór aankomst**. Ligt die datum al (bijna) in het verleden omdat de aankomst binnen een maand valt, dan doet het systeem een haalbaar voorstel dat duidelijk als "korte termijn" gemarkeerd is en dat u met één klik aanpast.
+Eén werklijst in Commissie Beheer → "Te factureren" met **alle** gerealiseerde partnerregels, ongeacht of er een inkoopfactuur aan hangt, plus de inkoopfacturen die nergens aan gekoppeld zijn. Per regel zie je de koppelstatus en kies je zelf de grondslag (onze verkoopprijs of de inkoopfactuur). Daarmee vervalt de aparte "Match & controle"-weergave.
 
-## Waarom dit nu misgaat
+## Huidige situatie (gecontroleerd)
 
-De geldigheidsdatum wordt op vier plekken los van elkaar bepaald, met drie verschillende regels:
+- `get-admin-commissions` filtert bij status "Te factureren" op `invoiced_number is not null`: 18 partnerregels met inkoopfactuur zijn zichtbaar, 32 gerealiseerde partnerregels zonder inkoopfactuur staan op `commission_status = not_applicable` en zijn onzichtbaar.
+- 23 van de 42 inkoopfacturen hebben geen `item_id`; die komen alleen voor in de losse "Match & controle"-tab.
+- De kolom `commission_basis` ('purchase' | 'sales') bestaat al, maar staat overal op 'purchase' en is alleen via het aparte matchpaneel te wijzigen.
+- `commission_invoice_lines` heeft alleen `item_id` / `quote_id`; een losse inkoopfactuur kan nu niet op een commissiefactuur.
 
-| Plek | Huidige default |
-| --- | --- |
-| Nieuw programma aanmaken (wizard) | 2 weken vóór eerste programmadatum, anders vandaag + 14 dagen |
-| Offerte-preview (Bekijk & verstuur) | 2 weken vóór eerste datum, anders morgen |
-| Offerte versturen (dialoog) | bestaande datum, anders vandaag + 14 dagen — kijkt níet naar de aankomstdatum |
-| Handmatig wijzigen op de projectkaart | vrije keuze, geen suggestie |
+## Wat er gebouwd wordt
 
-Daardoor krijgt dezelfde offerte een andere einddatum afhankelijk van waar u hem verstuurt.
+**1. Eén databron voor de lijst**
+`get-admin-commissions` gaat voor de werklijst de reconciliatie-logica (`_shared/commissionReconciliation.ts`) gebruiken als basis en levert per regel:
+- gerealiseerde partnerregels (status confirmed/accepted/executed, `block_type = partner`, commissie% > 0, commissie nog niet gefactureerd/betaald) — óók zonder inkoopfactuur;
+- geselecteerde logies-offertes, zelfde regels;
+- inkoopfacturen zonder koppeling als eigen regel;
+- per regel: verkoopwaarde ex btw, inkoopwaarde ex btw, verschil, koppelstatus (`gekoppeld` / `geen inkoopfactuur` / `niet gekoppeld` / `afwijking` / `commissievrij`), gekozen grondslag en de resulterende commissie.
 
-## De nieuwe regel
+**2. Nieuwe kolommen in het overzicht** (`AdminCommissions.tsx`)
+Per partnergroep, gesorteerd op datum, met naast Klant/Datum/Bedrag/Commissie:
+- **Koppeling**: badge met inkoopfactuurnummer, of "Geen inkoopfactuur" / "Niet gekoppeld aan projectregel";
+- **Verkoop ex btw / Inkoop ex btw / Verschil** met rode markering bij afwijking buiten tolerantie (€5 / 2%);
+- **Grondslag**: per regel schakelen tussen "Verkoop" en "Inkoop" (en bulk voor een hele partnergroep), inclusief automatische standaard: inkoop als er een factuur is, anders verkoop;
+- rij-acties: "Commissievrij", "Koppel aan projectregel" (opent bestaande matchdialoog) en doorklik naar project.
 
-Eén centrale rekenregel, hardcoded op één maand:
+**3. Losse inkoopfacturen meenemen in de commissiefactuur**
+Migratie op `commission_invoice_lines`: `purchase_invoice_id uuid` + `commission_basis text` toevoegen, `item_type` mag 'purchase_invoice' zijn. `AdminCommissionInvoiceCreate` accepteert `invoiceIds` naast `itemIds`/`quoteIds` en zet zulke regels als aparte factuurregel met de partnerfactuur als omschrijving. Na facturatie wordt de inkoopfactuur gemarkeerd zodat hij niet dubbel opduikt.
 
-```text
-voorstel = eerste programmadatum - 1 maand
+**4. Aparte matchpagina vervalt**
+De weergaveschakelaar "Match & controle" verdwijnt uit `AdminCommissions.tsx`; de acties die daar zaten (grondslag wijzigen, commissievrij markeren) zitten nu inline in de werklijst. Filter "Alleen afwijkingen / alleen ontbrekende facturen" komt als statusfilter in dezelfde lijst. `CommissionReconciliationPanel.tsx` en `get-commission-reconciliation` blijven bestaan als databron/logica; het losse paneel wordt uit de UI gehaald.
 
-als voorstel >= vandaag + 7 dagen   -> gebruik voorstel        (normaal)
-anders                              -> korte termijn:
-                                       midden tussen vandaag en aankomst,
-                                       met minimaal vandaag + 3 dagen
-                                       en maximaal aankomst - 1 dag
-geen programmadatum bekend          -> vandaag + 14 dagen      (terugval)
-```
+**5. Borging**
+Unit-tests uitbreiden op de gedeelde logica (grondslagkeuze, commissieberekening per grondslag, geen dubbele regels bij factuur die via nummer én allocatie matcht) en op de nieuwe factuurregel-opbouw. Volledige typecheck + testsuite.
 
-Het voorstel valt nooit ná de aankomst en nooit in het verleden. De admin kan de datum altijd overschrijven; zodra u zelf een datum kiest, laat het systeem die staan.
+## Technische details
 
-## Wat u gaat zien
+- Bestanden: `supabase/functions/get-admin-commissions/index.ts`, `supabase/functions/_shared/commissionReconciliation.ts`, `src/pages/admin/AdminCommissions.tsx`, `src/pages/admin/AdminCommissionInvoiceCreate.tsx`, migratie voor `commission_invoice_lines`.
+- Commissie op verkoopgrondslag = verkoopprijs incl btw → ex btw via `vat_rate` × commissie%; op inkoopgrondslag = som van `amount_excl_vat` van gekoppelde inkoopfacturen × commissie%.
+- `commission_status` van regels zonder factuur wordt bij tonen niet muteren; pas bij facturatie naar `invoiced`, zodat de lijst niets stilzwijgend verandert.
 
-- Overal dezelfde voorgestelde datum, met een korte toelichting onder de datumkiezer: *"Standaard: één maand vóór aankomst (28 augustus)."*
-- Bij een aanvraag binnen een maand een oranje "korte termijn"-melding: *"Aankomst is over 12 dagen — voorstel: 4 dagen geldig. Pas aan indien nodig."*
-- In de offerte-verzenddialoog wordt de datum nu óók op de aankomst gebaseerd in plaats van blind vandaag + 14 dagen.
-- Op de projectkaart bij "Geldig tot" een knopje **Standaard** dat de datum terugzet naar één maand vóór aankomst.
-- In de datumkiezers zijn datums vóór morgen en ná de aankomstdatum niet meer selecteerbaar.
+## Open vraag
 
-## Technische aanpak
-
-1. **Nieuw bestand `src/lib/quoteValidity.ts`** — pure functies, geen I/O:
-   - `QUOTE_VALIDITY_LEAD_DAYS` (één maand vóór aankomst) en `MIN_SHORT_TERM_DAYS` als constanten.
-   - `suggestQuoteValidUntil({ arrivalDate, today })` → `{ date, mode: "standard" | "short_term" | "fallback", daysUntilArrival, daysValid }`.
-   - `describeQuoteValidity(result)` → Nederlandse toelichting voor de UI.
-   - Helper `isQuoteExpired(validUntil, today)` zodat de bestaande verlopen-checks dezelfde datumvergelijking gebruiken (nu op sommige plekken inclusief tijdcomponent, wat op de dag zelf tot "verlopen" kan leiden).
-2. **Aanroepen vervangen** in `src/pages/admin/AdminProgramNew.tsx`, `src/pages/admin/AdminQuotePreview.tsx`, `src/components/admin/AdminSendQuoteDialog.tsx` en de "Geldig tot"-popover in `src/pages/admin/AdminRequestDetail.tsx`; per plek de toelichting/korte-termijn-melding tonen en de kalender begrenzen (`disabled` op verleden en na aankomst).
-3. **Vitest-suite `src/lib/__tests__/quoteValidity.test.ts`**: normale termijn, aankomst binnen een maand, aankomst over 2 dagen (minimum), geen datum bekend, meerdaags programma (eerste datum is anker), en dat het voorstel nooit ná aankomst of vóór morgen valt.
-
-Geen databasewijziging nodig: `quote_valid_until` blijft zoals het is en bestaande offertes worden niet aangepast.
+Standaardgrondslag: ik zet hem op "inkoopfactuur indien aanwezig, anders verkoop". Wil je liever altijd verkoop als standaard (met inkoop alleen als controle), dan pas ik dat aan.
