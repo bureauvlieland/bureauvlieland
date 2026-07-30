@@ -81,7 +81,12 @@ interface EditableLine {
   customerLabel: string;
   eventDate: string | null;
   reference: string | null;
+  /** Grondslag: onze verkoopwaarde of de inkoopfactuur van de partner. */
+  basis: CommissionBasis;
+  /** Gevuld bij losse inkoopfacturen zonder gekoppeld programma-onderdeel. */
+  purchaseInvoiceId: string | null;
 }
+
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
