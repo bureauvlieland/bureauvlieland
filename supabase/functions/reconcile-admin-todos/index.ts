@@ -171,6 +171,25 @@ Deno.serve(async (req) => {
       ((batches.data ?? []) as any[]).map((r) => [r.id, r]),
     );
 
+    // Allocaties per inkoopfactuur (voor commission_unlinked_invoice).
+    const allocatedInvoiceIds = new Set<string>();
+    if (purchaseInvoiceIds.size) {
+      const { data: allocs, error: allocError } = await supabase
+        .from("partner_purchase_invoice_allocations")
+        .select("invoice_id, item_id")
+        .in("invoice_id", [...purchaseInvoiceIds]);
+      if (allocError) {
+        throw new Error(
+          `partner_purchase_invoice_allocations lookup failed: ${allocError.message}`,
+        );
+      }
+      for (const a of (allocs ?? []) as { invoice_id: string; item_id: string | null }[]) {
+        if (a.item_id) allocatedInvoiceIds.add(a.invoice_id);
+      }
+    }
+
+
+
     // sales invoices grouped by request (for post_execution_invoice_check fallback)
     const salesByRequest = new Map<string, number>();
     if (requestIds.size) {
