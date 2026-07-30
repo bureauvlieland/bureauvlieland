@@ -85,11 +85,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Throttle: max 1 email per conversation per 10 minutes
+    // Fetch the latest admin message — this is the reply we notify about
+    const { data: lastAdminMsg } = await supabase
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("conversation_id", conversation_id)
+      .eq("sender_type", "admin")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const messagePreview = formatMessagePreview(lastAdminMsg?.content);
+
+    // Throttle: max 1 email per conversation per 2 minutes, but never swallow a
+    // reply that was written after the previous notification went out.
     if (conv.last_email_notified_at) {
       const lastNotified = new Date(conv.last_email_notified_at).getTime();
-      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-      if (lastNotified > tenMinutesAgo) {
+      const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
+      const messageIsNewer = lastAdminMsg?.created_at
+        ? new Date(lastAdminMsg.created_at).getTime() > lastNotified
+        : false;
+      if (lastNotified > twoMinutesAgo && !messageIsNewer) {
         return new Response(JSON.stringify({ skipped: true, reason: "throttled" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -99,8 +115,9 @@ Deno.serve(async (req) => {
 
     // Build portal link and subject
     const baseUrl = "https://bureauvlieland.nl";
-    let portalLink = baseUrl;
+    let portalLink = `${baseUrl}/?chat=open`;
     let emailSubject = "Nieuw bericht van Bureau Vlieland";
+
 
     if (isAccommodationChat) {
       // Get accommodation reference number
