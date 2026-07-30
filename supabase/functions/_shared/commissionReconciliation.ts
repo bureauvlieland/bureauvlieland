@@ -320,6 +320,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     }
 
     const basisAmount = purchaseExcl ?? salesExcl ?? 0;
+    const exemptItem = status === "exempt";
+    const commissionBasis = item.commission_basis ?? "purchase";
 
     rows.push({
       key: `item:${item.id}`,
@@ -333,17 +335,24 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
       itemId: item.id,
       invoiceId: activeInvoices[0]?.id ?? null,
+      itemType: item.item_type ?? "activity",
       label: item.block_name ?? "Onbekend onderdeel",
       salesExclVat: salesExcl,
       purchaseExclVat: purchaseExcl,
       differenceExclVat: salesExcl !== null && purchaseExcl !== null ? purchaseExcl - salesExcl : null,
       commissionPercentage: commissionPct,
-      commissionAtRisk: status === "exempt" ? 0 : basisAmount * (commissionPct / 100),
+      commissionAtRisk: exemptItem ? 0 : basisAmount * (commissionPct / 100),
+      salesCommission: exemptItem || salesExcl === null ? (exemptItem ? 0 : null) : salesExcl * (commissionPct / 100),
+      purchaseCommission: exemptItem || purchaseExcl === null
+        ? (exemptItem ? 0 : null)
+        : purchaseExcl * (commissionPct / 100),
+      defaultBasis: defaultBasisForRow({ purchaseExclVat: purchaseExcl, commissionBasis }),
+      commissionExempt: exemptItem,
       invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
       invoiceDate: activeInvoices[0]?.invoice_date ?? null,
       executionDate,
       commissionStatus: item.commission_status,
-      commissionBasis: item.commission_basis ?? "purchase",
+      commissionBasis,
       ageDays: daysSince(executionDate, now),
     });
   }
@@ -358,6 +367,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const purchaseExcl = toNumber(inv.amount_excl_vat);
     const commissionPct = toNumber(partner?.commission_percentage) ?? 10;
     const exempt = inv.commission_exempt === true || COMMISSION_FREE_PARTNER_IDS.has(partnerId);
+    const purchaseCommission = exempt ? 0 : (purchaseExcl ?? 0) * (commissionPct / 100);
 
     rows.push({
       key: `invoice:${inv.id}`,
@@ -371,20 +381,26 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
       itemId: null,
       invoiceId: inv.id,
+      itemType: "purchase_invoice",
       label: `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"}`,
       salesExclVat: null,
       purchaseExclVat: purchaseExcl,
       differenceExclVat: null,
       commissionPercentage: commissionPct,
       commissionAtRisk: exempt ? 0 : (purchaseExcl ?? 0) * (commissionPct / 100),
+      salesCommission: null,
+      purchaseCommission,
+      defaultBasis: "purchase",
+      commissionExempt: exempt,
       invoiceNumber: inv.invoice_number,
       invoiceDate: inv.invoice_date,
       executionDate: null,
-      commissionStatus: null,
+      commissionStatus: inv.commission_invoiced_at ? "invoiced" : null,
       commissionBasis: null,
       ageDays: daysSince(inv.invoice_date ?? inv.created_at ?? null, now),
     });
   }
+
 
   return rows;
 }
