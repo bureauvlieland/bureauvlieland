@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
       purchaseInvoiceIds.size
         ? supabase
             .from("partner_purchase_invoices")
-            .select("id, status")
+            .select("id, status, item_id, commission_exempt")
+
             .in("id", [...purchaseInvoiceIds])
         : Promise.resolve({ data: [], error: null }),
       batchIds.size
