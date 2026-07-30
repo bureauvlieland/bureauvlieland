@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, reason, cancelAccommodation: shouldCancelAccommodation = true, origin }: CancelRequest = await req.json();
+    const { token, reason, cancelAccommodation: shouldCancelAccommodation = true, origin, notify_partners = true }: CancelRequest = await req.json();
     
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
