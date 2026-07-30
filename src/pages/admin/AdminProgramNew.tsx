@@ -509,16 +509,43 @@ const AdminProgramNewContent = () => {
                           setQuoteValidUntilTouched(true);
                           updateFormData("quoteValidUntil", date);
                         }}
-                        disabled={(date) => date < new Date()}
+                        disabled={(date) => isQuoteValidUntilDateDisabled(date, { arrivalDate })}
                         initialFocus
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p
+                      className={cn(
+                        "text-sm",
+                        validitySuggestion.mode === "short_term"
+                          ? "text-amber-600 dark:text-amber-500"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {describeQuoteValidity(validitySuggestion)}
+                    </p>
+                    {formData.quoteValidUntil.getTime() !== validitySuggestion.date.getTime() && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          setQuoteValidUntilTouched(true);
+                          updateFormData("quoteValidUntil", validitySuggestion.date);
+                        }}
+                      >
+                        Standaard
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Na deze datum kan de klant niet meer akkoord geven op de offerte.
                   </p>
                 </div>
+
               )}
 
               {/* Summary */}
