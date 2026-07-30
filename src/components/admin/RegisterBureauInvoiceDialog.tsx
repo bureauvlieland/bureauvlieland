@@ -103,7 +103,15 @@ export const RegisterBureauInvoiceDialog = ({
   // van het project, dus nooit de invulvelden ermee overschrijven).
   useEffect(() => {
     if (!isOpen || !requestId) return;
+    // Slim standaardtype: dekt dit bedrag het volledige restant (en is er nog
+    // niets eerder gefactureerd of sluit dit het project af), dan is het een
+    // eindfactuur. Alleen bij een gedeeltelijk bedrag een deelfactuur.
+    const coversRemainder =
+      suggestedAmount > 0 &&
+      (outstandingAmount == null || suggestedAmount >= outstandingAmount - 0.01);
+    form.setValue("invoice_type", coversRemainder ? "final" : "partial");
     if (suggestedAmount > 0) {
+
       const baseTotal = (suggestedExclVat ?? 0) + (suggestedVatAmount ?? 0);
       if (suggestedExclVat != null && suggestedVatAmount != null && baseTotal > 0) {
         // Exacte uitsplitsing uit het Financieel Overzicht (gemengd 9%/21%).
