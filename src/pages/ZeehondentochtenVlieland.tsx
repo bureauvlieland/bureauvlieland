@@ -15,10 +15,13 @@ import {
   Anchor,
   Sparkles,
   ChevronRight,
+  Euro,
+  CalendarDays,
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { KeyFacts } from "@/components/seo/KeyFacts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -29,6 +32,7 @@ import {
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import heroImage from "@/assets/zeehondentocht-vlieland-zandbank.jpg";
+
 
 const FAQ: { q: string; a: string }[] = [
   {
@@ -151,16 +155,38 @@ const ZeehondentochtenVlieland = () => {
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mb-6">
               Per boot vanaf de haven naar de zandbanken in de Waddenzee — gewone én grijze zeehonden van dichtbij, zonder ze te storen.
             </p>
-            <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
-              <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                Boek je zeehondentocht
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
+                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                  Boek je zeehondentocht
+                </Button>
+              </Link>
+              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht-groep">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto bg-transparent text-primary-foreground border-primary-foreground/40 hover:bg-primary-foreground/10"
+                >
+                  Offerte voor een groep
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
+        <KeyFacts
+          summary="Een zeehondentocht op Vlieland is een begeleide boottocht van 2 tot 3 uur vanaf de haven van Oost-Vlieland naar de zandbanken in de Waddenzee, waar gewone en grijze zeehonden rusten. De vertrektijd volgt het getij (rond laag water). Richtprijs €25–€35 per volwassene; groepen vanaf circa 20 personen boeken een eigen afvaart."
+          facts={[
+            { icon: Clock, label: "Duur", value: "2 tot 3 uur" },
+            { icon: Euro, label: "Richtprijs", value: "€25–€35 p.p." },
+            { icon: CalendarDays, label: "Seizoen", value: "Hele jaar, piek juni–september" },
+            { icon: Users, label: "Voor wie", value: "Alle leeftijden, groepen vanaf ±20" },
+          ]}
+        />
+
         {/* Intro + trust */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
+
           <div className="prose prose-neutral max-w-none text-foreground space-y-4">
             <p>
               Vlieland ligt midden in het Werelderfgoed Waddenzee — en op een steenworp afstand liggen de beroemde zandbanken (zoals de Richel) waar honderden zeehonden uitrusten. Tijdens een zeehondentocht vaar je vanaf de haven met een ervaren schipper het wad op, op zoek naar gewone en grijze zeehonden. Op afstand, met respect voor de dieren, maar zo dichtbij dat je ze prachtig kunt bekijken.
@@ -191,6 +217,24 @@ const ZeehondentochtenVlieland = () => {
                 In de Waddenzee leven twee soorten: de gewone zeehond — kleiner, rond kopje, vaak in grote groepen — en de grijze zeehond, met zijn langere snuit en stevige postuur het grootste roofdier van Nederland. Beide soorten zijn vrijwel zeker te zien op de zandbanken rond Vlieland; vooral op de Richel komen ze met honderden tegelijk samen.
               </p>
             </div>
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
+                Wanneer kun je het beste zeehonden spotten?
+              </h2>
+              <p className="text-foreground">
+                Zeehonden liggen op de zandbanken zodra die droogvallen — dus rond laag water. De vertrektijd van de tocht schuift daarom elke dag mee met het getij; soms vaar je 's ochtends, soms halverwege de middag. Van juni tot en met september is de kans het grootst: dan zijn de kolonies het grootst en is het water rustig. Ook in het voor- en naseizoen worden vrijwel altijd zeehonden gezien, alleen vaart er dan minder vaak een boot. Plan je met een groep? Geef ons je datum, dan zoeken wij het afvaartvenster erbij dat in jullie dagindeling past.
+              </p>
+              <p className="text-foreground mt-3">
+                <Link
+                  to="/wadlopen-vlieland"
+                  className="text-primary underline underline-offset-2"
+                >
+                  Liever te voet het wad op?
+                </Link>{" "}
+                Een wadexcursie volgt hetzelfde getijderitme en is goed te combineren met de boottocht.
+              </p>
+            </div>
+
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
                 Waarom een zeehondentocht vanaf Vlieland?

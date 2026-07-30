@@ -17,10 +17,14 @@ import {
   Footprints,
   Sparkles,
   ChevronRight,
+  Euro,
+  CalendarDays,
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { KeyFacts } from "@/components/seo/KeyFacts";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -152,16 +156,38 @@ const WadlopenVlieland = () => {
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mb-6">
               Met een lokale gids het wad op — leerzaam, avontuurlijk en geschikt voor het hele gezin.
             </p>
-            <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
-              <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                Boek je wadexcursie
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
+                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                  Boek je wadexcursie
+                </Button>
+              </Link>
+              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie-groep">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto bg-transparent text-primary-foreground border-primary-foreground/40 hover:bg-primary-foreground/10"
+                >
+                  Offerte voor een groep
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
+        <KeyFacts
+          summary="Een wadexcursie op Vlieland is een begeleide wandeling van circa 1,5 uur over het drooggevallen wad rond het eiland, altijd rond laag water (van ongeveer één uur vóór tot één uur ná laagwater). Laarzen zijn inbegrepen, de excursie is geschikt voor alle leeftijden en kost circa €17,50 tot €20 per volwassene. Wadlopen vanaf het vasteland naar Vlieland is niet mogelijk: de geulen zijn ook bij eb te diep."
+          facts={[
+            { icon: Clock, label: "Duur", value: "Ongeveer 1,5 uur" },
+            { icon: Euro, label: "Richtprijs", value: "€17,50–€20 p.p." },
+            { icon: CalendarDays, label: "Wanneer", value: "Rond laag water, hele jaar" },
+            { icon: Footprints, label: "Inbegrepen", value: "Laarzen en lokale gids" },
+          ]}
+        />
+
         {/* Intro + trust */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
+
           <div className="prose prose-neutral max-w-none text-foreground space-y-4">
             <p>
               Trek je laarzen aan en ontdek het Werelderfgoed Waddenzee van de mooiste kant: te voet. Tijdens een wadexcursie op Vlieland neemt een lokale gids — die het eiland en het wad op zijn duimpje kent — je mee het wad op, vertelt over het leven onder je voeten en wijst je zeehonden, vogels en bijzondere wadbewoners aan. Een avontuur middenin de natuur — geschikt voor alle leeftijden, dus ook leuk met (klein)kinderen.
@@ -190,6 +216,29 @@ const WadlopenVlieland = () => {
                 Bij laag water valt de zeebodem droog en kun je over het wad lopen. Onder begeleiding van een gids ontdek je dit unieke landschap van zandbanken, slik en geulen. De gids kent het gebied, de getijden en de gevaren, en leert je onderweg van alles over de Waddenzee.
               </p>
             </div>
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
+                Kun je naar Vlieland wadlopen?
+              </h2>
+              <p className="text-foreground">
+                Nee. Anders dan bij Ameland of Schiermonnikoog is er geen wadlooproute vanaf het vasteland naar Vlieland: de geulen tussen de Friese kust en het eiland blijven ook bij eb te diep en de stroming is te sterk. Je komt op Vlieland met de veerboot van Rederij Doeksen vanuit Harlingen. Wat wél kan — en wat de meeste mensen zoeken — is een wadexcursie óp Vlieland: met een gids het drooggevallen wad rond het eiland op.
+              </p>
+            </div>
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
+                Een wadexcursie met je groep
+              </h2>
+              <p className="text-foreground">
+                Voor bedrijfsuitjes, teamdagen en familieweekenden reserveren we een eigen gids, zodat je groep niet aansluit bij losse bezoekers. Omdat de starttijd het getij volgt, bouwen we de rest van de dag daaromheen: overtocht, fietsen, lunch en bijvoorbeeld een zeehondentocht. Eén aanvraag, één aanspreekpunt, één factuur.
+              </p>
+              <p className="text-foreground mt-3">
+                <Link to="/voorbeeldprogrammas" className="text-primary underline underline-offset-2">
+                  Bekijk voorbeeldprogramma's
+                </Link>{" "}
+                waarin de wadexcursie al is ingepland.
+              </p>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <img
                 src={gezinImage}

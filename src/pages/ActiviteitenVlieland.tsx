@@ -16,10 +16,15 @@ import {
   UtensilsCrossed,
   Users,
   Compass,
+  Ship,
+  CalendarDays,
+  Clock,
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { KeyFacts } from "@/components/seo/KeyFacts";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -272,6 +277,16 @@ const ActiviteitenVlieland = () => {
           </div>
         </section>
 
+        <KeyFacts
+          summary="Op Vlieland zijn de populairste activiteiten een wadexcursie met gids, een zeehondentocht per boot, fietsen door de duinen en bossen, de Vliehors Expres naar het westelijke strand, blokarten, de vuurtoren beklimmen en Museum Tromp's Huys. Het eiland is autoluw en bereikbaar met de veerboot vanuit Harlingen (45 minuten met de sneldienst, circa 90 minuten met de gewone boot). Bureau Vlieland boekt losse activiteiten of een compleet groepsprogramma met één factuur."
+          facts={[
+            { icon: Ship, label: "Bereikbaar", value: "Veerboot Harlingen, 45–90 min" },
+            { icon: Bike, label: "Vervoer", value: "Autoluw — fiets en te voet" },
+            { icon: CalendarDays, label: "Hoogseizoen", value: "Mei t/m oktober" },
+            { icon: Clock, label: "Dagje eiland", value: "Boot 9:00 heen, begin avond terug" },
+          ]}
+        />
+
         {/* Intro */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
           <div className="prose prose-neutral max-w-none text-foreground space-y-4">
@@ -283,6 +298,7 @@ const ActiviteitenVlieland = () => {
             </p>
           </div>
         </section>
+
 
         {/* Thema's */}
         <section className="bg-muted/30 py-16">
@@ -350,6 +366,42 @@ const ActiviteitenVlieland = () => {
             </p>
           </div>
         </section>
+
+        {/* Seizoen */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl pb-16">
+          <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-6">
+            Activiteiten per seizoen
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                season: "Voorjaar (maart–mei)",
+                text: "Rustig op het eiland, volop vogeltrek. Wadexcursies, fietstochten en duinwandelingen zijn op hun mooist. Ideaal voor heisessies en teamdagen.",
+              },
+              {
+                season: "Zomer (juni–augustus)",
+                text: "Alles draait: zeehondentochten, blokarten, strandactiviteiten en BBQ's op het strand. Reserveer ruim vooraf — aanbieders zitten vol.",
+              },
+              {
+                season: "Najaar (september–oktober)",
+                text: "Het beste van twee werelden: nog warm water, minder drukte en prachtig licht. Populairste periode voor bedrijfsuitjes.",
+              },
+              {
+                season: "Winter (november–februari)",
+                text: "Stormachtig en stil. Vliehors Expres, museum, proeverijen en vergaderarrangementen met een stevige wandeling ertussen.",
+              },
+            ].map(({ season, text }) => (
+              <Card key={season} className="h-full">
+                <CardContent className="p-5">
+                  <h3 className="font-display font-semibold text-foreground mb-2">{season}</h3>
+                  <p className="text-sm text-muted-foreground">{text}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+
 
         {/* FAQ */}
         <section className="bg-muted/30 py-16">
