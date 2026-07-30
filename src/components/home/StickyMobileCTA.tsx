@@ -22,7 +22,7 @@ export const StickyMobileCTA = () => {
 
   return (
     <div
-      className={`lg:hidden fixed bottom-4 inset-x-4 z-40 transition-all duration-300 ${
+      className={`lg:hidden fixed bottom-4 left-4 right-[4.75rem] z-30 transition-all duration-300 ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
       }`}
       aria-hidden={!visible}
