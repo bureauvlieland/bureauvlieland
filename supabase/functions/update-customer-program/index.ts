@@ -753,11 +753,19 @@ Deno.serve(async (req) => {
       if (item.provider_email && item.block_type !== "self_arranged") {
         const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
 
+        const cancelSelectedDates = ((program.selected_dates as string[]) || [])
+          .map((d) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
+          .join(", ");
+
         const template = await getRenderedTemplate(TemplateIds.ITEM_CANCELLED_PARTNER, {
           partner_name: sanitizeHtml(item.provider_name),
           customer_name: customerLabel,
           block_name: sanitizeHtml(item.block_name),
+          selected_dates: cancelSelectedDates,
+          reference_number: sanitizeHtml(program.reference_number || ""),
+          cancellation_reason: "Geannuleerd door de klant via het klantportaal.",
         });
+
 
         const emailSubject = template?.subject || `Annulering - ${customerLabel}`;
         const emailBody = template?.body || `
@@ -1235,7 +1243,9 @@ Deno.serve(async (req) => {
           items_list: itemsList,
           selected_dates: selectedDates,
           number_of_people: String(program.number_of_people),
+          portal_url: "https://bureauvlieland.nl/partner",
         });
+
 
         const emailSubject = template?.subject || `Definitieve boeking - ${sanitizeHtml(program.customer_company || program.customer_name)}`;
         const emailBody = template?.body || `
@@ -1315,11 +1325,14 @@ Deno.serve(async (req) => {
         selected_dates: selectedDates,
         number_of_people: String(program.number_of_people),
         confirmed_count: String(confirmedItems?.length || 0),
+        booking_summary: signatureTableHtml,
+        reference_number: sanitizeHtml(program.reference_number || ""),
         signature_details: signatureTableHtml,
         partner_terms_note: partnerTermsNote,
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
         portal_link: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
+
 
       const bookingCustomerSubject = bookingCustomerTemplate?.subject || "Boeking definitief bevestigd";
       const bookingCustomerBody = bookingCustomerTemplate?.body || `
@@ -1698,8 +1711,11 @@ Deno.serve(async (req) => {
       const itemChangesCustomerTemplate = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
         customer_name: sanitizeHtml(program.customer_name),
         changes_list: customerChangesHtml,
+        changes_summary: `<ul>${customerChangesHtml}</ul>`,
+        reference_number: sanitizeHtml(program.reference_number || ""),
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
+
 
       const itemChangesCustomerSubject = itemChangesCustomerTemplate?.subject || "Wijzigingen in je programma bevestigd";
       const itemChangesCustomerBody = itemChangesCustomerTemplate?.body || `

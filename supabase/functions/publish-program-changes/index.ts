@@ -839,8 +839,10 @@ Deno.serve(async (req) => {
         customer_email: "", // privacy: PII niet delen
         customer_phone: "",
         dates,
+        selected_dates: dates,
         number_of_people: program.number_of_people,
         changes_list: itemsHtml + noteLi,
+
       });
       if (!rendered) continue;
       const to = recipientFor(partnerEmail, origin);

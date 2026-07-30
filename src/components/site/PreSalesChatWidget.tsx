@@ -41,6 +41,13 @@ export const PreSalesChatWidget = () => {
     } catch { /* ignore */ }
   }, []);
 
+  // Open automatically when arriving via an e-mail link (?chat=open)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("chat") === "open") setOpen(true);
+  }, [location.search]);
+
+
   const hideOnPortal =
     location.pathname.startsWith("/partner") ||
     location.pathname.startsWith("/admin") ||

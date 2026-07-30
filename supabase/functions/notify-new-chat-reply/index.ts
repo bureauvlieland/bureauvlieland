@@ -8,7 +8,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/** Escape + truncate a plain-text chat message for safe use inside an email body. */
+export function formatMessagePreview(content: string | null | undefined, maxLength = 600): string {
+  const raw = (content ?? "").trim();
+  if (!raw) return "";
+  const clipped = raw.length > maxLength ? `${raw.slice(0, maxLength).trimEnd()}…` : raw;
+  return escapeHtml(clipped).replace(/\r\n|\r|\n/g, "<br>");
+}
+
 Deno.serve(async (req) => {
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -67,11 +85,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Throttle: max 1 email per conversation per 10 minutes
+    // Fetch the latest admin message — this is the reply we notify about
+    const { data: lastAdminMsg } = await supabase
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("conversation_id", conversation_id)
+      .eq("sender_type", "admin")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const messagePreview = formatMessagePreview(lastAdminMsg?.content);
+
+    // Throttle: max 1 email per conversation per 2 minutes, but never swallow a
+    // reply that was written after the previous notification went out.
     if (conv.last_email_notified_at) {
       const lastNotified = new Date(conv.last_email_notified_at).getTime();
-      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-      if (lastNotified > tenMinutesAgo) {
+      const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
+      const messageIsNewer = lastAdminMsg?.created_at
+        ? new Date(lastAdminMsg.created_at).getTime() > lastNotified
+        : false;
+      if (lastNotified > twoMinutesAgo && !messageIsNewer) {
         return new Response(JSON.stringify({ skipped: true, reason: "throttled" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,8 +115,9 @@ Deno.serve(async (req) => {
 
     // Build portal link and subject
     const baseUrl = "https://bureauvlieland.nl";
-    let portalLink = baseUrl;
+    let portalLink = `${baseUrl}/?chat=open`;
     let emailSubject = "Nieuw bericht van Bureau Vlieland";
+
 
     if (isAccommodationChat) {
       // Get accommodation reference number
@@ -130,13 +165,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Try DB template
+    // Try DB template — the template uses {{message_preview}} and {{chat_url}}
     const template = await getRenderedTemplate(TemplateIds.CHAT_REPLY_VISITOR, {
       visitor_name: recipientName,
       portal_link: portalLink,
+      chat_url: portalLink,
+      message_preview: messagePreview,
     });
 
     const finalSubject = template?.subject || emailSubject;
+    const previewBlock = messagePreview
+      ? `<tr><td style="padding-bottom:24px;">
+                <div style="border-left:3px solid #1e3a5f;padding:8px 16px;background:#f8f9fa;color:#333333;font-size:15px;line-height:23px;">${messagePreview}</div>
+              </td></tr>`
+      : "";
     const htmlBody = template?.body || `
       <!DOCTYPE html>
       <html>
@@ -146,11 +188,14 @@ Deno.serve(async (req) => {
             <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;">
               <tr><td style="font-size:16px;line-height:24px;color:#333333;">
                 <p style="margin:0 0 16px 0;">Hallo ${recipientName},</p>
-                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen van Bureau Vlieland.</p>
-                <p style="margin:0 0 24px 0;">Klik op de knop hieronder om het bericht te bekijken en te reageren.</p>
+                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen van Bureau Vlieland:</p>
               </td></tr>
-              <tr><td style="padding-bottom:32px;">
-                <a href="${portalLink}" style="display:inline-block;background-color:#1a5276;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Bekijk bericht →</a>
+              ${previewBlock}
+              <tr><td style="font-size:16px;line-height:24px;color:#333333;padding-bottom:8px;">
+                <p style="margin:0;">U kunt reageren via de chat of gewoon antwoorden op deze e-mail.</p>
+              </td></tr>
+              <tr><td style="padding:16px 0 32px 0;">
+                <a href="${portalLink}" style="display:inline-block;background-color:#1a5276;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Open de chat →</a>
               </td></tr>
               <tr><td style="font-size:13px;color:#999999;border-top:1px solid #eeeeee;padding-top:16px;">
                 <p style="margin:0;">Dit is een automatisch bericht van Bureau Vlieland.</p>
@@ -161,6 +206,7 @@ Deno.serve(async (req) => {
       </body>
       </html>
     `;
+
 
     // Send via Mailjet
     const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -185,9 +231,11 @@ Deno.serve(async (req) => {
           { TrackClicks: "disabled", TrackOpens: "disabled",
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: getRecipientEmail(recipientEmail, req.headers.get("origin") || undefined), Name: recipientName }],
+            ReplyTo: { Email: `reply+chat-${conversation_id}@reply.bureauvlieland.nl`, Name: "Bureau Vlieland" },
             Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${finalSubject}`,
             HTMLPart: htmlBody,
           },
+
         ],
       }),
     });
