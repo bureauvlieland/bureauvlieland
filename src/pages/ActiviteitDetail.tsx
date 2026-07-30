@@ -144,8 +144,9 @@ const ActiviteitDetail = () => {
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: "https://bureauvlieland.nl/" },
-        { "@type": "ListItem", position: 2, name: "Bouwstenen", item: "https://bureauvlieland.nl/bouwstenen" },
-        { "@type": "ListItem", position: 3, name: block.name, item: url },
+        { "@type": "ListItem", position: 2, name: "Activiteiten Vlieland", item: "https://bureauvlieland.nl/activiteiten-vlieland" },
+        { "@type": "ListItem", position: 3, name: "Bouwstenen", item: "https://bureauvlieland.nl/bouwstenen" },
+        { "@type": "ListItem", position: 4, name: block.name, item: url },
       ],
     };
 
@@ -208,6 +209,8 @@ const ActiviteitDetail = () => {
         <nav aria-label="Kruimelpad" className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl pt-6 text-sm text-muted-foreground">
           <ol className="flex items-center gap-1 flex-wrap">
             <li><Link to="/" className="hover:text-foreground">Home</Link></li>
+            <li><ChevronRight className="h-3.5 w-3.5" /></li>
+            <li><Link to="/activiteiten-vlieland" className="hover:text-foreground">Activiteiten</Link></li>
             <li><ChevronRight className="h-3.5 w-3.5" /></li>
             <li><Link to="/bouwstenen" className="hover:text-foreground">Bouwstenen</Link></li>
             <li><ChevronRight className="h-3.5 w-3.5" /></li>
