@@ -63,6 +63,14 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
                   {item.label}
                 </Link>
               ))}
+              <p className="mt-3 mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Populair op Vlieland
+              </p>
+              {navItems.populairItems.map((item) => (
+                <Link key={item.href} to={item.href} onClick={onClose} className={subItemClass(item.href)}>
+                  {item.label}
+                </Link>
+              ))}
             </div>
           )}
         </div>
