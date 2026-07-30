@@ -81,11 +81,6 @@ export function findAmountDateCollisions(rows: BatchCandidate[]): BatchDuplicate
  * is aangemaakt en wordt bij de bank ingediend. Wordt de batch geannuleerd,
  * dan draaien we die markering terug naar 'doorgestuurd'.
  */
-export const BATCH_PAID_UPDATE = {
-  status: "paid",
-  paidAtSource: "batch",
-} as const;
-
 export interface BatchInvoiceStateInput {
   status: string | null;
   paid_at: string | null;
