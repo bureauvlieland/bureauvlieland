@@ -2235,6 +2235,8 @@ export type Database = {
           amount_mismatch_reason: string | null
           approved_at: string | null
           bank_line_id: string | null
+          commission_exempt: boolean
+          commission_exempt_reason: string | null
           created_at: string
           description: string | null
           file_path: string | null
@@ -2267,6 +2269,8 @@ export type Database = {
           amount_mismatch_reason?: string | null
           approved_at?: string | null
           bank_line_id?: string | null
+          commission_exempt?: boolean
+          commission_exempt_reason?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -2299,6 +2303,8 @@ export type Database = {
           amount_mismatch_reason?: string | null
           approved_at?: string | null
           bank_line_id?: string | null
+          commission_exempt?: boolean
+          commission_exempt_reason?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -2962,6 +2968,8 @@ export type Database = {
           bureau_guide_contact: string | null
           bureau_guide_name: string | null
           commission_amount: number | null
+          commission_basis: string
+          commission_basis_reason: string | null
           commission_invoiced_at: string | null
           commission_notes: string | null
           commission_percentage: number | null
@@ -3067,6 +3075,8 @@ export type Database = {
           bureau_guide_contact?: string | null
           bureau_guide_name?: string | null
           commission_amount?: number | null
+          commission_basis?: string
+          commission_basis_reason?: string | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
           commission_percentage?: number | null
@@ -3172,6 +3182,8 @@ export type Database = {
           bureau_guide_contact?: string | null
           bureau_guide_name?: string | null
           commission_amount?: number | null
+          commission_basis?: string
+          commission_basis_reason?: string | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
           commission_percentage?: number | null
