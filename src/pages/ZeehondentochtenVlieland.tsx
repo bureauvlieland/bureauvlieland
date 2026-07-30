@@ -219,6 +219,24 @@ const ZeehondentochtenVlieland = () => {
             </div>
             <div>
               <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
+                Wanneer kun je het beste zeehonden spotten?
+              </h2>
+              <p className="text-foreground">
+                Zeehonden liggen op de zandbanken zodra die droogvallen — dus rond laag water. De vertrektijd van de tocht schuift daarom elke dag mee met het getij; soms vaar je 's ochtends, soms halverwege de middag. Van juni tot en met september is de kans het grootst: dan zijn de kolonies het grootst en is het water rustig. Ook in het voor- en naseizoen worden vrijwel altijd zeehonden gezien, alleen vaart er dan minder vaak een boot. Plan je met een groep? Geef ons je datum, dan zoeken wij het afvaartvenster erbij dat in jullie dagindeling past.
+              </p>
+              <p className="text-foreground mt-3">
+                <Link
+                  to="/wadlopen-vlieland"
+                  className="text-primary underline underline-offset-2"
+                >
+                  Liever te voet het wad op?
+                </Link>{" "}
+                Een wadexcursie volgt hetzelfde getijderitme en is goed te combineren met de boottocht.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
                 Waarom een zeehondentocht vanaf Vlieland?
               </h2>
               <p className="text-foreground">
