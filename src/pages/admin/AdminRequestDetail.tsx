@@ -5,6 +5,13 @@ import { Helmet } from "react-helmet";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  describeQuoteValidity,
+  firstProgramDate,
+  isQuoteExpired as isQuoteExpiredCheck,
+  isQuoteValidUntilDateDisabled,
+  suggestQuoteValidUntil,
+} from "@/lib/quoteValidity";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { PartnerCancellationNotifyDialog } from "@/components/admin/PartnerCancellationNotifyDialog";
@@ -1481,7 +1488,20 @@ const AdminRequestDetail = () => {
                 ? format(new Date(datesArr[0]), "d MMM yyyy", { locale: nl })
                 : `${format(new Date(datesArr[0]), "d MMM", { locale: nl })}–${format(new Date(datesArr[datesArr.length - 1]), "d MMM yyyy", { locale: nl })}`;
             const validUntil = request.quote_valid_until ? new Date(request.quote_valid_until + "T00:00:00") : null;
-            const isQuoteExpired = validUntil ? validUntil < new Date() : false;
+            const isQuoteExpired = isQuoteExpiredCheck(request.quote_valid_until);
+            const validitySuggestion = suggestQuoteValidUntil({
+              arrivalDate: firstProgramDate(datesArr),
+            });
+            const saveValidUntil = async (date: Date) => {
+              const dateStr = format(date, "yyyy-MM-dd");
+              const updates: Record<string, string> = { quote_valid_until: dateStr };
+              if (!isQuoteExpiredCheck(dateStr) && request.quote_status === "verlopen") {
+                updates.quote_status = "offerte_verstuurd";
+              }
+              const { error } = await supabase.from("program_requests").update(updates as never).eq("id", request.id);
+              if (error) toast.error("Kon verloopdatum niet opslaan");
+              else { toast.success("Verloopdatum bijgewerkt"); fetchRequestData(); }
+            };
 
             const primaryAction = (!request.program_published_at && items.length > 0)
               ? { label: isPublishing ? "Publiceren..." : "Publiceer naar klant", onClick: handlePublishProgram, loading: isPublishing, icon: <Send className="h-4 w-4 mr-2" /> }
@@ -1701,19 +1721,30 @@ const AdminRequestDetail = () => {
                             selected={validUntil || undefined}
                             onSelect={async (date) => {
                               if (!date) return;
-                              const dateStr = format(date, "yyyy-MM-dd");
-                              const updates: Record<string, string> = { quote_valid_until: dateStr };
-                              if (date >= new Date() && request.quote_status === "verlopen") {
-                                updates.quote_status = "offerte_verstuurd";
-                              }
-                              const { error } = await supabase.from("program_requests").update(updates as never).eq("id", request.id);
-                              if (error) toast.error("Kon verloopdatum niet opslaan");
-                              else { toast.success("Verloopdatum bijgewerkt"); fetchRequestData(); }
+                              await saveValidUntil(date);
                             }}
+                            disabled={(date) =>
+                              isQuoteValidUntilDateDisabled(date, {
+                                arrivalDate: validitySuggestion.arrival,
+                              })
+                            }
                             className="p-3 pointer-events-auto"
                           />
+                          <div className="border-t p-2 text-xs text-muted-foreground max-w-[260px]">
+                            {describeQuoteValidity(validitySuggestion)}
+                          </div>
                         </PopoverContent>
                       </Popover>
+                      {(!validUntil || validUntil.getTime() !== validitySuggestion.date.getTime()) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => saveValidUntil(validitySuggestion.date)}
+                        >
+                          Standaard
+                        </Button>
+                      )}
                       {isQuoteExpired && request.quote_status !== "verlopen" && request.quote_status !== "geannuleerd" && (
                         <Badge variant="destructive" className="text-[10px] h-4 px-1.5">Verlopen</Badge>
                       )}

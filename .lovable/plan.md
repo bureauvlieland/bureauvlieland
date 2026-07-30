@@ -1,46 +1,53 @@
 ## Doel
 
-Mailen vanaf de klantenkaart wordt één slimme composer: geen HTML-templates meer in een tekstveld, maar korte **intenties** die de AI briefen, met het volledige projectdossier als context. Eén voorstel per keer, dat je met een instructie kunt laten herschrijven.
+Eén voorspelbare regel voor de geldigheid van een offerte: **standaard één maand vóór aankomst**. Ligt die datum al (bijna) in het verleden omdat de aankomst binnen een maand valt, dan doet het systeem een haalbaar voorstel dat duidelijk als "korte termijn" gemarkeerd is en dat u met één klik aanpast.
 
-## Wat er verandert in de UI (`SendProjectEmailSheet`)
+## Waarom dit nu misgaat
 
-1. **Template-dropdown verdwijnt** uit deze sheet. De `email_templates`-tabel en `/admin/email-templates` blijven bestaan voor automatische systeemmails (offerte verstuurd, partner-aanvraag, herinneringen) — daar hoort HTML wél.
-2. **Intentie-chips** komen in de plaats. Een rij korte knoppen, contextueel gefilterd op projectstatus:
-   - Herinnering: programmavoorstel nog niet bekeken
-   - Vraag om akkoord / ondertekening
-   - Statusupdate zonder actie
-   - Wijziging doorgeven / bevestigen
-   - Betaling of factuur opvolgen
-   - Nazorg / bedankt na uitvoering
-   - Antwoord op laatste bericht
-   - Vrij (eigen instructie)
-   Klik = AI genereert direct onderwerp + body. Geen HTML in de editor, alleen platte tekst — precies wat het `send-project-email`-eindpunt netjes in de Bureau Vlieland-skeleton wrapt.
-3. **Herschrijf-balk** onder het bericht na een suggestie: "Korter", "Warmer", "Formeler", "Voeg vervolgstap toe" + vrij instructieveld → nieuwe generatie op basis van de huidige tekst (dus verfijnen, niet opnieuw beginnen).
-4. **Contextpaneel (inklapbaar)** boven de suggestie: "AI gebruikt: 4 verzonden mails, 2 antwoorden van de klant, laatste contact 12 dagen geleden, status In afstemming". Zo zie je waarop het voorstel gebaseerd is.
-5. **Concept blijft bewaard** per project zolang de sheet open/heropend wordt binnen dezelfde sessie, zodat een per ongeluk gesloten sheet geen tekst kost.
+De geldigheidsdatum wordt op vier plekken los van elkaar bepaald, met drie verschillende regels:
 
-## Wat er verandert in de AI (`compose-followup-email`)
+| Plek | Huidige default |
+| --- | --- |
+| Nieuw programma aanmaken (wizard) | 2 weken vóór eerste programmadatum, anders vandaag + 14 dagen |
+| Offerte-preview (Bekijk & verstuur) | 2 weken vóór eerste datum, anders morgen |
+| Offerte versturen (dialoog) | bestaande datum, anders vandaag + 14 dagen — kijkt níet naar de aankomstdatum |
+| Handmatig wijzigen op de projectkaart | vrije keuze, geen suggestie |
 
-De functie krijgt het volledige dossier mee in plaats van alleen onderwerpen van de laatste 10 mails:
+Daardoor krijgt dezelfde offerte een andere einddatum afhankelijk van waar u hem verstuurt.
 
-- **Uitgaande én inkomende e-mailinhoud** uit `project_communications` (subject + content, richting, datum) — nu ziet de AI ook wat de klant zélf schreef.
-- **`email_log`** blijft erbij voor systeemmails die niet in het dossier staan (welke automatische mail is al gestuurd, en wanneer).
-- **Chatberichten** uit `chat_messages` via de gekoppelde `chat_conversations`.
-- **Admin-notities** (`admin_notes`) en de laatste history-regels van het project.
-- **Programma-inhoud op hoofdlijnen**: aantal onderdelen, welke al goedgekeurd/open staan, datum, aantal personen, offerte-geldigheid.
-- Alles gebundeld tot maximaal ~15 recente dossieritems, chronologisch, met een berekend "dagen sinds laatste klantcontact".
+## De nieuwe regel
 
-Nieuwe request-velden: `intent` (de gekozen intentie), `currentBody` + `refineInstruction` (voor herschrijven), naast de bestaande `instruction`.
+Eén centrale rekenregel, hardcoded op één maand:
 
-De system prompt wordt strakker: per intentie een eigen doel-instructie, expliciet verbod op herhalen van wat al gezegd is, expliciete opdracht om aan te sluiten op het laatste bericht van de klant (naam, toon, gestelde vraag), en de bestaande harde regels blijven (u-vorm, geen verzonnen prijzen/data, `{{portal_url}}`, platte tekst, max ~180 woorden). Model: `google/gemini-3.6-flash`.
+```text
+voorstel = eerste programmadatum - 1 maand
 
-## Technisch
+als voorstel >= vandaag + 7 dagen   -> gebruik voorstel        (normaal)
+anders                              -> korte termijn:
+                                       midden tussen vandaag en aankomst,
+                                       met minimaal vandaag + 3 dagen
+                                       en maximaal aankomst - 1 dag
+geen programmadatum bekend          -> vandaag + 14 dagen      (terugval)
+```
 
-- `supabase/functions/compose-followup-email/index.ts`: dossier-opbouw uitbreiden, intent-map en refine-modus toevoegen, prompt herschrijven, daarna deployen.
-- `src/components/admin/SendProjectEmailSheet.tsx`: template-blok en `render-email-template`-aanroep eruit, intentie-chips + herschrijf-balk + contextpaneel erin. `templateHtmlRef`/`templatePlainRef` en de `bodyHtml`-doorgifte kunnen weg voor deze sheet (het eindpunt blijft `bodyHtml` ondersteunen voor andere aanroepers).
-- `templateFilter`-prop wordt overbodig; call-sites die die meegeven worden opgeruimd. Als een plek nog wél een template-keuze nodig heeft (bijv. pre-sales), houden we daar een aparte lichte variant of laten we die ongemoeid — dat check ik per call-site.
-- Nieuwe unit-tests voor de intentie→prompt-mapping en de dossier-samenvatting (context-builder als los `_shared`-bestand zodat hij testbaar is).
+Het voorstel valt nooit ná de aankomst en nooit in het verleden. De admin kan de datum altijd overschrijven; zodra u zelf een datum kiest, laat het systeem die staan.
 
-## Buiten scope
+## Wat u gaat zien
 
-Automatische systeemmails, de e-mailtemplate-beheerpagina en de HTML-wrapper blijven zoals ze zijn.
+- Overal dezelfde voorgestelde datum, met een korte toelichting onder de datumkiezer: *"Standaard: één maand vóór aankomst (28 augustus)."*
+- Bij een aanvraag binnen een maand een oranje "korte termijn"-melding: *"Aankomst is over 12 dagen — voorstel: 4 dagen geldig. Pas aan indien nodig."*
+- In de offerte-verzenddialoog wordt de datum nu óók op de aankomst gebaseerd in plaats van blind vandaag + 14 dagen.
+- Op de projectkaart bij "Geldig tot" een knopje **Standaard** dat de datum terugzet naar één maand vóór aankomst.
+- In de datumkiezers zijn datums vóór morgen en ná de aankomstdatum niet meer selecteerbaar.
+
+## Technische aanpak
+
+1. **Nieuw bestand `src/lib/quoteValidity.ts`** — pure functies, geen I/O:
+   - `QUOTE_VALIDITY_LEAD_DAYS` (één maand vóór aankomst) en `MIN_SHORT_TERM_DAYS` als constanten.
+   - `suggestQuoteValidUntil({ arrivalDate, today })` → `{ date, mode: "standard" | "short_term" | "fallback", daysUntilArrival, daysValid }`.
+   - `describeQuoteValidity(result)` → Nederlandse toelichting voor de UI.
+   - Helper `isQuoteExpired(validUntil, today)` zodat de bestaande verlopen-checks dezelfde datumvergelijking gebruiken (nu op sommige plekken inclusief tijdcomponent, wat op de dag zelf tot "verlopen" kan leiden).
+2. **Aanroepen vervangen** in `src/pages/admin/AdminProgramNew.tsx`, `src/pages/admin/AdminQuotePreview.tsx`, `src/components/admin/AdminSendQuoteDialog.tsx` en de "Geldig tot"-popover in `src/pages/admin/AdminRequestDetail.tsx`; per plek de toelichting/korte-termijn-melding tonen en de kalender begrenzen (`disabled` op verleden en na aankomst).
+3. **Vitest-suite `src/lib/__tests__/quoteValidity.test.ts`**: normale termijn, aankomst binnen een maand, aankomst over 2 dagen (minimum), geen datum bekend, meerdaags programma (eerste datum is anker), en dat het voorstel nooit ná aankomst of vóór morgen valt.
+
+Geen databasewijziging nodig: `quote_valid_until` blijft zoals het is en bestaande offertes worden niet aangepast.
