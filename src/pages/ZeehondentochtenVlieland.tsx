@@ -38,11 +38,11 @@ import heroImage from "@/assets/zeehondentocht-vlieland-zandbank.jpg";
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Wat is een zeehondentocht op Vlieland?",
-    a: "Een zeehondentocht is een begeleide boottocht vanaf de haven van Vlieland naar de zandbanken in de Waddenzee waar zeehonden uitrusten. Met een verrekijker (en vaak ook op het blote oog) zie je grijze en gewone zeehonden van dichtbij — zonder ze te storen.",
+    a: "Een zeehondentocht is een begeleide boottocht vanaf de haven van Oost-Vlieland naar de zandbanken in de Waddenzee waar zeehonden uitrusten. Met een verrekijker (en vaak ook op het blote oog) zie je grijze en gewone zeehonden van dichtbij — zonder ze te storen.",
   },
   {
     q: "Hoe lang duurt een zeehondentocht vanaf Vlieland?",
-    a: "Een tocht duurt gemiddeld 2 tot 3 uur, afhankelijk van het tij en de route. De boot vertrekt vanaf de haven van Oost-Vlieland.",
+    a: "De vaartocht duurt ongeveer 45 minuten. Reken met in- en uitstappen op ruim een uur in uw programma. Vertrek is vanaf de reddingbootsteiger in de jachthaven van Oost-Vlieland.",
   },
   {
     q: "Wat is de beste tijd om zeehonden te spotten?",
@@ -54,21 +54,22 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is een zeehondentocht geschikt voor kinderen?",
-    a: "Ja. De boot is overdekt, kinderen kunnen rondlopen en de bemanning vertelt onderweg over de zeehonden, het wad en de eilanden. Ook voor ouderen en minder mobiele bezoekers is de tocht goed te doen.",
+    a: "Ja. De tocht is kort (circa 45 minuten) en de schipper vertelt onderweg over de zeehonden, het wad en de eilanden. Houd er rekening mee dat u op een open boot vaart: warme, winddichte kleding is ook in de zomer verstandig.",
   },
   {
     q: "Wat moet ik meenemen?",
-    a: "Warme, winddichte kleding (ook in de zomer kan het op het water fris zijn), een verrekijker (vaak ook aan boord te leen) en eventueel zonnebrand of een pet. Drinken en een snack zijn meestal aan boord verkrijgbaar.",
+    a: "Warme, winddichte kleding (ook in de zomer kan het op het water fris zijn), een verrekijker en eventueel zonnebrand of een pet. Neem zelf drinken mee; ga er niet vanuit dat er aan boord iets te koop is.",
   },
   {
     q: "Wat kost een zeehondentocht vanaf Vlieland?",
-    a: "Reken op ongeveer €25 tot €35 per volwassene; kinderen vaak met korting. De exacte prijs en beschikbaarheid hangen af van de aanbieder en datum.",
+    a: "€32,50 per persoon. Een exclusieve afvaart met de hele boot voor uw eigen gezelschap kost €425 in totaal. Prijzen zijn onder voorbehoud van beschikbaarheid en getij.",
   },
   {
     q: "Kan een groep een zeehondentocht boeken?",
-    a: "Ja. Voor groepen vanaf ongeveer 20 personen reserveren we een tocht op een tijd die past in jullie programma — vaak gecombineerd met de overtocht, lunch en een fietstocht. Eén aanvraag, één factuur.",
+    a: "Ja. De tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart. Grotere gezelschappen splitsen we over twee vaarten. Wij plannen de afvaart op een tijd die past in uw programma en verwerken die in één aanvraag en één factuur.",
   },
 ];
+
 
 const ZeehondentochtenVlieland = () => {
   const url = "https://bureauvlieland.nl/zeehondentochten-vlieland";
@@ -176,14 +177,15 @@ const ZeehondentochtenVlieland = () => {
         </section>
 
         <KeyFacts
-          summary="Een zeehondentocht op Vlieland is een begeleide boottocht van 2 tot 3 uur vanaf de haven van Oost-Vlieland naar de zandbanken in de Waddenzee, waar gewone en grijze zeehonden rusten. De vertrektijd volgt het getij (rond laag water). Richtprijs €25–€35 per volwassene; groepen vanaf circa 20 personen boeken een eigen afvaart."
+          summary="Een zeehondentocht op Vlieland is een begeleide boottocht van ongeveer 45 minuten vanaf de reddingbootsteiger in de jachthaven van Oost-Vlieland naar de zandbanken in de Waddenzee, waar gewone en grijze zeehonden rusten. De vertrektijd volgt het getij (rond laag water). De prijs is €32,50 per persoon; de tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart."
           facts={[
-            { icon: Clock, label: "Duur", value: "2 tot 3 uur" },
-            { icon: Euro, label: "Richtprijs", value: "€25–€35 p.p." },
-            { icon: CalendarDays, label: "Seizoen", value: "Hele jaar, piek juni–september" },
-            { icon: Users, label: "Voor wie", value: "Alle leeftijden, groepen vanaf ±20" },
+            { icon: Clock, label: "Duur", value: "Circa 45 minuten" },
+            { icon: Euro, label: "Prijs", value: "€32,50 p.p." },
+            { icon: CalendarDays, label: "Seizoen", value: "Voorjaar t/m najaar, piek juni–september" },
+            { icon: Users, label: "Groepsgrootte", value: "10 tot 40 personen" },
           ]}
         />
+
 
         {/* Intro + trust */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
@@ -193,8 +195,9 @@ const ZeehondentochtenVlieland = () => {
               Vlieland ligt midden in het Werelderfgoed Waddenzee — en op een steenworp afstand liggen de beroemde zandbanken (zoals de Richel) waar honderden zeehonden uitrusten. Tijdens een zeehondentocht vaar je vanaf de haven met een ervaren schipper het wad op, op zoek naar gewone en grijze zeehonden. Op afstand, met respect voor de dieren, maar zo dichtbij dat je ze prachtig kunt bekijken.
             </p>
             <p>
-              De tocht duurt 2 tot 3 uur en wordt afgestemd op het getij — bij laag water zijn de zandplaten droog en liggen de zeehonden eropuit te rusten. Tussendoor vertelt de schipper over het wad, de eilanden en hoe deze unieke zee werkt.
+              De vaartocht duurt ongeveer 45 minuten en wordt afgestemd op het getij — bij laag water zijn de zandplaten droog en liggen de zeehonden eropuit te rusten. Onderweg vertelt de schipper over het wad, de eilanden en hoe deze unieke zee werkt.
             </p>
+
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -260,9 +263,9 @@ const ZeehondentochtenVlieland = () => {
           <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-8 text-center">Praktisch</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Clock, title: "Duur", text: "2 tot 3 uur, afhankelijk van het tij." },
-              { icon: Anchor, title: "Vertrekpunt", text: "Haven van Oost-Vlieland — vertrektijden afgestemd op laagwater." },
-              { icon: Users, title: "Voor wie", text: "Alle leeftijden. Overdekte boot, toegankelijk voor minder mobiele bezoekers." },
+              { icon: Clock, title: "Duur", text: "Circa 45 minuten varen, afgestemd op het tij." },
+              { icon: Anchor, title: "Vertrekpunt", text: "Reddingbootsteiger, jachthaven Oost-Vlieland — vertrektijden rond laagwater." },
+              { icon: Users, title: "Voor wie", text: "Alle leeftijden. Vanaf 10 tot maximaal 40 deelnemers per afvaart." },
               { icon: MapPin, title: "Waar zie je ze", text: "Zandbanken in de Waddenzee (o.a. de Richel) rond Vlieland." },
             ].map(({ icon: Icon, title, text }) => (
               <Card key={title}>
@@ -275,8 +278,9 @@ const ZeehondentochtenVlieland = () => {
             ))}
           </div>
           <p className="mt-8 text-sm text-muted-foreground text-center max-w-2xl mx-auto">
-            <strong>Meenemen:</strong> warme winddichte kleding (ook in de zomer), verrekijker (vaak aan boord te leen), zonnebrand en pet bij zon.
+            <strong>Meenemen:</strong> warme winddichte kleding (ook in de zomer), een verrekijker, zonnebrand en pet bij zon, en zelf drinken.
           </p>
+
         </section>
 
         {/* CTA / boeken */}
@@ -289,9 +293,10 @@ const ZeehondentochtenVlieland = () => {
               Reserveer een individuele plek of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep.
             </p>
             <p className="text-foreground mb-6">
-              <strong>Volwassenen vanaf ±€25</strong>{" "}
-              <span className="text-muted-foreground">(richtprijs €25–€35; kinderen met korting)</span>
+              <strong>€32,50 per persoon</strong>{" "}
+              <span className="text-muted-foreground">(exclusieve afvaart met de hele boot: €425 totaal)</span>
             </p>
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">

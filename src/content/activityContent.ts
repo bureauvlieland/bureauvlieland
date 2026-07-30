@@ -30,13 +30,14 @@ export const activityContent: Record<string, ActivityContent> = {
     paragraphs: [
       "Rondom Vlieland liggen de zandplaten van de Waddenzee, en juist daar komen zeehonden bij laag water uit het water om te rusten en op te warmen. Vanaf het water kom je dichterbij dan vanaf het strand ooit lukt: de boot houdt respectvol afstand, maar met een verrekijker of een telelens zie je de dieren duidelijk liggen. Je treft er twee soorten aan: de gewone zeehond (kleiner, ronde kop) en de grijze zeehond (fors, met een langgerekte 'paardenkop').",
       "De tocht wordt gepland op het getij, niet op de klok. De schipper kiest een vertrektijd rond laagwater, want alleen dan liggen de platen droog. Voor groepen betekent dat: het vaarmoment is leidend, en de rest van het dagprogramma bouwen wij daaromheen. Dat is precies het soort puzzel dat wij voor u oplossen — u krijgt één programma en één factuur.",
-      "Onderweg vertelt de schipper over het ontstaan van de Waddenzee, de werking van eb en vloed en over het herstel van de zeehondenpopulatie in de afgelopen decennia. Het is daarmee net zo goed een korte natuurexcursie als een boottocht. Voor gezelschappen met kinderen of met deelnemers die minder goed ter been zijn, is dit een van de toegankelijkste manieren om het wad van dichtbij te beleven.",
+      "Onderweg vertelt de schipper over het ontstaan van de Waddenzee, de werking van eb en vloed en over het herstel van de zeehondenpopulatie in de afgelopen decennia. Het is daarmee net zo goed een korte natuurexcursie als een boottocht. Doordat de tocht kort is en u aan boord blijft, is dit voor gezelschappen met kinderen een laagdrempelige manier om het wad van dichtbij te beleven.",
     ],
     practical: [
       { label: "Duur", value: "Circa 45 minuten varen" },
-      { label: "Vertrekpunt", value: "Haven Oost-Vlieland" },
+      { label: "Vertrekpunt", value: "Reddingbootsteiger, jachthaven Oost-Vlieland" },
+      { label: "Prijs", value: "€32,50 p.p. — hele boot exclusief €425" },
+      { label: "Groepsgrootte", value: "10 tot 40 personen" },
       { label: "Seizoen", value: "Voorjaar t/m najaar; afhankelijk van getij" },
-      { label: "Geschikt voor", value: "Alle leeftijden, ook minder mobiele deelnemers" },
       { label: "Weersafhankelijk", value: "Ja — bij harde wind kan de tocht vervallen" },
     ],
     goodToKnow: [
@@ -58,7 +59,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Kan de zeehondentocht met een grote groep?",
         answer:
-          "Ja. Afhankelijk van het schip varen groepen tot enkele tientallen personen mee; grotere gezelschappen splitsen we over twee vaarten. Wij stemmen dat af met de rederij en verwerken het in uw programma.",
+          "De tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart. Een exclusieve afvaart met de hele boot kost €425. Grotere gezelschappen splitsen we over twee vaarten; wij stemmen dat af en verwerken het in uw programma.",
       },
       {
         question: "Wat gebeurt er bij slecht weer?",
