@@ -42,7 +42,7 @@ import {
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
-import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
+import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 
 interface ProgramRequest {
   id: string;
