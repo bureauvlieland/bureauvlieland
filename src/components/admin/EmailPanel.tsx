@@ -412,8 +412,8 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
   } | null>(null);
 
   const { data: items = [], isLoading, refetch } = useQuery({
-    queryKey: ["admin-email-threads", showArchived],
-    queryFn: () => fetchEmails(showArchived),
+    queryKey: ["admin-email-threads"],
+    queryFn: () => fetchEmails(),
     refetchInterval: 60_000,
   });
 
