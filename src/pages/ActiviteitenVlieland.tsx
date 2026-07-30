@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
 import { KeyFacts } from "@/components/seo/KeyFacts";
 
@@ -444,6 +445,7 @@ const ActiviteitenVlieland = () => {
       </main>
 
       <GoogleReviewsBlock title="Reviews over Bureau Vlieland" />
+      <RelatedLinks />
       <Footer />
     </div>
   );

@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTemplateWithItems, usePublishedTemplates } from "@/hooks/useProgramTemplates";
@@ -345,6 +346,7 @@ const VoorbeeldprogrammaDetail = () => {
         )}
       </main>
 
+      <RelatedLinks pathname="/voorbeeldprogrammas" title="Zelf verder bouwen" />
       <Footer />
     </div>
   );

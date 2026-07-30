@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { Helmet } from "react-helmet";
 import { useSearchParams } from "react-router-dom";
 import { CateringQuickRequest } from "@/components/catering/CateringQuickRequest";
@@ -36,6 +37,7 @@ const CateringAanvragen = () => {
             <CateringQuickRequest initialType={type} />
           </section>
         </main>
+        <RelatedLinks />
         <Footer />
       </div>
     </>

@@ -5,6 +5,7 @@ import { Loader2, Clock, Users, MapPin, ArrowLeft, ChevronRight } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -325,6 +326,7 @@ const ActiviteitDetail = () => {
         )}
       </main>
 
+      <RelatedLinks pathname="/bouwstenen" title="Verder kijken" />
       <Footer />
     </div>
   );

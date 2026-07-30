@@ -28,6 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { trackQuoteRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
@@ -413,6 +414,7 @@ export default function Offerte() {
             },
         ]}
       />
+      <RelatedLinks />
       <Footer />
     </>
   );

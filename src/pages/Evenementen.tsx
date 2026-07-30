@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, ExternalLink } from "lucide-react";
@@ -212,6 +213,7 @@ const Evenementen = () => {
             },
         ]}
       />
+      <RelatedLinks />
       <Footer />
     </>
   );

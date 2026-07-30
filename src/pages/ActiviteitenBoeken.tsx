@@ -13,6 +13,7 @@ import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities"
 import { Search, CalendarDays, Ticket, Loader2 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 
 type EnrichedActivity = MapActivity & {
   _partnerId?: string;
@@ -284,6 +285,7 @@ const ActiviteitenBoeken = () => {
         onOpenChange={(o) => !o && setSelectedBundle(null)}
       />
 
+      <RelatedLinks />
       <Footer />
     </>
   );

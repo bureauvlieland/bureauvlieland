@@ -125,6 +125,7 @@ export const Footer = () => {
               <li><Link to="/groepsweekend-vlieland" className="hover:text-primary transition-colors">Groepsweekend</Link></li>
               <li><Link to="/jubileum-vlieland" className="hover:text-primary transition-colors">Jubileum vieren</Link></li>
               <li><Link to="/familieweekend-vlieland" className="hover:text-primary transition-colors">Familieweekend</Link></li>
+              <li><Link to="/voor-wie" className="hover:text-primary transition-colors font-medium text-foreground">Alle doelgroepen</Link></li>
             </ul>
           </div>
 
@@ -176,6 +177,8 @@ export const Footer = () => {
             <Link to="/zeehondentochten-vlieland" className="hover:text-primary transition-colors">Zeehondentochten</Link>
             <Link to="/snel-aanvragen" className="hover:text-primary transition-colors">Snel aanvragen</Link>
             <Link to="/activiteiten-boeken" className="hover:text-primary transition-colors">Losse activiteiten boeken</Link>
+            <Link to="/programma-samenstellen" className="hover:text-primary transition-colors">Programma samenstellen</Link>
+            <Link to="/offerte" className="hover:text-primary transition-colors">Offerte aanvragen</Link>
             <Link to="/catering-aanvragen" className="hover:text-primary transition-colors">Catering aanvragen</Link>
           </nav>
         </div>
