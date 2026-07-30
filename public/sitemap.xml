@@ -61,11 +61,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/sitemap</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/bedrijfsuitje-vlieland</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
@@ -129,16 +124,6 @@
     <loc>https://bureauvlieland.nl/activiteiten-vlieland</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://bureauvlieland.nl/algemene-voorwaarden</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://bureauvlieland.nl/partner-voorwaarden</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
   </url>
   <url>
     <loc>https://bureauvlieland.nl/veelgestelde-vragen</loc>
