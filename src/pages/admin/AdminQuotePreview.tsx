@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
-import { format, addDays, subDays, differenceInCalendarDays } from "date-fns";
+import { format, addDays, differenceInCalendarDays } from "date-fns";
+import {
+  describeQuoteValidity,
+  firstProgramDate,
+  isQuoteValidUntilDateDisabled,
+  suggestQuoteValidUntil,
+} from "@/lib/quoteValidity";
 import { nl } from "date-fns/locale";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
@@ -157,14 +163,10 @@ const AdminQuotePreview = () => {
       if (requestData.quote_valid_until) {
         setValidUntil(new Date(requestData.quote_valid_until));
       } else {
-        // Default: 2 weken vóór de eerste programma-datum. Valt terug op
-        // vandaag+14 als die datum in het verleden zou liggen.
-        const firstDateStr = (requestData.selected_dates as string[] | null)?.[0];
-        if (firstDateStr) {
-          const firstDate = new Date(firstDateStr + "T00:00:00");
-          const tomorrow = addDays(new Date(), 1);
-          const twoWeeksBefore = subDays(firstDate, 14);
-          setValidUntil(twoWeeksBefore > tomorrow ? twoWeeksBefore : tomorrow);
+        // Standaard: één maand vóór aankomst (zie src/lib/quoteValidity.ts).
+        const arrival = firstProgramDate(requestData.selected_dates as string[] | null);
+        if (arrival) {
+          setValidUntil(suggestQuoteValidUntil({ arrivalDate: arrival }).date);
         }
       }
       if (requestData.quote_personal_message) {
@@ -528,12 +530,39 @@ const AdminQuotePreview = () => {
                           mode="single"
                           selected={validUntil}
                           onSelect={(date) => date && setValidUntil(date)}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) =>
+                            isQuoteValidUntilDateDisabled(date, {
+                              arrivalDate: validitySuggestion.arrival,
+                            })
+                          }
                           initialFocus
                           className="pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p
+                        className={cn(
+                          "text-xs",
+                          validitySuggestion.mode === "short_term"
+                            ? "text-amber-600 dark:text-amber-500"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {describeQuoteValidity(validitySuggestion)}
+                      </p>
+                      {validUntil.getTime() !== validitySuggestion.date.getTime() && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setValidUntil(validitySuggestion.date)}
+                        >
+                          Standaard
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Personal message */}
