@@ -263,9 +263,9 @@ const ZeehondentochtenVlieland = () => {
           <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-8 text-center">Praktisch</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Clock, title: "Duur", text: "2 tot 3 uur, afhankelijk van het tij." },
-              { icon: Anchor, title: "Vertrekpunt", text: "Haven van Oost-Vlieland — vertrektijden afgestemd op laagwater." },
-              { icon: Users, title: "Voor wie", text: "Alle leeftijden. Overdekte boot, toegankelijk voor minder mobiele bezoekers." },
+              { icon: Clock, title: "Duur", text: "Circa 45 minuten varen, afgestemd op het tij." },
+              { icon: Anchor, title: "Vertrekpunt", text: "Reddingbootsteiger, jachthaven Oost-Vlieland — vertrektijden rond laagwater." },
+              { icon: Users, title: "Voor wie", text: "Alle leeftijden. Vanaf 10 tot maximaal 40 deelnemers per afvaart." },
               { icon: MapPin, title: "Waar zie je ze", text: "Zandbanken in de Waddenzee (o.a. de Richel) rond Vlieland." },
             ].map(({ icon: Icon, title, text }) => (
               <Card key={title}>
@@ -278,8 +278,9 @@ const ZeehondentochtenVlieland = () => {
             ))}
           </div>
           <p className="mt-8 text-sm text-muted-foreground text-center max-w-2xl mx-auto">
-            <strong>Meenemen:</strong> warme winddichte kleding (ook in de zomer), verrekijker (vaak aan boord te leen), zonnebrand en pet bij zon.
+            <strong>Meenemen:</strong> warme winddichte kleding (ook in de zomer), een verrekijker, zonnebrand en pet bij zon, en zelf drinken.
           </p>
+
         </section>
 
         {/* CTA / boeken */}
