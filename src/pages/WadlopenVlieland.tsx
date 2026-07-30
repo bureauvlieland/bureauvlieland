@@ -216,6 +216,29 @@ const WadlopenVlieland = () => {
                 Bij laag water valt de zeebodem droog en kun je over het wad lopen. Onder begeleiding van een gids ontdek je dit unieke landschap van zandbanken, slik en geulen. De gids kent het gebied, de getijden en de gevaren, en leert je onderweg van alles over de Waddenzee.
               </p>
             </div>
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
+                Kun je naar Vlieland wadlopen?
+              </h2>
+              <p className="text-foreground">
+                Nee. Anders dan bij Ameland of Schiermonnikoog is er geen wadlooproute vanaf het vasteland naar Vlieland: de geulen tussen de Friese kust en het eiland blijven ook bij eb te diep en de stroming is te sterk. Je komt op Vlieland met de veerboot van Rederij Doeksen vanuit Harlingen. Wat wél kan — en wat de meeste mensen zoeken — is een wadexcursie óp Vlieland: met een gids het drooggevallen wad rond het eiland op.
+              </p>
+            </div>
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
+                Een wadexcursie met je groep
+              </h2>
+              <p className="text-foreground">
+                Voor bedrijfsuitjes, teamdagen en familieweekenden reserveren we een eigen gids, zodat je groep niet aansluit bij losse bezoekers. Omdat de starttijd het getij volgt, bouwen we de rest van de dag daaromheen: overtocht, fietsen, lunch en bijvoorbeeld een zeehondentocht. Eén aanvraag, één aanspreekpunt, één factuur.
+              </p>
+              <p className="text-foreground mt-3">
+                <Link to="/voorbeeldprogrammas" className="text-primary underline underline-offset-2">
+                  Bekijk voorbeeldprogramma's
+                </Link>{" "}
+                waarin de wadexcursie al is ingepland.
+              </p>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <img
                 src={gezinImage}
