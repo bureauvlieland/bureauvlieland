@@ -233,15 +233,16 @@ export default function AdminPaymentBatches() {
   };
 
   const handleCancelBatch = async (id: string) => {
-    if (!confirm("Batch annuleren? De facturen komen weer beschikbaar voor een nieuwe batch.")) return;
+    if (!confirm("Batch annuleren? De facturen worden weer op 'doorgestuurd' gezet en komen beschikbaar voor een nieuwe batch.")) return;
     const { error: e1 } = await supabase
       .from("partner_purchase_invoices")
-      .update({ payment_batch_id: null })
+      .update(buildBatchCancelUpdate(new Date().toISOString()))
       .eq("payment_batch_id", id);
     if (e1) {
       toast.error(e1.message);
       return;
     }
+
     const { error: e2 } = await supabase
       .from("payment_batches")
       .update({ status: "cancelled" })
