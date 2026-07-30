@@ -62,8 +62,9 @@ const staticEntries: SitemapEntry[] = [
   { path: "/wadlopen-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/zeehondentochten-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/activiteiten-vlieland", changefreq: "weekly", priority: "0.9" },
-  { path: "/algemene-voorwaarden", changefreq: "yearly", priority: "0.3" },
-  { path: "/partner-voorwaarden", changefreq: "yearly", priority: "0.3" },
+  // Juridische/utility-pagina's staan bewust NIET in de sitemap: ze zijn geen
+  // zoekdoel en verdunnen het crawlbudget (Google zet ze op "gevonden, niet geïndexeerd").
+
   { path: "/veelgestelde-vragen", changefreq: "monthly", priority: "0.7" },
   { path: "/programma-samenstellen", changefreq: "weekly", priority: "0.9" },
   { path: "/programma-op-maat", changefreq: "monthly", priority: "0.8" },
