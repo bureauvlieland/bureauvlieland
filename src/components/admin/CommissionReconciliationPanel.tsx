@@ -328,7 +328,7 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Zoek partner, project of factuur"
+                placeholder="Zoek partner, klant, project of factuur"
                 className="w-56"
               />
               <Select
