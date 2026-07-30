@@ -38,11 +38,11 @@ import heroImage from "@/assets/zeehondentocht-vlieland-zandbank.jpg";
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Wat is een zeehondentocht op Vlieland?",
-    a: "Een zeehondentocht is een begeleide boottocht vanaf de haven van Vlieland naar de zandbanken in de Waddenzee waar zeehonden uitrusten. Met een verrekijker (en vaak ook op het blote oog) zie je grijze en gewone zeehonden van dichtbij — zonder ze te storen.",
+    a: "Een zeehondentocht is een begeleide boottocht vanaf de haven van Oost-Vlieland naar de zandbanken in de Waddenzee waar zeehonden uitrusten. Met een verrekijker (en vaak ook op het blote oog) zie je grijze en gewone zeehonden van dichtbij — zonder ze te storen.",
   },
   {
     q: "Hoe lang duurt een zeehondentocht vanaf Vlieland?",
-    a: "Een tocht duurt gemiddeld 2 tot 3 uur, afhankelijk van het tij en de route. De boot vertrekt vanaf de haven van Oost-Vlieland.",
+    a: "De vaartocht duurt ongeveer 45 minuten. Reken met in- en uitstappen op ruim een uur in uw programma. Vertrek is vanaf de reddingbootsteiger in de jachthaven van Oost-Vlieland.",
   },
   {
     q: "Wat is de beste tijd om zeehonden te spotten?",
@@ -54,21 +54,22 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is een zeehondentocht geschikt voor kinderen?",
-    a: "Ja. De boot is overdekt, kinderen kunnen rondlopen en de bemanning vertelt onderweg over de zeehonden, het wad en de eilanden. Ook voor ouderen en minder mobiele bezoekers is de tocht goed te doen.",
+    a: "Ja. De tocht is kort (circa 45 minuten) en de schipper vertelt onderweg over de zeehonden, het wad en de eilanden. Houd er rekening mee dat u op een open boot vaart: warme, winddichte kleding is ook in de zomer verstandig.",
   },
   {
     q: "Wat moet ik meenemen?",
-    a: "Warme, winddichte kleding (ook in de zomer kan het op het water fris zijn), een verrekijker (vaak ook aan boord te leen) en eventueel zonnebrand of een pet. Drinken en een snack zijn meestal aan boord verkrijgbaar.",
+    a: "Warme, winddichte kleding (ook in de zomer kan het op het water fris zijn), een verrekijker en eventueel zonnebrand of een pet. Neem zelf drinken mee; ga er niet vanuit dat er aan boord iets te koop is.",
   },
   {
     q: "Wat kost een zeehondentocht vanaf Vlieland?",
-    a: "Reken op ongeveer €25 tot €35 per volwassene; kinderen vaak met korting. De exacte prijs en beschikbaarheid hangen af van de aanbieder en datum.",
+    a: "€32,50 per persoon. Een exclusieve afvaart met de hele boot voor uw eigen gezelschap kost €425 in totaal. Prijzen zijn onder voorbehoud van beschikbaarheid en getij.",
   },
   {
     q: "Kan een groep een zeehondentocht boeken?",
-    a: "Ja. Voor groepen vanaf ongeveer 20 personen reserveren we een tocht op een tijd die past in jullie programma — vaak gecombineerd met de overtocht, lunch en een fietstocht. Eén aanvraag, één factuur.",
+    a: "Ja. De tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart. Grotere gezelschappen splitsen we over twee vaarten. Wij plannen de afvaart op een tijd die past in uw programma en verwerken die in één aanvraag en één factuur.",
   },
 ];
+
 
 const ZeehondentochtenVlieland = () => {
   const url = "https://bureauvlieland.nl/zeehondentochten-vlieland";
