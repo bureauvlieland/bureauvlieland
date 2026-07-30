@@ -1,0 +1,100 @@
+# Memory: index.md
+Updated: nu
+
+# Project Memory
+
+## Core
+- Bureau Vlieland centrally invoices everything ('bureau_central' model); hide customer PII from partners.
+- Pricing: 10% commission on ex-VAT. Tourist tax €2.58 p.p/day, Nature €1.00 p.p. (0% VAT).
+- Tone: Formal ('u') in customer communications; informal ('je') for partners.
+- Ferries & Bikes: Pinned to day 1/last day. Ferry times MUST use live Doeksen API (no AI/templates). Bikes scale per person per day.
+- Auth/RLS: Strict RLS. Unauth portal access requires token where `expires_at > now()` (default 5 years for customer/lodging links so klantpagina's lang bruikbaar blijven; routes onder /mijn-programma, /mijn-logies, /programma, /partner zijn noindex via robots.txt + Helmet). Partner login via 'email', notices to 'contact_email'.
+- Email: Mailjet for transactional via Edge Functions. >10MB gets secure link. Inbound uses Mailjet Parse API.
+- Status/Workflow: Both `customer_approved_at` & `customer_accepted_at` set together. Silence=Agreement after 7 days for execution.
+- Deletion: Hard delete blocks, but soft/hard constraints handled via edge functions. Soft-deleted quotes to avoid constraint issues.
+- Front-end: Leaflet needs `map.invalidateSize()` and unique keys for remounts. 'impersonate' param must persist in partner portal navigation.
+- Positionering: Bureau Vlieland = lokale specialist / reisagent / boekingskantoor + programma-ontwikkelaar. Niet 'regie' op het eiland zelf. Centrale belofte: één partij, één factuur.
+- Bedragen: alle invoer en primaire weergave is **incl. BTW**. Excl. BTW alleen als afgeleide breakdown of op formele factuur-PDF (NL factuurplicht).
+
+## Memories
+- [Social Contentplan](mem://features/social-contentplan) — 5 contentpijlers, weekritme en vaste UTM-CTA's per pijler (FB deep link, IG via /links)
+- [Social Media Publisher](mem://features/social-media-publisher) — IG+FB publisher via Meta Graph API, AI-concepten, altijd handmatig goedkeuren
+- [Customer Status Todo Pacing](mem://features/customer-status-todo-pacing) — Anker op laatste klantcontact + leadtime-schaling (≥90d→3×, ≥30d→2×); admin_project_email sluit de taak
+- [Reconcile Todos Contract](mem://infrastructure/reconcile-todos-contract) — Sluit-criteria spiegelen aanmaak-criteria; mislukte lookups aborten; geen customer_approved_at op program_requests
+- [Doeksen Verzamelfactuur](mem://features/doeksen-collective-invoice-flow) — Multi-project supplier invoices auto-matched via Resnr → program_request_items.booking_reference; partner_id="rederij"
+- [Isla Vlieland Verzamelfactuur](mem://features/isla-vlieland-collective-invoice) — Bagagevervoer multi-project facturen; fuzzy match op klantnaam; partner_id="bagagevervoer-vlieland"; admin boekt elke regel als extra kost
+- [Partner Invoice Dialog Rules](mem://style/partner-invoice-dialog-rules) — Bedragen incl. BTW, commissie ex BTW, inkoop-inbox tonen in "Factureer aan"-blok
+- [Email Logging Contract](mem://infrastructure/email-logging-contract) — Verplichte metadata.template_name + metadata.actor in elke logEmail-aanroep; validatie gooit EmailLogValidationError
+- [Ticket Items](mem://features/ticket-items-bookings) — Ferries/bikes met booking_reference + PDF (ticket-documents bucket) + booking_group_id; /admin/tickets + inline popover in projectdetail
+- [Admin Projecten Overview](mem://ui/admin-projecten-overview-filters) — Default-hide afgerond+geannuleerd, archive toggle, action chip, time grouping, Facturatie sidebar badge
+- [Public Partners Directory](mem://infrastructure/partners-public-directory) — partners_public view + is_public flag for safe anon-facing partner data
+- [Admin Impersonation](mem://features/admin-impersonation-capability) — Admin impersonation token logic and routing parameters
+- [App Settings & Rules](mem://infrastructure/applicatie-instellingen-en-business-rules) — Business rules for fees, taxes, and commissions
+- [Counter Proposals](mem://features/program-negotiation-counter-proposal-flow) — Negotiation flow for timing and counter proposals
+- [Formal Tone](mem://style/formal-communication-tone) — Customer 'u', partner 'je' distinction
+- [Positioning Language](mem://style/positioning-language) — Lokale specialist/reisagent framing; vermijd 'regie' in customer-facing copy
+- [Configurator Upsell](mem://features/configurator-accommodation-upsell-logic) — CART_HANDOFF_KEY session handoff for activities to lodging
+- [Workflow Logic](mem://business/customer-legal-and-workflow-logic) — 4-step legal workflow and persistent conditions
+- [Unified Portal Integration](mem://infrastructure/unified-portal-lodging-integration) — Syncing dates and contacts between program and lodging
+- [Date Sync Logic](mem://business/lodging-date-sync-logic) — Resetting partner quotes and emails on date changes
+- [Partner Deletion Constraints](mem://business/partner-deletion-constraints) — Cleaning up inactive quotes when deleting partners
+- [Quote Extras](mem://business/lodging-quote-extras-and-commission) — Lodging extras are 10% commissionable and added to total
+- [Snelstart Integration](mem://features/accounting-integration-snelstart) — Sending invoices to Snelstart via specific email
+- [Block Status Lifecycle](mem://business/building-block-status-lifecycle) — Concept/active/published states and hard deletes
+- [Reminder System](mem://features/automated-reminder-system) — 3-day request and 5-day quote reminders via email_log
+- [Auto-Reject Automation](mem://features/accommodation-quote-rejection-automation) — Auto-rejecting pending quotes when one is accepted
+- [Auth Email Sync](mem://infrastructure/partner-auth-email-sync) — Keeping Supabase Auth synced with partners table
+- [Managed Services](mem://business/managed-services-transition) — Ferry and bike configurations as internal 'bureau' items
+- [Program Types](mem://data/program-request-type-mapping) — self_service, quote, maatwerk variations
+- [Copy Program Logic](mem://features/admin-copy-program-logic) — Default skip_partner_notification true for copied items
+- [Admin Notes Visibility](mem://features/partner-portal-admin-notes-visibility) — Admin notes shown to partners as 'Toelichting'
+- [Transparency](mem://features/customer-portal-accommodation-transparency) — Real-time tracking of approached and declined quotes
+- [Commission Tracking](mem://business/financial-commission-model-and-tracking-logic) — Ex-VAT calculation and silence-agreement window
+- [Security & RLS](mem://infrastructure/security-and-rls-architecture-logic) — Token expiration and sanitization logic
+- [Ferry API Integration](mem://infrastructure/edge-function-ferry-api-integration-logic) — Live Doeksen departure API usage
+- [Builder Sorting](mem://ui/program-builder-sorting-and-visuals) — Pinned ferry and bike positions in program
+- [Test Mode](mem://infrastructure/preview-environment-test-mode) — Email rerouting in preview environments
+- [Legal Centralization](mem://business/legal-and-invoicing-centralization-logic) — Bureau-central invoicing model and terms
+- [Lodging Centralization](mem://business/lodging-invoicing-workflow-centralized) — Hiding customer invoice data for lodging partners
+- [Tax & Contributions](mem://business/tourist-tax-and-nature-contribution-logic) — Configurable VAT-free tourist and nature fees
+- [Post-execution Workflow](mem://features/post-execution-workflow-automation) — Auto todos for feedback (1d) and invoicing (7d)
+- [MAP Integration](mem://features/mijnactiviteitenplanner-map-integration) — API connection to MijnActiviteitenPlanner
+- [Visibility Constraints](mem://business/partner-visibility-constraints) — Hiding pending items via skip_partner_notification
+- [Financial Override](mem://features/customer-portal-financial-specification) — Normalizing override_people in financial specs
+- [Large Files Strategy](mem://infrastructure/e-mail-strategie-grote-bestanden) — Secure download links for files >10MB
+- [Cancellation Sync](mem://features/synchronisatie-annulering-aanvragen) — Programma cancel -> logies reject automation
+- [Notification Email](mem://infrastructure/notificatie-logica-partner-e-mail) — contact_email for notifications vs auth email
+- [Transactional Email](mem://infrastructure/transactionele-e-mail-architectuur) — Reply-To subaddressing and Mailjet Parse webhook
+- [Password Resets](mem://infrastructure/partner-wachtwoord-reset-flow) — Custom edge function for partner resets
+- [Admin Password Mgmt](mem://features/admin-beheer-partner-wachtwoorden) — initial_password clearing upon first login
+- [Status Logic V2](mem://features/customer-portal-workflow-and-status-logic-v2) — Approval logic ignoring cancelled items
+- [Pricing Rules](mem://business/pricing-and-vat-rules) — Hierarchy of quoted_price and unpriced displays
+- [Program Workflow](mem://features/admin-program-workflow-automation) — Edge function sending items without bureau exclusions
+- [Accommodation Communication](mem://features/admin-accommodation-management-and-communication-logic) — Withdrawal logic and custom email triggering
+- [Financial Accuracy](mem://ui/admin-financial-reporting-accuracy) — Expected costs based on quoted_price and fee inclusions
+- [Chat Architecture](mem://features/chat-system-architecture-and-notifications) — Supabase Realtime grouping and read_at mechanics
+- [Quote Delivery](mem://features/admin-quote-delivery-workflow) — Transitions to in_afstemming and offer generation
+- [Communication Dossier](mem://infrastructure/unified-project-communication-dossier) — Merged request and accommodation timeline logging
+- [Invoicing Rules](mem://business/invoicing-centralization-rules) — block_type bureau and skip_partner_notification enforcement
+- [Internal Workflow](mem://business/bureau-internal-item-workflow) — Filtering day_index -1 and handling provider_id bureau
+- [Template Logic](mem://features/program-template-logic) — Stripping live API dependencies from templates
+- [Deduplication](mem://features/configurator-deduplication-logic) — 24h checks on email and dates in checkout
+- [Ferry Validation](mem://features/configurator-ferry-validation-logic) — Preferred time flexibility for ferries
+- [Data Enrichment](mem://infrastructure/partner-data-enrichment-flow) — Service role extraction for anon program requests
+- [Privacy Rules](mem://business/partner-communication-privacy-rules) — Stripping PII in outbound partner comms
+- [Calculation Logic](mem://technical/price-calculation-duration-logic) — Multiplying by duration for p.p.p.d items
+- [URL Resolution](mem://infrastructure/edge-function-url-resolution) — Fallback to root domain for critical transactional links
+- [Dashboard Retention](mem://infrastructure/partner-dashboard-retention-policy) — 3-month cleanup for inactive dashboard items
+- [Mailjet Config](mem://infrastructure/email-delivery-mailjet-configuration) — Environment variable requirements for edge functions
+- [Bulk Mailing](mem://features/admin-partner-bulk-mailing-system) — Rate-limited templated mass communications
+- [Operational Notifications](mem://features/admin-operational-notificaties-customer-acties) — Email alerts for lodging/approvals
+- [Lodging Confirmation](mem://features/automated-customer-lodging-confirmation) — Auto-completing todos upon customer selection
+- [Quote Attachments](mem://features/accommodation-quote-attachments) — Bucket logic and versioning for quote documents
+- [Project Deletion](mem://features/admin-project-deletion-workflow) — notify-partner-cancellation edge logic
+- [Item Inheritance](mem://data/program-request-item-inheritance) — Denormalizing metadata into request items
+- [Leaflet Pattern](mem://infrastructure/leaflet-map-rendering-pattern) — Remount and resize handling in sheets
+- [Reselection Logic](mem://business/accommodation-re-selection-logic) — Resetting processing status on resubmissions
+- [Revision History](mem://business/lodging-quote-revision-and-history-logic) — Clearing forwarded_at and snapshots
+- [Sales Invoicing](mem://business/customer-sales-invoicing-logic) — Multiple bureau invoices per project for installments
+- [Aftersales Mail](mem://features/aftersales-review-mail) — send-customer-aftersales edge function + customer_aftersales auto-todo na X dagen, met Google + eigen review-links
+- [Incasso-partners & Betaalbatches](mem://business/direct-debit-partners-exclusion) — pays_by_direct_debit vlag (Doeksen) sluit partner uit van SEPA-batches; Stortemelk heeft twee IBAN's (De Bolder afwijkend)
