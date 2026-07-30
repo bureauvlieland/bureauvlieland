@@ -47,7 +47,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/catering-aanvragen", changefreq: "monthly", priority: "0.6" },
   { path: "/voorbeeldprogrammas", changefreq: "weekly", priority: "0.8" },
   { path: "/evenementen", changefreq: "monthly", priority: "0.7" },
-  { path: "/sitemap", changefreq: "monthly", priority: "0.3" },
+  
   // Landingspagina's
   { path: "/bedrijfsuitje-vlieland", changefreq: "monthly", priority: "0.9" },
   { path: "/teamuitje-vlieland", changefreq: "monthly", priority: "0.9" },
