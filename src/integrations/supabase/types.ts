@@ -1496,6 +1496,7 @@ export type Database = {
         Row: {
           block_name: string
           commission_amount: number
+          commission_basis: string | null
           commission_percentage: number
           created_at: string
           customer_label: string | null
@@ -1506,6 +1507,7 @@ export type Database = {
           invoiced_amount_excl_vat: number
           item_id: string | null
           item_type: string
+          purchase_invoice_id: string | null
           quote_id: string | null
           reference_number: string | null
           sort_order: number
@@ -1513,6 +1515,7 @@ export type Database = {
         Insert: {
           block_name: string
           commission_amount?: number
+          commission_basis?: string | null
           commission_percentage?: number
           created_at?: string
           customer_label?: string | null
@@ -1523,6 +1526,7 @@ export type Database = {
           invoiced_amount_excl_vat?: number
           item_id?: string | null
           item_type: string
+          purchase_invoice_id?: string | null
           quote_id?: string | null
           reference_number?: string | null
           sort_order?: number
@@ -1530,6 +1534,7 @@ export type Database = {
         Update: {
           block_name?: string
           commission_amount?: number
+          commission_basis?: string | null
           commission_percentage?: number
           created_at?: string
           customer_label?: string | null
@@ -1540,6 +1545,7 @@ export type Database = {
           invoiced_amount_excl_vat?: number
           item_id?: string | null
           item_type?: string
+          purchase_invoice_id?: string | null
           quote_id?: string | null
           reference_number?: string | null
           sort_order?: number
@@ -1550,6 +1556,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "commission_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_invoice_lines_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -2237,6 +2250,8 @@ export type Database = {
           bank_line_id: string | null
           commission_exempt: boolean
           commission_exempt_reason: string | null
+          commission_invoice_id: string | null
+          commission_invoiced_at: string | null
           created_at: string
           description: string | null
           file_path: string | null
@@ -2271,6 +2286,8 @@ export type Database = {
           bank_line_id?: string | null
           commission_exempt?: boolean
           commission_exempt_reason?: string | null
+          commission_invoice_id?: string | null
+          commission_invoiced_at?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -2305,6 +2322,8 @@ export type Database = {
           bank_line_id?: string | null
           commission_exempt?: boolean
           commission_exempt_reason?: string | null
+          commission_invoice_id?: string | null
+          commission_invoiced_at?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
@@ -2337,6 +2356,13 @@ export type Database = {
             columns: ["bank_line_id"]
             isOneToOne: false
             referencedRelation: "bank_statement_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_purchase_invoices_commission_invoice_id_fkey"
+            columns: ["commission_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "commission_invoices"
             referencedColumns: ["id"]
           },
           {
