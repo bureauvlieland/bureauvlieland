@@ -19,6 +19,8 @@ interface FaqSectionProps {
   items: FaqItem[];
   /** Unieke id voor het JSON-LD script, voorkomt botsing met andere pagina's. */
   schemaId: string;
+  /** Absolute URL van de pagina; koppelt de FAQPage aan de juiste URL. */
+  pageUrl?: string;
 }
 
 /**
@@ -31,13 +33,20 @@ export const FaqSection = ({
   intro,
   items,
   schemaId,
+  pageUrl,
 }: FaqSectionProps) => {
   useEffect(() => {
     if (!items || items.length === 0) return;
 
+    const url =
+      pageUrl ?? (typeof window !== "undefined" ? window.location.href.split("?")[0] : undefined);
+
     const schema = {
       "@context": "https://schema.org",
       "@type": "FAQPage",
+      ...(url ? { "@id": `${url}#faq`, url, mainEntityOfPage: url } : {}),
+      inLanguage: "nl-NL",
+      name: title,
       mainEntity: items.map((item) => ({
         "@type": "Question",
         name: item.question,
@@ -47,6 +56,7 @@ export const FaqSection = ({
         },
       })),
     };
+
 
     const elementId = `faq-schema-${schemaId}`;
     const existing = document.getElementById(elementId);
