@@ -41,3 +41,38 @@ export function resolveBureauInvoiceType({
 
   return isKnownInvoiceType(storedType) ? storedType : "partial";
 }
+
+interface ShouldShowFullSpecificationArgs {
+  /** Type zoals afgeleid via resolveBureauInvoiceType. */
+  resolvedType: InvoiceType;
+  /** Som van reeds gefactureerde termijnen (excl. de huidige factuur), incl. BTW. */
+  alreadyInvoicedInclVat?: number | null;
+  /** Bedrag van deze factuur incl. BTW. */
+  invoiceAmountInclVat?: number | null;
+  /** Totaal van het project volgens de specificatie, incl. BTW. */
+  projectTotalInclVat?: number | null;
+}
+
+/** Tolerantie waarbinnen factuurbedrag en specificatie mogen afwijken (€0,02). */
+const SPECIFICATION_TOLERANCE = 0.02;
+
+/**
+ * Bepaalt of een factuur de volledige projectspecificatie mag tonen.
+ * Alleen eindfacturen zonder eerdere termijnen waarvan het bedrag exact
+ * overeenkomt met de specificatie; anders een compacte samenvattingsregel.
+ */
+export function shouldShowFullSpecification({
+  resolvedType,
+  alreadyInvoicedInclVat,
+  invoiceAmountInclVat,
+  projectTotalInclVat,
+}: ShouldShowFullSpecificationArgs): boolean {
+  if (resolvedType !== "final") return false;
+  if (Math.abs(Number(alreadyInvoicedInclVat ?? 0)) > INVOICE_TYPE_TOLERANCE) return false;
+
+  const amount = Number(invoiceAmountInclVat ?? 0);
+  const projectTotal = Number(projectTotalInclVat ?? 0);
+  if (projectTotal <= INVOICE_TYPE_TOLERANCE) return false;
+
+  return Math.abs(amount - projectTotal) <= SPECIFICATION_TOLERANCE;
+}
