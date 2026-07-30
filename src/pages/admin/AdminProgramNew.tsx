@@ -36,6 +36,12 @@ import {
 import { cn } from "@/lib/utils";
 import { generateCustomerToken, type ProgramType } from "@/types/programRequest";
 import { ExistingCustomerSelect, type ExistingCustomer } from "@/components/admin/ExistingCustomerSelect";
+import {
+  describeQuoteValidity,
+  firstProgramDate,
+  isQuoteValidUntilDateDisabled,
+  suggestQuoteValidUntil,
+} from "@/lib/quoteValidity";
 
 type WizardStep = "type" | "customer" | "settings";
 
