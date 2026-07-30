@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Sheet,
   SheetContent,
@@ -6,23 +6,33 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Loader2, Send, Sparkles, Users, X } from "lucide-react";
+import {
+  ChevronDown,
+  Loader2,
+  Send,
+  Sparkles,
+  Users,
+  Wand2,
+  X,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import {
+  EMAIL_INTENTS,
+  type DossierSummary,
+  type EmailIntentId,
+} from "@/lib/emailComposerIntents";
 
 interface Recipient {
   label: string;
@@ -41,18 +51,17 @@ interface SendProjectEmailSheetProps {
   onEmailSent?: () => void;
   defaultSubject?: string;
   defaultBody?: string;
-  /** Optional: only show templates whose id starts with one of these prefixes (e.g. ["presales_"]) */
-  templateFilter?: string[];
   /** Pre-select these emails (used by "Beantwoorden") */
   defaultSelectedEmails?: string[];
 }
 
-interface TemplateRow {
-  id: string;
-  name: string;
-  subject: string;
-  description: string | null;
-}
+const REFINE_PRESETS = [
+  "Korter",
+  "Warmer / persoonlijker",
+  "Zakelijker",
+  "Concreter, met duidelijke vervolgstap",
+  "Minder aandringen",
+];
 
 export function SendProjectEmailSheet({
   open,
@@ -63,14 +72,19 @@ export function SendProjectEmailSheet({
   onEmailSent,
   defaultSubject,
   defaultBody,
-  templateFilter,
   defaultSelectedEmails,
 }: SendProjectEmailSheetProps) {
   const [isSending, setIsSending] = useState(false);
-  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [isComposingAi, setIsComposingAi] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [showAiInstruction, setShowAiInstruction] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+
+  const [intent, setIntent] = useState<EmailIntentId | null>(null);
+  const [suggestedIntent, setSuggestedIntent] = useState<EmailIntentId | null>(null);
+  const [summary, setSummary] = useState<DossierSummary | null>(null);
+  const [contextOpen, setContextOpen] = useState(false);
 
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [customEmail, setCustomEmail] = useState("");
@@ -79,32 +93,8 @@ export function SendProjectEmailSheet({
 
   const [subject, setSubject] = useState(defaultSubject || "");
   const [body, setBody] = useState(defaultBody || "");
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
-  // Houd de originele template-HTML + bijbehorende platte tekst bij.
-  // Als de admin de body niet wijzigt versturen we de rijke HTML rechtstreeks,
-  // anders gaat het bewerkte bericht als platte tekst de wrapper in.
-  const templateHtmlRef = useRef<string | null>(null);
-  const templatePlainRef = useRef<string | null>(null);
 
-  // Fetch active templates
-  const { data: templates = [] } = useQuery<TemplateRow[]>({
-    queryKey: ["email-templates-active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_templates")
-        .select("id, name, subject, description")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return (data || []) as TemplateRow[];
-    },
-    staleTime: 5 * 60 * 1000,
-    enabled: open,
-  });
-
-  const filteredTemplates = templateFilter && templateFilter.length > 0
-    ? templates.filter((t) => templateFilter.some((p) => t.id.startsWith(p)))
-    : templates;
+  const hasProject = !!(requestId || accommodationId);
 
   // Reset state when sheet opens
   useEffect(() => {
@@ -125,44 +115,104 @@ export function SendProjectEmailSheet({
     setShowCustom(initial.size === 0 && recipients.length === 0);
     setSubject(defaultSubject || "");
     setBody(defaultBody || "");
-    setSelectedTemplate("");
-    templateHtmlRef.current = null;
-    templatePlainRef.current = null;
     setAiInstruction("");
     setShowAiInstruction(false);
+    setRefineInstruction("");
+    setIntent(null);
+    setSuggestedIntent(null);
+    setSummary(null);
+    setContextOpen(false);
   }, [open, defaultSubject, defaultBody]);
 
+  // Laad de dossier-samenvatting + aanbevolen intentie zodra de sheet opent.
+  useEffect(() => {
+    if (!open || !hasProject) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("compose-followup-email", {
+          body: { requestId, accommodationId, previewOnly: true },
+        });
+        if (error || cancelled) return;
+        if (data?.summary) setSummary(data.summary as DossierSummary);
+        if (data?.suggestedIntent) {
+          setSuggestedIntent(data.suggestedIntent as EmailIntentId);
+          setIntent((prev) => prev ?? (data.suggestedIntent as EmailIntentId));
+        }
+      } catch {
+        /* context is nice-to-have; stilzwijgend negeren */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, hasProject, requestId, accommodationId]);
+
+  const firstRecipient = useMemo(
+    () =>
+      recipients.find((r) => selectedEmails.has(r.email.toLowerCase())) ||
+      recipients.find((r) => r.type === "customer") ||
+      recipients[0],
+    [recipients, selectedEmails],
+  );
+
+  const callCompose = async (payload: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("compose-followup-email", {
+      body: {
+        requestId,
+        accommodationId,
+        recipientEmail: firstRecipient?.email,
+        recipientName: firstRecipient?.name,
+        recipientType: firstRecipient?.type,
+        intent: intent ?? suggestedIntent ?? undefined,
+        ...payload,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    if (data?.subject) setSubject(data.subject);
+    if (data?.body) setBody(data.body);
+    if (data?.summary) setSummary(data.summary as DossierSummary);
+    return data;
+  };
+
   const handleAiCompose = async () => {
-    if (!requestId && !accommodationId) {
+    if (!hasProject) {
       toast.error("Geen project gekoppeld");
       return;
     }
-    const firstRecipient =
-      recipients.find((r) => selectedEmails.has(r.email.toLowerCase())) ||
-      recipients.find((r) => r.type === "customer") ||
-      recipients[0];
-
     setIsComposingAi(true);
     try {
-      const { data, error } = await supabase.functions.invoke("compose-followup-email", {
-        body: {
-          requestId,
-          accommodationId,
-          recipientEmail: firstRecipient?.email,
-          recipientName: firstRecipient?.name,
-          instruction: aiInstruction.trim() || undefined,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data?.subject) setSubject(data.subject);
-      if (data?.body) setBody(data.body);
-      toast.success("AI-suggestie ingeladen — controleer voor verzending");
+      await callCompose({ instruction: aiInstruction.trim() || undefined });
+      toast.success("Concept ingeladen — controleer voor verzending");
     } catch (err: any) {
       console.error("AI compose error", err);
       toast.error(err?.message || "AI-suggestie mislukt");
     } finally {
       setIsComposingAi(false);
+    }
+  };
+
+  const handleRefine = async (instructionOverride?: string) => {
+    const instr = (instructionOverride ?? refineInstruction).trim();
+    if (!instr) {
+      toast.error("Geef aan hoe de mail aangepast moet worden");
+      return;
+    }
+    if (!body.trim()) {
+      toast.error("Er is nog geen concept om te herschrijven");
+      return;
+    }
+    setIsRefining(true);
+    try {
+      await callCompose({ currentBody: body, refineInstruction: instr });
+      setRefineInstruction("");
+      toast.success("Concept herschreven");
+    } catch (err: any) {
+      console.error("AI refine error", err);
+      toast.error(err?.message || "Herschrijven mislukt");
+    } finally {
+      setIsRefining(false);
     }
   };
 
@@ -174,36 +224,6 @@ export function SendProjectEmailSheet({
       else next.add(key);
       return next;
     });
-  };
-
-  const handleTemplateChange = async (templateId: string) => {
-    setSelectedTemplate(templateId);
-    if (!templateId || templateId === "__none__") return;
-    setIsLoadingTemplate(true);
-    try {
-      // Pick partnerId from first selected partner recipient (for partner-targeted templates)
-      const firstSelected = recipients.find(
-        (r) => selectedEmails.has(r.email.toLowerCase()) && r.type === "partner"
-      );
-      const { data, error } = await supabase.functions.invoke("render-email-template", {
-        body: {
-          templateId,
-          requestId,
-          accommodationId,
-          partnerId: firstSelected?.partnerId,
-        },
-      });
-      if (error) throw error;
-      if (data?.subject) setSubject(data.subject);
-      if (data?.body) setBody(data.body);
-      templateHtmlRef.current = typeof data?.html === "string" ? data.html : null;
-      templatePlainRef.current = typeof data?.body === "string" ? data.body : null;
-    } catch (err) {
-      console.error("Template render error:", err);
-      toast.error("Kon template niet laden");
-    } finally {
-      setIsLoadingTemplate(false);
-    }
   };
 
   const buildFinalRecipients = (): Recipient[] => {
@@ -239,7 +259,6 @@ export function SendProjectEmailSheet({
       toast.error("Bericht is verplicht");
       return;
     }
-    // Basic email check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     for (const r of finalRecipients) {
       if (!emailRegex.test(r.email)) {
@@ -252,15 +271,7 @@ export function SendProjectEmailSheet({
     let okCount = 0;
     const errors: string[] = [];
 
-    // Send a separate email per recipient so each ontvanger keeps an isolated thread
-    // (Reply-To is the same per project but each mail sequence is its own conversation)
-    // Als de admin de body niet wijzigde sinds het laden van de template,
-    // sturen we de originele rijke HTML door zodat tabellen/knoppen/kleuren behouden blijven.
-    const useTemplateHtml =
-      !!templateHtmlRef.current &&
-      templatePlainRef.current !== null &&
-      body === templatePlainRef.current;
-
+    // Per ontvanger een aparte mail, zodat antwoorden per persoon terugkomen.
     for (const r of finalRecipients) {
       try {
         const { error } = await supabase.functions.invoke("send-project-email", {
@@ -269,7 +280,6 @@ export function SendProjectEmailSheet({
             recipientName: r.name || undefined,
             subject,
             body,
-            bodyHtml: useTemplateHtml ? templateHtmlRef.current : undefined,
             requestId: requestId || undefined,
             accommodationId: accommodationId || undefined,
             partnerId: r.partnerId || undefined,
@@ -289,7 +299,7 @@ export function SendProjectEmailSheet({
       toast.success(
         okCount === 1
           ? `E-mail verstuurd naar ${finalRecipients[0].email}`
-          : `${okCount} e-mails verstuurd`
+          : `${okCount} e-mails verstuurd`,
       );
       onOpenChange(false);
       onEmailSent?.();
@@ -302,6 +312,7 @@ export function SendProjectEmailSheet({
   };
 
   const totalSelected = selectedEmails.size + (showCustom && customEmail.trim() ? 1 : 0);
+  const activeIntent = EMAIL_INTENTS.find((i) => i.id === (intent ?? suggestedIntent));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -312,7 +323,8 @@ export function SendProjectEmailSheet({
             E-mail versturen
           </SheetTitle>
           <SheetDescription>
-            Verstuur een e-mail vanuit Bureau Vlieland. Bij meerdere ontvangers gaat per ontvanger een aparte mail uit, zodat antwoorden netjes per persoon teruglopen.
+            Kies waarom u mailt; de AI schrijft een persoonlijk concept op basis van het volledige
+            projectdossier. Bij meerdere ontvangers gaat per ontvanger een aparte mail uit.
           </SheetDescription>
         </SheetHeader>
 
@@ -409,36 +421,13 @@ export function SendProjectEmailSheet({
             </div>
           </div>
 
-          {/* Template */}
-          {filteredTemplates.length > 0 && (
-            <div className="space-y-2">
-              <Label>Template (optioneel)</Label>
-              <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingTemplate ? "Bezig met laden..." : "Kies een template"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Geen template — leeg starten</SelectItem>
-                  {filteredTemplates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Variabelen zoals naam en referentienummer worden automatisch ingevuld. Je kunt het bericht daarna nog aanpassen.
-              </p>
-            </div>
-          )}
-
-          {/* AI follow-up suggestion */}
-          {(requestId || accommodationId) && (
-            <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
+          {/* Intent + AI concept */}
+          {hasProject && (
+            <div className="space-y-3 rounded-md border border-dashed bg-muted/20 p-3">
               <div className="flex items-center justify-between gap-2">
                 <Label className="flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  AI-suggestie voor opvolging
+                  Waarom mailt u?
                 </Label>
                 <Button
                   type="button"
@@ -450,6 +439,32 @@ export function SendProjectEmailSheet({
                   {showAiInstruction ? "Verberg instructie" : "+ Extra instructie"}
                 </Button>
               </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {EMAIL_INTENTS.map((i) => {
+                  const active = (intent ?? suggestedIntent) === i.id;
+                  return (
+                    <button
+                      key={i.id}
+                      type="button"
+                      onClick={() => setIntent(i.id)}
+                      title={i.hint}
+                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-muted"
+                      }`}
+                    >
+                      {i.label}
+                      {suggestedIntent === i.id && !active ? " ·" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+              {activeIntent && (
+                <p className="text-xs text-muted-foreground">{activeIntent.hint}</p>
+              )}
+
               {showAiInstruction && (
                 <Textarea
                   placeholder="Optioneel: stuur de AI bij, bijv. 'noem dat we morgen telefonisch contact opnemen'"
@@ -458,6 +473,7 @@ export function SendProjectEmailSheet({
                   className="min-h-[60px] text-sm"
                 />
               )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -471,15 +487,41 @@ export function SendProjectEmailSheet({
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                AI-suggestie genereren
+                {body.trim() ? "Nieuw concept genereren" : "Concept genereren"}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Op basis van projectstatus en reeds verstuurde mails. Onderwerp en bericht worden ingevuld; controleer altijd voor verzending.
-              </p>
+
+              {summary && (
+                <Collapsible open={contextOpen} onOpenChange={setContextOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <span>
+                        Dossier: {summary.totalEntries} item(s) ·{" "}
+                        {summary.daysSinceCustomerContact === null
+                          ? "klant heeft nog niet gereageerd"
+                          : `laatste klantreactie ${summary.daysSinceCustomerContact} dag(en) geleden`}
+                      </span>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${contextOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <div>Uitgaande berichten van ons: {summary.outgoingCount}</div>
+                    <div>Berichten van de klant: {summary.incomingCount}</div>
+                    <div>Automatische systeemmails: {summary.systemEmailCount}</div>
+                    {summary.lastIncomingExcerpt && (
+                      <div className="rounded bg-background/60 p-2 italic">
+                        “{summary.lastIncomingExcerpt}”
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
           )}
-
-
 
           {/* Subject */}
           <div className="space-y-2">
@@ -495,22 +537,60 @@ export function SendProjectEmailSheet({
           <div className="space-y-2">
             <Label>Bericht</Label>
             <Textarea
-              placeholder="Typ uw bericht..."
-              className="min-h-[220px] font-mono text-sm"
+              placeholder="Typ uw bericht of laat de AI een concept maken..."
+              className="min-h-[220px] text-sm"
               value={body}
               onChange={(e) => setBody(e.target.value)}
             />
-            {templateHtmlRef.current && templatePlainRef.current !== null && (
-              <p className="text-xs text-muted-foreground">
-                {body === templatePlainRef.current
-                  ? "✓ Template-opmaak (tabellen, knoppen, kleuren) blijft behouden. Zodra je iets aanpast wordt de mail als platte tekst verstuurd."
-                  : "✏️ Je hebt de template aangepast — deze mail wordt als platte tekst verstuurd binnen de Bureau Vlieland-huisstijl."}
-              </p>
-            )}
           </div>
 
+          {/* Refine bar */}
+          {hasProject && body.trim() && (
+            <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+              <Label className="flex items-center gap-1.5 text-xs">
+                <Wand2 className="h-3.5 w-3.5 text-primary" />
+                Verfijnen met AI
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {REFINE_PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    disabled={isRefining}
+                    onClick={() => handleRefine(p)}
+                    className="rounded-full border border-border bg-background px-2.5 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Eigen aanwijzing, bijv. 'verwijs naar het gesprek van vrijdag'"
+                  value={refineInstruction}
+                  onChange={(e) => setRefineInstruction(e.target.value)}
+                  className="text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isRefining}
+                  onClick={() => handleRefine()}
+                >
+                  {isRefining ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-muted-foreground">
-            Verzonden vanuit hallo@bureauvlieland.nl met Bureau Vlieland-opmaak. Antwoorden komen automatisch terug in het projectdossier.
+            Verzonden vanuit hallo@bureauvlieland.nl met Bureau Vlieland-opmaak. Antwoorden komen
+            automatisch terug in het projectdossier. Controleer het concept altijd voor verzending.
           </p>
 
           <div className="flex gap-2 pt-2">
@@ -522,7 +602,7 @@ export function SendProjectEmailSheet({
             >
               Annuleren
             </Button>
-            <Button type="submit" disabled={isSending || isLoadingTemplate} className="flex-1">
+            <Button type="submit" disabled={isSending} className="flex-1">
               {isSending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
