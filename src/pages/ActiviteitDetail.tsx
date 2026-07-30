@@ -103,10 +103,16 @@ const ActiviteitDetail = () => {
     };
   }, [slug, navigate]);
 
+  const extra = getActivityContent(block?.slug ?? block?.id);
+
   const seo = useMemo(() => {
     if (!block) return null;
     const url = `https://bureauvlieland.nl/activiteit/${block.slug ?? block.id}`;
-    const rawDesc = block.short_description || block.description || `${block.name} op Vlieland — boek via Bureau Vlieland.`;
+    const rawDesc =
+      extra?.summary ||
+      block.short_description ||
+      block.description ||
+      `${block.name} op Vlieland — boek via Bureau Vlieland.`;
     const description = truncate(rawDesc.replace(/\s+/g, " ").trim(), 158);
     const title = truncate(`${block.name} op Vlieland | Bureau Vlieland`, 60);
     const image = getBlockImage(block);
