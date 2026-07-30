@@ -74,6 +74,39 @@ Deno.serve(async (req) => {
       );
     }
 
+    // 'bookings' bevat klantgegevens: alleen voor ingelogde admin/partner.
+    if (endpoint === "bookings") {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      let allowed = false;
+      if (jwt) {
+        const authClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+        );
+        const { data: userData } = await authClient.auth.getUser();
+        const userId = userData?.user?.id;
+        if (userId) {
+          const admin = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          );
+          const [{ data: isAdmin }, { data: isPartner }] = await Promise.all([
+            admin.rpc("is_admin", { _user_id: userId }),
+            admin.rpc("is_partner", { _user_id: userId }),
+          ]);
+          allowed = Boolean(isAdmin) || Boolean(isPartner);
+        }
+      }
+      if (!allowed) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const apiKey = await getApiKeyForPartner(partnerId || null, slug);
 
     // Build URL without slug param — API auth is via X-Api-Key header per tenant
