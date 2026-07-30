@@ -649,7 +649,18 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
         <div className="p-3 border-b space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">E-mailgesprekken</h2>
-            <Badge variant="outline" className="text-xs">{groups.length}</Badge>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs">{groups.length}</Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Sneltoetsen (?)"
+                onClick={() => setShortcutsOpen(true)}
+              >
+                <Keyboard className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1">
             {filterChips.map((c) => (
