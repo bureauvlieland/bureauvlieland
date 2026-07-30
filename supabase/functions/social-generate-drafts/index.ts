@@ -209,6 +209,7 @@ Deno.serve(async (req) => {
     // Genereer per kandidaat
     let generated = 0;
     for (const c of usable) {
+      const pillar = pillarForSourceType(c.source_type);
       const systemPrompt = `Je bent social media copywriter voor Bureau Vlieland: lokale specialist voor groepsuitjes, evenementen en logies op Vlieland.
 Tone-of-voice: ${toneOfVoice}. Formeel 'u' wordt vermeden in social posts — gebruik 'je/jullie'.
 Centrale belofte: één partij, één factuur, lokale kennis. Niet 'regie', wel zorgvuldig boekingskantoor + programma-ontwikkelaar.
@@ -219,6 +220,8 @@ Vermijd hard sellen; vertel het verhaal en eindig zacht met een uitnodiging.`;
 """
 ${c.summary}
 """
+Contentpijler: ${PILLAR_LABELS[pillar]}.
+Caption-stramien: ${PILLAR_CAPTION_FORMAT[pillar]}
 Doel/hint: ${c.hint ?? "geen specifieke hint"}.
 
 Vereisten:
@@ -226,6 +229,7 @@ Vereisten:
 - 8 tot 12 hashtags (zonder dubbels), inclusief deze basis: ${(hashtagSets.default ?? []).join(", ")}
 - Korte alt-tekst (max 120 tekens) voor de afbeelding
 - Geen verzonnen prijzen, geen verzonnen datums
+- Zet zelf GEEN link in de caption; die voegen wij toe
 
 Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).`;
 
@@ -261,15 +265,20 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
 
       // PII scrub: vervang voornaam-achternaam tokens door 'een groep' (zachte verdediging)
       const safeCaption = scrubPii(aiOutput.caption);
-      const rawCta =
-        defaultCtas[c.source_type] ??
-        (c.source_type === "building_block" ? defaultCtas.bouwstenen : undefined) ??
-        defaultCtas.default ??
-        defaultCtas.programma ??
-        "/";
-      const cta = withUtm(rawCta, c.source_type);
-      const finalCaption = `${safeCaption}\n\n${cta}`;
-
+      const ctaFacebook = buildCtaUrl({
+        pillar,
+        slug: c.slug,
+        channel: "facebook",
+        overrides: ctaOverrides,
+      });
+      const ctaInstagram = buildCtaUrl({
+        pillar,
+        slug: c.slug,
+        channel: "instagram",
+        overrides: ctaOverrides,
+      });
+      // Facebook krijgt de klikbare diepe link in de caption; Instagram verwijst naar link-in-bio.
+      const finalCaption = `${safeCaption}\n\n${ctaFacebook}\n(Instagram: link in bio)`;
 
       await supabase.from("social_posts").insert({
         status: "draft",
@@ -281,9 +290,15 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
         source_id: c.source_id,
         source_summary: c.summary,
         ai_model: "google/gemini-2.5-flash",
-        ai_raw: aiOutput as unknown as Record<string, unknown>,
+        ai_raw: {
+          ...(aiOutput as unknown as Record<string, unknown>),
+          pillar,
+          cta_facebook: ctaFacebook,
+          cta_instagram: ctaInstagram,
+        },
       });
       generated++;
+
 
       // Update asset last_used_at
       if (c.source_type === "asset") {
