@@ -144,8 +144,9 @@ const ActiviteitDetail = () => {
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: "https://bureauvlieland.nl/" },
-        { "@type": "ListItem", position: 2, name: "Bouwstenen", item: "https://bureauvlieland.nl/bouwstenen" },
-        { "@type": "ListItem", position: 3, name: block.name, item: url },
+        { "@type": "ListItem", position: 2, name: "Activiteiten Vlieland", item: "https://bureauvlieland.nl/activiteiten-vlieland" },
+        { "@type": "ListItem", position: 3, name: "Bouwstenen", item: "https://bureauvlieland.nl/bouwstenen" },
+        { "@type": "ListItem", position: 4, name: block.name, item: url },
       ],
     };
 
