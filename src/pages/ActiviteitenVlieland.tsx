@@ -24,6 +24,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
+import { ActivityFilter } from "@/components/ActivityFilter";
 import { featuredActivities } from "@/content/activityLinks";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
 import { KeyFacts } from "@/components/seo/KeyFacts";
