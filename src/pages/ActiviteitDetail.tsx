@@ -325,6 +325,7 @@ const ActiviteitDetail = () => {
         )}
       </main>
 
+      <RelatedLinks pathname="/bouwstenen" title="Verder kijken" />
       <Footer />
     </div>
   );

@@ -345,6 +345,7 @@ const VoorbeeldprogrammaDetail = () => {
         )}
       </main>
 
+      <RelatedLinks pathname="/voorbeeldprogrammas" title="Zelf verder bouwen" />
       <Footer />
     </div>
   );
