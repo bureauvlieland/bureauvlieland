@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow, format, isSameDay } from "date-fns";
@@ -9,6 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
   Mail,
@@ -23,8 +29,25 @@ import {
   Bot,
   User,
   Inbox,
+  MoreVertical,
+  Keyboard,
+  CalendarDays,
+  RotateCcw,
 } from "lucide-react";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
+import { EmailShortcutsDialog } from "@/components/admin/EmailShortcutsDialog";
+import {
+  isThreadArchived,
+  planThreadArchive,
+  stripSourcePrefix,
+} from "@/lib/emailThreadArchive";
+import {
+  getDerivedStatus,
+  DERIVED_STATUS_LABEL,
+  DERIVED_STATUS_TONE,
+  isPastDate,
+  type DerivedStatus,
+} from "@/lib/projectStatus";
 
 type Origin = "inbound" | "manual" | "automatic";
 
