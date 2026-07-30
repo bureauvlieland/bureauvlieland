@@ -1243,7 +1243,9 @@ Deno.serve(async (req) => {
           items_list: itemsList,
           selected_dates: selectedDates,
           number_of_people: String(program.number_of_people),
+          portal_url: "https://bureauvlieland.nl/partner",
         });
+
 
         const emailSubject = template?.subject || `Definitieve boeking - ${sanitizeHtml(program.customer_company || program.customer_name)}`;
         const emailBody = template?.body || `
