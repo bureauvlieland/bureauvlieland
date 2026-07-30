@@ -199,8 +199,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
         const entityId = isMissing ? r.itemId : r.invoiceId;
         if (!entityId) return null;
-        if (existingKeys.has(`${autoType}:${entityId}`)) return null;
-        existingKeys.add(`${autoType}:${entityId}`);
+        const key = `${autoType.auto_type}:${entityId}`;
+        if (existingKeys.has(key)) return null;
+        existingKeys.add(key);
 
         const project = r.projectReference ? ` (${r.projectReference})` : "";
         return {
@@ -214,7 +215,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           status: "todo",
           related_request_id: r.projectId ?? null,
           related_partner_id: r.partnerId ?? null,
-          auto_type: autoType,
+          ...autoType,
           auto_entity_id: entityId,
         };
       })
