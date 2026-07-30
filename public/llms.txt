@@ -55,8 +55,16 @@ Kerngegevens (te citeren):
 - [Logies aanvragen](/logies-aanvragen): Logies-aanvraag voor groepen.
 - [Activiteiten boeken](/activiteiten-boeken): Losse activiteiten boeken.
 - [Catering](/catering): Catering op Vlieland.
-- [Evenementen](/evenementen): Evenementen op Vlieland.
+- [Evenementen & agenda](/evenementen): Evenementen en agenda op Vlieland.
 - [Partners](/partners): Onze eilandpartners.
+
+## Activiteiten op Vlieland
+
+- [Activiteiten Vlieland](/activiteiten-vlieland): Overzicht van alle activiteiten op het eiland.
+- [Zeehondentochten Vlieland](/zeehondentochten-vlieland): Zeehonden spotten vanaf het water.
+- [Wadlopen Vlieland](/wadlopen-vlieland): Wadlooptochten met gecertificeerde gidsen.
+- [Veelgestelde vragen](/veelgestelde-vragen): Antwoorden over boeken, boot, kosten en groepsgrootte.
+
 
 ## Optional
 
