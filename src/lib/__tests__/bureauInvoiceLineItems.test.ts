@@ -80,7 +80,7 @@ describe("adminInvoicingTotals — bureau_central factuur invarianten", () => {
     expect(b.centralSurcharge).toBeCloseTo(50, 2); // 5 × 10
   });
 
-  it("final factuur vervangt partials in invoicedTotal (geen dubbeltelling)", () => {
+  it("telt partial en externe restant-final cumulatief", () => {
     const req = baseRequest({
       invoices: [
         { amount_excl_vat: 500, vat_amount: 105, amount_incl_vat: 605, invoice_type: "partial" },
@@ -88,8 +88,8 @@ describe("adminInvoicingTotals — bureau_central factuur invarianten", () => {
       ],
     });
     const t = calculateAdminInvoicingTotals(req, baseSettings);
-    // final aanwezig → alleen final telt (1210), partial (605) telt niet mee
-    expect(t.invoicedTotal).toBeCloseTo(1210, 2);
+    // Beide registraties zijn daadwerkelijk gefactureerde bedragen.
+    expect(t.invoicedTotal).toBeCloseTo(1815, 2);
   });
 
   it("credit-facturen trekken altijd af, ook bovenop finals", () => {
