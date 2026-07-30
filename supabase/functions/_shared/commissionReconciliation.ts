@@ -268,6 +268,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       projectId: item.request_id,
       projectReference: project?.reference_number ?? null,
       projectLabel: project?.customer_company || project?.customer_name || null,
+      customerName: project?.customer_name ?? null,
+
       itemId: item.id,
       invoiceId: activeInvoices[0]?.id ?? null,
       label: item.block_name ?? "Onbekend onderdeel",
