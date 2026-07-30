@@ -78,7 +78,9 @@ export const activityContent: Record<string, ActivityContent> = {
       "Voor groepen is wadlopen een verrassend sterke teamactiviteit. Je loopt in een tempo waarin iedereen mee kan, je helpt elkaar door de geulen en je praat onderweg anders dan in een vergaderzaal. Veel bedrijven combineren de excursie daarom met een lunch of borrel erna — modder eerst, verhalen daarna.",
     ],
     practical: [
-      { label: "Duur", value: "Doorgaans 2 tot 3 uur inclusief uitleg" },
+      { label: "Duur", value: "Ongeveer 1,5 uur" },
+      { label: "Richtprijs", value: "€17,50 tot €20 per volwassene" },
+      { label: "Inbegrepen", value: "Laarzen en begeleiding door een lokale gids" },
       { label: "Starttijd", value: "Bepaald door het getij, niet vrij te kiezen" },
       { label: "Seizoen", value: "Circa april t/m oktober" },
       { label: "Conditie", value: "Redelijke basisconditie vereist; het lopen kost energie" },
