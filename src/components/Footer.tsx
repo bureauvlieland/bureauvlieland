@@ -180,7 +180,6 @@ export const Footer = () => {
             <Link to="/offerte" className="hover:text-primary transition-colors">Offerte aanvragen</Link>
             <Link to="/catering-aanvragen" className="hover:text-primary transition-colors">Catering aanvragen</Link>
           </nav>
-          </nav>
         </div>
 
         <div className="pt-8 border-t border-border space-y-6">
