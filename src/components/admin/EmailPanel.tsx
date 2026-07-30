@@ -1009,6 +1009,8 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
           defaultSubject={replyContext.initialSubject}
         />
       )}
+
+      <EmailShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }
