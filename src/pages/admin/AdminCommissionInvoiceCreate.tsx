@@ -439,6 +439,8 @@ export default function AdminCommissionInvoiceCreate() {
         invoice_id: invRow.id,
         item_id: l.source.item_type === "activity" ? l.source.id : null,
         quote_id: l.source.item_type === "accommodation" ? l.source.id : null,
+        purchase_invoice_id: l.purchaseInvoiceId,
+        commission_basis: l.basis,
         item_type: l.source.item_type,
         block_name: l.source.block_name,
         customer_label: l.customerLabel,
@@ -455,6 +457,22 @@ export default function AdminCommissionInvoiceCreate() {
         .from("commission_invoice_lines")
         .insert(lineInserts as any);
       if (linesErr) throw linesErr;
+
+      // Losse inkoopfacturen markeren zodat ze niet dubbel gefactureerd worden
+      const usedInvoiceIds = lines
+        .map((l) => l.purchaseInvoiceId)
+        .filter((id): id is string => !!id);
+      if (usedInvoiceIds.length > 0) {
+        const { error: markErr } = await supabase
+          .from("partner_purchase_invoices")
+          .update({
+            commission_invoiced_at: new Date().toISOString(),
+            commission_invoice_id: invRow.id,
+          } as any)
+          .in("id", usedInvoiceIds);
+        if (markErr) console.error("Kon inkoopfacturen niet markeren:", markErr);
+      }
+
 
       setSavedInvoiceId(invRow.id);
       setSavedInvoiceNumber(invRow.invoice_number);
