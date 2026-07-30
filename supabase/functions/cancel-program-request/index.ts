@@ -11,6 +11,7 @@ import {
   TemplateIds 
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { itemWasSentToPartner } from "../_shared/partnerWasApproached.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +26,13 @@ interface CancelRequest {
   reason?: string;
   cancelAccommodation?: boolean;
   origin?: string;
+  /**
+   * Wanneer false: partners worden NIET automatisch gemaild. De admin-flow
+   * gebruikt dit zodat de keuze in het bevestigingsvenster leidend is.
+   */
+  notify_partners?: boolean;
 }
+
 
 async function enrichProviderEmails(
   supabase: any,
@@ -76,7 +83,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, reason, cancelAccommodation: shouldCancelAccommodation = true, origin }: CancelRequest = await req.json();
+    const { token, reason, cancelAccommodation: shouldCancelAccommodation = true, origin, notify_partners = true }: CancelRequest = await req.json();
     
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
@@ -123,20 +130,28 @@ Deno.serve(async (req) => {
 
     await enrichProviderEmails(supabase, items || []);
 
-    // Get unique providers with emails
-    const providers = new Map<string, { name: string; email: string; items: string[] }>();
+    // Unieke providers met e-mail — alleen partners die daadwerkelijk benaderd zijn.
+    const providers = new Map<
+      string,
+      { name: string; email: string; items: string[]; responded: boolean }
+    >();
     (items || []).forEach((item) => {
-      if (item.provider_email && item.block_type !== "self_arranged") {
+      if (item.provider_email && item.block_type !== "self_arranged" && itemWasSentToPartner(item)) {
         if (!providers.has(item.provider_id)) {
           providers.set(item.provider_id, {
             name: item.provider_name,
             email: item.provider_email,
             items: [],
+            responded: false,
           });
         }
-        providers.get(item.provider_id)!.items.push(item.block_name);
+        const entry = providers.get(item.provider_id)!;
+        entry.items.push(item.block_name);
+        if (item.quoted_at || item.partner_price_change_acknowledged_at) entry.responded = true;
       }
     });
+
+
 
     // Update the program status
     const { error: updateError } = await supabase
@@ -276,9 +291,12 @@ Deno.serve(async (req) => {
     // Klant heeft zelf geannuleerd → partners automatisch informeren via
     // notify-partner-cancellation (zelfde mailflow als admin gebruikt). De
     // items zijn hierboven al op 'cancelled' gezet, dus skip_item_cancel=true.
+    // Bij notify_partners=false (admin-flow) gaat er niets uit: de admin kiest
+    // zelf in het bevestigingsvenster wie bericht krijgt.
     let partnersNotifiedCount = 0;
     let accommodationPartnersNotifiedCount = 0;
-    if (providers.size > 0 || accommodationPartners.size > 0) {
+    if (notify_partners && (providers.size > 0 || accommodationPartners.size > 0)) {
+
       try {
         const { data: notifyResult, error: notifyErr } = await supabase.functions.invoke(
           "notify-partner-cancellation",
@@ -384,7 +402,9 @@ Deno.serve(async (req) => {
       name: p.name,
       email: p.email || null,
       item_names: p.items,
+      approach_status: p.responded ? "responded" : "sent",
     }));
+
     const affected_accommodation_partners = Array.from(accommodationPartners.entries()).map(([partner_id, p]) => ({
       partner_id,
       name: p.name,

@@ -13,6 +13,8 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { itemWasSentToPartner } from "../_shared/partnerWasApproached.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,19 +80,27 @@ export const handler = async (req: Request): Promise<Response> => {
       : ["pending", "confirmed", "accepted", "counter_proposed"];
     const { data: openItems } = await supabase
       .from("program_request_items")
-      .select("id, provider_id, provider_name, provider_email, block_name, block_type, block_category, status")
+      .select("id, provider_id, provider_name, provider_email, block_name, block_type, block_category, status, skip_partner_notification, quoted_at, partner_price_change_acknowledged_at")
       .eq("request_id", request_id)
       .in("status", itemStatuses);
 
+    // Alleen partners die daadwerkelijk benaderd zijn mogen een annuleringsmail
+    // krijgen. Dit geldt ook als hun partner_id expliciet is meegegeven — een
+    // partner die nooit een aanvraag zag, hoort niets over een annulering.
     const notifiableItems = (openItems || []).filter(
       (i: any) =>
         i.block_type !== "self_arranged" &&
         !isBureauItem(i) &&
+        itemWasSentToPartner(i) &&
         (!partnerFilter || (i.provider_id && partnerFilter.has(i.provider_id)))
     );
 
-    // Cancel items (skipped when caller already cancelled them, e.g. cancel-program-request)
-    if (notifiableItems.length > 0 && !skip_item_cancel) {
+
+    // Cancel items (skipped when caller already cancelled them, e.g. cancel-program-request).
+    // Let op: dit staat los van notifiableItems — items moeten ook geannuleerd
+    // worden wanneer er geen enkele partner benaderd was.
+    if ((openItems || []).length > 0 && !skip_item_cancel) {
+
       await supabase
         .from("program_request_items")
         .update({ status: "cancelled", status_note: "Project verwijderd door admin" })
