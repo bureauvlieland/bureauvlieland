@@ -8,7 +8,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/** Escape + truncate a plain-text chat message for safe use inside an email body. */
+export function formatMessagePreview(content: string | null | undefined, maxLength = 600): string {
+  const raw = (content ?? "").trim();
+  if (!raw) return "";
+  const clipped = raw.length > maxLength ? `${raw.slice(0, maxLength).trimEnd()}…` : raw;
+  return escapeHtml(clipped).replace(/\r\n|\r|\n/g, "<br>");
+}
+
 Deno.serve(async (req) => {
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
