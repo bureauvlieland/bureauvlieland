@@ -23,3 +23,6 @@ type: feature
 
 ## Sitemap
 `scripts/generate-sitemap.ts` draait via `predev` + `prebuild` (`bunx tsx`), schrijft `public/sitemap.xml`. Fetcht `building_blocks` via REST met de publieke anon key. Faalt soft (exit 0) zodat dev/build niet stuk gaat.
+
+## Verdiepende content (top-10)
+`src/content/activityContent.ts` bevat per slug: `summary` (citeerbare zin, wordt ook meta-description), `paragraphs`, `practical` (label/waarde), `goodToKnow` en `faq`. Gerenderd in `ActiviteitDetail.tsx`; FAQ via `FaqSection` (FAQPage JSON-LD). Nu gevuld voor: zeehondentocht, wadloopexcursie, vliehors-expres, powerkiten-vliegeren, surfles, blokarten, vuurtorenbezoek, fietstocht-met-begeleiding, bezoek-het-bunkermuseum, strandspektakel. Zonder entry valt de pagina terug op de DB-omschrijving.
