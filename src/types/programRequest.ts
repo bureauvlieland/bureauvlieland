@@ -235,6 +235,9 @@ export interface ProgramRequest {
   guest_details_updated_at?: string | null;
   // Publish flow
   program_published_at: string | null;
+  completion_manually_overridden?: boolean;
+  completion_override_reason?: string | null;
+  completion_override_outstanding?: number | null;
   // Per-project uitgesloten automatische kostenposten (tourist_tax, nature_contribution, central_surcharge, coordination_fee)
   excluded_fees?: string[] | null;
 }

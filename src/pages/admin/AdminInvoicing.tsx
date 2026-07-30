@@ -54,6 +54,9 @@ interface ProgramRequestWithItems {
   selected_accommodation_total: number | null;
   excluded_fees?: string[] | null;
   completion_status: string | null;
+  completion_manually_overridden?: boolean;
+  completion_override_reason?: string | null;
+  completion_override_outstanding?: number | null;
   terms_accepted_at: string | null;
   created_at: string;
   items: {

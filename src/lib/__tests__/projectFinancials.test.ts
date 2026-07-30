@@ -9,7 +9,7 @@
  *  - day_index === -1 telt als extra kost (admin_price_override), niet als
  *    programma-item.
  *  - billing-lines overrulen quoted_price/admin_price_override.
- *  - Final vervangt partials in `netInvoicedInclVat`.
+ *  - Partial en final tellen cumulatief in `netInvoicedInclVat`.
  *  - Credit-facturen trekken altijd extra af.
  *  - Outstanding is nooit negatief (overbetaling → 0).
  */
