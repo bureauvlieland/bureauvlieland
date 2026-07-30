@@ -72,6 +72,10 @@ interface EmailItem {
   accommodation_archived?: string | null;
   email_type?: string | null;
   status?: string | null;
+  /** afgeleide projectstatus van het gekoppelde dossier */
+  project_status?: DerivedStatus | null;
+  /** eerste programma-/aankomstdatum van het dossier (ISO) */
+  project_date?: string | null;
 }
 
 interface ThreadGroup {
@@ -88,6 +92,9 @@ interface ThreadGroup {
   automaticCount: number;
   lastAt: string;
   projectArchived: boolean;
+  threadArchived: boolean;
+  projectStatus: DerivedStatus | null;
+  projectDate: string | null;
 }
 
 const ORIGIN_LABEL: Record<Origin, string> = {
