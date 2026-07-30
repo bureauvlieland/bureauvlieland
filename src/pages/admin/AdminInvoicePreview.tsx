@@ -644,7 +644,18 @@ const AdminInvoicePreview = () => {
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
 
 
-    if (loadedInvoiceForPdf) {
+    // Eindfacturen die het volledige project dekken krijgen de volledige
+    // specificatie; deel-/slot-/creditfacturen een compacte samenvattingsregel.
+    const showFullSpecPdf = loadedInvoiceForPdf
+      ? shouldShowFullSpecification({
+          resolvedType: (loadedInvoiceTypeForPdf ?? "partial") as InvoiceType,
+          alreadyInvoicedInclVat: priorOtherSumLocal,
+          invoiceAmountInclVat: Number(loadedInvoiceForPdf.amount_incl_vat),
+          projectTotalInclVat: totalsLocal.totalInclVat,
+        })
+      : false;
+
+    if (loadedInvoiceForPdf && !showFullSpecPdf) {
       const typeLabel =
         invoiceTypeLabels[loadedInvoiceTypeForPdf as InvoiceType] ||
         String(loadedInvoiceTypeForPdf || loadedInvoiceForPdf.invoice_type);
