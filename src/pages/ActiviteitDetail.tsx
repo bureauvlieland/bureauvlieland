@@ -16,6 +16,8 @@ import {
   formatPriceNote,
 } from "@/types/buildingBlock";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
+import { FaqSection } from "@/components/FaqSection";
+import { getActivityContent } from "@/content/activityContent";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
