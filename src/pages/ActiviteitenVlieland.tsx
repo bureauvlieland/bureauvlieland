@@ -341,6 +341,9 @@ const ActiviteitenVlieland = () => {
           </div>
         </section>
 
+        {/* Filterbaar overzicht op seizoen, duur en geschiktheid */}
+        <ActivityFilter />
+
         {/* Alle verdiepte activiteitenpagina's — directe interne links */}
         <SeeAlsoActivities
           title="Activiteiten in detail"
