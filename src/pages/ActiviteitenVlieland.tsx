@@ -81,12 +81,12 @@ const themas: Thema[] = [
       },
       {
         label: "Blokarten op het strand",
-        to: "/bouwstenen",
+        to: "/activiteit/blokarten",
         description: "Zeilen op wielen over het Vliehors-strand.",
       },
       {
         label: "Vuurtoren beklimmen",
-        to: "/bouwstenen",
+        to: "/activiteit/vuurtorenbezoek",
         description: "Honderden treden naar het hoogste punt van het eiland.",
       },
     ],
