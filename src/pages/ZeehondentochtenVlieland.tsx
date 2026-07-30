@@ -177,14 +177,15 @@ const ZeehondentochtenVlieland = () => {
         </section>
 
         <KeyFacts
-          summary="Een zeehondentocht op Vlieland is een begeleide boottocht van 2 tot 3 uur vanaf de haven van Oost-Vlieland naar de zandbanken in de Waddenzee, waar gewone en grijze zeehonden rusten. De vertrektijd volgt het getij (rond laag water). Richtprijs €25–€35 per volwassene; groepen vanaf circa 20 personen boeken een eigen afvaart."
+          summary="Een zeehondentocht op Vlieland is een begeleide boottocht van ongeveer 45 minuten vanaf de reddingbootsteiger in de jachthaven van Oost-Vlieland naar de zandbanken in de Waddenzee, waar gewone en grijze zeehonden rusten. De vertrektijd volgt het getij (rond laag water). De prijs is €32,50 per persoon; de tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart."
           facts={[
-            { icon: Clock, label: "Duur", value: "2 tot 3 uur" },
-            { icon: Euro, label: "Richtprijs", value: "€25–€35 p.p." },
-            { icon: CalendarDays, label: "Seizoen", value: "Hele jaar, piek juni–september" },
-            { icon: Users, label: "Voor wie", value: "Alle leeftijden, groepen vanaf ±20" },
+            { icon: Clock, label: "Duur", value: "Circa 45 minuten" },
+            { icon: Euro, label: "Prijs", value: "€32,50 p.p." },
+            { icon: CalendarDays, label: "Seizoen", value: "Voorjaar t/m najaar, piek juni–september" },
+            { icon: Users, label: "Groepsgrootte", value: "10 tot 40 personen" },
           ]}
         />
+
 
         {/* Intro + trust */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
