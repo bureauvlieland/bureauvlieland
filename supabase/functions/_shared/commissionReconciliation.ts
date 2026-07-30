@@ -168,7 +168,7 @@ export function basisAmountForBasis(
 /** Regels die nog gefactureerd moeten worden (commissie niet gefactureerd/betaald en niet commissievrij). */
 export function isBillableRow(row: ReconRow): boolean {
   if (row.commissionExempt) return false;
-  if (row.commissionStatus === "invoiced" || row.commissionStatus === "paid") return false;
+  if (row.commissionStatus && ["invoiced", "paid", "not_applicable"].includes(row.commissionStatus)) return false;
   return row.commissionPercentage > 0;
 }
 

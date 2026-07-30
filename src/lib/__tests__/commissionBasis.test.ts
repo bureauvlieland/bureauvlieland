@@ -120,3 +120,9 @@ describe("isBillableRow", () => {
     expect(isBillableRow(row({ commissionPercentage: 0 }))).toBe(false);
   });
 });
+
+describe("isBillableRow — commissiestatus not_applicable", () => {
+  it("sluit regels met status not_applicable uit", () => {
+    expect(isBillableRow(row({ commissionStatus: "not_applicable" }))).toBe(false);
+  });
+});
