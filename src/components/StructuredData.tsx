@@ -69,7 +69,13 @@ export const StructuredData = () => {
         "longitude": "5.0639"
       },
       "priceRange": "€€",
+      "founder": { "@type": "Person", "name": "Erwin Soolsma" },
+      "sameAs": [
+        "https://www.instagram.com/bureau_vlieland/",
+        "https://www.facebook.com/bureauvlieland/"
+      ],
       "areaServed": { "@type": "Place", "name": "Nederland" },
+
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": ratingValue,
