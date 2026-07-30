@@ -11,6 +11,7 @@ import {
   TemplateIds 
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { itemWasSentToPartner } from "../_shared/partnerWasApproached.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +26,13 @@ interface CancelRequest {
   reason?: string;
   cancelAccommodation?: boolean;
   origin?: string;
+  /**
+   * Wanneer false: partners worden NIET automatisch gemaild. De admin-flow
+   * gebruikt dit zodat de keuze in het bevestigingsvenster leidend is.
+   */
+  notify_partners?: boolean;
 }
+
 
 async function enrichProviderEmails(
   supabase: any,
