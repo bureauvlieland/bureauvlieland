@@ -195,8 +195,9 @@ const ZeehondentochtenVlieland = () => {
               Vlieland ligt midden in het Werelderfgoed Waddenzee — en op een steenworp afstand liggen de beroemde zandbanken (zoals de Richel) waar honderden zeehonden uitrusten. Tijdens een zeehondentocht vaar je vanaf de haven met een ervaren schipper het wad op, op zoek naar gewone en grijze zeehonden. Op afstand, met respect voor de dieren, maar zo dichtbij dat je ze prachtig kunt bekijken.
             </p>
             <p>
-              De tocht duurt 2 tot 3 uur en wordt afgestemd op het getij — bij laag water zijn de zandplaten droog en liggen de zeehonden eropuit te rusten. Tussendoor vertelt de schipper over het wad, de eilanden en hoe deze unieke zee werkt.
+              De vaartocht duurt ongeveer 45 minuten en wordt afgestemd op het getij — bij laag water zijn de zandplaten droog en liggen de zeehonden eropuit te rusten. Onderweg vertelt de schipper over het wad, de eilanden en hoe deze unieke zee werkt.
             </p>
+
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
