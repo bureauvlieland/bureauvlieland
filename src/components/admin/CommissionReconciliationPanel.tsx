@@ -428,68 +428,69 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
                             {row.invoiceNumber ? ` · factuur ${row.invoiceNumber}` : ""}
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">{euro(row.salesExclVat)}</TableCell>
+                        <TableCell className="text-right">{euro(row.purchaseExclVat)}</TableCell>
+                        <TableCell
+                          className={`text-right ${
+                            row.differenceExclVat && Math.abs(row.differenceExclVat) > 0.005
+                              ? "text-orange-700 font-medium"
+                              : ""
+                          }`}
+                        >
+                          {euro(row.differenceExclVat)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {euro(row.commissionAtRisk)}
+                          <span className="text-xs text-muted-foreground block">
+                            {row.commissionPercentage}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {shortDate(row.executionDate ?? row.invoiceDate)}
+                          {row.ageDays !== null && row.ageDays !== undefined && (
+                            <span className="block text-xs">{row.ageDays} dgn</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {row.status === "missing_invoice" && row.itemId && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={billOnSales.isPending}
+                                onClick={() => billOnSales.mutate(row)}
+                              >
+                                <Euro className="h-3.5 w-3.5 mr-1" />
+                                Op verkoopwaarde
+                              </Button>
+                            )}
+                            {row.status === "unlinked_invoice" && row.invoiceId && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={markExempt.isPending}
+                                onClick={() => markExempt.mutate(row)}
+                              >
+                                <ShieldOff className="h-3.5 w-3.5 mr-1" />
+                                Commissievrij
+                              </Button>
+                            )}
+                            {row.projectId && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => navigate(`/admin/projecten/${row.projectId}`)}
+                              >
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }),
+                ])}
 
-                      <TableCell className="text-right">{euro(row.salesExclVat)}</TableCell>
-                      <TableCell className="text-right">{euro(row.purchaseExclVat)}</TableCell>
-                      <TableCell
-                        className={`text-right ${
-                          row.differenceExclVat && Math.abs(row.differenceExclVat) > 0.005
-                            ? "text-orange-700 font-medium"
-                            : ""
-                        }`}
-                      >
-                        {euro(row.differenceExclVat)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {euro(row.commissionAtRisk)}
-                        <span className="text-xs text-muted-foreground block">
-                          {row.commissionPercentage}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {shortDate(row.executionDate ?? row.invoiceDate)}
-                        {row.ageDays !== null && row.ageDays !== undefined && (
-                          <span className="block text-xs">{row.ageDays} dgn</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {row.status === "missing_invoice" && row.itemId && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={billOnSales.isPending}
-                              onClick={() => billOnSales.mutate(row)}
-                            >
-                              <Euro className="h-3.5 w-3.5 mr-1" />
-                              Op verkoopwaarde
-                            </Button>
-                          )}
-                          {row.status === "unlinked_invoice" && row.invoiceId && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={markExempt.isPending}
-                              onClick={() => markExempt.mutate(row)}
-                            >
-                              <ShieldOff className="h-3.5 w-3.5 mr-1" />
-                              Commissievrij
-                            </Button>
-                          )}
-                          {row.projectId && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => navigate(`/admin/projecten/${row.projectId}`)}
-                            >
-                              <ArrowUpRight className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
               </TableBody>
             </Table>
           )}
