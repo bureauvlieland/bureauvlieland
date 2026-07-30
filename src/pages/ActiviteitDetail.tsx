@@ -19,6 +19,7 @@ import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
 import { FaqSection } from "@/components/FaqSection";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { getActivityContent } from "@/content/activityContent";
+import { buildFallbackFaq } from "@/lib/activityFallbackFaq";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
