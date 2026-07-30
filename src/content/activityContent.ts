@@ -34,9 +34,10 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     practical: [
       { label: "Duur", value: "Circa 45 minuten varen" },
-      { label: "Vertrekpunt", value: "Haven Oost-Vlieland" },
+      { label: "Vertrekpunt", value: "Reddingbootsteiger, jachthaven Oost-Vlieland" },
+      { label: "Prijs", value: "€32,50 p.p. — hele boot exclusief €425" },
+      { label: "Groepsgrootte", value: "10 tot 40 personen" },
       { label: "Seizoen", value: "Voorjaar t/m najaar; afhankelijk van getij" },
-      { label: "Geschikt voor", value: "Alle leeftijden, ook minder mobiele deelnemers" },
       { label: "Weersafhankelijk", value: "Ja — bij harde wind kan de tocht vervallen" },
     ],
     goodToKnow: [
