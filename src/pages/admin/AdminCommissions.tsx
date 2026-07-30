@@ -404,8 +404,13 @@ export default function AdminCommissions() {
           </div>
         </div>
 
+        {viewMode === "match" ? (
+          <CommissionReconciliationPanel partnerId={partnerFilter} />
+        ) : (
+        <>
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
           {isExpectedView ? (
             <>
               <Card>
