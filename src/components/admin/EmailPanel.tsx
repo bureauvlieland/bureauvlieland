@@ -434,24 +434,49 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
 
   const activeGroup = groups.find((g) => g.key === activeKey) || null;
 
-  const stripPrefix = (id: string) => id.replace(/^[cl]:/, "");
+  const stripPrefix = stripSourcePrefix;
 
-  const markAnswered = async (item: EmailItem) => {
+  const invalidate = useCallback(() => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+  }, [refetch, queryClient]);
+
+  const setAnswered = async (item: EmailItem, answered: boolean) => {
     if (item.source !== "communication") return;
     const { error } = await supabase
       .from("project_communications")
-      .update({ answered_at: new Date().toISOString() })
+      .update({ answered_at: answered ? new Date().toISOString() : null })
       .eq("id", stripPrefix(item.id));
-    if (error) toast.error("Kon niet markeren als beantwoord");
+    if (error) toast.error("Kon status niet bijwerken");
     else {
-      queryClient.invalidateQueries({ queryKey: ["admin-email-threads"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+      toast.success(answered ? "Gemarkeerd als beantwoord" : "Gemarkeerd als onbeantwoord");
+      invalidate();
+    }
+  };
+
+  const markAnswered = (item: EmailItem) => setAnswered(item, true);
+
+  /** Markeer/ontmarkeer alle inkomende berichten van een gesprek. */
+  const setThreadAnswered = async (group: ThreadGroup, answered: boolean) => {
+    const ids = group.items
+      .filter((e) => e.source === "communication" && e.origin === "inbound")
+      .filter((e) => (answered ? !e.answered_at : !!e.answered_at))
+      .map((e) => stripPrefix(e.id));
+    if (!ids.length) return;
+    const { error } = await supabase
+      .from("project_communications")
+      .update({ answered_at: answered ? new Date().toISOString() : null })
+      .in("id", ids);
+    if (error) toast.error("Kon status niet bijwerken");
+    else {
+      toast.success(answered ? "Gesprek gemarkeerd als beantwoord" : "Gesprek gemarkeerd als onbeantwoord");
+      invalidate();
     }
   };
 
   const archiveItem = async (item: EmailItem, archived = true) => {
     if (item.source !== "communication") {
-      toast.info("Automatische mails worden meegearchiveerd met het project.");
+      toast.info("Automatische mails kun je niet los archiveren.");
       return;
     }
     const { error } = await supabase
@@ -461,38 +486,45 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     if (error) toast.error("Archiveren mislukt");
     else {
       toast.success(archived ? "E-mail gearchiveerd" : "E-mail teruggehaald");
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+      invalidate();
     }
   };
 
+  /**
+   * Archiveert uitsluitend het gesprek (de berichten). Het dossier blijft
+   * actief in Projecten — dat archiveren gebeurt via archiveDossier().
+   */
   const archiveThread = async (group: ThreadGroup, archived = true) => {
-    if (group.kind === "program" && group.id) {
-      const { error } = await supabase
-        .from("program_requests")
-        .update({ archived_at: archived ? new Date().toISOString() : null })
-        .eq("id", group.id);
-      if (error) return toast.error("Archiveren mislukt");
-    } else if (group.kind === "accommodation" && group.id) {
-      const { error } = await supabase
-        .from("accommodation_requests")
-        .update({ archived_at: archived ? new Date().toISOString() : null })
-        .eq("id", group.id);
-      if (error) return toast.error("Archiveren mislukt");
-    } else {
-      const ids = group.items.filter((e) => e.source === "communication").map((e) => stripPrefix(e.id));
-      if (ids.length) {
-        const { error } = await supabase
-          .from("project_communications")
-          .update({ archived_at: archived ? new Date().toISOString() : null })
-          .in("id", ids);
-        if (error) return toast.error("Archiveren mislukt");
-      }
+    const plan = planThreadArchive(group.items, archived);
+    if (plan.noop) {
+      toast.info("Dit gesprek bestaat alleen uit automatische mails en kan niet gearchiveerd worden.");
+      return;
     }
-    toast.success(archived ? "Conversatie gearchiveerd" : "Conversatie teruggehaald");
+    if (plan.ids.length) {
+      const { error } = await supabase
+        .from("project_communications")
+        .update({ archived_at: plan.archivedAt })
+        .in("id", plan.ids);
+      if (error) return toast.error("Archiveren mislukt");
+    }
+    toast.success(archived ? "Gesprek gearchiveerd" : "Gesprek teruggehaald");
     if (archived) setActiveKey(null);
-    refetch();
-    queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+    invalidate();
+  };
+
+  /** Zware actie: archiveert het volledige dossier (project/logies). */
+  const archiveDossier = async (group: ThreadGroup, archived = true) => {
+    if (!group.id || group.kind === "contact") return;
+    const table = group.kind === "program" ? "program_requests" : "accommodation_requests";
+    const { error } = await supabase
+      .from(table)
+      .update({ archived_at: archived ? new Date().toISOString() : null })
+      .eq("id", group.id);
+    if (error) return toast.error("Archiveren van het dossier mislukt");
+    toast.success(archived ? "Dossier gearchiveerd" : "Dossier teruggehaald");
+    if (archived) setActiveKey(null);
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ["projects-overview"] });
   };
 
   const openReply = (group: ThreadGroup, lastInbound?: EmailItem) => {
@@ -515,6 +547,86 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     });
     setReplyOpen(true);
   };
+
+  const replyToGroup = (group: ThreadGroup) => {
+    const lastInbound = [...group.items].reverse().find((e) => e.origin === "inbound");
+    openReply(group, lastInbound);
+  };
+
+  // ---- Sneltoetsen (Outlook-stijl) ----
+  useEffect(() => {
+    const handler = (ev: KeyboardEvent) => {
+      if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      const el = ev.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      if (replyOpen || shortcutsOpen) {
+        if (ev.key === "?") setShortcutsOpen(true);
+        return;
+      }
+
+      const idx = groups.findIndex((g) => g.key === activeKey);
+      const move = (delta: number) => {
+        if (!groups.length) return;
+        const next = idx < 0 ? 0 : Math.min(groups.length - 1, Math.max(0, idx + delta));
+        setActiveKey(groups[next].key);
+      };
+
+      switch (ev.key) {
+        case "j":
+        case "ArrowDown":
+          ev.preventDefault();
+          move(1);
+          break;
+        case "k":
+        case "ArrowUp":
+          ev.preventDefault();
+          move(-1);
+          break;
+        case "Enter":
+          if (idx < 0 && groups.length) setActiveKey(groups[0].key);
+          break;
+        case "Escape":
+          setActiveKey(null);
+          break;
+        case "r":
+          if (activeGroup) {
+            ev.preventDefault();
+            replyToGroup(activeGroup);
+          }
+          break;
+        case "e":
+          if (activeGroup) {
+            ev.preventDefault();
+            archiveThread(activeGroup, !activeGroup.threadArchived);
+          }
+          break;
+        case "m":
+          if (activeGroup) {
+            ev.preventDefault();
+            setThreadAnswered(activeGroup, true);
+          }
+          break;
+        case "u":
+          if (activeGroup) {
+            ev.preventDefault();
+            setThreadAnswered(activeGroup, false);
+          }
+          break;
+        case "a":
+          ev.preventDefault();
+          setShowArchived((v) => !v);
+          break;
+        case "?":
+          setShortcutsOpen(true);
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, activeKey, activeGroup, replyOpen, shortcutsOpen]);
 
   const filterChips: { key: ExtendedOrigin; label: string; count?: number }[] = [
     { key: "all", label: "Alles" },
