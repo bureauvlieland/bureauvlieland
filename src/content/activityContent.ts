@@ -59,7 +59,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Kan de zeehondentocht met een grote groep?",
         answer:
-          "Ja. Afhankelijk van het schip varen groepen tot enkele tientallen personen mee; grotere gezelschappen splitsen we over twee vaarten. Wij stemmen dat af met de rederij en verwerken het in uw programma.",
+          "De tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart. Een exclusieve afvaart met de hele boot kost €425. Grotere gezelschappen splitsen we over twee vaarten; wij stemmen dat af en verwerken het in uw programma.",
       },
       {
         question: "Wat gebeurt er bij slecht weer?",
