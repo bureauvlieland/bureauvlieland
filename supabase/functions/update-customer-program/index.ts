@@ -753,11 +753,19 @@ Deno.serve(async (req) => {
       if (item.provider_email && item.block_type !== "self_arranged") {
         const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
 
+        const cancelSelectedDates = ((program.selected_dates as string[]) || [])
+          .map((d) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
+          .join(", ");
+
         const template = await getRenderedTemplate(TemplateIds.ITEM_CANCELLED_PARTNER, {
           partner_name: sanitizeHtml(item.provider_name),
           customer_name: customerLabel,
           block_name: sanitizeHtml(item.block_name),
+          selected_dates: cancelSelectedDates,
+          reference_number: sanitizeHtml(program.reference_number || ""),
+          cancellation_reason: "Geannuleerd door de klant via het klantportaal.",
         });
+
 
         const emailSubject = template?.subject || `Annulering - ${customerLabel}`;
         const emailBody = template?.body || `
