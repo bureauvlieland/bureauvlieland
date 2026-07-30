@@ -299,7 +299,7 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="gap-2 bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
-                  <Link to="/contact">
+                  <Link to="/programma-op-maat">
                     Maatwerk aanvragen
                   </Link>
                 </Button>
