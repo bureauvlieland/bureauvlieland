@@ -209,6 +209,12 @@ export const PartnerCancellationNotifyDialog = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">{p.name}</span>
+                            {p.approach_status === "responded" && (
+                              <Badge variant="secondary">heeft geoffreerd</Badge>
+                            )}
+                            {p.approach_status === "sent" && (
+                              <Badge variant="outline">aanvraag verstuurd</Badge>
+                            )}
                             {disabled && (
                               <Badge variant="destructive" className="gap-1">
                                 <AlertTriangle className="h-3 w-3" /> geen e-mail
@@ -216,6 +222,7 @@ export const PartnerCancellationNotifyDialog = ({
                             )}
                           </div>
                           {p.email && (
+
                             <div className="text-xs text-muted-foreground">{p.email}</div>
                           )}
                           <div className="text-xs text-muted-foreground mt-0.5">
