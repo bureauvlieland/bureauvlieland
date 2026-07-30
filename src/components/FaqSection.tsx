@@ -72,7 +72,7 @@ export const FaqSection = ({
       const el = document.getElementById(elementId);
       if (el) el.remove();
     };
-  }, [items, schemaId]);
+  }, [items, schemaId, pageUrl, title]);
 
   if (!items || items.length === 0) return null;
 

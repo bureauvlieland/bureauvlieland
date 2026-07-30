@@ -358,6 +358,7 @@ const ActiviteitDetail = () => {
             title={`Veelgestelde vragen over ${block.name.toLowerCase()}`}
             items={faqItems}
             schemaId={`activiteit-${block.slug ?? block.id}`}
+            pageUrl={seo.url}
           />
         )}
 
