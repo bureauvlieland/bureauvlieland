@@ -139,6 +139,8 @@ const App = () => {
         <BrowserRouter>
         <CartProvider>
           <ScrollToTop />
+          <SiteStructuredData />
+
           <PreSalesChatWidget />
           <Suspense fallback={null}>
           <Routes>
