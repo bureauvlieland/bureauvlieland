@@ -293,9 +293,10 @@ const ZeehondentochtenVlieland = () => {
               Reserveer een individuele plek of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep.
             </p>
             <p className="text-foreground mb-6">
-              <strong>Volwassenen vanaf ±€25</strong>{" "}
-              <span className="text-muted-foreground">(richtprijs €25–€35; kinderen met korting)</span>
+              <strong>€32,50 per persoon</strong>{" "}
+              <span className="text-muted-foreground">(exclusieve afvaart met de hele boot: €425 totaal)</span>
             </p>
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
