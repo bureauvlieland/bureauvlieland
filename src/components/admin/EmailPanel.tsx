@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow, format, isSameDay } from "date-fns";
@@ -9,6 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
   Mail,
@@ -23,8 +29,25 @@ import {
   Bot,
   User,
   Inbox,
+  MoreVertical,
+  Keyboard,
+  CalendarDays,
+  RotateCcw,
 } from "lucide-react";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
+import { EmailShortcutsDialog } from "@/components/admin/EmailShortcutsDialog";
+import {
+  isThreadArchived,
+  planThreadArchive,
+  stripSourcePrefix,
+} from "@/lib/emailThreadArchive";
+import {
+  getDerivedStatus,
+  DERIVED_STATUS_LABEL,
+  DERIVED_STATUS_TONE,
+  isPastDate,
+  type DerivedStatus,
+} from "@/lib/projectStatus";
 
 type Origin = "inbound" | "manual" | "automatic";
 
@@ -49,6 +72,10 @@ interface EmailItem {
   accommodation_archived?: string | null;
   email_type?: string | null;
   status?: string | null;
+  /** afgeleide projectstatus van het gekoppelde dossier */
+  project_status?: DerivedStatus | null;
+  /** eerste programma-/aankomstdatum van het dossier (ISO) */
+  project_date?: string | null;
 }
 
 interface ThreadGroup {
@@ -65,6 +92,9 @@ interface ThreadGroup {
   automaticCount: number;
   lastAt: string;
   projectArchived: boolean;
+  threadArchived: boolean;
+  projectStatus: DerivedStatus | null;
+  projectDate: string | null;
 }
 
 const ORIGIN_LABEL: Record<Origin, string> = {
@@ -85,11 +115,13 @@ function stripHtml(html: string): string {
   return noTags.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
 }
 
-async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
+async function fetchEmails(): Promise<EmailItem[]> {
   const sinceIso = new Date(Date.now() - 90 * 86400000).toISOString();
 
   // 1) project_communications: alle e-mail types
-  let commQuery = supabase
+  // 1) project_communications: alle e-mail types (incl. gearchiveerde, zodat we
+  //    per gesprek kunnen bepalen of het volledig gearchiveerd is)
+  const commQuery = supabase
     .from("project_communications")
     .select(
       `id, subject, content, contact_name, contact_email, communication_date, direction, communication_type,
@@ -100,8 +132,7 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
     .in("communication_type", ["email", "email_in", "email_out"])
     .gte("communication_date", sinceIso)
     .order("communication_date", { ascending: false })
-    .limit(500);
-  if (!showArchived) commQuery = commQuery.is("archived_at", null);
+    .limit(800);
 
   // 2) email_log: alleen succesvol verzonden + met project-koppeling
   const logQuery = supabase
@@ -194,7 +225,81 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
       };
     });
 
-  return [...commItems, ...logItems];
+  const all = [...commItems, ...logItems];
+
+  // Projectstatus (zelfde afleiding als het projectenoverzicht) toevoegen
+  const allProgIds = Array.from(new Set(all.map((e) => e.request_id).filter(Boolean))) as string[];
+  const allAccIds = Array.from(new Set(all.map((e) => e.accommodation_id).filter(Boolean))) as string[];
+
+  const [progMetaRes, accMetaRes] = await Promise.all([
+    allProgIds.length
+      ? supabase
+          .from("program_requests")
+          .select("id, status, quote_status, completion_status, terms_accepted_at, selected_dates, linked_accommodation_id")
+          .in("id", allProgIds)
+      : Promise.resolve({ data: [] as any[] }),
+    allAccIds.length
+      ? supabase
+          .from("accommodation_requests")
+          .select("id, status, arrival_date, linked_program_id")
+          .in("id", allAccIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const progMeta = new Map<string, any>((progMetaRes.data ?? []).map((p: any) => [p.id, p]));
+  const accMeta = new Map<string, any>((accMetaRes.data ?? []).map((a: any) => [a.id, a]));
+
+  // Voor logies-gesprekken willen we ook de status van het gekoppelde programma
+  const extraProgIds = Array.from(
+    new Set(
+      (accMetaRes.data ?? [])
+        .map((a: any) => a.linked_program_id)
+        .filter((id: string | null) => id && !progMeta.has(id)),
+    ),
+  ) as string[];
+  if (extraProgIds.length) {
+    const { data: extra } = await supabase
+      .from("program_requests")
+      .select("id, status, quote_status, completion_status, terms_accepted_at, selected_dates, linked_accommodation_id")
+      .in("id", extraProgIds);
+    (extra ?? []).forEach((p: any) => progMeta.set(p.id, p));
+  }
+
+  const firstSelectedDate = (selected: unknown): string | null => {
+    if (!Array.isArray(selected) || selected.length === 0) return null;
+    const dates = selected.map(String).filter(Boolean).sort();
+    return dates[0] ?? null;
+  };
+
+  for (const e of all) {
+    if (e.request_id) {
+      const prog = progMeta.get(e.request_id);
+      if (!prog) continue;
+      const acc = prog.linked_accommodation_id ? accMeta.get(prog.linked_accommodation_id) : null;
+      e.project_status = getDerivedStatus({
+        program_status: prog.status ?? null,
+        accommodation_status: acc?.status ?? null,
+        completion_status: prog.completion_status ?? null,
+        terms_accepted_at: prog.terms_accepted_at ?? null,
+        quote_status: prog.quote_status ?? null,
+      });
+      e.project_date = firstSelectedDate(prog.selected_dates) ?? acc?.arrival_date ?? null;
+    } else if (e.accommodation_id) {
+      const acc = accMeta.get(e.accommodation_id);
+      if (!acc) continue;
+      const prog = acc.linked_program_id ? progMeta.get(acc.linked_program_id) : null;
+      e.project_status = getDerivedStatus({
+        program_status: prog?.status ?? null,
+        accommodation_status: acc.status ?? null,
+        completion_status: prog?.completion_status ?? null,
+        terms_accepted_at: prog?.terms_accepted_at ?? null,
+        quote_status: prog?.quote_status ?? null,
+      });
+      e.project_date = acc.arrival_date ?? firstSelectedDate(prog?.selected_dates) ?? null;
+    }
+  }
+
+  return all;
 }
 
 function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all" | "unanswered"): ThreadGroup[] {
@@ -239,6 +344,8 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
       else if (e.origin === "manual") g.manualCount += 1;
       else g.automaticCount += 1;
       if (e.date > g.lastAt) g.lastAt = e.date;
+      if (!g.projectStatus && e.project_status) g.projectStatus = e.project_status;
+      if (!g.projectDate && e.project_date) g.projectDate = e.project_date;
     } else {
       groups.set(key, {
         key,
@@ -254,16 +361,26 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
         automaticCount: e.origin === "automatic" ? 1 : 0,
         lastAt: e.date,
         projectArchived,
+        threadArchived: false,
+        projectStatus: e.project_status ?? null,
+        projectDate: e.project_date ?? null,
       });
     }
   }
 
   return Array.from(groups.values())
-    .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .map((g) => ({
       ...g,
+      threadArchived: isThreadArchived(g.items),
       items: g.items.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")),
     }))
+    .filter((g) => (showArchived ? true : !g.threadArchived))
+    .map((g) => ({
+      ...g,
+      items: showArchived ? g.items : g.items.filter((e) => !e.archived_at),
+    }))
+    .filter((g) => g.items.length > 0)
+    .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .sort((a, b) => {
       if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1;
       return (b.lastAt || "").localeCompare(a.lastAt || "");
@@ -286,6 +403,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     initialFilter === "unanswered" ? "unanswered" : "all",
   );
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyContext, setReplyContext] = useState<{
     requestId?: string;
@@ -295,8 +413,8 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
   } | null>(null);
 
   const { data: items = [], isLoading, refetch } = useQuery({
-    queryKey: ["admin-email-threads", showArchived],
-    queryFn: () => fetchEmails(showArchived),
+    queryKey: ["admin-email-threads"],
+    queryFn: () => fetchEmails(),
     refetchInterval: 60_000,
   });
 
@@ -317,24 +435,49 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
 
   const activeGroup = groups.find((g) => g.key === activeKey) || null;
 
-  const stripPrefix = (id: string) => id.replace(/^[cl]:/, "");
+  const stripPrefix = stripSourcePrefix;
 
-  const markAnswered = async (item: EmailItem) => {
+  const invalidate = useCallback(() => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+  }, [refetch, queryClient]);
+
+  const setAnswered = async (item: EmailItem, answered: boolean) => {
     if (item.source !== "communication") return;
     const { error } = await supabase
       .from("project_communications")
-      .update({ answered_at: new Date().toISOString() })
+      .update({ answered_at: answered ? new Date().toISOString() : null })
       .eq("id", stripPrefix(item.id));
-    if (error) toast.error("Kon niet markeren als beantwoord");
+    if (error) toast.error("Kon status niet bijwerken");
     else {
-      queryClient.invalidateQueries({ queryKey: ["admin-email-threads"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+      toast.success(answered ? "Gemarkeerd als beantwoord" : "Gemarkeerd als onbeantwoord");
+      invalidate();
+    }
+  };
+
+  const markAnswered = (item: EmailItem) => setAnswered(item, true);
+
+  /** Markeer/ontmarkeer alle inkomende berichten van een gesprek. */
+  const setThreadAnswered = async (group: ThreadGroup, answered: boolean) => {
+    const ids = group.items
+      .filter((e) => e.source === "communication" && e.origin === "inbound")
+      .filter((e) => (answered ? !e.answered_at : !!e.answered_at))
+      .map((e) => stripPrefix(e.id));
+    if (!ids.length) return;
+    const { error } = await supabase
+      .from("project_communications")
+      .update({ answered_at: answered ? new Date().toISOString() : null })
+      .in("id", ids);
+    if (error) toast.error("Kon status niet bijwerken");
+    else {
+      toast.success(answered ? "Gesprek gemarkeerd als beantwoord" : "Gesprek gemarkeerd als onbeantwoord");
+      invalidate();
     }
   };
 
   const archiveItem = async (item: EmailItem, archived = true) => {
     if (item.source !== "communication") {
-      toast.info("Automatische mails worden meegearchiveerd met het project.");
+      toast.info("Automatische mails kun je niet los archiveren.");
       return;
     }
     const { error } = await supabase
@@ -344,38 +487,45 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     if (error) toast.error("Archiveren mislukt");
     else {
       toast.success(archived ? "E-mail gearchiveerd" : "E-mail teruggehaald");
-      refetch();
-      queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+      invalidate();
     }
   };
 
+  /**
+   * Archiveert uitsluitend het gesprek (de berichten). Het dossier blijft
+   * actief in Projecten — dat archiveren gebeurt via archiveDossier().
+   */
   const archiveThread = async (group: ThreadGroup, archived = true) => {
-    if (group.kind === "program" && group.id) {
-      const { error } = await supabase
-        .from("program_requests")
-        .update({ archived_at: archived ? new Date().toISOString() : null })
-        .eq("id", group.id);
-      if (error) return toast.error("Archiveren mislukt");
-    } else if (group.kind === "accommodation" && group.id) {
-      const { error } = await supabase
-        .from("accommodation_requests")
-        .update({ archived_at: archived ? new Date().toISOString() : null })
-        .eq("id", group.id);
-      if (error) return toast.error("Archiveren mislukt");
-    } else {
-      const ids = group.items.filter((e) => e.source === "communication").map((e) => stripPrefix(e.id));
-      if (ids.length) {
-        const { error } = await supabase
-          .from("project_communications")
-          .update({ archived_at: archived ? new Date().toISOString() : null })
-          .in("id", ids);
-        if (error) return toast.error("Archiveren mislukt");
-      }
+    const plan = planThreadArchive(group.items, archived);
+    if (plan.noop) {
+      toast.info("Dit gesprek bestaat alleen uit automatische mails en kan niet gearchiveerd worden.");
+      return;
     }
-    toast.success(archived ? "Conversatie gearchiveerd" : "Conversatie teruggehaald");
+    if (plan.ids.length) {
+      const { error } = await supabase
+        .from("project_communications")
+        .update({ archived_at: plan.archivedAt })
+        .in("id", plan.ids);
+      if (error) return toast.error("Archiveren mislukt");
+    }
+    toast.success(archived ? "Gesprek gearchiveerd" : "Gesprek teruggehaald");
     if (archived) setActiveKey(null);
-    refetch();
-    queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+    invalidate();
+  };
+
+  /** Zware actie: archiveert het volledige dossier (project/logies). */
+  const archiveDossier = async (group: ThreadGroup, archived = true) => {
+    if (!group.id || group.kind === "contact") return;
+    const table = group.kind === "program" ? "program_requests" : "accommodation_requests";
+    const { error } = await supabase
+      .from(table)
+      .update({ archived_at: archived ? new Date().toISOString() : null })
+      .eq("id", group.id);
+    if (error) return toast.error("Archiveren van het dossier mislukt");
+    toast.success(archived ? "Dossier gearchiveerd" : "Dossier teruggehaald");
+    if (archived) setActiveKey(null);
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ["projects-overview"] });
   };
 
   const openReply = (group: ThreadGroup, lastInbound?: EmailItem) => {
@@ -399,6 +549,86 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     setReplyOpen(true);
   };
 
+  const replyToGroup = (group: ThreadGroup) => {
+    const lastInbound = [...group.items].reverse().find((e) => e.origin === "inbound");
+    openReply(group, lastInbound);
+  };
+
+  // ---- Sneltoetsen (Outlook-stijl) ----
+  useEffect(() => {
+    const handler = (ev: KeyboardEvent) => {
+      if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      const el = ev.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      if (replyOpen || shortcutsOpen) {
+        if (ev.key === "?") setShortcutsOpen(true);
+        return;
+      }
+
+      const idx = groups.findIndex((g) => g.key === activeKey);
+      const move = (delta: number) => {
+        if (!groups.length) return;
+        const next = idx < 0 ? 0 : Math.min(groups.length - 1, Math.max(0, idx + delta));
+        setActiveKey(groups[next].key);
+      };
+
+      switch (ev.key) {
+        case "j":
+        case "ArrowDown":
+          ev.preventDefault();
+          move(1);
+          break;
+        case "k":
+        case "ArrowUp":
+          ev.preventDefault();
+          move(-1);
+          break;
+        case "Enter":
+          if (idx < 0 && groups.length) setActiveKey(groups[0].key);
+          break;
+        case "Escape":
+          setActiveKey(null);
+          break;
+        case "r":
+          if (activeGroup) {
+            ev.preventDefault();
+            replyToGroup(activeGroup);
+          }
+          break;
+        case "e":
+          if (activeGroup) {
+            ev.preventDefault();
+            archiveThread(activeGroup, !activeGroup.threadArchived);
+          }
+          break;
+        case "m":
+          if (activeGroup) {
+            ev.preventDefault();
+            setThreadAnswered(activeGroup, true);
+          }
+          break;
+        case "u":
+          if (activeGroup) {
+            ev.preventDefault();
+            setThreadAnswered(activeGroup, false);
+          }
+          break;
+        case "a":
+          ev.preventDefault();
+          setShowArchived((v) => !v);
+          break;
+        case "?":
+          setShortcutsOpen(true);
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, activeKey, activeGroup, replyOpen, shortcutsOpen]);
+
   const filterChips: { key: ExtendedOrigin; label: string; count?: number }[] = [
     { key: "all", label: "Alles" },
     { key: "unanswered", label: "Onbeantwoord", count: unansweredGroupCount },
@@ -419,7 +649,18 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
         <div className="p-3 border-b space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">E-mailgesprekken</h2>
-            <Badge variant="outline" className="text-xs">{groups.length}</Badge>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs">{groups.length}</Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Sneltoetsen (?)"
+                onClick={() => setShortcutsOpen(true)}
+              >
+                <Keyboard className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1">
             {filterChips.map((c) => (
@@ -503,6 +744,36 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                   <p className={cn("text-xs text-slate-700 truncate", g.unread > 0 && "font-medium")}>
                     {last?.subject || "(geen onderwerp)"}
                   </p>
+                  {(g.projectStatus || g.projectDate || g.threadArchived) && (
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {g.projectStatus && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                            DERIVED_STATUS_TONE[g.projectStatus],
+                          )}
+                        >
+                          {DERIVED_STATUS_LABEL[g.projectStatus]}
+                        </span>
+                      )}
+                      {g.projectDate && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 text-[10px]",
+                            isPastDate(new Date(g.projectDate)) ? "text-red-600 font-medium" : "text-slate-500",
+                          )}
+                        >
+                          <CalendarDays className="h-3 w-3" />
+                          {format(new Date(g.projectDate), "d MMM yyyy", { locale: nl })}
+                        </span>
+                      )}
+                      {g.threadArchived && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+                          <Archive className="h-3 w-3" /> gearchiveerd
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-2 mt-0.5">
                     <p className="text-[11px] text-slate-500 truncate flex-1">
                       {formatDistanceToNow(new Date(g.lastAt), { addSuffix: true, locale: nl })}
@@ -543,10 +814,34 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                 </Button>
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{activeGroup.label}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {activeGroup.items.length} bericht{activeGroup.items.length === 1 ? "" : "en"}
-                    {activeGroup.projectArchived && " · gearchiveerd dossier"}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                    <span>
+                      {activeGroup.items.length} bericht{activeGroup.items.length === 1 ? "" : "en"}
+                    </span>
+                    {activeGroup.projectStatus && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          DERIVED_STATUS_TONE[activeGroup.projectStatus],
+                        )}
+                      >
+                        {DERIVED_STATUS_LABEL[activeGroup.projectStatus]}
+                      </span>
+                    )}
+                    {activeGroup.projectDate && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1",
+                          isPastDate(new Date(activeGroup.projectDate)) ? "text-red-600 font-medium" : "",
+                        )}
+                      >
+                        <CalendarDays className="h-3 w-3" />
+                        {format(new Date(activeGroup.projectDate), "d MMM yyyy", { locale: nl })}
+                      </span>
+                    )}
+                    {activeGroup.threadArchived && <span>· gearchiveerd gesprek</span>}
+                    {activeGroup.projectArchived && <span>· gearchiveerd dossier</span>}
+                  </div>
                 </div>
                 {activeGroup.kind === "program" && activeGroup.id && (
                   <Button
@@ -568,16 +863,10 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const lastInbound = [...activeGroup.items].reverse().find((e) => e.origin === "inbound");
-                    openReply(activeGroup, lastInbound);
-                  }}
-                >
+                <Button size="sm" onClick={() => replyToGroup(activeGroup)}>
                   <Reply className="h-4 w-4 mr-1" /> Beantwoorden
                 </Button>
-                {activeGroup.projectArchived || activeGroup.kind === "contact" ? (
+                {activeGroup.threadArchived ? (
                   <Button variant="ghost" size="sm" onClick={() => archiveThread(activeGroup, false)}>
                     <ArchiveRestore className="h-4 w-4 mr-1" /> Uit archief
                   </Button>
@@ -586,6 +875,38 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                     <Archive className="h-4 w-4 mr-1" /> Archiveer
                   </Button>
                 )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuItem onClick={() => setThreadAnswered(activeGroup, true)}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Markeer gesprek als beantwoord
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setThreadAnswered(activeGroup, false)}>
+                      <RotateCcw className="h-4 w-4 mr-2" /> Markeer als onbeantwoord
+                    </DropdownMenuItem>
+                    {activeGroup.kind !== "contact" && activeGroup.id && (
+                      activeGroup.projectArchived ? (
+                        <DropdownMenuItem onClick={() => archiveDossier(activeGroup, false)}>
+                          <ArchiveRestore className="h-4 w-4 mr-2" /> Dossier terughalen uit archief
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className="text-amber-700"
+                          onClick={() => archiveDossier(activeGroup, true)}
+                        >
+                          <Archive className="h-4 w-4 mr-2" /> Ook het hele dossier archiveren
+                        </DropdownMenuItem>
+                      )
+                    )}
+                    <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
+                      <Keyboard className="h-4 w-4 mr-2" /> Sneltoetsen
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -688,6 +1009,8 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
           defaultSubject={replyContext.initialSubject}
         />
       )}
+
+      <EmailShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }
