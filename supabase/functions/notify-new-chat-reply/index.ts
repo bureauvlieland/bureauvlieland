@@ -165,13 +165,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Try DB template
+    // Try DB template — the template uses {{message_preview}} and {{chat_url}}
     const template = await getRenderedTemplate(TemplateIds.CHAT_REPLY_VISITOR, {
       visitor_name: recipientName,
       portal_link: portalLink,
+      chat_url: portalLink,
+      message_preview: messagePreview,
     });
 
     const finalSubject = template?.subject || emailSubject;
+    const previewBlock = messagePreview
+      ? `<tr><td style="padding-bottom:24px;">
+                <div style="border-left:3px solid #1e3a5f;padding:8px 16px;background:#f8f9fa;color:#333333;font-size:15px;line-height:23px;">${messagePreview}</div>
+              </td></tr>`
+      : "";
     const htmlBody = template?.body || `
       <!DOCTYPE html>
       <html>
@@ -181,11 +188,14 @@ Deno.serve(async (req) => {
             <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;">
               <tr><td style="font-size:16px;line-height:24px;color:#333333;">
                 <p style="margin:0 0 16px 0;">Hallo ${recipientName},</p>
-                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen van Bureau Vlieland.</p>
-                <p style="margin:0 0 24px 0;">Klik op de knop hieronder om het bericht te bekijken en te reageren.</p>
+                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen van Bureau Vlieland:</p>
               </td></tr>
-              <tr><td style="padding-bottom:32px;">
-                <a href="${portalLink}" style="display:inline-block;background-color:#1a5276;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Bekijk bericht →</a>
+              ${previewBlock}
+              <tr><td style="font-size:16px;line-height:24px;color:#333333;padding-bottom:8px;">
+                <p style="margin:0;">U kunt reageren via de chat of gewoon antwoorden op deze e-mail.</p>
+              </td></tr>
+              <tr><td style="padding:16px 0 32px 0;">
+                <a href="${portalLink}" style="display:inline-block;background-color:#1a5276;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Open de chat →</a>
               </td></tr>
               <tr><td style="font-size:13px;color:#999999;border-top:1px solid #eeeeee;padding-top:16px;">
                 <p style="margin:0;">Dit is een automatisch bericht van Bureau Vlieland.</p>
@@ -196,6 +206,7 @@ Deno.serve(async (req) => {
       </body>
       </html>
     `;
+
 
     // Send via Mailjet
     const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
