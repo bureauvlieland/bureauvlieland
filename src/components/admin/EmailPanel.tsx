@@ -403,6 +403,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     initialFilter === "unanswered" ? "unanswered" : "all",
   );
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyContext, setReplyContext] = useState<{
     requestId?: string;
