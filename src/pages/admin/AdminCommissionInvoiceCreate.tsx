@@ -212,7 +212,7 @@ export default function AdminCommissionInvoiceCreate() {
           .from("accommodation_quotes")
           .select(`
             id, accommodation_name, partner_id,
-            invoiced_amount, invoiced_number, invoiced_date, vat_rate, price_includes_vat,
+            invoiced_amount, invoiced_number, invoiced_date, vat_rate, price_includes_vat, price_total,
             commission_percentage, commission_amount, commission_status,
             accommodation_requests!inner(id, customer_name, customer_company, arrival_date, departure_date, reference_number)
           `)
