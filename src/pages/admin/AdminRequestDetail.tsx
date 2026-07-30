@@ -960,9 +960,12 @@ const AdminRequestDetail = () => {
       }
 
       if (activityPartners.length + accommodationPartners.length === 0) {
-        toast.info("Geen gekoppelde partners gevonden voor dit project.");
+        toast.info(
+          "Geen partners zijn benaderd voor dit project — er hoeft niemand geïnformeerd te worden.",
+        );
         return;
       }
+
 
       setCancelNotifyActivity(activityPartners);
       setCancelNotifyAccommodation(accommodationPartners);
