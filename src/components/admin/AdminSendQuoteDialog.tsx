@@ -25,6 +25,12 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  describeQuoteValidity,
+  firstProgramDate,
+  isQuoteValidUntilDateDisabled,
+  suggestQuoteValidUntil,
+} from "@/lib/quoteValidity";
 import { toast } from "sonner";
 
 interface AdminSendQuoteDialogProps {
@@ -58,9 +64,13 @@ export const AdminSendQuoteDialog = ({
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Standaard: één maand vóór aankomst (zie src/lib/quoteValidity.ts).
+  const validitySuggestion = suggestQuoteValidUntil({
+    arrivalDate: firstProgramDate(programDates),
+  });
   const defaultValidUntil = currentValidUntil
     ? new Date(currentValidUntil)
-    : addDays(new Date(), 14);
+    : validitySuggestion.date;
 
   const [validUntil, setValidUntil] = useState<Date>(defaultValidUntil);
   const [emailSubject, setEmailSubject] = useState("");
@@ -104,7 +114,7 @@ Bureau Vlieland`;
 
   const handleOpen = (open: boolean) => {
     if (open) {
-      setValidUntil(currentValidUntil ? new Date(currentValidUntil) : addDays(new Date(), 14));
+      setValidUntil(currentValidUntil ? new Date(currentValidUntil) : validitySuggestion.date);
       setIsEditing(false);
       loadTemplate();
     }
