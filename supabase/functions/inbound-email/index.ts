@@ -17,6 +17,18 @@ function extractReferenceNumber(toAddress: string): string | null {
 }
 
 /**
+ * Extract a chat conversation id from a Reply-To address like
+ * reply+chat-2741ccfb-4ad2-4ac8-8f41-b7b82e595cd4@reply.bureauvlieland.nl
+ */
+export function extractChatConversationId(toAddress: string): string | null {
+  const match = (toAddress || "").match(
+    /reply\+chat-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})@/i,
+  );
+  return match ? match[1].toLowerCase() : null;
+}
+
+/**
+
  * Detect if this email should be routed to the purchase invoice inbox.
  * Matches recipients like:
  *   - invoices@reply.bureauvlieland.nl
