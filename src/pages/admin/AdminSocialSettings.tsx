@@ -182,6 +182,8 @@ export default function AdminSocialSettings() {
           <CardContent className="space-y-2">
             {[
               { key: "building_blocks", label: "Nieuwe bouwstenen" },
+              { key: "program_templates", label: "Voorbeeldprogramma's (gepubliceerd)" },
+
               { key: "partners", label: "Nieuwe / bijgewerkte partners" },
               { key: "assets", label: "Projectfoto's (mediabank)" },
               { key: "partner_spotlight", label: "Partner in spotlight (rotatie)" },
