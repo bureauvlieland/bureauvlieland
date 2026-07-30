@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     if (sources.building_blocks) {
       const { data: blocks } = await supabase
         .from("building_blocks")
-        .select("id, name, description, image_url, provider_id, created_at")
+        .select("id, name, slug, description, image_url, provider_id, created_at")
         .eq("status", "published")
         .gte("created_at", fourteenDaysAgo)
         .limit(10);
@@ -102,12 +102,33 @@ Deno.serve(async (req) => {
         candidates.push({
           source_type: "building_block",
           source_id: b.id,
+          slug: (b as { slug?: string | null }).slug ?? null,
           summary: `Bouwsteen "${b.name}" (partner ${b.provider_id ?? "intern"}): ${b.description ?? ""}`.slice(0, 600),
           image_url: b.image_url ?? null,
           hint: "Vier een nieuwe bouwsteen in ons aanbod",
         });
       }
     }
+
+    if (sources.program_templates !== false) {
+      const { data: templates } = await supabase
+        .from("program_templates")
+        .select("id, name, short_description, description, image_url, duration_days, target_group")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .limit(10);
+      for (const t of templates ?? []) {
+        candidates.push({
+          source_type: "program_template",
+          source_id: t.id,
+          slug: t.id,
+          summary: `Voorbeeldprogramma "${t.name}" (${t.duration_days} dag(en), doelgroep ${t.target_group ?? "algemeen"}): ${t.short_description ?? t.description ?? ""}`.slice(0, 600),
+          image_url: t.image_url ?? null,
+          hint: "Laat de dagindeling spreken; geen verzonnen prijzen of datums",
+        });
+      }
+    }
+
 
     if (sources.assets) {
       const { data: assets } = await supabase
