@@ -12,6 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Link2 } from "lucide-react";
+import {
+  SOCIAL_PILLARS,
+  PILLAR_LABELS,
+  PILLAR_DESCRIPTIONS,
+  DEFAULT_PILLAR_ROUTES,
+  buildCtaUrl,
+} from "@/lib/socialCta";
+
 
 type Settings = {
   id?: string;
