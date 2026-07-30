@@ -107,6 +107,13 @@ const ActiviteitDetail = () => {
 
   const extra = getActivityContent(block?.slug ?? block?.id);
 
+  /** Redactionele FAQ als die er is, anders een feitelijke FAQ uit de databasevelden. */
+  const faqItems = useMemo(() => {
+    if (extra?.faq?.length) return extra.faq;
+    return block ? buildFallbackFaq(block) : [];
+  }, [extra, block]);
+
+
   const seo = useMemo(() => {
     if (!block) return null;
     const url = `https://bureauvlieland.nl/activiteit/${block.slug ?? block.id}`;
