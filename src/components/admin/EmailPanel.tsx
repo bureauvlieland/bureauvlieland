@@ -343,6 +343,8 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
       else if (e.origin === "manual") g.manualCount += 1;
       else g.automaticCount += 1;
       if (e.date > g.lastAt) g.lastAt = e.date;
+      if (!g.projectStatus && e.project_status) g.projectStatus = e.project_status;
+      if (!g.projectDate && e.project_date) g.projectDate = e.project_date;
     } else {
       groups.set(key, {
         key,
@@ -358,16 +360,26 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
         automaticCount: e.origin === "automatic" ? 1 : 0,
         lastAt: e.date,
         projectArchived,
+        threadArchived: false,
+        projectStatus: e.project_status ?? null,
+        projectDate: e.project_date ?? null,
       });
     }
   }
 
   return Array.from(groups.values())
-    .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .map((g) => ({
       ...g,
+      threadArchived: isThreadArchived(g.items),
       items: g.items.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")),
     }))
+    .filter((g) => (showArchived ? true : !g.threadArchived))
+    .map((g) => ({
+      ...g,
+      items: showArchived ? g.items : g.items.filter((e) => !e.archived_at),
+    }))
+    .filter((g) => g.items.length > 0)
+    .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .sort((a, b) => {
       if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1;
       return (b.lastAt || "").localeCompare(a.lastAt || "");
