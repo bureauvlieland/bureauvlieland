@@ -1,28 +1,32 @@
-## Doel
+## Wat er misging bij BV-2606-0017
 
-Een inkoopfactuur die in een SEPA-betaalbatch is opgenomen, krijgt automatisch de status **betaald**. Nu blijft die op "doorgestuurd" staan: 30 van de 38 facturen zitten al in een batch maar tellen nog als onbetaald.
+Twee losse fouten, beide bevestigd in de code en de data:
 
-## Wat er verandert
+1. **De mails gingen al weg vóórdat u iets koos.** De admin-annulering roept `cancel-program-request` aan; die functie roept intern zélf `notify-partner-cancellation` aan voor álle partners (regel 281–304). Pas daarna opent de UI het keuzevenster. Uw keuze in de popup kwam dus altijd te laat — die verstuurt een tweede ronde mails.
+2. **Partners waren nog nooit benaderd.** Alle 7 onderdelen van BV-2606-0017 staan op `skip_partner_notification = true` en hebben geen `quoted_at`: er is nooit een beschikbaarheids-/prijsaanvraag naar de partner gegaan. Toch kregen Neptunus, Café Boven, Zuiver en Vliehors Expres een annuleringsmelding. `notify-partner-cancellation` filtert alleen op `block_type` en bureau-items, niet op "is deze partner ooit benaderd".
 
-**1. Bij genereren van de batch → betaald**
-De batchgeneratie koppelt de facturen nu alleen aan de batch. Voortaan zet dezelfde stap in één keer ook de status op `paid` met `paid_at` op het moment van genereren. Alle bestaande controles (dubbele regels, terug te vorderen, IBAN, bedragafwijking, incasso-partners) blijven ongewijzigd vóór deze stap staan, dus een geblokkeerde batch markeert niets als betaald.
+## Wat ik ga doen
 
-**2. Batch annuleren → terugdraaien**
-Bij het annuleren van een batch worden de gekoppelde facturen niet alleen losgekoppeld, maar ook teruggezet naar "doorgestuurd" met een lege betaaldatum. Zo kan de factuur daarna weer in een nieuwe batch mee.
+### 1. Auto-versturen loskoppelen van de admin-annulering
+`cancel-program-request` krijgt een parameter `notify_partners` (default `true`, zodat de klant-annulering in het klantportaal onveranderd blijft werken). De admin-flow in `AdminRequestDetail.tsx` stuurt `notify_partners: false` mee. Resultaat: bij annuleren door de admin gaat er niets uit tot u in de popup op "Verstuur annuleringsmails" klikt. Klikt u op "Niet nu versturen" of sluit u het venster, dan gaat er niets.
 
-**3. Eenmalige correctie bestaande facturen**
-De 30 facturen die al in een batch zitten maar nog op "doorgestuurd" staan, worden bijgewerkt naar "betaald", met als betaaldatum de gevraagde uitvoerdatum van hun batch (niet vandaag), zodat de historie klopt. Facturen in geannuleerde batches worden overgeslagen.
+### 2. Alleen benaderde partners mailen
+Nieuwe gedeelde helper `supabase/functions/_shared/partnerWasApproached.ts` met één regel: een partner is benaderd als het onderdeel `skip_partner_notification = false` heeft óf de partner al gereageerd heeft (`quoted_at`, `partner_price_change_acknowledged_at`, of `item_quote_status` in de partner-statussen).
 
-**4. Zichtbaarheid**
-In het batchdetail (transactieoverzicht) en in de inkoopfacturenlijst wordt zichtbaar dat de betaling via een batch is gelopen, zodat een handmatige "markeer als betaald" niet meer nodig is voor batchfacturen.
+Die filter komt op drie plekken:
+- `notify-partner-cancellation`: onbenaderde partners worden overgeslagen, ook als hun `partner_id` expliciet in `partner_ids` staat — zo kan het nooit meer per ongeluk.
+- `cancel-program-request`: de teruggegeven `affected_activity_partners` bevat alleen benaderde partners.
+- `AdminRequestDetail.tsx` (de "achteraf alsnog informeren"-knop): dezelfde filter bij het opbouwen van de lijst.
 
-## Aandachtspunt
+Voor logiespartners geldt dit al impliciet — daar is een quote-record hét bewijs dat de partner benaderd is — dus die logica blijft ongewijzigd.
 
-De bankafletter-functie zoekt losse inkoopfacturen alleen onder niet-betaalde facturen. Omdat batchfacturen nu direct betaald zijn, worden ze niet meer individueel voorgesteld bij bankregels — dat is correct, want een SEPA-batch komt als één verzamelboeking op het afschrift en wordt al op batchniveau gematcht. Ik controleer dat de batch-matching daar blijft werken.
+### 3. Popup duidelijker maken
+`PartnerCancellationNotifyDialog` toont per activiteitenpartner een statuslabel ("Offerte-aanvraag verstuurd" / "Prijs bevestigd"), zodat u ziet waaróm iemand in de lijst staat. Zijn er na de filter geen partners over, dan opent de popup niet meer en ziet u de melding "Geen partners zijn benaderd — er hoeft niemand geïnformeerd te worden".
 
-## Technische uitvoering
+### 4. Borging
+- Contract-test dat `cancel-program-request` bij `notify_partners: false` geen `notify-partner-cancellation` aanroept.
+- Unit-tests op de nieuwe helper (skip=true + geen reactie → niet benaderd; skip=false → benaderd; skip=true maar `quoted_at` gezet → wél benaderd).
+- Uitbreiding van de bestaande idempotency-test zodat een expliciet meegegeven maar onbenaderde `partner_id` genegeerd wordt.
 
-- `supabase/functions/generate-payment-batch/index.ts`: de `update({ payment_batch_id })` uitbreiden met `status: "paid"`, `paid_at` en `updated_at`.
-- `src/pages/admin/AdminPaymentBatches.tsx`: in de annuleer-actie de losgekoppelde facturen terugzetten naar `status: "forwarded"`, `paid_at: null`; batch-transactietabel toont de betaalstatus.
-- Data-correctie via een insert/update-statement: `partner_purchase_invoices` met `payment_batch_id is not null` en `status = 'forwarded'` → `paid`, `paid_at = payment_batches.requested_execution_date`, exclusief geannuleerde batches.
-- Testdekking: een unittest op de terugdraai-/markeerregels in de bestaande betaalbatch-testsuite (`src/lib/__tests__/paymentBatch*`), plus draaien van de volledige suite.
+## Wat ik niet aanpas
+De al verstuurde mails voor BV-2606-0017 kan ik niet terughalen. De communicatie-log blijft staan zoals hij is; ik verwijder geen historie.
