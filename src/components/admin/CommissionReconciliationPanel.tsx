@@ -173,6 +173,9 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
       }),
   });
 
+  /** Datum waarop een regel wordt gesorteerd: uitvoering, anders factuurdatum. */
+  const rowDate = (row: ReconRow) => row.executionDate ?? row.invoiceDate ?? null;
+
   const rows = useMemo(() => {
     const all = data?.rows ?? [];
     const term = search.trim().toLowerCase();
@@ -190,13 +193,60 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
       })
       .filter((r) => {
         if (!term) return true;
-        return [r.partnerName, r.label, r.projectReference, r.projectLabel, r.invoiceNumber]
+        return [
+          r.partnerName,
+          r.label,
+          r.projectReference,
+          r.projectLabel,
+          r.customerName,
+          r.invoiceNumber,
+        ]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(term));
       });
   }, [data?.rows, statusFilter, search]);
 
+  /** Gegroepeerd per partner, binnen de groep gesorteerd op datum (nieuwste eerst). */
+  const partnerGroups = useMemo(() => {
+    const map = new Map<string, { partnerId: string; partnerName: string; rows: ReconRow[] }>();
+    for (const row of rows) {
+      const key = row.partnerId || row.partnerName || "onbekend";
+      if (!map.has(key)) {
+        map.set(key, { partnerId: row.partnerId, partnerName: row.partnerName, rows: [] });
+      }
+      map.get(key)!.rows.push(row);
+    }
+
+    const groups = Array.from(map.values()).map((group) => {
+      const sorted = [...group.rows].sort((a, b) => {
+        const da = rowDate(a);
+        const db = rowDate(b);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return db.localeCompare(da);
+      });
+      return {
+        ...group,
+        rows: sorted,
+        commissionAtRisk: sorted.reduce((sum, r) => sum + (r.commissionAtRisk || 0), 0),
+        latestDate: rowDate(sorted[0]) ?? null,
+      };
+    });
+
+    // Partners met de meest recente activiteit bovenaan; naam als tiebreaker.
+    return groups.sort((a, b) => {
+      if (a.latestDate && b.latestDate && a.latestDate !== b.latestDate) {
+        return b.latestDate.localeCompare(a.latestDate);
+      }
+      if (a.latestDate && !b.latestDate) return -1;
+      if (!a.latestDate && b.latestDate) return 1;
+      return a.partnerName.localeCompare(b.partnerName, "nl");
+    });
+  }, [rows]);
+
   const summary = data?.summary;
+
 
   if (error) {
     return (
