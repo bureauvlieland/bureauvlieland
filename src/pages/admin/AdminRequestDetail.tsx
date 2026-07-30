@@ -912,22 +912,29 @@ const AdminRequestDetail = () => {
         partnerMap = new Map((partners || []).map((p: any) => [p.id, p]));
       }
 
-      const groups = new Map<string, { name: string; email: string | null; item_names: string[] }>();
+      const groups = new Map<
+        string,
+        { name: string; email: string | null; item_names: string[]; responded: boolean }
+      >();
       for (const it of partnerItems) {
         const partner = partnerMap.get(it.provider_id);
         const email = it.provider_email || partner?.contact_email || partner?.email || null;
         const name = it.provider_name || partner?.name || it.provider_id;
         if (!groups.has(it.provider_id)) {
-          groups.set(it.provider_id, { name, email, item_names: [] });
+          groups.set(it.provider_id, { name, email, item_names: [], responded: false });
         }
-        groups.get(it.provider_id)!.item_names.push(it.block_name);
+        const group = groups.get(it.provider_id)!;
+        group.item_names.push(it.block_name);
+        if (it.quoted_at || it.partner_price_change_acknowledged_at) group.responded = true;
       }
       const activityPartners = Array.from(groups.entries()).map(([partner_id, g]) => ({
         partner_id,
         name: g.name,
         email: g.email,
         item_names: g.item_names,
+        approach_status: (g.responded ? "responded" : "sent") as "responded" | "sent",
       }));
+
 
       // 2) Logiespartners — quotes op gekoppelde logies-aanvraag
       let accommodationPartners: import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[] = [];
