@@ -114,7 +114,7 @@ describe("calculateAdminInvoicingTotals", () => {
     expect(r.outstanding).toBe(r.grandTotalInclVat - 242);
   });
 
-  it("eindfactuur overschrijft partiële facturen", () => {
+  it("telt aanbetaling en externe restant-eindfactuur bij elkaar op", () => {
     const partial = { invoice_type: "partial", amount_excl_vat: 100, vat_amount: 21, amount_incl_vat: 121 };
     const final = { invoice_type: "final", amount_excl_vat: 400, vat_amount: 84, amount_incl_vat: 484 };
     const r = calculateAdminInvoicingTotals(
@@ -124,7 +124,7 @@ describe("calculateAdminInvoicingTotals", () => {
       }),
       baseSettings,
     );
-    expect(r.invoicedTotal).toBe(484);
+    expect(r.invoicedTotal).toBe(605);
   });
 
   it("creditfactuur wordt afgetrokken", () => {

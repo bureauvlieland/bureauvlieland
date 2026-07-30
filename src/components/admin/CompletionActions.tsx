@@ -63,9 +63,11 @@ export const CompletionActions = ({
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState("");
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [completeReason, setCompleteReason] = useState("");
 
   const isCompleted = completionStatus === "fully_invoiced";
-  const canComplete = !isCompleted && outstanding <= 0.005; // tolerate rounding
+  const canComplete = !isCompleted;
+  const hasOutstanding = outstanding > 0.005;
 
   const invalidate = () => {
     if (invalidateKeys && invalidateKeys.length) {
@@ -87,6 +89,7 @@ export const CompletionActions = ({
             entity_id: entityId,
             action,
             ...(reason ? { reason } : {}),
+            ...(action === "complete" ? { outstanding } : {}),
           },
         },
       );
@@ -98,6 +101,7 @@ export const CompletionActions = ({
       invalidate();
       setReopenOpen(false);
       setCompleteOpen(false);
+      setCompleteReason("");
       setReopenReason("");
     } catch (err) {
       console.error(err);
@@ -170,13 +174,29 @@ export const CompletionActions = ({
               als er nog een correctie nodig is.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {hasOutstanding && (
+            <div className="space-y-2 py-2">
+              <p className="text-sm text-destructive">
+                Er staat administratief nog {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(outstanding)} open.
+              </p>
+              <Label htmlFor="complete-reason">Reden van handmatig afronden *</Label>
+              <Textarea
+                id="complete-reason"
+                value={completeReason}
+                onChange={(event) => setCompleteReason(event.target.value)}
+                placeholder="Bijv. volledige facturatie is extern via SnelStart verwerkt"
+                rows={3}
+                maxLength={2000}
+              />
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Annuleren</AlertDialogCancel>
             <AlertDialogAction
-              disabled={busy}
+              disabled={busy || (hasOutstanding && completeReason.trim().length < 3)}
               onClick={(e) => {
                 e.preventDefault();
-                callEdge("complete");
+                callEdge("complete", hasOutstanding ? completeReason.trim() : undefined);
               }}
             >
               {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

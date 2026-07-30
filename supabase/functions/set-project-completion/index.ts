@@ -12,6 +12,7 @@ const BodySchema = z.object({
   entity_id: z.string().uuid(),
   action: z.enum(["complete", "reopen"]),
   reason: z.string().max(2000).optional(),
+  outstanding: z.number().min(0).optional(),
 });
 
 Deno.serve(async (req) => {
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
         },
       );
     }
-    const { entity_type, entity_id, action, reason } = parsed.data;
+    const { entity_type, entity_id, action, reason, outstanding } = parsed.data;
 
     if (action === "reopen" && (!reason || reason.trim().length < 3)) {
       return new Response(
@@ -80,6 +81,12 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
+    }
+    if (action === "complete" && Number(outstanding ?? 0) > 0.005 && (!reason || reason.trim().length < 3)) {
+      return new Response(JSON.stringify({ error: "Reden van handmatig afronden is verplicht" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const table = entity_type === "program"
@@ -94,6 +101,11 @@ Deno.serve(async (req) => {
           completed_at: new Date().toISOString(),
           completed_by: user.id,
           reopened_reason: null,
+          ...(entity_type === "program" ? {
+            completion_manually_overridden: Number(outstanding ?? 0) > 0.005,
+            completion_override_reason: Number(outstanding ?? 0) > 0.005 ? reason?.trim() : null,
+            completion_override_outstanding: Number(outstanding ?? 0) > 0.005 ? outstanding : null,
+          } : {}),
         })
         .eq("id", entity_id);
       if (updErr) throw updErr;
@@ -120,7 +132,12 @@ Deno.serve(async (req) => {
           action: "Project gemarkeerd als afgerond",
           actor: "admin",
           actor_name: user.email ?? "Admin",
-          new_value: { completion_status: "fully_invoiced" },
+          notes: reason?.trim() || null,
+          new_value: {
+            completion_status: "fully_invoiced",
+            manually_overridden: Number(outstanding ?? 0) > 0.005,
+            outstanding: outstanding ?? 0,
+          },
         });
       }
     } else {
@@ -133,6 +150,11 @@ Deno.serve(async (req) => {
           completed_at: null,
           completed_by: null,
           reopened_reason: reason!.trim(),
+          ...(entity_type === "program" ? {
+            completion_manually_overridden: false,
+            completion_override_reason: null,
+            completion_override_outstanding: null,
+          } : {}),
         })
         .eq("id", entity_id);
       if (updErr) throw updErr;
@@ -161,7 +183,7 @@ Deno.serve(async (req) => {
           : "accommodation_reopened"),
       entity_type,
       entity_id,
-      details: { reason: reason ?? null },
+       details: { reason: reason ?? null, outstanding: outstanding ?? null },
     });
 
     return new Response(JSON.stringify({ success: true }), {

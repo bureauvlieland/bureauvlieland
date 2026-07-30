@@ -78,7 +78,7 @@ describe("calculateProjectOutstandingAmount", () => {
     expect(calculateProjectOutstandingAmount(baseArgs())).toBeCloseTo(2710, 2);
   });
 
-  it("final vervangt partials in netto gefactureerd (geen dubbeltelling)", () => {
+  it("telt partial en externe restant-final beide als gefactureerd", () => {
     const t = calculateProjectOutstandingAmount(
       baseArgs({
         invoices: [
@@ -87,8 +87,8 @@ describe("calculateProjectOutstandingAmount", () => {
         ],
       }),
     );
-    // 2710 - 2420 (final, partials niet meegeteld) = 290
-    expect(t).toBeCloseTo(290, 2);
+    // 2710 - (605 + 2420) is overgefactureerd en wordt nooit negatief.
+    expect(t).toBe(0);
   });
 
   it("credit-factuur trekt altijd extra af", () => {
