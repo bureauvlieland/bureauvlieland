@@ -989,8 +989,11 @@ const AdminRequestDetail = () => {
           reason: cancellationReason || undefined,
           cancelAccommodation: true,
           origin: window.location.origin,
+          // Admin kiest zelf wie bericht krijgt in het bevestigingsvenster.
+          notify_partners: false,
         },
       });
+
 
       if (response.error) throw response.error;
 
