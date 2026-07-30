@@ -34,7 +34,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
-import { CommissionReconciliationPanel } from "@/components/admin/CommissionReconciliationPanel";
+import { CommissionWorklist } from "@/components/admin/CommissionWorklist";
 
 import { format, addMonths, startOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
