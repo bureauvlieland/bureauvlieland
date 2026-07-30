@@ -1,5 +1,7 @@
+import { useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+
 import {
   CalendarDays,
   Compass,
@@ -26,11 +28,18 @@ const links = [
     icon: Sparkles,
   },
   {
+    to: "/programma-op-maat",
+    label: "Programma op maat",
+    description: "Grotere of complexere groep? Wij bouwen het voor u",
+    icon: Sparkles,
+  },
+  {
     to: "/activiteiten-vlieland",
     label: "Activiteiten op Vlieland",
     description: "Van zeehondentocht tot Vliehors Expres",
     icon: Waves,
   },
+
   {
     to: "/catering",
     label: "Catering",
@@ -63,8 +72,32 @@ const links = [
   },
 ];
 
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+
+/** Plakt de binnenkomende UTM-parameters op een interne route. */
+const withUtm = (to: string, params: URLSearchParams) => {
+  const utm = UTM_KEYS.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`);
+  if (utm.length === 0) return to;
+  return `${to}${to.includes("?") ? "&" : "?"}${utm.join("&")}`;
+};
+
 const Links = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Instagram-CTA's linken naar /links?to=/doelpad — direct doorsturen met behoud van UTM's.
+  const redirectTo = searchParams.get("to");
+  const target = useMemo(
+    () => (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : null),
+    [redirectTo],
+  );
+
+  useEffect(() => {
+    if (target) navigate(withUtm(target, searchParams), { replace: true });
+  }, [target, navigate, searchParams]);
+
   return (
+
     <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background">
       <Helmet>
         <title>Bureau Vlieland – alle links</title>
@@ -95,7 +128,7 @@ const Links = () => {
           {links.map(({ to, label, description, icon: Icon, highlight }) => (
             <Link
               key={to}
-              to={to}
+              to={withUtm(to, searchParams)}
               className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
                 highlight
                   ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"

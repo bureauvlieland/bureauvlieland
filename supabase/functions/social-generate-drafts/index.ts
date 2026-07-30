@@ -1,4 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildCtaUrl,
+  PILLAR_CAPTION_FORMAT,
+  PILLAR_LABELS,
+  pillarForSourceType,
+} from "../_shared/socialCta.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,21 +14,30 @@ const corsHeaders = {
 
 /**
  * social-generate-drafts
- * Verzamelt kandidaten (nieuwe bouwstenen, partners, projectfoto's, partner van de week)
- * en laat de AI per kandidaat een conceptpost genereren in `social_posts` (status='draft').
- * Skipt kandidaten die in laatste 30 dagen al gebruikt zijn.
+ * Verzamelt kandidaten (nieuwe bouwstenen, voorbeeldprogramma's, partners, projectfoto's,
+ * partner van de week) en laat de AI per kandidaat een conceptpost genereren in
+ * `social_posts` (status='draft'). Skipt kandidaten die in laatste 30 dagen al gebruikt zijn.
+ * Elke post krijgt een vaste UTM-CTA per contentpijler (zie _shared/socialCta.ts).
  *
  * Auth: admin-only wanneer aangeroepen vanuit UI (Authorization header met admin-JWT)
  *       OF service-role (cron via pg_net met service_role-key in header).
  */
 
 type Candidate = {
-  source_type: "building_block" | "partner" | "asset" | "partner_spotlight";
+  source_type:
+    | "building_block"
+    | "program_template"
+    | "partner"
+    | "asset"
+    | "partner_spotlight";
   source_id: string;
   summary: string;
   image_url?: string | null;
   hint?: string;
+  /** Slug voor de diepe CTA-link (bouwsteen-slug of template-id). */
+  slug?: string | null;
 };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -44,6 +59,7 @@ Deno.serve(async (req) => {
 
     const sources = (settings?.sources_enabled ?? {
       building_blocks: true,
+      program_templates: true,
       partners: true,
       assets: true,
       partner_spotlight: true,
@@ -53,9 +69,9 @@ Deno.serve(async (req) => {
     const hashtagSets = (settings?.hashtag_sets as Record<string, string[]>) ?? {
       default: ["#vlieland", "#waddeneilanden", "#bureauvlieland"],
     };
-    const defaultCtas = (settings?.default_ctas as Record<string, string>) ?? {
-      default: "https://www.bureauvlieland.nl",
-    };
+    // Overrides per contentpijler (activiteit / voorbeeldprogramma / partner / behind_scenes / eiland)
+    const ctaOverrides = (settings?.default_ctas as Record<string, string>) ?? {};
+
 
     // Bepaal hoeveel we deze run mogen toevoegen om totaal op ±cadence/week te houden.
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -78,7 +94,7 @@ Deno.serve(async (req) => {
     if (sources.building_blocks) {
       const { data: blocks } = await supabase
         .from("building_blocks")
-        .select("id, name, description, image_url, provider_id, created_at")
+        .select("id, name, slug, description, image_url, provider_id, created_at")
         .eq("status", "published")
         .gte("created_at", fourteenDaysAgo)
         .limit(10);
@@ -86,12 +102,33 @@ Deno.serve(async (req) => {
         candidates.push({
           source_type: "building_block",
           source_id: b.id,
+          slug: (b as { slug?: string | null }).slug ?? null,
           summary: `Bouwsteen "${b.name}" (partner ${b.provider_id ?? "intern"}): ${b.description ?? ""}`.slice(0, 600),
           image_url: b.image_url ?? null,
           hint: "Vier een nieuwe bouwsteen in ons aanbod",
         });
       }
     }
+
+    if (sources.program_templates !== false) {
+      const { data: templates } = await supabase
+        .from("program_templates")
+        .select("id, name, short_description, description, image_url, duration_days, target_group")
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .limit(10);
+      for (const t of templates ?? []) {
+        candidates.push({
+          source_type: "program_template",
+          source_id: t.id,
+          slug: t.id,
+          summary: `Voorbeeldprogramma "${t.name}" (${t.duration_days} dag(en), doelgroep ${t.target_group ?? "algemeen"}): ${t.short_description ?? t.description ?? ""}`.slice(0, 600),
+          image_url: t.image_url ?? null,
+          hint: "Laat de dagindeling spreken; geen verzonnen prijzen of datums",
+        });
+      }
+    }
+
 
     if (sources.assets) {
       const { data: assets } = await supabase
@@ -172,6 +209,7 @@ Deno.serve(async (req) => {
     // Genereer per kandidaat
     let generated = 0;
     for (const c of usable) {
+      const pillar = pillarForSourceType(c.source_type);
       const systemPrompt = `Je bent social media copywriter voor Bureau Vlieland: lokale specialist voor groepsuitjes, evenementen en logies op Vlieland.
 Tone-of-voice: ${toneOfVoice}. Formeel 'u' wordt vermeden in social posts — gebruik 'je/jullie'.
 Centrale belofte: één partij, één factuur, lokale kennis. Niet 'regie', wel zorgvuldig boekingskantoor + programma-ontwikkelaar.
@@ -182,6 +220,8 @@ Vermijd hard sellen; vertel het verhaal en eindig zacht met een uitnodiging.`;
 """
 ${c.summary}
 """
+Contentpijler: ${PILLAR_LABELS[pillar]}.
+Caption-stramien: ${PILLAR_CAPTION_FORMAT[pillar]}
 Doel/hint: ${c.hint ?? "geen specifieke hint"}.
 
 Vereisten:
@@ -189,6 +229,7 @@ Vereisten:
 - 8 tot 12 hashtags (zonder dubbels), inclusief deze basis: ${(hashtagSets.default ?? []).join(", ")}
 - Korte alt-tekst (max 120 tekens) voor de afbeelding
 - Geen verzonnen prijzen, geen verzonnen datums
+- Zet zelf GEEN link in de caption; die voegen wij toe
 
 Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).`;
 
@@ -224,15 +265,20 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
 
       // PII scrub: vervang voornaam-achternaam tokens door 'een groep' (zachte verdediging)
       const safeCaption = scrubPii(aiOutput.caption);
-      const rawCta =
-        defaultCtas[c.source_type] ??
-        (c.source_type === "building_block" ? defaultCtas.bouwstenen : undefined) ??
-        defaultCtas.default ??
-        defaultCtas.programma ??
-        "/";
-      const cta = withUtm(rawCta, c.source_type);
-      const finalCaption = `${safeCaption}\n\n${cta}`;
-
+      const ctaFacebook = buildCtaUrl({
+        pillar,
+        slug: c.slug,
+        channel: "facebook",
+        overrides: ctaOverrides,
+      });
+      const ctaInstagram = buildCtaUrl({
+        pillar,
+        slug: c.slug,
+        channel: "instagram",
+        overrides: ctaOverrides,
+      });
+      // Facebook krijgt de klikbare diepe link in de caption; Instagram verwijst naar link-in-bio.
+      const finalCaption = `${safeCaption}\n\n${ctaFacebook}\n(Instagram: link in bio)`;
 
       await supabase.from("social_posts").insert({
         status: "draft",
@@ -244,9 +290,15 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
         source_id: c.source_id,
         source_summary: c.summary,
         ai_model: "google/gemini-2.5-flash",
-        ai_raw: aiOutput as unknown as Record<string, unknown>,
+        ai_raw: {
+          ...(aiOutput as unknown as Record<string, unknown>),
+          pillar,
+          cta_facebook: ctaFacebook,
+          cta_instagram: ctaInstagram,
+        },
       });
       generated++;
+
 
       // Update asset last_used_at
       if (c.source_type === "asset") {
@@ -261,22 +313,6 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
   }
 });
 
-const SITE_ORIGIN = "https://bureauvlieland.nl";
-
-/** Maakt van een pad of URL een volledige URL met UTM-tagging voor social. */
-function withUtm(target: string, sourceType: string): string {
-  let url: URL;
-  try {
-    url = new URL(target, SITE_ORIGIN);
-  } catch {
-    url = new URL("/", SITE_ORIGIN);
-  }
-  url.searchParams.set("utm_source", "meta");
-  url.searchParams.set("utm_medium", "organic_social");
-  url.searchParams.set("utm_campaign", "bureau_vlieland_social");
-  url.searchParams.set("utm_content", sourceType);
-  return url.toString();
-}
 
 function scrubPii(text: string): string {
 

@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Settings as SettingsIcon, Loader2, ExternalLink, Upload, Trash2, Sparkles, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { extractCtaFromCaption } from "@/lib/socialCta";
+
 
 type SocialPost = {
   id: string;
@@ -318,6 +320,11 @@ function PublishedCard({ post }: { post: SocialPost }) {
           )}
           <div className="min-w-0">
             <p className="text-sm font-medium line-clamp-1">{post.caption}</p>
+            {extractCtaFromCaption(post.caption) && (
+              <p className="text-[11px] text-slate-400 truncate" title={extractCtaFromCaption(post.caption)!}>
+                CTA: {extractCtaFromCaption(post.caption)}
+              </p>
+            )}
             {failed ? (
               <p className="text-xs text-destructive line-clamp-1">{post.error_message}</p>
             ) : (
@@ -327,6 +334,7 @@ function PublishedCard({ post }: { post: SocialPost }) {
             )}
           </div>
         </div>
+
         <div className="flex gap-2">
           {post.permalinks &&
             Object.entries(post.permalinks).map(([ch, url]) => (
