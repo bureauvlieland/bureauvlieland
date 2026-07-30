@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { findDuplicatesInSelection } from "@/lib/paymentBatchGuards";
+import { findDuplicatesInSelection, buildBatchCancelUpdate } from "@/lib/paymentBatchGuards";
 
 function nextWorkingDay(): string {
   const d = new Date();
