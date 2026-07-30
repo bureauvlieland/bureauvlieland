@@ -1028,8 +1028,11 @@ const AdminRequestDetail = () => {
           `Aanvraag geannuleerd — kies welke ${partnerCount} partner(s) een annuleringsmail krijgen`,
         );
       } else {
-        toast.success("Aanvraag geannuleerd — er waren geen gekoppelde partners");
+        toast.success(
+          "Aanvraag geannuleerd — er zijn geen benaderde partners, dus er gaat geen annuleringsmail uit",
+        );
       }
+
       fetchRequestData();
 
     } catch (error) {
