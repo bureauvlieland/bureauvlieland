@@ -1,32 +1,46 @@
-## Wat er misging bij BV-2606-0017
+## Doel
 
-Twee losse fouten, beide bevestigd in de code en de data:
+Mailen vanaf de klantenkaart wordt één slimme composer: geen HTML-templates meer in een tekstveld, maar korte **intenties** die de AI briefen, met het volledige projectdossier als context. Eén voorstel per keer, dat je met een instructie kunt laten herschrijven.
 
-1. **De mails gingen al weg vóórdat u iets koos.** De admin-annulering roept `cancel-program-request` aan; die functie roept intern zélf `notify-partner-cancellation` aan voor álle partners (regel 281–304). Pas daarna opent de UI het keuzevenster. Uw keuze in de popup kwam dus altijd te laat — die verstuurt een tweede ronde mails.
-2. **Partners waren nog nooit benaderd.** Alle 7 onderdelen van BV-2606-0017 staan op `skip_partner_notification = true` en hebben geen `quoted_at`: er is nooit een beschikbaarheids-/prijsaanvraag naar de partner gegaan. Toch kregen Neptunus, Café Boven, Zuiver en Vliehors Expres een annuleringsmelding. `notify-partner-cancellation` filtert alleen op `block_type` en bureau-items, niet op "is deze partner ooit benaderd".
+## Wat er verandert in de UI (`SendProjectEmailSheet`)
 
-## Wat ik ga doen
+1. **Template-dropdown verdwijnt** uit deze sheet. De `email_templates`-tabel en `/admin/email-templates` blijven bestaan voor automatische systeemmails (offerte verstuurd, partner-aanvraag, herinneringen) — daar hoort HTML wél.
+2. **Intentie-chips** komen in de plaats. Een rij korte knoppen, contextueel gefilterd op projectstatus:
+   - Herinnering: programmavoorstel nog niet bekeken
+   - Vraag om akkoord / ondertekening
+   - Statusupdate zonder actie
+   - Wijziging doorgeven / bevestigen
+   - Betaling of factuur opvolgen
+   - Nazorg / bedankt na uitvoering
+   - Antwoord op laatste bericht
+   - Vrij (eigen instructie)
+   Klik = AI genereert direct onderwerp + body. Geen HTML in de editor, alleen platte tekst — precies wat het `send-project-email`-eindpunt netjes in de Bureau Vlieland-skeleton wrapt.
+3. **Herschrijf-balk** onder het bericht na een suggestie: "Korter", "Warmer", "Formeler", "Voeg vervolgstap toe" + vrij instructieveld → nieuwe generatie op basis van de huidige tekst (dus verfijnen, niet opnieuw beginnen).
+4. **Contextpaneel (inklapbaar)** boven de suggestie: "AI gebruikt: 4 verzonden mails, 2 antwoorden van de klant, laatste contact 12 dagen geleden, status In afstemming". Zo zie je waarop het voorstel gebaseerd is.
+5. **Concept blijft bewaard** per project zolang de sheet open/heropend wordt binnen dezelfde sessie, zodat een per ongeluk gesloten sheet geen tekst kost.
 
-### 1. Auto-versturen loskoppelen van de admin-annulering
-`cancel-program-request` krijgt een parameter `notify_partners` (default `true`, zodat de klant-annulering in het klantportaal onveranderd blijft werken). De admin-flow in `AdminRequestDetail.tsx` stuurt `notify_partners: false` mee. Resultaat: bij annuleren door de admin gaat er niets uit tot u in de popup op "Verstuur annuleringsmails" klikt. Klikt u op "Niet nu versturen" of sluit u het venster, dan gaat er niets.
+## Wat er verandert in de AI (`compose-followup-email`)
 
-### 2. Alleen benaderde partners mailen
-Nieuwe gedeelde helper `supabase/functions/_shared/partnerWasApproached.ts` met één regel: een partner is benaderd als het onderdeel `skip_partner_notification = false` heeft óf de partner al gereageerd heeft (`quoted_at`, `partner_price_change_acknowledged_at`, of `item_quote_status` in de partner-statussen).
+De functie krijgt het volledige dossier mee in plaats van alleen onderwerpen van de laatste 10 mails:
 
-Die filter komt op drie plekken:
-- `notify-partner-cancellation`: onbenaderde partners worden overgeslagen, ook als hun `partner_id` expliciet in `partner_ids` staat — zo kan het nooit meer per ongeluk.
-- `cancel-program-request`: de teruggegeven `affected_activity_partners` bevat alleen benaderde partners.
-- `AdminRequestDetail.tsx` (de "achteraf alsnog informeren"-knop): dezelfde filter bij het opbouwen van de lijst.
+- **Uitgaande én inkomende e-mailinhoud** uit `project_communications` (subject + content, richting, datum) — nu ziet de AI ook wat de klant zélf schreef.
+- **`email_log`** blijft erbij voor systeemmails die niet in het dossier staan (welke automatische mail is al gestuurd, en wanneer).
+- **Chatberichten** uit `chat_messages` via de gekoppelde `chat_conversations`.
+- **Admin-notities** (`admin_notes`) en de laatste history-regels van het project.
+- **Programma-inhoud op hoofdlijnen**: aantal onderdelen, welke al goedgekeurd/open staan, datum, aantal personen, offerte-geldigheid.
+- Alles gebundeld tot maximaal ~15 recente dossieritems, chronologisch, met een berekend "dagen sinds laatste klantcontact".
 
-Voor logiespartners geldt dit al impliciet — daar is een quote-record hét bewijs dat de partner benaderd is — dus die logica blijft ongewijzigd.
+Nieuwe request-velden: `intent` (de gekozen intentie), `currentBody` + `refineInstruction` (voor herschrijven), naast de bestaande `instruction`.
 
-### 3. Popup duidelijker maken
-`PartnerCancellationNotifyDialog` toont per activiteitenpartner een statuslabel ("Offerte-aanvraag verstuurd" / "Prijs bevestigd"), zodat u ziet waaróm iemand in de lijst staat. Zijn er na de filter geen partners over, dan opent de popup niet meer en ziet u de melding "Geen partners zijn benaderd — er hoeft niemand geïnformeerd te worden".
+De system prompt wordt strakker: per intentie een eigen doel-instructie, expliciet verbod op herhalen van wat al gezegd is, expliciete opdracht om aan te sluiten op het laatste bericht van de klant (naam, toon, gestelde vraag), en de bestaande harde regels blijven (u-vorm, geen verzonnen prijzen/data, `{{portal_url}}`, platte tekst, max ~180 woorden). Model: `google/gemini-3.6-flash`.
 
-### 4. Borging
-- Contract-test dat `cancel-program-request` bij `notify_partners: false` geen `notify-partner-cancellation` aanroept.
-- Unit-tests op de nieuwe helper (skip=true + geen reactie → niet benaderd; skip=false → benaderd; skip=true maar `quoted_at` gezet → wél benaderd).
-- Uitbreiding van de bestaande idempotency-test zodat een expliciet meegegeven maar onbenaderde `partner_id` genegeerd wordt.
+## Technisch
 
-## Wat ik niet aanpas
-De al verstuurde mails voor BV-2606-0017 kan ik niet terughalen. De communicatie-log blijft staan zoals hij is; ik verwijder geen historie.
+- `supabase/functions/compose-followup-email/index.ts`: dossier-opbouw uitbreiden, intent-map en refine-modus toevoegen, prompt herschrijven, daarna deployen.
+- `src/components/admin/SendProjectEmailSheet.tsx`: template-blok en `render-email-template`-aanroep eruit, intentie-chips + herschrijf-balk + contextpaneel erin. `templateHtmlRef`/`templatePlainRef` en de `bodyHtml`-doorgifte kunnen weg voor deze sheet (het eindpunt blijft `bodyHtml` ondersteunen voor andere aanroepers).
+- `templateFilter`-prop wordt overbodig; call-sites die die meegeven worden opgeruimd. Als een plek nog wél een template-keuze nodig heeft (bijv. pre-sales), houden we daar een aparte lichte variant of laten we die ongemoeid — dat check ik per call-site.
+- Nieuwe unit-tests voor de intentie→prompt-mapping en de dossier-samenvatting (context-builder als los `_shared`-bestand zodat hij testbaar is).
+
+## Buiten scope
+
+Automatische systeemmails, de e-mailtemplate-beheerpagina en de HTML-wrapper blijven zoals ze zijn.
