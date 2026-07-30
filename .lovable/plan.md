@@ -1,35 +1,45 @@
-## Doel
-Facturen uit SnelStart exact kunnen registreren, ook wanneer een eindfactuur meerdere BTW-tarieven en per saldo negatieve BTW bevat, terwijl het project handmatig administratief kan worden afgerond als de interne projectsom afwijkt van de werkelijk gefactureerde som.
+## Wat ik heb vastgesteld (geverifieerd in code + database)
 
-## Vastgestelde situatie
-- Project **BV-2602-0003 (Lexence)** heeft in de database twee registraties, maar de eerste staat als `final`. De huidige berekening negeert daardoor de tweede factuur bij “Gefactureerd”.
-- De geüploade aanbetalingsfactuur is **218168**: € 41.322,31 excl. + € 8.677,69 BTW = **€ 50.000,00 incl.** In de database staat deze abusievelijk als **218161**.
-- Eindfactuur **218169** is € 16.022,81 excl. + **€ -76,10 BTW** = **€ 15.946,71 incl.** De BTW bestaat uit 0%, 9% en 21%; door verrekening van de volledig tegen 21% geboekte aanbetaling is het netto BTW-bedrag negatief.
-- Het werkelijke totaal van beide facturen is **€ 65.946,71**. De interne projectcalculatie is € 79.400,60, waardoor na herstel nog € 13.453,89 administratief open blijft. Dat verschil moet niet met een fictieve factuur worden weggewerkt.
+Commissie wordt pas factureerbaar zodra een inkoopfactuur aan een **programma-onderdeel** is gekoppeld. `get-admin-commissions` gebruikt daarvoor `program_request_items.invoiced_number`. Er zijn twee lekken:
 
-## Implementatie
-1. **Factuurtelling herstellen**
-   - Alle deel- en eindfacturen optellen als werkelijk gefactureerde bedragen; creditnota’s blijven aftrekposten.
-   - Dezelfde regel toepassen in het facturatieoverzicht, projectdetail, preview en de database-trigger voor de voltooiingsstatus.
-   - De conflicterende regel verwijderen waarbij een `final`-registratie eerdere deelfacturen vervangt.
+**Lek 1 — verkocht, maar partner factureerde nooit** (13 items, € 6.083,50 verkoopwaarde incl. btw, oudste 9 april 2026):
+Zuiver 6 items (€ 2.726), Trattoria Oliva (€ 1.335), De Bazuin Watertaxi (€ 960), Vlieland Outdoor Center (€ 560), Zeehondentochten (€ 425), Rederij (€ 77,50).
 
-2. **BTW-registratie geschikt maken voor SnelStart-facturen**
-   - In het registratievenster een bewerkbare BTW-uitsplitsing per tarief toevoegen (0%, 9%, 21% en eventueel een ander tarief).
-   - Negatieve grondslag en negatief BTW-bedrag per tarief toestaan, zolang het totale factuurbedrag positief en rekenkundig consistent is.
-   - De uitsplitsing bij de factuur opslaan en later zichtbaar maken, zodat de registratie controleerbaar blijft.
-   - Totalen excl. BTW, BTW en incl. BTW automatisch uit de BTW-regels berekenen; geen automatische 21%-overschrijving meer bij handmatige gemengde BTW.
+**Lek 2 — inkoopfactuur geregistreerd, maar nooit aan een item gekoppeld** (21 van 42 facturen):
+Wel verwerkt in de inbox en doorgestuurd, maar zonder item-koppeling → geen commissie. O.a. Trattoria Oliva 3× (€ 3.789,62), Zuiver 3× (€ 3.533,49), Stortemelk 2× (€ 9.474,97), De Bazuin (€ 1.230), Vlielandhotel (€ 925,85), Seeruyter (€ 595,90), Bunkermuseum (€ 112). Een deel hiervan is terecht commissievrij (Rederij/veerboot, Poiesz, Taxi van Koot) — dat moet expliciet als zodanig te markeren zijn in plaats van stilzwijgend te verdwijnen.
 
-3. **Handmatig administratief afronden**
-   - “Markeer als afgerond” ook beschikbaar maken wanneer nog een berekend verschil openstaat.
-   - Bij een verschil verplicht een reden laten invullen en duidelijk het openstaande bedrag tonen.
-   - De handmatige override vastleggen in historie/audit en door automatische herberekening laten respecteren totdat het project expliciet wordt heropend.
+Verder: er is geen enkel signaal als een inkoopfactuur uitblijft. De bestaande `notify-partners-missing-invoice-pdf` gaat alleen over ontbrekende **PDF's** bij reeds geregistreerde facturen. Er zijn 220 bankmutaties (jan–jul 2026) met tegenpartij en IBAN, bruikbaar als extra signaal.
 
-4. **Gegevens van BV-2602-0003 herstellen**
-   - Eerste factuur corrigeren naar nummer **218168** en type **Deelfactuur**.
-   - Eindfactuur **218169** corrigeren naar type **Eindfactuur**, € 16.022,81 excl., € -76,10 BTW en € 15.946,71 incl.
-   - BTW-specificatie vastleggen als: 0% (€ 314,76 / € 0,00), 9% (€ 28.123,26 / € 2.531,09), 21% (€ -12.415,21 / € -2.607,19).
-   - Daarna blijft het reële calculatieverschil zichtbaar en kan het project met reden handmatig worden afgerond.
+## Wat ik ga bouwen
 
-5. **Borging**
-   - Tests toevoegen voor aanbetaling + netto eindfactuur, gemengde BTW met negatief nettobedrag, credits, handmatige afronding met reden en behoud van de override bij herberekening.
-   - De facturatiekaart en statusovergangen controleren voor dit project en voor bestaande normale deel-/eindfacturen.
+### 1. Reconciliatie-tab "Match" op de Commissie-pagina
+Per partner + project naast elkaar: verkoopwaarde (quoted_price ex btw) ↔ geregistreerde inkoopfactuur ↔ verschil, met status:
+- **Inkoopfactuur ontbreekt** — verkocht en uitgevoerd, geen factuur (lek 1)
+- **Factuur niet gekoppeld** — inkoopfactuur bestaat, maar hangt niet aan een item (lek 2), met een koppel-actie direct vanuit de regel
+- **Afwijking** — factuur wijkt meer dan de marge af (voorstel: € 5 of 2%)
+- **Match** — binnen marge
+- **Commissievrij** — expliciet gemarkeerd (veerboot, boodschappen, taxi), telt niet mee als gat
+
+Filters op partner, periode en status; export naar CSV.
+
+### 2. Vangnet: automatische signalering
+- Dagelijkse job die na X dagen (voorstel: 14 dagen na uitvoering) een admin-todo aanmaakt per item zonder inkoopfactuur, én per inkoopfactuur die na 7 dagen nog niet aan een item is gekoppeld. Todo's sluiten automatisch zodra de koppeling er is.
+- Herinneringsmail aan de partner bij een ontbrekende factuur, met dezelfde cooldown (5 dagen) als de bestaande PDF-herinnering; `pays_by_direct_debit`-partners en bureau-items uitgezonderd.
+- Badge met het aantal open reconciliatie-regels op de Commissie-pagina en in de Facturatie-sidebar.
+
+### 3. Handmatig factureren op verkoopwaarde
+Per regel de actie **"Commissie factureren op verkoopwaarde"**: zet het item op `pending` met quoted_price ex btw als grondslag, gemarkeerd als `commission_basis = 'sales'` met reden. Alles met een inkoopfactuur blijft `commission_basis = 'purchase'`.
+
+### 4. Bank-signaal (vangnet voor "buiten de app om")
+Waarschuwing wanneer er een uitgaande bankmutatie naar een partner-IBAN staat zonder gekoppelde inkoopfactuur in dezelfde periode — precies het geval "partner factureerde buiten de app om en is al betaald".
+
+### 5. Bestaande achterstand
+Alle 13 ontbrekende items en 21 niet-gekoppelde facturen verschijnen automatisch in de Match-tab. Ik boek niets automatisch weg; je beoordeelt per regel (koppelen, alsnog opvragen, pro forma factureren, of markeren als commissievrij).
+
+## Technische details
+
+- **Database**: `program_request_items` krijgt `commission_basis` (`purchase` | `sales`, default `purchase`) en `commission_basis_reason`. `partner_purchase_invoices` krijgt `commission_exempt` (boolean) + `commission_exempt_reason`. Nieuwe `auto_type`-waarden voor de todo's (`partner_invoice_missing`, `purchase_invoice_unlinked`) — geen nieuwe tabel nodig.
+- **Edge functions**: nieuw `get-commission-reconciliation` en `flag-missing-partner-invoices` (dagelijkse cron, idempotent); uitbreiden van `update-commission-status` (pro forma op verkoopwaarde) en `reconcile-admin-todos` (nette sluiting).
+- **Frontend**: nieuwe tab + tabel in `src/pages/admin/AdminCommissions.tsx`, matchlogica als losse testbare module `src/lib/commissionReconciliation.ts`, koppel-dialog hergebruikt de bestaande allocatie-UI uit `AdminPurchaseInvoices.tsx`.
+- **Tests**: Vitest op de matchlogica (marges, alle vier statussen, meerdere facturen op één item, credits, commissievrij) en idempotency-test op de signaleringsjob (dubbele run = geen dubbele todo of mail).
+- Marge en dagen-drempels in `app_settings`, aanpasbaar zonder code-wijziging.

@@ -66,11 +66,13 @@ Deno.serve(async (req) => {
       const eid = t.auto_entity_id;
       if (
         type === "purchase_invoice_pending" ||
-        type === "purchase_invoice_inbox"
+        type === "purchase_invoice_inbox" ||
+        type === "commission_unlinked_invoice"
       ) {
         if (isUuid(eid)) purchaseInvoiceIds.add(eid);
       } else if (type === "commission_pending") {
         if (isUuid(eid)) batchIds.add(eid);
+
       } else if (
         type === "quote_pending_partner" ||
         type === "quote_expiring_soon" ||
@@ -97,9 +99,11 @@ Deno.serve(async (req) => {
         type === "book_ferry_tickets" ||
         type === "stale_pending_change" ||
         type === "partner_reminder" ||
-        type === "partner_status_update"
+        type === "partner_status_update" ||
+        type === "commission_missing_invoice"
       ) {
         if (isUuid(eid)) itemIds.add(eid);
+
       }
     }
 
@@ -117,8 +121,9 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_request_items")
             .select(
-              "id, request_id, status, customer_approved_at, executed_at, booking_reference, pending_changed_at, pending_added, pending_marked_for_removal",
+              "id, request_id, status, customer_approved_at, executed_at, booking_reference, pending_changed_at, pending_added, pending_marked_for_removal, invoiced_number, commission_basis, commission_status",
             )
+
             .in("id", [...itemIds])
         : Promise.resolve({ data: [], error: null }),
       quoteIds.size
@@ -130,7 +135,8 @@ Deno.serve(async (req) => {
       purchaseInvoiceIds.size
         ? supabase
             .from("partner_purchase_invoices")
-            .select("id, status")
+            .select("id, status, item_id, commission_exempt")
+
             .in("id", [...purchaseInvoiceIds])
         : Promise.resolve({ data: [], error: null }),
       batchIds.size
@@ -164,6 +170,25 @@ Deno.serve(async (req) => {
     const batchMap = new Map<string, any>(
       ((batches.data ?? []) as any[]).map((r) => [r.id, r]),
     );
+
+    // Allocaties per inkoopfactuur (voor commission_unlinked_invoice).
+    const allocatedInvoiceIds = new Set<string>();
+    if (purchaseInvoiceIds.size) {
+      const { data: allocs, error: allocError } = await supabase
+        .from("partner_purchase_invoice_allocations")
+        .select("invoice_id, item_id")
+        .in("invoice_id", [...purchaseInvoiceIds]);
+      if (allocError) {
+        throw new Error(
+          `partner_purchase_invoice_allocations lookup failed: ${allocError.message}`,
+        );
+      }
+      for (const a of (allocs ?? []) as { invoice_id: string; item_id: string | null }[]) {
+        if (a.item_id) allocatedInvoiceIds.add(a.invoice_id);
+      }
+    }
+
+
 
     // sales invoices grouped by request (for post_execution_invoice_check fallback)
     const salesByRequest = new Map<string, number>();
@@ -255,6 +280,45 @@ Deno.serve(async (req) => {
           if (b.status === "paid") markClosed(t.id, type);
           break;
         }
+        case "commission_missing_invoice": {
+          // Aanmaakcriterium: uitgevoerd partner-item zonder gekoppelde
+          // inkoopfactuur. Sluiten zodra er wél een factuur hangt, de
+          // commissie op verkoopwaarde gefactureerd wordt, of de commissie
+          // al verwerkt is.
+          const item = eid ? itemMap.get(eid) : null;
+          if (!item) {
+            markClosed(t.id, `${type}_missing`);
+            break;
+          }
+          if (
+            item.invoiced_number ||
+            item.commission_basis === "sales" ||
+            ["invoiced", "paid", "exempt"].includes(item.commission_status ?? "")
+          ) {
+            markClosed(t.id, type);
+          }
+          break;
+        }
+        case "commission_unlinked_invoice": {
+          // Aanmaakcriterium: geregistreerde inkoopfactuur zonder koppeling
+          // aan een programma-onderdeel. Sluiten zodra gekoppeld of
+          // commissievrij verklaard.
+          const inv = eid ? pInvoiceMap.get(eid) : null;
+          if (!inv) {
+            markClosed(t.id, `${type}_missing`);
+            break;
+          }
+          if (
+            inv.item_id ||
+            inv.commission_exempt === true ||
+            allocatedInvoiceIds.has(inv.id) ||
+            ["rejected", "archived"].includes(inv.status)
+          ) {
+            markClosed(t.id, type);
+          }
+          break;
+        }
+
         case "invoicing_ready": {
           if (req && req.completion_status === "fully_invoiced") {
             markClosed(t.id, type);

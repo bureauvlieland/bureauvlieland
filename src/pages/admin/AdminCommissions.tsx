@@ -34,6 +34,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
+import { CommissionReconciliationPanel } from "@/components/admin/CommissionReconciliationPanel";
+
 import { format, addMonths, startOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -51,6 +53,8 @@ import {
   CalendarDays,
   AlertCircle,
   ArrowRight,
+  Scale,
+
 } from "lucide-react";
 
 interface CommissionItem {
@@ -131,6 +135,8 @@ const statusColors: Record<string, string> = {
 
 export default function AdminCommissions() {
   const [statusFilter, setStatusFilter] = useState("expected");
+  const [viewMode, setViewMode] = useState<"commissions" | "match">("commissions");
+
   const [typeFilter, setTypeFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -393,10 +399,20 @@ export default function AdminCommissions() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant={viewMode === "match" ? "default" : "outline"}
+              onClick={() =>
+                setViewMode(viewMode === "match" ? "commissions" : "match")
+              }
+            >
+              <Scale className="h-4 w-4 mr-2" />
+              {viewMode === "match" ? "Terug naar commissies" : "Match & controle"}
+            </Button>
             <Button variant="outline" onClick={() => navigate("/admin/commissies/facturen")}>
               <FileText className="h-4 w-4 mr-2" />
               Commissiefacturen
             </Button>
+
             <Button variant="outline" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Vernieuwen
@@ -404,8 +420,13 @@ export default function AdminCommissions() {
           </div>
         </div>
 
+        {viewMode === "match" ? (
+          <CommissionReconciliationPanel partnerId={partnerFilter} />
+        ) : (
+        <>
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
           {isExpectedView ? (
             <>
               <Card>
@@ -865,6 +886,10 @@ export default function AdminCommissions() {
             </CardContent>
           </Card>
         )}
+        </>
+        )}
+
+
 
         {/* Invoice Dialog */}
         <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
