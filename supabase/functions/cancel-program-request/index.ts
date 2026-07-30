@@ -131,7 +131,10 @@ Deno.serve(async (req) => {
     await enrichProviderEmails(supabase, items || []);
 
     // Unieke providers met e-mail — alleen partners die daadwerkelijk benaderd zijn.
-    const providers = new Map<string, { name: string; email: string; items: string[] }>();
+    const providers = new Map<
+      string,
+      { name: string; email: string; items: string[]; responded: boolean }
+    >();
     (items || []).forEach((item) => {
       if (item.provider_email && item.block_type !== "self_arranged" && itemWasSentToPartner(item)) {
         if (!providers.has(item.provider_id)) {
@@ -139,11 +142,15 @@ Deno.serve(async (req) => {
             name: item.provider_name,
             email: item.provider_email,
             items: [],
+            responded: false,
           });
         }
-        providers.get(item.provider_id)!.items.push(item.block_name);
+        const entry = providers.get(item.provider_id)!;
+        entry.items.push(item.block_name);
+        if (item.quoted_at || item.partner_price_change_acknowledged_at) entry.responded = true;
       }
     });
+
 
 
     // Update the program status
