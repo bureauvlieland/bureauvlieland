@@ -108,8 +108,21 @@ export default function AdminCommissionInvoiceCreate() {
 
   const itemIdsParam = searchParams.get("itemIds") || "";
   const quoteIdsParam = searchParams.get("quoteIds") || "";
+  const invoiceIdsParam = searchParams.get("invoiceIds") || "";
+  const basisParam = searchParams.get("basis") || "";
   const itemIds = useMemo(() => itemIdsParam.split(",").filter(Boolean), [itemIdsParam]);
   const quoteIds = useMemo(() => quoteIdsParam.split(",").filter(Boolean), [quoteIdsParam]);
+  const invoiceIds = useMemo(() => invoiceIdsParam.split(",").filter(Boolean), [invoiceIdsParam]);
+  /** Map van bron-id → gekozen commissiegrondslag (uit de werklijst). */
+  const basisById = useMemo(() => {
+    const map = new Map<string, CommissionBasis>();
+    for (const entry of basisParam.split(",").filter(Boolean)) {
+      const [id, basis] = entry.split(":");
+      if (id && (basis === "sales" || basis === "purchase")) map.set(id, basis);
+    }
+    return map;
+  }, [basisParam]);
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [partner, setPartner] = useState<SourceItem["partner"]>(null);
