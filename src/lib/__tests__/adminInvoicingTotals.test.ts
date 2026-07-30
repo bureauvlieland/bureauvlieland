@@ -127,6 +127,21 @@ describe("calculateAdminInvoicingTotals", () => {
     expect(r.invoicedTotal).toBe(605);
   });
 
+  it("verwerkt SnelStart-aanbetaling plus eindfactuur met negatieve netto-BTW", () => {
+    const r = calculateAdminInvoicingTotals(
+      makeRequest({
+        items: [makeItem({ quoted_price: 79400.6 })],
+        invoices: [
+          { invoice_type: "partial", amount_excl_vat: 41322.31, vat_amount: 8677.69, amount_incl_vat: 50000 },
+          { invoice_type: "final", amount_excl_vat: 16022.81, vat_amount: -76.1, amount_incl_vat: 15946.71 },
+        ],
+      }),
+      { coordinationFee: 0, touristTaxPerPersonPerDay: 0, natureContributionPerPerson: 0, bureauCentralSurchargePerPerson: 0 },
+    );
+    expect(r.invoicedTotal).toBeCloseTo(65946.71, 2);
+    expect(r.outstanding).toBeCloseTo(13453.89, 2);
+  });
+
   it("creditfactuur wordt afgetrokken", () => {
     const r = calculateAdminInvoicingTotals(
       makeRequest({
