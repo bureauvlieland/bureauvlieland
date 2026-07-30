@@ -28,6 +28,8 @@ const Voorbeeldprogrammas = lazy(() => import("./pages/Voorbeeldprogrammas"));
 const VoorbeeldprogrammaOverzicht = lazy(() => import("./pages/VoorbeeldprogrammaOverzicht"));
 const VoorbeeldprogrammaDetail = lazy(() => import("./pages/VoorbeeldprogrammaDetail"));
 const VeelgesteldeVragen = lazy(() => import("./pages/VeelgesteldeVragen"));
+const LinksPage = lazy(() => import("./pages/Links"));
+
 const Bouwstenen = lazy(() => import("./pages/Bouwstenen"));
 const ActiviteitDetail = lazy(() => import("./pages/ActiviteitDetail"));
 const WadlopenVlieland = lazy(() => import("./pages/WadlopenVlieland"));
