@@ -47,7 +47,10 @@ export interface ReconItemInput {
   block_type?: string | null;
   /** Datum waarop het onderdeel plaatsvond (yyyy-mm-dd). */
   execution_date?: string | null;
+  /** "activity" (programma-onderdeel) of "accommodation" (logies-offerte). */
+  item_type?: ReconItemType;
 }
+
 
 export interface ReconInvoiceInput {
   id: string;
