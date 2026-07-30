@@ -15,10 +15,13 @@ import {
   Anchor,
   Sparkles,
   ChevronRight,
+  Euro,
+  CalendarDays,
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { KeyFacts } from "@/components/seo/KeyFacts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -29,6 +32,7 @@ import {
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import heroImage from "@/assets/zeehondentocht-vlieland-zandbank.jpg";
+
 
 const FAQ: { q: string; a: string }[] = [
   {
