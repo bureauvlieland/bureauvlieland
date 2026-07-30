@@ -17,29 +17,21 @@ const SOLD_STATUSES = ["confirmed", "accepted", "executed", "invoiced", "complet
 const euro = (n: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
-/** Bepaalt of een rij oud genoeg is om te signaleren. */
+/**
+ * Bepaalt of een rij oud genoeg is om te signaleren.
+ * `ageDays` telt vanaf uitvoering (ontbrekende factuur) of registratie
+ * (niet-gekoppelde factuur); rijen zonder datum worden niet gesignaleerd.
+ */
 export function shouldFlag(
-  row: ReconRow,
-  now: Date,
+  row: Pick<ReconRow, "status" | "ageDays">,
   cfg: { missingDays: number; unlinkedDays: number },
 ): boolean {
-  const ageDays = (iso: string | null) => {
-    if (!iso) return null;
-    const t = new Date(iso).getTime();
-    if (!Number.isFinite(t)) return null;
-    return Math.floor((now.getTime() - t) / 86_400_000);
-  };
-
-  if (row.status === "missing_invoice") {
-    const age = ageDays(row.executionDate);
-    return age !== null && age >= cfg.missingDays;
-  }
-  if (row.status === "unlinked_invoice") {
-    const age = ageDays(row.invoiceRegisteredAt ?? row.invoiceDate);
-    return age !== null && age >= cfg.unlinkedDays;
-  }
+  if (row.ageDays === null || row.ageDays === undefined) return false;
+  if (row.status === "missing_invoice") return row.ageDays >= cfg.missingDays;
+  if (row.status === "unlinked_invoice") return row.ageDays >= cfg.unlinkedDays;
   return false;
 }
+
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
