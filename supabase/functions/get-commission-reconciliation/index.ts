@@ -104,10 +104,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .from("partner_purchase_invoices")
       .select(
         "id, partner_id, request_id, item_id, invoice_number, invoice_date, amount_excl_vat, " +
-          "amount_incl_vat, commission_exempt, commission_exempt_reason, status, created_at",
+          "amount_incl_vat, commission_exempt, commission_exempt_reason, status, created_at, " +
+          "commission_invoiced_at",
       );
 
     if (partnerIdFilter) invoicesQuery = invoicesQuery.eq("partner_id", partnerIdFilter);
+
 
     const [{ data: rawItems, error: itemsError }, { data: rawInvoices, error: invoicesError }] =
       await Promise.all([itemsQuery, invoicesQuery]);
