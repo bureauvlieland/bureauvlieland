@@ -261,7 +261,25 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
   }
 });
 
+const SITE_ORIGIN = "https://bureauvlieland.nl";
+
+/** Maakt van een pad of URL een volledige URL met UTM-tagging voor social. */
+function withUtm(target: string, sourceType: string): string {
+  let url: URL;
+  try {
+    url = new URL(target, SITE_ORIGIN);
+  } catch {
+    url = new URL("/", SITE_ORIGIN);
+  }
+  url.searchParams.set("utm_source", "instagram");
+  url.searchParams.set("utm_medium", "social");
+  url.searchParams.set("utm_campaign", "organic");
+  url.searchParams.set("utm_content", sourceType);
+  return url.toString();
+}
+
 function scrubPii(text: string): string {
+
   // Vervang sequenties "Voornaam Achternaam" (2 hoofdletter-woorden) door "een groep" wanneer ze klinken als persoonsnaam.
   // Lichtgewicht; admin reviewt sowieso vóór publicatie.
   return text.replace(/\b[A-Z][a-z]{2,}\s[A-Z][a-z]{2,}\b/g, "een groep");
