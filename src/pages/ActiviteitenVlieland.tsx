@@ -339,6 +339,14 @@ const ActiviteitenVlieland = () => {
           </div>
         </section>
 
+        {/* Alle verdiepte activiteitenpagina's — directe interne links */}
+        <SeeAlsoActivities
+          title="Activiteiten in detail"
+          links={featuredActivities}
+        />
+
+
+
         {/* Plan een dag */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
           <div className="flex items-start gap-3 mb-4">
