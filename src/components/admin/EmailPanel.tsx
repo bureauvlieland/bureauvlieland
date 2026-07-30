@@ -814,10 +814,34 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                 </Button>
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{activeGroup.label}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {activeGroup.items.length} bericht{activeGroup.items.length === 1 ? "" : "en"}
-                    {activeGroup.projectArchived && " · gearchiveerd dossier"}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                    <span>
+                      {activeGroup.items.length} bericht{activeGroup.items.length === 1 ? "" : "en"}
+                    </span>
+                    {activeGroup.projectStatus && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                          DERIVED_STATUS_TONE[activeGroup.projectStatus],
+                        )}
+                      >
+                        {DERIVED_STATUS_LABEL[activeGroup.projectStatus]}
+                      </span>
+                    )}
+                    {activeGroup.projectDate && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1",
+                          isPastDate(new Date(activeGroup.projectDate)) ? "text-red-600 font-medium" : "",
+                        )}
+                      >
+                        <CalendarDays className="h-3 w-3" />
+                        {format(new Date(activeGroup.projectDate), "d MMM yyyy", { locale: nl })}
+                      </span>
+                    )}
+                    {activeGroup.threadArchived && <span>· gearchiveerd gesprek</span>}
+                    {activeGroup.projectArchived && <span>· gearchiveerd dossier</span>}
+                  </div>
                 </div>
                 {activeGroup.kind === "program" && activeGroup.id && (
                   <Button
@@ -839,16 +863,10 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const lastInbound = [...activeGroup.items].reverse().find((e) => e.origin === "inbound");
-                    openReply(activeGroup, lastInbound);
-                  }}
-                >
+                <Button size="sm" onClick={() => replyToGroup(activeGroup)}>
                   <Reply className="h-4 w-4 mr-1" /> Beantwoorden
                 </Button>
-                {activeGroup.projectArchived || activeGroup.kind === "contact" ? (
+                {activeGroup.threadArchived ? (
                   <Button variant="ghost" size="sm" onClick={() => archiveThread(activeGroup, false)}>
                     <ArchiveRestore className="h-4 w-4 mr-1" /> Uit archief
                   </Button>
@@ -857,6 +875,38 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                     <Archive className="h-4 w-4 mr-1" /> Archiveer
                   </Button>
                 )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuItem onClick={() => setThreadAnswered(activeGroup, true)}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" /> Markeer gesprek als beantwoord
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setThreadAnswered(activeGroup, false)}>
+                      <RotateCcw className="h-4 w-4 mr-2" /> Markeer als onbeantwoord
+                    </DropdownMenuItem>
+                    {activeGroup.kind !== "contact" && activeGroup.id && (
+                      activeGroup.projectArchived ? (
+                        <DropdownMenuItem onClick={() => archiveDossier(activeGroup, false)}>
+                          <ArchiveRestore className="h-4 w-4 mr-2" /> Dossier terughalen uit archief
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className="text-amber-700"
+                          onClick={() => archiveDossier(activeGroup, true)}
+                        >
+                          <Archive className="h-4 w-4 mr-2" /> Ook het hele dossier archiveren
+                        </DropdownMenuItem>
+                      )
+                    )}
+                    <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
+                      <Keyboard className="h-4 w-4 mr-2" /> Sneltoetsen
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
