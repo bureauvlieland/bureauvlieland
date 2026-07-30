@@ -277,6 +277,16 @@ const ActiviteitenVlieland = () => {
           </div>
         </section>
 
+        <KeyFacts
+          summary="Op Vlieland zijn de populairste activiteiten een wadexcursie met gids, een zeehondentocht per boot, fietsen door de duinen en bossen, de Vliehors Expres naar het westelijke strand, blokarten, de vuurtoren beklimmen en Museum Tromp's Huys. Het eiland is autoluw en bereikbaar met de veerboot vanuit Harlingen (45 minuten met de sneldienst, circa 90 minuten met de gewone boot). Bureau Vlieland boekt losse activiteiten of een compleet groepsprogramma met één factuur."
+          facts={[
+            { icon: Ship, label: "Bereikbaar", value: "Veerboot Harlingen, 45–90 min" },
+            { icon: Bike, label: "Vervoer", value: "Autoluw — fiets en te voet" },
+            { icon: CalendarDays, label: "Hoogseizoen", value: "Mei t/m oktober" },
+            { icon: Clock, label: "Dagje eiland", value: "Boot 9:00 heen, begin avond terug" },
+          ]}
+        />
+
         {/* Intro */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
           <div className="prose prose-neutral max-w-none text-foreground space-y-4">
@@ -288,6 +298,7 @@ const ActiviteitenVlieland = () => {
             </p>
           </div>
         </section>
+
 
         {/* Thema's */}
         <section className="bg-muted/30 py-16">
