@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sandwich, GlassWater, Flame, UtensilsCrossed, Sparkles, MapPin, ChefHat, Check } from "lucide-react";
 import { Helmet } from "react-helmet";
@@ -472,6 +473,7 @@ const Catering = () => {
             </div>
           </section>
         </main>
+        <RelatedLinks />
         <Footer />
       </div>
     </>

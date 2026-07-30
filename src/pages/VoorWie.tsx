@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { ForWho } from "@/components/ForWho";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,7 @@ const VoorWie = () => {
             },
         ]}
       />
+      <RelatedLinks />
       <Footer />
     </div>
   );

@@ -2,6 +2,7 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import {
   Accordion,
   AccordionContent,
@@ -266,6 +267,7 @@ export default function VeelgesteldeVragen() {
         </section>
       </main>
 
+      <RelatedLinks />
       <Footer />
     </>
   );

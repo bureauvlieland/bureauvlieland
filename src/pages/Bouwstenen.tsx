@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -356,6 +357,7 @@ const Bouwstenen = () => {
             },
         ]}
       />
+      <RelatedLinks />
       <Footer />
     </div>
   );

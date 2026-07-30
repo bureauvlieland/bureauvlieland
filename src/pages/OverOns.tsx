@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { AboutErwin } from "@/components/AboutErwin";
 import { Verbinder } from "@/components/Verbinder";
@@ -103,6 +104,7 @@ const OverOns = () => {
             },
         ]}
       />
+      <RelatedLinks />
       <Footer />
     </div>
   );

@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -93,6 +94,7 @@ const OnzeWerkwijze = () => {
           </div>
         </section>
       </main>
+      <RelatedLinks />
       <Footer />
     </div>
   );
