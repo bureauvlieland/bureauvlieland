@@ -1419,7 +1419,7 @@ const AdminInvoicePreview = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {isExistingInvoiceView && loadedInvoice ? (
+                          {isExistingInvoiceView && loadedInvoice && !showFullSpecification ? (
                             <>
                               <tr>
                                 <td
