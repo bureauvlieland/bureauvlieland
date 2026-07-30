@@ -121,8 +121,9 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_request_items")
             .select(
-              "id, request_id, status, customer_approved_at, executed_at, booking_reference, pending_changed_at, pending_added, pending_marked_for_removal",
+              "id, request_id, status, customer_approved_at, executed_at, booking_reference, pending_changed_at, pending_added, pending_marked_for_removal, invoiced_number, commission_basis, commission_status",
             )
+
             .in("id", [...itemIds])
         : Promise.resolve({ data: [], error: null }),
       quoteIds.size
