@@ -42,7 +42,7 @@ import {
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
-import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
+import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 
 interface ProgramRequest {
   id: string;
@@ -644,7 +644,18 @@ const AdminInvoicePreview = () => {
     const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
 
 
-    if (loadedInvoiceForPdf) {
+    // Eindfacturen die het volledige project dekken krijgen de volledige
+    // specificatie; deel-/slot-/creditfacturen een compacte samenvattingsregel.
+    const showFullSpecPdf = loadedInvoiceForPdf
+      ? shouldShowFullSpecification({
+          resolvedType: (loadedInvoiceTypeForPdf ?? "partial") as InvoiceType,
+          alreadyInvoicedInclVat: priorOtherSumLocal,
+          invoiceAmountInclVat: Number(loadedInvoiceForPdf.amount_incl_vat),
+          projectTotalInclVat: totalsLocal.totalInclVat,
+        })
+      : false;
+
+    if (loadedInvoiceForPdf && !showFullSpecPdf) {
       const typeLabel =
         invoiceTypeLabels[loadedInvoiceTypeForPdf as InvoiceType] ||
         String(loadedInvoiceTypeForPdf || loadedInvoiceForPdf.invoice_type);
@@ -1067,6 +1078,18 @@ const AdminInvoicePreview = () => {
         alreadyInvoicedInclVat: priorSumExcludingCurrent,
       });
 
+  // Volledige specificatie tonen bij een reeds geregistreerde eindfactuur die
+  // het hele project dekt; anders blijft de compacte samenvattingsregel staan.
+  const showFullSpecification =
+    isExistingInvoiceView && loadedInvoice
+      ? shouldShowFullSpecification({
+          resolvedType: outgoingInvoiceType,
+          alreadyInvoicedInclVat: priorSumExcludingCurrent,
+          invoiceAmountInclVat: Number(loadedInvoice.amount_incl_vat),
+          projectTotalInclVat: totals.totalInclVat,
+        })
+      : false;
+
 
   const priorRefList = priorInvoices
     .filter((p) => p.invoice_number !== invoiceNumber)
@@ -1396,7 +1419,7 @@ const AdminInvoicePreview = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {isExistingInvoiceView && loadedInvoice ? (
+                          {isExistingInvoiceView && loadedInvoice && !showFullSpecification ? (
                             <>
                               <tr>
                                 <td
