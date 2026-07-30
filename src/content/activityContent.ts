@@ -71,7 +71,7 @@ export const activityContent: Record<string, ActivityContent> = {
 
   wadloopexcursie: {
     summary:
-      "Een begeleide wadloopexcursie op Vlieland gaat onder leiding van een gecertificeerde gids de bodem van de Waddenzee op, duurt doorgaans twee tot drie uur en start op een tijdstip dat door het getij wordt bepaald.",
+      "Een begeleide wadloopexcursie op Vlieland gaat onder leiding van een ervaren gids het drooggevallen wad rond het eiland op, duurt ongeveer 1,5 uur en start op een tijdstip dat door het getij wordt bepaald. De richtprijs is €17,50 tot €20 per volwassene; laarzen zijn inbegrepen.",
     paragraphs: [
       "Wadlopen is de enige manier om het werelderfgoed Waddenzee letterlijk onder je voeten te voelen. Bij laagwater valt een landschap droog dat er twee keer per dag anders uitziet: geulen, slikvlaktes, mosselbanken en priel na priel. Een gids laat zien wat er leeft — wadpieren, kokkels, garnalen, krabben — en legt uit waarom dit gebied zo bijzonder is dat het op de UNESCO-lijst staat.",
       "Zonder gids is het wad levensgevaarlijk: het tij komt sneller op dan mensen inschatten en mist kan binnen minuten het zicht wegnemen. Daarom werken wij uitsluitend met gecertificeerde wadgidsen die het gebied rond Vlieland dagelijks kennen. Zij bepalen route en starttijd op basis van de getijdentabel en de actuele weersverwachting.",
