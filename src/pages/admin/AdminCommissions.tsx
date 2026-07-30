@@ -660,8 +660,11 @@ export default function AdminCommissions() {
           </div>
         )}
 
-        {/* Partner Groups */}
-        {data?.byPartner && data.byPartner.length > 0 ? (
+        {/* Werklijst: alle gerealiseerde partnerregels + losse inkoopfacturen */}
+        {statusFilter === "pending" ? (
+          <CommissionWorklist partnerId={partnerFilter} />
+        ) : data?.byPartner && data.byPartner.length > 0 ? (
+
           <div className="space-y-6">
             {data.byPartner.map((group) => (
               <Card key={group.partner?.id || "unknown"} className={isExpectedView ? "border-purple-200" : ""}>
