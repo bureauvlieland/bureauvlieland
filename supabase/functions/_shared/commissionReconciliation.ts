@@ -86,7 +86,11 @@ export interface ReconRow {
   partnerName: string;
   projectId: string | null;
   projectReference: string | null;
+  /** Bedrijfsnaam indien bekend, anders de klantnaam. */
   projectLabel: string | null;
+  /** Naam van de contactpersoon/klant (los van bedrijfsnaam). */
+  customerName: string | null;
+
   itemId: string | null;
   invoiceId: string | null;
   label: string;
@@ -264,6 +268,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       projectId: item.request_id,
       projectReference: project?.reference_number ?? null,
       projectLabel: project?.customer_company || project?.customer_name || null,
+      customerName: project?.customer_name ?? null,
+
       itemId: item.id,
       invoiceId: activeInvoices[0]?.id ?? null,
       label: item.block_name ?? "Onbekend onderdeel",
@@ -300,6 +306,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       projectId: inv.request_id,
       projectReference: project?.reference_number ?? null,
       projectLabel: project?.customer_company || project?.customer_name || null,
+      customerName: project?.customer_name ?? null,
+
       itemId: null,
       invoiceId: inv.id,
       label: `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"}`,

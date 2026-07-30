@@ -173,6 +173,9 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
       }),
   });
 
+  /** Datum waarop een regel wordt gesorteerd: uitvoering, anders factuurdatum. */
+  const rowDate = (row: ReconRow) => row.executionDate ?? row.invoiceDate ?? null;
+
   const rows = useMemo(() => {
     const all = data?.rows ?? [];
     const term = search.trim().toLowerCase();
@@ -190,13 +193,60 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
       })
       .filter((r) => {
         if (!term) return true;
-        return [r.partnerName, r.label, r.projectReference, r.projectLabel, r.invoiceNumber]
+        return [
+          r.partnerName,
+          r.label,
+          r.projectReference,
+          r.projectLabel,
+          r.customerName,
+          r.invoiceNumber,
+        ]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(term));
       });
   }, [data?.rows, statusFilter, search]);
 
+  /** Gegroepeerd per partner, binnen de groep gesorteerd op datum (nieuwste eerst). */
+  const partnerGroups = useMemo(() => {
+    const map = new Map<string, { partnerId: string; partnerName: string; rows: ReconRow[] }>();
+    for (const row of rows) {
+      const key = row.partnerId || row.partnerName || "onbekend";
+      if (!map.has(key)) {
+        map.set(key, { partnerId: row.partnerId, partnerName: row.partnerName, rows: [] });
+      }
+      map.get(key)!.rows.push(row);
+    }
+
+    const groups = Array.from(map.values()).map((group) => {
+      const sorted = [...group.rows].sort((a, b) => {
+        const da = rowDate(a);
+        const db = rowDate(b);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return db.localeCompare(da);
+      });
+      return {
+        ...group,
+        rows: sorted,
+        commissionAtRisk: sorted.reduce((sum, r) => sum + (r.commissionAtRisk || 0), 0),
+        latestDate: rowDate(sorted[0]) ?? null,
+      };
+    });
+
+    // Partners met de meest recente activiteit bovenaan; naam als tiebreaker.
+    return groups.sort((a, b) => {
+      if (a.latestDate && b.latestDate && a.latestDate !== b.latestDate) {
+        return b.latestDate.localeCompare(a.latestDate);
+      }
+      if (a.latestDate && !b.latestDate) return -1;
+      if (!a.latestDate && b.latestDate) return 1;
+      return a.partnerName.localeCompare(b.partnerName, "nl");
+    });
+  }, [rows]);
+
   const summary = data?.summary;
+
 
   if (error) {
     return (
@@ -278,7 +328,7 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Zoek partner, project of factuur"
+                placeholder="Zoek partner, klant, project of factuur"
                 className="w-56"
               />
               <Select
@@ -324,8 +374,7 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Status</TableHead>
-                  <TableHead>Partner</TableHead>
-                  <TableHead>Project / onderdeel</TableHead>
+                  <TableHead>Klant / project / onderdeel</TableHead>
                   <TableHead className="text-right">Verkoop ex btw</TableHead>
                   <TableHead className="text-right">Inkoop ex btw</TableHead>
                   <TableHead className="text-right">Verschil</TableHead>
@@ -335,84 +384,113 @@ export function CommissionReconciliationPanel({ partnerId = null }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => {
-                  const meta = statusMeta[row.status];
-                  return (
-                    <TableRow key={row.key}>
-                      <TableCell>
-                        <Badge variant="secondary" className={meta.className} title={meta.description}>
-                          {meta.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{row.partnerName}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">{row.label}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {row.projectReference ?? "Geen project"}
-                          {row.invoiceNumber ? ` · factuur ${row.invoiceNumber}` : ""}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{euro(row.salesExclVat)}</TableCell>
-                      <TableCell className="text-right">{euro(row.purchaseExclVat)}</TableCell>
-                      <TableCell
-                        className={`text-right ${
-                          row.differenceExclVat && Math.abs(row.differenceExclVat) > 0.005
-                            ? "text-orange-700 font-medium"
-                            : ""
-                        }`}
-                      >
-                        {euro(row.differenceExclVat)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {euro(row.commissionAtRisk)}
-                        <span className="text-xs text-muted-foreground block">
-                          {row.commissionPercentage}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {shortDate(row.executionDate ?? row.invoiceDate)}
-                        {row.ageDays !== null && row.ageDays !== undefined && (
-                          <span className="block text-xs">{row.ageDays} dgn</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {row.status === "missing_invoice" && row.itemId && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={billOnSales.isPending}
-                              onClick={() => billOnSales.mutate(row)}
-                            >
-                              <Euro className="h-3.5 w-3.5 mr-1" />
-                              Op verkoopwaarde
-                            </Button>
+                {partnerGroups.flatMap((group) => [
+                  <TableRow key={`group:${group.partnerId}`} className="bg-muted/60 hover:bg-muted/60">
+                    <TableCell colSpan={6} className="font-semibold">
+                      {group.partnerName}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        {group.rows.length} regel{group.rows.length === 1 ? "" : "s"}
+                      </span>
+                    </TableCell>
+                    <TableCell colSpan={2} className="text-right text-xs text-muted-foreground">
+                      commissie in risico: {euro(group.commissionAtRisk)}
+                    </TableCell>
+                  </TableRow>,
+                  ...group.rows.map((row) => {
+                    const meta = statusMeta[row.status];
+                    const customerLabel = row.projectLabel ?? row.customerName;
+                    const showContact =
+                      row.customerName && row.projectLabel && row.customerName !== row.projectLabel;
+                    return (
+                      <TableRow key={row.key}>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={meta.className}
+                            title={meta.description}
+                          >
+                            {meta.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-medium">
+                            {customerLabel ?? "Onbekende klant"}
+                            {showContact && (
+                              <span className="font-normal text-muted-foreground">
+                                {" "}
+                                ({row.customerName})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm">{row.label}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {row.projectReference ?? "Geen project"}
+                            {row.invoiceNumber ? ` · factuur ${row.invoiceNumber}` : ""}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{euro(row.salesExclVat)}</TableCell>
+                        <TableCell className="text-right">{euro(row.purchaseExclVat)}</TableCell>
+                        <TableCell
+                          className={`text-right ${
+                            row.differenceExclVat && Math.abs(row.differenceExclVat) > 0.005
+                              ? "text-orange-700 font-medium"
+                              : ""
+                          }`}
+                        >
+                          {euro(row.differenceExclVat)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {euro(row.commissionAtRisk)}
+                          <span className="text-xs text-muted-foreground block">
+                            {row.commissionPercentage}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {shortDate(row.executionDate ?? row.invoiceDate)}
+                          {row.ageDays !== null && row.ageDays !== undefined && (
+                            <span className="block text-xs">{row.ageDays} dgn</span>
                           )}
-                          {row.status === "unlinked_invoice" && row.invoiceId && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={markExempt.isPending}
-                              onClick={() => markExempt.mutate(row)}
-                            >
-                              <ShieldOff className="h-3.5 w-3.5 mr-1" />
-                              Commissievrij
-                            </Button>
-                          )}
-                          {row.projectId && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => navigate(`/admin/projecten/${row.projectId}`)}
-                            >
-                              <ArrowUpRight className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {row.status === "missing_invoice" && row.itemId && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={billOnSales.isPending}
+                                onClick={() => billOnSales.mutate(row)}
+                              >
+                                <Euro className="h-3.5 w-3.5 mr-1" />
+                                Op verkoopwaarde
+                              </Button>
+                            )}
+                            {row.status === "unlinked_invoice" && row.invoiceId && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={markExempt.isPending}
+                                onClick={() => markExempt.mutate(row)}
+                              >
+                                <ShieldOff className="h-3.5 w-3.5 mr-1" />
+                                Commissievrij
+                              </Button>
+                            )}
+                            {row.projectId && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => navigate(`/admin/projecten/${row.projectId}`)}
+                              >
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }),
+                ])}
+
               </TableBody>
             </Table>
           )}
