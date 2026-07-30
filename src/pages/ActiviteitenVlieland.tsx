@@ -16,10 +16,15 @@ import {
   UtensilsCrossed,
   Users,
   Compass,
+  Ship,
+  CalendarDays,
+  Clock,
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { KeyFacts } from "@/components/seo/KeyFacts";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
