@@ -1,4 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildCtaUrl,
+  PILLAR_CAPTION_FORMAT,
+  PILLAR_LABELS,
+  pillarForSourceType,
+} from "../_shared/socialCta.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,21 +14,30 @@ const corsHeaders = {
 
 /**
  * social-generate-drafts
- * Verzamelt kandidaten (nieuwe bouwstenen, partners, projectfoto's, partner van de week)
- * en laat de AI per kandidaat een conceptpost genereren in `social_posts` (status='draft').
- * Skipt kandidaten die in laatste 30 dagen al gebruikt zijn.
+ * Verzamelt kandidaten (nieuwe bouwstenen, voorbeeldprogramma's, partners, projectfoto's,
+ * partner van de week) en laat de AI per kandidaat een conceptpost genereren in
+ * `social_posts` (status='draft'). Skipt kandidaten die in laatste 30 dagen al gebruikt zijn.
+ * Elke post krijgt een vaste UTM-CTA per contentpijler (zie _shared/socialCta.ts).
  *
  * Auth: admin-only wanneer aangeroepen vanuit UI (Authorization header met admin-JWT)
  *       OF service-role (cron via pg_net met service_role-key in header).
  */
 
 type Candidate = {
-  source_type: "building_block" | "partner" | "asset" | "partner_spotlight";
+  source_type:
+    | "building_block"
+    | "program_template"
+    | "partner"
+    | "asset"
+    | "partner_spotlight";
   source_id: string;
   summary: string;
   image_url?: string | null;
   hint?: string;
+  /** Slug voor de diepe CTA-link (bouwsteen-slug of template-id). */
+  slug?: string | null;
 };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
