@@ -115,7 +115,7 @@ function stripHtml(html: string): string {
   return noTags.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
 }
 
-async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
+async function fetchEmails(): Promise<EmailItem[]> {
   const sinceIso = new Date(Date.now() - 90 * 86400000).toISOString();
 
   // 1) project_communications: alle e-mail types
