@@ -126,6 +126,11 @@ const AdminQuotePreview = () => {
   const [validUntil, setValidUntil] = useState<Date>(defaultValidUntil);
   const [personalMessage, setPersonalMessage] = useState("");
 
+  // Voorstel: één maand vóór aankomst; bij late aanvragen een korte-termijn-datum.
+  const validitySuggestion = suggestQuoteValidUntil({
+    arrivalDate: firstProgramDate(request?.selected_dates),
+  });
+
   useEffect(() => {
     if (!id) return;
     let fetched = false;
