@@ -11,14 +11,14 @@ const Evenementen = () => {
   return (
     <>
        <Helmet>
-        <title>Evenementen op Vlieland | Bureau Vlieland</title>
+        <title>Agenda & evenementen Vlieland | Bureau Vlieland</title>
         <meta 
           name="description" 
-          content="Ontdek de mooiste evenementen op Vlieland: van de Vuurtorenloop hardloopfeest tot de culinaire Amusetour. Bureau Vlieland organiseert uw deelname."
+          content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement — één partij, één factuur."
         />
         <link rel="canonical" href="https://bureauvlieland.nl/evenementen" />
-        <meta property="og:title" content="Evenementen op Vlieland | Bureau Vlieland" />
-        <meta property="og:description" content="Ontdek de mooiste evenementen op Vlieland: van de Vuurtorenloop hardloopfeest tot de culinaire Amusetour. Bureau Vlieland organiseert uw deelname." />
+        <meta property="og:title" content="Agenda & evenementen Vlieland | Bureau Vlieland" />
+        <meta property="og:description" content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement." />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
         <meta property="og:url" content="https://bureauvlieland.nl/evenementen" />
         <meta property="og:type" content="website" />
@@ -30,14 +30,15 @@ const Evenementen = () => {
       <section className="relative min-h-[40vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-accent-soft/30 to-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-20 text-center">
           <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground mb-6">
-            Evenementen op Vlieland
+            Agenda & evenementen op Vlieland
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Ontdek de mooiste evenementen die Vlieland te bieden heeft. Van sportief tot culinair - 
-            Bureau Vlieland helpt u bij de perfecte evenementbeleving.
+            Ontdek de mooiste evenementen die Vlieland te bieden heeft. Van sportief tot culinair — 
+            Bureau Vlieland regelt de boot, het verblijf en het programma eromheen.
           </p>
         </div>
       </section>
+
 
       {/* Amusetour Section */}
       <section className="py-20 bg-background">
