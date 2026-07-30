@@ -744,6 +744,36 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                   <p className={cn("text-xs text-slate-700 truncate", g.unread > 0 && "font-medium")}>
                     {last?.subject || "(geen onderwerp)"}
                   </p>
+                  {(g.projectStatus || g.projectDate || g.threadArchived) && (
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {g.projectStatus && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                            DERIVED_STATUS_TONE[g.projectStatus],
+                          )}
+                        >
+                          {DERIVED_STATUS_LABEL[g.projectStatus]}
+                        </span>
+                      )}
+                      {g.projectDate && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 text-[10px]",
+                            isPastDate(new Date(g.projectDate)) ? "text-red-600 font-medium" : "text-slate-500",
+                          )}
+                        >
+                          <CalendarDays className="h-3 w-3" />
+                          {format(new Date(g.projectDate), "d MMM yyyy", { locale: nl })}
+                        </span>
+                      )}
+                      {g.threadArchived && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+                          <Archive className="h-3 w-3" /> gearchiveerd
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-2 mt-0.5">
                     <p className="text-[11px] text-slate-500 truncate flex-1">
                       {formatDistanceToNow(new Date(g.lastAt), { addSuffix: true, locale: nl })}
