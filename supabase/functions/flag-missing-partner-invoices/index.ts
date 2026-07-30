@@ -174,7 +174,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       settings,
     });
 
-    const flagged = rows.filter((r) => shouldFlag(r, now, cfg));
+    const flagged = rows.filter((r) => shouldFlag(r, cfg));
 
     // Bestaande open todo's ophalen zodat we niets dubbel aanmaken.
     const { data: existing, error: existingError } = await supabase
@@ -200,14 +200,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const project = r.projectReference ? ` (${r.projectReference})` : "";
         return {
           title: isMissing
-            ? `Inkoopfactuur ontbreekt: ${r.partnerName} — ${r.itemName ?? "onderdeel"}${project}`
+            ? `Inkoopfactuur ontbreekt: ${r.partnerName} — ${r.label}${project}`
             : `Inkoopfactuur niet gekoppeld: ${r.partnerName} — factuur ${r.invoiceNumber ?? "?"}`,
           description: isMissing
             ? `Dit onderdeel is uitgevoerd (verkoopwaarde ${euro(r.salesExclVat ?? 0)} ex btw) maar er is geen inkoopfactuur van ${r.partnerName} geregistreerd. Zonder factuur wordt er geen commissie (${euro(r.commissionAtRisk)}) gefactureerd. Vraag de factuur op of factureer de commissie op verkoopwaarde.`
             : `Deze inkoopfactuur van ${r.partnerName} (${euro(r.purchaseExclVat ?? 0)} ex btw) is geregistreerd maar niet gekoppeld aan een programma-onderdeel, waardoor de commissie (${euro(r.commissionAtRisk)}) buiten beeld blijft. Koppel de factuur of markeer hem commissievrij.`,
           priority: r.commissionAtRisk >= 250 ? "high" : "normal",
           status: "todo",
-          related_request_id: r.requestId ?? null,
+          related_request_id: r.projectId ?? null,
           related_partner_id: r.partnerId ?? null,
           auto_type: autoType,
           auto_entity_id: entityId,
