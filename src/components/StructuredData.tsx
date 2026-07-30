@@ -105,7 +105,17 @@ export const StructuredData = () => {
       "reviewBody": r.text,
     }));
 
-    const schemas = [localBusiness, ...services, ...reviews];
+    const website = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Bureau Vlieland",
+      "url": "https://bureauvlieland.nl",
+      "inLanguage": "nl-NL",
+      "publisher": { "@type": "Organization", "name": "Bureau Vlieland" },
+    };
+
+    const schemas = [localBusiness, website, ...services, ...reviews];
+
 
     schemas.forEach((schema, index) => {
       const script = document.createElement('script');
