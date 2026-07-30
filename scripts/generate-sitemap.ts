@@ -69,6 +69,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/programma-op-maat", changefreq: "monthly", priority: "0.8" },
   { path: "/logies-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/activiteiten-boeken", changefreq: "weekly", priority: "0.8" },
+  { path: "/offerte", changefreq: "monthly", priority: "0.8" },
 ];
 
 
