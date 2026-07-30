@@ -1078,6 +1078,18 @@ const AdminInvoicePreview = () => {
         alreadyInvoicedInclVat: priorSumExcludingCurrent,
       });
 
+  // Volledige specificatie tonen bij een reeds geregistreerde eindfactuur die
+  // het hele project dekt; anders blijft de compacte samenvattingsregel staan.
+  const showFullSpecification =
+    isExistingInvoiceView && loadedInvoice
+      ? shouldShowFullSpecification({
+          resolvedType: outgoingInvoiceType,
+          alreadyInvoicedInclVat: priorSumExcludingCurrent,
+          invoiceAmountInclVat: Number(loadedInvoice.amount_incl_vat),
+          projectTotalInclVat: totals.totalInclVat,
+        })
+      : false;
+
 
   const priorRefList = priorInvoices
     .filter((p) => p.invoice_number !== invoiceNumber)
