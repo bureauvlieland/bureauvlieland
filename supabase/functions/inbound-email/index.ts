@@ -560,6 +560,61 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Route: reply to a chat notification (reply+chat-<uuid>@...) ───────────
+    const chatConversationId = extractChatConversationId(recipient);
+    if (chatConversationId) {
+      try {
+        const { data: conv } = await supabase
+          .from("chat_conversations")
+          .select("id, visitor_name, visitor_email, source")
+          .eq("id", chatConversationId)
+          .maybeSingle();
+
+        if (!conv) {
+          console.warn(`Chat reply for unknown conversation ${chatConversationId}`);
+        } else {
+          const { name: senderName, email: senderEmail } = parseSender(sender);
+          const rawText = textContent || stripHtml(htmlContent) || "";
+          const trimmed = (trimQuotedReply(rawText) || rawText).trim();
+
+          if (!trimmed) {
+            console.warn(`Empty chat reply for conversation ${chatConversationId}`);
+          } else {
+            const { error: msgErr } = await supabase.from("chat_messages").insert({
+              conversation_id: conv.id,
+              sender_type: "visitor",
+              sender_name: conv.visitor_name || senderName || senderEmail || "Bezoeker",
+              content: trimmed.substring(0, 10000),
+            });
+            if (msgErr) {
+              console.error("chat reply insert error:", msgErr);
+            } else {
+              await supabase
+                .from("chat_conversations")
+                .update({
+                  last_message_at: new Date().toISOString(),
+                  status: "active",
+                  archived_at: null,
+                })
+                .eq("id", conv.id);
+            }
+          }
+
+          return new Response(
+            JSON.stringify({ status: "ok", routed_to: "chat", conversation_id: conv.id }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      } catch (err) {
+        console.error("chat routing failed:", err);
+        return new Response(
+          JSON.stringify({ status: "error", message: "chat_routing_failed" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+
     const referenceNumber = extractReferenceNumber(recipient);
     if (!referenceNumber) {
       console.warn(`No valid reference number found in recipient: ${recipient} — storing as unrouted in sales_inbox`);
