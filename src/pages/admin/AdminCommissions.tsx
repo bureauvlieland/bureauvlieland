@@ -133,6 +133,8 @@ const statusColors: Record<string, string> = {
 
 export default function AdminCommissions() {
   const [statusFilter, setStatusFilter] = useState("expected");
+  const [viewMode, setViewMode] = useState<"commissions" | "match">("commissions");
+
   const [typeFilter, setTypeFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
