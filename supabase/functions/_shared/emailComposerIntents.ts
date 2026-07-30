@@ -1,11 +1,9 @@
 /**
  * Slimme e-mailcomposer voor de klantenkaart.
  *
- * Deze module is puur (geen I/O) zodat zowel de admin-UI als de
- * `compose-followup-email` edge function dezelfde intenties, dossier-samenvatting
- * en promptopbouw gebruiken — en het geheel testbaar blijft.
- *
- * Deze file is een kopie van src/lib/emailComposerIntents.ts (bron van waarheid).
+ * Deno-kopie van src/lib/emailComposerIntents.ts (dat bestand is de bron van waarheid).
+ * Puur (geen I/O) zodat admin-UI en edge function dezelfde intenties,
+ * dossier-samenvatting en promptopbouw gebruiken.
  */
 
 export type EmailIntentId =
@@ -20,11 +18,8 @@ export type EmailIntentId =
 
 export interface EmailIntent {
   id: EmailIntentId;
-  /** Korte knoplabel in de UI. */
   label: string;
-  /** Toelichting onder/naast de knop. */
   hint: string;
-  /** Doelinstructie die de AI meekrijgt. */
   goal: string;
 }
 
@@ -110,10 +105,6 @@ export function goalForIntent(id: string | null | undefined): string {
   );
 }
 
-/* ------------------------------------------------------------------ *
- * Dossier
- * ------------------------------------------------------------------ */
-
 export type DossierKind =
   | "email_out"
   | "email_in"
@@ -156,10 +147,6 @@ export function daysBetween(from: string, to: Date = new Date()): number {
   return Math.max(0, Math.floor((to.getTime() - t) / 86_400_000));
 }
 
-/**
- * Sorteert dossieritems (nieuwste eerst), kapt af op `max` en berekent de samenvatting.
- * Voor de prompt draaien we daarna om naar chronologisch.
- */
 export function buildDossier(
   entries: DossierEntry[],
   opts: { max?: number; now?: Date } = {},
@@ -184,7 +171,6 @@ export function buildDossier(
     lastIncomingExcerpt: lastInbound ? truncate(lastInbound.content, 400) || null : null,
   };
 
-  // Chronologisch voor de prompt: oudste eerst leest als een gesprek.
   const chronological = [...kept].sort(
     (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
   );
@@ -215,9 +201,6 @@ export function formatDossier(entries: DossierEntry[]): string {
     .join("\n\n");
 }
 
-/**
- * Bepaalt welke intentie het meest logisch is, zodat de UI die kan aanraden.
- */
 export function suggestIntent(input: {
   quoteSentAt?: string | null;
   termsAcceptedAt?: string | null;
@@ -226,7 +209,6 @@ export function suggestIntent(input: {
   summary: DossierSummary;
 }): EmailIntentId {
   const { summary } = input;
-  // Klant wacht op antwoord: dat gaat altijd voor.
   if (
     summary.lastCustomerContactAt &&
     (summary.daysSinceCustomerContact ?? 99) <= 5 &&
@@ -241,17 +223,10 @@ export function suggestIntent(input: {
   return "status_update";
 }
 
-/* ------------------------------------------------------------------ *
- * Prompt
- * ------------------------------------------------------------------ */
-
 export interface ComposerPromptInput {
   intent?: string | null;
-  /** Extra sturing van de admin bij een nieuwe suggestie. */
   instruction?: string | null;
-  /** Huidige tekst in de editor bij een herschrijf-actie. */
   currentBody?: string | null;
-  /** Herschrijf-opdracht, bijv. "korter" of "warmer". */
   refineInstruction?: string | null;
   contactFirstName: string;
   recipientName?: string | null;
