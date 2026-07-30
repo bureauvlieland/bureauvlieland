@@ -133,7 +133,7 @@ function BatchTransactions({ batchId }: { batchId: string }) {
           ))}
 
           <TableRow>
-            <TableCell colSpan={4} className="text-right text-sm font-medium">
+            <TableCell colSpan={5} className="text-right text-sm font-medium">
               Totaal ({data.length} transacties)
             </TableCell>
             <TableCell className="text-right font-mono font-bold">
