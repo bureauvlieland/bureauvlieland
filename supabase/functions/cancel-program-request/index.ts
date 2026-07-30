@@ -402,7 +402,9 @@ Deno.serve(async (req) => {
       name: p.name,
       email: p.email || null,
       item_names: p.items,
+      approach_status: p.responded ? "responded" : "sent",
     }));
+
     const affected_accommodation_partners = Array.from(accommodationPartners.entries()).map(([partner_id, p]) => ({
       partner_id,
       name: p.name,
