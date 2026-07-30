@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { Button } from "@/components/ui/button";
@@ -329,6 +330,27 @@ const LogiesVlieland = () => {
         </section>
       </main>
 
+      <FaqSection
+        schemaId="logies-vlieland"
+        items={[
+            {
+              question: "Welke soorten logies zijn er op Vlieland?",
+              answer: "Op Vlieland vind je hotels, appartementen, groepsaccommodaties, vakantiehuizen en campings. Wij bemiddelen voor groepen bij alle typen.",
+            },
+            {
+              question: "Regelen jullie de accommodatie voor mijn groep?",
+              answer: "Ja. Wij vragen op basis van je data en groepsgrootte offertes op bij meerdere accommodaties, zodat je de opties naast elkaar kunt vergelijken.",
+            },
+            {
+              question: "Hoe ver vooruit moet ik logies reserveren?",
+              answer: "Voor het hoogseizoen en rond evenementen adviseren we zes tot twaalf maanden vooraf. Buiten het seizoen is enkele weken vaak voldoende.",
+            },
+            {
+              question: "Kan ik logies en programma op één factuur krijgen?",
+              answer: "Ja. Bureau Vlieland factureert logies, activiteiten, catering en overtocht centraal op één factuur.",
+            },
+        ]}
+      />
       <Footer />
     </>
   );

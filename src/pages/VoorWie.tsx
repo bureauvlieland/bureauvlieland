@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { ForWho } from "@/components/ForWho";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
@@ -92,6 +93,27 @@ const VoorWie = () => {
           </div>
         </section>
       </main>
+      <FaqSection
+        schemaId="voor-wie"
+        items={[
+            {
+              question: "Voor welke groepen organiseert Bureau Vlieland programma's?",
+              answer: "Wij werken voor bedrijven (teamuitjes, heisessies, incentives en jubilea), verenigingen en studiegroepen, en voor families en vriendengroepen. Groepen vanaf circa 8 personen tot ruim 200 deelnemers zijn mogelijk.",
+            },
+            {
+              question: "Wat is de minimale groepsgrootte?",
+              answer: "Voor een compleet verzorgd programma werken we meestal vanaf 8 tot 10 personen. Kleinere gezelschappen kunnen losse activiteiten boeken via de website.",
+            },
+            {
+              question: "Kunnen jullie ook een programma voor één dag maken?",
+              answer: "Ja. Veel groepen komen met de ochtendboot en gaan aan het begin van de avond terug. Wij plannen de dag rond de afvaarttijden van Rederij Doeksen.",
+            },
+            {
+              question: "Regelen jullie ook de overnachting?",
+              answer: "Ja. Wij vragen logies aan bij hotels, groepsaccommodaties en vakantiehuizen op Vlieland en zetten dat op dezelfde offerte en factuur.",
+            },
+        ]}
+      />
       <Footer />
     </div>
   );

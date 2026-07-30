@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useKenBurns } from "@/hooks/use-ken-burns";
@@ -220,6 +221,27 @@ const VoorbeeldprogrammaOverzicht = () => {
         </section>
       </main>
 
+      <FaqSection
+        schemaId="voorbeeldprogrammas"
+        items={[
+            {
+              question: "Wat is een voorbeeldprogramma?",
+              answer: "Een voorbeeldprogramma is een kant-en-klare dagindeling voor Vlieland, samengesteld uit activiteiten, catering en vervoer. Je kunt het één op één overnemen of als startpunt gebruiken.",
+            },
+            {
+              question: "Kan ik een voorbeeldprogramma aanpassen?",
+              answer: "Ja. Elk programma is volledig aanpasbaar: onderdelen wisselen, tijden verschuiven of dagen toevoegen kan altijd.",
+            },
+            {
+              question: "Zijn de genoemde prijzen definitief?",
+              answer: "De getoonde bedragen zijn richtprijzen inclusief btw op basis van een standaard groepsgrootte. Je definitieve offerte volgt na je aanvraag.",
+            },
+            {
+              question: "Zit de overtocht bij het programma inbegrepen?",
+              answer: "In de meeste voorbeeldprogramma's is de veerboot vanuit Harlingen opgenomen. Bij je aanvraag kun je aangeven of je dit zelf regelt.",
+            },
+        ]}
+      />
       <Footer />
     </div>
   );

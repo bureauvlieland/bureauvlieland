@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -334,6 +335,27 @@ const Bouwstenen = () => {
       </Dialog>
 
 
+      <FaqSection
+        schemaId="bouwstenen"
+        items={[
+            {
+              question: "Wat is een bouwsteen?",
+              answer: "Een bouwsteen is een losse programmaonderdeel — een activiteit, excursie, lunch, diner, vergaderruimte of vervoer — die je kunt combineren tot een compleet programma op Vlieland.",
+            },
+            {
+              question: "Kan ik een losse activiteit boeken zonder programma?",
+              answer: "Ja. Elke bouwsteen is los aan te vragen. Wij checken de beschikbaarheid bij de aanbieder en bevestigen binnen één werkdag.",
+            },
+            {
+              question: "Staan de prijzen inclusief btw?",
+              answer: "Alle getoonde bedragen zijn inclusief btw. Op de formele factuur staat de btw apart gespecificeerd.",
+            },
+            {
+              question: "Hoe ver van tevoren moet ik boeken?",
+              answer: "In het hoogseizoen (mei tot en met oktober) adviseren we minimaal vier tot zes weken vooraf. Buiten het seizoen lukt het vaak op kortere termijn.",
+            },
+        ]}
+      />
       <Footer />
     </div>
   );

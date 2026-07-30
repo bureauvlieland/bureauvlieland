@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Handshake, MapPin, Users, Utensils, Truck, Package, UserCheck } from "lucide-react";
@@ -323,6 +324,27 @@ const Programmas = () => {
           </div>
         </section>
       </main>
+      <FaqSection
+        schemaId="samenwerken"
+        items={[
+            {
+              question: "Hoe word ik partner van Bureau Vlieland?",
+              answer: "Neem contact met ons op via hallo@bureauvlieland.nl. Na een kennismaking krijg je toegang tot het partnerportaal waarin je je aanbod en beschikbaarheid beheert.",
+            },
+            {
+              question: "Wat kost een samenwerking?",
+              answer: "Bureau Vlieland rekent een commissie over de geboekte omzet exclusief btw. Er zijn geen abonnements- of aanmeldkosten.",
+            },
+            {
+              question: "Hoe verloopt de facturatie?",
+              answer: "Bureau Vlieland factureert de klant centraal. Jij stuurt je factuur naar ons en wij betalen uit volgens de afgesproken termijn.",
+            },
+            {
+              question: "Bepaal ik zelf mijn tarieven en beschikbaarheid?",
+              answer: "Ja. Je beheert je eigen bouwstenen, prijzen en beschikbaarheid in het partnerportaal en accepteert of weigert elke aanvraag zelf.",
+            },
+        ]}
+      />
       <Footer />
     </div>
   );

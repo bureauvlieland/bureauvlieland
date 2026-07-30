@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, ExternalLink } from "lucide-react";
 import vuurtorenloopImage from "@/assets/vuurtorenloop.jpg";
@@ -190,6 +191,27 @@ const Evenementen = () => {
         </div>
       </section>
 
+      <FaqSection
+        schemaId="evenementen"
+        items={[
+            {
+              question: "Welke evenementen zijn er op Vlieland?",
+              answer: "Op Vlieland vinden het hele jaar door evenementen plaats, van Into The Great Wide Open en de Vlieland Marathon tot kleinere culturele en sportieve activiteiten in het dorp.",
+            },
+            {
+              question: "Kan ik mijn groepsprogramma combineren met een evenement?",
+              answer: "Ja. Wij plannen programma's graag rondom een eilandevenement, maar houd rekening met beperkte beschikbaarheid van logies en boot op die dagen.",
+            },
+            {
+              question: "Waarom is logies rond evenementen lastig te krijgen?",
+              answer: "Tijdens grote evenementen is vrijwel alle accommodatie op het eiland bezet. Boek dan minimaal een half jaar vooraf.",
+            },
+            {
+              question: "Organiseren jullie ook eigen evenementen voor bedrijven?",
+              answer: "Ja. Van bedrijfsfeest en jubileum tot netwerkevent: wij verzorgen locatie, catering, techniek en programma.",
+            },
+        ]}
+      />
       <Footer />
     </>
   );
