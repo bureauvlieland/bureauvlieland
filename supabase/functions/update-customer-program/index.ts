@@ -1325,11 +1325,14 @@ Deno.serve(async (req) => {
         selected_dates: selectedDates,
         number_of_people: String(program.number_of_people),
         confirmed_count: String(confirmedItems?.length || 0),
+        booking_summary: signatureTableHtml,
+        reference_number: sanitizeHtml(program.reference_number || ""),
         signature_details: signatureTableHtml,
         partner_terms_note: partnerTermsNote,
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
         portal_link: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
+
 
       const bookingCustomerSubject = bookingCustomerTemplate?.subject || "Boeking definitief bevestigd";
       const bookingCustomerBody = bookingCustomerTemplate?.body || `
