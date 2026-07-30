@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Settings as SettingsIcon, Loader2, ExternalLink, Upload, Trash2, Sparkles, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { extractCtaFromCaption } from "@/lib/socialCta";
+
 
 type SocialPost = {
   id: string;
