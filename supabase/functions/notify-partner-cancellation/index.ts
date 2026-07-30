@@ -13,6 +13,8 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { itemWasSentToPartner } from "../_shared/partnerWasApproached.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
