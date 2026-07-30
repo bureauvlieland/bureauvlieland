@@ -87,6 +87,7 @@ function BatchTransactions({ batchId }: { batchId: string }) {
             <TableHead>Partner</TableHead>
             <TableHead>IBAN</TableHead>
             <TableHead>Project</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Bedrag</TableHead>
           </TableRow>
         </TableHeader>
@@ -109,11 +110,28 @@ function BatchTransactions({ batchId }: { batchId: string }) {
               <TableCell className="text-xs text-muted-foreground">
                 {r.program_requests?.reference_number || "-"}
               </TableCell>
+              <TableCell>
+                {r.status === "paid" ? (
+                  <Badge variant="secondary" className="text-[10px]">
+                    Betaald via batch
+                    {r.paid_at && (
+                      <span className="ml-1 font-normal opacity-70">
+                        {format(new Date(r.paid_at), "d MMM", { locale: nl })}
+                      </span>
+                    )}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px]">
+                    Doorgestuurd
+                  </Badge>
+                )}
+              </TableCell>
               <TableCell className="text-right font-mono">
                 €{Number(r.amount_incl_vat).toFixed(2)}
               </TableCell>
             </TableRow>
           ))}
+
           <TableRow>
             <TableCell colSpan={4} className="text-right text-sm font-medium">
               Totaal ({data.length} transacties)
