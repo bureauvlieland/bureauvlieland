@@ -151,6 +151,22 @@ export const ProgrammasMega = ({ onNavigate }: MegaDropdownProps) => {
       <div className="space-y-1.5">
         {watWeOrganiserenItems.map((item) => renderIconCard(item, onNavigate))}
       </div>
+
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mt-5 mb-3 pt-4 border-t border-border">
+        Populair op Vlieland
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {populairItems.map((item) => (
+          <Link
+            key={item.href}
+            to={item.href}
+            onClick={onNavigate}
+            className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 };
