@@ -30,7 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ const formSchema = z.object({
   invoice_date: z.date({ required_error: "Factuurdatum is verplicht" }),
   invoice_type: z.enum(["partial", "final", "credit"]),
   amount_excl_vat: z.coerce.number().min(0.01, "Bedrag moet groter zijn dan 0"),
-  vat_amount: z.coerce.number().min(0, "BTW kan niet negatief zijn"),
+  vat_amount: z.coerce.number(),
   description: z.string().optional(),
 });
 
@@ -85,6 +85,7 @@ export const RegisterBureauInvoiceDialog = ({
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vatBreakdown, setVatBreakdown] = useState<{ rate: number; excl: number; vat: number }[]>([]);
+  const [manualVatLines, setManualVatLines] = useState<{ rate: number; exclVat: number; vatAmount: number }[]>([]);
   const [overrideConfirmed, setOverrideConfirmed] = useState(false);
 
   const form = useForm<FormData>({
@@ -113,6 +114,10 @@ export const RegisterBureauInvoiceDialog = ({
         alreadyInvoicedInclVat: alreadyInvoiced,
       }),
     );
+    const initialVatLines = suggestedVatGroups.length > 0
+      ? suggestedVatGroups.map((line) => ({ ...line }))
+      : [{ rate: 21, exclVat: Math.round((suggestedAmount / 1.21) * 100) / 100, vatAmount: Math.round((suggestedAmount - suggestedAmount / 1.21) * 100) / 100 }];
+    setManualVatLines(initialVatLines);
     if (suggestedAmount > 0) {
 
       const baseTotal = (suggestedExclVat ?? 0) + (suggestedVatAmount ?? 0);
@@ -173,6 +178,13 @@ export const RegisterBureauInvoiceDialog = ({
     })();
   }, [isOpen, requestId, suggestedAmount, suggestedExclVat, suggestedVatAmount, outstandingAmount, projectTotal, alreadyInvoiced, form]);
 
+  useEffect(() => {
+    const excl = Math.round(manualVatLines.reduce((sum, line) => sum + Number(line.exclVat || 0), 0) * 100) / 100;
+    const vat = Math.round(manualVatLines.reduce((sum, line) => sum + Number(line.vatAmount || 0), 0) * 100) / 100;
+    form.setValue("amount_excl_vat", excl, { shouldValidate: true });
+    form.setValue("vat_amount", vat, { shouldValidate: true });
+  }, [manualVatLines, form]);
+
   const amountExclVat = parseFloat(String(form.watch("amount_excl_vat"))) || 0;
   const vatAmount = parseFloat(String(form.watch("vat_amount"))) || 0;
   const totalInclVat = amountExclVat + vatAmount;
@@ -203,6 +215,7 @@ export const RegisterBureauInvoiceDialog = ({
         invoice_date: format(data.invoice_date, "yyyy-MM-dd"),
         amount_excl_vat: data.amount_excl_vat,
         vat_amount: data.vat_amount,
+        vat_breakdown: manualVatLines,
         invoice_type: data.invoice_type,
         description: data.description || null,
         created_by: session.session?.user.id,
@@ -373,6 +386,33 @@ export const RegisterBureauInvoiceDialog = ({
               )}
             />
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <FormLabel>BTW-uitsplitsing</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setManualVatLines((lines) => [...lines, { rate: 0, exclVat: 0, vatAmount: 0 }])}
+                >
+                  <Plus className="h-4 w-4" /> Regel
+                </Button>
+              </div>
+              <div className="grid grid-cols-[70px_1fr_1fr_36px] gap-2 text-xs text-muted-foreground">
+                <span>Tarief %</span><span>Grondslag excl.</span><span>BTW-bedrag</span><span />
+              </div>
+              {manualVatLines.map((line, index) => (
+                <div key={`${index}-${line.rate}`} className="grid grid-cols-[70px_1fr_1fr_36px] gap-2">
+                  <Input type="number" step="0.01" value={line.rate} onChange={(event) => setManualVatLines((lines) => lines.map((item, itemIndex) => itemIndex === index ? { ...item, rate: Number(event.target.value) } : item))} />
+                  <Input type="number" step="0.01" value={line.exclVat} onChange={(event) => setManualVatLines((lines) => lines.map((item, itemIndex) => itemIndex === index ? { ...item, exclVat: Number(event.target.value) } : item))} />
+                  <Input type="number" step="0.01" value={line.vatAmount} onChange={(event) => setManualVatLines((lines) => lines.map((item, itemIndex) => itemIndex === index ? { ...item, vatAmount: Number(event.target.value) } : item))} />
+                  <Button type="button" variant="ghost" size="icon" disabled={manualVatLines.length === 1} onClick={() => setManualVatLines((lines) => lines.filter((_, itemIndex) => itemIndex !== index))} aria-label="BTW-regel verwijderen">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -384,13 +424,8 @@ export const RegisterBureauInvoiceDialog = ({
                       <Input
                         type="number"
                         step="0.01"
+                        readOnly
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          // Auto-calculate VAT at 21%
-                          const excl = parseFloat(e.target.value) || 0;
-                          form.setValue("vat_amount", Math.round(excl * 0.21 * 100) / 100);
-                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -405,7 +440,7 @@ export const RegisterBureauInvoiceDialog = ({
                   <FormItem>
                     <FormLabel>BTW bedrag *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input type="number" step="0.01" {...field} readOnly />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -15,7 +15,7 @@ export interface BureauInvoice {
   invoice_date: string;
   amount_excl_vat: number;
   vat_amount: number;
-  vat_breakdown?: InvoiceVatBreakdownLine[];
+  vat_breakdown?: InvoiceVatBreakdownLine[] | Record<string, unknown> | null;
   amount_incl_vat: number;
   invoice_type: InvoiceType;
   description: string | null;
