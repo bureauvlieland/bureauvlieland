@@ -870,6 +870,10 @@ export default function AdminCommissions() {
             </CardContent>
           </Card>
         )}
+        </>
+        )}
+
+
 
         {/* Invoice Dialog */}
         <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
