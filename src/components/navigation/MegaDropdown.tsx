@@ -256,6 +256,7 @@ export const OverOnsDropdown = ({ onNavigate }: MegaDropdownProps) => {
 
 export const navItems = {
   watWeOrganiserenItems,
+  populairItems,
   inspiratieItems,
   voorBedrijvenItems,
   voorPriveItems,
