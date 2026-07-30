@@ -306,6 +306,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       projectId: inv.request_id,
       projectReference: project?.reference_number ?? null,
       projectLabel: project?.customer_company || project?.customer_name || null,
+      customerName: project?.customer_name ?? null,
+
       itemId: null,
       invoiceId: inv.id,
       label: `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"}`,
