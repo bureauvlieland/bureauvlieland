@@ -66,11 +66,13 @@ Deno.serve(async (req) => {
       const eid = t.auto_entity_id;
       if (
         type === "purchase_invoice_pending" ||
-        type === "purchase_invoice_inbox"
+        type === "purchase_invoice_inbox" ||
+        type === "commission_unlinked_invoice"
       ) {
         if (isUuid(eid)) purchaseInvoiceIds.add(eid);
       } else if (type === "commission_pending") {
         if (isUuid(eid)) batchIds.add(eid);
+
       } else if (
         type === "quote_pending_partner" ||
         type === "quote_expiring_soon" ||
