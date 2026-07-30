@@ -116,7 +116,7 @@ const AdminQuotePreview = () => {
   } | null>(null);
 
   // Form state
-  const defaultValidUntil = addDays(new Date(), 14);
+  const defaultValidUntil = suggestQuoteValidUntil({}).date;
   const [validUntil, setValidUntil] = useState<Date>(defaultValidUntil);
   const [personalMessage, setPersonalMessage] = useState("");
 
