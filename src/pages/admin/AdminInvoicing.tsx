@@ -54,6 +54,9 @@ interface ProgramRequestWithItems {
   selected_accommodation_total: number | null;
   excluded_fees?: string[] | null;
   completion_status: string | null;
+  completion_manually_overridden?: boolean;
+  completion_override_reason?: string | null;
+  completion_override_outstanding?: number | null;
   terms_accepted_at: string | null;
   created_at: string;
   items: {
@@ -76,6 +79,7 @@ interface ProgramRequestWithItems {
     invoice_date: string;
     amount_excl_vat: number;
     vat_amount: number;
+    vat_breakdown: { rate: number; exclVat: number; vatAmount: number }[] | null;
     amount_incl_vat: number | null;
     invoice_type: string;
     description: string | null;
@@ -207,7 +211,7 @@ const AdminInvoicing = () => {
       // Get invoices for these requests
       const { data: invoicesData, error: invoicesError } = await supabase
         .from("bureau_invoices")
-        .select("id, request_id, invoice_number, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, invoice_type, description, status, forwarded_to_accounting_at, pdf_path")
+        .select("id, request_id, invoice_number, invoice_date, amount_excl_vat, vat_amount, vat_breakdown, amount_incl_vat, invoice_type, description, status, forwarded_to_accounting_at, pdf_path")
         .in("request_id", requestIds);
 
       if (invoicesError) throw invoicesError;
@@ -543,6 +547,11 @@ const AdminInvoicing = () => {
                       <span className="text-muted-foreground">
                         · {formatCurrency(totalIncl)}
                       </span>
+                      {Array.isArray(inv.vat_breakdown) && inv.vat_breakdown.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          · {inv.vat_breakdown.map((line) => `${line.rate}%: ${formatCurrency(line.vatAmount)}`).join(" · ")}
+                        </span>
+                      )}
                       {isForwarded && (
                         <Badge variant="secondary" className="gap-1">
                           <CheckCircle2 className="h-3 w-3" />

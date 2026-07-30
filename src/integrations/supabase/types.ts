@@ -1188,6 +1188,7 @@ export type Database = {
           status: string
           updated_at: string
           vat_amount: number
+          vat_breakdown: Json
         }
         Insert: {
           amount_excl_vat: number
@@ -1207,6 +1208,7 @@ export type Database = {
           status?: string
           updated_at?: string
           vat_amount: number
+          vat_breakdown?: Json
         }
         Update: {
           amount_excl_vat?: number
@@ -1226,6 +1228,7 @@ export type Database = {
           status?: string
           updated_at?: string
           vat_amount?: number
+          vat_breakdown?: Json
         }
         Relationships: [
           {
@@ -3300,6 +3303,9 @@ export type Database = {
           catering_start_time: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_manually_overridden: boolean
+          completion_override_outstanding: number | null
+          completion_override_reason: string | null
           completion_status: string | null
           created_at: string
           customer_company: string | null
@@ -3364,6 +3370,9 @@ export type Database = {
           catering_start_time?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_manually_overridden?: boolean
+          completion_override_outstanding?: number | null
+          completion_override_reason?: string | null
           completion_status?: string | null
           created_at?: string
           customer_company?: string | null
@@ -3428,6 +3437,9 @@ export type Database = {
           catering_start_time?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_manually_overridden?: boolean
+          completion_override_outstanding?: number | null
+          completion_override_reason?: string | null
           completion_status?: string | null
           created_at?: string
           customer_company?: string | null

@@ -1,29 +1,35 @@
-## Wat er aan de hand is
+## Doel
+Facturen uit SnelStart exact kunnen registreren, ook wanneer een eindfactuur meerdere BTW-tarieven en per saldo negatieve BTW bevat, terwijl het project handmatig administratief kan worden afgerond als de interne projectsom afwijkt van de werkelijk gefactureerde som.
 
-In `src/pages/admin/AdminInvoicePreview.tsx` wordt de factuurtabel opgebouwd in drie varianten:
+## Vastgestelde situatie
+- Project **BV-2602-0003 (Lexence)** heeft in de database twee registraties, maar de eerste staat als `final`. De huidige berekening negeert daardoor de tweede factuur bij “Gefactureerd”.
+- De geüploade aanbetalingsfactuur is **218168**: € 41.322,31 excl. + € 8.677,69 BTW = **€ 50.000,00 incl.** In de database staat deze abusievelijk als **218161**.
+- Eindfactuur **218169** is € 16.022,81 excl. + **€ -76,10 BTW** = **€ 15.946,71 incl.** De BTW bestaat uit 0%, 9% en 21%; door verrekening van de volledig tegen 21% geboekte aanbetaling is het netto BTW-bedrag negatief.
+- Het werkelijke totaal van beide facturen is **€ 65.946,71**. De interne projectcalculatie is € 79.400,60, waardoor na herstel nog € 13.453,89 administratief open blijft. Dat verschil moet niet met een fictieve factuur worden weggewerkt.
 
-1. **Bestaande, al geregistreerde factuur** (`isExistingInvoiceView`, regels 1399–1424 in de preview en regels 647–665 in de PDF-opbouw): er wordt bewust **één regel** gerenderd — "Eindfactuur FV-… / Project BV-…" met het totaalbedrag.
-2. **Slot-/termijnmodus**: eveneens één regel ("Slotfactuur project …").
-3. **Nieuwe volledige factuur**: de volledige specificatie per categorie (programma-items, logies, extra's, coördinatie & bijdragen).
+## Implementatie
+1. **Factuurtelling herstellen**
+   - Alle deel- en eindfacturen optellen als werkelijk gefactureerde bedragen; creditnota’s blijven aftrekposten.
+   - Dezelfde regel toepassen in het facturatieoverzicht, projectdetail, preview en de database-trigger voor de voltooiingsstatus.
+   - De conflicterende regel verwijderen waarbij een `final`-registratie eerdere deelfacturen vervangt.
 
-BV-2606-0022 valt in geval 1: de factuur is al geregistreerd, dus de preview toont de samenvattingsregel. Dat het label nu correct "Eindfactuur" is, verandert die weergave niet.
+2. **BTW-registratie geschikt maken voor SnelStart-facturen**
+   - In het registratievenster een bewerkbare BTW-uitsplitsing per tarief toevoegen (0%, 9%, 21% en eventueel een ander tarief).
+   - Negatieve grondslag en negatief BTW-bedrag per tarief toestaan, zolang het totale factuurbedrag positief en rekenkundig consistent is.
+   - De uitsplitsing bij de factuur opslaan en later zichtbaar maken, zodat de registratie controleerbaar blijft.
+   - Totalen excl. BTW, BTW en incl. BTW automatisch uit de BTW-regels berekenen; geen automatische 21%-overschrijving meer bij handmatige gemengde BTW.
 
-## Wat ik ga aanpassen
+3. **Handmatig administratief afronden**
+   - “Markeer als afgerond” ook beschikbaar maken wanneer nog een berekend verschil openstaat.
+   - Bij een verschil verplicht een reden laten invullen en duidelijk het openstaande bedrag tonen.
+   - De handmatige override vastleggen in historie/audit en door automatische herberekening laten respecteren totdat het project expliciet wordt heropend.
 
-**Regel:** een factuur die het volledige projectbedrag dekt (type resolvet naar `final` én er zijn geen eerdere niet-gecrediteerde termijnen) krijgt altijd de volledige specificatie — ook wanneer hij al geregistreerd is. Deelfacturen, slotfacturen en creditnota's houden de compacte regel, omdat hun bedrag niet 1-op-1 op de items te herleiden is.
+4. **Gegevens van BV-2602-0003 herstellen**
+   - Eerste factuur corrigeren naar nummer **218168** en type **Deelfactuur**.
+   - Eindfactuur **218169** corrigeren naar type **Eindfactuur**, € 16.022,81 excl., € -76,10 BTW en € 15.946,71 incl.
+   - BTW-specificatie vastleggen als: 0% (€ 314,76 / € 0,00), 9% (€ 28.123,26 / € 2.531,09), 21% (€ -12.415,21 / € -2.607,19).
+   - Daarna blijft het reële calculatieverschil zichtbaar en kan het project met reden handmatig worden afgerond.
 
-Concreet:
-
-- Nieuwe afgeleide waarde `showFullSpecification` in `AdminInvoicePreview.tsx`: waar wanneer `outgoingInvoiceType === "final"` en `priorSumExcludingCurrent ≈ 0`, en niet in creditweergave.
-- **Preview (regel ~1399)**: conditie wordt `isExistingInvoiceView && loadedInvoice && !showFullSpecification` voor de samenvattingsregel; anders valt hij door naar de bestaande categorie-render.
-- **PDF (regel ~647)**: dezelfde conditie op `loadedInvoiceForPdf`, zodat preview en PDF identiek zijn.
-- **Bedragen blijven leidend vanuit de geregistreerde factuur**: de totalen/BTW-regels blijven uit `signedExistingTotals` komen (`buildScaledVatTotals`), zodat de PDF exact het geregistreerde bedrag toont, ook als items daarna licht zijn gewijzigd. Ik voeg een kleine controle toe: wijkt de som van de gespecificeerde regels meer dan €0,02 af van het geregistreerde bedrag, dan valt de weergave terug op de compacte samenvattingsregel (voorkomt een factuur waarvan de regels niet optellen tot het totaal).
-
-## Tests
-
-Uitbreiding van `src/lib/__tests__/bureauInvoiceType.test.ts` of een nieuw testbestand met een pure helper (`shouldShowFullSpecification`) in `src/lib/bureauInvoiceType.ts`:
-- eindfactuur zonder eerdere termijnen → volledige specificatie
-- deelfactuur → compacte regel
-- slotfactuur na eerdere termijn → compacte regel
-- creditnota → compacte regel
-- eindfactuur met afwijkend bedrag t.o.v. itemtotaal → compacte regel (fallback)
+5. **Borging**
+   - Tests toevoegen voor aanbetaling + netto eindfactuur, gemengde BTW met negatief nettobedrag, credits, handmatige afronding met reden en behoud van de override bij herberekening.
+   - De facturatiekaart en statusovergangen controleren voor dit project en voor bestaande normale deel-/eindfacturen.

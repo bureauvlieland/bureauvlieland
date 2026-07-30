@@ -2,6 +2,12 @@
 
 export type InvoiceType = "partial" | "final" | "credit";
 
+export interface InvoiceVatBreakdownLine {
+  rate: number;
+  exclVat: number;
+  vatAmount: number;
+}
+
 export interface BureauInvoice {
   id: string;
   request_id: string;
@@ -9,6 +15,7 @@ export interface BureauInvoice {
   invoice_date: string;
   amount_excl_vat: number;
   vat_amount: number;
+  vat_breakdown?: InvoiceVatBreakdownLine[] | Record<string, unknown> | null;
   amount_incl_vat: number;
   invoice_type: InvoiceType;
   description: string | null;
