@@ -43,7 +43,7 @@ export const activityFacets: Record<string, ActivityFacets> = {
   zeehondentocht: {
     seasons: ["voorjaar", "zomer", "najaar"],
     duration: "kort",
-    suitability: ["kinderen", "groepen", "minder-mobiel"],
+    suitability: ["kinderen", "groepen"],
   },
   wadloopexcursie: {
     seasons: ["voorjaar", "zomer", "najaar"],
