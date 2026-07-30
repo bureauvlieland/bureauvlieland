@@ -156,16 +156,38 @@ const WadlopenVlieland = () => {
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mb-6">
               Met een lokale gids het wad op — leerzaam, avontuurlijk en geschikt voor het hele gezin.
             </p>
-            <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
-              <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                Boek je wadexcursie
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
+                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                  Boek je wadexcursie
+                </Button>
+              </Link>
+              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie-groep">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto bg-transparent text-primary-foreground border-primary-foreground/40 hover:bg-primary-foreground/10"
+                >
+                  Offerte voor een groep
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
+        <KeyFacts
+          summary="Een wadexcursie op Vlieland is een begeleide wandeling van circa 1,5 uur over het drooggevallen wad rond het eiland, altijd rond laag water (van ongeveer één uur vóór tot één uur ná laagwater). Laarzen zijn inbegrepen, de excursie is geschikt voor alle leeftijden en kost circa €17,50 tot €20 per volwassene. Wadlopen vanaf het vasteland naar Vlieland is niet mogelijk: de geulen zijn ook bij eb te diep."
+          facts={[
+            { icon: Clock, label: "Duur", value: "Ongeveer 1,5 uur" },
+            { icon: Euro, label: "Richtprijs", value: "€17,50–€20 p.p." },
+            { icon: CalendarDays, label: "Wanneer", value: "Rond laag water, hele jaar" },
+            { icon: Footprints, label: "Inbegrepen", value: "Laarzen en lokale gids" },
+          ]}
+        />
+
         {/* Intro + trust */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
+
           <div className="prose prose-neutral max-w-none text-foreground space-y-4">
             <p>
               Trek je laarzen aan en ontdek het Werelderfgoed Waddenzee van de mooiste kant: te voet. Tijdens een wadexcursie op Vlieland neemt een lokale gids — die het eiland en het wad op zijn duimpje kent — je mee het wad op, vertelt over het leven onder je voeten en wijst je zeehonden, vogels en bijzondere wadbewoners aan. Een avontuur middenin de natuur — geschikt voor alle leeftijden, dus ook leuk met (klein)kinderen.
