@@ -280,6 +280,45 @@ Deno.serve(async (req) => {
           if (b.status === "paid") markClosed(t.id, type);
           break;
         }
+        case "commission_missing_invoice": {
+          // Aanmaakcriterium: uitgevoerd partner-item zonder gekoppelde
+          // inkoopfactuur. Sluiten zodra er wél een factuur hangt, de
+          // commissie op verkoopwaarde gefactureerd wordt, of de commissie
+          // al verwerkt is.
+          const item = eid ? itemMap.get(eid) : null;
+          if (!item) {
+            markClosed(t.id, `${type}_missing`);
+            break;
+          }
+          if (
+            item.invoiced_number ||
+            item.commission_basis === "sales" ||
+            ["invoiced", "paid", "exempt"].includes(item.commission_status ?? "")
+          ) {
+            markClosed(t.id, type);
+          }
+          break;
+        }
+        case "commission_unlinked_invoice": {
+          // Aanmaakcriterium: geregistreerde inkoopfactuur zonder koppeling
+          // aan een programma-onderdeel. Sluiten zodra gekoppeld of
+          // commissievrij verklaard.
+          const inv = eid ? pInvoiceMap.get(eid) : null;
+          if (!inv) {
+            markClosed(t.id, `${type}_missing`);
+            break;
+          }
+          if (
+            inv.item_id ||
+            inv.commission_exempt === true ||
+            allocatedInvoiceIds.has(inv.id) ||
+            ["rejected", "archived"].includes(inv.status)
+          ) {
+            markClosed(t.id, type);
+          }
+          break;
+        }
+
         case "invoicing_ready": {
           if (req && req.completion_status === "fully_invoiced") {
             markClosed(t.id, type);
