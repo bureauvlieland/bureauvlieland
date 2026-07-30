@@ -312,14 +312,23 @@ ${txBlocks}
       await supabase.from("payment_batches").update({ xml_file_path: filePath }).eq("id", batch.id);
     }
 
-    // Link invoices to batch
+    // Link invoices to batch + markeer direct als betaald.
+    // Het SEPA-bestand is aangemaakt en wordt bij de bank ingediend; bij annuleren
+    // van de batch wordt dit teruggedraaid naar 'forwarded' (zie AdminPaymentBatches).
+    const paidAtIso = new Date().toISOString();
     const { error: linkErr } = await supabase
       .from("partner_purchase_invoices")
-      .update({ payment_batch_id: batch.id })
+      .update({
+        payment_batch_id: batch.id,
+        status: "paid",
+        paid_at: paidAtIso,
+        updated_at: paidAtIso,
+      })
       .in("id", invoiceIds);
     if (linkErr) {
       console.error("Link error:", linkErr);
     }
+
 
     const xmlBase64 = btoa(unescape(encodeURIComponent(xml)));
 

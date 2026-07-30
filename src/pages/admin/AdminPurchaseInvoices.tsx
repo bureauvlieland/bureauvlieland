@@ -160,11 +160,19 @@ export default function AdminPurchaseInvoices() {
         );
       case "paid":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Betaald {invoice.paid_at && format(new Date(invoice.paid_at), "EEE d MMM", { locale: nl })}
-          </Badge>
+          <div className="flex flex-col gap-1 items-start">
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Betaald {invoice.paid_at && format(new Date(invoice.paid_at), "EEE d MMM", { locale: nl })}
+            </Badge>
+            {invoice.payment_batch && (
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                Via batch {invoice.payment_batch.batch_reference}
+              </Badge>
+            )}
+          </div>
         );
+
     }
   };
 

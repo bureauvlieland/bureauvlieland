@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { findDuplicatesInSelection } from "@/lib/paymentBatchGuards";
+import { findDuplicatesInSelection, buildBatchCancelUpdate } from "@/lib/paymentBatchGuards";
 
 function nextWorkingDay(): string {
   const d = new Date();
@@ -44,10 +44,11 @@ function BatchTransactions({ batchId }: { batchId: string }) {
         .from("partner_purchase_invoices")
         .select(`
           id, invoice_number, invoice_date, amount_incl_vat, description,
-          refund_pending_at, refund_reason,
+          refund_pending_at, refund_reason, status, paid_at,
           partners(id, name, iban),
           program_requests(reference_number)
         `)
+
         .eq("payment_batch_id", batchId)
         .order("invoice_date", { ascending: true });
       if (error) throw error;
@@ -86,6 +87,7 @@ function BatchTransactions({ batchId }: { batchId: string }) {
             <TableHead>Partner</TableHead>
             <TableHead>IBAN</TableHead>
             <TableHead>Project</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead className="text-right">Bedrag</TableHead>
           </TableRow>
         </TableHeader>
@@ -108,13 +110,30 @@ function BatchTransactions({ batchId }: { batchId: string }) {
               <TableCell className="text-xs text-muted-foreground">
                 {r.program_requests?.reference_number || "-"}
               </TableCell>
+              <TableCell>
+                {r.status === "paid" ? (
+                  <Badge variant="secondary" className="text-[10px]">
+                    Betaald via batch
+                    {r.paid_at && (
+                      <span className="ml-1 font-normal opacity-70">
+                        {format(new Date(r.paid_at), "d MMM", { locale: nl })}
+                      </span>
+                    )}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px]">
+                    Doorgestuurd
+                  </Badge>
+                )}
+              </TableCell>
               <TableCell className="text-right font-mono">
                 €{Number(r.amount_incl_vat).toFixed(2)}
               </TableCell>
             </TableRow>
           ))}
+
           <TableRow>
-            <TableCell colSpan={4} className="text-right text-sm font-medium">
+            <TableCell colSpan={5} className="text-right text-sm font-medium">
               Totaal ({data.length} transacties)
             </TableCell>
             <TableCell className="text-right font-mono font-bold">
@@ -233,15 +252,16 @@ export default function AdminPaymentBatches() {
   };
 
   const handleCancelBatch = async (id: string) => {
-    if (!confirm("Batch annuleren? De facturen komen weer beschikbaar voor een nieuwe batch.")) return;
+    if (!confirm("Batch annuleren? De facturen worden weer op 'doorgestuurd' gezet en komen beschikbaar voor een nieuwe batch.")) return;
     const { error: e1 } = await supabase
       .from("partner_purchase_invoices")
-      .update({ payment_batch_id: null })
+      .update(buildBatchCancelUpdate(new Date().toISOString()))
       .eq("payment_batch_id", id);
     if (e1) {
       toast.error(e1.message);
       return;
     }
+
     const { error: e2 } = await supabase
       .from("payment_batches")
       .update({ status: "cancelled" })

@@ -74,3 +74,40 @@ export function findAmountDateCollisions(rows: BatchCandidate[]): BatchDuplicate
   }
   return Array.from(buckets.values()).filter((g) => g.ids.length > 1);
 }
+
+/**
+ * Statusovergangen rond betaalbatches.
+ * Een factuur die in een gegenereerde batch zit is betaald: het SEPA-bestand
+ * is aangemaakt en wordt bij de bank ingediend. Wordt de batch geannuleerd,
+ * dan draaien we die markering terug naar 'doorgestuurd'.
+ */
+export interface BatchInvoiceStateInput {
+  status: string | null;
+  paid_at: string | null;
+  payment_batch_id: string | null;
+}
+
+/** Payload om een factuur bij batch-generatie als betaald te markeren. */
+export function buildBatchPaidUpdate(batchId: string, paidAtIso: string) {
+  return {
+    payment_batch_id: batchId,
+    status: "paid" as const,
+    paid_at: paidAtIso,
+    updated_at: paidAtIso,
+  };
+}
+
+/** Payload om de betaalmarkering terug te draaien bij annulering van een batch. */
+export function buildBatchCancelUpdate(nowIso: string) {
+  return {
+    payment_batch_id: null,
+    status: "forwarded" as const,
+    paid_at: null,
+    updated_at: nowIso,
+  };
+}
+
+/** Is deze factuur betaald doordat hij in een batch is opgenomen? */
+export function isPaidViaBatch(inv: BatchInvoiceStateInput): boolean {
+  return inv.status === "paid" && !!inv.payment_batch_id;
+}
