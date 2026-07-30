@@ -224,7 +224,81 @@ async function fetchEmails(showArchived: boolean): Promise<EmailItem[]> {
       };
     });
 
-  return [...commItems, ...logItems];
+  const all = [...commItems, ...logItems];
+
+  // Projectstatus (zelfde afleiding als het projectenoverzicht) toevoegen
+  const allProgIds = Array.from(new Set(all.map((e) => e.request_id).filter(Boolean))) as string[];
+  const allAccIds = Array.from(new Set(all.map((e) => e.accommodation_id).filter(Boolean))) as string[];
+
+  const [progMetaRes, accMetaRes] = await Promise.all([
+    allProgIds.length
+      ? supabase
+          .from("program_requests")
+          .select("id, status, quote_status, completion_status, terms_accepted_at, selected_dates, linked_accommodation_id")
+          .in("id", allProgIds)
+      : Promise.resolve({ data: [] as any[] }),
+    allAccIds.length
+      ? supabase
+          .from("accommodation_requests")
+          .select("id, status, arrival_date, linked_program_id")
+          .in("id", allAccIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const progMeta = new Map<string, any>((progMetaRes.data ?? []).map((p: any) => [p.id, p]));
+  const accMeta = new Map<string, any>((accMetaRes.data ?? []).map((a: any) => [a.id, a]));
+
+  // Voor logies-gesprekken willen we ook de status van het gekoppelde programma
+  const extraProgIds = Array.from(
+    new Set(
+      (accMetaRes.data ?? [])
+        .map((a: any) => a.linked_program_id)
+        .filter((id: string | null) => id && !progMeta.has(id)),
+    ),
+  ) as string[];
+  if (extraProgIds.length) {
+    const { data: extra } = await supabase
+      .from("program_requests")
+      .select("id, status, quote_status, completion_status, terms_accepted_at, selected_dates, linked_accommodation_id")
+      .in("id", extraProgIds);
+    (extra ?? []).forEach((p: any) => progMeta.set(p.id, p));
+  }
+
+  const firstSelectedDate = (selected: unknown): string | null => {
+    if (!Array.isArray(selected) || selected.length === 0) return null;
+    const dates = selected.map(String).filter(Boolean).sort();
+    return dates[0] ?? null;
+  };
+
+  for (const e of all) {
+    if (e.request_id) {
+      const prog = progMeta.get(e.request_id);
+      if (!prog) continue;
+      const acc = prog.linked_accommodation_id ? accMeta.get(prog.linked_accommodation_id) : null;
+      e.project_status = getDerivedStatus({
+        program_status: prog.status ?? null,
+        accommodation_status: acc?.status ?? null,
+        completion_status: prog.completion_status ?? null,
+        terms_accepted_at: prog.terms_accepted_at ?? null,
+        quote_status: prog.quote_status ?? null,
+      });
+      e.project_date = firstSelectedDate(prog.selected_dates) ?? acc?.arrival_date ?? null;
+    } else if (e.accommodation_id) {
+      const acc = accMeta.get(e.accommodation_id);
+      if (!acc) continue;
+      const prog = acc.linked_program_id ? progMeta.get(acc.linked_program_id) : null;
+      e.project_status = getDerivedStatus({
+        program_status: prog?.status ?? null,
+        accommodation_status: acc.status ?? null,
+        completion_status: prog?.completion_status ?? null,
+        terms_accepted_at: prog?.terms_accepted_at ?? null,
+        quote_status: prog?.quote_status ?? null,
+      });
+      e.project_date = acc.arrival_date ?? firstSelectedDate(prog?.selected_dates) ?? null;
+    }
+  }
+
+  return all;
 }
 
 function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all" | "unanswered"): ThreadGroup[] {
