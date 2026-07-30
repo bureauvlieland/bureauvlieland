@@ -71,25 +71,24 @@ const AdminProgramNewContent = () => {
     numberOfPeople: 20,
     selectedDates: [],
     generalNotes: "",
-    quoteValidUntil: addDays(new Date(), 14),
+    quoteValidUntil: suggestQuoteValidUntil({}).date,
   });
 
-  // Default: 2 weken vóór de eerste programma-datum. Valt terug op vandaag+14
-  // als de berekende datum in het verleden zou liggen (korte termijn-aanvragen).
-  // Admin kan altijd handmatig overschrijven; we resetten enkel zolang de
-  // gebruiker zelf de datepicker nog niet heeft aangeraakt.
+  // Standaard: één maand vóór aankomst (zie src/lib/quoteValidity.ts). Bij late
+  // aanvragen komt daar automatisch een korte-termijn-voorstel uit. Admin kan
+  // altijd overschrijven; we resetten enkel zolang de datepicker niet is
+  // aangeraakt.
   const [quoteValidUntilTouched, setQuoteValidUntilTouched] = useState(false);
+  const arrivalDate = firstProgramDate(formData.selectedDates);
+  const validitySuggestion = suggestQuoteValidUntil({ arrivalDate });
   useEffect(() => {
     if (quoteValidUntilTouched) return;
-    const firstDate = formData.selectedDates[0];
-    if (!firstDate) return;
-    const tomorrow = addDays(new Date(), 1);
-    const twoWeeksBefore = subDays(firstDate, 14);
-    const next = twoWeeksBefore > tomorrow ? twoWeeksBefore : tomorrow;
+    if (!arrivalDate) return;
+    const next = suggestQuoteValidUntil({ arrivalDate }).date;
     setFormData((prev) =>
       prev.quoteValidUntil.getTime() === next.getTime() ? prev : { ...prev, quoteValidUntil: next }
     );
-  }, [formData.selectedDates, quoteValidUntilTouched]);
+  }, [arrivalDate?.getTime(), quoteValidUntilTouched]);
 
 
   const steps: { id: WizardStep; title: string; icon: React.ReactNode }[] = [
