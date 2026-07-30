@@ -1,52 +1,43 @@
-## Uitgangssituatie (gemeten, niet aangenomen)
+## Doel
 
-Semrush (database NL) voor bureauvlieland.nl: **229 organische zoekwoorden, ~31 bezoeken/maand geschat**. Dat is een schatting van alleen Google-organisch; je echte verkeer ligt hoger. Sterke posities: `incentive vlieland` (4), `evenementen vlieland` (5), `trouwen vlieland` (5), `agenda vlieland` (6). Net naast de top-10, met veel volume: `zeehondentocht vlieland` (11-12, 260/mnd), `activiteiten op vlieland` (16, 390/mnd), `vlieland wadlopen` (12).
+Elke Facebook- en Instagram-post krijgt een vaste, voorspelbare bestemmingspagina met UTM-tagging, zodat je in analytics per contentsoort ziet wat bezoekers en aanvragen oplevert. Nu bestaat er al UTM-tagging in `social-generate-drafts`, maar de CTA-keuze is een losse fallback-ketting (`default_ctas[source_type] → bouwstenen → default → "/"`) en er is geen inhoudelijke contentkalender.
 
-Technische basis is al goed: sitemap met 83 pagina's, robots.txt correct, `/llms.txt` aanwezig, gestructureerde data (Service, FAQPage, LocalBusiness) en pre-rendering staan aan. Een verse SEO-scan draait nu.
+## 1. Contentpijlers (posttypen)
 
-Twee concrete problemen die ik in de code zag:
-1. `index.html` bevat **twee sets** `og:title` / `og:description` / `twitter:*` (regels 15-28 én 47-50) met verschillende teksten — Facebook en LinkedIn kiezen dan willekeurig, wat je social previews onbetrouwbaar maakt.
-2. Google Search Console is niet gekoppeld, dus er is geen zicht op vertoningen, klikken en indexering.
+Vijf vaste pijlers, elk met een eigen doel en landingspagina:
 
-## Wat ik ga doen
+| Pijler | Wat je post | Landingspagina |
+|---|---|---|
+| Activiteit in de spotlight | één bouwsteen, foto + praktische info | `/activiteit/{slug}`, fallback `/bouwstenen` |
+| Voorbeeldprogramma | dag-tot-dag programma als carrousel | `/voorbeeldprogrammas/{slug}` |
+| Partner in de spotlight | lokale ondernemer, gezicht + verhaal | `/partners` |
+| Achter de schermen / gerealiseerd | projectfoto uit de mediabank | `/onze-werkwijze` |
+| Eiland & seizoen (agenda, weer, wad) | zachte content, geen verkoop | `/evenementen` of `/zeehondentochten-vlieland` |
 
-### 1. Technische opschoning
-- Dubbele Open Graph/Twitter-tags in `index.html` verwijderen; één consistente set overhouden met de scherpste propositie ("één partij, één factuur").
-- Titels boven 60 tekens inkorten (homepage, Onze werkwijze) en de fallback-meta-description terugbrengen naar ±155 tekens.
-- Search Console koppelen, eigendom verifiëren en de sitemap indienen, zodat we voortaan op data sturen in plaats van aannames.
+Cadans blijft 2-3 posts per week (bestaande `cadence_per_week`), ritme: activiteit → voorbeeldprogramma → partner/behind-the-scenes, met eiland-content als vuller.
 
-### 2. Zoekwoorden waar je bijna scoort
-Per thema de bestaande pagina uitbouwen tot een echte antwoordpagina in plaats van een bouwsteen-overzicht:
-- **Zeehondentocht/robbentocht** — nu ranken op `/bouwstenen` (positie 11-12 bij 260/mnd). De bestaande pagina `/zeehondentochten-vlieland` wordt de doelpagina: praktische info (duur, vertrek, seizoen, geschikt voor welke groepen), FAQ-blok en interne links vanaf bouwstenen.
-- **Activiteiten op Vlieland** (390/mnd, positie 16) — `/activiteiten-vlieland` uitbreiden met categorie-indeling, seizoensinformatie en verwijzingen naar detailpagina's.
-- **Wadlopen Vlieland** — eigen inhoudsblok/pagina in plaats van bouwsteen-vermelding.
-- **Agenda/evenementen Vlieland** — je scoort hier al goed vanaf de homepage; dit verdient een eigen agenda-pagina zodat de homepage vrijkomt voor je kernpropositie.
+## 2. Vaste UTM-CTA's
 
-### 3. Vindbaarheid in AI-assistenten (ChatGPT, Claude, Perplexity)
-AI-modellen citeren pagina's die een vraag letterlijk en feitelijk beantwoorden.
-- `/llms.txt` uitbreiden met de nieuwe contentpagina's en met een compact "feiten"-blok (wie, waar, wat kost het ongeveer, hoe werkt de boeking).
-- FAQ-schema uitbreiden op de belangrijkste landingspagina's, met vragen zoals mensen ze aan een AI stellen ("wat kost een bedrijfsuitje op Vlieland voor 25 personen?", "hoe kom ik met een groep op Vlieland?").
-- Op elke commerciële pagina een kort, feitelijk samenvattingsblok bovenaan (aantallen, duur, seizoen, prijsindicatie) — dat is precies het formaat dat AI-antwoorden overnemen.
-- Organization/LocalBusiness-schema aanvullen met `sameAs`-links naar je Facebook- en Instagram-profielen, zodat je merk als entiteit herkend wordt.
+Eén centrale mapping in plaats van de huidige fallback-ketting. Standaardparameters blijven `utm_source=meta`, `utm_medium=organic_social`, `utm_campaign=bureau_vlieland_social`, met per post:
 
-### 4. Social (Facebook & Instagram)
-Je hebt al een social publisher voor IG+FB met AI-concepten en handmatige goedkeuring. Die maken we effectiever:
-- **Deelbare previews**: één consistente og-afbeelding en heldere titels, zodat een link in een FB-post er verzorgd uitziet.
-- **UTM-tagging** in de gedeelde links vanuit de publisher, zodat je in analytics ziet welke posts bezoekers en aanvragen opleveren.
-- **Content-koppeling**: de publisher put nu uit nieuwe bouwstenen en partners. Ik voeg voorbeeldprogramma's en de nieuwe contentpagina's toe als bron, zodat social en website dezelfde verhalen vertellen en verkeer naar de nieuwe pagina's sturen.
-- **Link-in-bio-pagina** voor Instagram (Instagram staat geen links in posts toe): één compacte pagina met de drie routes (losse activiteiten / programma samenstellen / maatwerk) plus WhatsApp-contact.
+- `utm_content` = pijler (`activiteit`, `voorbeeldprogramma`, `partner`, `behind_scenes`, `eiland`)
+- `utm_term` = slug/id van de bron, zodat je per activiteit of programma kunt meten
 
-## Wat dit niet doet
-Per-pagina social previews (een eigen afbeelding per landingspagina bij delen op Facebook) vragen server-side rendering; die kan de huidige opzet niet betrouwbaar leveren.
+Instagram-posts krijgen geen klikbare link in de caption: die verwijzen naar `/links` (link-in-bio), die pagina krijgt dezelfde UTM-doorgifte naar de onderliggende routes. Facebook krijgt de directe diepe link.
 
-## Technische details
-- `index.html`: dedupliceren van `og:*` en `twitter:*`, titel/description inkorten.
-- Nieuwe/uitgebreide contentsecties in bestaande pagina's onder `src/pages/` (Zeehondentochten, Activiteiten, Wadlopen, Agenda) met JSON-LD via Helmet.
-- `public/llms.txt` en `public/sitemap.xml` (via `scripts/generate-sitemap.ts`) bijwerken met nieuwe routes.
-- `StructuredData.tsx`: `sameAs` met FB/IG-profielen.
-- Social publisher: UTM-parameters bij linkopbouw in de edge function, extra bronprioriteit voor voorbeeldprogramma's.
-- Nieuwe route `/links` voor Instagram-bio, uitgesloten van indexering noch geblokkeerd — gewoon een lichte pagina.
+## 3. Wat er in de app verandert
 
-Ik heb hiervoor je Facebook- en Instagram-profiel-URL's nodig; die kun je bij de uitvoering aanleveren of ik haal ze uit de social-instellingen.
+- `social-generate-drafts`: CTA-resolutie vervangen door een expliciete pijler→route-tabel; slug ophalen bij bouwsteen/voorbeeldprogramma zodat de link naar de detailpagina wijst in plaats van het overzicht; `utm_term` toevoegen; per kanaal een aparte CTA (FB = deep link, IG = `/links`).
+- Nieuwe bron toevoegen: gepubliceerde voorbeeldprogramma's (nu ontbreekt die als kandidaat-bron), inclusief 30-dagen dedup zoals de andere bronnen.
+- `AdminSocialSettings`: het CTA-blok omzetten van vrije key/value naar de vijf pijlers met per pijler een bewerkbare bestemming, plus een read-only voorbeeld van de volledige UTM-URL.
+- `/links`: secties uitbreiden met de drie routes + actuele activiteit/voorbeeldprogramma, en UTM's doorzetten naar de doelpagina's.
+- Contentkalender als document in het project (`.lovable/social-contentplan.md`) met de pijlers, het weekritme, per pijler een caption-format en de CTA-mapping — zodat AI-generatie én handmatige posts hetzelfde stramien volgen.
+- De AI-prompt in `social-generate-drafts` aanvullen met het caption-format per pijler (haakje → verhaal → praktisch feit → zachte uitnodiging), tone-of-voice blijft 'je/jullie'.
 
-De verse scan draait nu; resultaten verschijnen in het SEO-tabblad.
+## 4. Meten
+
+Geen nieuwe analytics-infrastructuur; de bestaande UTM's zijn genoeg om in je analytics per pijler en per activiteit te filteren. In de admin-social-lijst toon ik bij elke geplaatste post de gebruikte CTA-URL, zodat de koppeling post ↔ meting zichtbaar is.
+
+## Buiten scope
+
+Geen automatische publicatie-wijzigingen (handmatige goedkeuring blijft), geen advertenties, geen per-pagina social preview-afbeeldingen (vereist server-side rendering).
