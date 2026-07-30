@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Phone, MapPin } from "lucide-react";
@@ -152,6 +153,27 @@ const Contact = () => {
           </div>
         </section>
       </main>
+      <FaqSection
+        schemaId="contact"
+        items={[
+            {
+              question: "Hoe kan ik contact opnemen met Bureau Vlieland?",
+              answer: "Bel +31 562 700208, mail naar hallo@bureauvlieland.nl of gebruik het contactformulier op deze pagina. We reageren doorgaans binnen één werkdag.",
+            },
+            {
+              question: "Wat zijn jullie openingstijden?",
+              answer: "Wij zijn op werkdagen bereikbaar. Aanvragen die in het weekend binnenkomen, pakken we de eerstvolgende werkdag op.",
+            },
+            {
+              question: "Waar is Bureau Vlieland gevestigd?",
+              answer: "Ons adres is Sikkelduin 11, 8899 CG Vlieland.",
+            },
+            {
+              question: "Kan ik ook via WhatsApp een vraag stellen?",
+              answer: "Ja, via de chatknop rechtsonder op de website kun je direct een vraag stellen of doorschakelen naar WhatsApp.",
+            },
+        ]}
+      />
       <Footer />
     </div>
   );

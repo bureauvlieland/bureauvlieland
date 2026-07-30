@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
+
 import { CartProvider } from "@/contexts/CartContext";
 import { PreSalesChatWidget } from "@/components/site/PreSalesChatWidget";
 import { FeatureGate } from "@/components/FeatureGate";
@@ -139,6 +141,8 @@ const App = () => {
         <BrowserRouter>
         <CartProvider>
           <ScrollToTop />
+          <SiteStructuredData />
+
           <PreSalesChatWidget />
           <Suspense fallback={null}>
           <Routes>

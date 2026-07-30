@@ -28,6 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { trackQuoteRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 
@@ -391,6 +392,27 @@ export default function Offerte() {
         </div>
       </main>
 
+      <FaqSection
+        schemaId="offerte"
+        items={[
+            {
+              question: "Hoe snel ontvang ik een offerte?",
+              answer: "Na je aanvraag nemen we contact op om de wensen door te nemen. Doorgaans ontvang je binnen twee tot vijf werkdagen een compleet voorstel, afhankelijk van hoeveel partners we moeten benaderen.",
+            },
+            {
+              question: "Zitten er kosten aan een offerte?",
+              answer: "Nee, het opstellen van een programmavoorstel is kosteloos en vrijblijvend.",
+            },
+            {
+              question: "Hoe lang is een offerte geldig?",
+              answer: "Op elke offerte staat een geldigheidsdatum. Daarna kunnen beschikbaarheid en tarieven van aanbieders wijzigen.",
+            },
+            {
+              question: "Kan ik de offerte nog aanpassen?",
+              answer: "Ja. Via je persoonlijke klantpagina kun je onderdelen laten toevoegen, wijzigen of verwijderen voordat je akkoord geeft.",
+            },
+        ]}
+      />
       <Footer />
     </>
   );
