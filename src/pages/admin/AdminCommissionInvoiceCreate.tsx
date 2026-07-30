@@ -28,6 +28,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { CommissionBasis } from "@/lib/commissionReconciliation";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
