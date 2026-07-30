@@ -347,6 +347,9 @@ const ActiviteitDetail = () => {
         )}
 
 
+        {/* Bekijk ook: redactionele links naar andere activiteitenpagina's */}
+        <SeeAlsoActivities currentSlug={block.slug ?? block.id} />
+
         {/* Related */}
         {related.length > 0 && (
           <section className="bg-muted/30 py-16 mt-8">
