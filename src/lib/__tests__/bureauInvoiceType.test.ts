@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
+import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 
 describe("resolveBureauInvoiceType", () => {
   it("kiest eindfactuur wanneer één factuur het volledige projecttotaal dekt", () => {
