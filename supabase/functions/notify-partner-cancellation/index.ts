@@ -96,8 +96,11 @@ export const handler = async (req: Request): Promise<Response> => {
     );
 
 
-    // Cancel items (skipped when caller already cancelled them, e.g. cancel-program-request)
-    if (notifiableItems.length > 0 && !skip_item_cancel) {
+    // Cancel items (skipped when caller already cancelled them, e.g. cancel-program-request).
+    // Let op: dit staat los van notifiableItems — items moeten ook geannuleerd
+    // worden wanneer er geen enkele partner benaderd was.
+    if ((openItems || []).length > 0 && !skip_item_cancel) {
+
       await supabase
         .from("program_request_items")
         .update({ status: "cancelled", status_note: "Project verwijderd door admin" })
