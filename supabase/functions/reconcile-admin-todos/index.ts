@@ -99,9 +99,11 @@ Deno.serve(async (req) => {
         type === "book_ferry_tickets" ||
         type === "stale_pending_change" ||
         type === "partner_reminder" ||
-        type === "partner_status_update"
+        type === "partner_status_update" ||
+        type === "commission_missing_invoice"
       ) {
         if (isUuid(eid)) itemIds.add(eid);
+
       }
     }
 
