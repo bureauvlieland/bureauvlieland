@@ -147,10 +147,15 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
         updated_at: string;
         invoice_number?: string;
         invoice_date?: string;
+        status?: string;
       } = {
         file_path: item.attachment_path,
         updated_at: new Date().toISOString(),
       };
+      // "via e-mail"-registraties staan op pending_email_match; met PDF horen ze
+      // gewoon in de doorstuur-/betaalstroom te vallen.
+      const nextStatus = resolveStatusAfterPdfLink(match.status, true);
+      if (nextStatus) patch.status = nextStatus;
       if (newInvoiceNumber) patch.invoice_number = newInvoiceNumber;
       if (newInvoiceDate) patch.invoice_date = newInvoiceDate;
 
