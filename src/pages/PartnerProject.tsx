@@ -496,14 +496,28 @@ const PartnerProjectContent = ({ mode }: Props) => {
                               }),
                             }
                           );
-                          if (!response.ok) throw new Error("Failed");
+                          if (!response.ok) {
+                            const payload = await response
+                              .json()
+                              .catch(() => ({} as Record<string, unknown>));
+                            throw new Error(
+                              (payload.details as string) ||
+                                (payload.error as string) ||
+                                "Kon status niet bijwerken.",
+                            );
+                          }
                           toast({ title: "Status bijgewerkt" });
                           await refetch();
                           return true;
-                        } catch {
-                          toast({ title: "Fout", description: "Kon status niet bijwerken.", variant: "destructive" });
+                        } catch (e) {
+                          toast({
+                            title: "Fout",
+                            description: e instanceof Error ? e.message : "Kon status niet bijwerken.",
+                            variant: "destructive",
+                          });
                           return false;
                         }
+
                       })();
                     }}
                     onRegisterInvoice={() => {
