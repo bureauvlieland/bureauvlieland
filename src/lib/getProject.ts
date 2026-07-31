@@ -87,6 +87,9 @@ export interface ProjectSummary {
   };
   dates: string[];                   // ISO date strings
   numberOfPeople: number;
+  /** Rauwe offertefase (`program_requests.quote_status`) — nodig voor itemstatus-labels. */
+  quoteStatus: string | null;
+
 
   pipeline: ProjectPipelineStage;
   programPipeline: ProjectPipelineStage;
@@ -292,6 +295,8 @@ export async function listProjectsForWerkbank(opts: {
         ? (p.selected_dates as unknown[]).map(String)
         : [],
       numberOfPeople: p.number_of_people ?? 0,
+      quoteStatus: p.quote_status ?? null,
+
       pipeline: overallPipeline,
       programPipeline,
       lodgingPipeline,

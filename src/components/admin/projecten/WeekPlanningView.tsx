@@ -65,7 +65,7 @@ export function WeekPlanningView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_requests")
-        .select("id, customer_name, customer_company, number_of_people, selected_dates, reference_number, status")
+        .select("id, customer_name, customer_company, number_of_people, selected_dates, reference_number, status, quote_status")
         .eq("status", "active");
       if (error) throw error;
       return data || [];
@@ -113,7 +113,13 @@ export function WeekPlanningView() {
         label: item.block_name,
         sublabel: `${item.provider_name} · ${item.proposed_time || item.preferred_time || ""}`,
         linkTo: `/admin/projecten/${item.request_id}`,
-        displayStatus: deriveItemDisplayStatusLoose(item, { audience: "admin" }),
+        displayStatus: deriveItemDisplayStatusLoose(item, {
+          audience: "admin",
+          quoteStatus: req?.quote_status ?? null,
+          programPeople: req?.number_of_people ?? 0,
+          numberOfDays: Array.isArray(req?.selected_dates) ? (req!.selected_dates as string[]).length || 1 : 1,
+        }),
+
         customerName: req?.customer_name || "Onbekend",
         groupSize: req?.number_of_people,
       });
@@ -134,7 +140,13 @@ export function WeekPlanningView() {
           label: item.block_name,
           sublabel: `${item.provider_name} · ${item.preferred_time || ""}`,
           linkTo: `/admin/projecten/${item.request_id}`,
-          displayStatus: deriveItemDisplayStatusLoose(item, { audience: "admin" }),
+          displayStatus: deriveItemDisplayStatusLoose(item, {
+            audience: "admin",
+            quoteStatus: req.quote_status ?? null,
+            programPeople: req.number_of_people ?? 0,
+            numberOfDays: dates.length || 1,
+          }),
+
           customerName: req.customer_name,
           groupSize: req.number_of_people,
         });
