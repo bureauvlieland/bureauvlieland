@@ -124,7 +124,7 @@ export const ShareProgramDialog = ({
     trackShareProgram('whatsapp');
     if (!shareUrl) return;
     const text = `Bekijk mijn Vlieland programma: ${shareUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    openWhatsApp({ text });
   };
 
   const shareViaEmail = () => {

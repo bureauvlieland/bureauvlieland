@@ -78,7 +78,7 @@ export const ShareWithParticipantsDialog = ({
 
   const shareWhatsApp = () => {
     const text = `Hier is ons programma op Vlieland: ${shareUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    openWhatsApp({ text });
   };
 
   const shareEmail = () => {

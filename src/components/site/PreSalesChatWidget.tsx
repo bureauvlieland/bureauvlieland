@@ -166,7 +166,7 @@ export const PreSalesChatWidget = () => {
                   We reageren op <strong>{email}</strong> zo snel mogelijk. Liever direct contact?
                 </p>
                 <div className="flex flex-col gap-2 mt-3">
-                  <a href={waHref} target="_blank" rel="noopener noreferrer">
+                  <a href={waHref} onClick={openWa} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2">
                       <MessageCircle className="h-4 w-4" /> Verder chatten via WhatsApp
                     </Button>
@@ -218,11 +218,18 @@ export const PreSalesChatWidget = () => {
                     <Send className="h-4 w-4" />
                     {submitting ? "Versturen…" : "Verstuur"}
                   </Button>
-                  <a href={waHref} target="_blank" rel="noopener noreferrer">
+                  <a href={waHref} onClick={openWa} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2">
                       <MessageCircle className="h-4 w-4" /> Chat via WhatsApp
                     </Button>
                   </a>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Opent WhatsApp niet? Bel of app ons op{" "}
+                    <a href="tel:+31562700208" className="underline">
+                      +31 562 700 208
+                    </a>
+                    .
+                  </p>
                 </div>
               </>
             )}
