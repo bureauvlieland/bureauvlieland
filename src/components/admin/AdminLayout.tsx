@@ -95,14 +95,17 @@ const useOpenTicketsCount = () => {
   return useQuery({
     queryKey: ["admin-open-tickets-count"],
     queryFn: async () => {
-      const { TICKET_BLOCK_IDS } = await import("@/lib/ticketItems");
+      const { TICKET_BLOCK_IDS, TICKET_EXCLUDED_REQUEST_STATUSES } = await import("@/lib/ticketItems");
+      // Mirrors isOpenTicketRow(): only customer-approved items in live projects.
       const { count, error } = await supabase
         .from("program_request_items")
-        .select("id", { count: "exact", head: true })
+        .select("id, program_requests!inner(status)", { count: "exact", head: true })
         .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
         .is("booking_reference", null)
         .is("booking_document_path", null)
-        .neq("status", "cancelled");
+        .neq("status", "cancelled")
+        .not("customer_approved_at", "is", null)
+        .not("program_requests.status", "in", `(${TICKET_EXCLUDED_REQUEST_STATUSES.join(",")})`);
       if (error) throw error;
       return count || 0;
     },
