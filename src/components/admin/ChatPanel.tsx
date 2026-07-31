@@ -108,12 +108,16 @@ export function ChatPanel({
     return !ref?.program && !ref?.accommodation;
   };
 
+  const presalesMode = mode === "presales";
+
+  const scopeFiltered = filteredConversations.filter((c) =>
+    presalesMode ? isPresales(c.id) : !isPresales(c.id)
+  );
+
   const channelFiltered = (
-    channelFilter === "presales"
-      ? filteredConversations.filter((c) => isPresales(c.id))
-      : channelFilter === "all"
-        ? filteredConversations.filter((c) => !isPresales(c.id))
-        : filteredConversations.filter((c) => c.source === channelFilter && !isPresales(c.id))
+    channelFilter === "all"
+      ? scopeFiltered
+      : scopeFiltered.filter((c) => c.source === channelFilter)
   )
     .slice()
     .sort((a, b) => {
@@ -123,10 +127,6 @@ export function ChatPanel({
       return b.last_message_at.localeCompare(a.last_message_at);
     });
 
-  const presalesUnread = filteredConversations.reduce(
-    (sum, c) => (isPresales(c.id) ? sum + (unreadByConversation.get(c.id) ?? 0) : sum),
-    0
-  );
 
   const handleSendWithToast = async (text: string) => {
     try {
