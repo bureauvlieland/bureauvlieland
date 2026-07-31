@@ -1,37 +1,39 @@
-## Wat ik in de data gevonden heb
+## Wat er misloopt
 
-De 5 meldingen zijn **geen 5 echte gaten** — het zijn twee verschillende problemen:
+Twee velden zijn uit sync geraakt op onderdelen van BV-2602-0005:
 
-**1. Zeehondentocht 2026016 (€931,19) en 2026015 (€715,60): factuur is wél geregistreerd.**
-Beide inkoopfacturen bestaan in de administratie, op partner Zeehondentochten, status **betaald**, en op de juiste projecten (2026015 → BV-2602-0002, 2026016 → BV-2603-0003). Ze zijn destijds door de admin op projectniveau geregistreerd, dus zonder koppeling aan één specifiek programma-onderdeel. De afwijkingscheck zoekt alleen op die onderdeel-koppeling en ziet daarom niets — een valse melding.
+```text
+Fietshuur, Luncharrangement, Vrije tijd, 3-gangen diner,
+Fietstocht met begeleiding (alle block_type = bureau):
+  customer_approved_at = 2026-05-04 / 2026-06-16   ← akkoord staat er WEL
+  customer_accepted_at = NULL                       ← ontbreekt
+```
 
-**2. De drie regels met factuurnummer "nvt" (Inzet 4x4, Overtocht, Groepsvervoer, project BV-2602-0006).**
-Dit zijn bureau-onderdelen (leverancier "bureau"), waarbij iemand letterlijk "nvt" als factuurnummer heeft ingevuld. Er hoort dus per definitie geen partnerfactuur bij; het veld is misbruikt als opmerking. Ook valse meldingen — maar wel data-vervuiling die opgeruimd moet worden.
+- Het **label** (`src/lib/itemStatus.ts`, `deriveItemDisplayStatus`) bepaalt akkoord uitsluitend op `customer_accepted_at`. Die is leeg → het onderdeel valt terug op `wacht_op_klant` → badge "Goedkeuring nodig" + groene goedkeurknop.
+- De **actie** (`supabase/functions/approve-quote-item`) blokkeert op `customer_approved_at` → "Dit onderdeel is al geaccordeerd".
 
-Conclusie: er ontbreekt geen enkele factuur. Wat ontbreekt is een betrouwbare check.
+Zo ontstaat exact de klacht: knop zichtbaar, klikken lukt niet.
 
-## Wat ik ga bouwen
+Omvang gemeten: **23 onderdelen over 4 projecten** hebben `customer_approved_at` gevuld en `customer_accepted_at` leeg (tussen 4 mei en 16 juni 2026 aangemaakt). Dat is een legacy-schrijfpad; de huidige `approve-quote-item` zet beide velden wél samen, maar de bulk-accept in `update-customer-program` (regel ~655) zet alléén `customer_accepted_at` — dus de drift kan nog in de andere richting ontstaan.
 
-**A. Matching verbreden (einde valse meldingen)**
-De check gaat een onderdeel als "gedekt" beschouwen wanneer er een inkoopfactuur bestaat met hetzelfde (genormaliseerde) factuurnummer bij dezelfde leverancier — ook als die factuur op projectniveau of via een verzamelfactuur geregistreerd is. Naast de bestaande koppeling op onderdeel en op allocatie.
+## Aanpak
 
-**B. Placeholder-nummers dichtspijkeren**
-- Database-trigger op programma-onderdelen én logies-offertes: waarden als `nvt`, `n.v.t.`, `n/a`, `-`, `geen`, `x` en leegtekens worden bij opslaan genormaliseerd naar leeg (NULL) in plaats van als factuurnummer bewaard. Zo kan dit nooit meer een afwijking veroorzaken.
-- Eenmalige opschoning van de drie bestaande "nvt"-regels in BV-2602-0006 (nummer leegmaken, bedragen blijven staan).
-- Invoervalidatie in de admin- en partnerdialogen: een factuurnummer moet minstens één cijfer bevatten, anders een duidelijke melding in plaats van opslaan.
+**1. Weergave robuust maken (echte fix van het symptoom)**
+In `src/lib/itemStatus.ts`: akkoord = `customer_accepted_at` **óf** `customer_approved_at`. Eén effectieve timestamp (`accepted ?? approved`) gebruiken voor de prijswijziging-vergelijking, zodat "Nieuwe prijs — akkoord nodig" blijft werken. Gevolg: deze onderdelen tonen "Door u goedgekeurd" met de bureau-uitleg, en de goedkeurknop verdwijnt.
 
-**C. Melding wordt actiegericht**
-Het panel toont per regel het projectnummer en de leverancier, plus twee directe acties:
-- **Factuur koppelen** — opent de bestaande koppeldialoog om een geregistreerde factuur aan het onderdeel te hangen.
-- **Nummer wissen** — maakt het factuurnummer op het onderdeel leeg (met bevestiging), voor gevallen waar geen factuur hoort te bestaan.
-Regels die alleen op projectniveau gedekt zijn krijgen geen waarschuwing meer, maar wel een neutrale hint "gedekt via projectfactuur <nummer>" in het detailoverzicht van het project.
+**2. Knop/banner uit één bron**
+In `src/components/customer-portal/CustomerProgramItem.tsx` en `useCustomerProgram.ts` de goedkeurknop en de teller "X onderdelen wachten op uw akkoord" laten volgen uit dezelfde afgeleide status, in plaats van uit een los veld. Dan kan de knop nooit meer verschijnen bij iets dat de backend weigert.
 
-**D. Testen**
-Uitbreiding van de bestaande suite: matching op nummer+leverancier zonder onderdeel-koppeling, normalisatie van placeholder-nummers, geen false positive voor bureau-onderdelen, en behoud van een echte melding wanneer er werkelijk geen factuurrij bestaat.
+**3. Datafix (23 rijen)**
+`customer_accepted_at = customer_approved_at` waar accepted leeg is en approved gevuld — en omgekeerd `customer_approved_at = customer_accepted_at` waar approved leeg is. Puur een sync van bestaande feiten, geen nieuwe goedkeuringen.
 
-## Technische details
+**4. Dichtspijkeren op databaseniveau**
+Trigger `sync_customer_approval_timestamps` op `program_request_items` (BEFORE INSERT/UPDATE): als één van beide velden gezet wordt en de ander leeg is, wordt die gelijkgetrokken. Daarmee is de projectregel "beide velden altijd samen" niet langer afhankelijk van elke individuele edge function.
 
-- `src/lib/purchaseInvoiceConsistency.ts`: `findOrphanInvoicedItems` krijgt een derde input (factuurrijen met `invoice_number_normalized` + `partner_id`) en een normalisatiehelper `normalizeInvoiceNumberInput` die placeholders als leeg beschouwt.
-- `InvoiceConsistencyPanel.tsx`: extra query op `partner_purchase_invoices(invoice_number_normalized, partner_id)`, projectreferentie erbij, en de twee actieknoppen (hergebruik van de bestaande koppel-dialoog).
-- Migratie: `BEFORE INSERT OR UPDATE`-trigger `normalize_invoiced_number` op `program_request_items` en `accommodation_quotes`; datafix voor de drie bestaande rijen.
-- Geen wijziging aan de commissie-berekening of aan de bestaande sync-triggers.
+**5. Tests**
+- `itemStatus.test.ts`: approved-zonder-accepted → `klant_akkoord_bureau` (bureau) / `geaccepteerd`; prijs-herakkoord blijft werken via de effectieve timestamp.
+- Regressietest: geen enkel onderdeel kan tegelijk "goedkeurknop tonen" en door de backend geweigerd worden (`customer_approved_at` gevuld ⇒ nooit `wacht_op_klant`).
+
+## Technische noot
+
+Ik laat `customer_approved_at` de leidende bron in de backend-guard, zodat er geen dubbele goedkeurmails of dubbele partner-notificaties kunnen ontstaan; de frontend wordt alleen toleranter in het lezen.

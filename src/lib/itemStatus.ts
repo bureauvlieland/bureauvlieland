@@ -252,8 +252,14 @@ export function deriveItemDisplayStatus(
     new Date(item.customer_approved_at).getTime() >=
       new Date((item as any).status_updated_at).getTime();
 
+  // Akkoord = customer_accepted_at ÓF customer_approved_at. Historisch zijn er
+  // rijen waar alleen `customer_approved_at` gevuld is (legacy schrijfpad). De
+  // backend blokkeert een tweede goedkeuring op `customer_approved_at`, dus als
+  // de UI alleen naar `customer_accepted_at` kijkt zou de klant een knop zien
+  // die per definitie faalt ("dit onderdeel is al geaccordeerd").
+  const approvalTimestamp = item.customer_accepted_at ?? item.customer_approved_at ?? null;
   const hasAcceptance =
-    !!item.customer_accepted_at &&
+    !!approvalTimestamp &&
     (item.status !== "alternative" || approvedAfterAlternative);
   const hasApproval =
     !!item.customer_approved_at &&
@@ -271,7 +277,7 @@ export function deriveItemDisplayStatus(
       openPriceChange &&
       item.admin_price_override_updated_at &&
       new Date(item.admin_price_override_updated_at).getTime() >
-        new Date(item.customer_accepted_at!).getTime() &&
+        new Date(approvalTimestamp!).getTime() &&
       priceChangeRequiresReapproval(
         item,
         item.override_people ?? ctx.programPeople,

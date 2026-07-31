@@ -421,3 +421,44 @@ describe("regressie-matrix: prioriteit van terminale toestanden", () => {
 
 
 
+
+describe("legacy akkoord: alleen customer_approved_at gevuld", () => {
+  const ctx = { programPeople: 150, numberOfDays: 2, quoteStatus: "akkoord_ontvangen" };
+
+  const item = (over: Record<string, unknown> = {}) =>
+    ({
+      block_type: "bureau",
+      status: "confirmed",
+      provider_id: "bureau",
+      customer_approved_at: "2026-05-04T15:20:51Z",
+      customer_accepted_at: null,
+      admin_price_override: 12,
+      ...over,
+    }) as never;
+
+  it("bureau-onderdeel toont 'Door u goedgekeurd' i.p.v. 'Goedkeuring nodig'", () => {
+    expect(deriveItemDisplayStatusLoose(item(), ctx)).toBe("klant_akkoord_bureau");
+  });
+
+  it("partneronderdeel met bevestiging is geaccepteerd", () => {
+    expect(
+      deriveItemDisplayStatusLoose(item({ block_type: "partner", provider_id: "fortuna" }), ctx),
+    ).toBe("geaccepteerd");
+  });
+
+  it("regressie: een goedgekeurd onderdeel vraagt nooit opnieuw om goedkeuring", () => {
+    for (const quoteStatus of ["concept", "in_afstemming", "offerte_verstuurd", "akkoord_ontvangen", "definitief_bevestigd"]) {
+      const status = deriveItemDisplayStatusLoose(item(), { ...ctx, quoteStatus });
+      expect(status).not.toBe("wacht_op_klant");
+    }
+  });
+
+  it("werkt ook als alleen customer_accepted_at gevuld is", () => {
+    expect(
+      deriveItemDisplayStatusLoose(
+        item({ customer_approved_at: null, customer_accepted_at: "2026-05-04T15:20:51Z" }),
+        ctx,
+      ),
+    ).toBe("klant_akkoord_bureau");
+  });
+});
