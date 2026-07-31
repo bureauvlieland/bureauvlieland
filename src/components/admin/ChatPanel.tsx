@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAdminChat, type ChatStatusFilter } from "@/hooks/useAdminChat";
 import { formatNL } from "@/lib/dateFormat";
+import { getWhatsappWindowState } from "@/lib/whatsappWindow";
 import { isToday, isYesterday, isSameDay } from "date-fns";
 import { useConversationProjects } from "@/hooks/useConversationProjects";
 import { ChatConversationItem } from "@/components/admin/chat/ChatConversationItem";
