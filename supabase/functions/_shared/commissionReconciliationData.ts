@@ -1,0 +1,318 @@
+/**
+ * Eén waarheid voor de commissie-reconciliatie.
+ *
+ * Zowel de werklijst (`get-commission-reconciliation`), de taakgenerator
+ * (`flag-missing-partner-invoices`) als de opschoner (`reconcile-admin-todos`)
+ * moeten met exact dezelfde invoer rekenen. Voorheen laadden ze elk hun eigen
+ * set gegevens: alleen de werklijst nam logies-offertes mee, waardoor
+ * logies-inkoopfacturen daar correct gematcht werden maar in de Werkbank als
+ * "niet gekoppeld" opdoken. Deze loader is dus de enige plek waar de invoer
+ * voor `buildReconciliationRows` wordt opgehaald.
+ */
+
+import {
+  DEFAULT_RECON_SETTINGS,
+  invoiceKey,
+  type ReconInvoiceInput,
+  type ReconItemInput,
+  type ReconPartnerInput,
+  type ReconProjectInput,
+  type ReconSettings,
+} from "./commissionReconciliation.ts";
+
+/** Statussen waarbij het onderdeel daadwerkelijk verkocht is en dus commissie hoort op te leveren. */
+export const SOLD_ITEM_STATUSES = [
+  "confirmed",
+  "accepted",
+  "executed",
+  "invoiced",
+  "completed",
+];
+
+/** Inkoopfactuurstatussen die niet meetellen in de reconciliatie. */
+export const IGNORED_INVOICE_STATUSES = ["rejected", "archived"];
+
+export interface LoadReconciliationOptions {
+  /** Beperk tot één partner (null/undefined = alle partners). */
+  partnerId?: string | null;
+  /**
+   * Sla geannuleerde en (nog) gesnoozede projecten over. De Werkbank wil die
+   * niet signaleren; de werklijst toont ze wel.
+   */
+  skipCancelledAndSnoozed?: boolean;
+  now?: Date;
+}
+
+export interface ReconciliationInputs {
+  items: ReconItemInput[];
+  invoices: ReconInvoiceInput[];
+  projects: ReconProjectInput[];
+  partners: ReconPartnerInput[];
+  settings: ReconSettings;
+  /** partner::factuurnummer van alle facturen die via een onderdeel of logies gekoppeld zijn. */
+  linkedInvoiceKeys: Set<string>;
+}
+
+// deno-lint-ignore no-explicit-any
+type AnyClient = any;
+
+export async function loadReconciliationSettings(client: AnyClient): Promise<ReconSettings> {
+  const { data } = await client
+    .from("app_settings")
+    .select("id, value")
+    .in("id", ["commission_match_tolerance_eur", "commission_match_tolerance_pct"]);
+
+  // deno-lint-ignore no-explicit-any
+  const map = new Map((data ?? []).map((r: any) => [r.id, r.value]));
+  const num = (key: string, fallback: number) => {
+    const raw = map.get(key);
+    const n = typeof raw === "number" ? raw : parseFloat(String(raw ?? ""));
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  return {
+    toleranceEur: num("commission_match_tolerance_eur", DEFAULT_RECON_SETTINGS.toleranceEur),
+    tolerancePct: num("commission_match_tolerance_pct", DEFAULT_RECON_SETTINGS.tolerancePct),
+  };
+}
+
+export async function loadReconciliationInputs(
+  client: AnyClient,
+  options: LoadReconciliationOptions = {},
+): Promise<ReconciliationInputs> {
+  const partnerIdFilter = options.partnerId && options.partnerId !== "all" ? options.partnerId : null;
+  const now = options.now ?? new Date();
+
+  const settings = await loadReconciliationSettings(client);
+
+  // ── Verkoopkant: programma-onderdelen ────────────────────────────────────
+  let itemsQuery = client
+    .from("program_request_items")
+    .select(
+      "id, request_id, provider_id, block_name, quoted_price, vat_rate, commission_percentage, " +
+        "commission_status, commission_basis, invoiced_number, invoiced_amount, " +
+        "status, block_type, proposed_date",
+    )
+    .in("status", SOLD_ITEM_STATUSES)
+    .not("provider_id", "is", null);
+  if (partnerIdFilter) itemsQuery = itemsQuery.eq("provider_id", partnerIdFilter);
+
+  // ── Inkoopkant: geregistreerde inkoopfacturen ────────────────────────────
+  let invoicesQuery = client
+    .from("partner_purchase_invoices")
+    .select(
+      "id, partner_id, request_id, item_id, invoice_number, invoice_date, amount_excl_vat, " +
+        "amount_incl_vat, commission_exempt, commission_exempt_reason, status, created_at, " +
+        "commission_invoiced_at",
+    );
+  if (partnerIdFilter) invoicesQuery = invoicesQuery.eq("partner_id", partnerIdFilter);
+
+  // ── Logies: geselecteerde offertes leveren ook commissie op ──────────────
+  let quotesQuery = client
+    .from("accommodation_quotes")
+    .select(
+      "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
+        "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
+        "accommodation_requests!inner(id, reference_number, customer_name, customer_company, arrival_date)",
+    )
+    .eq("status", "selected");
+  if (partnerIdFilter) quotesQuery = quotesQuery.eq("partner_id", partnerIdFilter);
+
+  const [itemsRes, invoicesRes, quotesRes] = await Promise.all([
+    itemsQuery,
+    invoicesQuery,
+    quotesQuery,
+  ]);
+
+  if (itemsRes.error) throw new Error(`program_request_items lookup failed: ${itemsRes.error.message}`);
+  if (invoicesRes.error) {
+    throw new Error(`partner_purchase_invoices lookup failed: ${invoicesRes.error.message}`);
+  }
+  if (quotesRes.error) throw new Error(`accommodation_quotes lookup failed: ${quotesRes.error.message}`);
+
+  // deno-lint-ignore no-explicit-any
+  const rawItems: any[] = itemsRes.data ?? [];
+  // deno-lint-ignore no-explicit-any
+  const rawInvoices: any[] = invoicesRes.data ?? [];
+  // deno-lint-ignore no-explicit-any
+  const rawQuotes: any[] = quotesRes.data ?? [];
+
+  // ── Allocaties ───────────────────────────────────────────────────────────
+  const invoiceIds = rawInvoices.map((i) => i.id);
+  const allocMap = new Map<string, string[]>();
+  if (invoiceIds.length) {
+    const { data: allocations, error: allocError } = await client
+      .from("partner_purchase_invoice_allocations")
+      .select("invoice_id, item_id")
+      .in("invoice_id", invoiceIds);
+    if (allocError) {
+      throw new Error(
+        `partner_purchase_invoice_allocations lookup failed: ${allocError.message}`,
+      );
+    }
+    for (const a of allocations ?? []) {
+      const arr = allocMap.get(a.invoice_id) ?? [];
+      if (a.item_id) arr.push(a.item_id);
+      allocMap.set(a.invoice_id, arr);
+    }
+  }
+
+  // ── Extra's bij logies-offertes (commissionabel) ─────────────────────────
+  const quoteIds = rawQuotes.map((q) => q.id);
+  const extrasByQuote = new Map<string, number>();
+  if (quoteIds.length) {
+    const { data: quoteExtras, error: extrasError } = await client
+      .from("accommodation_quote_extras")
+      .select("quote_id, unit_price, quantity, pricing_type")
+      .in("quote_id", quoteIds);
+    if (extrasError) {
+      throw new Error(`accommodation_quote_extras lookup failed: ${extrasError.message}`);
+    }
+    for (const extra of quoteExtras ?? []) {
+      const amount = extra.pricing_type === "fixed"
+        ? Number(extra.unit_price) || 0
+        : (Number(extra.unit_price) || 0) * (Number(extra.quantity) || 0);
+      extrasByQuote.set(extra.quote_id, (extrasByQuote.get(extra.quote_id) ?? 0) + amount);
+    }
+  }
+
+  // ── Projecten & partners ─────────────────────────────────────────────────
+  const requestIds = [
+    ...new Set(
+      [
+        ...rawItems.map((i) => i.request_id),
+        ...rawInvoices.map((i) => i.request_id),
+      ].filter(Boolean),
+    ),
+  ];
+
+  const [projectsRes, partnersRes] = await Promise.all([
+    requestIds.length
+      ? client
+          .from("program_requests")
+          .select(
+            "id, reference_number, customer_name, customer_company, selected_dates, cancelled_at, snoozed_until",
+          )
+          .in("id", requestIds)
+      : Promise.resolve({ data: [], error: null }),
+    client.from("partners").select("id, name, commission_percentage, pays_by_direct_debit"),
+  ]);
+
+  if (projectsRes.error) throw new Error(`program_requests lookup failed: ${projectsRes.error.message}`);
+  if (partnersRes.error) throw new Error(`partners lookup failed: ${partnersRes.error.message}`);
+
+  // deno-lint-ignore no-explicit-any
+  const rawProjects: any[] = projectsRes.data ?? [];
+
+  const skipRequestIds = new Set<string>(
+    options.skipCancelledAndSnoozed
+      ? rawProjects
+          .filter(
+            (p) =>
+              p.cancelled_at ||
+              (p.snoozed_until && new Date(p.snoozed_until).getTime() > now.getTime()),
+          )
+          .map((p) => p.id)
+      : [],
+  );
+
+  const items: ReconItemInput[] = rawItems
+    .filter((i) => !skipRequestIds.has(i.request_id))
+    .map((i) => ({
+      id: i.id,
+      request_id: i.request_id,
+      provider_id: i.provider_id,
+      block_name: i.block_name,
+      quoted_price: i.quoted_price,
+      vat_rate: i.vat_rate,
+      commission_percentage: i.commission_percentage,
+      commission_status: i.commission_status,
+      commission_basis: i.commission_basis,
+      invoiced_number: i.invoiced_number,
+      invoiced_amount: i.invoiced_amount,
+      status: i.status,
+      block_type: i.block_type,
+      execution_date: i.proposed_date ?? null,
+      item_type: "activity" as const,
+    }));
+
+  const accommodationProjects: ReconProjectInput[] = [];
+  const accommodationItems: ReconItemInput[] = rawQuotes.map((q) => {
+    const request = q.accommodation_requests;
+    if (request) {
+      accommodationProjects.push({
+        id: request.id,
+        reference_number: request.reference_number ?? null,
+        customer_name: request.customer_name,
+        customer_company: request.customer_company,
+        selected_dates: request.arrival_date ? [request.arrival_date] : null,
+      });
+    }
+    const total = (Number(q.price_total) || 0) + (extrasByQuote.get(q.id) ?? 0);
+    return {
+      id: q.id,
+      request_id: request?.id ?? q.request_id ?? null,
+      provider_id: q.partner_id,
+      block_name: q.accommodation_name,
+      // quoted_price wordt als incl. btw behandeld; bij excl.-prijzen zetten we vat_rate op 0.
+      quoted_price: total,
+      vat_rate: q.price_includes_vat ? (q.vat_rate ?? 9) : 0,
+      commission_percentage: q.commission_percentage,
+      commission_status: q.commission_status,
+      commission_basis: "purchase",
+      invoiced_number: q.invoiced_number,
+      invoiced_amount: q.invoiced_amount,
+      status: q.status,
+      block_type: "partner",
+      execution_date: request?.arrival_date ?? null,
+      item_type: "accommodation" as const,
+    } satisfies ReconItemInput;
+  });
+
+  const allItems = [...items, ...accommodationItems];
+
+  const invoices: ReconInvoiceInput[] = rawInvoices
+    .filter((i) => !IGNORED_INVOICE_STATUSES.includes(i.status ?? ""))
+    .filter((i) => !i.request_id || !skipRequestIds.has(i.request_id))
+    .map((i) => ({
+      id: i.id,
+      partner_id: i.partner_id,
+      request_id: i.request_id,
+      item_id: i.item_id,
+      invoice_number: i.invoice_number,
+      invoice_date: i.invoice_date,
+      amount_excl_vat: i.amount_excl_vat,
+      amount_incl_vat: i.amount_incl_vat,
+      commission_exempt: i.commission_exempt,
+      commission_invoiced_at: i.commission_invoiced_at,
+      created_at: i.created_at,
+      allocated_item_ids: allocMap.get(i.id) ?? [],
+    }));
+
+  const linkedInvoiceKeys = new Set<string>();
+  for (const item of allItems) {
+    if (item.invoiced_number) {
+      linkedInvoiceKeys.add(invoiceKey(item.provider_id, item.invoiced_number));
+    }
+  }
+
+  const projects: ReconProjectInput[] = [
+    ...rawProjects.map((p) => ({
+      id: p.id,
+      reference_number: p.reference_number ?? null,
+      customer_name: p.customer_name,
+      customer_company: p.customer_company,
+      selected_dates: p.selected_dates,
+    })),
+    ...accommodationProjects,
+  ];
+
+  return {
+    items: allItems,
+    invoices,
+    projects,
+    partners: (partnersRes.data ?? []) as ReconPartnerInput[],
+    settings,
+    linkedInvoiceKeys,
+  };
+}
