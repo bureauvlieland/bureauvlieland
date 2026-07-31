@@ -324,7 +324,22 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                             <Badge variant="outline" className="mt-1 text-xs">
                               {TYPE_LABELS[row.itemType]}
                             </Badge>
+                            {row.itemType === "purchase_invoice" && (
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="mt-1 block h-auto p-0 text-xs"
+                                onClick={() =>
+                                  navigate(
+                                    `/admin/inkoopfacturen?search=${encodeURIComponent(row.invoiceNumber ?? "")}`,
+                                  )
+                                }
+                              >
+                                Koppel aan onderdeel of logies
+                              </Button>
+                            )}
                           </td>
+
                           <td className="p-3">
                             <div>{row.projectLabel ?? "—"}</div>
                             {row.customerName && row.customerName !== row.projectLabel && (
