@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
 import {
   Dialog,
   DialogContent,
@@ -118,7 +119,11 @@ export const InvoiceRegistrationDialog = ({
 
     if (!invoiceNumber.trim()) {
       newErrors.invoiceNumber = "Factuurnummer is verplicht";
+    } else if (!isValidInvoiceNumberInput(invoiceNumber)) {
+      newErrors.invoiceNumber =
+        "Vul het echte factuurnummer in (minimaal één cijfer, geen 'nvt' of '-')";
     }
+
 
     if (!invoiceDate) {
       newErrors.invoiceDate = "Factuurdatum is verplicht";

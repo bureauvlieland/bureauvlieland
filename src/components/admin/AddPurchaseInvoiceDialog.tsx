@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
 import {
   Dialog,
   DialogContent,
@@ -619,6 +620,8 @@ export function AddPurchaseInvoiceDialog({
     if (!partnerId) return toast.error("Selecteer een leverancier (partner)");
     if (!requestId) return toast.error("Selecteer een project");
     if (!invoiceNumber) return toast.error("Factuurnummer is verplicht");
+    if (!isValidInvoiceNumberInput(invoiceNumber))
+      return toast.error("Vul het echte factuurnummer in (minimaal \u00e9\u00e9n cijfer, geen 'nvt' of '-')");
     if (!invoiceDate) return toast.error("Factuurdatum is verplicht");
     const excl = parseFloat(amountExcl);
     if (isNaN(excl) || excl <= 0) return toast.error("Bedrag excl. BTW is verplicht");

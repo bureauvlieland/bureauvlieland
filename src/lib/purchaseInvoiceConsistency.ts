@@ -24,19 +24,87 @@ export interface OrphanInvoicedItem extends InvoicedItemRef {
   reason: "no_purchase_invoice";
 }
 
+/** Factuurrij zoals we die gebruiken om dekking op nummer + leverancier vast te stellen. */
+export interface PurchaseInvoiceRef {
+  partner_id: string | null;
+  invoice_number: string | null;
+  invoice_number_normalized?: string | null;
+}
+
+/** Placeholders die gebruikers als "geen factuur" invullen. */
+const PLACEHOLDER_INVOICE_NUMBERS = new Set([
+  "nvt",
+  "nvt.",
+  "nvt-",
+  "nva",
+  "na",
+  "n/a",
+  "n.a.",
+  "geen",
+  "geenfactuur",
+  "x",
+  "xx",
+  "xxx",
+  "-",
+  "--",
+  "?",
+  "0",
+]);
+
 /**
- * Items met een factuurnummer waarvoor geen enkele inkoopfactuurrij bestaat
- * (niet via allocatie en niet via `item_id` op de header).
+ * Normaliseert een ingevoerd factuurnummer: trim + lowercase, strip scheidingstekens.
+ * Retourneert `null` voor lege waarden en placeholders zoals "nvt" of "-".
+ */
+export function normalizeInvoiceNumberInput(raw: string | null | undefined): string | null {
+  if (raw === null || raw === undefined) return null;
+  const trimmed = String(raw).trim();
+  if (!trimmed) return null;
+  const key = trimmed.toLowerCase().replace(/[\s._]/g, "");
+  if (PLACEHOLDER_INVOICE_NUMBERS.has(key)) return null;
+  return trimmed;
+}
+
+/** True als de waarde bruikbaar is als factuurnummer (geen placeholder, bevat een cijfer). */
+export function isValidInvoiceNumberInput(raw: string | null | undefined): boolean {
+  const normalized = normalizeInvoiceNumberInput(raw);
+  return !!normalized && /\d/.test(normalized);
+}
+
+/** Matchsleutel voor nummer + leverancier. */
+function matchKey(partnerId: string | null | undefined, number: string | null | undefined): string | null {
+  const normalized = normalizeInvoiceNumberInput(number);
+  if (!normalized || !partnerId) return null;
+  return `${String(partnerId).trim().toLowerCase()}::${normalized.toLowerCase().replace(/[\s._-]/g, "")}`;
+}
+
+/**
+ * Items met een factuurnummer waarvoor geen enkele inkoopfactuur bestaat:
+ * niet via allocatie, niet via `item_id` op de header, en ook niet als
+ * factuurrij met hetzelfde nummer bij dezelfde leverancier (projectniveau
+ * of verzamelfactuur). Placeholder-nummers worden genegeerd.
  */
 export function findOrphanInvoicedItems(
   items: InvoicedItemRef[],
   linkedItemIds: Iterable<string>,
+  invoices: PurchaseInvoiceRef[] = [],
 ): OrphanInvoicedItem[] {
   const linked = new Set(linkedItemIds);
+  const invoiceKeys = new Set<string>();
+  for (const inv of invoices) {
+    const key = matchKey(inv.partner_id, inv.invoice_number_normalized ?? inv.invoice_number);
+    if (key) invoiceKeys.add(key);
+  }
   return items
-    .filter((i) => !!i.invoiced_number && !linked.has(i.id))
+    .filter((i) => {
+      if (!normalizeInvoiceNumberInput(i.invoiced_number)) return false;
+      if (linked.has(i.id)) return false;
+      const key = matchKey(i.provider_id, i.invoiced_number);
+      if (key && invoiceKeys.has(key)) return false;
+      return true;
+    })
     .map((i) => ({ ...i, reason: "no_purchase_invoice" as const }));
 }
+
 
 /** Verwachte commissie op basis van grondslag en percentage, afgerond op centen. */
 export function expectedCommission(
