@@ -137,8 +137,14 @@ export interface ReconRow {
   purchaseCommission: number | null;
   /** Voorgestelde grondslag: inkoop indien beschikbaar, anders verkoop. */
   defaultBasis: CommissionBasis;
-  /** True als deze regel commissievrij is (partner of factuur). */
+  /** True als deze regel commissievrij is (partner, factuur of admin-archivering). */
   commissionExempt: boolean;
+  /** Reden die de admin gaf bij het commissievrij markeren. */
+  exemptReason: string | null;
+  /** Moment van commissievrij markeren. */
+  exemptAt: string | null;
+  /** Factureerbaar (uitgevoerd) of nog verwacht. */
+  readiness: ReconReadiness;
   invoiceNumber: string | null;
   invoiceDate: string | null;
   executionDate: string | null;
@@ -147,6 +153,7 @@ export interface ReconRow {
   /** Aantal dagen sinds uitvoering (missing) of registratie (unlinked). */
   ageDays: number | null;
 }
+
 
 /** Voorgestelde grondslag voor een regel. */
 export function defaultBasisForRow(row: {
