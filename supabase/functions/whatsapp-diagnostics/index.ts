@@ -150,7 +150,17 @@ Deno.serve(async (req) => {
         status_callback: n.status_callback,
       })) ?? [];
 
-    // 3. Recent inbound messages Twilio actually received on our number
+    // 3. WhatsApp senders (v2) incl. their own webhook configuration
+    const waSenders = await get("https://messaging.twilio.com/v2/channels/senders?PageSize=50");
+    const senderReport =
+      (waSenders.body as any)?.senders?.map((s: any) => ({
+        sid: s.sid,
+        sender_id: s.sender_id,
+        status: s.status,
+        webhook: s.webhook ?? null,
+      })) ?? [];
+
+    // 4. Recent inbound messages Twilio actually received on our number
     const inbound = await get(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json?PageSize=20`,
     );
@@ -166,15 +176,64 @@ Deno.serve(async (req) => {
         date_sent: m.date_sent,
       })) ?? [];
 
+    // Optional repair: point the messaging service inbound webhook at our
+    // function and make sure the WhatsApp sender is in its sender pool.
+    const fixResults: Record<string, unknown> = {};
+    if (action === "fix") {
+      const svc = (serviceReport as any[])[0];
+      if (svc) {
+        const upd = await post(`https://messaging.twilio.com/v1/Services/${svc.sid}`, {
+          InboundRequestUrl: expectedWebhook,
+          InboundMethod: "POST",
+          UseInboundWebhookOnNumber: "false",
+        });
+        fixResults.service_update = { status: upd.status, ok: upd.ok, body: upd.body };
+
+        const senderTarget = twilioNumber.startsWith("whatsapp:")
+          ? twilioNumber
+          : `whatsapp:${twilioNumber}`;
+        if (!svc.channel_senders?.some((s: any) => s.sender === senderTarget)) {
+          const add = await post(
+            `https://messaging.twilio.com/v1/Services/${svc.sid}/ChannelSenders`,
+            { Sid: senderTarget },
+          );
+          fixResults.channel_sender_add = { status: add.status, ok: add.ok, body: add.body };
+        }
+      }
+
+      // Sender-level webhook as a belt-and-braces fallback.
+      const target = (senderReport as any[]).find(
+        (s) => String(s.sender_id ?? "").includes(twilioNumber.replace("whatsapp:", "")),
+      );
+      if (target?.sid) {
+        const wh = await post(
+          `https://messaging.twilio.com/v2/channels/senders/${target.sid}`,
+          undefined,
+          {
+            webhook: {
+              callback_url: expectedWebhook,
+              callback_method: "POST",
+            },
+          },
+        );
+        fixResults.sender_webhook = { status: wh.status, ok: wh.ok, body: wh.body };
+      }
+    }
+
     return json({
+      action,
       expected_webhook_url: expectedWebhook,
       configured_whatsapp_number: twilioNumber,
       auth_token_present: Boolean(authToken),
       messaging_services: serviceReport,
       messaging_services_status: services.status,
+      whatsapp_senders: senderReport,
+      whatsapp_senders_status: waSenders.status,
       incoming_phone_numbers: numberReport,
       recent_messages: recentMessages,
+      fix: action === "fix" ? fixResults : undefined,
     });
+
   } catch (err) {
     console.error("whatsapp-diagnostics error", err);
     return json({ error: String(err) }, 500);
