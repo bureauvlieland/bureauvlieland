@@ -119,8 +119,8 @@ function ProjectListRow({
 
 export default function AdminWerkbank() {
   const [params, setParams] = useSearchParams();
-  const [tab, setTab] = useState<"inbox" | "projecten">(
-    (params.get("tab") as "inbox" | "projecten") || "inbox",
+  const [tab, setTab] = useState<"inbox" | "projecten" | "financieel">(
+    (params.get("tab") as "inbox" | "projecten" | "financieel") || "inbox",
   );
   const [view, setView] = useState<QuickView>("alles");
   const [search, setSearch] = useState("");
