@@ -45,6 +45,7 @@ import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountin
 import { InvoiceForwardHistoryPopover } from "@/components/admin/InvoiceForwardHistoryPopover";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/DuplicateCandidatesBanner";
+import { InvoiceConsistencyPanel } from "@/components/admin/purchase-invoices/InvoiceConsistencyPanel";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
 import { Plus } from "lucide-react";
@@ -240,6 +241,9 @@ export default function AdminPurchaseInvoices() {
 
 
         <DuplicateCandidatesBanner />
+
+        <InvoiceConsistencyPanel />
+
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
