@@ -142,6 +142,11 @@ export default function AdminCommissionInvoiceCreate() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  /** Regels waar de herberekende grondslag afwijkt van wat de werklijst toonde. */
+  const [baseMismatches, setBaseMismatches] = useState<
+    Array<{ label: string; expected: number; actual: number }>
+  >([]);
+
 
   // Bureau details
   const companyName = getSetting<string>("bureau_company_name", "Bureau Vlieland");
