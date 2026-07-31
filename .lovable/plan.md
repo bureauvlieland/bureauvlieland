@@ -1,51 +1,37 @@
-## Wat er nu misgaat
+## Wat ik in de data gevonden heb
 
-- **Commissie Beheer** heeft één statusdropdown (Verwacht / Te factureren / Gefactureerd / Betaald). Bij "Te factureren" krijg je de werklijst, bij "Verwacht" een compleet andere tabel uit een andere edge function — dus twee weergaven met dezelfde regels en verschillende bedragen.
-- De werklijst neemt élk verkocht onderdeel mee (status `confirmed`, `accepted`, `executed`, `invoiced`, `completed`) zodra er commissie op zit. Projecten die nog moeten plaatsvinden staan dus tussen de te factureren regels — vandaar de 38 regels in jouw screenshot.
-- Niet aanvinken haalt een regel niet uit beeld: de lijst filtert alleen op commissiestatus `invoiced`/`paid` en op `commission_exempt`. Er is geen archiveer-actie in de UI, dus regels blijven eeuwig staan.
+De 5 meldingen zijn **geen 5 echte gaten** — het zijn twee verschillende problemen:
+
+**1. Zeehondentocht 2026016 (€931,19) en 2026015 (€715,60): factuur is wél geregistreerd.**
+Beide inkoopfacturen bestaan in de administratie, op partner Zeehondentochten, status **betaald**, en op de juiste projecten (2026015 → BV-2602-0002, 2026016 → BV-2603-0003). Ze zijn destijds door de admin op projectniveau geregistreerd, dus zonder koppeling aan één specifiek programma-onderdeel. De afwijkingscheck zoekt alleen op die onderdeel-koppeling en ziet daarom niets — een valse melding.
+
+**2. De drie regels met factuurnummer "nvt" (Inzet 4x4, Overtocht, Groepsvervoer, project BV-2602-0006).**
+Dit zijn bureau-onderdelen (leverancier "bureau"), waarbij iemand letterlijk "nvt" als factuurnummer heeft ingevuld. Er hoort dus per definitie geen partnerfactuur bij; het veld is misbruikt als opmerking. Ook valse meldingen — maar wel data-vervuiling die opgeruimd moet worden.
+
+Conclusie: er ontbreekt geen enkele factuur. Wat ontbreekt is een betrouwbare check.
 
 ## Wat ik ga bouwen
 
-### 1. Eén lijst met filterchips (Commissie Beheer wordt de startpagina)
+**A. Matching verbreden (einde valse meldingen)**
+De check gaat een onderdeel als "gedekt" beschouwen wanneer er een inkoopfactuur bestaat met hetzelfde (genormaliseerde) factuurnummer bij dezelfde leverancier — ook als die factuur op projectniveau of via een verzamelfactuur geregistreerd is. Naast de bestaande koppeling op onderdeel en op allocatie.
 
-De statusdropdown verdwijnt. In plaats daarvan één werklijst met chips bovenaan:
+**B. Placeholder-nummers dichtspijkeren**
+- Database-trigger op programma-onderdelen én logies-offertes: waarden als `nvt`, `n.v.t.`, `n/a`, `-`, `geen`, `x` en leegtekens worden bij opslaan genormaliseerd naar leeg (NULL) in plaats van als factuurnummer bewaard. Zo kan dit nooit meer een afwijking veroorzaken.
+- Eenmalige opschoning van de drie bestaande "nvt"-regels in BV-2602-0006 (nummer leegmaken, bedragen blijven staan).
+- Invoervalidatie in de admin- en partnerdialogen: een factuurnummer moet minstens één cijfer bevatten, anders een duidelijke melding in plaats van opslaan.
 
-`Te factureren` (default) · `Verwacht` · `Gefactureerd` · `Betaald` · `Commissievrij / gearchiveerd` · `Alles`
+**C. Melding wordt actiegericht**
+Het panel toont per regel het projectnummer en de leverancier, plus twee directe acties:
+- **Factuur koppelen** — opent de bestaande koppeldialoog om een geregistreerde factuur aan het onderdeel te hangen.
+- **Nummer wissen** — maakt het factuurnummer op het onderdeel leeg (met bevestiging), voor gevallen waar geen factuur hoort te bestaan.
+Regels die alleen op projectniveau gedekt zijn krijgen geen waarschuwing meer, maar wel een neutrale hint "gedekt via projectfactuur <nummer>" in het detailoverzicht van het project.
 
-- Binnen "Te factureren" blijft de groepering per partner, met per groep het totaal en de Verkoop/Inkoop-grondslagknoppen zoals nu.
-- De kop toont KPI's die bij de actieve chip horen (aantal regels, totaal commissie, zonder inkoopfactuur, verkoop ≠ inkoop).
-- Het losse menu-item "Verwachte commissie" verdwijnt; die weergave wordt de chip "Verwacht". `/admin/commissies/verwacht` blijft werken en zet de chip meteen goed.
-- Commissie Beheer wordt het eerste item in de financiële sectie van het admin-menu.
+**D. Testen**
+Uitbreiding van de bestaande suite: matching op nummer+leverancier zonder onderdeel-koppeling, normalisatie van placeholder-nummers, geen false positive voor bureau-onderdelen, en behoud van een echte melding wanneer er werkelijk geen factuurrij bestaat.
 
-### 2. Verwacht vs. te factureren op projectstatus
+## Technische details
 
-Een regel is **te factureren** alleen als het werk daadwerkelijk gedaan is: onderdeel op `executed` / `invoiced` / `completed`, of het project is afgerond. Onderdelen die alleen `confirmed`/`accepted` zijn (project moet nog plaatsvinden) vallen onder **Verwacht**, ongeacht de datum. Logies-offertes volgen dezelfde regel via de projectstatus.
-
-Losse inkoopfacturen zonder koppeling blijven altijd in "Te factureren" staan — daar is het werk al geleverd en gefactureerd.
-
-Bij elke verwachte regel staat de uitvoerdatum met een subtiele "wordt factureerbaar na uitvoering"-hint, en per partnergroep zie ik zowel het verwachte als het factureerbare totaal.
-
-### 3. Archiveren = definitief commissievrij
-
-Per regel (en per selectie, in bulk) een actie **"Commissievrij markeren"**:
-
-- Dialoog met verplichte reden (vrij tekstveld + suggesties: doorbelasting zonder commissie, interne post, dubbele factuur, afspraak met partner).
-- Regel verdwijnt uit "Te factureren" en "Verwacht" en verschijnt onder de chip **Commissievrij / gearchiveerd**, met reden, wie het deed en wanneer.
-- Daar staat ook **"Terugzetten"** om de regel weer factureerbaar te maken.
-- Werkt voor alle drie de regeltypes: programma-onderdeel, logies-offerte en losse inkoopfactuur.
-- Bijbehorende werkbank-taken (`commission_unlinked_invoice` / ontbrekende inkoopfactuur) sluiten automatisch en komen niet terug.
-
-### 4. Voorkomen dat ze terugkomen
-
-De taakgenerator en de opschoner gebruiken dezelfde loader, dus commissievrij gemarkeerde regels worden ook daar overgeslagen. Regels die nog "Verwacht" zijn genereren geen "inkoopfactuur ontbreekt"-taak meer — dat signaal hoort pas na uitvoering.
-
-## Technisch
-
-- **Migratie**: `commission_exempt_reason`, `commission_exempt_at`, `commission_exempt_by` toevoegen op `program_request_items` en `accommodation_quotes` (`partner_purchase_invoices` heeft `commission_exempt` + reden al). Plus een `commission_exempt` boolean op items/quotes. Admin-only policies; partner mag deze velden niet zetten (guard-trigger uitbreiden).
-- **Gedeelde logica** in `supabase/functions/_shared/commissionReconciliation.ts`: nieuw veld `readiness: "expected" | "billable"` op `ReconRow`, plus `isBillableRow` (alleen billable) en `isExpectedRow`. Zo blijven werklijst, taakgenerator en opschoner één waarheid.
-- **Loader** `_shared/commissionReconciliationData.ts`: itemstatus en projectafronding meenemen, en de exempt-velden van items/quotes meelezen.
-- **Frontend**: `CommissionWorklist.tsx` krijgt de chips, de readiness-splitsing en de archiveer-acties; `AdminCommissions.tsx` wordt teruggebracht tot kop + KPI's + werklijst (de aparte "expected"-tabel en `get-admin-commissions`-fetch vervallen daar).
-- **Nieuwe edge function** `set-commission-exempt` (admin-only) voor markeren/terugzetten inclusief `admin_activity_log`-registratie en het sluiten van de bijbehorende taken.
-- **Tests** uitbreiden in `commissionReconciliation.test.ts`: readiness-classificatie (confirmed = verwacht, executed = factureerbaar, losse factuur = factureerbaar), en dat commissievrij gemarkeerde regels uit beide buckets én uit de taakgenerator verdwijnen.
-
-Netto effect voor jou: één lijst, standaard alleen wat écht gefactureerd kan worden, en alles wat je niet wil meenemen kun je met reden wegzetten zonder dat het terugkomt.
+- `src/lib/purchaseInvoiceConsistency.ts`: `findOrphanInvoicedItems` krijgt een derde input (factuurrijen met `invoice_number_normalized` + `partner_id`) en een normalisatiehelper `normalizeInvoiceNumberInput` die placeholders als leeg beschouwt.
+- `InvoiceConsistencyPanel.tsx`: extra query op `partner_purchase_invoices(invoice_number_normalized, partner_id)`, projectreferentie erbij, en de twee actieknoppen (hergebruik van de bestaande koppel-dialoog).
+- Migratie: `BEFORE INSERT OR UPDATE`-trigger `normalize_invoiced_number` op `program_request_items` en `accommodation_quotes`; datafix voor de drie bestaande rijen.
+- Geen wijziging aan de commissie-berekening of aan de bestaande sync-triggers.
