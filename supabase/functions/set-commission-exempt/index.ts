@@ -111,7 +111,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           .update({
             status: "dismissed",
             completed_at: now,
-            resolution_note: `Commissievrij gemarkeerd: ${reasonRaw}`,
+            completion_reason: `Commissievrij gemarkeerd: ${reasonRaw}`,
           })
           .eq("auto_type", TODO_TYPE_BY_TYPE[type])
           .in("auto_entity_id", ids)
