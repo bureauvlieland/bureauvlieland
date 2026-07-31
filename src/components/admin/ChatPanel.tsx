@@ -38,6 +38,7 @@ import {
   BedDouble,
   Archive,
   ArchiveRestore,
+  Sparkles,
 } from "lucide-react";
 
 
