@@ -168,6 +168,15 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
       .map((row) => `${row.itemId ?? row.invoiceId}:${basisFor(row)}`)
       .join(",");
     if (basisMap) params.set("basis", basisMap);
+    // Grondslag meegeven zodat de factuurpagina kan waarschuwen bij afwijkingen.
+    const amountsMap = selectedRows
+      .map(
+        (row) =>
+          `${row.itemId ?? row.invoiceId}:${basisAmountForBasis(row, basisFor(row)).toFixed(2)}`,
+      )
+      .join(",");
+    if (amountsMap) params.set("amounts", amountsMap);
+
     navigate(`/admin/commissies/factuur-maken?${params.toString()}`);
   };
 
