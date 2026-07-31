@@ -1,51 +1,53 @@
-## Wat er mis gaat
+## Waar het misgaat (nagerekend op Zuiver)
 
-De werklijst (Commissie Beheer) en de pagina "Commissiefactuur maken" rekenen **onafhankelijk van elkaar** de grondslag en het percentage uit. De werklijst gebruikt de edge function `get-commission-reconciliation` (inclusief inkoopfactuur-allocaties); de factuurpagina haalt zelf ruwe rijen op en rekent opnieuw. Daardoor lopen de bedragen uiteen.
+Er zijn **twee losse bronnen** voor "heeft dit onderdeel een inkoopfactuur":
 
-Concreet voor je selectie van 5 regels bij Zeehondentochten Vlieland:
+1. `partner_purchase_invoices` (+ `partner_purchase_invoice_allocations`) — hier leest de **commissie-werklijst** uit.
+2. De gedenormaliseerde velden `invoiced_number` / `invoiced_amount` / `commission_*` op `program_request_items` — hier leest het **partner-dashboard/Werkbank** (en de "Factureren"-lijst) uit.
 
-| Regel | Werklijst | Concept BVC-2607-0002 |
-|---|---|---|
-| Artcadia / Katalys | 10% van € 715,60 = € 71,56 | € 715,60 → € 71,56 ✔ |
-| Salure B.V. | 10% van € 931,19 = € 93,12 | € 931,20 → € 93,12 (centen weg) |
-| OVM Partners | 10% van € 330,28 = € 33,03 | € 330,30 → € 33,03 (centen weg) |
-| van der Velden Interieur | 10% van € 389,91 = € 38,99 | € 389,90 → € 38,99 (centen weg) |
-| Regio Deal De Waddeneilanden | 10% van € 389,91 = **€ 38,99** | **€ 425,00 × 15% = € 63,75** ✘ |
+Concreet bij Zuiver Traiteur:
 
-**Juiste totaal: € 275,69 excl. btw** (btw 21% € 57,89 → € 333,58 incl.). Het concept staat nu op € 300,45 / € 363,54: **€ 24,76 te hoog**.
+| Factuur | Project | item_id op header | allocatie | `invoiced_number` op item |
+|---|---|---|---|---|
+| T-261015 (€ 573,39, betaald) | BV-2605-0014 Smallingerland | leeg | ja | **leeg** |
+| T-261016 (€ 269,72, betaald) | BV-2604-0004 OVM | leeg | ja | **leeg** |
 
-Drie bugs in `AdminCommissionInvoiceCreate.tsx` verklaren dit — alle op de Regio Deal-regel (BV-2606-0020) tegelijk:
+Daarom staan Smallingerland en OVM nog onder "Factureren — Registreer uw factuur", terwijl de factuur er allang is en zelfs betaald in batch BATCH-2607-0002.
 
-1. **Percentage-fallback is 15%** (`Number(row.commission_percentage) || 15`) terwijl het item nog geen eigen percentage heeft. De werklijst valt terug op het partnerpercentage (Zeehondentochten = 10%). Voor logies is de fallback 10% i.p.v. het partner-logiespercentage.
-2. **Inkoopfactuur via allocatie wordt genegeerd.** De pagina leidt de inkoopgrondslag af uit `commission_amount / pct` of `invoiced_amount` op het item zelf. Bij dit item staan die leeg; de inkoopfactuur 2026058 (€ 389,91 excl.) hangt via `partner_purchase_invoice_allocations` aan het item. De pagina valt dan terug op de verkoopwaarde.
-3. **Btw wordt niet afgehaald als `vat_rate` leeg is.** `Number(null)` = 0, dus 0% i.p.v. de bedoelde 21%: € 425,00 blijft € 425,00 in plaats van € 351,24. Precies daarom zie je "425" in het veld Grondslag.
-4. Bijkomend: terugrekenen via `commission_amount / pct` verliest centen (931,19 → 931,20 etc.).
+Oorzaak: de **partner**-route (`register-partner-invoice`) schrijft de velden netjes terug naar de items (regel 270-290), maar de **admin**-route (`usePurchaseInvoices.createInvoice`, en dus ook de inkoop-inbox/e-mailmatch) doet dat níet — die schrijft alleen de header + allocaties. Alles wat jij zelf registreert, blijft dus onzichtbaar voor het partnerdashboard.
 
-De werklijst zelf is dus correct; de factuurpagina is het probleem. Het concept BVC-2607-0001 (Vlieland Outdoor Center) is met dezelfde logica gemaakt en moet ook nagerekend worden.
+Omvang nu in de database:
+- **15 items** met een gekoppelde inkoopfactuur maar zonder `invoiced_number`: trattoria-oliva 6, rederij 3, zuiver 2, bunkermuseum 2, zeehonden 1, manege-de-seeruyter 1.
+- **2 items** waarbij de factuurheader direct aan het item hangt (`item_id`) en het item toch leeg is.
+- **5 items** andersom: wel `invoiced_number`, geen factuurrij (oude handmatige registraties).
+- Bijvangst bij Zuiver: **T-261008 staat dubbel** (twee headers, zelfde bedrag/project) — daarom zie je 'm twee keer in de facturenlijst.
 
 ## Wat ik ga bouwen
 
-**1. Eén bron van waarheid**
-`AdminCommissionInvoiceCreate.tsx` haalt de regels niet meer zelf uit `program_request_items` / `accommodation_quotes`, maar roept `get-commission-reconciliation` aan (dezelfde edge function als de werklijst), filtert op de meegegeven `itemIds` / `quoteIds` / `invoiceIds` en zet elke `ReconRow` om naar een factuurregel met `basisAmountForBasis(row, basis)` en `commissionForBasis(row, basis)` uit `src/lib/commissionReconciliation.ts`. De grondslag-keuze (`basis`-parameter uit de URL) blijft gerespecteerd; handmatig aanpassen van grondslag en percentage per regel blijft gewoon werken.
+**1. Eén schrijfpunt in de database (de fix van het lek)**
+Een trigger op `partner_purchase_invoices` en `partner_purchase_invoice_allocations` die de item-velden altijd synchroon houdt, ongeacht welk pad de factuur aanmaakt (partner-portal, admin, inkoop-inbox, verzamelfactuur, e-mailmatch):
+- bij insert/update: zet op elk gekoppeld item `invoiced_number`, `invoiced_date`, `invoiced_amount` (allocatiebedrag ex btw), `commission_percentage` (partnerpercentage als het item er nog geen heeft), `commission_amount` en `commission_status`;
+- bij verwijderen van de factuur of allocatie: maak die velden weer leeg, zodat het onderdeel terugkomt op de werklijst.
 
-Partner- en adresgegevens voor de factuurkop blijven uit `partners` komen.
+Daarmee blijft alle bestaande UI werken, maar is er nog maar één plek die deze waarheid schrijft.
 
-**2. Vangnet in de werklijst**
-Bij het doorklikken geef ik naast de basis ook de door de werklijst berekende grondslag mee (`amounts=<id>:<grondslag>`), zodat de factuurpagina kan valideren. Wijkt de herberekening meer dan € 0,02 af, dan verschijnt een waarschuwing boven de regels ("grondslag herberekend, controleer") in plaats van stilzwijgend een ander bedrag.
+**2. Backfill**
+Zelfde migratie draait de sync eenmalig over alle bestaande facturen — dat repareert de 15 + 2 items in één keer (Zuiver, Trattoria Oliva, Rederij, Bunkermuseum, Zeehonden, Manege de Seeruyter). Na de backfill verdwijnen Smallingerland en OVM uit "Factureren" bij Zuiver.
 
-**3. Kleine correcties**
-- Btw-strip helper: leeg/ongeldig `vat_rate` → 21% (activiteiten) resp. 9% (logies), niet 0%.
-- Grondslag afronden op 2 decimalen vanuit het bronbedrag, niet vanuit `commission_amount`.
+**3. Consistentie-rapport in de admin**
+Een klein blok op de pagina Inkoopfacturen: "Afwijkingen (n)" dat de resterende scheve gevallen toont — items met `invoiced_number` zonder factuurrij (de 5 oude handmatige) en dubbele factuurnummers per partner (T-261008). Met per regel een knop om te openen; niets wordt automatisch verwijderd, jij beslist.
 
 **4. Tests**
-- `src/lib/__tests__/commissionInvoiceLines.test.ts`: regressietest met exact deze 5 Zeehondentochten-regels → totaal € 275,69; en een regel met leeg `commission_percentage` + leeg `vat_rate` + allocatie-gekoppelde inkoopfactuur → 10% van € 389,91.
-- Test dat werklijst-totaal en factuur-totaal voor dezelfde selectie identiek zijn.
+- Unittest op de nieuwe sync-helper: allocatie → itemvelden, met en zonder eigen commissiepercentage, en verwijderen → velden leeg.
+- Regressietest dat werklijst-status en partner-werkbankstatus voor hetzelfde item niet uiteen kunnen lopen.
 
-**5. Bestaande concepten**
-Beide concepten (BVC-2607-0002 en BVC-2607-0001) zijn nog niet verstuurd. Na de fix verwijder je ze en maak je ze opnieuw aan uit de werklijst; ik meld in de chat de verwachte nieuwe bedragen zodat je kunt vergelijken. Zeg je liever dat ik ze automatisch herberekend bijwerk, dan doe ik dat in plaats van opnieuw aanmaken.
+**5. Run 2 — alle overige partners**
+Na jouw akkoord op de fix loop ik per partner de werklijst na (Trattoria Oliva, Rederij, Bunkermuseum, Zeehonden, Manege de Seeruyter, Vlieland Outdoor Center, Fortuna, …) en rapporteer per partner: aantal gecorrigeerde regels, en of het commissietotaal verandert. Correcties aan bedragen doe ik pas na jouw bevestiging.
 
 ## Technische details
 
-- Bestanden: `src/pages/admin/AdminCommissionInvoiceCreate.tsx` (hoofdmoot), `src/components/admin/CommissionWorklist.tsx` (extra `amounts`-parameter), nieuwe testfile onder `src/lib/__tests__/`.
-- Geen databasewijziging nodig; `commission_invoice_lines` heeft al `commission_basis` en `purchase_invoice_id`.
-- `get-commission-reconciliation` wordt aangeroepen met de partner-id die uit de eerste geselecteerde rij volgt, zodat de payload klein blijft.
+- Nieuwe migratie: functie `public.sync_item_invoice_from_purchase_invoice()` + triggers op beide tabellen, plus een backfill-`UPDATE`.
+- `src/hooks/usePurchaseInvoices.ts`: de nu ontbrekende terugschrijving hoeft niet in de client — de trigger dekt het; wel invalidatie van de `partner-dashboard`/`commissie`-queries toevoegen zodat de UI direct bijwerkt.
+- Nieuw: `src/components/admin/purchase-invoices/InvoiceConsistencyPanel.tsx` + query voor de afwijkingen.
+- Tests onder `src/lib/__tests__/` en een Deno-test voor de triggerlogica-equivalent.
+- Geen wijziging aan `get-commission-reconciliation` — die was al correct.
