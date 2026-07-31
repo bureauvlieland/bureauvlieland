@@ -140,7 +140,13 @@ export function WeekPlanningView() {
           label: item.block_name,
           sublabel: `${item.provider_name} · ${item.preferred_time || ""}`,
           linkTo: `/admin/projecten/${item.request_id}`,
-          displayStatus: deriveItemDisplayStatusLoose(item, { audience: "admin" }),
+          displayStatus: deriveItemDisplayStatusLoose(item, {
+            audience: "admin",
+            quoteStatus: req.quote_status ?? null,
+            programPeople: req.number_of_people ?? 0,
+            numberOfDays: dates.length || 1,
+          }),
+
           customerName: req.customer_name,
           groupSize: req.number_of_people,
         });
