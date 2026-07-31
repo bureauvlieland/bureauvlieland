@@ -5,6 +5,7 @@ import {
   getTicketKindLabel,
   getTicketDate,
   getTicketStatus,
+  isOpenTicketRow,
   FERRY_BLOCK_IDS,
   BIKE_BLOCK_IDS,
 } from "@/lib/ticketItems";
