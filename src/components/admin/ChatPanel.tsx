@@ -261,8 +261,7 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
                 onClick={() => setActiveConversationId(conv.id)}
               />
             ))}
-          {channelFilter !== "presales" && (
-          {(() => {
+          {channelFilter !== "presales" && (() => {
             type Group = {
               key: string;
               label: string;
