@@ -68,7 +68,7 @@ export function InvoiceConsistencyPanel() {
               </span>
               {o.request_id && (
                 <Button asChild size="sm" variant="outline">
-                  <Link to={`/admin/aanvraag/${o.request_id}`}>Openen</Link>
+                  <Link to={`/admin/projecten/${o.request_id}`}>Openen</Link>
                 </Button>
               )}
             </li>
