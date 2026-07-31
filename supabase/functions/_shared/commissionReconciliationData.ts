@@ -114,7 +114,10 @@ export async function loadReconciliationInputs(
     .select(
       "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
         "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
-        "accommodation_requests!inner(id, reference_number, customer_name, customer_company, arrival_date)",
+        "commission_exempt, commission_exempt_reason, commission_exempt_at, " +
+        "accommodation_requests!inner(id, reference_number, customer_name, customer_company, " +
+        "arrival_date, departure_date, completion_status, completed_at)",
+
     )
     .eq("status", "selected");
   if (partnerIdFilter) quotesQuery = quotesQuery.eq("partner_id", partnerIdFilter);
