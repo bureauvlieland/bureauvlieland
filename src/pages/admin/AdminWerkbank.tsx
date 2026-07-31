@@ -300,7 +300,8 @@ export default function AdminWerkbank() {
                 </div>
               )}
 
-              {/* Type-filter (geldt voor beide tabs) */}
+              {/* Type-filter (inbox + projecten) */}
+              {tab !== "financieel" && (
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <Layers className="h-3 w-3 text-muted-foreground" />
                 {([
