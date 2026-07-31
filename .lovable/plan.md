@@ -1,19 +1,29 @@
-## Doel
+## Wat er aan de hand is
 
-Gesprekken zonder gekoppeld project (website-widget/WhatsApp-vragen) krijgen een eigen tab **Pre-sales** in het Berichtencentrum, in plaats van onderaan te verschijnen als groepskop "Zonder project".
+Beide schermen gebruiken dezelfde functie `deriveItemDisplayStatus`, maar met verschillende context.
 
-## Wat er verandert (`src/components/admin/ChatPanel.tsx`)
+- Op de projectkaart (Activiteiten-tab) wordt de projectfase (`quote_status = offerte_verstuurd`) meegegeven. Daardoor komt er correct **"Wacht op klant-goedkeuring"** uit.
+- In de Werkbank (`ProjectDetailPanel`, tab Programma) en in de Weekplanning wordt die projectfase **niet** meegegeven. De afleiding valt dan terug op de itemstatus `pending` en toont **"Wacht op aanbieder"**.
 
-1. **Nieuwe filter-tab**: het kanaalrijtje (Alle / Klant / Partner / WhatsApp) krijgt een vijfde tab **Pre-sales** met een eigen icoon en een badge met het aantal ongelezen pre-sales gesprekken.
-2. **Definitie pre-sales**: een gesprek zonder `program` én zonder `accommodation` in `useConversationProjects` — precies de gesprekken die nu onder "Zonder project" vallen (ongeacht kanaal, dus zowel website-chat als WhatsApp).
-3. **Filterlogica**:
-   - Tab "Pre-sales" toont uitsluitend die gesprekken, zonder groepskop (platte lijst, gesorteerd op laatste bericht).
-   - De tabs Alle / Klant / Partner / WhatsApp tonen alleen gesprekken mét project, zodat de kop "Zonder project" verdwijnt en er geen dubbele weergave ontstaat.
-4. **Groepering opschonen**: de `key: "none"`-tak en de bijbehorende sorteer-uitzonderingen vervallen; alle overgebleven groepen zijn project- of logies-groepen.
-5. **Lege staat**: in de pre-sales tab een passende melding ("Geen pre-sales vragen") in plaats van de generieke tekst.
+Dus: het label in het projectdetail klopt, dat in de Werkbank/weekplanning niet.
 
-## Technische notities
+## Wat ik ga doen
 
-- `ChannelFilter` breidt uit met `"presales"`; de kanaalfilter blijft op `conversation.source` werken, de pre-sales-check gaat via `projectRefs`.
-- Ongelezen-telling per tab hergebruikt de bestaande `unreadByConversation`-map.
-- Puur front-end; geen database- of edge-functionwijzigingen.
+1. **Werkbank – ProjectDetailPanel**
+   - `quote_status`, `number_of_people` en `selected_dates` van het project meeophalen (of doorgeven vanuit het al aanwezige project-object).
+   - Die meegeven aan de statusafleiding, samen met `audience: "admin"`, zodat het label identiek is aan de projectkaart.
+
+2. **Weekplanning (`WeekPlanningView`)**
+   - `quote_status` toevoegen aan de `program_requests`-query.
+   - Bij beide plekken waar een item-status wordt afgeleid de projectfase + aantal personen/dagen meegeven.
+
+3. **Regressietest**
+   - Test toevoegen in `src/lib/__tests__/itemStatus.test.ts`: een `pending` item in fase `offerte_verstuurd` zonder klant-akkoord levert voor audience `admin` altijd `wacht_op_klant` op — zodat een view die de fase vergeet, opvalt.
+
+## Technisch detail
+
+Geen wijziging aan `deriveItemDisplayStatus` zelf; alleen de aanroepende views leveren nu de volledige context. Dit is puur presentatie: er verandert niets aan onderliggende data, mails of workflow.
+
+## Nog even checken
+
+De partnerportaal-views (`PartnerProjectItemRow`, `PartnerItemSheet`) geven de projectfase ook niet mee. Daar zou het label voor de partner wijzigen van "Reactie gevraagd" naar "Voorstel verstuurd" bij nog niet goedgekeurde items. Dat is inhoudelijk juister, maar raakt wel wat partners zien — ik laat die standaard ongemoeid tenzij je zegt dat ik ze mag meenemen.
