@@ -203,6 +203,10 @@ export type Database = {
           actual_invoiced_excl_vat: number | null
           auto_closed_reason: string | null
           commission_amount: number | null
+          commission_exempt: boolean
+          commission_exempt_at: string | null
+          commission_exempt_by: string | null
+          commission_exempt_reason: string | null
           commission_invoiced_at: string | null
           commission_percentage: number | null
           commission_status: string | null
@@ -251,6 +255,10 @@ export type Database = {
           actual_invoiced_excl_vat?: number | null
           auto_closed_reason?: string | null
           commission_amount?: number | null
+          commission_exempt?: boolean
+          commission_exempt_at?: string | null
+          commission_exempt_by?: string | null
+          commission_exempt_reason?: string | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
           commission_status?: string | null
@@ -299,6 +307,10 @@ export type Database = {
           actual_invoiced_excl_vat?: number | null
           auto_closed_reason?: string | null
           commission_amount?: number | null
+          commission_exempt?: boolean
+          commission_exempt_at?: string | null
+          commission_exempt_by?: string | null
+          commission_exempt_reason?: string | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
           commission_status?: string | null
@@ -2249,6 +2261,8 @@ export type Database = {
           approved_at: string | null
           bank_line_id: string | null
           commission_exempt: boolean
+          commission_exempt_at: string | null
+          commission_exempt_by: string | null
           commission_exempt_reason: string | null
           commission_invoice_id: string | null
           commission_invoiced_at: string | null
@@ -2285,6 +2299,8 @@ export type Database = {
           approved_at?: string | null
           bank_line_id?: string | null
           commission_exempt?: boolean
+          commission_exempt_at?: string | null
+          commission_exempt_by?: string | null
           commission_exempt_reason?: string | null
           commission_invoice_id?: string | null
           commission_invoiced_at?: string | null
@@ -2321,6 +2337,8 @@ export type Database = {
           approved_at?: string | null
           bank_line_id?: string | null
           commission_exempt?: boolean
+          commission_exempt_at?: string | null
+          commission_exempt_by?: string | null
           commission_exempt_reason?: string | null
           commission_invoice_id?: string | null
           commission_invoiced_at?: string | null
@@ -2996,6 +3014,10 @@ export type Database = {
           commission_amount: number | null
           commission_basis: string
           commission_basis_reason: string | null
+          commission_exempt: boolean
+          commission_exempt_at: string | null
+          commission_exempt_by: string | null
+          commission_exempt_reason: string | null
           commission_invoiced_at: string | null
           commission_notes: string | null
           commission_percentage: number | null
@@ -3103,6 +3125,10 @@ export type Database = {
           commission_amount?: number | null
           commission_basis?: string
           commission_basis_reason?: string | null
+          commission_exempt?: boolean
+          commission_exempt_at?: string | null
+          commission_exempt_by?: string | null
+          commission_exempt_reason?: string | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
           commission_percentage?: number | null
@@ -3210,6 +3236,10 @@ export type Database = {
           commission_amount?: number | null
           commission_basis?: string
           commission_basis_reason?: string | null
+          commission_exempt?: boolean
+          commission_exempt_at?: string | null
+          commission_exempt_by?: string | null
+          commission_exempt_reason?: string | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
           commission_percentage?: number | null
