@@ -112,6 +112,67 @@ export function FinanceTodoList({
     queryFn: loadFinanceTodos,
     refetchInterval: 60_000,
   });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<null | "done" | "dismissed">(null);
+
+  const rows = data ?? [];
+  const selectedIds = rows.map((r) => r.todoId).filter((id) => selected.has(id));
+
+  const toggle = (id: string, on: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleMany = (ids: string[], on: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const applyBulk = async (status: "done" | "dismissed") => {
+    if (selectedIds.length === 0) return;
+    setBusy(true);
+    const patch: Record<string, unknown> = { status };
+    if (status === "done") patch.completed_at = new Date().toISOString();
+    const { error } = await supabase
+      .from("admin_todos")
+      .update(patch as never)
+      .in("id", selectedIds);
+    setBusy(false);
+    setConfirm(null);
+    if (error) {
+      toast({ title: "Kon taken niet bijwerken", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title:
+        status === "done"
+          ? `${selectedIds.length} taak/taken afgerond`
+          : `${selectedIds.length} taak/taken gearchiveerd`,
+    });
+    setSelected(new Set());
+    queryClient.invalidateQueries({ queryKey: ["werkbank-finance-todos"] });
+    queryClient.invalidateQueries({ queryKey: ["werkbank-inbox"] });
+    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations"] });
+    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations-count"] });
+  };
+
+  const requestBulk = (status: "done" | "dismissed") => {
+    if (selectedIds.length > 5) setConfirm(status);
+    else void applyBulk(status);
+  };
 
   if (isLoading) {
     return (
@@ -123,7 +184,6 @@ export function FinanceTodoList({
     );
   }
 
-  const rows = data ?? [];
   if (rows.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
@@ -141,25 +201,78 @@ export function FinanceTodoList({
     else groups.set(key, [r]);
   }
 
+  const allIds = rows.map((r) => r.todoId);
+  const allSelected = selectedIds.length === allIds.length;
+
   return (
     <div className="space-y-2 p-2">
+      <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+        <Checkbox
+          checked={allSelected ? true : selectedIds.length > 0 ? "indeterminate" : false}
+          onCheckedChange={(v) => toggleMany(allIds, v === true)}
+          aria-label="Alles selecteren"
+        />
+        <span>Alles selecteren ({rows.length})</span>
+      </div>
+      <p className="px-1 text-[11px] leading-snug text-muted-foreground">
+        Let op: automatische commissie- en inkoopfactuurtaken komen terug zolang de
+        onderliggende factuur of koppeling nog mist. Archiveren is bedoeld voor oude ruis.
+      </p>
+
+      {selectedIds.length > 0 && (
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-md border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+          <span className="text-sm font-medium">{selectedIds.length} geselecteerd</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" disabled={busy} onClick={() => requestBulk("done")} className="gap-1">
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Afronden
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => requestBulk("dismissed")}
+              className="gap-1"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archiveren
+            </Button>
+          </div>
+        </div>
+      )}
+
       {Array.from(groups.entries()).map(([key, items]) => {
         const head = items[0];
+        const groupIds = items.map((i) => i.todoId);
+        const groupSelectedCount = groupIds.filter((id) => selected.has(id)).length;
         return (
           <div key={key} className="rounded-md border bg-background">
             <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {head.reference ?? "Losse taken"}
-                  </span>
-                  {head.projectStatus && (
-                    <Badge variant="outline" className="text-[10px]">{head.projectStatus}</Badge>
+              <div className="flex min-w-0 items-center gap-2">
+                <Checkbox
+                  checked={
+                    groupSelectedCount === groupIds.length
+                      ? true
+                      : groupSelectedCount > 0
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(v) => toggleMany(groupIds, v === true)}
+                  aria-label="Selecteer alle taken van dit project"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {head.reference ?? "Losse taken"}
+                    </span>
+                    {head.projectStatus && (
+                      <Badge variant="outline" className="text-[10px]">{head.projectStatus}</Badge>
+                    )}
+                  </div>
+                  {head.customer && (
+                    <div className="truncate text-sm font-medium">{head.customer}</div>
                   )}
                 </div>
-                {head.customer && (
-                  <div className="truncate text-sm font-medium">{head.customer}</div>
-                )}
               </div>
               {head.requestId && (
                 <Link
@@ -173,24 +286,59 @@ export function FinanceTodoList({
             </div>
             <div className="divide-y">
               {items.map((it) => (
-                <button
+                <div
                   key={it.todoId}
-                  onClick={() => onSelect(`_orphan_${it.todoId}`)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50",
+                    "flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/50",
                     selectedProjectId === `_orphan_${it.todoId}` && "bg-muted/60",
                   )}
                 >
-                  <span className="truncate">{it.title}</span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
-                    {it.dueDate ?? ""}
-                  </span>
-                </button>
+                  <Checkbox
+                    checked={selected.has(it.todoId)}
+                    onCheckedChange={(v) => toggle(it.todoId, v === true)}
+                    aria-label={`Selecteer taak ${it.title}`}
+                  />
+                  <button
+                    onClick={() => onSelect(`_orphan_${it.todoId}`)}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+                  >
+                    <span className="truncate">{it.title}</span>
+                    <span className="shrink-0 text-[11px] text-muted-foreground">
+                      {it.dueDate ?? ""}
+                    </span>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
         );
       })}
+
+      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm === "done" ? "Taken afronden?" : "Taken archiveren?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Je staat op het punt {selectedIds.length} taken{" "}
+              {confirm === "done" ? "af te ronden" : "te archiveren"}. Dit kan niet in één
+              klik ongedaan gemaakt worden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void applyBulk(confirm!);
+              }}
+            >
+              Bevestigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
