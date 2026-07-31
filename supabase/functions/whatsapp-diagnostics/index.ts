@@ -77,6 +77,29 @@ Deno.serve(async (req) => {
       }
       return { ok: r.ok, status: r.status, body: parsed as Record<string, unknown> };
     };
+    const post = async (url: string, form?: Record<string, string>, jsonBody?: unknown) => {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: basic,
+          "Content-Type": jsonBody ? "application/json" : "application/x-www-form-urlencoded",
+        },
+        body: jsonBody ? JSON.stringify(jsonBody) : new URLSearchParams(form ?? {}).toString(),
+      });
+      const text = await r.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = text.slice(0, 500);
+      }
+      return { ok: r.ok, status: r.status, body: parsed as Record<string, unknown> };
+    };
+
+    const payload = await req.json().catch(() => ({}));
+    const action = String((payload as any)?.action ?? "inspect");
+
+
 
     const expectedWebhook = `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-webhook`;
 
