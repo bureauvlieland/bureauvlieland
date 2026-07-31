@@ -448,7 +448,16 @@ const PartnerProjectContent = ({ mode }: Props) => {
           {/* Items + chat in 2-col layout */}
           <div className={cn("grid gap-6", !isConceptProject && "lg:grid-cols-[1fr_400px]")}>
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
+                {!isConceptProject && canCloseProject && (
+                  <Button variant="outline" size="sm" onClick={() => setShowDismissProject(true)}>
+                    <Archive className="h-4 w-4 mr-1.5" />
+                    Project sluiten
+                  </Button>
+                )}
+              </div>
+
               {isConceptProject ? (
                 <Card className="divide-y">
                   {projectItems.map((item) => (
