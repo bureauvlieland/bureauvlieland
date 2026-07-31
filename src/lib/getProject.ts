@@ -87,6 +87,9 @@ export interface ProjectSummary {
   };
   dates: string[];                   // ISO date strings
   numberOfPeople: number;
+  /** Rauwe offertefase (`program_requests.quote_status`) — nodig voor itemstatus-labels. */
+  quoteStatus: string | null;
+
 
   pipeline: ProjectPipelineStage;
   programPipeline: ProjectPipelineStage;
