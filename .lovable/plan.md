@@ -1,29 +1,26 @@
-## Wat er aan de hand is
+## Doel
 
-Beide schermen gebruiken dezelfde functie `deriveItemDisplayStatus`, maar met verschillende context.
+Pre-sales (websitevragen via de floating button + WhatsApp zonder project) wordt een eigen hoofdtab bovenin het Berichtencentrum, naast "E-mail", "Chat & live-chat" en "Verzonden e-mails", met een rood badge-getal voor nieuwe/ongelezen berichten. De sub-tab "Pre-sales" in de gesprekkenlijst verdwijnt.
 
-- Op de projectkaart (Activiteiten-tab) wordt de projectfase (`quote_status = offerte_verstuurd`) meegegeven. Daardoor komt er correct **"Wacht op klant-goedkeuring"** uit.
-- In de Werkbank (`ProjectDetailPanel`, tab Programma) en in de Weekplanning wordt die projectfase **niet** meegegeven. De afleiding valt dan terug op de itemstatus `pending` en toont **"Wacht op aanbieder"**.
+## Wat verandert
 
-Dus: het label in het projectdetail klopt, dat in de Werkbank/weekplanning niet.
+1. **ChatPanel krijgt een modus**
+   - Nieuwe prop `mode?: "projects" | "presales"` (default `projects`).
+   - Definitie pre-sales blijft ongewijzigd: gesprek zonder gekoppeld programma of logies (dus ook WhatsApp- en widget-berichten zonder project).
+   - `mode="presales"`: toont uitsluitend pre-sales gesprekken; kanaalfilters worden beperkt tot Alle / WhatsApp / Website-chat (geen Klant/Partner), geen groepering per projectnummer.
+   - `mode="projects"`: gedraagt zich als nu, pre-sales blijft uitgesloten; de sub-tab "Pre-sales" wordt verwijderd.
 
-## Wat ik ga doen
+2. **Nieuwe hoofdtab in AdminMessages**
+   - Tab `presales` (icoon + label "Pre-sales") tussen "Chat & live-chat" en "Verzonden e-mails", met dezelfde rode badge-styling als de andere tabs.
+   - Tabcontent rendert `<ChatPanel mode="presales" />`.
+   - Deeplink `?tab=presales` werkt net als de bestaande tabs.
 
-1. **Werkbank – ProjectDetailPanel**
-   - `quote_status`, `number_of_people` en `selected_dates` van het project meeophalen (of doorgeven vanuit het al aanwezige project-object).
-   - Die meegeven aan de statusafleiding, samen met `audience: "admin"`, zodat het label identiek is aan de projectkaart.
+3. **Badge-telling**
+   - Kleine query/hook die ongelezen berichten telt in niet-gearchiveerde gesprekken zonder `request_id`, `accommodation_request_id` en `accommodation_id` (zelfde ongelezen-definitie als de chatlijst gebruikt).
+   - Deze pre-sales gesprekken worden afgetrokken van de badge op "Chat & live-chat", zodat er niet dubbel geteld wordt.
 
-2. **Weekplanning (`WeekPlanningView`)**
-   - `quote_status` toevoegen aan de `program_requests`-query.
-   - Bij beide plekken waar een item-status wordt afgeleid de projectfase + aantal personen/dagen meegeven.
+## Technisch
 
-3. **Regressietest**
-   - Test toevoegen in `src/lib/__tests__/itemStatus.test.ts`: een `pending` item in fase `offerte_verstuurd` zonder klant-akkoord levert voor audience `admin` altijd `wacht_op_klant` op — zodat een view die de fase vergeet, opvalt.
-
-## Technisch detail
-
-Geen wijziging aan `deriveItemDisplayStatus` zelf; alleen de aanroepende views leveren nu de volledige context. Dit is puur presentatie: er verandert niets aan onderliggende data, mails of workflow.
-
-## Nog even checken
-
-De partnerportaal-views (`PartnerProjectItemRow`, `PartnerItemSheet`) geven de projectfase ook niet mee. Daar zou het label voor de partner wijzigen van "Reactie gevraagd" naar "Voorstel verstuurd" bij nog niet goedgekeurde items. Dat is inhoudelijk juister, maar raakt wel wat partners zien — ik laat die standaard ongemoeid tenzij je zegt dat ik ze mag meenemen.
+- `src/components/admin/ChatPanel.tsx`: prop `mode`, filterlogica splitsen, pre-sales sub-tab verwijderen.
+- `src/pages/admin/AdminMessages.tsx`: extra `TabsTrigger`/`TabsContent`, tab-param uitbreiden, badge-tellingen.
+- Telling van ongelezen pre-sales in een aparte hook (bijv. `usePresalesUnread`) zodat de badge ook klopt als de tab niet open staat.
