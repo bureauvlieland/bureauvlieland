@@ -465,7 +465,26 @@ Deno.serve(async (req) => {
           if (age > 7 * 86400_000) markClosed(t.id, type);
           break;
         }
+        case "inbound_email": {
+          // Aanmaakcriterium: inkomend bericht dat nog opgevolgd moet worden.
+          // Sluiten zodra er ná de melding uitgaande communicatie in het
+          // dossier staat, of na 14 dagen (informatief vangnet).
+          const lastOut = t.related_request_id
+            ? lastOutboundByRequest.get(t.related_request_id)
+            : undefined;
+          if (
+            lastOut &&
+            new Date(lastOut).getTime() > new Date(t.created_at).getTime()
+          ) {
+            markClosed(t.id, type);
+            break;
+          }
+          const inboundAge = Date.now() - new Date(t.created_at).getTime();
+          if (inboundAge > 14 * 86400_000) markClosed(t.id, `${type}_stale`);
+          break;
+        }
         case "customer_cancellation": {
+
           const age = Date.now() - new Date(t.created_at).getTime();
           if (age > 7 * 86400_000) markClosed(t.id, type);
           break;
