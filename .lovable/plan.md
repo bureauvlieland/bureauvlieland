@@ -1,26 +1,34 @@
-## Doel
+## Wat er aan de hand is (geverifieerd in de database)
 
-Pre-sales (websitevragen via de floating button + WhatsApp zonder project) wordt een eigen hoofdtab bovenin het Berichtencentrum, naast "E-mail", "Chat & live-chat" en "Verzonden e-mails", met een rood badge-getal voor nieuwe/ongelezen berichten. De sub-tab "Pre-sales" in de gesprekkenlijst verdwijnt.
+Zuiver Traiteur heeft **12 verkochte onderdelen** (status confirmed/executed) in projecten BV-2602-0002, -0005, -0006, BV-2603-0003, BV-2604-0004, -0010, BV-2605-0001, -0014, BV-2606-0011. In het overzicht zie je er maar 2.
 
-## Wat verandert
+Oorzaak: de werklijst (`get-commission-reconciliation` → `isBillableRow`) verbergt elke regel waarvan `commission_status` gelijk is aan `invoiced`, `paid` **of `not_applicable`**. De kolom `program_request_items.commission_status` heeft in de database de default **`'not_applicable'`**. Die waarde wordt pas op `pending` gezet zodra iemand een inkoopfactuur registreert/koppelt.
 
-1. **ChatPanel krijgt een modus**
-   - Nieuwe prop `mode?: "projects" | "presales"` (default `projects`).
-   - Definitie pre-sales blijft ongewijzigd: gesprek zonder gekoppeld programma of logies (dus ook WhatsApp- en widget-berichten zonder project).
-   - `mode="presales"`: toont uitsluitend pre-sales gesprekken; kanaalfilters worden beperkt tot Alle / WhatsApp / Website-chat (geen Klant/Partner), geen groepering per projectnummer.
-   - `mode="projects"`: gedraagt zich als nu, pre-sales blijft uitgesloten; de sub-tab "Pre-sales" wordt verwijderd.
+Gevolg: 11 van de 12 Zuiver-regels staan nog op de default `not_applicable` en worden dus stilzwijgend uitgefilterd — precies de regels waar nog géén inkoopfactuur bij zit (o.a. Strand BBQ €870, Lunch in de natuur €3.750, Grillmaster €195, Luxe Lunchbuffet €416). Alleen "Luxe Lunchbuffet geserveerd bij Fortuna" (met factuur T-261008, status `pending`) is zichtbaar, plus één losse inkoopfactuur.
 
-2. **Nieuwe hoofdtab in AdminMessages**
-   - Tab `presales` (icoon + label "Pre-sales") tussen "Chat & live-chat" en "Verzonden e-mails", met dezelfde rode badge-styling als de andere tabs.
-   - Tabcontent rendert `<ChatPanel mode="presales" />`.
-   - Deeplink `?tab=presales` werkt net als de bestaande tabs.
+Dit is niet partner-specifiek: elke partner mist zo alle regels zonder geregistreerde inkoopfactuur. De tegel "Zonder inkoopfactuur" telt daardoor structureel te laag, en dat is juist het lek dat de reconciliatie zou moeten dichten.
 
-3. **Badge-telling**
-   - Kleine query/hook die ongelezen berichten telt in niet-gearchiveerde gesprekken zonder `request_id`, `accommodation_request_id` en `accommodation_id` (zelfde ongelezen-definitie als de chatlijst gebruikt).
-   - Deze pre-sales gesprekken worden afgetrokken van de badge op "Chat & live-chat", zodat er niet dubbel geteld wordt.
+## Wat ik ga doen
 
-## Technisch
+1. **Filterlogica corrigeren** in `supabase/functions/_shared/commissionReconciliation.ts`
+   - `isBillableRow` behandelt `not_applicable` niet langer als "afgehandeld". Alleen `invoiced` en `paid` sluiten een regel uit, plus expliciete commissievrijstelling (`commissionExempt`, commissievrije partners, 0% commissie).
+   - Zo blijft "commissievrij" wél werken via de bestaande `exempt`-status, maar verdwijnt de default-waarde als onbedoeld filter.
 
-- `src/components/admin/ChatPanel.tsx`: prop `mode`, filterlogica splitsen, pre-sales sub-tab verwijderen.
-- `src/pages/admin/AdminMessages.tsx`: extra `TabsTrigger`/`TabsContent`, tab-param uitbreiden, badge-tellingen.
-- Telling van ongelezen pre-sales in een aparte hook (bijv. `usePresalesUnread`) zodat de badge ook klopt als de tab niet open staat.
+2. **Expliciete vrijstelling scheiden van de default**
+   - Waar de admin bewust "geen commissie" kiest, wordt dat vastgelegd via `commission_exempt` / 0% in plaats van via de default-status, zodat de twee betekenissen niet langer door elkaar lopen.
+   - Optioneel voorstel (jouw keuze bij implementatie): de databasedefault van `commission_status` wijzigen naar `pending` zodat nieuwe regels meteen in de werklijst landen.
+
+3. **Tests toevoegen** (vitest, bij de bestaande recon-tests)
+   - Regel met `commission_status = 'not_applicable'` en zonder inkoopfactuur is **wel** billable.
+   - Regel met `invoiced`/`paid` blijft uitgesloten.
+   - Commissievrije partner (`rederij`, `bureau`) en `commission_exempt = true` blijven uitgesloten.
+   - Regressietest met een Zuiver-achtige dataset: 12 verkochte onderdelen → 12 regels in de werklijst, waarvan 10 met status `missing_invoice`.
+
+4. **Controle na deploy**
+   - Edge function opnieuw uitrollen en in de UI verifiëren dat Zuiver Traiteur alle regels toont en de tegels "Te factureren" / "Zonder inkoopfactuur" kloppen.
+
+## Technische details
+
+- Betrokken bestanden: `supabase/functions/_shared/commissionReconciliation.ts` (filter), `supabase/functions/get-commission-reconciliation/index.ts` (alleen indien de statuslijst `SOLD_STATUSES` moet worden verruimd), de bijbehorende testsuite.
+- Geen wijziging aan de facturatieflow zelf: regels zonder inkoopfactuur krijgen gewoon grondslag "Verkoop" als voorstel, zoals de logica al doet.
+- Let op: na de fix zullen er in één klap fors meer openstaande regels in het overzicht verschijnen (historische posten die tot nu toe onzichtbaar waren). Dat is het beoogde effect, maar het vraagt eenmalig opschonen.
