@@ -602,6 +602,21 @@ const PartnerProjectContent = ({ mode }: Props) => {
           commissionPercentage={data?.partner.commission_percentage ?? 0}
         />
 
+        {id && partnerToken && (
+          <DismissProjectDialog
+            open={showDismissProject}
+            onOpenChange={setShowDismissProject}
+            requestId={id}
+            projectLabel={req?.reference_number || "dit project"}
+            itemCount={closableCount}
+            partnerToken={partnerToken}
+            onDismissed={() => {
+              void refetch();
+            }}
+          />
+        )}
+
+
         <InvoiceRegistrationDialog
           isOpen={showInvoiceDialog}
           onClose={() => {
