@@ -452,6 +452,16 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                             <Badge variant="outline" className="mt-1 text-xs">
                               {TYPE_LABELS[row.itemType]}
                             </Badge>
+                            {row.readiness === "expected" && (
+                              <Badge variant="secondary" className="mt-1 ml-1 text-xs">
+                                Verwacht
+                              </Badge>
+                            )}
+                            {row.exemptReason && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Commissievrij: {row.exemptReason}
+                              </div>
+                            )}
                             {row.itemType === "purchase_invoice" && (
                               <Button
                                 variant="link"
