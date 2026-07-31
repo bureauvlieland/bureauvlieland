@@ -148,7 +148,7 @@ describe("hasOpenAdminPriceChange", () => {
         quoted_price: null,
         quoted_at: null,
       }),
-    ).toBe(true === false ? true : false);
+    ).toBe(false);
   });
 
   it("is true bij een nieuwer en afwijkend admin-bedrag", () => {
