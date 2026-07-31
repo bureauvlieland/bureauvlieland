@@ -232,23 +232,24 @@ export function ChatPanel({
           <Tabs value={channelFilter} onValueChange={(v) => setChannelFilter(v as ChannelFilter)}>
             <TabsList className="w-full h-8">
               <TabsTrigger value="all" className="flex-1 text-[11px] px-1">Alle</TabsTrigger>
-              <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
-                <User className="h-3 w-3" /> Klant
-              </TabsTrigger>
-              <TabsTrigger value="partner_portal" className="flex-1 text-[11px] px-1 gap-1">
-                <Building2 className="h-3 w-3" /> Partner
-              </TabsTrigger>
+              {!presalesMode && (
+                <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <User className="h-3 w-3" /> Klant
+                </TabsTrigger>
+              )}
+              {!presalesMode && (
+                <TabsTrigger value="partner_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <Building2 className="h-3 w-3" /> Partner
+                </TabsTrigger>
+              )}
               <TabsTrigger value="whatsapp" className="flex-1 text-[11px] px-1 gap-1">
                 <MessageCircle className="h-3 w-3 text-emerald-600" /> WhatsApp
               </TabsTrigger>
-              <TabsTrigger value="presales" className="flex-1 text-[11px] px-1 gap-1">
-                <Sparkles className="h-3 w-3 text-amber-500" /> Pre-sales
-                {presalesUnread > 0 && (
-                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
-                    {presalesUnread}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              {presalesMode && (
+                <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-500" /> Website
+                </TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
         </div>
@@ -257,10 +258,10 @@ export function ChatPanel({
           {channelFiltered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground text-sm">
               <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              {channelFilter === "presales" ? "Geen pre-sales vragen" : "Geen gesprekken"}
+              {presalesMode ? "Geen pre-sales vragen" : "Geen gesprekken"}
             </div>
           )}
-          {channelFilter === "presales" &&
+          {presalesMode &&
             channelFiltered.map((conv) => (
               <ChatConversationItem
                 key={conv.id}
@@ -271,7 +272,7 @@ export function ChatPanel({
                 onClick={() => setActiveConversationId(conv.id)}
               />
             ))}
-          {channelFilter !== "presales" && (() => {
+          {!presalesMode && (() => {
             type Group = {
               key: string;
               label: string;
