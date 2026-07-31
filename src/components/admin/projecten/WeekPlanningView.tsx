@@ -113,7 +113,13 @@ export function WeekPlanningView() {
         label: item.block_name,
         sublabel: `${item.provider_name} · ${item.proposed_time || item.preferred_time || ""}`,
         linkTo: `/admin/projecten/${item.request_id}`,
-        displayStatus: deriveItemDisplayStatusLoose(item, { audience: "admin" }),
+        displayStatus: deriveItemDisplayStatusLoose(item, {
+          audience: "admin",
+          quoteStatus: req?.quote_status ?? null,
+          programPeople: req?.number_of_people ?? 0,
+          numberOfDays: Array.isArray(req?.selected_dates) ? (req!.selected_dates as string[]).length || 1 : 1,
+        }),
+
         customerName: req?.customer_name || "Onbekend",
         groupSize: req?.number_of_people,
       });
