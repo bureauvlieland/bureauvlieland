@@ -467,9 +467,15 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
                       <span>·</span>
                       <span>{fmtTime(it)}</span>
                       <ItemDisplayStatusBadge
-                        status={deriveItemDisplayStatusLoose(it, { audience: "admin" })}
+                        status={deriveItemDisplayStatusLoose(it, {
+                          audience: "admin",
+                          quoteStatus: project.quoteStatus,
+                          programPeople: project.numberOfPeople,
+                          numberOfDays: project.dates.length || 1,
+                        })}
                         audience="admin"
                       />
+
                       {it.block_type === "bureau" && <span>· Bureau Vlieland regelt</span>}
                       {it.provider_name && it.block_type !== "bureau" && <span>· {it.provider_name}</span>}
                     </div>
