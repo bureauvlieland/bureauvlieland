@@ -205,10 +205,17 @@ Deno.serve(async (req) => {
       conversationId = created.id;
     }
 
-    // 3. store the message
+    // 3. store the message (media are referenced, not stored)
     let content = body || "";
     if (numMedia > 0) {
-      content += (content ? "\n\n" : "") + `[${numMedia} media-bijlage(n) — niet opgeslagen]`;
+      const mediaLines: string[] = [];
+      for (let i = 0; i < numMedia; i++) {
+        const type = params[`MediaContentType${i}`] || "bestand";
+        mediaLines.push(`• ${type}`);
+      }
+      content +=
+        (content ? "\n\n" : "") +
+        `[${numMedia} media-bijlage(n) via WhatsApp]\n${mediaLines.join("\n")}`;
     }
 
     const { error: msgErr } = await supabase.from("chat_messages").insert({
@@ -218,9 +225,33 @@ Deno.serve(async (req) => {
       content: content || "(leeg bericht)",
       twilio_message_sid: messageSid,
     });
-    if (msgErr) console.error("whatsapp-webhook: insert message failed", msgErr);
+    if (msgErr) {
+      console.error("whatsapp-webhook: insert message failed", msgErr);
+    } else {
+      console.log("whatsapp-webhook: message stored", { conversationId, messageSid });
+      // Notify the team about the new inbound message (best-effort).
+      try {
+        const notifyResp = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-new-chat`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({ conversation_id: conversationId }),
+          },
+        );
+        if (!notifyResp.ok) {
+          console.warn("whatsapp-webhook: notify-new-chat failed", notifyResp.status);
+        }
+      } catch (notifyErr) {
+        console.warn("whatsapp-webhook: notify-new-chat error", notifyErr);
+      }
+    }
 
     return twiml();
+
   } catch (err) {
     console.error("whatsapp-webhook: unexpected error", err);
     return twiml();
