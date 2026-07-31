@@ -154,11 +154,12 @@ const AdminMessages = () => {
   });
   const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
   const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
-  const presalesUnread = usePresalesUnread();
-  const chatTotalUnread = Math.max(
-    0,
-    chatUnreadConversations + liveChatUnreadTotal - presalesUnread
-  );
+  const presales = usePresalesUnread();
+  const presalesUnread = presales.messages;
+  // Trek per bucket af in dezelfde eenheid: chat = per gesprek, live chat = per bericht.
+  const chatTotalUnread =
+    Math.max(0, chatUnreadConversations - presales.nonWidgetConversations) +
+    Math.max(0, liveChatUnreadTotal - presales.widgetMessages);
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
