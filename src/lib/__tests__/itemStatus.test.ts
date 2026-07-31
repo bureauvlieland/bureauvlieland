@@ -211,7 +211,23 @@ describe("deriveItemDisplayStatusLoose", () => {
     const item = makeItem({ status: "confirmed", customer_accepted_at: "2024-05-01T10:00:00Z" } as any);
     expect(deriveItemDisplayStatusLoose(item, ctx)).toBe(deriveItemDisplayStatus(item, ctx));
   });
+
+  it("toont in admin-views 'wacht op klant' zodra de projectfase wordt meegegeven", () => {
+    // Zonder projectfase valt een pending item terug op de partner-flow …
+    expect(deriveItemDisplayStatusLoose({ status: "pending" }, { audience: "admin" }))
+      .toBe("wacht_op_partner");
+    // … maar met fase offerte_verstuurd is de klant aan zet (zoals op de projectkaart).
+    for (const phase of ["concept", "in_afstemming", "offerte_verstuurd"]) {
+      expect(
+        deriveItemDisplayStatusLoose(
+          { status: "pending" },
+          { audience: "admin", quoteStatus: phase },
+        ),
+      ).toBe("wacht_op_klant");
+    }
+  });
 });
+
 
 describe("regressie: partner-alternatief vraagt opnieuw klant-akkoord", () => {
   // Scenario uit BV-2606-0020: klant gaf bulk-akkoord, partner kwam daarna
