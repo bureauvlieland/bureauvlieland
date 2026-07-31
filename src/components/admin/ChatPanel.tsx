@@ -135,6 +135,13 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
+  // WhatsApp: vrije antwoorden mogen alleen binnen 24u na het laatste klantbericht.
+  const lastInboundAt = [...messages]
+    .reverse()
+    .find((m) => m.sender_type === "customer")?.created_at ?? null;
+  const whatsappWindow = getWhatsappWindowState(lastInboundAt);
+
+
   const handleSaveToProject = async () => {
     if (!activeConversationId) return;
     setSaving(true);
