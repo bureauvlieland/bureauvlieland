@@ -297,6 +297,9 @@ export async function loadReconciliationInputs(
       amount_excl_vat: i.amount_excl_vat,
       amount_incl_vat: i.amount_incl_vat,
       commission_exempt: i.commission_exempt,
+      commission_exempt_reason: i.commission_exempt_reason ?? null,
+      commission_exempt_at: i.commission_exempt_at ?? null,
+
       commission_invoiced_at: i.commission_invoiced_at,
       created_at: i.created_at,
       allocated_item_ids: allocMap.get(i.id) ?? [],
