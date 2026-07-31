@@ -61,22 +61,32 @@ Deno.serve(async (req) => {
 
     // Signature validation (skip if no token configured — keeps preview usable)
     if (authToken) {
-      // Reconstruct the URL Twilio used. Respect proxy forwarding.
+      // The edge runtime rewrites the incoming URL (host becomes an internal
+      // edge-runtime host), so reconstructing from the request alone breaks the
+      // signature. Try the canonical public functions URL first, then any
+      // proxy-forwarded variant as fallback.
+      const projectUrl = Deno.env.get("SUPABASE_URL") || "";
+      const canonical = projectUrl
+        ? `${projectUrl.replace(/\/$/, "")}/functions/v1/whatsapp-webhook`
+        : "";
       const proto = req.headers.get("x-forwarded-proto") || "https";
       const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
-      const url = `${proto}://${host}${new URL(req.url).pathname}`;
-      const ok = verifyTwilioSignature(authToken, url, params, signature);
+      const forwarded = host ? `${proto}://${host}${new URL(req.url).pathname}` : "";
+
+      const candidates = [canonical, forwarded].filter(Boolean);
+      const ok = candidates.some((u) => verifyTwilioSignature(authToken, u, params, signature));
       if (!ok) {
         console.warn("whatsapp-webhook: invalid Twilio signature", {
-          reconstructed_url: url,
+          tried_urls: candidates,
           signature_present: Boolean(signature),
-          hint: "Controleer of de webhook-URL in Twilio exact gelijk is aan deze URL (zonder query).",
+          hint: "Controleer of de webhook-URL in Twilio exact gelijk is aan de canonieke functions-URL (zonder query).",
         });
         return new Response("Invalid signature", { status: 403, headers: corsHeaders });
       }
     } else {
       console.warn("whatsapp-webhook: TWILIO_AUTH_TOKEN not set — skipping signature check");
     }
+
 
     const from = params.From || "";
     const body = (params.Body || "").trim();
