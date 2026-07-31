@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         );
         // WhatsApp senders live in a separate sub-resource on newer accounts.
         const channelSenders = await get(
-          `https://messaging.twilio.com/v1/Services/${svc.sid}/ChannelSenders?PageSize=50`,
+          `https://messaging.twilio.com/v1/Services/${svc.sid}/ChannelSenders?PageSize=50`, true,
         );
         serviceReport.push({
           sid: svc.sid,
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       })) ?? [];
 
     // 3. WhatsApp senders (v2) incl. their own webhook configuration
-    const waSenders = await get("https://messaging.twilio.com/v2/channels/senders?PageSize=50");
+    const waSenders = await get("https://messaging.twilio.com/v2/channels/senders?PageSize=50", true);
     const senderReport =
       (waSenders.body as any)?.senders?.map((s: any) => ({
         sid: s.sid,
