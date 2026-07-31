@@ -242,6 +242,9 @@ export default function AdminPurchaseInvoices() {
 
         <DuplicateCandidatesBanner />
 
+        <InvoiceConsistencyPanel />
+
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="border-amber-200 bg-amber-50/50">
