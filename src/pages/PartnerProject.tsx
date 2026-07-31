@@ -607,7 +607,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
             open={showDismissProject}
             onOpenChange={setShowDismissProject}
             requestId={id}
-            projectLabel={req?.reference_number || "dit project"}
+            projectLabel={projectItems[0]?.program_requests?.reference_number || "dit project"}
             itemCount={closableCount}
             partnerToken={partnerToken}
             onDismissed={() => {
