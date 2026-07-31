@@ -10,6 +10,7 @@ import type {
   PurchaseInvoiceStats 
 } from "@/types/purchaseInvoice";
 import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
+import { isAwaitingPdfMatch } from "@/lib/purchaseInvoiceStatusFlow";
 
 
 export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
@@ -77,6 +78,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
 
   const stats: PurchaseInvoiceStats = {
     pending: invoices?.filter(i => i.status === 'pending').length || 0,
+    awaitingPdf: invoices?.filter(i => isAwaitingPdfMatch(i)).length || 0,
     forwarded: invoices?.filter(i => i.status === 'forwarded').length || 0,
     paid: invoices?.filter(i => i.status === 'paid').length || 0,
     totalAmount: invoices?.reduce((sum, i) => sum + Number(i.amount_incl_vat ?? (Number(i.amount_excl_vat || 0) + Number(i.vat_amount || 0))), 0) || 0,

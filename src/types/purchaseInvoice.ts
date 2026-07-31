@@ -2,7 +2,7 @@
 
 export type InvoicingMode = 'bureau_central';
 
-export type PurchaseInvoiceStatus = 'pending' | 'forwarded' | 'paid';
+export type PurchaseInvoiceStatus = 'pending' | 'pending_email_match' | 'forwarded' | 'paid';
 
 export interface PurchaseInvoice {
   id: string;
@@ -132,6 +132,7 @@ export interface PurchaseInvoiceFilters {
 
 export interface PurchaseInvoiceStats {
   pending: number;
+  awaitingPdf: number;
   forwarded: number;
   paid: number;
   totalAmount: number;
