@@ -173,6 +173,24 @@ Deno.serve(async (req) => {
       insertedExtras.push(...(ins || []));
     }
 
+    // --- Koppeling vastleggen op de logies-offerte ---
+    // Zonder factuurnummer op de offerte ziet de commissie-werklijst de factuur
+    // als "los" én de logies-regel als "ontbrekend" → dubbeltelling.
+    if (payload.invoice_number) {
+      const { error: linkErr } = await supabase
+        .from("accommodation_quotes")
+        .update({
+          invoiced_number: payload.invoice_number,
+          invoiced_date: new Date().toISOString().slice(0, 10),
+          purchase_invoice_id: payload.purchase_invoice_id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", quote.id)
+        .is("invoiced_number", null);
+      if (linkErr) return jsonResp({ error: `Koppelen factuurnummer: ${linkErr.message}` }, 500);
+    }
+
+
     // --- Log naar project_communications ---
     if (quote.request_id) {
       const summary: string[] = [];
