@@ -1,6 +1,8 @@
 // Partner-initiated dismissal van een executed-item dat niet gefactureerd
 // gaat worden (buiten Bureau Vlieland om afgehandeld, gratis, vervallen).
 // Item verdwijnt uit partner-werkbank; admin ziet reden en kan heropenen.
+// Ondersteunt ook het sluiten van een volledig project (requestId): alle
+// onderdelen van dat project die geen actie meer vragen worden gesloten.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -12,8 +14,13 @@ const corsHeaders = {
 interface Body {
   partnerToken?: string;
   itemId?: string;
+  requestId?: string;
   reason?: string;
 }
+
+// Statussen waarbij de partner nog iets moet doen → niet stilzwijgend sluiten.
+const OPEN_ACTION_STATUSES = ["pending", "alternative", "counter_proposed"];
+const CLOSABLE_STATUSES = ["executed", "accepted", "confirmed"];
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -35,9 +42,12 @@ async function handler(req: Request): Promise<Response> {
 
   const partnerToken = (body.partnerToken ?? "").trim();
   const itemId = (body.itemId ?? "").trim();
+  const requestId = (body.requestId ?? "").trim();
   const reason = (body.reason ?? "").trim();
 
-  if (!partnerToken || !itemId) return json(400, { error: "partnerToken and itemId are required" });
+  if (!partnerToken || (!itemId && !requestId)) {
+    return json(400, { error: "partnerToken en itemId of requestId zijn verplicht" });
+  }
   if (reason.length < 3) return json(400, { error: "Reden is verplicht (min. 3 tekens)." });
   if (reason.length > 500) return json(400, { error: "Reden is te lang (max. 500 tekens)." });
 
@@ -55,9 +65,85 @@ async function handler(req: Request): Promise<Response> {
 
   if (partnerErr || !partner) return json(404, { error: "Invalid or inactive partner token" });
 
+  const nowIso = new Date().toISOString();
+  const selectCols =
+    "id, provider_id, status, executed_at, invoiced_number, partner_dismissed_at, request_id, block_name";
+
+  // ---- Bulk: heel project sluiten -----------------------------------------
+  if (!itemId) {
+    const { data: items, error: itemsErr } = await supabase
+      .from("program_request_items")
+      .select(selectCols)
+      .eq("request_id", requestId)
+      .eq("provider_id", partner.id);
+
+    if (itemsErr) {
+      console.error("project dismiss fetch failed:", itemsErr);
+      return json(500, { error: "Kon onderdelen niet ophalen" });
+    }
+    if (!items || items.length === 0) {
+      return json(404, { error: "Geen onderdelen van deze partner in dit project" });
+    }
+    const open = items.filter((i) => OPEN_ACTION_STATUSES.includes(i.status) && !i.partner_dismissed_at);
+    if (open.length > 0) {
+      return json(409, {
+        error: `Er staan nog ${open.length} onderdelen open die uw reactie vragen. Handel die eerst af.`,
+      });
+    }
+    const closable = items.filter(
+      (i) => !i.partner_dismissed_at && !i.invoiced_number && CLOSABLE_STATUSES.includes(i.status),
+    );
+    if (closable.length === 0) {
+      return json(409, { error: "Er zijn geen onderdelen meer om te sluiten in dit project." });
+    }
+
+    const { error: bulkErr } = await supabase
+      .from("program_request_items")
+      .update({ partner_dismissed_at: nowIso, partner_dismissed_reason: reason, updated_at: nowIso })
+      .in("id", closable.map((i) => i.id));
+
+    if (bulkErr) {
+      console.error("project dismiss update failed:", bulkErr);
+      return json(500, { error: "Kon project niet sluiten", details: bulkErr.message });
+    }
+
+    try {
+      await supabase.from("project_communications").insert({
+        request_id: requestId,
+        type: "partner_note",
+        direction: "inbound",
+        subject: `Partner sluit project af (${closable.length} onderdelen)`,
+        body:
+          `Partner ${partner.name} heeft het project in het partnerportaal gesloten.\n\n` +
+          `Gesloten onderdelen: ${closable.map((i) => i.block_name).join(", ")}\n\nReden: ${reason}`,
+        metadata: {
+          action: "partner_project_dismiss",
+          item_ids: closable.map((i) => i.id),
+          partner_id: partner.id,
+        },
+      });
+    } catch (e) {
+      console.error("project_communications insert failed (non-fatal):", e);
+    }
+
+    try {
+      await supabase
+        .from("admin_todos")
+        .update({ status: "done", completed_at: nowIso, closed_reason: "partner_dismissed_no_invoice" })
+        .in("item_id", closable.map((i) => i.id))
+        .in("auto_type", ["partner_invoice_pending", "commission_pending"])
+        .eq("status", "open");
+    } catch (e) {
+      console.error("admin_todos close failed (non-fatal):", e);
+    }
+
+    return json(200, { success: true, dismissed: closable.length });
+  }
+
+  // ---- Enkel item ----------------------------------------------------------
   const { data: item, error: itemErr } = await supabase
     .from("program_request_items")
-    .select("id, provider_id, status, executed_at, invoiced_number, partner_dismissed_at, request_id, block_name")
+    .select(selectCols)
     .eq("id", itemId)
     .maybeSingle();
 
@@ -65,11 +151,10 @@ async function handler(req: Request): Promise<Response> {
   if (item.provider_id !== partner.id) return json(403, { error: "Item hoort niet bij deze partner" });
   if (item.invoiced_number) return json(409, { error: "Item is al gefactureerd — sluiten niet mogelijk" });
   if (item.partner_dismissed_at) return json(409, { error: "Item is al gesloten" });
-  if (item.status !== "executed" && item.status !== "accepted" && item.status !== "confirmed") {
+  if (!CLOSABLE_STATUSES.includes(item.status)) {
     return json(409, { error: "Alleen uitgevoerde onderdelen kunnen zo gesloten worden" });
   }
 
-  const nowIso = new Date().toISOString();
   const { error: updErr } = await supabase
     .from("program_request_items")
     .update({
@@ -81,7 +166,7 @@ async function handler(req: Request): Promise<Response> {
 
   if (updErr) {
     console.error("dismiss update failed:", updErr);
-    return json(500, { error: "Kon item niet sluiten" });
+    return json(500, { error: "Kon item niet sluiten", details: updErr.message });
   }
 
   // Log naar project-dossier zodat admin het terugziet
@@ -114,7 +199,7 @@ async function handler(req: Request): Promise<Response> {
     console.error("admin_todos close failed (non-fatal):", e);
   }
 
-  return json(200, { success: true });
+  return json(200, { success: true, dismissed: 1 });
 }
 
 if (import.meta.main) {

@@ -370,10 +370,16 @@ export const handler = async (req: Request): Promise<Response> => {
     if (updateError) {
       console.error("Error updating item:", updateError);
       return new Response(
-        JSON.stringify({ error: "Failed to update item" }),
+        JSON.stringify({
+          error: "Failed to update item",
+          details: updateError.message,
+          hint: (updateError as { hint?: string }).hint ?? null,
+          code: updateError.code ?? null,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
 
     // Log to history
     const historyNotes = isPriceAck && quotedPrice

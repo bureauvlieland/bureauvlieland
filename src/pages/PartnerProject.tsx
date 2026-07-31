@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive } from "lucide-react";
 import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -21,6 +21,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
 import { cn } from "@/lib/utils";
+import { DismissProjectDialog } from "@/components/partner-portal/DismissProjectDialog";
+import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partnerProjectDismiss";
+
 
 type Mode = "activities" | "accommodation";
 
@@ -48,6 +51,8 @@ const PartnerProjectContent = ({ mode }: Props) => {
   const [showSheet, setShowSheet] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
+  const [showDismissProject, setShowDismissProject] = useState(false);
+
 
   const fetchDashboard = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -138,6 +143,28 @@ const PartnerProjectContent = ({ mode }: Props) => {
     return data.items.filter((i) => i.request_id === id);
   }, [data, mode, id]);
 
+  const dismissableProjectItems = useMemo(
+    () =>
+      projectItems.map((i) => ({
+        id: i.id,
+        status: i.status,
+        invoiced_number: (i as { invoiced_number?: string | null }).invoiced_number ?? null,
+        partner_dismissed_at: (i as { partner_dismissed_at?: string | null }).partner_dismissed_at ?? null,
+        block_name: i.block_name,
+      })),
+    [projectItems],
+  );
+  const closableCount = useMemo(
+    () => selectClosableProjectItems(dismissableProjectItems).length,
+    [dismissableProjectItems],
+  );
+  const canCloseProject = useMemo(
+    () => canPartnerCloseProject(dismissableProjectItems),
+    [dismissableProjectItems],
+  );
+
+
+
   const accommodationQuote = useMemo<PartnerAccommodationQuote | null>(() => {
     if (!data || mode !== "accommodation" || !id) return null;
     return (
@@ -175,14 +202,24 @@ const PartnerProjectContent = ({ mode }: Props) => {
           }),
         }
       );
-      if (!response.ok) throw new Error("Failed");
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({} as Record<string, unknown>));
+        throw new Error(
+          (payload.details as string) || (payload.error as string) || "Kon status niet bijwerken.",
+        );
+      }
       toast({ title: "Status bijgewerkt" });
       await refetch();
       return true;
-    } catch {
-      toast({ title: "Fout", description: "Kon status niet bijwerken.", variant: "destructive" });
+    } catch (e) {
+      toast({
+        title: "Fout",
+        description: e instanceof Error ? e.message : "Kon status niet bijwerken.",
+        variant: "destructive",
+      });
       return false;
     }
+
   };
 
   const handleInvoiceRegister = async (
@@ -438,7 +475,16 @@ const PartnerProjectContent = ({ mode }: Props) => {
           {/* Items + chat in 2-col layout */}
           <div className={cn("grid gap-6", !isConceptProject && "lg:grid-cols-[1fr_400px]")}>
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
+                {!isConceptProject && canCloseProject && (
+                  <Button variant="outline" size="sm" onClick={() => setShowDismissProject(true)}>
+                    <Archive className="h-4 w-4 mr-1.5" />
+                    Project sluiten
+                  </Button>
+                )}
+              </div>
+
               {isConceptProject ? (
                 <Card className="divide-y">
                   {projectItems.map((item) => (
@@ -486,14 +532,28 @@ const PartnerProjectContent = ({ mode }: Props) => {
                               }),
                             }
                           );
-                          if (!response.ok) throw new Error("Failed");
+                          if (!response.ok) {
+                            const payload = await response
+                              .json()
+                              .catch(() => ({} as Record<string, unknown>));
+                            throw new Error(
+                              (payload.details as string) ||
+                                (payload.error as string) ||
+                                "Kon status niet bijwerken.",
+                            );
+                          }
                           toast({ title: "Status bijgewerkt" });
                           await refetch();
                           return true;
-                        } catch {
-                          toast({ title: "Fout", description: "Kon status niet bijwerken.", variant: "destructive" });
+                        } catch (e) {
+                          toast({
+                            title: "Fout",
+                            description: e instanceof Error ? e.message : "Kon status niet bijwerken.",
+                            variant: "destructive",
+                          });
                           return false;
                         }
+
                       })();
                     }}
                     onRegisterInvoice={() => {
@@ -541,6 +601,21 @@ const PartnerProjectContent = ({ mode }: Props) => {
           }}
           commissionPercentage={data?.partner.commission_percentage ?? 0}
         />
+
+        {id && partnerToken && (
+          <DismissProjectDialog
+            open={showDismissProject}
+            onOpenChange={setShowDismissProject}
+            requestId={id}
+            projectLabel={projectItems[0]?.program_requests?.reference_number || "dit project"}
+            itemCount={closableCount}
+            partnerToken={partnerToken}
+            onDismissed={() => {
+              void refetch();
+            }}
+          />
+        )}
+
 
         <InvoiceRegistrationDialog
           isOpen={showInvoiceDialog}
