@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCartSafe } from "@/contexts/CartContext";
+import { buildWhatsAppHref, openWhatsApp } from "@/lib/whatsappLink";
 
 const WA_NUMBER = "31562700208"; // +31 562 700208
 const STORAGE_KEY = "bv_presales_widget";
@@ -92,9 +93,14 @@ export const PreSalesChatWidget = () => {
 
   const cartCount = cart?.cartItems.length ?? 0;
   const itemJustAdded = cart?.itemJustAdded;
-  const waHref = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
-    `Hallo Bureau Vlieland, ik heb een vraag via bureauvlieland.nl (${location.pathname}).`
-  )}`;
+  const waHref = buildWhatsAppHref({
+    phone: WA_NUMBER,
+    text: `Hallo Bureau Vlieland, ik heb een vraag via bureauvlieland.nl (${location.pathname}).`,
+  });
+  const openWa = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openWhatsApp(waHref);
+  };
 
   return (
     <>
