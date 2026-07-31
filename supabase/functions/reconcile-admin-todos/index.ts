@@ -220,6 +220,47 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Laatste uitgaande communicatie per project (voor inbound_email todos).
+    // Zodra er vanuit de admin een antwoord/mail de deur uit is ná het
+    // aanmaken van de todo, is de melding afgehandeld.
+    const lastOutboundByRequest = new Map<string, string>();
+    {
+      const inboundRequestIds = [
+        ...new Set(
+          list
+            .filter(
+              (t) =>
+                t.auto_type === "inbound_email" &&
+                t.related_request_id &&
+                isUuid(t.related_request_id),
+            )
+            .map((t) => t.related_request_id!),
+        ),
+      ];
+      if (inboundRequestIds.length) {
+        const { data: outbound, error: outboundError } = await supabase
+          .from("project_communications")
+          .select("request_id, communication_date, direction")
+          .in("request_id", inboundRequestIds)
+          .eq("direction", "outbound")
+          .order("communication_date", { ascending: false });
+        if (outboundError) {
+          throw new Error(
+            `project_communications lookup failed: ${outboundError.message}`,
+          );
+        }
+        for (
+          const row of (outbound ?? []) as {
+            request_id: string;
+            communication_date: string;
+          }[]
+        ) {
+          if (!lastOutboundByRequest.has(row.request_id)) {
+            lastOutboundByRequest.set(row.request_id, row.communication_date);
+          }
+        }
+      }
+    }
 
 
     for (const t of list) {
