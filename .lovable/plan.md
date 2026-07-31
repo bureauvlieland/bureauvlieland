@@ -1,45 +1,40 @@
-## Doel
-Het Berichtencentrum (tab E-mail) werkt sneller en veiliger, met Outlook-gemak: archiveren op gespreksniveau, zichtbare projectstatus en sneltoetsen.
+## Stand van zaken (gecontroleerd)
 
-## 1. Archiveren = alleen het gesprek
-Nu archiveert "Archiveer" bij een programma- of logies-gesprek het hele dossier (`program_requests.archived_at` / `accommodation_requests.archived_at`). Dat wordt aangepast:
+- De webhook-URL die in de messaging service staat is de juiste endpoint van de functie `whatsapp-webhook`.
+- Die functie staat in `supabase/config.toml` op `verify_jwt = false`, dus Twilio mag hem zonder token aanroepen. Daar zit het probleem niet.
+- `whatsapp-webhook` heeft **nul logs**: Twilio heeft de endpoint nog nooit aangeroepen.
+- Het nummer +31562700208 is een actieve WhatsApp-sender (status Online).
+- Uitgaand werkt al via `whatsapp-send`; alleen inbound ontbreekt.
 
-- "Archiveer" zet uitsluitend `archived_at` op alle bijbehorende `project_communications` van dat gesprek. Het project blijft actief in Projecten.
-- Automatische mails uit `email_log` kunnen niet los gearchiveerd worden; die verdwijnen mee uit de lijst zodra alle gespreksberichten gearchiveerd zijn (gesprek wordt als gearchiveerd beschouwd wanneer er geen niet-gearchiveerde communicatie meer is).
-- "Uit archief" draait dit terug.
-- Losse extra knop in een klein menu (⋯): "Ook dossier archiveren" — de oude, zwaardere actie, expliciet gelabeld zodat dit nooit per ongeluk gebeurt.
-- Het bestaande "Toon archief"-schakelaartje blijft werken en toont dan ook gearchiveerde gesprekken.
+De messaging-service-webhook geldt uitsluitend voor senders in de sender pool van díe service. Dat controleer ik zelf via de Twilio-API met de bestaande credentials — niet handmatig door jou.
 
-## 2. Projectstatus zichtbaar
-Per gesprek wordt de status van het gekoppelde project meegeladen en getoond:
+## Aanpak
 
-- **Fase-badge** met de bestaande afgeleide status (Concept, Offerte verstuurd, Akkoord ontvangen, AV getekend, Facturatie, Afgerond, Geannuleerd) via de al bestaande `getDerivedStatus`/`DERIVED_STATUS_LABEL`/`DERIVED_STATUS_TONE` uit `src/lib/projectStatus.ts` — dus exact dezelfde labels en kleuren als in het projectenoverzicht.
-- **Aankomst-/programmadatum** met rode markering als de datum verstreken is (`isPastDate`).
-- Bij logies-gesprekken de status van de logies-aanvraag op dezelfde manier.
-- Weergave: compacte badge op de gespreksregel in de lijst; in de gespreksheader de volledige regel (fase + datum + reserveringsnummer) naast de bestaande "Project"/"Logies"-knop.
+### 1. Koppeling zelf verifiëren via de Twilio-API
+- Ophalen van de messaging services van het account en de sender pool daarvan, plus de webhook-instelling van de WhatsApp-sender zelf.
+- Daarmee stel ik feitelijk vast of +31562700208 in de service "Whatsapp bureauvlieland website" zit en waar de inbound-URL op staat. Pas als dat klopt en er nog steeds niets binnenkomt, ligt het aan de functie zelf.
 
-## 3. Sneltoetsen (Outlook-stijl)
-Actief zolang het E-mailpaneel open is en de focus niet in een invoerveld/dialog staat:
+### 2. Zichtbaar maken wat er binnenkomt
+- Logging bovenaan `whatsapp-webhook`: elke POST logt methode, `From`, `To`, `MessageSid`, `Body`-lengte en of de signature-check slaagde. Nu is "afgewezen" niet te onderscheiden van "nooit aangekomen".
+- Bij een signature-mismatch wordt de door de functie gereconstrueerde URL naast de door Twilio ondertekende URL gelogd. Dat is de klassieke valkuil: mismatch → stille 403.
+- Ik test met een gesimuleerde Twilio-POST en controleer in de database dat contact + gesprek + bericht zijn aangemaakt.
 
-| Toets | Actie |
-| --- | --- |
-| `j` / `k` of ↓ / ↑ | volgend / vorig gesprek |
-| `Enter` | gesprek openen |
-| `Esc` | terug naar de lijst |
-| `r` | Beantwoorden |
-| `e` | Archiveer gesprek |
-| `u` | markeer als onbeantwoord (of `m` als beantwoord) |
-| `a` | Toon archief aan/uit |
-| `?` | overzicht sneltoetsen |
+### 3. Melding bij een nieuw WhatsApp-bericht
+- Na het opslaan roept de webhook `notify-new-chat` aan, zodat je dezelfde e-mailmelding krijgt als bij een bericht via het websiteformulier.
 
-Een klein "?"-knopje in de paneelheader opent een dialog met dezelfde lijst, zodat de sneltoetsen vindbaar zijn.
+### 4. Bijlagen niet stilzwijgend verliezen
+- Nu wordt een foto vervangen door "[1 media-bijlage(n) — niet opgeslagen]". Ik log de media-URL's mee en maak de melding in het bericht expliciet. Media daadwerkelijk downloaden en opslaan valt buiten scope (vereist media-leesrechten op de Twilio-key); ik meld het als vervolgstap.
 
-## Technische details
-- Bestanden: `src/components/admin/EmailPanel.tsx` (lijst, header, archiveerlogica, sneltoetsen), nieuw `src/components/admin/EmailShortcutsDialog.tsx`, nieuw `src/lib/emailThreadArchive.ts` (pure helpers: bepaal of een gesprek gearchiveerd is, welke communicatie-ids te updaten).
-- `fetchEmails` haalt bij de programma-/logies-joins extra kolommen op die `getDerivedStatus` nodig heeft (`status`, `quote_status`, `completion_status`, `terms_accepted_at`, programmadatum) plus dezelfde velden voor logies; de bestaande query-structuur blijft gelijk.
-- Geen databasewijzigingen nodig: `project_communications.archived_at` bestaat al.
-- Unit-tests voor de nieuwe helpers in `src/lib/__tests__/emailThreadArchive.test.ts` (gesprek-archiefstatus, terughalen, dossier-actie los).
-- Statusinfo is puur lees-/weergavelogica; er verandert niets aan workflow of e-mailverzending.
+### 5. Admin: antwoorden binnen/buiten het 24-uursvenster
+- In het WhatsApp-gesprek een regel met het laatste klantbericht en de resterende tijd van het 24-uursvenster.
+- Buiten dat venster weigert WhatsApp vrije tekst; het invoerveld waarschuwt vooraf in plaats van een generieke fout achteraf.
+- Twilio-foutcodes uit `whatsapp-send` worden leesbaar getoond (bijv. 63016 = buiten venster, template vereist).
+- Nieuwe pure helper `src/lib/whatsappWindow.ts` + Vitest-tests voor de vensterberekening en de foutcode-vertaling.
 
-## Niet in scope
-Bulk-selectie met checkboxes en snoozen van gesprekken (niet gekozen) — later toe te voegen.
+### 6. Afsluitende test
+Jij stuurt één testbericht naar het nummer; ik lees logs en database uit en bevestig dat het in het Berichtencentrum landt. Toont de log dan een 403, dan is `TWILIO_AUTH_TOKEN` van een ander (sub)account dan de sender en pas ik de validatie daarop aan.
+
+## Technisch
+- Aangepast: `supabase/functions/whatsapp-webhook/index.ts` (logging, signature-diagnostiek, media-logging, `notify-new-chat`), `supabase/functions/whatsapp-send/index.ts` (leesbare Twilio-foutdoorgifte), `src/components/admin/ChatPanel.tsx` (24-uursvenster + foutmelding).
+- Nieuw: `src/lib/whatsappWindow.ts` en test in `src/lib/__tests__/`.
+- Geen databasemigratie; geen wijziging aan de `wa.me`-links, die wijzen al naar het juiste nummer.

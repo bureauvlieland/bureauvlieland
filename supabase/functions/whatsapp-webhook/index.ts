@@ -50,6 +50,15 @@ Deno.serve(async (req) => {
     const params: Record<string, string> = {};
     for (const [k, v] of formData.entries()) params[k] = String(v);
 
+    console.log("whatsapp-webhook: inbound hit", {
+      from: params.From ?? null,
+      to: params.To ?? null,
+      message_sid: params.MessageSid ?? params.SmsMessageSid ?? null,
+      num_media: params.NumMedia ?? "0",
+      has_signature: Boolean(signature),
+      param_keys: Object.keys(params),
+    });
+
     // Signature validation (skip if no token configured — keeps preview usable)
     if (authToken) {
       // Reconstruct the URL Twilio used. Respect proxy forwarding.
@@ -58,7 +67,11 @@ Deno.serve(async (req) => {
       const url = `${proto}://${host}${new URL(req.url).pathname}`;
       const ok = verifyTwilioSignature(authToken, url, params, signature);
       if (!ok) {
-        console.warn("whatsapp-webhook: invalid Twilio signature", { url });
+        console.warn("whatsapp-webhook: invalid Twilio signature", {
+          reconstructed_url: url,
+          signature_present: Boolean(signature),
+          hint: "Controleer of de webhook-URL in Twilio exact gelijk is aan deze URL (zonder query).",
+        });
         return new Response("Invalid signature", { status: 403, headers: corsHeaders });
       }
     } else {
@@ -71,9 +84,13 @@ Deno.serve(async (req) => {
     const numMedia = parseInt(params.NumMedia || "0", 10);
     const messageSid = params.MessageSid || params.SmsMessageSid || null;
 
-    if (!from) return twiml();
+    if (!from) {
+      console.warn("whatsapp-webhook: payload zonder From — genegeerd");
+      return twiml();
+    }
 
     const phoneNumber = normalizePhone(from);
+
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -188,10 +205,17 @@ Deno.serve(async (req) => {
       conversationId = created.id;
     }
 
-    // 3. store the message
+    // 3. store the message (media are referenced, not stored)
     let content = body || "";
     if (numMedia > 0) {
-      content += (content ? "\n\n" : "") + `[${numMedia} media-bijlage(n) — niet opgeslagen]`;
+      const mediaLines: string[] = [];
+      for (let i = 0; i < numMedia; i++) {
+        const type = params[`MediaContentType${i}`] || "bestand";
+        mediaLines.push(`• ${type}`);
+      }
+      content +=
+        (content ? "\n\n" : "") +
+        `[${numMedia} media-bijlage(n) via WhatsApp]\n${mediaLines.join("\n")}`;
     }
 
     const { error: msgErr } = await supabase.from("chat_messages").insert({
@@ -201,9 +225,33 @@ Deno.serve(async (req) => {
       content: content || "(leeg bericht)",
       twilio_message_sid: messageSid,
     });
-    if (msgErr) console.error("whatsapp-webhook: insert message failed", msgErr);
+    if (msgErr) {
+      console.error("whatsapp-webhook: insert message failed", msgErr);
+    } else {
+      console.log("whatsapp-webhook: message stored", { conversationId, messageSid });
+      // Notify the team about the new inbound message (best-effort).
+      try {
+        const notifyResp = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-new-chat`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({ conversation_id: conversationId }),
+          },
+        );
+        if (!notifyResp.ok) {
+          console.warn("whatsapp-webhook: notify-new-chat failed", notifyResp.status);
+        }
+      } catch (notifyErr) {
+        console.warn("whatsapp-webhook: notify-new-chat error", notifyErr);
+      }
+    }
 
     return twiml();
+
   } catch (err) {
     console.error("whatsapp-webhook: unexpected error", err);
     return twiml();

@@ -198,11 +198,20 @@ Deno.serve(async (req) => {
     const twData = await twResp.json().catch(() => ({}));
     if (!twResp.ok) {
       console.error("twilio error", twData);
+      // 63016: free-form message outside the 24h customer service window.
+      const outsideWindow = String(twData?.code ?? "") === "63016";
       return json(
-        { error: "Twilio send failed", details: twData?.message || twData?.code || twResp.status },
+        {
+          error: outsideWindow ? "outside_window" : "Twilio send failed",
+          details: outsideWindow
+            ? "Het 24-uursvenster van WhatsApp is verlopen. De klant moet eerst opnieuw een bericht sturen, of je stuurt een goedgekeurde template."
+            : twData?.message || twData?.code || twResp.status,
+          twilio_code: twData?.code ?? null,
+        },
         502,
       );
     }
+
 
     // Save admin message
     const senderName = userData.user.email?.split("@")[0] || "Admin";

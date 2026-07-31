@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAdminChat, type ChatStatusFilter } from "@/hooks/useAdminChat";
 import { formatNL } from "@/lib/dateFormat";
+import { getWhatsappWindowState } from "@/lib/whatsappWindow";
 import { isToday, isYesterday, isSameDay } from "date-fns";
 import { useConversationProjects } from "@/hooks/useConversationProjects";
 import { ChatConversationItem } from "@/components/admin/chat/ChatConversationItem";
@@ -134,6 +135,13 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
   };
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
+
+  // WhatsApp: vrije antwoorden mogen alleen binnen 24u na het laatste klantbericht.
+  const lastInboundAt = [...messages]
+    .reverse()
+    .find((m) => m.sender_type === "customer")?.created_at ?? null;
+  const whatsappWindow = getWhatsappWindowState(lastInboundAt);
+
 
   const handleSaveToProject = async () => {
     if (!activeConversationId) return;
@@ -484,6 +492,17 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
 
             {activeConversation.status !== "closed" && (
               <div className="border-t bg-white p-3">
+                {activeConversation.source === "whatsapp" && !whatsappWindow.isOpen && (
+                  <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                    Het WhatsApp 24-uursvenster is verlopen. Meta blokkeert vrije antwoorden tot de
+                    klant opnieuw een bericht stuurt.
+                  </div>
+                )}
+                {activeConversation.source === "whatsapp" && whatsappWindow.isOpen && (
+                  <div className="mb-2 text-[11px] text-muted-foreground">
+                    Antwoordvenster sluit over {whatsappWindow.remainingLabel}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Textarea
                     value={message}
@@ -504,6 +523,7 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
                 </div>
               </div>
             )}
+
           </>
         )}
       </div>
