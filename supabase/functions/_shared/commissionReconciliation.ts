@@ -165,10 +165,20 @@ export function basisAmountForBasis(
   return fallback ?? 0;
 }
 
+/**
+ * Statussen waarbij de commissie al is afgehandeld en de regel dus uit de werklijst mag.
+ *
+ * LET OP: `not_applicable` staat hier bewust NIET bij. Dat is de databasedefault van
+ * `program_request_items.commission_status` en betekent "nog niet in de commissieflow
+ * opgepakt", niet "commissievrij". Vrijstelling loopt via `commissionExempt`
+ * (commissievrije partner of `commission_exempt` op de inkoopfactuur) of 0% commissie.
+ */
+export const COMMISSION_SETTLED_STATUSES = ["invoiced", "paid"];
+
 /** Regels die nog gefactureerd moeten worden (commissie niet gefactureerd/betaald en niet commissievrij). */
 export function isBillableRow(row: ReconRow): boolean {
   if (row.commissionExempt) return false;
-  if (row.commissionStatus && ["invoiced", "paid", "not_applicable"].includes(row.commissionStatus)) return false;
+  if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
   return row.commissionPercentage > 0;
 }
 
