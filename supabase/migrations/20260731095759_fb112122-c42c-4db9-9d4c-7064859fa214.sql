@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.partner_self_update_sensitive_unchanged(text, text, text, text, numeric, numeric, numeric, text, text, uuid, boolean, text);

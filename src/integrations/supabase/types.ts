@@ -4670,6 +4670,7 @@ export type Database = {
           _commission_percentage: number
           _email: string
           _extras_commission_percentage: number
+          _iban?: string
           _id: string
           _is_active: boolean
           _kvk_number: string
