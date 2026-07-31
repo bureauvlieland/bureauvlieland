@@ -168,13 +168,16 @@ describe("getProjectPhase", () => {
 });
 
 describe("phase-info helpers", () => {
-  it("geeft een label en kleur mee voor project- en itemfases", () => {
+  it("geeft labels en kleuren mee voor project- en itemfases", () => {
     const proj = getProjectPhaseInfo(project({ completion_status: "completed" }), []);
     expect(proj.phase).toBe("afgerond");
-    expect(proj.config.label).toBeTruthy();
+    expect(proj.config.adminLabel).toBeTruthy();
+    expect(proj.config.customerLabel).toBeTruthy();
+    expect(proj.config.partnerLabel).toBeTruthy();
 
     const it1 = getItemPhaseInfo(item({ status: "confirmed" }), {});
     expect(it1.phase).toBe("bevestigd");
-    expect(it1.config.label).toBeTruthy();
+    expect(it1.config.adminLabel).toBeTruthy();
+    expect(it1.config.color).toBeTruthy();
   });
 });
