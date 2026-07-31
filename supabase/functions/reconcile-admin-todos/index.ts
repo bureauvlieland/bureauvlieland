@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       purchaseInvoiceIds.size
         ? supabase
             .from("partner_purchase_invoices")
-            .select("id, status, item_id, commission_exempt")
+            .select("id, status, item_id, commission_exempt, partner_id, invoice_number")
 
             .in("id", [...purchaseInvoiceIds])
         : Promise.resolve({ data: [], error: null }),
@@ -189,6 +189,47 @@ Deno.serve(async (req) => {
     }
 
 
+
+    // Facturen die via een factuurnummer aan een programma-onderdeel of
+    // logies-offerte hangen. Spiegelt `invoiceIsLinked` uit de gedeelde
+    // reconciliatiemodule, zodat de opschoner exact dezelfde definitie van
+    // "gekoppeld" gebruikt als de werklijst en de taakgenerator.
+    const invoiceKeyOf = (partnerId?: string | null, invoiceNumber?: string | null) =>
+      `${(partnerId ?? "").trim().toLowerCase()}::${(invoiceNumber ?? "").trim().toLowerCase()}`;
+    const linkedInvoiceKeys = new Set<string>();
+    {
+      const numbers = [
+        ...new Set(
+          [...pInvoiceMap.values()]
+            .map((i: any) => i.invoice_number)
+            .filter((n: unknown): n is string => typeof n === "string" && n.trim() !== ""),
+        ),
+      ];
+      if (numbers.length) {
+        const [quoteLinks, itemLinks] = await Promise.all([
+          supabase
+            .from("accommodation_quotes")
+            .select("partner_id, invoiced_number")
+            .in("invoiced_number", numbers),
+          supabase
+            .from("program_request_items")
+            .select("provider_id, invoiced_number")
+            .in("invoiced_number", numbers),
+        ]);
+        if (quoteLinks.error) {
+          throw new Error(`accommodation_quotes link lookup failed: ${quoteLinks.error.message}`);
+        }
+        if (itemLinks.error) {
+          throw new Error(`program_request_items link lookup failed: ${itemLinks.error.message}`);
+        }
+        for (const q of (quoteLinks.data ?? []) as any[]) {
+          linkedInvoiceKeys.add(invoiceKeyOf(q.partner_id, q.invoiced_number));
+        }
+        for (const i of (itemLinks.data ?? []) as any[]) {
+          linkedInvoiceKeys.add(invoiceKeyOf(i.provider_id, i.invoiced_number));
+        }
+      }
+    }
 
     // sales invoices grouped by request (for post_execution_invoice_check fallback)
     const salesByRequest = new Map<string, number>();
@@ -342,8 +383,9 @@ Deno.serve(async (req) => {
         }
         case "commission_unlinked_invoice": {
           // Aanmaakcriterium: geregistreerde inkoopfactuur zonder koppeling
-          // aan een programma-onderdeel. Sluiten zodra gekoppeld of
-          // commissievrij verklaard.
+          // aan een programma-onderdeel of logies-offerte. Sluiten zodra
+          // gekoppeld (item, allocatie of factuurnummer op onderdeel/logies)
+          // of commissievrij verklaard.
           const inv = eid ? pInvoiceMap.get(eid) : null;
           if (!inv) {
             markClosed(t.id, `${type}_missing`);
@@ -353,6 +395,7 @@ Deno.serve(async (req) => {
             inv.item_id ||
             inv.commission_exempt === true ||
             allocatedInvoiceIds.has(inv.id) ||
+            linkedInvoiceKeys.has(invoiceKeyOf(inv.partner_id, inv.invoice_number)) ||
             ["rejected", "archived"].includes(inv.status)
           ) {
             markClosed(t.id, type);
