@@ -66,17 +66,24 @@ Deno.serve(async (req) => {
     }
 
     const basic = `Basic ${btoa(`${apiKeySid}:${apiKeySecret}`)}`;
-    const get = async (url: string) => {
-      const r = await fetch(url, { headers: { Authorization: basic } });
+    // Some v2 endpoints (WhatsApp senders) reject API-key auth and require
+    // the account credentials, so we keep both and fall back automatically.
+    const basicAccount = authToken ? `Basic ${btoa(`${accountSid}:${authToken}`)}` : null;
+    const parseBody = async (r: Response) => {
       const text = await r.text();
-      let parsed: unknown;
       try {
-        parsed = JSON.parse(text);
+        return JSON.parse(text) as Record<string, unknown>;
       } catch {
-        parsed = text.slice(0, 500);
+        return { raw: text.slice(0, 500) } as Record<string, unknown>;
       }
-      return { ok: r.ok, status: r.status, body: parsed as Record<string, unknown> };
     };
+    const get = async (url: string, useAccountAuth = false) => {
+      const r = await fetch(url, {
+        headers: { Authorization: useAccountAuth && basicAccount ? basicAccount : basic },
+      });
+      return { ok: r.ok, status: r.status, body: await parseBody(r) };
+    };
+
     const post = async (url: string, form?: Record<string, string>, jsonBody?: unknown) => {
       const r = await fetch(url, {
         method: "POST",
