@@ -190,6 +190,8 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
       toast.success("Inkoopfactuur geregistreerd");
     },
     onError: (error: any) => {
@@ -216,6 +218,8 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
     },
     onError: (error) => {
       console.error("Error updating purchase invoice:", error);
@@ -238,6 +242,8 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
       toast.success("Factuur gemarkeerd als betaald");
     },
     onError: (error) => {
@@ -264,6 +270,8 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
     },
   });
 
@@ -341,6 +349,8 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
       toast.success("Inkoopfactuur verwijderd");
     },
     onError: (error) => {
