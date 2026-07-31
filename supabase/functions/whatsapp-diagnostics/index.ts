@@ -202,6 +202,8 @@ Deno.serve(async (req) => {
           const add = await post(
             `https://messaging.twilio.com/v1/Services/${svc.sid}/ChannelSenders`,
             { Sid: senderTarget },
+            undefined,
+            true,
           );
           fixResults.channel_sender_add = { status: add.status, ok: add.ok, body: add.body };
         }
@@ -221,6 +223,7 @@ Deno.serve(async (req) => {
               callback_method: "POST",
             },
           },
+          true,
         );
         fixResults.sender_webhook = { status: wh.status, ok: wh.ok, body: wh.body };
       }
