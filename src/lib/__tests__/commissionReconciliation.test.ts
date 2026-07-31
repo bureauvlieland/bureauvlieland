@@ -5,6 +5,7 @@ import {
   isWithinTolerance,
   invoiceIsLinked,
   invoiceKey,
+  isBillableRow,
   exclVatFromIncl,
   firstSelectedDate,
   daysSince,
@@ -280,5 +281,71 @@ describe("summarizeReconciliation", () => {
     expect(summary.unlinkedInvoice).toBe(1);
     expect(summary.openCount).toBe(2);
     expect(summary.commissionAtRisk).toBeCloseTo(150, 6);
+  });
+});
+
+describe("regressie: partnerregels met default commissiestatus blijven zichtbaar", () => {
+  // Reproductie van de Zuiver Traiteur-casus: 12 verkochte onderdelen, waarvan er
+  // slechts 1 een geregistreerde inkoopfactuur (en dus status "pending") heeft.
+  // Alle overige regels staan op de databasedefault "not_applicable" en mogen
+  // niet stilzwijgend uit de werklijst verdwijnen.
+  const soldItems: ReconItemInput[] = Array.from({ length: 11 }, (_, i) =>
+    item({
+      id: `zuiver-${i + 1}`,
+      provider_id: "zuiver",
+      block_name: `Catering ${i + 1}`,
+      quoted_price: 500,
+      commission_percentage: null,
+      commission_status: "not_applicable",
+      invoiced_number: null,
+      status: i % 2 === 0 ? "confirmed" : "executed",
+    }),
+  );
+
+  const invoicedItem = item({
+    id: "zuiver-12",
+    provider_id: "zuiver",
+    block_name: "Luxe Lunchbuffet",
+    quoted_price: 225,
+    commission_percentage: 15,
+    commission_status: "pending",
+    invoiced_number: "T-261008",
+    invoiced_amount: 186,
+    status: "confirmed",
+  });
+
+  const rows = buildReconciliationRows({
+    items: [...soldItems, invoicedItem],
+    invoices: [
+      invoice({
+        id: "inv-zuiver-1",
+        partner_id: "zuiver",
+        item_id: "zuiver-12",
+        invoice_number: "T-261008",
+        amount_excl_vat: 186,
+        amount_incl_vat: 225,
+      }),
+    ],
+    projects,
+    partners,
+  });
+
+  it("bouwt een regel per verkocht onderdeel", () => {
+    expect(rows.filter((r) => r.partnerId === "zuiver")).toHaveLength(12);
+  });
+
+  it("markeert de regels zonder inkoopfactuur als missing_invoice", () => {
+    expect(rows.filter((r) => r.status === "missing_invoice")).toHaveLength(11);
+  });
+
+  it("houdt alle 12 regels factureerbaar in de werklijst", () => {
+    expect(rows.filter(isBillableRow)).toHaveLength(12);
+  });
+
+  it("gebruikt het partnerpercentage als het onderdeel er geen heeft", () => {
+    const row = rows.find((r) => r.itemId === "zuiver-1")!;
+    expect(row.commissionPercentage).toBe(15);
+    expect(row.salesCommission).toBeCloseTo((500 / 1.21) * 0.15, 6);
+    expect(row.defaultBasis).toBe("sales");
   });
 });
