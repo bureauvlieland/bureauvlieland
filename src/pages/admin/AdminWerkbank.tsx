@@ -324,6 +324,7 @@ export default function AdminWerkbank() {
                   </button>
                 ))}
               </div>
+              )}
 
               {tab === "projecten" && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
