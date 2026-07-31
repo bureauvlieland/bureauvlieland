@@ -543,7 +543,21 @@ export default function AdminCommissionInvoiceCreate() {
             </div>
           </div>
 
+          {baseMismatches.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-medium">Let op: grondslag afwijkend van de werklijst</p>
+              <ul className="mt-1 list-disc pl-5 space-y-0.5">
+                {baseMismatches.map((m) => (
+                  <li key={m.label}>
+                    {m.label}: werklijst {formatCurrency(m.expected)} → nu {formatCurrency(m.actual)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="grid lg:grid-cols-3 gap-6">
+
             {/* Settings sidebar */}
             <Card className="lg:order-2">
               <CardContent className="p-6 space-y-4">
