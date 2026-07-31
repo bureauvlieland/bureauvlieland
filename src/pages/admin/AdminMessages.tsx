@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePresalesUnread } from "@/hooks/usePresalesUnread";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
@@ -97,7 +98,13 @@ const AdminMessages = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab =
-    tabParam === "verzonden" ? "verzonden" : tabParam === "chat" ? "chat" : "inbox";
+    tabParam === "verzonden"
+      ? "verzonden"
+      : tabParam === "chat"
+        ? "chat"
+        : tabParam === "presales"
+          ? "presales"
+          : "inbox";
   const highlightedInboxId = searchParams.get("inbox");
   const inboxFilter = searchParams.get("filter");
   const initialConversationId = searchParams.get("conversation");
@@ -146,7 +153,11 @@ const AdminMessages = () => {
   });
   const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
   const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
-  const chatTotalUnread = chatUnreadConversations + liveChatUnreadTotal;
+  const presalesUnread = usePresalesUnread();
+  const chatTotalUnread = Math.max(
+    0,
+    chatUnreadConversations + liveChatUnreadTotal - presalesUnread
+  );
 
   const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["admin-email-logs"],
@@ -298,6 +309,18 @@ const AdminMessages = () => {
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="presales" className="gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Pre-sales
+                {presalesUnread > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
+                  >
+                    {presalesUnread}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="verzonden" className="gap-2">
                 <Send className="h-4 w-4" />
                 Verzonden e-mails
@@ -313,6 +336,10 @@ const AdminMessages = () => {
               <ChatPanel initialConversationId={initialConversationId} />
             </TabsContent>
 
+
+            <TabsContent value="presales" className="mt-4">
+              <ChatPanel mode="presales" />
+            </TabsContent>
 
             <TabsContent value="verzonden" className="mt-4 space-y-6">
           {/* Stats */}
