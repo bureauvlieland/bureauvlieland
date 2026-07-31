@@ -133,7 +133,9 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminCommissions() {
-  const [statusFilter, setStatusFilter] = useState("expected");
+  // De werklijst is de startweergave: daar staan te factureren én verwachte regels
+  // (verwacht = project moet nog plaatsvinden) achter filterchips.
+  const [statusFilter, setStatusFilter] = useState("pending");
 
   const [typeFilter, setTypeFilter] = useState("all");
   const [partnerFilter, setPartnerFilter] = useState<string | null>(null);
@@ -509,8 +511,7 @@ export default function AdminCommissions() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="expected">Verwacht</SelectItem>
-                <SelectItem value="pending">Te factureren</SelectItem>
+                <SelectItem value="pending">Werklijst (te factureren &amp; verwacht)</SelectItem>
                 <SelectItem value="invoiced">Gefactureerd</SelectItem>
                 <SelectItem value="paid">Betaald</SelectItem>
               </SelectContent>
