@@ -21,8 +21,12 @@ export type ReconStatus =
 /** Soort regel in de werklijst. */
 export type ReconItemType = "activity" | "accommodation" | "purchase_invoice";
 
+/** Is de regel al factureerbaar (uitgevoerd) of nog een verwachte commissie? */
+export type ReconReadiness = "expected" | "billable";
+
 /** Grondslag voor de commissieberekening. */
 export type CommissionBasis = "purchase" | "sales";
+
 
 
 export interface ReconSettings {
