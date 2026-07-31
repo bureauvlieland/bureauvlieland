@@ -34,7 +34,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,7 +66,9 @@ export default function AdminPurchaseInvoices() {
   const [selectedRequestId, setSelectedRequestId] = useState<string>("all");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<PurchaseInvoiceStatus | "all">("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Diep-link vanuit de commissie-werklijst: ?search=<factuurnummer>
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [forwardMethod, setForwardMethod] = useState<"outlook" | "mailjet">("outlook");
