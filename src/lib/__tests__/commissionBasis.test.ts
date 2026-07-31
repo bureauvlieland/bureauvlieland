@@ -122,7 +122,33 @@ describe("isBillableRow", () => {
 });
 
 describe("isBillableRow — commissiestatus not_applicable", () => {
-  it("sluit regels met status not_applicable uit", () => {
-    expect(isBillableRow(row({ commissionStatus: "not_applicable" }))).toBe(false);
+  it("houdt regels met de databasedefault not_applicable zichtbaar", () => {
+    // `not_applicable` is de default van program_request_items.commission_status en
+    // betekent 'nog niet opgepakt', niet 'commissievrij'. Regels zonder inkoopfactuur
+    // moeten juist in de werklijst blijven staan.
+    expect(isBillableRow(row({ commissionStatus: "not_applicable" }))).toBe(true);
+  });
+
+  it("sluit not_applicable-regels wel uit bij expliciete vrijstelling of 0%", () => {
+    expect(
+      isBillableRow(row({ commissionStatus: "not_applicable", commissionExempt: true, status: "exempt" })),
+    ).toBe(false);
+    expect(isBillableRow(row({ commissionStatus: "not_applicable", commissionPercentage: 0 }))).toBe(false);
+  });
+
+  it("houdt een regel zonder inkoopfactuur (missing_invoice) zichtbaar", () => {
+    expect(
+      isBillableRow(
+        row({
+          commissionStatus: "not_applicable",
+          status: "missing_invoice",
+          purchaseExclVat: null,
+          purchaseCommission: null,
+          salesExclVat: 1000,
+          salesCommission: 100,
+        }),
+      ),
+    ).toBe(true);
   });
 });
+
