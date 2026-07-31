@@ -140,6 +140,28 @@ const PartnerProjectContent = ({ mode }: Props) => {
     return data.items.filter((i) => i.request_id === id);
   }, [data, mode, id]);
 
+  const dismissableProjectItems = useMemo(
+    () =>
+      projectItems.map((i) => ({
+        id: i.id,
+        status: i.status,
+        invoiced_number: (i as { invoiced_number?: string | null }).invoiced_number ?? null,
+        partner_dismissed_at: (i as { partner_dismissed_at?: string | null }).partner_dismissed_at ?? null,
+        block_name: i.block_name,
+      })),
+    [projectItems],
+  );
+  const closableCount = useMemo(
+    () => selectClosableProjectItems(dismissableProjectItems).length,
+    [dismissableProjectItems],
+  );
+  const canCloseProject = useMemo(
+    () => canPartnerCloseProject(dismissableProjectItems),
+    [dismissableProjectItems],
+  );
+
+
+
   const accommodationQuote = useMemo<PartnerAccommodationQuote | null>(() => {
     if (!data || mode !== "accommodation" || !id) return null;
     return (
