@@ -59,6 +59,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
+import { isForwardableInvoice, isAwaitingPdfMatch, daysAwaitingPdf } from "@/lib/purchaseInvoiceStatusFlow";
 
 export default function AdminPurchaseInvoices() {
   const [selectedRequestId, setSelectedRequestId] = useState<string>("all");
@@ -137,6 +138,30 @@ export default function AdminPurchaseInvoices() {
 
   const getStatusBadge = (invoice: PurchaseInvoiceWithRelations) => {
     switch (invoice.status) {
+      case "pending_email_match": {
+        if (invoice.file_path) {
+          return (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+              <Clock className="h-3 w-3 mr-1" />
+              In afwachting
+            </Badge>
+          );
+        }
+        const waiting = daysAwaitingPdf(invoice) ?? 0;
+        const overdue = waiting > 14;
+        return (
+          <Badge
+            variant="outline"
+            className={overdue
+              ? "bg-red-50 text-red-700 border-red-200"
+              : "bg-orange-50 text-orange-700 border-orange-200"}
+            title="Partner heeft de factuur per e-mail gestuurd; PDF nog niet gekoppeld"
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            Wacht op PDF{waiting > 0 ? ` (${waiting}d)` : ""}
+          </Badge>
+        );
+      }
       case "pending":
         return (
           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
@@ -217,11 +242,17 @@ export default function AdminPurchaseInvoices() {
         <DuplicateCandidatesBanner />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="border-amber-200 bg-amber-50/50">
             <CardHeader className="pb-2">
               <CardDescription>In afwachting</CardDescription>
               <CardTitle className="text-2xl text-amber-700">{stats.pending}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card className={stats.awaitingPdf > 0 ? "border-orange-300 bg-orange-50/60" : "border-slate-200"}>
+            <CardHeader className="pb-2">
+              <CardDescription>Wacht op PDF</CardDescription>
+              <CardTitle className={stats.awaitingPdf > 0 ? "text-2xl text-orange-700" : "text-2xl"}>{stats.awaitingPdf}</CardTitle>
             </CardHeader>
           </Card>
           <Card className="border-blue-200 bg-blue-50/50">
@@ -289,6 +320,7 @@ export default function AdminPurchaseInvoices() {
                 <SelectContent>
                   <SelectItem value="all">Alle statussen</SelectItem>
                   <SelectItem value="pending">In afwachting</SelectItem>
+                  <SelectItem value="pending_email_match">Wacht op PDF</SelectItem>
                   <SelectItem value="forwarded">Doorgestuurd</SelectItem>
                   <SelectItem value="paid">Betaald</SelectItem>
                 </SelectContent>
@@ -326,7 +358,12 @@ export default function AdminPurchaseInvoices() {
                 </Button>
                 <Button
                   onClick={async () => {
-                    const targets = invoices?.filter(i => selectedInvoices.includes(i.id) && (i.status === "pending" || i.status === "forwarded")) || [];
+                    const selection = invoices?.filter(i => selectedInvoices.includes(i.id)) || [];
+                    const blocked = selection.filter(i => isAwaitingPdfMatch(i));
+                    if (blocked.length > 0) {
+                      toast.error(`${blocked.length} factuur/facturen wachten nog op de PDF uit de inkoop-inbox — koppel die eerst`);
+                    }
+                    const targets = selection.filter(i => isForwardableInvoice(i));
                     if (targets.length === 0) {
                       toast.info("Geen verzendbare facturen geselecteerd");
                       return;

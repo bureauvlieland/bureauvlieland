@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
+import { resolveStatusAfterPdfLink } from "@/lib/purchaseInvoiceStatusFlow";
 
 interface UploadInvoicePdfDialogProps {
   invoice: PurchaseInvoiceWithRelations | null;
@@ -60,9 +61,14 @@ export function UploadInvoicePdfDialog({ invoice, onClose }: UploadInvoicePdfDia
 
       if (uploadError) throw uploadError;
 
+      const nextStatus = resolveStatusAfterPdfLink(invoice.status, true);
       const { error: updateError } = await supabase
         .from("partner_purchase_invoices")
-        .update({ file_path: fileName, updated_at: new Date().toISOString() })
+        .update({
+          file_path: fileName,
+          updated_at: new Date().toISOString(),
+          ...(nextStatus ? { status: nextStatus } : {}),
+        })
         .eq("id", invoice.id);
 
       if (updateError) throw updateError;

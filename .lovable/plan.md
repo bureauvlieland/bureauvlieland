@@ -1,34 +1,40 @@
 ## Wat er aan de hand is (geverifieerd in de database)
 
-Zuiver Traiteur heeft **12 verkochte onderdelen** (status confirmed/executed) in projecten BV-2602-0002, -0005, -0006, BV-2603-0003, BV-2604-0004, -0010, BV-2605-0001, -0014, BV-2606-0011. In het overzicht zie je er maar 2.
+Er zijn precies **3** inkoopfacturen met het label "via e-mail":
 
-Oorzaak: de werklijst (`get-commission-reconciliation` → `isBillableRow`) verbergt elke regel waarvan `commission_status` gelijk is aan `invoiced`, `paid` **of `not_applicable`**. De kolom `program_request_items.commission_status` heeft in de database de default **`'not_applicable'`**. Die waarde wordt pas op `pending` gezet zodra iemand een inkoopfactuur registreert/koppelt.
+| Factuur | Partner | Project | Bedrag incl. | Status in DB | PDF aanwezig |
+|---|---|---|---|---|---|
+| 202610041 (11 jul 2026) | Vliehors Expres | BV-2604-0004 | € 749,99 | `pending_email_match` | ja |
+| 202610040 (11 jul 2026) | Vliehors Expres | BV-2606-0022 | € 420,00 | `pending_email_match` | ja |
+| 2026045 (22 jun 2026) | Zeehondentochten Vlieland | BV-2604-0004 | € 360,01 | `pending_email_match` | ja |
 
-Gevolg: 11 van de 12 Zuiver-regels staan nog op de default `not_applicable` en worden dus stilzwijgend uitgefilterd — precies de regels waar nog géén inkoopfactuur bij zit (o.a. Strand BBQ €870, Lunch in de natuur €3.750, Grillmaster €195, Luxe Lunchbuffet €416). Alleen "Luxe Lunchbuffet geserveerd bij Fortuna" (met factuur T-261008, status `pending`) is zichtbaar, plus één losse inkoopfactuur.
+Alle drie zijn: **niet doorgestuurd naar de boekhouding, niet in een betaalbatch, niet betaald.** Ze staan dus al weken stil.
 
-Dit is niet partner-specifiek: elke partner mist zo alle regels zonder geregistreerde inkoopfactuur. De tegel "Zonder inkoopfactuur" telt daardoor structureel te laag, en dat is juist het lek dat de reconciliatie zou moeten dichten.
+## Waarom ze blijven hangen
 
-## Wat ik ga doen
+Als een partner in het portaal aangeeft "ik heb de factuur per e-mail gestuurd", zet `register-partner-invoice` de status op `pending_email_match` (in plaats van `pending`). Die status is bedoeld als tijdelijke wachtstand tot de PDF uit de inkoop-inbox eraan gekoppeld is. Maar:
 
-1. **Filterlogica corrigeren** in `supabase/functions/_shared/commissionReconciliation.ts`
-   - `isBillableRow` behandelt `not_applicable` niet langer als "afgehandeld". Alleen `invoiced` en `paid` sluiten een regel uit, plus expliciete commissievrijstelling (`commissionExempt`, commissievrije partners, 0% commissie).
-   - Zo blijft "commissievrij" wél werken via de bestaande `exempt`-status, maar verdwijnt de default-waarde als onbedoeld filter.
+1. **Niets zet die status ooit terug.** In de hele codebase komt `pending_email_match` maar op één plek voor: bij het aanmaken. Het koppelen van de PDF vanuit de inbox (`MatchedRegistrationBanner`) schrijft alleen `file_path`, `invoice_number` en `invoice_date` — niet de status. Bij alle drie de facturen is de PDF inmiddels wél gekoppeld, maar de status bleef staan.
+2. **Daardoor vallen ze overal buiten de boot:**
+   - Bulk "doorsturen naar boekhouding" pakt alleen `pending` en `forwarded`.
+   - Betaalbatches selecteren alleen `status = 'forwarded'` → deze facturen kunnen niet betaald worden.
+   - De statuskolom toont niets (de badge-functie heeft geen case voor `pending_email_match`) — precies wat op de screenshot te zien is: een lege statuscel.
+   - Het statusfilter en de KPI-tegels (In afwachting / Doorgestuurd / Betaald) tellen ze niet mee, dus ze zijn ook nergens als achterstand zichtbaar.
 
-2. **Expliciete vrijstelling scheiden van de default**
-   - Waar de admin bewust "geen commissie" kiest, wordt dat vastgelegd via `commission_exempt` / 0% in plaats van via de default-status, zodat de twee betekenissen niet langer door elkaar lopen.
-   - Optioneel voorstel (jouw keuze bij implementatie): de databasedefault van `commission_status` wijzigen naar `pending` zodat nieuwe regels meteen in de werklijst landen.
+Kortom: het zijn echte, openstaande crediteuren van in totaal **€ 1.530,00** die onzichtbaar uit de betaalstroom zijn gevallen.
 
-3. **Tests toevoegen** (vitest, bij de bestaande recon-tests)
-   - Regel met `commission_status = 'not_applicable'` en zonder inkoopfactuur is **wel** billable.
-   - Regel met `invoiced`/`paid` blijft uitgesloten.
-   - Commissievrije partner (`rederij`, `bureau`) en `commission_exempt = true` blijven uitgesloten.
-   - Regressietest met een Zuiver-achtige dataset: 12 verkochte onderdelen → 12 regels in de werklijst, waarvan 10 met status `missing_invoice`.
+## Plan
 
-4. **Controle na deploy**
-   - Edge function opnieuw uitrollen en in de UI verifiëren dat Zuiver Traiteur alle regels toont en de tegels "Te factureren" / "Zonder inkoopfactuur" kloppen.
+1. **Statusovergang bij PDF-koppeling.** In `MatchedRegistrationBanner` (en de handmatige "PDF toevoegen"-actie in `AdminPurchaseInvoices`) de status meepatchen naar `pending` zodra er een `file_path` wordt gezet en de status nog `pending_email_match` is.
+2. **Vangnet in de database.** Trigger op `partner_purchase_invoices`: zodra `file_path` van leeg naar gevuld gaat en de status `pending_email_match` is, automatisch naar `pending`. Zo kan dit ook niet via een ander pad meer stilvallen.
+3. **Zichtbaar maken in plaats van verstoppen.** In `AdminPurchaseInvoices`:
+   - Badge-case voor `pending_email_match` ("Wacht op PDF", amber/oranje) zodat de statuscel nooit leeg is.
+   - Filteroptie "Wacht op PDF" toevoegen.
+   - KPI-tegel "In afwachting" laten meetellen, of een aparte teller "Wacht op PDF" met waarschuwingskleur bij ouderdom > 14 dagen.
+   - Bulk-doorsturen: `pending_email_match`-regels mét PDF meenemen; zonder PDF blokkeren met een duidelijke melding.
+4. **De 3 bestaande facturen rechttrekken.** Data-update: deze drie (PDF is al gekoppeld) naar status `pending`, zodat ze normaal doorgestuurd en in de eerstvolgende betaalbatch meegenomen kunnen worden.
+5. **Tests.** Unit-tests op de statusovergangsregel (PDF erbij → `pending`; geen PDF → blijft wachten) en op de batch-/doorstuur-selectie, zodat een factuur met PDF nooit meer buiten de betaalstroom kan vallen.
 
-## Technische details
-
-- Betrokken bestanden: `supabase/functions/_shared/commissionReconciliation.ts` (filter), `supabase/functions/get-commission-reconciliation/index.ts` (alleen indien de statuslijst `SOLD_STATUSES` moet worden verruimd), de bijbehorende testsuite.
-- Geen wijziging aan de facturatieflow zelf: regels zonder inkoopfactuur krijgen gewoon grondslag "Verkoop" als voorstel, zoals de logica al doet.
-- Let op: na de fix zullen er in één klap fors meer openstaande regels in het overzicht verschijnen (historische posten die tot nu toe onzichtbaar waren). Dat is het beoogde effect, maar het vraagt eenmalig opschonen.
+### Technische details
+- Betrokken: `supabase/functions/register-partner-invoice/index.ts` (alleen ter referentie, gedrag blijft), `src/components/admin/purchase-invoices/MatchedRegistrationBanner.tsx`, `src/pages/admin/AdminPurchaseInvoices.tsx`, `src/lib/paymentBatchGuards.ts`, nieuwe migratie voor de trigger, plus een data-update voor de 3 bestaande rijen.
+- De statuscheck-constraint (`pending`, `pending_email_match`, `forwarded`, `paid`) blijft ongewijzigd.
