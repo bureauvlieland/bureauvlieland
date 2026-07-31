@@ -391,6 +391,8 @@ export default function AdminWerkbank() {
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
                 <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} showSnoozed={showSnoozed} />
+              ) : tab === "financieel" ? (
+                <FinanceTodoList selectedProjectId={selectedId} onSelect={handleSelect} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (
