@@ -48,6 +48,8 @@ const PartnerProjectContent = ({ mode }: Props) => {
   const [showSheet, setShowSheet] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
+  const [showDismissProject, setShowDismissProject] = useState(false);
+
 
   const fetchDashboard = async () => {
     const { data: { session } } = await supabase.auth.getSession();
