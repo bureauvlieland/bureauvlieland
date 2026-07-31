@@ -384,8 +384,10 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
     const executionDate = item.execution_date ?? firstSelectedDate(project?.selected_dates);
 
+    const archived = item.commission_exempt === true;
+
     let status: ReconStatus;
-    if (COMMISSION_FREE_PARTNER_IDS.has(partnerId) || commissionPct <= 0) {
+    if (archived || COMMISSION_FREE_PARTNER_IDS.has(partnerId) || commissionPct <= 0) {
       status = "exempt";
     } else if (purchaseExcl === null) {
       status = "missing_invoice";
@@ -398,6 +400,13 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const basisAmount = purchaseExcl ?? salesExcl ?? 0;
     const exemptItem = status === "exempt";
     const commissionBasis = item.commission_basis ?? "purchase";
+    const projectCompleted = Boolean(
+      project?.completed_at ||
+        (project?.completion_status &&
+          COMPLETED_PROJECT_STATUSES.includes(project.completion_status)),
+    );
+    const readiness = readinessForItem({ status: item.status, projectCompleted });
+
 
     rows.push({
       key: `item:${item.id}`,
