@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Mail } from "lucide-react";
+import { buildWhatsAppHref, openWhatsApp } from "@/lib/whatsappLink";
 
 type FaqItem = { id: string; q: string; a: React.ReactNode; plain: string };
 

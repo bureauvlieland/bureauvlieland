@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Check, Share2, Mail, QrCode, Download } from "lucide-react";
+import { openWhatsApp } from "@/lib/whatsappLink";
 
 const WhatsAppIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">

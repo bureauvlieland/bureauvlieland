@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, Share2, Printer, Loader2 } from "lucide-react";
 import { type CartItemDetail } from "@/types/buildingBlock";
 import { trackShareProgram } from "@/lib/analytics";
+import { openWhatsApp } from "@/lib/whatsappLink";
 
 // WhatsApp icon as inline SVG
 const WhatsAppIcon = () => (
