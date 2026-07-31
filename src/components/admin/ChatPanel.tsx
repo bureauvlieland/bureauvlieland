@@ -49,13 +49,22 @@ interface ChatPanelProps {
   initialConversationId?: string | null;
   /** Tailwind height utility for the outer wrapper. Defaults to a sane embed height. */
   heightClassName?: string;
+  /**
+   * "projects" (default) shows conversations linked to a program/lodging request.
+   * "presales" shows only website/WhatsApp questions without a linked project.
+   */
+  mode?: "projects" | "presales";
 }
 
 /**
  * Embeddable chat workspace (split list / conversation). Extracted from the old
  * /admin/chat page so it can live as a tab inside the unified message center.
  */
-export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(100vh-220px)]" }: ChatPanelProps) {
+export function ChatPanel({
+  initialConversationId,
+  heightClassName = "h-[calc(100vh-220px)]",
+  mode = "projects",
+}: ChatPanelProps) {
   const {
     conversations,
     filteredConversations,
@@ -99,12 +108,16 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
     return !ref?.program && !ref?.accommodation;
   };
 
+  const presalesMode = mode === "presales";
+
+  const scopeFiltered = filteredConversations.filter((c) =>
+    presalesMode ? isPresales(c.id) : !isPresales(c.id)
+  );
+
   const channelFiltered = (
-    channelFilter === "presales"
-      ? filteredConversations.filter((c) => isPresales(c.id))
-      : channelFilter === "all"
-        ? filteredConversations.filter((c) => !isPresales(c.id))
-        : filteredConversations.filter((c) => c.source === channelFilter && !isPresales(c.id))
+    channelFilter === "all"
+      ? scopeFiltered
+      : scopeFiltered.filter((c) => c.source === channelFilter)
   )
     .slice()
     .sort((a, b) => {
@@ -114,10 +127,6 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
       return b.last_message_at.localeCompare(a.last_message_at);
     });
 
-  const presalesUnread = filteredConversations.reduce(
-    (sum, c) => (isPresales(c.id) ? sum + (unreadByConversation.get(c.id) ?? 0) : sum),
-    0
-  );
 
   const handleSendWithToast = async (text: string) => {
     try {
@@ -223,23 +232,24 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
           <Tabs value={channelFilter} onValueChange={(v) => setChannelFilter(v as ChannelFilter)}>
             <TabsList className="w-full h-8">
               <TabsTrigger value="all" className="flex-1 text-[11px] px-1">Alle</TabsTrigger>
-              <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
-                <User className="h-3 w-3" /> Klant
-              </TabsTrigger>
-              <TabsTrigger value="partner_portal" className="flex-1 text-[11px] px-1 gap-1">
-                <Building2 className="h-3 w-3" /> Partner
-              </TabsTrigger>
+              {!presalesMode && (
+                <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <User className="h-3 w-3" /> Klant
+                </TabsTrigger>
+              )}
+              {!presalesMode && (
+                <TabsTrigger value="partner_portal" className="flex-1 text-[11px] px-1 gap-1">
+                  <Building2 className="h-3 w-3" /> Partner
+                </TabsTrigger>
+              )}
               <TabsTrigger value="whatsapp" className="flex-1 text-[11px] px-1 gap-1">
                 <MessageCircle className="h-3 w-3 text-emerald-600" /> WhatsApp
               </TabsTrigger>
-              <TabsTrigger value="presales" className="flex-1 text-[11px] px-1 gap-1">
-                <Sparkles className="h-3 w-3 text-amber-500" /> Pre-sales
-                {presalesUnread > 0 && (
-                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
-                    {presalesUnread}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              {presalesMode && (
+                <TabsTrigger value="presales" className="flex-1 text-[11px] px-1 gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-500" /> Website
+                </TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
         </div>
@@ -248,10 +258,10 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
           {channelFiltered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground text-sm">
               <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              {channelFilter === "presales" ? "Geen pre-sales vragen" : "Geen gesprekken"}
+              {presalesMode ? "Geen pre-sales vragen" : "Geen gesprekken"}
             </div>
           )}
-          {channelFilter === "presales" &&
+          {presalesMode &&
             channelFiltered.map((conv) => (
               <ChatConversationItem
                 key={conv.id}
@@ -262,7 +272,7 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
                 onClick={() => setActiveConversationId(conv.id)}
               />
             ))}
-          {channelFilter !== "presales" && (() => {
+          {!presalesMode && (() => {
             type Group = {
               key: string;
               label: string;
