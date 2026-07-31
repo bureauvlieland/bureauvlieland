@@ -28,6 +28,7 @@ import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 import { OrphanTodoPanel } from "@/components/admin/werkbank/OrphanTodoPanel";
+import { FinanceTodoList } from "@/components/admin/werkbank/FinanceTodoList";
 
 type QuickView =
   | "alles"
