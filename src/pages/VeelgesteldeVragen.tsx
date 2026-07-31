@@ -256,7 +256,11 @@ export default function VeelgesteldeVragen() {
               </Button>
             </Link>
             <a
-              href="https://wa.me/31562700208"
+              href={buildWhatsAppHref({ phone: "31562700208" })}
+              onClick={(e) => {
+                e.preventDefault();
+                openWhatsApp({ phone: "31562700208" });
+              }}
               target="_blank"
               rel="noopener noreferrer"
             >
