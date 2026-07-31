@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
 import {
   Dialog,
   DialogContent,
