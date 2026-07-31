@@ -4686,6 +4686,10 @@ export type Database = {
         Args: { p_items: Json; p_request: Json }
         Returns: Json
       }
+      sync_item_invoice_fields: {
+        Args: { _item_id: string }
+        Returns: undefined
+      }
       touch_partner_last_seen: {
         Args: { p_partner_id: string }
         Returns: string
