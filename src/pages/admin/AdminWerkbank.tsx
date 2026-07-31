@@ -28,6 +28,7 @@ import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 import { OrphanTodoPanel } from "@/components/admin/werkbank/OrphanTodoPanel";
+import { FinanceTodoList } from "@/components/admin/werkbank/FinanceTodoList";
 
 type QuickView =
   | "alles"
@@ -118,8 +119,8 @@ function ProjectListRow({
 
 export default function AdminWerkbank() {
   const [params, setParams] = useSearchParams();
-  const [tab, setTab] = useState<"inbox" | "projecten">(
-    (params.get("tab") as "inbox" | "projecten") || "inbox",
+  const [tab, setTab] = useState<"inbox" | "projecten" | "financieel">(
+    (params.get("tab") as "inbox" | "projecten" | "financieel") || "inbox",
   );
   const [view, setView] = useState<QuickView>("alles");
   const [search, setSearch] = useState("");
@@ -259,6 +260,7 @@ export default function AdminWerkbank() {
               <TabsList>
                 <TabsTrigger value="inbox">Inbox</TabsTrigger>
                 <TabsTrigger value="projecten">Projecten</TabsTrigger>
+                <TabsTrigger value="financieel">Financieel / afgerond</TabsTrigger>
               </TabsList>
             </Tabs>
             <Button
@@ -298,7 +300,8 @@ export default function AdminWerkbank() {
                 </div>
               )}
 
-              {/* Type-filter (geldt voor beide tabs) */}
+              {/* Type-filter (inbox + projecten) */}
+              {tab !== "financieel" && (
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <Layers className="h-3 w-3 text-muted-foreground" />
                 {([
@@ -321,6 +324,7 @@ export default function AdminWerkbank() {
                   </button>
                 ))}
               </div>
+              )}
 
               {tab === "projecten" && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -389,6 +393,8 @@ export default function AdminWerkbank() {
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
                 <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} showSnoozed={showSnoozed} />
+              ) : tab === "financieel" ? (
+                <FinanceTodoList selectedProjectId={selectedId} onSelect={handleSelect} />
               ) : (
                 <div className="space-y-1.5 p-2">
                   {isLoading ? (
