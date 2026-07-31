@@ -11,6 +11,8 @@ export const FERRY_BLOCK_IDS = [
 export const BIKE_BLOCK_IDS = [
   "fiets-huur",
   "fietshuur-weekend",
+  // E-bike verhuur (gepubliceerde kopie van fietshuur)
+  "fiets-huur-kopie-2",
 ] as const;
 
 export const TICKET_BLOCK_IDS: readonly string[] = [
@@ -58,4 +60,42 @@ export type TicketStatus = "open" | "booked";
 
 export function getTicketStatus(item: Pick<ProgramRequestItem, "booking_reference" | "booking_document_path">): TicketStatus {
   return item.booking_reference || item.booking_document_path ? "booked" : "open";
+}
+
+/**
+ * Project statuses whose ticket items must never be counted or shown:
+ * the project itself is dead.
+ */
+export const TICKET_EXCLUDED_REQUEST_STATUSES = ["cancelled", "deleted"] as const;
+
+/**
+ * Single source of truth for "open ticket" (= actionable, must be booked):
+ * - ticket block (ferry/bike)
+ * - item not cancelled
+ * - no booking_reference and no booking_document_path yet
+ * - customer already approved the item (before approval we may not book)
+ * - parent project not cancelled/deleted
+ *
+ * Both the sidebar badge and the tickets page use this so the counts can never
+ * drift apart again.
+ */
+export function isOpenTicketRow(row: {
+  block_id?: string | null;
+  status?: string | null;
+  booking_reference?: string | null;
+  booking_document_path?: string | null;
+  customer_approved_at?: string | null;
+  request_status?: string | null;
+}): boolean {
+  if (!isTicketItem(row)) return false;
+  if (row.status === "cancelled") return false;
+  if (row.booking_reference || row.booking_document_path) return false;
+  if (!row.customer_approved_at) return false;
+  if (
+    row.request_status &&
+    (TICKET_EXCLUDED_REQUEST_STATUSES as readonly string[]).includes(row.request_status)
+  ) {
+    return false;
+  }
+  return true;
 }
