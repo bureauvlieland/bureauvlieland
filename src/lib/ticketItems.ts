@@ -11,6 +11,8 @@ export const FERRY_BLOCK_IDS = [
 export const BIKE_BLOCK_IDS = [
   "fiets-huur",
   "fietshuur-weekend",
+  // E-bike verhuur (gepubliceerde kopie van fietshuur)
+  "fiets-huur-kopie-2",
 ] as const;
 
 export const TICKET_BLOCK_IDS: readonly string[] = [
