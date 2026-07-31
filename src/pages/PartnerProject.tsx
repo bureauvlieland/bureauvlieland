@@ -21,6 +21,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
 import { cn } from "@/lib/utils";
+import { DismissProjectDialog } from "@/components/partner-portal/DismissProjectDialog";
+import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partnerProjectDismiss";
+
 
 type Mode = "activities" | "accommodation";
 
