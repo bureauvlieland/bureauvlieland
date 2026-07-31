@@ -436,8 +436,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       exemptReason: item.commission_exempt_reason ?? null,
       exemptAt: item.commission_exempt_at ?? null,
       readiness,
-
+      invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
       invoiceDate: activeInvoices[0]?.invoice_date ?? null,
+
       executionDate,
       commissionStatus: item.commission_status,
       commissionBasis,
