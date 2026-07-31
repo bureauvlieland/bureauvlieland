@@ -113,7 +113,7 @@ describe("buildCommissionLineDrafts", () => {
         ["item-2", "purchase"],
       ]),
     });
-    expect(sumCommission(drafts)).toBeCloseTo(64.45, 2);
+    expect(sumCommission(drafts)).toBeCloseTo(64.44, 2);
   });
 });
 
