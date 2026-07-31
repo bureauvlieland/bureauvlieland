@@ -319,7 +319,10 @@ export async function loadReconciliationInputs(
       customer_name: p.customer_name,
       customer_company: p.customer_company,
       selected_dates: p.selected_dates,
+      completion_status: p.completion_status ?? null,
+      completed_at: p.completed_at ?? null,
     })),
+
     ...accommodationProjects,
   ];
 
