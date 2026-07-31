@@ -90,7 +90,11 @@ interface CommissionWorklistProps {
 export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<WorklistFilter>("billable");
+  const [exemptDialogOpen, setExemptDialogOpen] = useState(false);
+  const [exemptReason, setExemptReason] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [basisOverrides, setBasisOverrides] = useState<Record<string, CommissionBasis>>({});
 
@@ -108,16 +112,33 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
   const basisFor = (row: ReconRow): CommissionBasis =>
     basisOverrides[row.key] ?? row.defaultBasis;
 
-  const rows = useMemo(() => {
-    const billable = (data?.rows ?? []).filter(isBillableRow);
+  const searched = useMemo(() => {
+    const all = data?.rows ?? [];
     const term = search.trim().toLowerCase();
-    if (!term) return billable;
-    return billable.filter((row) =>
+    if (!term) return all;
+    return all.filter((row) =>
       [row.label, row.partnerName, row.customerName, row.projectLabel, row.projectReference, row.invoiceNumber]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term)),
     );
   }, [data?.rows, search]);
+
+  const counts = useMemo(() => {
+    const base: Record<WorklistFilter, number> = {
+      billable: 0,
+      expected: 0,
+      invoiced: 0,
+      paid: 0,
+      archived: 0,
+    };
+    for (const row of searched) base[bucketForRow(row)] += 1;
+    return base;
+  }, [searched]);
+
+  const rows = useMemo(
+    () => searched.filter((row) => bucketForRow(row) === filter),
+    [searched, filter],
+  );
 
   const groups = useMemo(() => {
     const map = new Map<string, { partnerId: string; partnerName: string; rows: ReconRow[] }>();
@@ -179,6 +200,41 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
       return next;
     });
   };
+
+  const exemptMutation = useMutation({
+    mutationFn: async ({ exempt, reason }: { exempt: boolean; reason: string }) => {
+      const payload = selectedRows
+        .map((row) => {
+          const id = row.itemType === "purchase_invoice" ? row.invoiceId : row.itemId;
+          return id ? { type: row.itemType, id } : null;
+        })
+        .filter(Boolean);
+      const { data, error } = await supabase.functions.invoke("set-commission-exempt", {
+        body: { rows: payload, exempt, reason },
+      });
+      if (error) throw error;
+      if ((data as { error?: string } | null)?.error) {
+        throw new Error((data as { error: string }).error);
+      }
+      return data as { updated: number; todosClosed: number };
+    },
+    onSuccess: (result, variables) => {
+      toast({
+        title: variables.exempt ? "Commissievrij gemarkeerd" : "Teruggezet in de werklijst",
+        description: variables.exempt
+          ? `${result.updated} regel(s) gearchiveerd${result.todosClosed ? `, ${result.todosClosed} taak/taken gesloten` : ""}.`
+          : `${result.updated} regel(s) weer actief.`,
+      });
+      setSelected(new Set());
+      setExemptDialogOpen(false);
+      setExemptReason("");
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Actie mislukt", description: err.message, variant: "destructive" });
+    },
+  });
 
   const createInvoice = () => {
     if (selectedRows.length === 0) return;
