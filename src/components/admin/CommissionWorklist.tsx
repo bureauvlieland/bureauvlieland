@@ -292,10 +292,29 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
 
   const missingInvoiceCount = rows.filter((row) => row.status === "missing_invoice").length;
   const unlinkedCount = rows.filter((row) => row.itemType === "purchase_invoice").length;
-  const deviationCount = rows.filter((row) => row.status === "deviation").length;
+  const bucketTotal = rows.reduce((sum, row) => sum + commissionForBasis(row, basisFor(row)), 0);
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {FILTER_ORDER.map((key) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={filter === key ? "default" : "outline"}
+            onClick={() => {
+              setFilter(key);
+              setSelected(new Set());
+            }}
+          >
+            {FILTER_LABELS[key]}
+            <Badge variant="secondary" className="ml-2">
+              {counts[key]}
+            </Badge>
+          </Button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -316,10 +335,10 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Verkoop ≠ inkoop
+              Commissie in beeld
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{deviationCount}</CardContent>
+          <CardContent className="text-2xl font-bold">{formatCurrency(bucketTotal)}</CardContent>
         </Card>
       </div>
 
@@ -338,10 +357,27 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
             <span className="text-sm text-muted-foreground">
               {selected.size} geselecteerd · {formatCurrency(selectedTotal)} commissie
             </span>
-            <Button onClick={createInvoice}>
-              <FileText className="h-4 w-4 mr-2" />
-              Commissiefactuur maken
-            </Button>
+            {filter === "billable" && (
+              <Button onClick={createInvoice}>
+                <FileText className="h-4 w-4 mr-2" />
+                Commissiefactuur maken
+              </Button>
+            )}
+            {filter === "archived" ? (
+              <Button
+                variant="outline"
+                disabled={exemptMutation.isPending}
+                onClick={() => exemptMutation.mutate({ exempt: false, reason: "" })}
+              >
+                <ArchiveRestore className="h-4 w-4 mr-2" />
+                Terugzetten
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setExemptDialogOpen(true)}>
+                <Archive className="h-4 w-4 mr-2" />
+                Commissievrij markeren
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -349,7 +385,7 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
       {groups.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Geen regels om te factureren.
+            Geen regels in "{FILTER_LABELS[filter]}".
           </CardContent>
         </Card>
       )}
@@ -522,7 +558,40 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
         );
       })}
 
-      {rows.length > 0 && (
+      <Dialog open={exemptDialogOpen} onOpenChange={setExemptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Commissievrij markeren</DialogTitle>
+            <DialogDescription>
+              {selected.size} regel(s) verdwijnen uit de actieve lijst en blijven terugvindbaar
+              onder "Commissievrij / gearchiveerd". Openstaande commissietaken worden gesloten.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="exempt-reason">Reden (verplicht)</Label>
+            <Textarea
+              id="exempt-reason"
+              value={exemptReason}
+              onChange={(event) => setExemptReason(event.target.value)}
+              placeholder="Bijv. afspraak zonder commissie, project geannuleerd, al via Snelstart verrekend"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExemptDialogOpen(false)}>
+              Annuleren
+            </Button>
+            <Button
+              disabled={exemptReason.trim().length < 3 || exemptMutation.isPending}
+              onClick={() => exemptMutation.mutate({ exempt: true, reason: exemptReason.trim() })}
+            >
+              {exemptMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Markeren
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {rows.length > 0 && filter === "billable" && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <Check className="h-3 w-3" />
           Standaard rekent de lijst met de inkoopfactuur wanneer die bekend is, anders met onze
