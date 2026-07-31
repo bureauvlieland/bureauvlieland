@@ -481,8 +481,13 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       purchaseCommission,
       defaultBasis: "purchase",
       commissionExempt: exempt,
+      exemptReason: inv.commission_exempt_reason ?? null,
+      exemptAt: inv.commission_exempt_at ?? null,
+      // Losse inkoopfacturen zijn per definitie geleverd werk: altijd factureerbaar.
+      readiness: "billable",
       invoiceNumber: inv.invoice_number,
       invoiceDate: inv.invoice_date,
+
       executionDate: null,
       commissionStatus: inv.commission_invoiced_at ? "invoiced" : null,
       commissionBasis: null,
