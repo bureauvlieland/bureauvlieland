@@ -84,24 +84,23 @@ Deno.serve(async (req) => {
       return { ok: r.ok, status: r.status, body: await parseBody(r) };
     };
 
-    const post = async (url: string, form?: Record<string, string>, jsonBody?: unknown) => {
+    const post = async (
+      url: string,
+      form?: Record<string, string>,
+      jsonBody?: unknown,
+      useAccountAuth = false,
+    ) => {
       const r = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: basic,
+          Authorization: useAccountAuth && basicAccount ? basicAccount : basic,
           "Content-Type": jsonBody ? "application/json" : "application/x-www-form-urlencoded",
         },
         body: jsonBody ? JSON.stringify(jsonBody) : new URLSearchParams(form ?? {}).toString(),
       });
-      const text = await r.text();
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        parsed = text.slice(0, 500);
-      }
-      return { ok: r.ok, status: r.status, body: parsed as Record<string, unknown> };
+      return { ok: r.ok, status: r.status, body: await parseBody(r) };
     };
+
 
     const payload = await req.json().catch(() => ({}));
     const action = String((payload as any)?.action ?? "inspect");
