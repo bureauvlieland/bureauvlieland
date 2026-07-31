@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -8,6 +8,8 @@ import {
   Check,
   FileText,
   Link2,
+  Archive,
+  ArchiveRestore,
   Link2Off,
   Loader2,
   Search,
@@ -19,13 +21,25 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   basisAmountForBasis,
   commissionForBasis,
+  isArchivedRow,
   isBillableRow,
+  isExpectedRow,
   type CommissionBasis,
   type ReconRow,
 } from "@/lib/commissionReconciliation";
@@ -41,6 +55,28 @@ const TYPE_LABELS: Record<ReconRow["itemType"], string> = {
   accommodation: "Logies",
   purchase_invoice: "Losse inkoopfactuur",
 };
+
+type WorklistFilter = "billable" | "expected" | "invoiced" | "paid" | "archived";
+
+const FILTER_LABELS: Record<WorklistFilter, string> = {
+  billable: "Te factureren",
+  expected: "Verwacht",
+  invoiced: "Gefactureerd",
+  paid: "Betaald",
+  archived: "Commissievrij / gearchiveerd",
+};
+
+const FILTER_ORDER: WorklistFilter[] = ["billable", "expected", "invoiced", "paid", "archived"];
+
+/** In welke filterbucket hoort deze regel? Precies één per regel. */
+export function bucketForRow(row: ReconRow): WorklistFilter {
+  if (isArchivedRow(row)) return "archived";
+  if (row.commissionStatus === "paid") return "paid";
+  if (row.commissionStatus === "invoiced") return "invoiced";
+  if (isBillableRow(row)) return "billable";
+  if (isExpectedRow(row)) return "expected";
+  return "archived";
+}
 
 interface CommissionWorklistProps {
   /** Optioneel: alleen regels van deze partner tonen. */
