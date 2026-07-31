@@ -175,12 +175,57 @@ export function basisAmountForBasis(
  */
 export const COMMISSION_SETTLED_STATUSES = ["invoiced", "paid"];
 
-/** Regels die nog gefactureerd moeten worden (commissie niet gefactureerd/betaald en niet commissievrij). */
+/**
+ * Itemstatussen waarbij het werk daadwerkelijk is uitgevoerd. Pas dan mag de regel
+ * in "Te factureren" staan; daarvoor is het een verwachte commissie.
+ */
+export const EXECUTED_ITEM_STATUSES = ["executed", "invoiced", "completed"];
+
+/** Projectafronding-statussen waarbij het project de facturatiefase in is. */
+export const COMPLETED_PROJECT_STATUSES = [
+  "ready_for_invoice",
+  "partially_invoiced",
+  "fully_invoiced",
+  "completed",
+];
+
+/**
+ * Is dit onderdeel/logies al uitgevoerd (en dus factureerbaar), of nog verwacht?
+ *
+ * Bewust niet op datum: een project dat nog moet plaatsvinden levert een verwachte
+ * commissie op, ook als de datum inmiddels verstreken is maar niets is afgerond.
+ */
+export function readinessForItem(input: {
+  status?: string | null;
+  projectCompleted?: boolean | null;
+  hasPurchaseInvoice?: boolean | null;
+}): ReconReadiness {
+  if (input.status && EXECUTED_ITEM_STATUSES.includes(input.status)) return "billable";
+  if (input.projectCompleted) return "billable";
+  return "expected";
+}
+
+/** Regels die nog gefactureerd moeten worden: uitgevoerd, niet commissievrij en niet afgehandeld. */
 export function isBillableRow(row: ReconRow): boolean {
+  if (row.readiness !== "billable") return false;
   if (row.commissionExempt) return false;
   if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
   return row.commissionPercentage > 0;
 }
+
+/** Regels die nog moeten plaatsvinden: verwachte commissie, nog niet factureerbaar. */
+export function isExpectedRow(row: ReconRow): boolean {
+  if (row.readiness !== "expected") return false;
+  if (row.commissionExempt) return false;
+  if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
+  return row.commissionPercentage > 0;
+}
+
+/** Regels die de admin definitief buiten de commissieflow heeft gezet. */
+export function isArchivedRow(row: ReconRow): boolean {
+  return row.commissionExempt === true;
+}
+
 
 
 /** Partners waarvoor commissie principieel niet van toepassing is. */
