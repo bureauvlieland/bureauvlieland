@@ -65,7 +65,7 @@ export function WeekPlanningView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("program_requests")
-        .select("id, customer_name, customer_company, number_of_people, selected_dates, reference_number, status")
+        .select("id, customer_name, customer_company, number_of_people, selected_dates, reference_number, status, quote_status")
         .eq("status", "active");
       if (error) throw error;
       return data || [];
