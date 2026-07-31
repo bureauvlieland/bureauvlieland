@@ -42,6 +42,7 @@ import {
   Settings,
   Inbox,
   MessageCircle,
+  Sparkles,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
