@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCartSafe } from "@/contexts/CartContext";
+import { buildWhatsAppHref, openWhatsApp } from "@/lib/whatsappLink";
 
 const WA_NUMBER = "31562700208"; // +31 562 700208
 const STORAGE_KEY = "bv_presales_widget";
@@ -92,9 +93,14 @@ export const PreSalesChatWidget = () => {
 
   const cartCount = cart?.cartItems.length ?? 0;
   const itemJustAdded = cart?.itemJustAdded;
-  const waHref = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
-    `Hallo Bureau Vlieland, ik heb een vraag via bureauvlieland.nl (${location.pathname}).`
-  )}`;
+  const waHref = buildWhatsAppHref({
+    phone: WA_NUMBER,
+    text: `Hallo Bureau Vlieland, ik heb een vraag via bureauvlieland.nl (${location.pathname}).`,
+  });
+  const openWa = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openWhatsApp(waHref);
+  };
 
   return (
     <>
@@ -160,7 +166,7 @@ export const PreSalesChatWidget = () => {
                   We reageren op <strong>{email}</strong> zo snel mogelijk. Liever direct contact?
                 </p>
                 <div className="flex flex-col gap-2 mt-3">
-                  <a href={waHref} target="_blank" rel="noopener noreferrer">
+                  <a href={waHref} onClick={openWa} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2">
                       <MessageCircle className="h-4 w-4" /> Verder chatten via WhatsApp
                     </Button>
@@ -212,11 +218,18 @@ export const PreSalesChatWidget = () => {
                     <Send className="h-4 w-4" />
                     {submitting ? "Versturen…" : "Verstuur"}
                   </Button>
-                  <a href={waHref} target="_blank" rel="noopener noreferrer">
+                  <a href={waHref} onClick={openWa} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" className="w-full gap-2">
                       <MessageCircle className="h-4 w-4" /> Chat via WhatsApp
                     </Button>
                   </a>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Opent WhatsApp niet? Bel of app ons op{" "}
+                    <a href="tel:+31562700208" className="underline">
+                      +31 562 700 208
+                    </a>
+                    .
+                  </p>
                 </div>
               </>
             )}

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Mail } from "lucide-react";
+import { buildWhatsAppHref, openWhatsApp } from "@/lib/whatsappLink";
 
 type FaqItem = { id: string; q: string; a: React.ReactNode; plain: string };
 
@@ -255,7 +256,11 @@ export default function VeelgesteldeVragen() {
               </Button>
             </Link>
             <a
-              href="https://wa.me/31562700208"
+              href={buildWhatsAppHref({ phone: "31562700208" })}
+              onClick={(e) => {
+                e.preventDefault();
+                openWhatsApp({ phone: "31562700208" });
+              }}
               target="_blank"
               rel="noopener noreferrer"
             >

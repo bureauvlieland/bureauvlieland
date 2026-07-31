@@ -1,46 +1,30 @@
-## Wat er nu misgaat (geverifieerd in de database)
+## Wat er speelt
 
-Zeezicht Vlieland heeft 3 inkoopfacturen. Twee daarvan zijn **logies**-facturen, en logies wordt niet overal op dezelfde manier meegerekend:
+De WhatsApp-knoppen linken nu naar `https://wa.me/31562700208?text=...`. Op desktop stuurt `wa.me` door naar `api.whatsapp.com/send`, en die pagina weigert te laden zodra de navigatie *niet* in een echt nieuw tabblad gebeurt (bijvoorbeeld binnen een iframe zoals het Lovable-preview­venster, of wanneer de popup geblokkeerd wordt). Dat geeft precies `ERR_BLOCKED_BY_RESPONSE`.
 
-| Factuur | Werkelijkheid | Werklijst (Commissie Beheer) | Werkbank-taak |
-|---|---|---|---|
-| 202602844 (BV-2604-0004) | gekoppeld aan programma-onderdeel | correct | geen |
-| 202502225 (€ 5.464,70) | hoort bij logies LOG-2603-0002 (Salure) — daar staat het factuurnummer ook op | correct gematcht | **onterechte taak "niet gekoppeld"** |
-| 202502217 (€ 2.680,19) | hoort bij logies LOG-2602-0002 (Artcadia) — maar dat factuurnummer staat daar níet op | **dubbel geteld**: logies-regel "Ontbrekend" (€ 267,29) én losse factuurregel (€ 268,02) | geen |
+Bevestigd in de code:
+- `src/components/site/PreSalesChatWidget.tsx` — twee knoppen (regel 163 en 215) met `wa.me`-link.
+- `src/pages/VeelgesteldeVragen.tsx` (regel 258) — zelfde soort link.
+- `src/components/configurator/ShareProgramDialog.tsx` en `src/components/customer-portal/ShareWithParticipantsDialog.tsx` gebruiken `window.open("https://wa.me/?text=...")` voor delen — zelfde risico.
 
-Oorzaken:
-1. De taakgenerator (`flag-missing-partner-invoices`) en de taakopschoner (`reconcile-admin-todos`) kijken **alleen naar programma-onderdelen**, terwijl de werklijst (`get-commission-reconciliation`) óók logies-offertes meeneemt. Zelfde rekenmodule, andere invoer → andere uitkomst. Een logies-factuur is daar per definitie "niet gekoppeld", en de taak kan ook nooit vanzelf sluiten.
-2. Bij het registreren van een inkoopfactuur op een logies wordt het factuurnummer niet altijd op de logies-offerte vastgelegd; alleen dat nummer maakt de match. Bij 202502217 ontbreekt dat, waardoor dezelfde euro's twee keer in de werklijst staan.
+## Wat ik ga bouwen
 
-## Aanpak: één gedeelde invoer voor alle drie de plekken
+1. **Eén hulpmodule** `src/lib/whatsappLink.ts`
+   - `buildWhatsAppHref({ phone, text })`: kiest automatisch de juiste variant.
+     - Desktop → `https://web.whatsapp.com/send?phone=...&text=...` (opent WhatsApp Web/Desktop en wordt niet geblokkeerd).
+     - Mobiel/tablet → `https://wa.me/<nummer>?text=...` (opent de app).
+   - `openWhatsApp(href)`: opent via `window.open(href, "_blank", "noopener")` en valt terug op `window.top`-navigatie als de popup geblokkeerd wordt, zodat er nooit een dood tabblad ontstaat.
 
-**1. Gedeelde dataloader**
-Een nieuwe gedeelde module haalt precies één keer op wat de reconciliatie nodig heeft: programma-onderdelen, logies-offertes, inkoopfacturen, allocaties, projecten en partners. Werklijst, taakgenerator en taakopschoner gaan alle drie via die loader. Daarmee is de werklijst per definitie leidend en kunnen taken niet meer afwijken.
+2. **Widget aanpassen** (`PreSalesChatWidget.tsx`)
+   - Beide WhatsApp-knoppen gebruiken de nieuwe helper.
+   - Fallback-regel eronder: het telefoonnummer als klikbare `tel:`-link plus een "kopieer nummer"-knop, zodat de bezoeker altijd verder kan als WhatsApp niet opent.
 
-**2. Taken kloppen weer**
-- "Inkoopfactuur niet gekoppeld" ontstaat alleen nog als de factuur ook echt aan geen enkel programma-onderdeel én geen enkele logies-offerte hangt.
-- De opschoner sluit zo'n taak zodra de koppeling er is (via onderdeel, allocatie, of factuurnummer op de logies-offerte) of de factuur commissievrij is.
-- De bestaande onterechte taak voor 202502225 wordt bij de eerstvolgende opschoonronde automatisch gesloten; ik sluit hem ook direct.
+3. **Overige plekken gelijktrekken**
+   - FAQ-pagina en de twee deel-dialogen (configurator + klantportaal) gaan door dezelfde helper, zodat er één gedrag is.
 
-**3. Koppelen wordt echt vastgelegd (geen dubbeltellingen meer)**
-- Bij het registreren/koppelen van een inkoopfactuur op een logies wordt het factuurnummer en -bedrag voortaan op de logies-offerte gezet, zodat verkoop en inkoop op één regel samenkomen.
-- Op een "losse inkoopfactuur"-regel in de werklijst komt een actie **"Koppel aan logies/onderdeel"**, met suggesties van openstaande regels van dezelfde partner (zelfde project of vergelijkbaar bedrag).
-- De werklijst waarschuwt zichtbaar wanneer een losse factuur waarschijnlijk hoort bij een regel die als "Ontbrekend" staat, zodat het niet stilzwijgend dubbel geteld wordt.
+4. **Test**
+   - Vitest-test op `buildWhatsAppHref`: juiste host per user-agent, nummer zonder `+`/spaties, tekst correct ge-encodeerd, en delen-zonder-nummer (alleen tekst) blijft werken.
 
-**4. Data rechtzetten**
-Factuur 202502217 wordt gekoppeld aan LOG-2602-0002 (Artcadia / Katalys). Daarna toont de werklijst voor Zeezicht 3 regels in plaats van 4, zonder "Ontbrekend" en zonder losse factuur. Ik controleer dezelfde situatie bij alle andere partners en rapporteer wat ik aantref voordat ik daar iets aanpas.
+## Technische noot
 
-**5. Overzicht Inkoopfacturen consistent**
-Bij een logies-factuur toont de kolom Project voortaan de logies-referentie (LOG-…) naast/in plaats van de programma-referentie, zodat het overzicht en de werklijst dezelfde herkomst laten zien.
-
-**6. Tests die de waarheid bewaken**
-- Contract-test: taakgenerator en werklijst produceren voor dezelfde invoer identieke statussen (inclusief logies).
-- Test: sluitcriteria van de opschoner spiegelen exact de aanmaakcriteria.
-- Test: een factuur die aan een logies-offerte hangt levert nooit tegelijk een "Ontbrekend"- én een "losse factuur"-regel op.
-
-## Technische details
-
-- Nieuw: `supabase/functions/_shared/commissionReconciliationData.ts` met `loadReconciliationInputs(supabase, { partnerId? })`.
-- Aangepast: `get-commission-reconciliation`, `flag-missing-partner-invoices`, `reconcile-admin-todos` gebruiken die loader; `invoiceIsLinked` krijgt de logies-factuurnummers mee via dezelfde `linkedInvoiceNumbers`-index.
-- `accommodation_quotes.invoiced_number` / `invoiced_amount` worden gevuld bij registratie en bij de nieuwe koppelactie (edge function + UI-dialoog in `CommissionWorklist.tsx`).
-- Datacorrectie via losse data-update, geen schemawijziging nodig.
+`web.whatsapp.com/send` is de door WhatsApp bedoelde desktop-ingang en stelt geen frame-blokkerende headers in op de doorstuur, waardoor de melding verdwijnt. In het preview-venster van Lovable blijft een echte app-koppeling beperkt (iframe), maar met de popup-fallback krijgt de bezoeker daar nu een werkende link in plaats van een foutpagina; op de live site werkt het volledig.
