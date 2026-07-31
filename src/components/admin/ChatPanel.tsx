@@ -93,10 +93,17 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
     }
   }, [initialConversationId, setActiveConversationId]);
 
+  const isPresales = (id: string) => {
+    const ref = projectRefs[id];
+    return !ref?.program && !ref?.accommodation;
+  };
+
   const channelFiltered = (
-    channelFilter === "all"
-      ? filteredConversations
-      : filteredConversations.filter((c) => c.source === channelFilter)
+    channelFilter === "presales"
+      ? filteredConversations.filter((c) => isPresales(c.id))
+      : channelFilter === "all"
+        ? filteredConversations.filter((c) => !isPresales(c.id))
+        : filteredConversations.filter((c) => c.source === channelFilter && !isPresales(c.id))
   )
     .slice()
     .sort((a, b) => {
@@ -105,6 +112,11 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
       if ((ua > 0) !== (ub > 0)) return ua > 0 ? -1 : 1;
       return b.last_message_at.localeCompare(a.last_message_at);
     });
+
+  const presalesUnread = filteredConversations.reduce(
+    (sum, c) => (isPresales(c.id) ? sum + (unreadByConversation.get(c.id) ?? 0) : sum),
+    0
+  );
 
   const handleSendWithToast = async (text: string) => {
     try {
