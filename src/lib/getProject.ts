@@ -295,6 +295,8 @@ export async function listProjectsForWerkbank(opts: {
         ? (p.selected_dates as unknown[]).map(String)
         : [],
       numberOfPeople: p.number_of_people ?? 0,
+      quoteStatus: p.quote_status ?? null,
+
       pipeline: overallPipeline,
       programPipeline,
       lodgingPipeline,
