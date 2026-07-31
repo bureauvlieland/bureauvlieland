@@ -231,6 +231,14 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
               <TabsTrigger value="whatsapp" className="flex-1 text-[11px] px-1 gap-1">
                 <MessageCircle className="h-3 w-3 text-emerald-600" /> WhatsApp
               </TabsTrigger>
+              <TabsTrigger value="presales" className="flex-1 text-[11px] px-1 gap-1">
+                <Sparkles className="h-3 w-3 text-amber-500" /> Pre-sales
+                {presalesUnread > 0 && (
+                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 min-w-4 flex items-center justify-center">
+                    {presalesUnread}
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -239,9 +247,21 @@ export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(10
           {channelFiltered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground text-sm">
               <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              Geen gesprekken
+              {channelFilter === "presales" ? "Geen pre-sales vragen" : "Geen gesprekken"}
             </div>
           )}
+          {channelFilter === "presales" &&
+            channelFiltered.map((conv) => (
+              <ChatConversationItem
+                key={conv.id}
+                conversation={conv}
+                isActive={activeConversationId === conv.id}
+                projectRef={projectRefs[conv.id]}
+                unreadCount={unreadByConversation.get(conv.id) ?? 0}
+                onClick={() => setActiveConversationId(conv.id)}
+              />
+            ))}
+          {channelFilter !== "presales" && (
           {(() => {
             type Group = {
               key: string;
