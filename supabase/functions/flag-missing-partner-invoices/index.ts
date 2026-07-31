@@ -19,9 +19,13 @@ const euro = (n: number) =>
  * (niet-gekoppelde factuur); rijen zonder datum worden niet gesignaleerd.
  */
 export function shouldFlag(
-  row: Pick<ReconRow, "status" | "ageDays">,
+  row: Pick<ReconRow, "status" | "ageDays"> & Partial<Pick<ReconRow, "readiness" | "commissionExempt">>,
   cfg: { missingDays: number; unlinkedDays: number },
 ): boolean {
+  // Commissievrij gemarkeerde regels en projecten die nog moeten plaatsvinden
+  // (verwachte commissie) leveren geen taak op.
+  if (row.commissionExempt) return false;
+  if (row.readiness === "expected") return false;
   if (row.ageDays === null || row.ageDays === undefined) return false;
   if (row.status === "missing_invoice") return row.ageDays >= cfg.missingDays;
   if (row.status === "unlinked_invoice") return row.ageDays >= cfg.unlinkedDays;
