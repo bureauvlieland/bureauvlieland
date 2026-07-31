@@ -260,6 +260,7 @@ export default function AdminWerkbank() {
               <TabsList>
                 <TabsTrigger value="inbox">Inbox</TabsTrigger>
                 <TabsTrigger value="projecten">Projecten</TabsTrigger>
+                <TabsTrigger value="financieel">Financieel / afgerond</TabsTrigger>
               </TabsList>
             </Tabs>
             <Button
