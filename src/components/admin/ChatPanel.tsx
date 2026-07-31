@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 
 
-type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
+type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp" | "presales";
 
 interface ChatPanelProps {
   /** Optionally pin a specific conversation when the panel mounts. */
@@ -246,7 +246,7 @@ export function ChatPanel({
                 <MessageCircle className="h-3 w-3 text-emerald-600" /> WhatsApp
               </TabsTrigger>
               {presalesMode && (
-                <TabsTrigger value="customer_portal" className="flex-1 text-[11px] px-1 gap-1">
+                <TabsTrigger value="presales" className="flex-1 text-[11px] px-1 gap-1">
                   <Sparkles className="h-3 w-3 text-amber-500" /> Website
                 </TabsTrigger>
               )}
