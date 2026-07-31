@@ -21,8 +21,12 @@ export type ReconStatus =
 /** Soort regel in de werklijst. */
 export type ReconItemType = "activity" | "accommodation" | "purchase_invoice";
 
+/** Is de regel al factureerbaar (uitgevoerd) of nog een verwachte commissie? */
+export type ReconReadiness = "expected" | "billable";
+
 /** Grondslag voor de commissieberekening. */
 export type CommissionBasis = "purchase" | "sales";
+
 
 
 export interface ReconSettings {
@@ -56,6 +60,10 @@ export interface ReconItemInput {
   execution_date?: string | null;
   /** "activity" (programma-onderdeel) of "accommodation" (logies-offerte). */
   item_type?: ReconItemType;
+  /** Admin heeft deze regel definitief commissievrij (gearchiveerd) gemarkeerd. */
+  commission_exempt?: boolean | null;
+  commission_exempt_reason?: string | null;
+  commission_exempt_at?: string | null;
 }
 
 
@@ -69,6 +77,8 @@ export interface ReconInvoiceInput {
   amount_excl_vat: number | null;
   amount_incl_vat: number | null;
   commission_exempt?: boolean | null;
+  commission_exempt_reason?: string | null;
+  commission_exempt_at?: string | null;
   created_at?: string | null;
   /** Gezet zodra deze inkoopfactuur op een commissiefactuur is meegenomen. */
   commission_invoiced_at?: string | null;
@@ -82,7 +92,11 @@ export interface ReconProjectInput {
   customer_name: string | null;
   customer_company: string | null;
   selected_dates?: unknown;
+  /** Afrondingsfase van het project (ready_for_invoice, fully_invoiced, …). */
+  completion_status?: string | null;
+  completed_at?: string | null;
 }
+
 
 export interface ReconPartnerInput {
   id: string;
@@ -123,8 +137,14 @@ export interface ReconRow {
   purchaseCommission: number | null;
   /** Voorgestelde grondslag: inkoop indien beschikbaar, anders verkoop. */
   defaultBasis: CommissionBasis;
-  /** True als deze regel commissievrij is (partner of factuur). */
+  /** True als deze regel commissievrij is (partner, factuur of admin-archivering). */
   commissionExempt: boolean;
+  /** Reden die de admin gaf bij het commissievrij markeren. */
+  exemptReason: string | null;
+  /** Moment van commissievrij markeren. */
+  exemptAt: string | null;
+  /** Factureerbaar (uitgevoerd) of nog verwacht. */
+  readiness: ReconReadiness;
   invoiceNumber: string | null;
   invoiceDate: string | null;
   executionDate: string | null;
@@ -133,6 +153,7 @@ export interface ReconRow {
   /** Aantal dagen sinds uitvoering (missing) of registratie (unlinked). */
   ageDays: number | null;
 }
+
 
 /** Voorgestelde grondslag voor een regel. */
 export function defaultBasisForRow(row: {
@@ -175,12 +196,57 @@ export function basisAmountForBasis(
  */
 export const COMMISSION_SETTLED_STATUSES = ["invoiced", "paid"];
 
-/** Regels die nog gefactureerd moeten worden (commissie niet gefactureerd/betaald en niet commissievrij). */
+/**
+ * Itemstatussen waarbij het werk daadwerkelijk is uitgevoerd. Pas dan mag de regel
+ * in "Te factureren" staan; daarvoor is het een verwachte commissie.
+ */
+export const EXECUTED_ITEM_STATUSES = ["executed", "invoiced", "completed"];
+
+/** Projectafronding-statussen waarbij het project de facturatiefase in is. */
+export const COMPLETED_PROJECT_STATUSES = [
+  "ready_for_invoice",
+  "partially_invoiced",
+  "fully_invoiced",
+  "completed",
+];
+
+/**
+ * Is dit onderdeel/logies al uitgevoerd (en dus factureerbaar), of nog verwacht?
+ *
+ * Bewust niet op datum: een project dat nog moet plaatsvinden levert een verwachte
+ * commissie op, ook als de datum inmiddels verstreken is maar niets is afgerond.
+ */
+export function readinessForItem(input: {
+  status?: string | null;
+  projectCompleted?: boolean | null;
+  hasPurchaseInvoice?: boolean | null;
+}): ReconReadiness {
+  if (input.status && EXECUTED_ITEM_STATUSES.includes(input.status)) return "billable";
+  if (input.projectCompleted) return "billable";
+  return "expected";
+}
+
+/** Regels die nog gefactureerd moeten worden: uitgevoerd, niet commissievrij en niet afgehandeld. */
 export function isBillableRow(row: ReconRow): boolean {
+  if (row.readiness !== "billable") return false;
   if (row.commissionExempt) return false;
   if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
   return row.commissionPercentage > 0;
 }
+
+/** Regels die nog moeten plaatsvinden: verwachte commissie, nog niet factureerbaar. */
+export function isExpectedRow(row: ReconRow): boolean {
+  if (row.readiness !== "expected") return false;
+  if (row.commissionExempt) return false;
+  if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
+  return row.commissionPercentage > 0;
+}
+
+/** Regels die de admin definitief buiten de commissieflow heeft gezet. */
+export function isArchivedRow(row: ReconRow): boolean {
+  return row.commissionExempt === true;
+}
+
 
 
 /** Partners waarvoor commissie principieel niet van toepassing is. */
@@ -318,8 +384,10 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
     const executionDate = item.execution_date ?? firstSelectedDate(project?.selected_dates);
 
+    const archived = item.commission_exempt === true;
+
     let status: ReconStatus;
-    if (COMMISSION_FREE_PARTNER_IDS.has(partnerId) || commissionPct <= 0) {
+    if (archived || COMMISSION_FREE_PARTNER_IDS.has(partnerId) || commissionPct <= 0) {
       status = "exempt";
     } else if (purchaseExcl === null) {
       status = "missing_invoice";
@@ -332,6 +400,13 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const basisAmount = purchaseExcl ?? salesExcl ?? 0;
     const exemptItem = status === "exempt";
     const commissionBasis = item.commission_basis ?? "purchase";
+    const projectCompleted = Boolean(
+      project?.completed_at ||
+        (project?.completion_status &&
+          COMPLETED_PROJECT_STATUSES.includes(project.completion_status)),
+    );
+    const readiness = readinessForItem({ status: item.status, projectCompleted });
+
 
     rows.push({
       key: `item:${item.id}`,
@@ -358,8 +433,12 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         : purchaseExcl * (commissionPct / 100),
       defaultBasis: defaultBasisForRow({ purchaseExclVat: purchaseExcl, commissionBasis }),
       commissionExempt: exemptItem,
+      exemptReason: item.commission_exempt_reason ?? null,
+      exemptAt: item.commission_exempt_at ?? null,
+      readiness,
       invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
       invoiceDate: activeInvoices[0]?.invoice_date ?? null,
+
       executionDate,
       commissionStatus: item.commission_status,
       commissionBasis,
@@ -402,8 +481,13 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       purchaseCommission,
       defaultBasis: "purchase",
       commissionExempt: exempt,
+      exemptReason: inv.commission_exempt_reason ?? null,
+      exemptAt: inv.commission_exempt_at ?? null,
+      // Losse inkoopfacturen zijn per definitie geleverd werk: altijd factureerbaar.
+      readiness: "billable",
       invoiceNumber: inv.invoice_number,
       invoiceDate: inv.invoice_date,
+
       executionDate: null,
       commissionStatus: inv.commission_invoiced_at ? "invoiced" : null,
       commissionBasis: null,

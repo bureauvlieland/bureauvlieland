@@ -6,6 +6,9 @@ import {
   invoiceIsLinked,
   invoiceKey,
   isBillableRow,
+  isExpectedRow,
+  isArchivedRow,
+  readinessForItem,
   exclVatFromIncl,
   firstSelectedDate,
   daysSince,
@@ -284,6 +287,34 @@ describe("summarizeReconciliation", () => {
   });
 });
 
+describe("readiness: verwacht vs factureerbaar", () => {
+  it("is factureerbaar bij uitgevoerde itemstatus", () => {
+    expect(readinessForItem({ status: "executed" })).toBe("billable");
+    expect(readinessForItem({ status: "invoiced" })).toBe("billable");
+  });
+
+  it("is verwacht zolang het project nog niet is afgerond", () => {
+    expect(readinessForItem({ status: "confirmed" })).toBe("expected");
+    expect(readinessForItem({ status: "confirmed", projectCompleted: true })).toBe("billable");
+  });
+});
+
+describe("commissievrij markeren", () => {
+  it("haalt een gearchiveerde regel uit zowel te factureren als verwacht", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ id: "ex-1", commission_exempt: true, commission_exempt_reason: "Afspraak" })],
+      invoices: [],
+      projects,
+      partners,
+    });
+    expect(rows).toHaveLength(1);
+    expect(isArchivedRow(rows[0])).toBe(true);
+    expect(isBillableRow(rows[0])).toBe(false);
+    expect(isExpectedRow(rows[0])).toBe(false);
+    expect(rows[0].exemptReason).toBe("Afspraak");
+  });
+});
+
 describe("regressie: partnerregels met default commissiestatus blijven zichtbaar", () => {
   // Reproductie van de Zuiver Traiteur-casus: 12 verkochte onderdelen, waarvan er
   // slechts 1 een geregistreerde inkoopfactuur (en dus status "pending") heeft.
@@ -338,8 +369,26 @@ describe("regressie: partnerregels met default commissiestatus blijven zichtbaar
     expect(rows.filter((r) => r.status === "missing_invoice")).toHaveLength(11);
   });
 
-  it("houdt alle 12 regels factureerbaar in de werklijst", () => {
-    expect(rows.filter(isBillableRow)).toHaveLength(12);
+  it("houdt alle 12 regels zichtbaar (factureerbaar of verwacht)", () => {
+    const zuiver = rows.filter((r) => r.partnerId === "zuiver");
+    expect(zuiver.filter((r) => isBillableRow(r) || isExpectedRow(r))).toHaveLength(12);
+  });
+
+  it("zet niet-uitgevoerde onderdelen op verwacht en uitgevoerde op factureerbaar", () => {
+    // 6 onderdelen staan op "confirmed" (i % 2 === 0 => 0,2,4,6,8,10) plus het
+    // gefactureerde onderdeel op "confirmed": samen 7 verwachte regels.
+    expect(rows.filter(isExpectedRow)).toHaveLength(7);
+    expect(rows.filter(isBillableRow)).toHaveLength(5);
+  });
+
+  it("maakt alles factureerbaar zodra het project is afgerond", () => {
+    const completed = buildReconciliationRows({
+      items: [...soldItems, invoicedItem],
+      invoices: [],
+      projects: [{ ...projects[0], completion_status: "completed" }],
+      partners,
+    });
+    expect(completed.filter((r) => r.partnerId === "zuiver").every(isBillableRow)).toBe(true);
   });
 
   it("gebruikt het partnerpercentage als het onderdeel er geen heeft", () => {

@@ -91,7 +91,8 @@ export async function loadReconciliationInputs(
     .select(
       "id, request_id, provider_id, block_name, quoted_price, vat_rate, commission_percentage, " +
         "commission_status, commission_basis, invoiced_number, invoiced_amount, " +
-        "status, block_type, proposed_date",
+        "status, block_type, proposed_date, commission_exempt, commission_exempt_reason, " +
+        "commission_exempt_at",
     )
     .in("status", SOLD_ITEM_STATUSES)
     .not("provider_id", "is", null);
@@ -102,8 +103,8 @@ export async function loadReconciliationInputs(
     .from("partner_purchase_invoices")
     .select(
       "id, partner_id, request_id, item_id, invoice_number, invoice_date, amount_excl_vat, " +
-        "amount_incl_vat, commission_exempt, commission_exempt_reason, status, created_at, " +
-        "commission_invoiced_at",
+        "amount_incl_vat, commission_exempt, commission_exempt_reason, commission_exempt_at, " +
+        "status, created_at, commission_invoiced_at",
     );
   if (partnerIdFilter) invoicesQuery = invoicesQuery.eq("partner_id", partnerIdFilter);
 
@@ -113,7 +114,10 @@ export async function loadReconciliationInputs(
     .select(
       "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
         "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
-        "accommodation_requests!inner(id, reference_number, customer_name, customer_company, arrival_date)",
+        "commission_exempt, commission_exempt_reason, commission_exempt_at, " +
+        "accommodation_requests!inner(id, reference_number, customer_name, customer_company, " +
+        "arrival_date, departure_date, completion_status, completed_at)",
+
     )
     .eq("status", "selected");
   if (partnerIdFilter) quotesQuery = quotesQuery.eq("partner_id", partnerIdFilter);
@@ -191,7 +195,8 @@ export async function loadReconciliationInputs(
       ? client
           .from("program_requests")
           .select(
-            "id, reference_number, customer_name, customer_company, selected_dates, cancelled_at, snoozed_until",
+            "id, reference_number, customer_name, customer_company, selected_dates, cancelled_at, " +
+              "snoozed_until, completion_status, completed_at",
           )
           .in("id", requestIds)
       : Promise.resolve({ data: [], error: null }),
@@ -234,6 +239,9 @@ export async function loadReconciliationInputs(
       block_type: i.block_type,
       execution_date: i.proposed_date ?? null,
       item_type: "activity" as const,
+      commission_exempt: i.commission_exempt ?? false,
+      commission_exempt_reason: i.commission_exempt_reason ?? null,
+      commission_exempt_at: i.commission_exempt_at ?? null,
     }));
 
   const accommodationProjects: ReconProjectInput[] = [];
@@ -246,6 +254,8 @@ export async function loadReconciliationInputs(
         customer_name: request.customer_name,
         customer_company: request.customer_company,
         selected_dates: request.arrival_date ? [request.arrival_date] : null,
+        completion_status: request.completion_status ?? null,
+        completed_at: request.completed_at ?? null,
       });
     }
     const total = (Number(q.price_total) || 0) + (extrasByQuote.get(q.id) ?? 0);
@@ -266,6 +276,9 @@ export async function loadReconciliationInputs(
       block_type: "partner",
       execution_date: request?.arrival_date ?? null,
       item_type: "accommodation" as const,
+      commission_exempt: q.commission_exempt ?? false,
+      commission_exempt_reason: q.commission_exempt_reason ?? null,
+      commission_exempt_at: q.commission_exempt_at ?? null,
     } satisfies ReconItemInput;
   });
 
@@ -284,6 +297,9 @@ export async function loadReconciliationInputs(
       amount_excl_vat: i.amount_excl_vat,
       amount_incl_vat: i.amount_incl_vat,
       commission_exempt: i.commission_exempt,
+      commission_exempt_reason: i.commission_exempt_reason ?? null,
+      commission_exempt_at: i.commission_exempt_at ?? null,
+
       commission_invoiced_at: i.commission_invoiced_at,
       created_at: i.created_at,
       allocated_item_ids: allocMap.get(i.id) ?? [],
@@ -303,7 +319,10 @@ export async function loadReconciliationInputs(
       customer_name: p.customer_name,
       customer_company: p.customer_company,
       selected_dates: p.selected_dates,
+      completion_status: p.completion_status ?? null,
+      completed_at: p.completed_at ?? null,
     })),
+
     ...accommodationProjects,
   ];
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -8,6 +8,8 @@ import {
   Check,
   FileText,
   Link2,
+  Archive,
+  ArchiveRestore,
   Link2Off,
   Loader2,
   Search,
@@ -19,13 +21,25 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   basisAmountForBasis,
   commissionForBasis,
+  isArchivedRow,
   isBillableRow,
+  isExpectedRow,
   type CommissionBasis,
   type ReconRow,
 } from "@/lib/commissionReconciliation";
@@ -42,6 +56,28 @@ const TYPE_LABELS: Record<ReconRow["itemType"], string> = {
   purchase_invoice: "Losse inkoopfactuur",
 };
 
+type WorklistFilter = "billable" | "expected" | "invoiced" | "paid" | "archived";
+
+const FILTER_LABELS: Record<WorklistFilter, string> = {
+  billable: "Te factureren",
+  expected: "Verwacht",
+  invoiced: "Gefactureerd",
+  paid: "Betaald",
+  archived: "Commissievrij / gearchiveerd",
+};
+
+const FILTER_ORDER: WorklistFilter[] = ["billable", "expected", "invoiced", "paid", "archived"];
+
+/** In welke filterbucket hoort deze regel? Precies één per regel. */
+export function bucketForRow(row: ReconRow): WorklistFilter {
+  if (isArchivedRow(row)) return "archived";
+  if (row.commissionStatus === "paid") return "paid";
+  if (row.commissionStatus === "invoiced") return "invoiced";
+  if (isBillableRow(row)) return "billable";
+  if (isExpectedRow(row)) return "expected";
+  return "archived";
+}
+
 interface CommissionWorklistProps {
   /** Optioneel: alleen regels van deze partner tonen. */
   partnerId?: string | null;
@@ -54,7 +90,11 @@ interface CommissionWorklistProps {
 export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<WorklistFilter>("billable");
+  const [exemptDialogOpen, setExemptDialogOpen] = useState(false);
+  const [exemptReason, setExemptReason] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [basisOverrides, setBasisOverrides] = useState<Record<string, CommissionBasis>>({});
 
@@ -72,16 +112,33 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
   const basisFor = (row: ReconRow): CommissionBasis =>
     basisOverrides[row.key] ?? row.defaultBasis;
 
-  const rows = useMemo(() => {
-    const billable = (data?.rows ?? []).filter(isBillableRow);
+  const searched = useMemo(() => {
+    const all = data?.rows ?? [];
     const term = search.trim().toLowerCase();
-    if (!term) return billable;
-    return billable.filter((row) =>
+    if (!term) return all;
+    return all.filter((row) =>
       [row.label, row.partnerName, row.customerName, row.projectLabel, row.projectReference, row.invoiceNumber]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term)),
     );
   }, [data?.rows, search]);
+
+  const counts = useMemo(() => {
+    const base: Record<WorklistFilter, number> = {
+      billable: 0,
+      expected: 0,
+      invoiced: 0,
+      paid: 0,
+      archived: 0,
+    };
+    for (const row of searched) base[bucketForRow(row)] += 1;
+    return base;
+  }, [searched]);
+
+  const rows = useMemo(
+    () => searched.filter((row) => bucketForRow(row) === filter),
+    [searched, filter],
+  );
 
   const groups = useMemo(() => {
     const map = new Map<string, { partnerId: string; partnerName: string; rows: ReconRow[] }>();
@@ -144,6 +201,41 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
     });
   };
 
+  const exemptMutation = useMutation({
+    mutationFn: async ({ exempt, reason }: { exempt: boolean; reason: string }) => {
+      const payload = selectedRows
+        .map((row) => {
+          const id = row.itemType === "purchase_invoice" ? row.invoiceId : row.itemId;
+          return id ? { type: row.itemType, id } : null;
+        })
+        .filter(Boolean);
+      const { data, error } = await supabase.functions.invoke("set-commission-exempt", {
+        body: { rows: payload, exempt, reason },
+      });
+      if (error) throw error;
+      if ((data as { error?: string } | null)?.error) {
+        throw new Error((data as { error: string }).error);
+      }
+      return data as { updated: number; todosClosed: number };
+    },
+    onSuccess: (result, variables) => {
+      toast({
+        title: variables.exempt ? "Commissievrij gemarkeerd" : "Teruggezet in de werklijst",
+        description: variables.exempt
+          ? `${result.updated} regel(s) gearchiveerd${result.todosClosed ? `, ${result.todosClosed} taak/taken gesloten` : ""}.`
+          : `${result.updated} regel(s) weer actief.`,
+      });
+      setSelected(new Set());
+      setExemptDialogOpen(false);
+      setExemptReason("");
+      queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Actie mislukt", description: err.message, variant: "destructive" });
+    },
+  });
+
   const createInvoice = () => {
     if (selectedRows.length === 0) return;
     const partnerIds = new Set(selectedRows.map((row) => row.partnerId));
@@ -200,10 +292,29 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
 
   const missingInvoiceCount = rows.filter((row) => row.status === "missing_invoice").length;
   const unlinkedCount = rows.filter((row) => row.itemType === "purchase_invoice").length;
-  const deviationCount = rows.filter((row) => row.status === "deviation").length;
+  const bucketTotal = rows.reduce((sum, row) => sum + commissionForBasis(row, basisFor(row)), 0);
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {FILTER_ORDER.map((key) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={filter === key ? "default" : "outline"}
+            onClick={() => {
+              setFilter(key);
+              setSelected(new Set());
+            }}
+          >
+            {FILTER_LABELS[key]}
+            <Badge variant="secondary" className="ml-2">
+              {counts[key]}
+            </Badge>
+          </Button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -224,10 +335,10 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Verkoop ≠ inkoop
+              Commissie in beeld
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{deviationCount}</CardContent>
+          <CardContent className="text-2xl font-bold">{formatCurrency(bucketTotal)}</CardContent>
         </Card>
       </div>
 
@@ -246,10 +357,27 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
             <span className="text-sm text-muted-foreground">
               {selected.size} geselecteerd · {formatCurrency(selectedTotal)} commissie
             </span>
-            <Button onClick={createInvoice}>
-              <FileText className="h-4 w-4 mr-2" />
-              Commissiefactuur maken
-            </Button>
+            {filter === "billable" && (
+              <Button onClick={createInvoice}>
+                <FileText className="h-4 w-4 mr-2" />
+                Commissiefactuur maken
+              </Button>
+            )}
+            {filter === "archived" ? (
+              <Button
+                variant="outline"
+                disabled={exemptMutation.isPending}
+                onClick={() => exemptMutation.mutate({ exempt: false, reason: "" })}
+              >
+                <ArchiveRestore className="h-4 w-4 mr-2" />
+                Terugzetten
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => setExemptDialogOpen(true)}>
+                <Archive className="h-4 w-4 mr-2" />
+                Commissievrij markeren
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -257,7 +385,7 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
       {groups.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Geen regels om te factureren.
+            Geen regels in "{FILTER_LABELS[filter]}".
           </CardContent>
         </Card>
       )}
@@ -324,6 +452,16 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                             <Badge variant="outline" className="mt-1 text-xs">
                               {TYPE_LABELS[row.itemType]}
                             </Badge>
+                            {row.readiness === "expected" && (
+                              <Badge variant="secondary" className="mt-1 ml-1 text-xs">
+                                Verwacht
+                              </Badge>
+                            )}
+                            {row.exemptReason && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Commissievrij: {row.exemptReason}
+                              </div>
+                            )}
                             {row.itemType === "purchase_invoice" && (
                               <Button
                                 variant="link"
@@ -430,7 +568,40 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
         );
       })}
 
-      {rows.length > 0 && (
+      <Dialog open={exemptDialogOpen} onOpenChange={setExemptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Commissievrij markeren</DialogTitle>
+            <DialogDescription>
+              {selected.size} regel(s) verdwijnen uit de actieve lijst en blijven terugvindbaar
+              onder "Commissievrij / gearchiveerd". Openstaande commissietaken worden gesloten.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="exempt-reason">Reden (verplicht)</Label>
+            <Textarea
+              id="exempt-reason"
+              value={exemptReason}
+              onChange={(event) => setExemptReason(event.target.value)}
+              placeholder="Bijv. afspraak zonder commissie, project geannuleerd, al via Snelstart verrekend"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExemptDialogOpen(false)}>
+              Annuleren
+            </Button>
+            <Button
+              disabled={exemptReason.trim().length < 3 || exemptMutation.isPending}
+              onClick={() => exemptMutation.mutate({ exempt: true, reason: exemptReason.trim() })}
+            >
+              {exemptMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Markeren
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {rows.length > 0 && filter === "billable" && (
         <p className="text-xs text-muted-foreground flex items-center gap-1">
           <Check className="h-3 w-3" />
           Standaard rekent de lijst met de inkoopfactuur wanneer die bekend is, anders met onze
