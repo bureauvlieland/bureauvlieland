@@ -3,6 +3,8 @@ import {
   expectedCommission,
   findOrphanInvoicedItems,
   hasCommissionDrift,
+  isValidInvoiceNumberInput,
+  normalizeInvoiceNumberInput,
   type InvoicedItemRef,
 } from "@/lib/purchaseInvoiceConsistency";
 
@@ -31,7 +33,61 @@ describe("findOrphanInvoicedItems", () => {
   it("negeert items zonder factuurnummer", () => {
     expect(findOrphanInvoicedItems([item({ invoiced_number: null })], [])).toHaveLength(0);
   });
+
+  it("ziet dekking via factuurnummer + leverancier zonder item-koppeling", () => {
+    const rows = [item({ invoiced_number: "2026015", provider_id: "zeehonden" })];
+    expect(
+      findOrphanInvoicedItems(rows, [], [
+        { partner_id: "zeehonden", invoice_number: "2026015", invoice_number_normalized: "2026015" },
+      ]),
+    ).toHaveLength(0);
+  });
+
+  it("blijft melden bij ander leverancier of ander nummer", () => {
+    const rows = [item({ invoiced_number: "2026015", provider_id: "zeehonden" })];
+    expect(
+      findOrphanInvoicedItems(rows, [], [
+        { partner_id: "rederij", invoice_number: "2026015" },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      findOrphanInvoicedItems(rows, [], [
+        { partner_id: "zeehonden", invoice_number: "2026099" },
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it("negeert placeholder-nummers zoals nvt op bureau-onderdelen", () => {
+    const rows = [
+      item({ invoiced_number: "nvt", provider_id: "bureau" }),
+      item({ id: "i2", invoiced_number: "n.v.t.", provider_id: "bureau" }),
+      item({ id: "i3", invoiced_number: "-", provider_id: "bureau" }),
+      item({ id: "i4", invoiced_number: "   ", provider_id: "bureau" }),
+    ];
+    expect(findOrphanInvoicedItems(rows, [])).toHaveLength(0);
+  });
 });
+
+describe("normalizeInvoiceNumberInput", () => {
+  it("trimt en behoudt echte nummers", () => {
+    expect(normalizeInvoiceNumberInput("  2026015 ")).toBe("2026015");
+    expect(normalizeInvoiceNumberInput("F2026011")).toBe("F2026011");
+  });
+
+  it("maakt placeholders leeg", () => {
+    for (const raw of ["nvt", "NVT", "n.v.t.", "N/A", "geen", "-", "?", "x", "", "   ", "0"]) {
+      expect(normalizeInvoiceNumberInput(raw)).toBeNull();
+    }
+    expect(normalizeInvoiceNumberInput(null)).toBeNull();
+  });
+
+  it("valideert dat er minstens één cijfer in staat", () => {
+    expect(isValidInvoiceNumberInput("2026015")).toBe(true);
+    expect(isValidInvoiceNumberInput("factuur")).toBe(false);
+    expect(isValidInvoiceNumberInput("nvt")).toBe(false);
+  });
+});
+
 
 describe("commissie-afgeleiden", () => {
   it("rekent commissie op centen af", () => {
