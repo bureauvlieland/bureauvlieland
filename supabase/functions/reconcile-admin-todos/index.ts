@@ -220,6 +220,47 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Laatste uitgaande communicatie per project (voor inbound_email todos).
+    // Zodra er vanuit de admin een antwoord/mail de deur uit is ná het
+    // aanmaken van de todo, is de melding afgehandeld.
+    const lastOutboundByRequest = new Map<string, string>();
+    {
+      const inboundRequestIds = [
+        ...new Set(
+          list
+            .filter(
+              (t) =>
+                t.auto_type === "inbound_email" &&
+                t.related_request_id &&
+                isUuid(t.related_request_id),
+            )
+            .map((t) => t.related_request_id!),
+        ),
+      ];
+      if (inboundRequestIds.length) {
+        const { data: outbound, error: outboundError } = await supabase
+          .from("project_communications")
+          .select("request_id, communication_date, direction")
+          .in("request_id", inboundRequestIds)
+          .eq("direction", "outbound")
+          .order("communication_date", { ascending: false });
+        if (outboundError) {
+          throw new Error(
+            `project_communications lookup failed: ${outboundError.message}`,
+          );
+        }
+        for (
+          const row of (outbound ?? []) as {
+            request_id: string;
+            communication_date: string;
+          }[]
+        ) {
+          if (!lastOutboundByRequest.has(row.request_id)) {
+            lastOutboundByRequest.set(row.request_id, row.communication_date);
+          }
+        }
+      }
+    }
 
 
     for (const t of list) {
@@ -424,7 +465,26 @@ Deno.serve(async (req) => {
           if (age > 7 * 86400_000) markClosed(t.id, type);
           break;
         }
+        case "inbound_email": {
+          // Aanmaakcriterium: inkomend bericht dat nog opgevolgd moet worden.
+          // Sluiten zodra er ná de melding uitgaande communicatie in het
+          // dossier staat, of na 14 dagen (informatief vangnet).
+          const lastOut = t.related_request_id
+            ? lastOutboundByRequest.get(t.related_request_id)
+            : undefined;
+          if (
+            lastOut &&
+            new Date(lastOut).getTime() > new Date(t.created_at).getTime()
+          ) {
+            markClosed(t.id, type);
+            break;
+          }
+          const inboundAge = Date.now() - new Date(t.created_at).getTime();
+          if (inboundAge > 14 * 86400_000) markClosed(t.id, `${type}_stale`);
+          break;
+        }
         case "customer_cancellation": {
+
           const age = Date.now() - new Date(t.created_at).getTime();
           if (age > 7 * 86400_000) markClosed(t.id, type);
           break;
