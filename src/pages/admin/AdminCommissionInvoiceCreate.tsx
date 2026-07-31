@@ -28,7 +28,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { CommissionBasis } from "@/lib/commissionReconciliation";
+import type { CommissionBasis, ReconRow } from "@/lib/commissionReconciliation";
+import {
+  buildCommissionLineDrafts,
+  parseAmountParam,
+  parseBasisParam,
+} from "@/lib/commissionInvoiceLines";
+
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
