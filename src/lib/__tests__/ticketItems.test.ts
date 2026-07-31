@@ -63,3 +63,45 @@ describe("ticketItems", () => {
     expect(getTicketStatus({ booking_reference: null, booking_document_path: null })).toBe("open");
   });
 });
+
+describe("isOpenTicketRow (badge == pagina)", () => {
+  const base = {
+    block_id: "boot-retour",
+    status: "confirmed",
+    booking_reference: null,
+    booking_document_path: null,
+    customer_approved_at: "2026-07-01T00:00:00Z",
+    request_status: "in_afstemming",
+  };
+
+  it("telt een klant-goedgekeurd, onbeboekt ticket in een actief project", () => {
+    expect(isOpenTicketRow(base)).toBe(true);
+  });
+
+  it("telt niet-goedgekeurde items niet mee", () => {
+    expect(isOpenTicketRow({ ...base, customer_approved_at: null })).toBe(false);
+  });
+
+  it("telt items in geannuleerde/verwijderde projecten niet mee", () => {
+    expect(isOpenTicketRow({ ...base, request_status: "cancelled" })).toBe(false);
+    expect(isOpenTicketRow({ ...base, request_status: "deleted" })).toBe(false);
+  });
+
+  it("telt al geboekte items niet mee", () => {
+    expect(isOpenTicketRow({ ...base, booking_reference: "R123" })).toBe(false);
+    expect(isOpenTicketRow({ ...base, booking_document_path: "x.pdf" })).toBe(false);
+  });
+
+  it("telt geannuleerde onderdelen niet mee", () => {
+    expect(isOpenTicketRow({ ...base, status: "cancelled" })).toBe(false);
+  });
+
+  it("negeert niet-ticket blokken", () => {
+    expect(isOpenTicketRow({ ...base, block_id: "diner-zeezicht" })).toBe(false);
+  });
+
+  it("herkent e-bike verhuur als fietshuur-ticket", () => {
+    expect(isOpenTicketRow({ ...base, block_id: "fiets-huur-kopie-2" })).toBe(true);
+    expect(getTicketKind({ block_id: "fiets-huur-kopie-2" })).toBe("bike");
+  });
+});
