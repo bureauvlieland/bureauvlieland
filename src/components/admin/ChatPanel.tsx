@@ -42,20 +42,29 @@ import {
 } from "lucide-react";
 
 
-type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp" | "presales";
+type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
 
 interface ChatPanelProps {
   /** Optionally pin a specific conversation when the panel mounts. */
   initialConversationId?: string | null;
   /** Tailwind height utility for the outer wrapper. Defaults to a sane embed height. */
   heightClassName?: string;
+  /**
+   * "projects" (default) shows conversations linked to a program/lodging request.
+   * "presales" shows only website/WhatsApp questions without a linked project.
+   */
+  mode?: "projects" | "presales";
 }
 
 /**
  * Embeddable chat workspace (split list / conversation). Extracted from the old
  * /admin/chat page so it can live as a tab inside the unified message center.
  */
-export function ChatPanel({ initialConversationId, heightClassName = "h-[calc(100vh-220px)]" }: ChatPanelProps) {
+export function ChatPanel({
+  initialConversationId,
+  heightClassName = "h-[calc(100vh-220px)]",
+  mode = "projects",
+}: ChatPanelProps) {
   const {
     conversations,
     filteredConversations,
