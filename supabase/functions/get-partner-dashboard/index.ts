@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
           reference_number,
           cancelled_at,
           cancellation_reason,
+          completed_at,
           terms_accepted_at,
           invoicing_mode,
           billing_company_name,
@@ -147,6 +148,9 @@ Deno.serve(async (req) => {
         const ref = item.updated_at || req?.cancelled_at;
         return ref ? new Date(ref) > cancelledCutoff : false;
       }
+      // Project is door Bureau Vlieland afgerond én dit onderdeel is
+      // gefactureerd of gesloten → niet langer relevant in de werkbank.
+      if (req?.completed_at && (item.invoiced_number || item.partner_dismissed_at)) return false;
       if (activeStatuses.includes(item.status)) return true;
       return new Date(item.updated_at) > cutoffDate;
     });
