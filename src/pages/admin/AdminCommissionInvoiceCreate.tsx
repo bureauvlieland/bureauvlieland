@@ -177,58 +177,30 @@ export default function AdminCommissionInvoiceCreate() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      let activityRows: any[] = [];
-      let quoteRows: any[] = [];
-      let purchaseInvoiceRows: any[] = [];
+      // Eén bron van waarheid: dezelfde reconciliatie die de werklijst gebruikt.
+      const { data, error } = await supabase.functions.invoke("get-commission-reconciliation", {
+        body: {},
+      });
+      if (error) throw error;
+      const rows = ((data as { rows?: ReconRow[] } | null)?.rows ?? []) as ReconRow[];
 
-      if (itemIds.length > 0) {
-        const { data, error } = await supabase
-          .from("program_request_items")
-          .select(`
-            id, block_name, invoiced_amount, invoiced_number, invoiced_date,
-            quoted_price, vat_rate,
-            commission_percentage, commission_amount, commission_status,
-            provider_id, provider_name,
-            program_requests!inner(id, customer_name, customer_company, selected_dates, reference_number)
-          `)
-          .in("id", itemIds);
-        if (error) throw error;
-        activityRows = data || [];
+      const drafts = buildCommissionLineDrafts({
+        rows,
+        itemIds,
+        quoteIds,
+        invoiceIds,
+        basisById,
+        amountById,
+        formatDate: formatDateNL,
+      });
+
+      if (drafts.length === 0) {
+        toast.error("Geselecteerde regels niet gevonden in de commissiewerklijst");
+        navigate("/admin/commissies");
+        return;
       }
 
-      if (invoiceIds.length > 0) {
-        const { data, error } = await supabase
-          .from("partner_purchase_invoices")
-          .select(`
-            id, partner_id, request_id, invoice_number, invoice_date,
-            amount_excl_vat, amount_incl_vat, description,
-            program_requests(id, customer_name, customer_company, reference_number)
-          `)
-          .in("id", invoiceIds);
-        if (error) throw error;
-        purchaseInvoiceRows = data || [];
-      }
-
-
-      if (quoteIds.length > 0) {
-        const { data, error } = await supabase
-          .from("accommodation_quotes")
-          .select(`
-            id, accommodation_name, partner_id,
-            invoiced_amount, invoiced_number, invoiced_date, vat_rate, price_includes_vat, price_total,
-            commission_percentage, commission_amount, commission_status,
-            accommodation_requests!inner(id, customer_name, customer_company, arrival_date, departure_date, reference_number)
-          `)
-          .in("id", quoteIds);
-        if (error) throw error;
-        quoteRows = data || [];
-      }
-
-      // Determine partner ids and ensure all from same partner
-      const partnerIds = new Set<string>();
-      activityRows.forEach((r) => partnerIds.add(r.provider_id));
-      quoteRows.forEach((r) => partnerIds.add(r.partner_id));
-      purchaseInvoiceRows.forEach((r) => partnerIds.add(r.partner_id));
+      const partnerIds = new Set(drafts.map((d) => d.partnerId));
       if (partnerIds.size > 1) {
         toast.error("Geselecteerde items behoren tot meerdere partners");
         navigate("/admin/commissies");
@@ -238,128 +210,50 @@ export default function AdminCommissionInvoiceCreate() {
 
       const { data: partnerData } = await supabase
         .from("partners")
-        .select("id, name, email, contact_email, kvk_number, address_street, address_postal, address_city, accommodation_commission_percentage, commission_percentage")
+        .select(
+          "id, name, email, contact_email, kvk_number, address_street, address_postal, address_city, accommodation_commission_percentage, commission_percentage",
+        )
         .eq("id", partnerId)
         .maybeSingle();
 
       setPartner(partnerData as any);
 
-      const editable: EditableLine[] = [];
-      /** Verkoopbedrag ex btw uit een incl.-btw verkoopprijs. */
-      const salesExclVat = (inclPrice: unknown, vatRate: unknown) => {
-        const gross = Number(inclPrice) || 0;
-        const rate = Number(vatRate);
-        return gross / (1 + (Number.isFinite(rate) ? rate : 21) / 100);
-      };
-
-      for (const row of activityRows) {
-        const customerLabel =
-          row.program_requests?.customer_company || row.program_requests?.customer_name || "Klant";
-        const dates = row.program_requests?.selected_dates as string[] | null;
-        const eventDate = Array.isArray(dates) && dates.length > 0 ? dates[0] : null;
-        const pct = Number(row.commission_percentage) || 15;
-        // Inkoopgrondslag: het door de partner gefactureerde bedrag (ex btw).
-        const purchaseBase = pct > 0 && row.commission_amount
-          ? Number(row.commission_amount) / (pct / 100)
-          : Number(row.invoiced_amount) || 0;
-        // Verkoopgrondslag: onze prijs aan de klant, ex btw.
-        const salesBase = salesExclVat(row.quoted_price, row.vat_rate);
-        const basis: CommissionBasis =
-          basisById.get(row.id) ?? (purchaseBase > 0 ? "purchase" : "sales");
-        const base = basis === "sales" ? salesBase : purchaseBase || salesBase;
-
-        editable.push({
-          source: { ...row, item_type: "activity", partner: partnerData as any, accommodation_requests: null } as any,
-          description: `Commissie ${row.block_name} – ${customerLabel}${eventDate ? ` – ${formatDateNL(eventDate)}` : ""}`,
-          baseAmountExclVat: Math.round(base * 100) / 100,
-          commissionPct: pct,
-          customerLabel,
-          eventDate,
-          reference: row.program_requests?.reference_number || null,
-          basis,
-          purchaseInvoiceId: null,
-        });
-      }
-
-      for (const row of quoteRows) {
-        const customerLabel =
-          row.accommodation_requests?.customer_company || row.accommodation_requests?.customer_name || "Klant";
-        const eventDate = row.accommodation_requests?.arrival_date || null;
-        const pct = Number(row.commission_percentage) || 10;
-        const purchaseBase = pct > 0 && row.commission_amount
-          ? Number(row.commission_amount) / (pct / 100)
-          : Number(row.invoiced_amount) || 0;
-        const salesBase = row.price_includes_vat
-          ? salesExclVat(row.price_total, row.vat_rate ?? 9)
-          : Number(row.price_total) || 0;
-        const basis: CommissionBasis =
-          basisById.get(row.id) ?? (purchaseBase > 0 ? "purchase" : "sales");
-        const base = basis === "sales" ? salesBase : purchaseBase || salesBase;
-
-        editable.push({
-          source: {
-            id: row.id,
-            block_name: row.accommodation_name,
-            invoiced_amount: row.invoiced_amount,
-            invoiced_number: row.invoiced_number,
-            invoiced_date: row.invoiced_date,
-            commission_percentage: pct,
-            commission_amount: row.commission_amount,
-            provider_id: row.partner_id,
-            provider_name: partnerData?.name || "",
-            item_type: "accommodation",
-            partner: partnerData as any,
-            program_requests: null,
-            accommodation_requests: row.accommodation_requests as any,
-          },
-          description: `Commissie logies ${row.accommodation_name} – ${customerLabel}${eventDate ? ` – ${formatDateNL(eventDate)}` : ""}`,
-          baseAmountExclVat: Math.round(base * 100) / 100,
-          commissionPct: pct,
-          customerLabel,
-          eventDate,
-          reference: row.accommodation_requests?.reference_number || null,
-          basis,
-          purchaseInvoiceId: null,
-        });
-      }
-
-      // Losse inkoopfacturen zonder gekoppeld programma-onderdeel
-      for (const row of purchaseInvoiceRows) {
-        const customerLabel =
-          row.program_requests?.customer_company || row.program_requests?.customer_name || "Onbekende klant";
-        const pct = Number(partnerData?.commission_percentage) || 10;
-        const base = Number(row.amount_excl_vat) || 0;
-        const label = row.description || `inkoopfactuur ${row.invoice_number ?? ""}`.trim();
-
-        editable.push({
-          source: {
-            id: row.id,
-            block_name: label,
-            invoiced_amount: row.amount_excl_vat,
-            invoiced_number: row.invoice_number,
-            invoiced_date: row.invoice_date,
-            commission_percentage: pct,
-            commission_amount: null,
-            provider_id: row.partner_id,
-            provider_name: partnerData?.name || "",
-            item_type: "purchase_invoice",
-            partner: partnerData as any,
-            program_requests: null,
-            accommodation_requests: null,
-          },
-          description: `Commissie ${label} – ${customerLabel}${row.invoice_date ? ` – ${formatDateNL(row.invoice_date)}` : ""}`,
-          baseAmountExclVat: Math.round(base * 100) / 100,
-          commissionPct: pct,
-          customerLabel,
-          eventDate: row.invoice_date || null,
-          reference: row.program_requests?.reference_number || null,
-          basis: "purchase",
-          purchaseInvoiceId: row.id,
-        });
-      }
-
+      const editable: EditableLine[] = drafts.map((draft) => ({
+        source: {
+          id: draft.sourceId,
+          block_name: draft.blockName,
+          invoiced_amount: draft.baseAmountExclVat,
+          invoiced_number: draft.partnerInvoiceNumber,
+          invoiced_date: null,
+          commission_percentage: draft.commissionPct,
+          commission_amount: draft.commissionAmount,
+          provider_id: draft.partnerId,
+          provider_name: (partnerData as any)?.name || "",
+          item_type: draft.itemType,
+          partner: partnerData as any,
+          program_requests: null,
+          accommodation_requests: null,
+        },
+        description: draft.description,
+        baseAmountExclVat: draft.baseAmountExclVat,
+        commissionPct: draft.commissionPct,
+        customerLabel: draft.customerLabel,
+        eventDate: draft.eventDate,
+        reference: draft.reference,
+        basis: draft.basis,
+        purchaseInvoiceId: draft.purchaseInvoiceId,
+      }));
 
       setLines(editable);
+      setBaseMismatches(
+        drafts
+          .filter((d) => d.hasBaseMismatch)
+          .map((d) => ({
+            label: d.blockName,
+            expected: d.expectedBaseAmount ?? 0,
+            actual: d.baseAmountExclVat,
+          })),
+      );
 
       // Suggest invoice number — placeholder; final number is generated by DB trigger on save
       const suggested = `BVC-${format(new Date(), "yyMM")}-XXXX`;
@@ -372,6 +266,7 @@ export default function AdminCommissionInvoiceCreate() {
       setIsLoading(false);
     }
   };
+
 
   const updateLine = (idx: number, patch: Partial<EditableLine>) => {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
