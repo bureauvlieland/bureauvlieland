@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 
 
-type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp";
+type ChannelFilter = "all" | "customer_portal" | "partner_portal" | "whatsapp" | "presales";
 
 interface ChatPanelProps {
   /** Optionally pin a specific conversation when the panel mounts. */
