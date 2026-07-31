@@ -433,7 +433,10 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         : purchaseExcl * (commissionPct / 100),
       defaultBasis: defaultBasisForRow({ purchaseExclVat: purchaseExcl, commissionBasis }),
       commissionExempt: exemptItem,
-      invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
+      exemptReason: item.commission_exempt_reason ?? null,
+      exemptAt: item.commission_exempt_at ?? null,
+      readiness,
+
       invoiceDate: activeInvoices[0]?.invoice_date ?? null,
       executionDate,
       commissionStatus: item.commission_status,
