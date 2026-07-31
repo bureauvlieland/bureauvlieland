@@ -60,6 +60,10 @@ export interface ReconItemInput {
   execution_date?: string | null;
   /** "activity" (programma-onderdeel) of "accommodation" (logies-offerte). */
   item_type?: ReconItemType;
+  /** Admin heeft deze regel definitief commissievrij (gearchiveerd) gemarkeerd. */
+  commission_exempt?: boolean | null;
+  commission_exempt_reason?: string | null;
+  commission_exempt_at?: string | null;
 }
 
 
@@ -73,6 +77,8 @@ export interface ReconInvoiceInput {
   amount_excl_vat: number | null;
   amount_incl_vat: number | null;
   commission_exempt?: boolean | null;
+  commission_exempt_reason?: string | null;
+  commission_exempt_at?: string | null;
   created_at?: string | null;
   /** Gezet zodra deze inkoopfactuur op een commissiefactuur is meegenomen. */
   commission_invoiced_at?: string | null;
@@ -86,7 +92,11 @@ export interface ReconProjectInput {
   customer_name: string | null;
   customer_company: string | null;
   selected_dates?: unknown;
+  /** Afrondingsfase van het project (ready_for_invoice, fully_invoiced, …). */
+  completion_status?: string | null;
+  completed_at?: string | null;
 }
+
 
 export interface ReconPartnerInput {
   id: string;
