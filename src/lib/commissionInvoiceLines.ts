@@ -15,7 +15,10 @@ import {
 export interface CommissionLineDraft {
   /** program_request_items.id, accommodation_quotes.id of partner_purchase_invoices.id. */
   sourceId: string;
+  partnerId: string;
   itemType: ReconRow["itemType"];
+  /** Factuurnummer van de gekoppelde inkoopfactuur (indien bekend). */
+  partnerInvoiceNumber: string | null;
   blockName: string;
   description: string;
   /** Grondslag ex btw, afgerond op centen. */
@@ -112,7 +115,9 @@ export function buildCommissionLineDrafts(
 
     drafts.push({
       sourceId,
+      partnerId: row.partnerId,
       itemType: row.itemType,
+      partnerInvoiceNumber: row.invoiceNumber,
       blockName: row.label,
       description: `${prefix}${row.label} – ${customerLabel}${datePart}`,
       baseAmountExclVat,
