@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { AccommodationWizardData } from "@/types/accommodation";
-import { LOCATION_PREFERENCES, BUDGET_RANGES } from "@/types/accommodation";
+import { LOCATION_PREFERENCES, BUDGET_RANGES, BOARD_PREFERENCE_OPTIONS } from "@/types/accommodation";
 
 interface StepWishesProps {
   formData: AccommodationWizardData;
