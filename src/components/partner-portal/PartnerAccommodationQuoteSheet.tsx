@@ -33,7 +33,7 @@ import {
   Ban,
   BedDouble,
 } from "lucide-react";
-import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES, BOARD_TYPES, getBoardLabel } from "@/types/accommodation";
+import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES, BOARD_TYPES, getBoardLabel, validateBoardSelection } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
 import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
@@ -182,6 +182,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [includes, setIncludes] = useState<string[]>([]);
   const [boardType, setBoardType] = useState<string>("");
   const [boardNotes, setBoardNotes] = useState("");
+  const [boardError, setBoardError] = useState<string | null>(null);
   const [conditions, setConditions] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [partnerNotes, setPartnerNotes] = useState("");
@@ -342,6 +343,15 @@ export const PartnerAccommodationQuoteSheet = ({
     if (isNaN(price) || price <= 0) {
       return;
     }
+
+    // Verzorging is verplicht: zonder deze waarde weet de klant niet of
+    // ontbijt/pension in de prijs zit.
+    const boardValidation = validateBoardSelection(boardType, boardNotes);
+    if (boardValidation) {
+      setBoardError(boardValidation);
+      return;
+    }
+    setBoardError(null);
 
     setIsSubmitting(true);
     
@@ -927,13 +937,20 @@ export const PartnerAccommodationQuoteSheet = ({
                     key={board.value}
                     variant={boardType === board.value ? "default" : "outline"}
                     className={`cursor-pointer transition-colors ${isReadOnly ? "pointer-events-none" : ""}`}
-                    onClick={() => !isReadOnly && setBoardType(board.value)}
+                    onClick={() => {
+                      if (isReadOnly) return;
+                      setBoardType(board.value);
+                      setBoardError(null);
+                    }}
                   >
                     {boardType === board.value && <Check className="h-3 w-3 mr-1" />}
                     {board.icon} {board.label}
                   </Badge>
                 ))}
               </div>
+              {boardError && (
+                <p className="text-xs text-destructive">{boardError}</p>
+              )}
               {(boardType === "other" || boardNotes) && (
                 <Textarea
                   placeholder="Toelichting op de verzorging (bijv. 3-gangen diner op dag 2)"

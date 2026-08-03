@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getBoardLabel } from "@/types/accommodation";
+import { getBoardDisplay } from "@/types/accommodation";
 import {
   Collapsible,
   CollapsibleContent,
@@ -170,15 +170,18 @@ export const AccommodationQuoteItem = ({
           )}
 
           {/* Verzorging */}
-          {getBoardLabel(quote.board_type) && (
+          {(() => {
+            const board = getBoardDisplay(quote.board_type);
+            return (
             <div>
               <p className="text-sm font-medium mb-1">Verzorging</p>
-              <Badge variant="secondary" className="text-xs">{getBoardLabel(quote.board_type)}</Badge>
+              <Badge variant={board.isKnown ? "secondary" : "outline"} className="text-xs">{board.label}</Badge>
               {quote.board_notes && (
                 <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{quote.board_notes}</p>
               )}
             </div>
-          )}
+            );
+          })()}
 
           {/* Includes */}
           {includes.length > 0 && (
