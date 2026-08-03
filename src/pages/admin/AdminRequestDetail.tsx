@@ -574,6 +574,50 @@ const AdminRequestDetail = () => {
     })();
   }, [request?.linked_accommodation_id]);
 
+  // Logiespartners (offerte aangevraagd/ingediend/gekozen) — beschikbaar in de mail-dropdown
+  const [accommodationMailPartners, setAccommodationMailPartners] = useState<
+    { name: string; email: string; partnerId: string }[]
+  >([]);
+
+  useEffect(() => {
+    const accommodationId = request?.linked_accommodation_id;
+    if (!accommodationId) {
+      setAccommodationMailPartners([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: quotes } = await supabase
+        .from("accommodation_quotes")
+        .select("partner_id, accommodation_name, status")
+        .eq("request_id", accommodationId)
+        .in("status", ["pending", "submitted", "selected", "expired", "declined", "rejected"]);
+
+      const partnerIds = [...new Set((quotes || []).map((q: any) => q.partner_id).filter(Boolean))];
+      if (partnerIds.length === 0) {
+        if (!cancelled) setAccommodationMailPartners([]);
+        return;
+      }
+      const { data: partnersData } = await supabase
+        .from("partners")
+        .select("id, name, email, contact_email")
+        .in("id", partnerIds);
+
+      const list = (partnersData || [])
+        .map((p: any) => ({
+          partnerId: p.id,
+          name: `${p.name} (logies)`,
+          email: (p.contact_email || p.email) as string | null,
+        }))
+        .filter((p): p is { partnerId: string; name: string; email: string } => Boolean(p.email));
+
+      if (!cancelled) setAccommodationMailPartners(list);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [request?.linked_accommodation_id]);
+
   const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);
 
   // Calculate bureau invoiced amount for profit summary (incl. coordination fee)
@@ -3184,11 +3228,12 @@ const AdminRequestDetail = () => {
                 highlightStatusEmail={highlightStatusEmail}
                 partnerRecipients={
                   Array.from(
-                    new Map(
-                      items
+                    new Map([
+                      ...items
                         .filter((i) => i.provider_email && i.provider_id)
-                        .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }])
-                    ).values()
+                        .map((i) => [i.provider_id, { name: i.provider_name, email: i.provider_email!, partnerId: i.provider_id }] as const),
+                      ...accommodationMailPartners.map((p) => [p.partnerId, p] as const),
+                    ]).values()
                   )
                 }
               />
