@@ -30,6 +30,7 @@ import {
   LOCATION_PREFERENCES,
   FACILITIES,
   BUDGET_RANGES,
+  getBoardLabel,
 } from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
@@ -251,6 +252,43 @@ export const AccommodationSection = ({
               )}
             </div>
           </div>
+
+          {/* Verzorging + kamerconfiguratie */}
+          {(getBoardLabel(selectedQuote.board_type) || (selectedQuote.room_configuration?.length ?? 0) > 0) && (
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              {getBoardLabel(selectedQuote.board_type) && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Verzorging</p>
+                  <Badge variant="secondary" className="font-normal">
+                    {getBoardLabel(selectedQuote.board_type)}
+                  </Badge>
+                  {selectedQuote.board_notes && (
+                    <p className="text-sm text-muted-foreground mt-2 whitespace-pre-line">{selectedQuote.board_notes}</p>
+                  )}
+                </div>
+              )}
+
+              {(selectedQuote.room_configuration?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Kamerindeling</p>
+                  <ul className="text-sm space-y-1">
+                    {selectedQuote.room_configuration.map((room, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2 rounded bg-muted/50 px-2 py-1.5">
+                        <span className="flex items-center gap-2">
+                          <BedDouble className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {room.count}x {ROOM_TYPES.find((t) => t.value === room.type)?.label || room.type}
+                          {room.occupancy ? ` (${room.occupancy} pers.)` : ""}
+                        </span>
+                        {room.price_per_night ? (
+                          <span className="text-muted-foreground">{formatPrice(room.price_per_night)} p.n.</span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Reservation status */}
           <div className="rounded-lg border border-green-200 bg-green-100/60 dark:border-green-900 dark:bg-green-900/20 p-3 text-sm text-green-800 dark:text-green-200 flex items-start gap-2">
