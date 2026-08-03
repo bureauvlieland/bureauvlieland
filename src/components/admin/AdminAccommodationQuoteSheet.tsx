@@ -29,6 +29,7 @@ import {
   type ExtraCategory,
 } from "@/types/accommodationExtras";
 import type { RoomConfiguration } from "@/types/accommodation";
+import { getBoardLabel } from "@/types/accommodation";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { History } from "lucide-react";
@@ -44,6 +45,8 @@ interface QuoteData {
   vat_rate: number | null;
   includes: any;
   conditions: string | null;
+  board_type?: string | null;
+  board_notes?: string | null;
   valid_until: string;
   status: string;
   submitted_at: string | null;
@@ -216,6 +219,20 @@ export function AdminAccommodationQuoteSheet({
               </div>
             )}
           </div>
+
+          {/* Verzorging */}
+          {getBoardLabel(quote.board_type) && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="text-sm font-semibold mb-1">Verzorging</h4>
+                <Badge variant="secondary">{getBoardLabel(quote.board_type)}</Badge>
+                {quote.board_notes && (
+                  <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{quote.board_notes}</p>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Room configuration */}
           {rooms.length > 0 && (
