@@ -259,3 +259,37 @@ export function getBoardLabel(value?: string | null): string | null {
   const match = [...BOARD_TYPES, ...BOARD_PREFERENCE_OPTIONS].find((b) => b.value === value);
   return match?.label ?? value;
 }
+
+/** Tekst die de klant ziet als de verzorging nog niet is vastgelegd. */
+export const BOARD_UNKNOWN_LABEL =
+  'Nog niet bevestigd — wij checken dit bij de accommodatie';
+
+/**
+ * Weergave van de verzorging die nooit leeg is: bekende waarden krijgen hun
+ * label, lege waarden de expliciete "nog niet bevestigd"-tekst. Zo ziet de
+ * klant altijd of ontbijt/pension is inbegrepen in plaats van niets.
+ */
+export function getBoardDisplay(value?: string | null): {
+  label: string;
+  isKnown: boolean;
+} {
+  const label = getBoardLabel(value);
+  return label ? { label, isKnown: true } : { label: BOARD_UNKNOWN_LABEL, isKnown: false };
+}
+
+/**
+ * Validatie voor het partner-offerteformulier: verzorging is verplicht en bij
+ * "Anders / in overleg" is een toelichting nodig. Geeft de foutmelding terug
+ * of null als de invoer klopt.
+ */
+export function validateBoardSelection(
+  boardType?: string | null,
+  boardNotes?: string | null,
+): string | null {
+  if (!boardType) return 'Kies de verzorging (bijv. logies of logies & ontbijt)';
+  if (!BOARD_TYPES.some((b) => b.value === boardType)) return 'Kies een geldige verzorging';
+  if (boardType === 'other' && !boardNotes?.trim()) {
+    return 'Geef een korte toelichting op de verzorging';
+  }
+  return null;
+}
