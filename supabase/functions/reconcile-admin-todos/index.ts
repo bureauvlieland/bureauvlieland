@@ -471,6 +471,29 @@ Deno.serve(async (req) => {
           }
           break;
         }
+        case "lodging_board_missing": {
+          // Aanmaakcriterium spiegelen: offerte is 'selected' zonder
+          // board_type. Sluiten zodra de verzorging is vastgelegd of de
+          // offerte niet meer gekozen is.
+          if (!eid) {
+            markClosed(t.id, `${type}_missing`);
+            break;
+          }
+          const { data: q, error: qErr } = await supabase
+            .from("accommodation_quotes")
+            .select("id, status, board_type")
+            .eq("id", eid)
+            .maybeSingle();
+          if (qErr) {
+            throw new Error(`accommodation_quotes board lookup failed: ${qErr.message}`);
+          }
+          if (!q) {
+            markClosed(t.id, `${type}_missing`);
+          } else if (q.board_type || q.status !== "selected") {
+            markClosed(t.id, type);
+          }
+          break;
+        }
         case "book_ferry_tickets": {
           const item = eid ? itemMap.get(eid) : null;
           if (item && item.booking_reference) markClosed(t.id, type);
