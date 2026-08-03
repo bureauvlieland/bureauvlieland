@@ -254,19 +254,23 @@ export const AccommodationSection = ({
           </div>
 
           {/* Verzorging + kamerconfiguratie */}
-          {(getBoardLabel(selectedQuote.board_type) || (selectedQuote.room_configuration?.length ?? 0) > 0) && (
+          {(
             <div className="rounded-lg border bg-card p-4 space-y-3">
-              {getBoardLabel(selectedQuote.board_type) && (
+              {(() => {
+                const board = getBoardDisplay(selectedQuote.board_type);
+                return (
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Verzorging</p>
-                  <Badge variant="secondary" className="font-normal">
-                    {getBoardLabel(selectedQuote.board_type)}
+                  <Badge variant={board.isKnown ? "secondary" : "outline"} className="font-normal">
+                    {board.label}
                   </Badge>
                   {selectedQuote.board_notes && (
                     <p className="text-sm text-muted-foreground mt-2 whitespace-pre-line">{selectedQuote.board_notes}</p>
                   )}
                 </div>
-              )}
+                );
+              })()}
+
 
               {(selectedQuote.room_configuration?.length ?? 0) > 0 && (
                 <div>
