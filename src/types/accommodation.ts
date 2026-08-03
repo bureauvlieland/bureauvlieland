@@ -79,6 +79,11 @@ export interface AccommodationQuote {
   // What's included
   includes: string[];
   conditions: string | null;
+
+  // Verzorging
+  board_type?: string | null;
+  board_notes?: string | null;
+
   
   // Validity
   valid_until: string;
