@@ -90,6 +90,8 @@ interface AccommodationQuote {
   vat_rate: number;
   includes: unknown;
   conditions: string | null;
+  board_type?: string | null;
+  board_notes?: string | null;
   valid_until: string;
   partner_notes: string | null;
   room_configuration: Record<string, unknown>[] | null;
@@ -129,6 +131,8 @@ interface PartnerAccommodationQuoteSheetProps {
     vatRate: number;
     includes: string[];
     conditions: string;
+    boardType: string;
+    boardNotes: string;
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: RoomConfig[];
@@ -175,6 +179,8 @@ export const PartnerAccommodationQuoteSheet = ({
   const [priceIncludesVat, setPriceIncludesVat] = useState(true);
   const [vatRate, setVatRate] = useState("9");
   const [includes, setIncludes] = useState<string[]>([]);
+  const [boardType, setBoardType] = useState<string>("");
+  const [boardNotes, setBoardNotes] = useState("");
   const [conditions, setConditions] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [partnerNotes, setPartnerNotes] = useState("");
@@ -233,6 +239,11 @@ export const PartnerAccommodationQuoteSheet = ({
       setPriceIncludesVat(existingQuote.price_includes_vat);
       setVatRate(existingQuote.vat_rate?.toString() || "9");
       setIncludes(Array.isArray(existingQuote.includes) ? existingQuote.includes as string[] : []);
+      setBoardType(
+        existingQuote.board_type ||
+          (requestBoardPreference && requestBoardPreference !== "no_preference" ? requestBoardPreference : "")
+      );
+      setBoardNotes(existingQuote.board_notes || "");
       setConditions(existingQuote.conditions || "");
       setValidUntil(existingQuote.valid_until || format(addDays(new Date(), 14), "yyyy-MM-dd"));
       setPartnerNotes(existingQuote.partner_notes || "");
@@ -253,6 +264,10 @@ export const PartnerAccommodationQuoteSheet = ({
       setPriceIncludesVat(true);
       setVatRate("9");
       setIncludes([]);
+      setBoardType(
+        requestBoardPreference && requestBoardPreference !== "no_preference" ? requestBoardPreference : ""
+      );
+      setBoardNotes("");
       setConditions("");
       setValidUntil(format(addDays(new Date(), 14), "yyyy-MM-dd"));
       setPartnerNotes("");
@@ -340,6 +355,8 @@ export const PartnerAccommodationQuoteSheet = ({
       vatRate: parseInt(vatRate),
       includes,
       conditions: conditions.trim(),
+      boardType,
+      boardNotes: boardNotes.trim(),
       validUntil,
       partnerNotes: partnerNotes.trim(),
       roomConfiguration,
