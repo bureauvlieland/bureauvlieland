@@ -165,8 +165,10 @@ export interface AccommodationWizardData {
   // Step 4: Wishes
   location_preference: string[];
   facilities_required: string[];
+  board_preference: string;
   budget_range: string;
   special_requests: string;
+
   
   // Step 5: Contact
   customer_name: string;
