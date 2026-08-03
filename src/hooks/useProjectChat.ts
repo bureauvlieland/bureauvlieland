@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { pickAccommodationThread } from "@/lib/accommodationChatThread";
+
 
 export interface ProjectChatMessage {
   id: string;
