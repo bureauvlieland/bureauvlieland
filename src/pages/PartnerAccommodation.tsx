@@ -240,6 +240,8 @@ const PartnerAccommodationContent = () => {
     vatRate: number;
     includes: string[];
     conditions: string;
+    boardType: string;
+    boardNotes: string;
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: any[];
@@ -284,6 +286,8 @@ const PartnerAccommodationContent = () => {
           valid_until: quoteData.validUntil,
           partner_notes: quoteData.partnerNotes,
           room_configuration: quoteData.roomConfiguration,
+          board_type: quoteData.boardType || null,
+          board_notes: quoteData.boardNotes || null,
           quote_external_url: quoteData.quoteExternalUrl || null,
           quote_attachment_path: attachmentPath,
           quote_attachment_filename: attachmentFilename,

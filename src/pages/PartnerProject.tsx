@@ -281,6 +281,8 @@ const PartnerProjectContent = ({ mode }: Props) => {
           valid_until: quoteData.validUntil,
           partner_notes: quoteData.partnerNotes,
           room_configuration: quoteData.roomConfiguration,
+          board_type: quoteData.boardType || null,
+          board_notes: quoteData.boardNotes || null,
           quote_external_url: quoteData.quoteExternalUrl || null,
           status: "submitted",
           submitted_at: new Date().toISOString(),
