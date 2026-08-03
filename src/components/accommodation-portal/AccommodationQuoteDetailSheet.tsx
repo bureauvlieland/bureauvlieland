@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { AccommodationQuote, RoomConfiguration } from '@/types/accommodation';
+import { getBoardDisplay } from '@/types/accommodation';
 import { useQuoteExtras } from '@/hooks/useQuoteExtras';
 import { 
   calculateExtraTotal, 
@@ -168,6 +169,22 @@ export function AccommodationQuoteDetailSheet({
               </div>
             </div>
           )}
+
+          {/* Verzorging — altijd tonen, ook als nog niet vastgelegd */}
+          {(() => {
+            const board = getBoardDisplay(quote.board_type);
+            return (
+              <div>
+                <h4 className="font-medium mb-3">Verzorging</h4>
+                <Badge variant={board.isKnown ? 'secondary' : 'outline'} className="font-normal">
+                  {board.label}
+                </Badge>
+                {quote.board_notes && (
+                  <p className="text-sm text-muted-foreground mt-2 whitespace-pre-line">{quote.board_notes}</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* What's included */}
           {includes.length > 0 && (

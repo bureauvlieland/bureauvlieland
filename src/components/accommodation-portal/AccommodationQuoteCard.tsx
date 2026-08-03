@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { AccommodationQuote } from '@/types/accommodation';
+import { getBoardDisplay } from '@/types/accommodation';
 import { useQuoteExtras } from '@/hooks/useQuoteExtras';
 import { calculateExtrasTotal, EXTRA_CATEGORY_ICONS, type AccommodationQuoteExtra } from '@/types/accommodationExtras';
 
@@ -137,6 +138,22 @@ export function AccommodationQuoteCard({
             {numberOfGuests} gasten × {numberOfNights} nachten
           </p>
         </div>
+
+        {/* Verzorging — altijd tonen, ook als nog niet vastgelegd */}
+        {(() => {
+          const board = getBoardDisplay(quote.board_type);
+          return (
+            <div>
+              <p className="text-sm font-medium mb-2">Verzorging:</p>
+              <Badge variant={board.isKnown ? 'secondary' : 'outline'} className="text-xs font-normal">
+                {board.label}
+              </Badge>
+              {quote.board_notes && (
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{quote.board_notes}</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Includes */}
         {includes.length > 0 && (
