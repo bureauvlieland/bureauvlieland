@@ -1532,6 +1532,57 @@ Deno.serve(async (req) => {
       }
     }
 
+    // CHECK: gekozen logies zonder vastgelegde verzorging.
+    // Zonder board_type weet de klant niet of ontbijt/pension in de prijs zit.
+    {
+      const { data: boardlessQuotes, error: boardlessError } = await supabase
+        .from("accommodation_quotes")
+        .select("id, request_id, accommodation_name, board_type, status")
+        .eq("status", "selected")
+        .is("board_type", null);
+
+      if (boardlessError) {
+        console.error("Error fetching quotes without board type:", boardlessError);
+      } else {
+        for (const q of boardlessQuotes || []) {
+          const { data: existingTodo } = await supabase
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "lodging_board_missing")
+            .eq("auto_entity_id", q.id)
+            .neq("status", "done")
+            .maybeSingle();
+          if (existingTodo) { totalSkipped++; continue; }
+
+          // Koppel aan het programma als de logiesaanvraag daaraan hangt.
+          let relatedRequestId: string | null = null;
+          if (q.request_id) {
+            const { data: prog } = await supabase
+              .from("program_requests")
+              .select("id")
+              .eq("linked_accommodation_id", q.request_id)
+              .maybeSingle();
+            relatedRequestId = prog?.id ?? null;
+          }
+          if (relatedRequestId && isSnoozed(relatedRequestId)) { totalSkipped++; continue; }
+
+          const { error: todoError } = await supabase
+            .from("admin_todos")
+            .insert({
+              title: `Verzorging ontbreekt bij gekozen logies${q.accommodation_name ? ` (${q.accommodation_name})` : ""}`,
+              description:
+                "De gekozen logies-offerte heeft geen verzorging (logies, logies & ontbijt, halfpension, ...). De klant ziet daardoor niet wat in de prijs zit. Vul dit aan in de offerte-sheet.",
+              priority: "normal",
+              status: "todo",
+              related_request_id: relatedRequestId,
+              auto_type: "lodging_board_missing",
+              auto_entity_id: q.id,
+            });
+          if (!todoError) totalCreated++;
+        }
+      }
+    }
+
     console.log(`Job completed: ${totalCreated} reminders created, ${totalSkipped} skipped`);
 
     return new Response(
