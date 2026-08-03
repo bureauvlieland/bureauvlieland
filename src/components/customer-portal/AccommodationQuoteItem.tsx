@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getBoardLabel } from "@/types/accommodation";
 import {
   Collapsible,
   CollapsibleContent,
@@ -165,6 +166,17 @@ export const AccommodationQuoteItem = ({
                   </p>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Verzorging */}
+          {getBoardLabel(quote.board_type) && (
+            <div>
+              <p className="text-sm font-medium mb-1">Verzorging</p>
+              <Badge variant="secondary" className="text-xs">{getBoardLabel(quote.board_type)}</Badge>
+              {quote.board_notes && (
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{quote.board_notes}</p>
+              )}
             </div>
           )}
 
