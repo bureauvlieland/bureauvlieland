@@ -33,6 +33,10 @@ export interface AccommodationRequest {
   // Budget and wishes
   budget_range: string | null;
   special_requests: string | null;
+
+  // Verzorging (voorkeur klant)
+  board_preference?: string | null;
+
   
   // Program integration
   wants_activities: boolean;
