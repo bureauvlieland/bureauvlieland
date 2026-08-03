@@ -221,3 +221,30 @@ export const BUDGET_RANGES = [
   { value: '150+', label: '€150+ p.p.p.n.' },
   { value: 'no_max', label: 'Geen maximum' },
 ] as const;
+
+// Verzorging (board) — expliciet veld op aanvraag (voorkeur klant) en offerte (partner)
+export const BOARD_TYPES = [
+  { value: 'room_only', label: 'Logies (alleen overnachting)', icon: '🛏️' },
+  { value: 'breakfast', label: 'Logies & ontbijt', icon: '🥐' },
+  { value: 'half_board', label: 'Halfpension', icon: '🍽️' },
+  { value: 'full_board', label: 'Volpension', icon: '🍲' },
+  { value: 'all_inclusive', label: 'All-inclusive', icon: '🥂' },
+  { value: 'other', label: 'Anders / in overleg', icon: '💬' },
+] as const;
+
+export const BOARD_PREFERENCE_OPTIONS = [
+  ...BOARD_TYPES.filter((b) => b.value !== 'other'),
+  { value: 'no_preference', label: 'Geen voorkeur — adviseer mij', icon: '🔄' },
+] as const;
+
+export type BoardType = (typeof BOARD_TYPES)[number]['value'];
+
+/**
+ * Label voor een verzorgingswaarde. Lege/onbekende waarden geven null terug
+ * zodat de UI het blok kan verbergen in plaats van een rauwe key te tonen.
+ */
+export function getBoardLabel(value?: string | null): string | null {
+  if (!value) return null;
+  const match = [...BOARD_TYPES, ...BOARD_PREFERENCE_OPTIONS].find((b) => b.value === value);
+  return match?.label ?? value;
+}
