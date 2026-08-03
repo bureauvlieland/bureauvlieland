@@ -30,7 +30,7 @@ import {
   LOCATION_PREFERENCES,
   FACILITIES,
   BUDGET_RANGES,
-  getBoardLabel,
+  getBoardDisplay,
 } from "@/types/accommodation";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
