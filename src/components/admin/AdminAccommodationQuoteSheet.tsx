@@ -29,9 +29,14 @@ import {
   type ExtraCategory,
 } from "@/types/accommodationExtras";
 import type { RoomConfiguration } from "@/types/accommodation";
-import { getBoardLabel } from "@/types/accommodation";
+import { BOARD_TYPES, getBoardDisplay, validateBoardSelection } from "@/types/accommodation";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { History } from "lucide-react";
 
 interface QuoteData {
@@ -141,6 +146,44 @@ export function AdminAccommodationQuoteSheet({
   numberOfNights,
 }: AdminAccommodationQuoteSheetProps) {
   const { data: extras, isLoading: extrasLoading } = useQuoteExtras(quote?.id);
+  const queryClient = useQueryClient();
+
+  // Verzorging is bewerkbaar zodat de admin bestaande offertes kan aanvullen
+  // zonder de partner opnieuw te bevragen.
+  const [boardType, setBoardType] = useState<string>("");
+  const [boardNotes, setBoardNotes] = useState<string>("");
+  const [savingBoard, setSavingBoard] = useState(false);
+
+  useEffect(() => {
+    setBoardType(quote?.board_type ?? "");
+    setBoardNotes(quote?.board_notes ?? "");
+  }, [quote?.id, quote?.board_type, quote?.board_notes]);
+
+  const boardDirty =
+    boardType !== (quote?.board_type ?? "") || boardNotes !== (quote?.board_notes ?? "");
+
+  const saveBoard = async () => {
+    if (!quote) return;
+    const validation = validateBoardSelection(boardType, boardNotes);
+    if (validation) {
+      toast.error(validation);
+      return;
+    }
+    setSavingBoard(true);
+    const { error } = await supabase
+      .from("accommodation_quotes")
+      .update({ board_type: boardType, board_notes: boardNotes.trim() || null })
+      .eq("id", quote.id);
+    setSavingBoard(false);
+    if (error) {
+      toast.error("Verzorging opslaan mislukt");
+      return;
+    }
+    toast.success("Verzorging bijgewerkt");
+    queryClient.invalidateQueries({ queryKey: ["accommodation-quotes"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-request-detail"] });
+    queryClient.invalidateQueries({ queryKey: ["werkbank-detail-todos"] });
+  };
 
   const { data: history } = useQuery({
     queryKey: ["accommodation-quote-history", quote?.id],
@@ -220,19 +263,48 @@ export function AdminAccommodationQuoteSheet({
             )}
           </div>
 
-          {/* Verzorging */}
-          {getBoardLabel(quote.board_type) && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-semibold mb-1">Verzorging</h4>
-                <Badge variant="secondary">{getBoardLabel(quote.board_type)}</Badge>
-                {quote.board_notes && (
-                  <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{quote.board_notes}</p>
+          {/* Verzorging — bewerkbaar */}
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold">Verzorging</h4>
+                {!getBoardDisplay(quote.board_type).isKnown && (
+                  <Badge variant="outline" className="text-xs">Nog niet vastgelegd</Badge>
                 )}
               </div>
-            </>
-          )}
+              <div className="flex flex-wrap gap-2">
+                {BOARD_TYPES.map((board) => (
+                  <Badge
+                    key={board.value}
+                    variant={boardType === board.value ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setBoardType(board.value)}
+                  >
+                    {boardType === board.value && <Check className="h-3 w-3 mr-1" />}
+                    {board.icon} {board.label}
+                  </Badge>
+                ))}
+              </div>
+              {(boardType === "other" || boardNotes) && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Toelichting</Label>
+                  <Textarea
+                    value={boardNotes}
+                    onChange={(e) => setBoardNotes(e.target.value)}
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Bijv. 3-gangen diner op dag 2"
+                  />
+                </div>
+              )}
+              {boardDirty && (
+                <Button size="sm" onClick={saveBoard} disabled={savingBoard}>
+                  {savingBoard ? "Opslaan..." : "Verzorging opslaan"}
+                </Button>
+              )}
+            </div>
+          </>
 
           {/* Room configuration */}
           {rooms.length > 0 && (
