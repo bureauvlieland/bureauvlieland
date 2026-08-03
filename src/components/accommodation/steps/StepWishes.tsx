@@ -71,8 +71,10 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
         </div>
       </div>
 
-
+      {/* Budget */}
+      <div className="space-y-3">
         <Label>Budget indicatie</Label>
+
         <p className="text-xs text-muted-foreground mb-2">
           Prijs per persoon per nacht (p.p.p.n.)
         </p>
