@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import logoUrl from "@/assets/logo.png";
 import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
+import { getBoardLabel } from "@/types/accommodation";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -169,6 +170,14 @@ export async function generateStayOverviewPdf(
   if (quote.description) {
     section("Beschrijving");
     writeWrapped(quote.description);
+    y += 3;
+  }
+
+  const boardLabel = getBoardLabel(quote.board_type);
+  if (boardLabel) {
+    section("Verzorging");
+    writeWrapped(boardLabel);
+    if (quote.board_notes) writeWrapped(quote.board_notes);
     y += 3;
   }
 

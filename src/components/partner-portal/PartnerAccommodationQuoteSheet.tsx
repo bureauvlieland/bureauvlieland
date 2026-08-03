@@ -33,7 +33,7 @@ import {
   Ban,
   BedDouble,
 } from "lucide-react";
-import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
+import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES, BOARD_TYPES, getBoardLabel } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
 import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
@@ -90,6 +90,8 @@ interface AccommodationQuote {
   vat_rate: number;
   includes: unknown;
   conditions: string | null;
+  board_type?: string | null;
+  board_notes?: string | null;
   valid_until: string;
   partner_notes: string | null;
   room_configuration: Record<string, unknown>[] | null;
@@ -129,6 +131,8 @@ interface PartnerAccommodationQuoteSheetProps {
     vatRate: number;
     includes: string[];
     conditions: string;
+    boardType: string;
+    boardNotes: string;
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: RoomConfig[];
@@ -164,6 +168,7 @@ export const PartnerAccommodationQuoteSheet = ({
   onDecline,
   onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
+  const requestBoardPreference = (request as any)?.board_preference as string | null | undefined;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [responseType, setResponseType] = useState<"submit_quote" | "decline" | "alternative_dates">("submit_quote");
   const [declineReason, setDeclineReason] = useState("");
@@ -175,6 +180,8 @@ export const PartnerAccommodationQuoteSheet = ({
   const [priceIncludesVat, setPriceIncludesVat] = useState(true);
   const [vatRate, setVatRate] = useState("9");
   const [includes, setIncludes] = useState<string[]>([]);
+  const [boardType, setBoardType] = useState<string>("");
+  const [boardNotes, setBoardNotes] = useState("");
   const [conditions, setConditions] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [partnerNotes, setPartnerNotes] = useState("");
@@ -233,6 +240,11 @@ export const PartnerAccommodationQuoteSheet = ({
       setPriceIncludesVat(existingQuote.price_includes_vat);
       setVatRate(existingQuote.vat_rate?.toString() || "9");
       setIncludes(Array.isArray(existingQuote.includes) ? existingQuote.includes as string[] : []);
+      setBoardType(
+        existingQuote.board_type ||
+          (requestBoardPreference && requestBoardPreference !== "no_preference" ? requestBoardPreference : "")
+      );
+      setBoardNotes(existingQuote.board_notes || "");
       setConditions(existingQuote.conditions || "");
       setValidUntil(existingQuote.valid_until || format(addDays(new Date(), 14), "yyyy-MM-dd"));
       setPartnerNotes(existingQuote.partner_notes || "");
@@ -253,6 +265,10 @@ export const PartnerAccommodationQuoteSheet = ({
       setPriceIncludesVat(true);
       setVatRate("9");
       setIncludes([]);
+      setBoardType(
+        requestBoardPreference && requestBoardPreference !== "no_preference" ? requestBoardPreference : ""
+      );
+      setBoardNotes("");
       setConditions("");
       setValidUntil(format(addDays(new Date(), 14), "yyyy-MM-dd"));
       setPartnerNotes("");
@@ -264,7 +280,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setProposedArrivalDate("");
       setProposedDepartureDate("");
     }
-  }, [isOpen, existingQuote, partnerName, partnerDescription]);
+  }, [isOpen, existingQuote, partnerName, partnerDescription, requestBoardPreference]);
 
   // Fetch partner room types for selection - must be before any early returns
   const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);
@@ -340,6 +356,8 @@ export const PartnerAccommodationQuoteSheet = ({
       vatRate: parseInt(vatRate),
       includes,
       conditions: conditions.trim(),
+      boardType,
+      boardNotes: boardNotes.trim(),
       validUntil,
       partnerNotes: partnerNotes.trim(),
       roomConfiguration,
@@ -890,6 +908,41 @@ export const PartnerAccommodationQuoteSheet = ({
                   <Plus className="h-4 w-4 mr-1" />
                   Handmatig kamer toevoegen
                 </Button>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Verzorging */}
+            <div className="space-y-3">
+              <Label>Verzorging *</Label>
+              {requestBoardPreference && (
+                <p className="text-xs text-muted-foreground">
+                  Voorkeur van de klant: {getBoardLabel(requestBoardPreference)}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {BOARD_TYPES.map((board) => (
+                  <Badge
+                    key={board.value}
+                    variant={boardType === board.value ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors ${isReadOnly ? "pointer-events-none" : ""}`}
+                    onClick={() => !isReadOnly && setBoardType(board.value)}
+                  >
+                    {boardType === board.value && <Check className="h-3 w-3 mr-1" />}
+                    {board.icon} {board.label}
+                  </Badge>
+                ))}
+              </div>
+              {(boardType === "other" || boardNotes) && (
+                <Textarea
+                  placeholder="Toelichting op de verzorging (bijv. 3-gangen diner op dag 2)"
+                  value={boardNotes}
+                  onChange={(e) => setBoardNotes(e.target.value)}
+                  disabled={isReadOnly}
+                  rows={2}
+                  maxLength={500}
+                />
               )}
             </div>
 

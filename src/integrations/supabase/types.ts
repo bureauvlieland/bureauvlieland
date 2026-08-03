@@ -202,6 +202,8 @@ export type Database = {
           accommodation_name: string
           actual_invoiced_excl_vat: number | null
           auto_closed_reason: string | null
+          board_notes: string | null
+          board_type: string | null
           commission_amount: number | null
           commission_exempt: boolean
           commission_exempt_at: string | null
@@ -254,6 +256,8 @@ export type Database = {
           accommodation_name: string
           actual_invoiced_excl_vat?: number | null
           auto_closed_reason?: string | null
+          board_notes?: string | null
+          board_type?: string | null
           commission_amount?: number | null
           commission_exempt?: boolean
           commission_exempt_at?: string | null
@@ -306,6 +310,8 @@ export type Database = {
           accommodation_name?: string
           actual_invoiced_excl_vat?: number | null
           auto_closed_reason?: string | null
+          board_notes?: string | null
+          board_type?: string | null
           commission_amount?: number | null
           commission_exempt?: boolean
           commission_exempt_at?: string | null
@@ -392,6 +398,7 @@ export type Database = {
           archived_at: string | null
           arrival_date: string
           attribution: Json | null
+          board_preference: string | null
           budget_range: string | null
           completed_at: string | null
           completed_by: string | null
@@ -431,6 +438,7 @@ export type Database = {
           archived_at?: string | null
           arrival_date: string
           attribution?: Json | null
+          board_preference?: string | null
           budget_range?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -470,6 +478,7 @@ export type Database = {
           archived_at?: string | null
           arrival_date?: string
           attribution?: Json | null
+          board_preference?: string | null
           budget_range?: string | null
           completed_at?: string | null
           completed_by?: string | null

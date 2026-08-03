@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { AccommodationWizardData } from "@/types/accommodation";
-import { LOCATION_PREFERENCES, BUDGET_RANGES } from "@/types/accommodation";
+import { LOCATION_PREFERENCES, BUDGET_RANGES, BOARD_PREFERENCE_OPTIONS } from "@/types/accommodation";
 
 interface StepWishesProps {
   formData: AccommodationWizardData;
@@ -45,9 +45,36 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
       </div>
 
 
+      {/* Verzorging */}
+      <div className="space-y-3">
+        <Label>Welke verzorging wenst u?</Label>
+        <p className="text-xs text-muted-foreground">
+          Zo weten de accommodaties direct of u alleen wilt overnachten of ook maaltijden wenst.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {BOARD_PREFERENCE_OPTIONS.map((board) => (
+            <button
+              key={board.value}
+              type="button"
+              onClick={() => updateFormData({ board_preference: board.value })}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-lg border-2 text-left text-sm transition-all",
+                formData.board_preference === board.value
+                  ? "border-primary bg-primary/5 font-medium"
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <span className="text-xl">{board.icon}</span>
+              <span>{board.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Budget */}
       <div className="space-y-3">
         <Label>Budget indicatie</Label>
+
         <p className="text-xs text-muted-foreground mb-2">
           Prijs per persoon per nacht (p.p.p.n.)
         </p>

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Eye, Edit2, Mail, Users, Calendar, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { getBoardLabel } from "@/types/accommodation";
 
 interface Partner {
   id: string;
@@ -35,6 +36,7 @@ interface AccommodationRequest {
   number_of_guests: number;
   accommodation_type: string;
   special_requests?: string;
+  board_preference?: string | null;
 }
 
 interface SendAccommodationQuoteRequestDialogProps {
@@ -84,7 +86,7 @@ We ontvingen een logiesaanvraag die goed bij jullie aanbod past. Graag ontvangen
 - Klant: ${request.customer_name}${request.customer_company ? ` (${request.customer_company})` : ""}
 - Periode: ${format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl })} - ${format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl })} (${nights} nachten)
 - Aantal gasten: ${request.number_of_guests} personen
-- Type accommodatie: ${TYPE_LABELS[request.accommodation_type] || request.accommodation_type}
+- Type accommodatie: ${TYPE_LABELS[request.accommodation_type] || request.accommodation_type}${getBoardLabel(request.board_preference) ? `\n- Gewenste verzorging: ${getBoardLabel(request.board_preference)}` : ""}
 ${request.special_requests ? `\n**Bijzondere wensen:**\n${request.special_requests}` : ""}
 
 Jullie kunnen de offerte indienen via het partnerportaal. We zien jullie offerte graag binnen 5 werkdagen tegemoet.
