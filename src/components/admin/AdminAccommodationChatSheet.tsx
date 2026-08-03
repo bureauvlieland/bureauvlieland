@@ -13,7 +13,8 @@ interface AdminAccommodationChatSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   accommodationId: string;
-  quoteId: string;
+  /** Optioneel: alleen context bij het aanmaken van de thread. */
+  quoteId?: string | null;
   partnerId: string;
   partnerName: string;
   partnerEmail: string;
@@ -39,6 +40,7 @@ export function AdminAccommodationChatSheet({
     partnerEmail,
     senderRole: "admin",
   });
+
 
   useEffect(() => {
     if (scrollRef.current) {

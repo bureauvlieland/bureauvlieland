@@ -186,7 +186,7 @@ export default function AdminAccommodationDetail() {
   const [reactivateDate, setReactivateDate] = useState<Date | undefined>(addDays(new Date(), 14));
   const [withdrawQuoteId, setWithdrawQuoteId] = useState<string | null>(null);
   const [withdrawNotify, setWithdrawNotify] = useState(true);
-  const [chatQuote, setChatQuote] = useState<{ id: string; partnerId: string; partnerName: string; partnerEmail: string } | null>(null);
+  const [chatQuote, setChatQuote] = useState<{ id: string | null; partnerId: string; partnerName: string; partnerEmail: string } | null>(null);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [closeReason, setCloseReason] = useState("");
   const [closeNotifyCustomer, setCloseNotifyCustomer] = useState(true);
@@ -816,7 +816,34 @@ export default function AdminAccommodationDetail() {
             {/* Quote Cards */}
             {quotes && quotes.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-foreground">Ontvangen offertes</h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-base font-semibold text-foreground">Ontvangen offertes</h3>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Bericht aan logiespartner:</span>
+                    {quotes.map((quote) => {
+                      const partner = quote.partner as { id: string; name: string; email: string } | null;
+                      if (!partner?.id) return null;
+                      return (
+                        <Button
+                          key={`chat-${quote.id}`}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setChatQuote({
+                            id: quote.id,
+                            partnerId: partner.id,
+                            partnerName: partner.name || "Partner",
+                            partnerEmail: partner.email || "",
+                          })}
+                        >
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          {partner.name || "Partner"}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-3">
                   {quotes.map((quote) => {
                     const quoteStatus = QUOTE_STATUS_CONFIG[quote.status] || QUOTE_STATUS_CONFIG.pending;

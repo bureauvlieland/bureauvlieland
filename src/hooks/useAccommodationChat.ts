@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  buildAccommodationThreadInsert,
+  pickAccommodationThread,
+} from "@/lib/accommodationChatThread";
 
 export interface AccommodationChatMessage {
   id: string;
@@ -13,7 +17,8 @@ export interface AccommodationChatMessage {
 
 interface UseAccommodationChatOptions {
   accommodationId: string;
-  quoteId: string;
+  /** Optioneel: alleen context bij het aanmaken van de thread. */
+  quoteId?: string | null;
   partnerId: string;
   partnerName: string;
   partnerEmail: string;
@@ -28,29 +33,31 @@ export function useAccommodationChat(options: UseAccommodationChatOptions) {
   const [isSending, setIsSending] = useState(false);
   const initialLoadDone = useRef(false);
 
-  // Find or load existing conversation
+  // Find existing conversation for this partner + accommodation request
   useEffect(() => {
-    if (!options.quoteId) return;
+    if (!options.accommodationId || !options.partnerId) return;
     initialLoadDone.current = false;
+    setConversationId(null);
+    setMessages([]);
 
     const findConversation = async () => {
       setIsLoading(true);
       const { data } = await supabase
         .from("chat_conversations")
-        .select("id")
-        .eq("quote_id", options.quoteId)
-        .neq("status", "closed")
+        .select("id, status, created_at")
+        .eq("source", "partner_portal")
+        .eq("source_partner_id", options.partnerId)
+        .eq("accommodation_id", options.accommodationId)
         .order("created_at", { ascending: false })
-        .limit(1);
+        .limit(10);
 
-      if (data && data.length > 0) {
-        setConversationId(data[0].id);
-      }
+      const found = pickAccommodationThread(data as { id: string; status?: string | null; created_at?: string | null }[] | null);
+      if (found) setConversationId(found);
       setIsLoading(false);
       initialLoadDone.current = true;
     };
     findConversation();
-  }, [options.quoteId]);
+  }, [options.accommodationId, options.partnerId]);
 
   // Load messages when conversation exists
   useEffect(() => {
@@ -96,16 +103,13 @@ export function useAccommodationChat(options: UseAccommodationChatOptions) {
     if (!convId) {
       const { data, error } = await supabase
         .from("chat_conversations")
-        .insert({
-          source: "partner_portal",
-          source_partner_id: options.partnerId,
-          accommodation_id: options.accommodationId,
-          quote_id: options.quoteId,
-          visitor_name: options.partnerName,
-          visitor_email: options.partnerEmail,
-          status: "active",
-          last_message_at: new Date().toISOString(),
-        } as any)
+        .insert(buildAccommodationThreadInsert({
+          partnerId: options.partnerId,
+          accommodationId: options.accommodationId,
+          partnerName: options.partnerName,
+          partnerEmail: options.partnerEmail,
+          quoteId: options.quoteId ?? null,
+        }) as any)
         .select()
         .single();
 

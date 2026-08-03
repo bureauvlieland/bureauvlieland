@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { pickAccommodationThread } from "@/lib/accommodationChatThread";
+
 
 export interface ProjectChatMessage {
   id: string;
@@ -45,12 +47,12 @@ export function useProjectChat({
       setIsLoading(true);
       let query = supabase
         .from("chat_conversations")
-        .select("id")
+        .select("id, status, created_at")
         .eq("source", "partner_portal")
         .eq("source_partner_id", partnerId)
         .neq("status", "closed")
         .order("created_at", { ascending: false })
-        .limit(1);
+        .limit(10);
 
       if (requestId) {
         query = query.eq("request_id", requestId).is("accommodation_id", null);
@@ -59,7 +61,10 @@ export function useProjectChat({
       }
 
       const { data } = await query;
-      let convId = data?.[0]?.id as string | undefined;
+      let convId =
+        pickAccommodationThread(
+          data as { id: string; status?: string | null; created_at?: string | null }[] | null,
+        ) ?? undefined;
 
       if (!convId) {
         const { data: inserted } = await supabase
@@ -78,6 +83,7 @@ export function useProjectChat({
           .single();
         convId = inserted?.id;
       }
+
 
       if (cancelled || !convId) {
         setIsLoading(false);
