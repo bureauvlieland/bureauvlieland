@@ -33,7 +33,7 @@ import {
   Ban,
   BedDouble,
 } from "lucide-react";
-import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES } from "@/types/accommodation";
+import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES, ROOM_TYPES, BOARD_TYPES, getBoardLabel } from "@/types/accommodation";
 import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
 import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
@@ -168,6 +168,7 @@ export const PartnerAccommodationQuoteSheet = ({
   onDecline,
   onRefresh,
 }: PartnerAccommodationQuoteSheetProps) => {
+  const requestBoardPreference = (request as any)?.board_preference as string | null | undefined;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [responseType, setResponseType] = useState<"submit_quote" | "decline" | "alternative_dates">("submit_quote");
   const [declineReason, setDeclineReason] = useState("");
@@ -279,7 +280,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setProposedArrivalDate("");
       setProposedDepartureDate("");
     }
-  }, [isOpen, existingQuote, partnerName, partnerDescription]);
+  }, [isOpen, existingQuote, partnerName, partnerDescription, requestBoardPreference]);
 
   // Fetch partner room types for selection - must be before any early returns
   const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(partnerId);
@@ -907,6 +908,41 @@ export const PartnerAccommodationQuoteSheet = ({
                   <Plus className="h-4 w-4 mr-1" />
                   Handmatig kamer toevoegen
                 </Button>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Verzorging */}
+            <div className="space-y-3">
+              <Label>Verzorging *</Label>
+              {requestBoardPreference && (
+                <p className="text-xs text-muted-foreground">
+                  Voorkeur van de klant: {getBoardLabel(requestBoardPreference)}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {BOARD_TYPES.map((board) => (
+                  <Badge
+                    key={board.value}
+                    variant={boardType === board.value ? "default" : "outline"}
+                    className={`cursor-pointer transition-colors ${isReadOnly ? "pointer-events-none" : ""}`}
+                    onClick={() => !isReadOnly && setBoardType(board.value)}
+                  >
+                    {boardType === board.value && <Check className="h-3 w-3 mr-1" />}
+                    {board.icon} {board.label}
+                  </Badge>
+                ))}
+              </div>
+              {(boardType === "other" || boardNotes) && (
+                <Textarea
+                  placeholder="Toelichting op de verzorging (bijv. 3-gangen diner op dag 2)"
+                  value={boardNotes}
+                  onChange={(e) => setBoardNotes(e.target.value)}
+                  disabled={isReadOnly}
+                  rows={2}
+                  maxLength={500}
+                />
               )}
             </div>
 
