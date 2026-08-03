@@ -267,9 +267,15 @@ export const AccommodationSection = ({
                   {selectedQuote.board_notes && (
                     <p className="text-sm text-muted-foreground mt-2 whitespace-pre-line">{selectedQuote.board_notes}</p>
                   )}
+                  {!board.isKnown && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Wilt u dit direct weten? Stel uw vraag via "Nieuw bericht" onderaan deze pagina.
+                    </p>
+                  )}
                 </div>
                 );
               })()}
+
 
 
               {(selectedQuote.room_configuration?.length ?? 0) > 0 && (
