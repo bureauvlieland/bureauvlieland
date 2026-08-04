@@ -2,7 +2,9 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
-import heroImage from "@/assets/beach-activity.jpg";
+
+const heroImage =
+  "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/building-block-images/1785853376111-Diner-online-106.jpg";
 
 export const HeroEditorial = () => {
   return (
@@ -11,7 +13,7 @@ export const HeroEditorial = () => {
       <div className="absolute inset-0">
         <img
           src={heroImage}
-          alt="Groep gasten geniet samen op Vlieland"
+          alt="Sfeervol diner voor een groep op Vlieland"
           className="w-full h-full object-cover"
           width={1920}
           height={1280}
