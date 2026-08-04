@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
       // Programma-onderdelen op hoofdlijnen (geen prijsdetails de prompt in).
       const { data: items } = await supabase
         .from("program_request_items")
-        .select("block_name, status, day_index, preferred_time, number_of_people")
+        .select("block_name, status, day_index, preferred_time, override_people")
         .eq("request_id", requestId)
         .limit(60);
       if (items?.length) {
