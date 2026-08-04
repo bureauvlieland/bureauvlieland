@@ -525,8 +525,8 @@ const PartnerFinanceContent = () => {
                 <Mail className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Tip:</strong> je kunt je factuur ook gewoon mailen naar{" "}
-                  <a href="mailto:inkoop@reply.bureauvlieland.nl" className="underline font-medium">
-                    inkoop@reply.bureauvlieland.nl
+                  <a href="mailto:invoices@reply.bureauvlieland.nl" className="underline font-medium">
+                    invoices@reply.bureauvlieland.nl
                   </a>{" "}
                   — Bureau Vlieland verwerkt 'm dan automatisch (PDF wordt ingelezen en gekoppeld aan je project).
                 </AlertDescription>

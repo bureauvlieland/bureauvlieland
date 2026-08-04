@@ -70,7 +70,7 @@ interface Props {
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
 
-const INKOOP_INBOX = "inkoop@reply.bureauvlieland.nl";
+const INKOOP_INBOX = PURCHASE_INVOICE_INBOX;
 
 export const RegisterCollectivePartnerInvoiceDialog = ({
   isOpen,
