@@ -180,7 +180,7 @@ export function AdminAccommodationQuoteSheet({
       return;
     }
     toast.success("Verzorging bijgewerkt");
-    setBoardDirty(false);
+    
     // Let op: invalidatie is prefix-based. De logies-detailpagina registreert
     // de offertes onder ["admin-accommodation-quotes", id], dus die key moet
     // hier expliciet mee — anders blijft de sheet bij heropenen leeg.
