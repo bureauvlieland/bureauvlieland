@@ -882,14 +882,15 @@ Deno.serve(async (req) => {
         if (
           canSendEmail &&
           item.executed_at && item.executed_at <= threeDaysAgo &&
-          !invoicedItemIds.has(item.id) &&
+          !hasInvoice(item) &&
           item.block_type !== "bureau"
         ) {
           const partner = partnerMap.get(item.provider_id as string) as any;
           if (partner) {
             const partnerEmail = partner.contact_email || partner.email;
             const partnerName = partner.name || item.provider_name || "partner";
-            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? item.invoiced_amount ?? item.quoted_price ?? null);
+
             await sendReminderEmail({
               templateId: "partner_invoice_reminder_t1",
               recipientEmail: partnerEmail,
