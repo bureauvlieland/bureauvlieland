@@ -304,7 +304,10 @@ export const InvoiceRegistrationDialog = ({
                   </a>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">Factureer dezelfde geoffreerde prijs. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
+              <p className="text-xs text-muted-foreground">
+                Factureer dezelfde geoffreerde prijs. U kunt de PDF hieronder direct uploaden of mailen naar dit adres.
+                Bureau Vlieland stuurt u apart een commissiefactuur.
+              </p>
             </div>
           ) : billingDetails?.billing_company_name ? (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
