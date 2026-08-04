@@ -333,7 +333,11 @@ export const handler = async (req: Request): Promise<Response> => {
       // meetelt als goedgekeurd in aggregaten ("Alles goedgekeurd").
       updateData.customer_accepted_at = null;
       updateData.customer_approved_at = null;
-      updateData.item_quote_status = "wacht_op_klant";
+      // LET OP: alleen de waarden uit program_request_items_quote_status_check zijn
+      // toegestaan ('concept' | 'offerte_verstuurd' | 'in_afstemming' | 'bevestigd' |
+      // 'optioneel'). Weergavestatussen zoals "wacht_op_klant" worden nooit opgeslagen —
+      // die worden afgeleid uit status + goedkeurings-vlaggen.
+      updateData.item_quote_status = "in_afstemming";
     }
 
     if (status === "unavailable") {
