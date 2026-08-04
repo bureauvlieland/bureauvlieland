@@ -13,7 +13,7 @@ export const HeroEditorial = () => {
       <div className="absolute inset-0">
         <img
           src={heroImage}
-          alt="Groep gasten geniet samen op Vlieland"
+          alt="Sfeervol diner voor een groep op Vlieland"
           className="w-full h-full object-cover"
           width={1920}
           height={1280}
