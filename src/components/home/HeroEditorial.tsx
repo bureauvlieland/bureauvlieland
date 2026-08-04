@@ -2,9 +2,9 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
-import heroAsset from "@/assets/hero-diner.jpg.asset.json";
 
-const heroImage = heroAsset.url;
+const heroImage =
+  "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/building-block-images/1785853376111-Diner-online-106.jpg";
 
 export const HeroEditorial = () => {
   return (
