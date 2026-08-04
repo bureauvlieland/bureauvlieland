@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
+import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
+
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
@@ -782,7 +784,7 @@ Deno.serve(async (req) => {
     // Get executed items (incl. fields needed for partner invoice reminders)
     const { data: executedItems } = await supabase
       .from("program_request_items")
-      .select("id, block_name, provider_name, provider_id, request_id, executed_at, block_type, quoted_price, proforma_amount_excl_vat")
+      .select("id, block_name, provider_name, provider_id, request_id, executed_at, block_type, quoted_price, proforma_amount_excl_vat, invoiced_number, invoiced_amount, partner_dismissed_at")
       .not("executed_at", "is", null)
       .neq("status", "cancelled");
 
@@ -795,13 +797,22 @@ Deno.serve(async (req) => {
         .in("id", execRequestIds);
       const execReqMap = new Map((execRequests || []).map(r => [r.id, r]));
 
-      // Get existing purchase invoices for these items
+      // Factuur-aanwezigheid via dezelfde signalen als de Commissie Werklijst:
+      // directe koppeling, verzamelfactuur-allocatie of factuurnummer op het item.
       const execItemIds = executedItems.map(i => i.id);
       const { data: existingInvoices } = await supabase
         .from("partner_purchase_invoices")
+        .select("item_id, partner_id, invoice_number");
+      const { data: existingAllocations } = await supabase
+        .from("partner_purchase_invoice_allocations")
         .select("item_id")
         .in("item_id", execItemIds);
-      const invoicedItemIds = new Set((existingInvoices || []).map(i => i.item_id));
+      const invoicePresence = buildInvoicePresenceIndex({
+        invoices: existingInvoices || [],
+        allocations: existingAllocations || [],
+      });
+      const hasInvoice = (item: any) => hasPartnerInvoiceSignal(item, invoicePresence);
+
 
       // Pre-fetch partner contacts for executed items (skip bureau items)
       const execPartnerIds = [...new Set(
@@ -871,14 +882,15 @@ Deno.serve(async (req) => {
         if (
           canSendEmail &&
           item.executed_at && item.executed_at <= threeDaysAgo &&
-          !invoicedItemIds.has(item.id) &&
+          !hasInvoice(item) &&
           item.block_type !== "bureau"
         ) {
           const partner = partnerMap.get(item.provider_id as string) as any;
           if (partner) {
             const partnerEmail = partner.contact_email || partner.email;
             const partnerName = partner.name || item.provider_name || "partner";
-            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? item.invoiced_amount ?? item.quoted_price ?? null);
+
             await sendReminderEmail({
               templateId: "partner_invoice_reminder_t1",
               recipientEmail: partnerEmail,
@@ -904,7 +916,7 @@ Deno.serve(async (req) => {
         }
 
         // Post-execution invoice check: 7 days after executed_at, no purchase invoice
-        if (item.executed_at && item.executed_at <= sevenDaysAgo && !invoicedItemIds.has(item.id)) {
+        if (item.executed_at && item.executed_at <= sevenDaysAgo && !hasInvoice(item)) {
           const { data: existingCheck } = await supabase
             .from("admin_todos")
             .select("id")
@@ -945,7 +957,7 @@ Deno.serve(async (req) => {
             if (partner) {
               const partnerEmail = partner.contact_email || partner.email;
               const partnerName = partner.name || item.provider_name || "partner";
-              const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? null);
+              const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? item.invoiced_amount ?? item.quoted_price ?? null);
               await sendReminderEmail({
                 templateId: "partner_invoice_reminder_t7",
                 recipientEmail: partnerEmail,
