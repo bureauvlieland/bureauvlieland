@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
+import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import {
   Dialog,
   DialogContent,
