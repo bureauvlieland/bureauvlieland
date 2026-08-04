@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
-import heroImage from "@/assets/hero-vlieland.jpg";
+import heroImage from "@/assets/beach-activity.jpg";
 
 export const HeroEditorial = () => {
   return (
