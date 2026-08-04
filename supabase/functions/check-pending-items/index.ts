@@ -2,6 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
+import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
+
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
