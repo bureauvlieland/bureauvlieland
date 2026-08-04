@@ -576,9 +576,11 @@ export const PartnerAccommodationQuoteSheet = ({
                 </p>
                 <div className="text-amber-700 dark:text-amber-400 space-y-0.5">
                   <p className="font-medium">Bureau Vlieland</p>
-                  <p>administratie@bureauvlieland.nl</p>
+                  <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="underline font-medium">
+                    {PURCHASE_INVOICE_INBOX}
+                  </a>
                 </div>
-                  <p className="text-muted-foreground text-xs">U factureert dezelfde geoffreerde prijs als bij directe facturatie. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
+                  <p className="text-muted-foreground text-xs">U factureert dezelfde geoffreerde prijs als bij directe facturatie. U kunt de factuur ook direct in het portaal registreren en uploaden. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
                 </div>
               
               {/* Invoice registration section */}
