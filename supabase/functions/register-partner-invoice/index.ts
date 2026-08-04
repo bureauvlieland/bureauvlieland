@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
     const viaEmailBanner = isViaEmail
       ? `<div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 16px;border-radius:8px;margin:16px 0;font-size:14px;">
            <strong>Let op:</strong> partner heeft aangegeven dat de PDF per e-mail is verzonden naar
-           <a href="mailto:inkoop@reply.bureauvlieland.nl">inkoop@reply.bureauvlieland.nl</a>.
+           <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>.
            De factuur wordt automatisch gekoppeld zodra hij binnenkomt.
          </div>`
       : "";

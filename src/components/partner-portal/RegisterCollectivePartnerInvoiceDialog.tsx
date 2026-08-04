@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
+import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import {
   Dialog,
   DialogContent,
@@ -70,7 +71,7 @@ interface Props {
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
 
-const INKOOP_INBOX = "inkoop@reply.bureauvlieland.nl";
+const INKOOP_INBOX = PURCHASE_INVOICE_INBOX;
 
 export const RegisterCollectivePartnerInvoiceDialog = ({
   isOpen,

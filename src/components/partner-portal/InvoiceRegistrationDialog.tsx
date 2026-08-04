@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
+import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import {
   Dialog,
   DialogContent,
@@ -219,7 +220,7 @@ export const InvoiceRegistrationDialog = ({
     kvkNumber: bureauDetails?.kvkNumber || "",
     vatNumber: bureauDetails?.vatNumber || "",
     address: bureauDetails?.address || "Vlieland",
-    email: bureauDetails?.email || "administratie@bureauvlieland.nl",
+    email: PURCHASE_INVOICE_INBOX,
   };
 
   return (
@@ -304,7 +305,10 @@ export const InvoiceRegistrationDialog = ({
                   </a>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">Factureer dezelfde geoffreerde prijs. Bureau Vlieland stuurt u apart een commissiefactuur.</p>
+              <p className="text-xs text-muted-foreground">
+                Factureer dezelfde geoffreerde prijs. U kunt de PDF hieronder direct uploaden of mailen naar dit adres.
+                Bureau Vlieland stuurt u apart een commissiefactuur.
+              </p>
             </div>
           ) : billingDetails?.billing_company_name ? (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">

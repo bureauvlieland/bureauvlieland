@@ -1264,7 +1264,7 @@ Deno.serve(async (req) => {
               <p style="background:#f8f9fa; padding:12px 16px; border-left:3px solid #1e3a5f; border-radius:4px;">
                 <strong>Facturatie:</strong> Bureau Vlieland factureert centraal aan de klant — stuur jouw factuur dus niet rechtstreeks naar de klant.
                 Je factureert ná uitvoering aan Bureau Vlieland: upload de factuur in je partnerportaal of mail de PDF naar
-                <a href="mailto:inkoop@reply.bureauvlieland.nl">inkoop@reply.bureauvlieland.nl</a>. Vermeld het referentienummer voor snelle verwerking.
+                <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>. Vermeld het referentienummer voor snelle verwerking.
               </p>
 
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
