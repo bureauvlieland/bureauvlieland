@@ -916,7 +916,7 @@ Deno.serve(async (req) => {
         }
 
         // Post-execution invoice check: 7 days after executed_at, no purchase invoice
-        if (item.executed_at && item.executed_at <= sevenDaysAgo && !invoicedItemIds.has(item.id)) {
+        if (item.executed_at && item.executed_at <= sevenDaysAgo && !hasInvoice(item)) {
           const { data: existingCheck } = await supabase
             .from("admin_todos")
             .select("id")
