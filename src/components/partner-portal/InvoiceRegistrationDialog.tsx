@@ -219,7 +219,7 @@ export const InvoiceRegistrationDialog = ({
     kvkNumber: bureauDetails?.kvkNumber || "",
     vatNumber: bureauDetails?.vatNumber || "",
     address: bureauDetails?.address || "Vlieland",
-    email: bureauDetails?.email || "administratie@bureauvlieland.nl",
+    email: PURCHASE_INVOICE_INBOX,
   };
 
   return (
