@@ -180,7 +180,13 @@ export function AdminAccommodationQuoteSheet({
       return;
     }
     toast.success("Verzorging bijgewerkt");
+    setBoardDirty(false);
+    // Let op: invalidatie is prefix-based. De logies-detailpagina registreert
+    // de offertes onder ["admin-accommodation-quotes", id], dus die key moet
+    // hier expliciet mee — anders blijft de sheet bij heropenen leeg.
     queryClient.invalidateQueries({ queryKey: ["accommodation-quotes"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request"] });
     queryClient.invalidateQueries({ queryKey: ["admin-request-detail"] });
     queryClient.invalidateQueries({ queryKey: ["werkbank-detail-todos"] });
   };
