@@ -2,7 +2,9 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
-import heroImage from "@/assets/beach-activity.jpg";
+import heroAsset from "@/assets/hero-diner.jpg.asset.json";
+
+const heroImage = heroAsset.url;
 
 export const HeroEditorial = () => {
   return (
