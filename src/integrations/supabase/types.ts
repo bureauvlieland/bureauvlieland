@@ -4738,6 +4738,27 @@ export type Database = {
             }
             Returns: boolean
           }
+        | {
+            Args: {
+              _accommodation_commission_percentage: number
+              _auth_user_id: string
+              _bank_account_name?: string
+              _bank_iban: string
+              _bic: string
+              _commission_percentage: number
+              _email: string
+              _extras_commission_percentage: number
+              _iban?: string
+              _id: string
+              _is_active: boolean
+              _is_public?: boolean
+              _kvk_number: string
+              _map_api_key: string
+              _partner_token: string
+              _partner_type?: string
+            }
+            Returns: boolean
+          }
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       scan_stale_pending_changes: { Args: never; Returns: number }
