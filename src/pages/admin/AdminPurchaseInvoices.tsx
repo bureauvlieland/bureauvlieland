@@ -507,7 +507,19 @@ export default function AdminPurchaseInvoices() {
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {!invoice.item_id && !(invoice as any).accommodation_quote && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setLinkTargetInvoice(invoice)}
+                              title="Koppel aan programma-onderdeel of logies-offerte"
+                              className="text-primary hover:bg-primary/10"
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          )}
                           {invoice.file_path ? (
+
                             <Button
                               variant="ghost"
                               size="icon"
