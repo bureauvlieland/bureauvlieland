@@ -167,6 +167,36 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
             </div>
           )}
 
+          {isUnlinkedInvoiceTodo && invoice && (
+            <div className="rounded-md border bg-background px-3 py-2 text-sm">
+              <div className="text-xs uppercase text-muted-foreground">Inkoopfactuur</div>
+              <div className="font-medium">
+                {invoice.invoice_number || "zonder nummer"}
+                {invoice.amount_incl_vat !== null && (
+                  <span className="ml-2 text-xs text-muted-foreground tabular-nums">
+                    {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(
+                      invoice.amount_incl_vat,
+                    )}{" "}
+                    incl. btw
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button size="sm" className="h-7 gap-1" onClick={() => setLinkOpen(true)}>
+                  <Link2 className="h-3.5 w-3.5" /> Factuur koppelen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1"
+                  onClick={() => setExemptOpen(true)}
+                >
+                  <Archive className="h-3.5 w-3.5" /> Commissievrij markeren
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="gap-1" onClick={() => setStatus("done")}>
               <Check className="h-4 w-4" /> Opgepakt
@@ -177,6 +207,28 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
           </div>
         </CardContent>
       </Card>
+
+      <LinkPurchaseInvoiceDialog
+        invoice={invoice ?? null}
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        onLinked={() => {
+          refreshAll();
+          onResolved?.();
+        }}
+      />
+      {todo.auto_entity_id && (
+        <CommissionExemptDialog
+          open={exemptOpen}
+          onOpenChange={setExemptOpen}
+          rows={[{ type: "purchase_invoice", id: todo.auto_entity_id }]}
+          onDone={() => {
+            refreshAll();
+            onResolved?.();
+          }}
+        />
+      )}
     </div>
+
   );
 }
