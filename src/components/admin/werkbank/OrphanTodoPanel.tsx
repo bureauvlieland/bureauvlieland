@@ -38,13 +38,15 @@ const PRIORITY_TONE: Record<TodoRow["priority"], string> = {
 export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onResolved?: () => void }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [exemptOpen, setExemptOpen] = useState(false);
 
   const { data: todo, isLoading } = useQuery<TodoRow | null>({
     queryKey: ["werkbank-orphan-todo", todoId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admin_todos")
-        .select("id, title, description, priority, due_date, auto_type, related_partner_id, related_request_id, created_at")
+        .select("id, title, description, priority, due_date, auto_type, auto_entity_id, related_partner_id, related_request_id, created_at")
         .eq("id", todoId)
         .maybeSingle();
       if (error) throw error;
@@ -62,6 +64,35 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
         .eq("id", todo!.related_partner_id!)
         .maybeSingle();
       return data;
+    },
+  });
+
+  const isUnlinkedInvoiceTodo = todo?.auto_type === "commission_unlinked_invoice" && !!todo?.auto_entity_id;
+
+  const { data: invoice } = useQuery<LinkableInvoice | null>({
+    queryKey: ["werkbank-orphan-todo-invoice", todo?.auto_entity_id],
+    enabled: !!isUnlinkedInvoiceTodo,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_purchase_invoices")
+        .select("id, partner_id, invoice_number, invoice_date, amount_incl_vat, request_id, partners(name)")
+        .eq("id", todo!.auto_entity_id!)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const row = data as any;
+      return {
+        id: row.id,
+        partner_id: row.partner_id,
+        partner_name: row.partners?.name ?? null,
+        invoice_number: row.invoice_number,
+        invoice_date: row.invoice_date,
+        amount_incl_vat:
+          row.amount_incl_vat !== null && row.amount_incl_vat !== undefined
+            ? Number(row.amount_incl_vat)
+            : null,
+        request_id: row.request_id,
+      } satisfies LinkableInvoice;
     },
   });
 
@@ -84,6 +115,7 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
     refreshAll();
     onResolved?.();
   };
+
 
   if (isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Laden…</div>;
