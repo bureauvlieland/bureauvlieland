@@ -11,7 +11,7 @@ import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
 import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
-import { isFeeExcluded } from "@/lib/excludedFees";
+import { computeAutomaticFees } from "@/lib/customerFeeTotals";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -163,22 +163,21 @@ export const PriceSummaryCard = ({
     const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
     const pendingLines = orderLines.filter(l => l.effectivePrice === null);
 
-    // Per-project uitgesloten posten: niet tonen én niet meerekenen.
-    const excludeTouristTax = isFeeExcluded(excludedFees, "tourist_tax");
-    const excludeNature = isFeeExcluded(excludedFees, "nature_contribution");
-    const excludeCoordination = isFeeExcluded(excludedFees, "coordination_fee");
-    const excludeCentralSurcharge = isFeeExcluded(excludedFees, "central_surcharge");
-
-    // Coordination fee
-    const coordinationFee = excludeCoordination ? 0 : getCoordinationFee(numberOfPeople);
-    const centralSurcharge = isBureauCentral && !excludeCentralSurcharge
-      ? appSettings.bureau_central_surcharge_pp * numberOfPeople
-      : 0;
+    // Automatische posten — respecteert per-project uitsluitingen (excluded_fees).
+    const fees = computeAutomaticFees({
+      numberOfPeople,
+      numberOfDays,
+      isBureauCentral,
+      coordinationFeeForPeople: getCoordinationFee(numberOfPeople),
+      settings: {
+        tourist_tax_pp_per_day: appSettings.tourist_tax_pp_per_day,
+        nature_contribution_pp: appSettings.nature_contribution_pp,
+        bureau_central_surcharge_pp: appSettings.bureau_central_surcharge_pp,
+      },
+      excludedFees,
+    });
+    const { touristTax, natureContribution, coordinationFee, centralSurcharge } = fees;
     const standardVatRate = getVatRate("standard");
-
-    // Tourist tax & nature contribution (0% VAT — levies)
-    const touristTax = excludeTouristTax ? 0 : appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
-    const natureContribution = excludeNature ? 0 : appSettings.nature_contribution_pp * numberOfPeople;
 
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
@@ -243,9 +242,9 @@ export const PriceSummaryCard = ({
       standardVatRate,
       touristTax,
       natureContribution,
-      showTouristTax: !excludeTouristTax,
-      showNatureContribution: !excludeNature,
-      showCoordinationFee: !excludeCoordination,
+      showTouristTax: fees.showTouristTax,
+      showNatureContribution: fees.showNatureContribution,
+      showCoordinationFee: fees.showCoordinationFee,
       accommodationTotal,
       accommodationVatRate,
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
