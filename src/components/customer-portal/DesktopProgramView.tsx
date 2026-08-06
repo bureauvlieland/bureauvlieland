@@ -91,6 +91,7 @@ interface DesktopProgramViewProps {
     // Quote mode fields
     origin?: string | null;
     quote_status?: string | null;
+    excluded_fees?: string[] | null;
     quote_valid_until?: string | null;
     // Program description
     program_description?: string | null;
@@ -622,6 +623,7 @@ export const DesktopProgramView = ({
                 billingLinesByItem={billingLinesByItem}
                 blockVatRates={blockVatRates}
                 accommodationExtrasByQuoteId={accommodationExtrasByQuoteId}
+                excludedFees={program.excluded_fees}
               />
             </div>
             {termsAccepted && (
@@ -682,6 +684,7 @@ export const DesktopProgramView = ({
          isPreApproval={isPreApproval}
          quoteStatus={program.quote_status}
         totalCost={totalCost}
+        excludedFees={program.excluded_fees}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
         topSlot={

@@ -23,6 +23,7 @@ interface InvoiceTotalsRequestLike {
   number_of_people: number;
   selected_dates: string[];
   invoicing_mode?: string | null;
+  excluded_fees?: string[] | null;
 }
 
 interface InvoiceTotalsArgs {
