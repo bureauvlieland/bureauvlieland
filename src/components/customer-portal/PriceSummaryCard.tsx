@@ -11,6 +11,7 @@ import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
 import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
+import { isFeeExcluded } from "@/lib/excludedFees";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -26,6 +27,8 @@ interface PriceSummaryCardProps {
   billingLinesByItem?: Record<string, any[]>;
   blockVatRates?: Record<string, number>;
   accommodationExtrasOverride?: any[];
+  /** Per-project uitgesloten automatische kostenposten (program_requests.excluded_fees). */
+  excludedFees?: string[] | null;
 }
 
 const calcVatBreakdown = (amountInclVat: number, vatRate: number = 21) => ({
@@ -45,6 +48,7 @@ export const PriceSummaryCard = ({
   billingLinesByItem: billingLinesByItemProp,
   blockVatRates: blockVatRatesProp,
   accommodationExtrasOverride,
+  excludedFees,
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
@@ -159,14 +163,22 @@ export const PriceSummaryCard = ({
     const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
     const pendingLines = orderLines.filter(l => l.effectivePrice === null);
 
+    // Per-project uitgesloten posten: niet tonen én niet meerekenen.
+    const excludeTouristTax = isFeeExcluded(excludedFees, "tourist_tax");
+    const excludeNature = isFeeExcluded(excludedFees, "nature_contribution");
+    const excludeCoordination = isFeeExcluded(excludedFees, "coordination_fee");
+    const excludeCentralSurcharge = isFeeExcluded(excludedFees, "central_surcharge");
+
     // Coordination fee
-    const coordinationFee = getCoordinationFee(numberOfPeople);
-    const centralSurcharge = isBureauCentral ? appSettings.bureau_central_surcharge_pp * numberOfPeople : 0;
+    const coordinationFee = excludeCoordination ? 0 : getCoordinationFee(numberOfPeople);
+    const centralSurcharge = isBureauCentral && !excludeCentralSurcharge
+      ? appSettings.bureau_central_surcharge_pp * numberOfPeople
+      : 0;
     const standardVatRate = getVatRate("standard");
 
     // Tourist tax & nature contribution (0% VAT — levies)
-    const touristTax = appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
-    const natureContribution = appSettings.nature_contribution_pp * numberOfPeople;
+    const touristTax = excludeTouristTax ? 0 : appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
+    const natureContribution = excludeNature ? 0 : appSettings.nature_contribution_pp * numberOfPeople;
 
     // Accommodation
     const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
@@ -207,13 +219,13 @@ export const PriceSummaryCard = ({
         addVat(l.effectivePrice, getItemVatRate(l.item));
       }
     });
-    addVat(coordinationFee + centralSurcharge, standardVatRate);
+    if (coordinationFee + centralSurcharge > 0) addVat(coordinationFee + centralSurcharge, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
     // Each extra has its own VAT rate (often 9% for F&B, 21% for services)
     extrasWithTotals.forEach(({ extra, total }) => {
       if (total > 0) addVat(total, Number(extra.vat_rate ?? 9));
     });
-    addZeroVat(touristTax + natureContribution);
+    if (touristTax + natureContribution > 0) addZeroVat(touristTax + natureContribution);
 
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
@@ -231,6 +243,9 @@ export const PriceSummaryCard = ({
       standardVatRate,
       touristTax,
       natureContribution,
+      showTouristTax: !excludeTouristTax,
+      showNatureContribution: !excludeNature,
+      showCoordinationFee: !excludeCoordination,
       accommodationTotal,
       accommodationVatRate,
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
@@ -244,7 +259,7 @@ export const PriceSummaryCard = ({
       grandTotalInclVat,
       hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral, excludedFees]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
@@ -279,18 +294,24 @@ export const PriceSummaryCard = ({
               <span>€{formatPrice(activitiesTotal)}</span>
             </div>
           )}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Toeristenbelasting</span>
-            <span>€{formatPrice(summary.touristTax)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Natuurbijdrage</span>
-            <span>€{formatPrice(summary.natureContribution)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Coördinatiefee</span>
-            <span>€{formatPrice(summary.coordinationFee)}</span>
-          </div>
+          {summary.showTouristTax && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Toeristenbelasting</span>
+              <span>€{formatPrice(summary.touristTax)}</span>
+            </div>
+          )}
+          {summary.showNatureContribution && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Natuurbijdrage</span>
+              <span>€{formatPrice(summary.natureContribution)}</span>
+            </div>
+          )}
+          {summary.showCoordinationFee && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Coördinatiefee</span>
+              <span>€{formatPrice(summary.coordinationFee)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-1.5 border-t">
             <span className="font-medium">Totaal incl. BTW</span>
             <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
@@ -421,29 +442,35 @@ export const PriceSummaryCard = ({
           })}
 
           {/* Tourist tax line */}
-          <div className="py-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
-              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.touristTax)}</span>
+          {summary.showTouristTax && (
+            <div className="py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Toeristenbelasting ({numberOfPeople} pers. × {numberOfDays} dgn)</span>
+                <span className="text-sm whitespace-nowrap">€{formatPrice(summary.touristTax)}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Nature contribution line */}
-          <div className="py-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Natuurbijdrage ({numberOfPeople} pers.)</span>
-              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.natureContribution)}</span>
+          {summary.showNatureContribution && (
+            <div className="py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Natuurbijdrage ({numberOfPeople} pers.)</span>
+                <span className="text-sm whitespace-nowrap">€{formatPrice(summary.natureContribution)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Bijdrage natuurbeheer Staatsbosbeheer</p>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Bijdrage natuurbeheer Staatsbosbeheer</p>
-          </div>
+          )}
 
           {/* Coordination fee line */}
-          <div className="py-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Coördinatie & handling fee</span>
-              <span className="text-sm whitespace-nowrap">€{formatPrice(summary.coordinationFee)}</span>
+          {summary.showCoordinationFee && (
+            <div className="py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Coördinatie & handling fee</span>
+                <span className="text-sm whitespace-nowrap">€{formatPrice(summary.coordinationFee)}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Central surcharge line */}
           {summary.centralSurcharge > 0 && (
