@@ -298,6 +298,15 @@ export interface ProgramRequestItem {
   external_url: string | null;
   // Per-item participant override (null = use program total)
   override_people: number | null;
+  /** Aantal deelnemers tegen het kindtarief (los van override_people = volwassenen) */
+  override_children?: number | null;
+  /** Kindtarief per persoon (incl. BTW), alleen relevant als override_children > 0 */
+  child_unit_price?: number | null;
+  child_min_age?: number | null;
+  child_max_age?: number | null;
+  pending_override_children?: number | null;
+  pending_child_unit_price?: number | null;
+
   // Admin-driven price-change tracking (synced with portalPricing.hasOpenAdminPriceChange)
   admin_price_override_updated_at?: string | null;
   partner_price_change_acknowledged_at?: string | null;
