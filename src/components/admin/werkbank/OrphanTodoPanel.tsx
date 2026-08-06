@@ -1,12 +1,18 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListTodo, Check, X, ExternalLink } from "lucide-react";
+import { ListTodo, Check, X, ExternalLink, Link2, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  LinkPurchaseInvoiceDialog,
+  type LinkableInvoice,
+} from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
+import { CommissionExemptDialog } from "@/components/admin/CommissionExemptDialog";
 
 interface TodoRow {
   id: string;
@@ -15,10 +21,12 @@ interface TodoRow {
   priority: "low" | "normal" | "high" | "urgent";
   due_date: string | null;
   auto_type: string | null;
+  auto_entity_id: string | null;
   related_partner_id: string | null;
   related_request_id: string | null;
   created_at: string;
 }
+
 
 const PRIORITY_TONE: Record<TodoRow["priority"], string> = {
   urgent: "border-red-200 bg-red-50 text-red-700",
