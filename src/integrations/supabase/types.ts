@@ -3020,6 +3020,9 @@ export type Database = {
           bureau_arranged_notes: string | null
           bureau_guide_contact: string | null
           bureau_guide_name: string | null
+          child_max_age: number | null
+          child_min_age: number | null
+          child_unit_price: number | null
           commission_amount: number | null
           commission_basis: string
           commission_basis_reason: string | null
@@ -3056,6 +3059,7 @@ export type Database = {
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
+          override_children: number | null
           override_people: number | null
           parent_item_id: string | null
           partner_dismissed_at: string | null
@@ -3071,12 +3075,14 @@ export type Database = {
           pending_block_type: string | null
           pending_changed_at: string | null
           pending_changed_by: string | null
+          pending_child_unit_price: number | null
           pending_customer_notes: string | null
           pending_day_index: number | null
           pending_location_address: string | null
           pending_location_lat: number | null
           pending_location_lng: number | null
           pending_marked_for_removal: boolean
+          pending_override_children: number | null
           pending_override_people: number | null
           pending_partner_instructions: string | null
           pending_preferred_time: string | null
@@ -3131,6 +3137,9 @@ export type Database = {
           bureau_arranged_notes?: string | null
           bureau_guide_contact?: string | null
           bureau_guide_name?: string | null
+          child_max_age?: number | null
+          child_min_age?: number | null
+          child_unit_price?: number | null
           commission_amount?: number | null
           commission_basis?: string
           commission_basis_reason?: string | null
@@ -3167,6 +3176,7 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          override_children?: number | null
           override_people?: number | null
           parent_item_id?: string | null
           partner_dismissed_at?: string | null
@@ -3182,12 +3192,14 @@ export type Database = {
           pending_block_type?: string | null
           pending_changed_at?: string | null
           pending_changed_by?: string | null
+          pending_child_unit_price?: number | null
           pending_customer_notes?: string | null
           pending_day_index?: number | null
           pending_location_address?: string | null
           pending_location_lat?: number | null
           pending_location_lng?: number | null
           pending_marked_for_removal?: boolean
+          pending_override_children?: number | null
           pending_override_people?: number | null
           pending_partner_instructions?: string | null
           pending_preferred_time?: string | null
@@ -3242,6 +3254,9 @@ export type Database = {
           bureau_arranged_notes?: string | null
           bureau_guide_contact?: string | null
           bureau_guide_name?: string | null
+          child_max_age?: number | null
+          child_min_age?: number | null
+          child_unit_price?: number | null
           commission_amount?: number | null
           commission_basis?: string
           commission_basis_reason?: string | null
@@ -3278,6 +3293,7 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          override_children?: number | null
           override_people?: number | null
           parent_item_id?: string | null
           partner_dismissed_at?: string | null
@@ -3293,12 +3309,14 @@ export type Database = {
           pending_block_type?: string | null
           pending_changed_at?: string | null
           pending_changed_by?: string | null
+          pending_child_unit_price?: number | null
           pending_customer_notes?: string | null
           pending_day_index?: number | null
           pending_location_address?: string | null
           pending_location_lat?: number | null
           pending_location_lng?: number | null
           pending_marked_for_removal?: boolean
+          pending_override_children?: number | null
           pending_override_people?: number | null
           pending_partner_instructions?: string | null
           pending_preferred_time?: string | null
