@@ -78,6 +78,8 @@ export default function AdminPurchaseInvoices() {
   const [deleteTarget, setDeleteTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [linkTargetInvoice, setLinkTargetInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+
 
   const { invoices, isLoading, stats, markAsPaid, markAsForwarded, deleteInvoice, getDownloadUrl } = usePurchaseInvoices({
     requestId: selectedRequestId !== "all" ? selectedRequestId : undefined,
