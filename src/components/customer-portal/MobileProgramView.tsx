@@ -89,6 +89,7 @@ interface MobileProgramViewProps {
     // Quote mode fields
     origin?: string | null;
     quote_status?: string | null;
+    excluded_fees?: string[] | null;
     quote_valid_until?: string | null;
     // Program description
     program_description?: string | null;
