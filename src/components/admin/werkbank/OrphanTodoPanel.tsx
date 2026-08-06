@@ -1,12 +1,18 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListTodo, Check, X, ExternalLink } from "lucide-react";
+import { ListTodo, Check, X, ExternalLink, Link2, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  LinkPurchaseInvoiceDialog,
+  type LinkableInvoice,
+} from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
+import { CommissionExemptDialog } from "@/components/admin/CommissionExemptDialog";
 
 interface TodoRow {
   id: string;
@@ -15,10 +21,12 @@ interface TodoRow {
   priority: "low" | "normal" | "high" | "urgent";
   due_date: string | null;
   auto_type: string | null;
+  auto_entity_id: string | null;
   related_partner_id: string | null;
   related_request_id: string | null;
   created_at: string;
 }
+
 
 const PRIORITY_TONE: Record<TodoRow["priority"], string> = {
   urgent: "border-red-200 bg-red-50 text-red-700",
@@ -30,13 +38,15 @@ const PRIORITY_TONE: Record<TodoRow["priority"], string> = {
 export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onResolved?: () => void }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [exemptOpen, setExemptOpen] = useState(false);
 
   const { data: todo, isLoading } = useQuery<TodoRow | null>({
     queryKey: ["werkbank-orphan-todo", todoId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("admin_todos")
-        .select("id, title, description, priority, due_date, auto_type, related_partner_id, related_request_id, created_at")
+        .select("id, title, description, priority, due_date, auto_type, auto_entity_id, related_partner_id, related_request_id, created_at")
         .eq("id", todoId)
         .maybeSingle();
       if (error) throw error;
@@ -54,6 +64,35 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
         .eq("id", todo!.related_partner_id!)
         .maybeSingle();
       return data;
+    },
+  });
+
+  const isUnlinkedInvoiceTodo = todo?.auto_type === "commission_unlinked_invoice" && !!todo?.auto_entity_id;
+
+  const { data: invoice } = useQuery<LinkableInvoice | null>({
+    queryKey: ["werkbank-orphan-todo-invoice", todo?.auto_entity_id],
+    enabled: !!isUnlinkedInvoiceTodo,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_purchase_invoices")
+        .select("id, partner_id, invoice_number, invoice_date, amount_incl_vat, request_id, partners(name)")
+        .eq("id", todo!.auto_entity_id!)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      const row = data as any;
+      return {
+        id: row.id,
+        partner_id: row.partner_id,
+        partner_name: row.partners?.name ?? null,
+        invoice_number: row.invoice_number,
+        invoice_date: row.invoice_date,
+        amount_incl_vat:
+          row.amount_incl_vat !== null && row.amount_incl_vat !== undefined
+            ? Number(row.amount_incl_vat)
+            : null,
+        request_id: row.request_id,
+      } satisfies LinkableInvoice;
     },
   });
 
@@ -76,6 +115,7 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
     refreshAll();
     onResolved?.();
   };
+
 
   if (isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Laden…</div>;
@@ -127,6 +167,36 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
             </div>
           )}
 
+          {isUnlinkedInvoiceTodo && invoice && (
+            <div className="rounded-md border bg-background px-3 py-2 text-sm">
+              <div className="text-xs uppercase text-muted-foreground">Inkoopfactuur</div>
+              <div className="font-medium">
+                {invoice.invoice_number || "zonder nummer"}
+                {invoice.amount_incl_vat !== null && (
+                  <span className="ml-2 text-xs text-muted-foreground tabular-nums">
+                    {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(
+                      invoice.amount_incl_vat,
+                    )}{" "}
+                    incl. btw
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button size="sm" className="h-7 gap-1" onClick={() => setLinkOpen(true)}>
+                  <Link2 className="h-3.5 w-3.5" /> Factuur koppelen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1"
+                  onClick={() => setExemptOpen(true)}
+                >
+                  <Archive className="h-3.5 w-3.5" /> Commissievrij markeren
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="gap-1" onClick={() => setStatus("done")}>
               <Check className="h-4 w-4" /> Opgepakt
@@ -137,6 +207,28 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
           </div>
         </CardContent>
       </Card>
+
+      <LinkPurchaseInvoiceDialog
+        invoice={invoice ?? null}
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        onLinked={() => {
+          refreshAll();
+          onResolved?.();
+        }}
+      />
+      {todo.auto_entity_id && (
+        <CommissionExemptDialog
+          open={exemptOpen}
+          onOpenChange={setExemptOpen}
+          rows={[{ type: "purchase_invoice", id: todo.auto_entity_id }]}
+          onDone={() => {
+            refreshAll();
+            onResolved?.();
+          }}
+        />
+      )}
     </div>
+
   );
 }
