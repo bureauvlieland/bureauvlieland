@@ -258,12 +258,10 @@ export function hasOpenAdminPriceChange(
   // Materiele bedragvergelijking — alleen mogelijk wanneer caller people-context geeft
   // én er een quoted_price is om tegen af te zetten.
   if (programPeople != null && item.quoted_price != null) {
-    const effectivePeople = getEffectivePeople(item, programPeople);
-    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
-    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
-    const adminTotal = item.admin_price_override * personMultiplier * dayMultiplier;
+    const adminTotal = multiplyUnitPrice(item, item.admin_price_override, programPeople, numberOfDays);
     if (Math.abs(adminTotal - item.quoted_price) <= 0.01) return false;
   }
+
 
   return true;
 }
