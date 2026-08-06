@@ -165,7 +165,7 @@ function adminOverrideIsLeading(
  * Single source of truth for the per-person UNIT price shown on every portal
  * (admin, partner, customer). Hierarchy:
  *   1. open admin override (price_type=total → ÷ people for unit)  → wins
- *   2. quoted_price (group total) ÷ effective people
+ *   2. quoted_price (group total) − kindregels, ÷ volwassenen
  *   3. admin_price_override (already a unit price for per_person variants)
  *   4. null when nothing is known yet
  */
@@ -184,7 +184,10 @@ export function getDisplayUnitPrice(
   }
   if (item.quoted_price != null) {
     if (isPerPersonItem(item) && effectivePeople > 0) {
-      return item.quoted_price / effectivePeople;
+      // Kindregels eerst van het groepstotaal af, de rest is het volwassenentarief.
+      const childUnit = getChildUnitPrice(item);
+      const childPart = childUnit !== null ? childUnit * getEffectiveChildren(item) : 0;
+      return (item.quoted_price - childPart) / effectivePeople;
     }
     return item.quoted_price;
   }
@@ -203,16 +206,12 @@ export function getDisplayLineTotal(
   numberOfDays: number = 1,
 ): number | null {
   if (adminOverrideIsLeading(item, programPeople, numberOfDays)) {
-    const effectivePeople = getEffectivePeople(item, programPeople);
-    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
-    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
-    return item.admin_price_override! * personMultiplier * dayMultiplier;
+    return multiplyUnitPrice(item, item.admin_price_override!, programPeople, numberOfDays);
   }
   if (item.quoted_price != null) return item.quoted_price;
   if (item.admin_price_override != null) {
-    const effectivePeople = getEffectivePeople(item, programPeople);
-    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
-    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
+    return multiplyUnitPrice(item, item.admin_price_override, programPeople, numberOfDays);
+
     return item.admin_price_override * personMultiplier * dayMultiplier;
   }
   return null;
