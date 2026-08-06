@@ -8,6 +8,7 @@ import olivaImg from "@/assets/oliva.jpg";
 import cafeBovenImg from "@/assets/cafe-boven.jpg";
 import { cn } from "@/lib/utils";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { isFeeExcluded } from "@/lib/excludedFees";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
 
@@ -37,6 +38,8 @@ interface ProgramSidebarProps {
   allConfirmed?: boolean;
   onScrollToTerms?: () => void;
   className?: string;
+  /** Per-project uitgesloten automatische kostenposten (program_requests.excluded_fees). */
+  excludedFees?: string[] | null;
   /** Slot bovenaan de sidebar — gebruikt voor de verticale voortgangs-stepper op tab-pagina's. */
   topSlot?: React.ReactNode;
 }
@@ -58,6 +61,7 @@ export const ProgramSidebar = ({
   quoteStatus,
   totalCost = 0,
   allConfirmed = false,
+  excludedFees,
   onScrollToTerms,
   className,
   topSlot,
@@ -78,6 +82,9 @@ export const ProgramSidebar = ({
   };
 
 
+  const showTouristTax = !isFeeExcluded(excludedFees, "tourist_tax");
+  const showNature = !isFeeExcluded(excludedFees, "nature_contribution");
+
   return (
     <aside
       className={cn(
@@ -91,27 +98,33 @@ export const ProgramSidebar = ({
 
 
 
-      {/* Levies info */}
-      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-        <div className="flex items-start gap-2.5">
-          <Landmark className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium">Toeristenbelasting</p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              €{appSettings.tourist_tax_pp_per_day.toFixed(2).replace('.', ',')} p.p. per dag — de gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft.
-            </p>
-          </div>
+      {/* Levies info — uitgesloten posten niet toelichten */}
+      {(showTouristTax || showNature) && (
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          {showTouristTax && (
+            <div className="flex items-start gap-2.5">
+              <Landmark className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Toeristenbelasting</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                  €{appSettings.tourist_tax_pp_per_day.toFixed(2).replace('.', ',')} p.p. per dag — de gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft.
+                </p>
+              </div>
+            </div>
+          )}
+          {showNature && (
+            <div className="flex items-start gap-2.5">
+              <TreePine className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Natuurbijdrage</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                  Evenementenbureaus op Vlieland dragen €{appSettings.nature_contribution_pp.toFixed(2).replace('.', ',')} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex items-start gap-2.5">
-          <TreePine className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium">Natuurbijdrage</p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              Evenementenbureaus op Vlieland dragen €{appSettings.nature_contribution_pp.toFixed(2).replace('.', ',')} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied.
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Wadden Werelderfgoed ambassadeur */}
       <div className="flex justify-center pt-1">
