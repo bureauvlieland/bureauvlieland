@@ -633,6 +633,7 @@ export const MobileProgramView = ({
               const sel = accommodationQuotes.find(q => q.status === "selected");
               return sel && accommodationExtrasByQuoteId ? accommodationExtrasByQuoteId[sel.id] : undefined;
             })()}
+            excludedFees={program.excluded_fees}
           />
           {termsAccepted && (
             <PaymentStatusCard

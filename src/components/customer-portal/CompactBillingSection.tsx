@@ -28,6 +28,8 @@ interface CompactBillingSectionProps {
   billingLinesByItem?: Record<string, any[]>;
   blockVatRates?: Record<string, number>;
   accommodationExtrasByQuoteId?: Record<string, any[]>;
+  /** Per-project uitgesloten automatische kostenposten. */
+  excludedFees?: string[] | null;
 }
 
 export const CompactBillingSection = ({
@@ -42,6 +44,7 @@ export const CompactBillingSection = ({
   billingLinesByItem,
   blockVatRates,
   accommodationExtrasByQuoteId,
+  excludedFees,
 }: CompactBillingSectionProps) => {
   const billingComplete = !!(
     program.billing_company_name &&
@@ -90,6 +93,7 @@ export const CompactBillingSection = ({
         billingLinesByItem={billingLinesByItem}
         blockVatRates={blockVatRates}
         accommodationExtrasOverride={extrasOverride}
+        excludedFees={excludedFees}
       />
     </div>
   );

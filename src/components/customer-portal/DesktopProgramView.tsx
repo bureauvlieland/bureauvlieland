@@ -622,6 +622,7 @@ export const DesktopProgramView = ({
                 billingLinesByItem={billingLinesByItem}
                 blockVatRates={blockVatRates}
                 accommodationExtrasByQuoteId={accommodationExtrasByQuoteId}
+                excludedFees={program.excluded_fees}
               />
             </div>
             {termsAccepted && (
@@ -682,6 +683,7 @@ export const DesktopProgramView = ({
          isPreApproval={isPreApproval}
          quoteStatus={program.quote_status}
         totalCost={totalCost}
+        excludedFees={program.excluded_fees}
         allConfirmed={allConfirmed}
         onScrollToTerms={scrollToTerms}
         topSlot={
