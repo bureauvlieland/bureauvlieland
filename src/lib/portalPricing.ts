@@ -285,6 +285,8 @@ export function priceChangeRequiresReapproval(
     quoted_price?: number | null;
     price_type?: string | null;
     override_people?: number | null;
+    override_children?: number | null;
+    child_unit_price?: number | null;
   },
   programPeople: number,
   numberOfDays: number,
@@ -295,10 +297,8 @@ export function priceChangeRequiresReapproval(
     // Geen basis om delta te bepalen → conservatief: opnieuw vragen.
     return true;
   }
-  const effectivePeople = getEffectivePeople(item, programPeople);
-  const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
-  const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
-  const adminTotal = item.admin_price_override * personMultiplier * dayMultiplier;
+  const adminTotal = multiplyUnitPrice(item, item.admin_price_override, programPeople, numberOfDays);
+
   const delta = adminTotal - item.quoted_price;
   if (delta <= 0.01) return false; // gelijk of daling
   const pct = thresholds?.pct ?? 5;
