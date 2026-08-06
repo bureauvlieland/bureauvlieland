@@ -610,6 +610,31 @@ export default function AdminPurchaseInvoices() {
         onClose={() => setUploadPdfTarget(null)}
       />
 
+      {/* Losse factuur koppelen aan onderdeel of logies-offerte */}
+      <LinkPurchaseInvoiceDialog
+        invoice={
+          linkTargetInvoice
+            ? {
+                id: linkTargetInvoice.id,
+                partner_id: linkTargetInvoice.partner_id ?? null,
+                partner_name: linkTargetInvoice.partner?.name ?? null,
+                invoice_number: linkTargetInvoice.invoice_number ?? null,
+                invoice_date: linkTargetInvoice.invoice_date ?? null,
+                amount_incl_vat:
+                  linkTargetInvoice.amount_incl_vat !== null &&
+                  linkTargetInvoice.amount_incl_vat !== undefined
+                    ? Number(linkTargetInvoice.amount_incl_vat)
+                    : null,
+                request_id: linkTargetInvoice.request_id ?? null,
+              }
+            : null
+        }
+        open={!!linkTargetInvoice}
+        onOpenChange={(o) => !o && setLinkTargetInvoice(null)}
+      />
+
+
+
       {/* Single delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
