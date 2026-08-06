@@ -4,17 +4,53 @@
  *
  * KEY RULE:
  * - `quoted_price` = always the TOTAL for the whole group (never multiply)
- * - `admin_price_override` = unit price, multiply by numberOfPeople only when price_type is per_person/per_person_per_day
- * - `override_people` on item = use instead of program-wide numberOfPeople when set
+ * - `admin_price_override` = unit price for ADULTS, multiply by numberOfPeople only when price_type is per_person/per_person_per_day
+ * - `override_people` on item = number of participants at the ADULT rate (falls back to the program total)
+ * - `override_children` + `child_unit_price` = optional child tier on top of the adults
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
 
-/** Get the effective number of people for an item (override or program total) */
+/** Get the effective number of people at the ADULT rate (override or program total) */
 export function getEffectivePeople(
   item: { override_people?: number | null },
   programPeople: number,
 ): number {
   return item.override_people ?? programPeople;
+}
+
+/** Number of children at the child rate on this item (0 when not used). */
+export function getEffectiveChildren(item: { override_children?: number | null }): number {
+  const n = Number(item.override_children ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n);
+}
+
+/** Child unit price, only meaningful when there are children on the item. */
+export function getChildUnitPrice(item: {
+  override_children?: number | null;
+  child_unit_price?: number | null;
+}): number | null {
+  if (getEffectiveChildren(item) <= 0) return null;
+  const price = item.child_unit_price;
+  if (price === null || price === undefined) return null;
+  const n = Number(price);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Does this item use a separate child tier? */
+export function hasChildTier(item: {
+  override_children?: number | null;
+  child_unit_price?: number | null;
+}): boolean {
+  return getChildUnitPrice(item) !== null;
+}
+
+/** Total headcount on the item: adults + children. */
+export function getParticipantTotal(
+  item: { override_people?: number | null; override_children?: number | null },
+  programPeople: number,
+): number {
+  return getEffectivePeople(item, programPeople) + getEffectiveChildren(item);
 }
 
 type PricingItem = {
@@ -25,7 +61,91 @@ type PricingItem = {
   quoted_at?: string | null;
   price_type?: string | null;
   override_people?: number | null;
+  override_children?: number | null;
+  child_unit_price?: number | null;
 };
+
+/**
+ * Core multiplication for per-person items: adults × adult rate plus
+ * children × child rate, times the number of days for p.p.p.d. items.
+ * Non per-person items simply return the unit price (× days when applicable).
+ */
+export function multiplyUnitPrice(
+  item: PricingItem,
+  adultUnitPrice: number,
+  programPeople: number,
+  numberOfDays: number = 1,
+): number {
+  const dayMultiplier = isPerDayItem(item) ? Math.max(numberOfDays, 1) : 1;
+  if (!isPerPersonItem(item)) return adultUnitPrice * dayMultiplier;
+  const adults = getEffectivePeople(item, programPeople);
+  const children = getEffectiveChildren(item);
+  const childUnit = getChildUnitPrice(item);
+  const base = adultUnitPrice * adults + (childUnit !== null ? childUnit * children : 0);
+  return base * dayMultiplier;
+}
+
+export interface PriceComponent {
+  /** "Volwassenen" / "Kinderen (4–12 jr)" */
+  label: string;
+  count: number;
+  unitPrice: number;
+  total: number;
+  kind: "adult" | "child";
+}
+
+/** Human label for the child tier, including the age range when known. */
+export function getChildTierLabel(item: {
+  child_min_age?: number | null;
+  child_max_age?: number | null;
+}): string {
+  const min = item.child_min_age;
+  const max = item.child_max_age;
+  if (min != null && max != null) return `Kinderen (${min}–${max} jr)`;
+  if (max != null) return `Kinderen (t/m ${max} jr)`;
+  if (min != null) return `Kinderen (vanaf ${min} jr)`;
+  return "Kinderen";
+}
+
+/**
+ * Breakdown of one item into its billable tiers (adults, children).
+ * Returns an empty array when the item has no usable unit price or is not
+ * priced per person — callers then fall back to the single line total.
+ */
+export function getPriceComponents(
+  item: PricingItem & { child_min_age?: number | null; child_max_age?: number | null },
+  programPeople: number,
+  numberOfDays: number = 1,
+): PriceComponent[] {
+  if (!isPerPersonItem(item)) return [];
+  const adultUnit = getDisplayUnitPrice(item, programPeople);
+  if (adultUnit === null) return [];
+  const dayMultiplier = isPerDayItem(item) ? Math.max(numberOfDays, 1) : 1;
+  const adults = getEffectivePeople(item, programPeople);
+  const childUnit = getChildUnitPrice(item);
+  const children = getEffectiveChildren(item);
+  const components: PriceComponent[] = [];
+  if (adults > 0) {
+    components.push({
+      label: children > 0 ? "Volwassenen" : "Personen",
+      count: adults,
+      unitPrice: adultUnit,
+      total: adultUnit * adults * dayMultiplier,
+      kind: "adult",
+    });
+  }
+  if (childUnit !== null && children > 0) {
+    components.push({
+      label: getChildTierLabel(item),
+      count: children,
+      unitPrice: childUnit,
+      total: childUnit * children * dayMultiplier,
+      kind: "child",
+    });
+  }
+  return components;
+}
+
 
 /**
  * When the admin has issued a NEW price after the last partner ack (or after
