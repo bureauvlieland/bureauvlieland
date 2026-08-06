@@ -212,7 +212,6 @@ export function getDisplayLineTotal(
   if (item.admin_price_override != null) {
     return multiplyUnitPrice(item, item.admin_price_override, programPeople, numberOfDays);
 
-    return item.admin_price_override * personMultiplier * dayMultiplier;
   }
   return null;
 }
