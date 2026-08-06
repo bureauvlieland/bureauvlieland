@@ -392,16 +392,20 @@ export function getItemUnitPrice(
 ): number | null {
   const effectivePeople = getEffectivePeople(item, numberOfPeople);
   if (item.quoted_price != null) {
-    // quoted_price is already a group total; derive unit price
-    return isPerPersonItem(item) && effectivePeople > 0
-      ? item.quoted_price / effectivePeople
-      : item.quoted_price;
+    // quoted_price is already a group total; derive the adult unit price
+    if (isPerPersonItem(item) && effectivePeople > 0) {
+      const childUnit = getChildUnitPrice(item);
+      const childPart = childUnit !== null ? childUnit * getEffectiveChildren(item) : 0;
+      return (item.quoted_price - childPart) / effectivePeople;
+    }
+    return item.quoted_price;
   }
   if (item.admin_price_override != null) {
     return item.admin_price_override;
   }
   return null;
 }
+
 
 /**
  * Calculate the effective GROUP total for a single program item.
