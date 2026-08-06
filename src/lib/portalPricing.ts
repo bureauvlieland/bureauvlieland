@@ -421,11 +421,9 @@ export function getItemLineTotal(
     return item.quoted_price;
   }
   if (item.admin_price_override != null) {
-    const effectivePeople = getEffectivePeople(item, numberOfPeople);
-    const personMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
-    const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
-    return item.admin_price_override * personMultiplier * dayMultiplier;
+    return multiplyUnitPrice(item, item.admin_price_override, numberOfPeople, numberOfDays);
   }
+
   return null;
 }
 
