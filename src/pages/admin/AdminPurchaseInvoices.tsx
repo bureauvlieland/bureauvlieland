@@ -48,7 +48,9 @@ import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/
 import { InvoiceConsistencyPanel } from "@/components/admin/purchase-invoices/InvoiceConsistencyPanel";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
-import { Plus } from "lucide-react";
+import { Plus, Link2 } from "lucide-react";
+import { LinkPurchaseInvoiceDialog } from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
+
 import {
   AlertDialog,
   AlertDialogAction,
