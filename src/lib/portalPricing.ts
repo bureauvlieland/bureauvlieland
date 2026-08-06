@@ -236,6 +236,9 @@ export function hasOpenAdminPriceChange(
     quoted_price?: number | null;
     price_type?: string | null;
     override_people?: number | null;
+    override_children?: number | null;
+    child_unit_price?: number | null;
+
   },
   programPeople?: number,
   numberOfDays: number = 1,
