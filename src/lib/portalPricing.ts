@@ -327,10 +327,17 @@ export function getPriceTypeSuffix(priceType?: string | null): string {
 
 /**
  * Human-readable explanation for how a line total is built up.
- * E.g. "€29,50 p.p. × 12 personen × 3 dagen" or "Totaalprijs".
+ * E.g. "€29,50 p.p. × 12 personen × 3 dagen", of met kindtarief
+ * "20 × €32,00 + 7 × €18,00".
  */
 export function getPriceBreakdownLabel(
-  item: { price_type?: string | null; admin_price_override?: number | null; override_people?: number | null },
+  item: {
+    price_type?: string | null;
+    admin_price_override?: number | null;
+    override_people?: number | null;
+    override_children?: number | null;
+    child_unit_price?: number | null;
+  },
   programPeople: number,
   numberOfDays: number = 1,
 ): string {
@@ -341,11 +348,18 @@ export function getPriceBreakdownLabel(
   if (!isPerPersonItem(item)) return "Totaalprijs";
   const people = getEffectivePeople(item, programPeople);
   const suffix = getPriceTypeSuffix(item.price_type);
+  const childUnit = getChildUnitPrice(item);
+  const children = getEffectiveChildren(item);
+  if (childUnit !== null && children > 0) {
+    const base = `${people} × €${fmt(unit)} + ${children} × €${fmt(childUnit)}`;
+    return isPerDayItem(item) ? `${base} × ${numberOfDays} dagen` : base;
+  }
   if (isPerDayItem(item)) {
     return `€${fmt(unit)} ${suffix} × ${people} personen × ${numberOfDays} dagen`;
   }
   return `€${fmt(unit)} ${suffix} × ${people} personen`;
 }
+
 
 /**
  * Single source of truth for "hoeveel dagen telt dit programma".
