@@ -82,6 +82,26 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
   // Validate FIRST — throws synchronously so callers fail fast.
   validateEntry(entry);
 
+  // Vul de inhoud automatisch aan uit de mailjet-send registry als de
+  // aanroeper die niet expliciet meegaf. Zo blijft elk bericht terug te
+  // lezen (en opnieuw te versturen) in het admin-dialoog.
+  let html = entry.html_body;
+  let text = entry.text_body;
+  let fromEmail = entry.from_email;
+  let replyTo = entry.reply_to;
+  if (!html && !text) {
+    const remembered = lookupSentBody({
+      messageId: entry.mailjet_message_id ?? null,
+      recipientEmail: entry.recipient_email ?? null,
+    });
+    if (remembered) {
+      html = remembered.html_body;
+      text = remembered.text_body;
+      fromEmail = fromEmail || remembered.from_email;
+      replyTo = replyTo || remembered.reply_to;
+    }
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -101,13 +121,14 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
       mailjet_message_id: entry.mailjet_message_id || null,
       sent_by: entry.sent_by,
       metadata: entry.metadata || {},
-      html_body: entry.html_body || null,
-      text_body: entry.text_body || null,
-      from_email: entry.from_email || null,
-      reply_to: entry.reply_to || null,
+      html_body: html || null,
+      text_body: text || null,
+      from_email: fromEmail || null,
+      reply_to: replyTo || null,
       idempotency_key: entry.idempotency_key || null,
       sent_at: entry.status === "sent" ? new Date().toISOString() : null,
     });
+
 
     if (error) {
       console.error("Failed to log email:", error);
