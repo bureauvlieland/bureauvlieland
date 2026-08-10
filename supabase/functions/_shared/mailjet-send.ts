@@ -101,7 +101,75 @@ export type SendMailjetResult =
  * }
  * MessageID kan `number` zijn — we stringify'en altijd.
  */
+// ---------------------------------------------------------------------------
+// Body-registry: bewaart per verzending de daadwerkelijke HTML/tekst zodat
+// `logEmail(...)` die automatisch in `email_log` kan opslaan. Zonder dit
+// moest elke edge function zelf `html_body` meegeven — wat vrijwel nergens
+// gebeurde, waardoor het admin-dialoog altijd "inhoud niet bewaard" toonde.
+// ---------------------------------------------------------------------------
+
+export interface SentBody {
+  html_body?: string;
+  text_body?: string;
+  subject?: string;
+  from_email?: string;
+  reply_to?: string;
+}
+
+const sentBodies = new Map<string, SentBody>();
+const MAX_REGISTRY_ENTRIES = 200;
+
+function registryKeys(msg: MailjetMessage, messageId?: string | null): string[] {
+  const keys: string[] = [];
+  if (messageId) keys.push(`id:${messageId}`);
+  for (const to of msg.To ?? []) {
+    if (to?.Email) keys.push(`to:${to.Email.trim().toLowerCase()}`);
+  }
+  return keys;
+}
+
+function rememberBody(msg: MailjetMessage, messageId?: string | null): void {
+  const body: SentBody = {
+    html_body: msg.HTMLPart,
+    text_body: msg.TextPart,
+    subject: msg.Subject,
+    from_email: msg.From?.Email,
+    reply_to: msg.ReplyTo?.Email,
+  };
+  for (const key of registryKeys(msg, messageId)) {
+    sentBodies.set(key, body);
+  }
+  // Simpele FIFO-cap zodat een langlevende isolate niet volloopt.
+  while (sentBodies.size > MAX_REGISTRY_ENTRIES) {
+    const oldest = sentBodies.keys().next().value;
+    if (oldest === undefined) break;
+    sentBodies.delete(oldest);
+  }
+}
+
+/** Zoek de bewaarde inhoud op via MessageID of ontvangeradres. */
+export function lookupSentBody(opts: {
+  messageId?: string | null;
+  recipientEmail?: string | null;
+}): SentBody | null {
+  if (opts.messageId) {
+    const byId = sentBodies.get(`id:${opts.messageId}`);
+    if (byId) return byId;
+  }
+  if (opts.recipientEmail) {
+    const byTo = sentBodies.get(`to:${opts.recipientEmail.trim().toLowerCase()}`);
+    if (byTo) return byTo;
+  }
+  return null;
+}
+
+/** Alleen voor tests. */
+export function __clearSentBodies(): void {
+  sentBodies.clear();
+}
+
 export function extractMessageIds(raw: unknown): string[] {
+
   const ids: string[] = [];
   if (!raw || typeof raw !== "object") return ids;
   const messages = (raw as { Messages?: unknown }).Messages;
