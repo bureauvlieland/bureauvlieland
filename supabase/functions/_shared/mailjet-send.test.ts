@@ -7,6 +7,9 @@ import {
   sendMailjet,
   checkEmailSuppressed,
   findRecentIdempotentSend,
+  installMailjetBodyCapture,
+  lookupSentBody,
+  __clearSentBodies,
 } from "./mailjet-send.ts";
 
 Deno.env.set("SUPABASE_URL", "http://test-supabase.local");
@@ -216,6 +219,43 @@ Deno.test({
     async () => {
       const result = await findRecentIdempotentSend("key-1", 10);
       assertEquals(result, null);
+    },
+  );
+});
+
+Deno.test("installMailjetBodyCapture onthoudt de verstuurde inhoud", async () => {
+  __clearSentBodies();
+  await withFetchStub(
+    () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ Messages: [{ To: [{ Email: "k@example.com", MessageID: 555 }] }] }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    async () => {
+      // Capture ná het plaatsen van de stub installeren, zodat de wrapper
+      // de stub-fetch omsluit (in productie wrapt hij de echte fetch).
+      (globalThis as unknown as { __mailjetBodyCapture?: boolean }).__mailjetBodyCapture = false;
+      installMailjetBodyCapture();
+      await fetch("https://api.mailjet.com/v3.1/send", {
+        method: "POST",
+        body: JSON.stringify({
+          Messages: [
+            {
+              From: { Email: "hallo@bureauvlieland.nl" },
+              To: [{ Email: "k@example.com" }],
+              Subject: "Uw maatwerkvoorstel",
+              HTMLPart: "<p>Hallo</p>",
+            },
+          ],
+        }),
+      });
+      const byId = lookupSentBody({ messageId: "555" });
+      assertEquals(byId?.html_body, "<p>Hallo</p>");
+      const byTo = lookupSentBody({ recipientEmail: "K@Example.com" });
+      assertEquals(byTo?.subject, "Uw maatwerkvoorstel");
+      assertEquals(lookupSentBody({ messageId: "999" }), null);
     },
   );
 });
