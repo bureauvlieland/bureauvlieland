@@ -47,6 +47,7 @@ export const BUILDING_BLOCK_PUBLIC_COLUMNS = [
   "required_with",
   "suggested_addons",
   "scaling_rules",
-].join(", ");
+].join(", ") as "*"; // cast keeps Supabase row typing intact
 
-export const BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER = `${BUILDING_BLOCK_PUBLIC_COLUMNS}, provider:partners!building_blocks_provider_id_fkey(id, name, email)`;
+export const BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER =
+  `${BUILDING_BLOCK_PUBLIC_COLUMNS}, provider:partners!building_blocks_provider_id_fkey(id, name, email)` as "*";

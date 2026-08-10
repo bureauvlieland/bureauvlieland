@@ -335,7 +335,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     // Fetch the block details
     const { data: block, error } = await supabase
       .from("building_blocks")
-      .select(`${BUILDING_BLOCK_PUBLIC_COLUMNS}, provider:partners(id, name, email)`)
+      .select(`${BUILDING_BLOCK_PUBLIC_COLUMNS}, provider:partners(id, name, email)` as "*")
       .eq("id", blockId)
       .single();
 
