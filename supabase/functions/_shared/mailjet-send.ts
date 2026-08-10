@@ -168,6 +168,63 @@ export function __clearSentBodies(): void {
   sentBodies.clear();
 }
 
+/**
+ * De meeste edge functions posten (historisch) zelf naar de Mailjet API in
+ * plaats van via `sendMailjet`. Daardoor bleef `html_body` in `email_log`
+ * altijd leeg en toonde het admin-dialoog "inhoud niet bewaard".
+ *
+ * Deze interceptor wrapt `fetch` één keer en onthoudt de verstuurde
+ * HTML/tekst van élke Mailjet-send, ongeacht welke function hem doet.
+ * `email-logger.ts` importeert deze module, en elke verzendende function
+ * importeert `logEmail`, dus de capture is overal actief.
+ */
+export function installMailjetBodyCapture(): void {
+  const g = globalThis as typeof globalThis & { __mailjetBodyCapture?: boolean };
+  if (g.__mailjetBodyCapture) return;
+  g.__mailjetBodyCapture = true;
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    const isMailjetSend =
+      typeof url === "string" && url.includes("api.mailjet.com") && url.includes("/send");
+
+    let messages: MailjetMessage[] = [];
+    if (isMailjetSend && typeof init?.body === "string") {
+      try {
+        const parsedBody = JSON.parse(init.body) as { Messages?: MailjetMessage[] };
+        messages = Array.isArray(parsedBody?.Messages) ? parsedBody.Messages : [];
+      } catch {
+        messages = [];
+      }
+    }
+
+    const response = await originalFetch(input as RequestInfo, init);
+
+    if (isMailjetSend && messages.length > 0 && response.ok) {
+      try {
+        const raw = JSON.parse(await response.clone().text()) as {
+          Messages?: Array<{ To?: Array<{ MessageID?: unknown }> }>;
+        };
+        messages.forEach((msg, i) => {
+          const id = raw?.Messages?.[i]?.To?.[0]?.MessageID;
+          rememberBody(msg, id !== undefined && id !== null ? String(id) : null);
+        });
+      } catch {
+        messages.forEach((msg) => rememberBody(msg, null));
+      }
+    }
+
+    return response;
+  };
+}
+
+
 export function extractMessageIds(raw: unknown): string[] {
 
   const ids: string[] = [];
