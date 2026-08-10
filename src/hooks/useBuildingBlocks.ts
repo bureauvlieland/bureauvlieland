@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { BuildingBlock, BuildingBlockFormData } from "@/types/buildingBlock";
+import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 
 // Fetch all published building blocks (for public configurator)
 export const usePublishedBuildingBlocks = () => {
@@ -9,10 +10,7 @@ export const usePublishedBuildingBlocks = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("building_blocks")
-        .select(`
-          *,
-          provider:partners!building_blocks_provider_id_fkey(id, name, email)
-        `)
+        .select(BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER)
         .eq("status", "published")
         .order("sort_order");
       

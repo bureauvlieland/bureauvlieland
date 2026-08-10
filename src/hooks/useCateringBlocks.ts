@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { BuildingBlock } from "@/types/buildingBlock";
+import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 
 /**
  * Fetch building blocks tagged for the catering wizard.
@@ -13,10 +14,7 @@ export const useCateringBlocks = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("building_blocks")
-        .select(`
-          *,
-          provider:partners!building_blocks_provider_id_fkey(id, name, email)
-        `)
+        .select(BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER)
         .eq("category", "catering")
         .in("status", ["active", "published"])
         .not("catering_type", "is", null)
