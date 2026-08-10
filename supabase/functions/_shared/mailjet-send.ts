@@ -305,6 +305,19 @@ export async function sendMailjet(
     );
   }
 
+  // Bewaar de verstuurde inhoud per bericht (op MessageID én op ontvanger),
+  // zodat logEmail die zonder extra werk in `email_log` kan opslaan.
+  const perMessage = Array.isArray((parsed as { Messages?: unknown })?.Messages)
+    ? ((parsed as { Messages: unknown[] }).Messages)
+    : [];
+  opts.messages.forEach((msg, i) => {
+    const to = (perMessage[i] as { To?: Array<{ MessageID?: unknown }> } | undefined)?.To;
+    const id = to?.[0]?.MessageID;
+    rememberBody(msg, id !== undefined && id !== null ? String(id) : null);
+  });
+
+
+
   return {
     ok: true,
     messageId: messageIds[0] ?? null,
