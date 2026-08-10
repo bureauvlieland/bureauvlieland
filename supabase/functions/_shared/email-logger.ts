@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { lookupSentBody } from "./mailjet-send.ts";
+import { lookupSentBody, installMailjetBodyCapture } from "./mailjet-send.ts";
+
+// Activeer de centrale Mailjet-body capture zodra een function de logger
+// importeert (dat doet elke verzendende function).
+installMailjetBodyCapture();
 
 export interface EmailLogEntry {
   email_type: string;
