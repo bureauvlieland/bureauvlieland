@@ -206,8 +206,10 @@ export async function sendMailjet(
   if (testMode) {
     const fakeId = `test-${crypto.randomUUID()}`;
     console.log(`[mailjet-send:${source}] TEST MODE — skipping real send, returning ${fakeId}`);
+    for (const msg of opts.messages) rememberBody(msg, fakeId);
     return { ok: true, messageId: fakeId, messageIds: [fakeId], raw: null, skipped: "test_mode" };
   }
+
 
   if (!apiKey || !secretKey) {
     console.error(`[mailjet-send:${source}] Mailjet credentials not configured`);
