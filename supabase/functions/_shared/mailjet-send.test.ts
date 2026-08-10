@@ -225,7 +225,6 @@ Deno.test({
 
 Deno.test("installMailjetBodyCapture onthoudt de verstuurde inhoud", async () => {
   __clearSentBodies();
-  installMailjetBodyCapture();
   await withFetchStub(
     () =>
       Promise.resolve(
@@ -235,6 +234,10 @@ Deno.test("installMailjetBodyCapture onthoudt de verstuurde inhoud", async () =>
         ),
       ),
     async () => {
+      // Capture ná het plaatsen van de stub installeren, zodat de wrapper
+      // de stub-fetch omsluit (in productie wrapt hij de echte fetch).
+      (globalThis as unknown as { __mailjetBodyCapture?: boolean }).__mailjetBodyCapture = false;
+      installMailjetBodyCapture();
       await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
         body: JSON.stringify({
