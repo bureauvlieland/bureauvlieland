@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { lookupSentBody } from "./mailjet-send.ts";
 
 export interface EmailLogEntry {
   email_type: string;
