@@ -20,6 +20,7 @@ import { FaqSection } from "@/components/FaqSection";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { getActivityContent } from "@/content/activityContent";
 import { buildFallbackFaq } from "@/lib/activityFallbackFaq";
+import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
@@ -50,7 +51,7 @@ const ActiviteitDetail = () => {
       // Lookup by slug first, fallback to id (legacy)
       const { data: bySlug } = await supabase
         .from("building_blocks")
-        .select(`*, provider:partners!building_blocks_provider_id_fkey(id, name, email)`)
+        .select(BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER)
         .eq("slug", slug)
         .eq("status", "published")
         .maybeSingle();
@@ -60,7 +61,7 @@ const ActiviteitDetail = () => {
       if (!result) {
         const { data: byId } = await supabase
           .from("building_blocks")
-          .select(`*, provider:partners!building_blocks_provider_id_fkey(id, name, email)`)
+          .select(BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER)
           .eq("id", slug)
           .eq("status", "published")
           .maybeSingle();
@@ -85,7 +86,7 @@ const ActiviteitDetail = () => {
       // Related: same category, 3 items, exclude self & hidden
       const { data: rel } = await supabase
         .from("building_blocks")
-        .select(`*, provider:partners!building_blocks_provider_id_fkey(id, name, email)`)
+        .select(BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER)
         .eq("status", "published")
         .eq("category", result.category)
         .neq("id", result.id)

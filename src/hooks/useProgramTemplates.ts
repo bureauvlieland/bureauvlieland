@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProgramTemplate, ProgramTemplateItem } from "@/types/programTemplate";
 import type { BuildingBlock } from "@/types/buildingBlock";
+import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 
 /**
  * Fetch all published templates
@@ -156,7 +157,7 @@ export const useTemplateWithItems = (templateId: string | null) => {
       if (blockIds.length > 0) {
         const { data: blocksData, error: blocksError } = await supabase
           .from("building_blocks")
-          .select("*")
+          .select(BUILDING_BLOCK_PUBLIC_COLUMNS)
           .in("id", blockIds);
 
         if (blocksError) throw blocksError;
@@ -212,7 +213,7 @@ export const useAdminTemplates = () => {
       if (blockIds.length > 0) {
         const { data: blocksData, error: blocksError } = await supabase
           .from("building_blocks")
-          .select("*")
+          .select(BUILDING_BLOCK_PUBLIC_COLUMNS)
           .in("id", blockIds);
 
         if (blocksError) throw blocksError;

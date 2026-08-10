@@ -10,6 +10,7 @@ import {
   calculateStatusSummary,
 } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 
 export interface BillingDetails {
   billing_company_name: string;
@@ -332,14 +333,12 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     if (!program) return;
 
     // Fetch the block details
-    const { data: block, error } = await supabase
+    const { data: blockRow, error } = await supabase
       .from("building_blocks")
-      .select(`
-        *,
-        provider:partners(id, name, email)
-      `)
+      .select(`${BUILDING_BLOCK_PUBLIC_COLUMNS}, provider:partners(id, name, email)` as "*")
       .eq("id", blockId)
       .single();
+    const block = blockRow as (typeof blockRow & { provider?: { id: string; name: string; email?: string } | null }) | null;
 
     if (error || !block) {
       console.error("Error fetching block:", error);
