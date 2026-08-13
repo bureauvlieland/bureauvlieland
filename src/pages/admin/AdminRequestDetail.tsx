@@ -1499,16 +1499,17 @@ const AdminRequestDetail = () => {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-sm">
                   <span className="font-semibold text-amber-900">
-                    {pendingItems.length} ongepubliceerde wijziging{pendingItems.length !== 1 ? "en" : ""}
+                    {pendingItems.length} wijziging{pendingItems.length !== 1 ? "en" : ""} klaargezet — nog niet doorgevoerd
                   </span>
                   <span className="ml-2 text-amber-800">
-                    — klant en partners zien dit nog niet.
+                    Klant en partners zien dit pas na publiceren.
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={discardPendingChanges}>
-                    Verwerp
+                    Wijzigingen ongedaan maken
                   </Button>
+
                   <Button size="sm" onClick={() => setPublishDialogOpen(true)}>
                     Publiceer & notificeer →
                   </Button>
