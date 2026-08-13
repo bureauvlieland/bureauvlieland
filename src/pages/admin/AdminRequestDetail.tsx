@@ -146,6 +146,13 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 // Bureau-managed item-check via gedeelde helper (provider_id ∈ BUREAU_PROVIDER_IDS).
 // Eén bron van waarheid samen met supabase/functions/_shared/bureau-item.ts.
 import { isBureauItem } from "@/lib/bureauItem";
+import {
+  isCancelledItem,
+  sortByEffectiveTime,
+  pendingChangeKind,
+  pendingChangeChipLabel,
+} from "@/lib/pendingItemChanges";
+
 import { itemWasSentToPartner } from "@/lib/partnerWasApproached";
 
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
