@@ -968,6 +968,36 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_events: {
+        Row: {
+          booking_id: number | null
+          created_at: string
+          id: string
+          note: string | null
+          payment_id: string | null
+          status: string
+          tenant_slug: string
+        }
+        Insert: {
+          booking_id?: number | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          status: string
+          tenant_slug: string
+        }
+        Update: {
+          booking_id?: number | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          payment_id?: string | null
+          status?: string
+          tenant_slug?: string
+        }
+        Relationships: []
+      }
       building_block_components: {
         Row: {
           child_block_id: string
