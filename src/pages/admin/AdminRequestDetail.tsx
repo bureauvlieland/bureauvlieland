@@ -2981,7 +2981,48 @@ const AdminRequestDetail = () => {
                             ];
                           });
                         })()}
+                        {(() => {
+                          const cancelled = items.filter((it) => it.day_index >= 0 && isCancelledItem(it));
+                          if (cancelled.length === 0) return null;
+                          const dates = (request.selected_dates as string[]) || [];
+                          const totalColumns = 7;
+                          return [
+                            <TableRow key="cancelled-toggle" className="hover:bg-transparent">
+                              <TableCell colSpan={totalColumns} className="py-2 px-4">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowCancelledItems((v) => !v)}
+                                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                                >
+                                  {showCancelledItems
+                                    ? `${cancelled.length} geannuleerde onderdelen verbergen`
+                                    : `${cancelled.length} geannuleerde onderdeel${cancelled.length !== 1 ? "en" : ""} tonen`}
+                                </button>
+                              </TableCell>
+                            </TableRow>,
+                            ...(showCancelledItems
+                              ? cancelled.map((it) => (
+                                  <TableRow key={`cancelled-${it.id}`} className="bg-muted/20 text-muted-foreground">
+                                    <TableCell colSpan={totalColumns} className="py-1.5 px-4 text-xs">
+                                      <span className="uppercase tracking-wide mr-2">
+                                        Dag {it.day_index + 1}
+                                        {dates[it.day_index]
+                                          ? ` — ${format(new Date(dates[it.day_index]), "EEE d MMM", { locale: nl })}`
+                                          : ""}
+                                      </span>
+                                      <span className="line-through">{it.block_name}</span>
+                                      {it.provider_name && <span className="ml-2">· {it.provider_name}</span>}
+                                      <span className="ml-2 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
+                                        Geannuleerd
+                                      </span>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              : []),
+                          ];
+                        })()}
                       </TableBody>
+
                     </Table>
                   </div>
                 </CardContent>
