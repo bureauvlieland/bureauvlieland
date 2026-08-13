@@ -146,6 +146,13 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 // Bureau-managed item-check via gedeelde helper (provider_id ∈ BUREAU_PROVIDER_IDS).
 // Eén bron van waarheid samen met supabase/functions/_shared/bureau-item.ts.
 import { isBureauItem } from "@/lib/bureauItem";
+import {
+  isCancelledItem,
+  sortByEffectiveTime,
+  pendingChangeKind,
+  pendingChangeChipLabel,
+} from "@/lib/pendingItemChanges";
+
 import { itemWasSentToPartner } from "@/lib/partnerWasApproached";
 
 import { ApplyTemplateDialog } from "@/components/admin/ApplyTemplateDialog";
@@ -367,6 +374,8 @@ const AdminRequestDetail = () => {
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
   const [highlightStatusEmail, setHighlightStatusEmail] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [showCancelledItems, setShowCancelledItems] = useState(false);
+
   const [activeTab, setActiveTab] = useState<string>(() => searchParams.get("tab") || "activiteiten");
 
   // Keep activeTab in sync with ?tab=
@@ -1490,16 +1499,17 @@ const AdminRequestDetail = () => {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-sm">
                   <span className="font-semibold text-amber-900">
-                    {pendingItems.length} ongepubliceerde wijziging{pendingItems.length !== 1 ? "en" : ""}
+                    {pendingItems.length} wijziging{pendingItems.length !== 1 ? "en" : ""} klaargezet — nog niet doorgevoerd
                   </span>
                   <span className="ml-2 text-amber-800">
-                    — klant en partners zien dit nog niet.
+                    Klant en partners zien dit pas na publiceren.
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={discardPendingChanges}>
-                    Verwerp
+                    Wijzigingen ongedaan maken
                   </Button>
+
                   <Button size="sm" onClick={() => setPublishDialogOpen(true)}>
                     Publiceer & notificeer →
                   </Button>
@@ -2256,7 +2266,7 @@ const AdminRequestDetail = () => {
                       </TableHeader>
                       <TableBody>
                         {(() => {
-                          const programItems = items.filter(item => item.day_index >= 0);
+                          const programItems = items.filter(item => item.day_index >= 0 && !isCancelledItem(item));
                           const dayGroups = programItems.reduce<Record<number, typeof programItems>>((acc, item) => {
                             if (!acc[item.day_index]) acc[item.day_index] = [];
                             acc[item.day_index].push(item);
@@ -2269,7 +2279,7 @@ const AdminRequestDetail = () => {
                           return sortedDays.flatMap((dayIdx) => {
                             const dayDate = dates[dayIdx] ? format(new Date(dates[dayIdx]), "EEE d MMM", { locale: nl }) : null;
                             const dayLabel = `Dag ${dayIdx + 1}${dayDate ? ` — ${dayDate}` : ""}`;
-                            const dayItems = dayGroups[dayIdx];
+                            const dayItems = sortByEffectiveTime(dayGroups[dayIdx] as any[]) as typeof dayGroups[number];
 
                             return [
                               <TableRow key={`day-header-${dayIdx}`} className="bg-muted/40 hover:bg-muted/40">
@@ -2288,8 +2298,21 @@ const AdminRequestDetail = () => {
                                   !item.customer_accepted_at &&
                                   (item.status === "confirmed" || item.status === "alternative") &&
                                   hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, numDaysForItem);
+                                const changeKind = pendingChangeKind(item as any);
+                                const changeChip = pendingChangeChipLabel(item as any);
                                 return (
-                                  <TableRow key={item.id} className="group">
+                                  <TableRow
+                                    key={item.id}
+                                    className={cn(
+                                      "group",
+                                      changeKind === "removed" && "opacity-60 line-through decoration-amber-600/70 bg-amber-50/40",
+                                      changeKind === "added" && "bg-emerald-50/40",
+                                      changeKind === "changed" && "bg-amber-50/40",
+                                      changeKind && "border-l-4",
+                                      changeKind === "added" ? "border-l-emerald-500" : changeKind ? "border-l-amber-500" : undefined,
+                                    )}
+                                  >
+
                                     <TableCell>
                                       <div>
                                         <div className="font-medium flex items-center gap-1.5">
@@ -2300,7 +2323,24 @@ const AdminRequestDetail = () => {
                                             </span>
                                           )}
                                         </div>
+                                        {changeChip && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setPublishDialogOpen(true)}
+                                            className={cn(
+                                              "mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium no-underline",
+                                              changeKind === "added"
+                                                ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                                                : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100",
+                                            )}
+                                            title="Nog niet doorgevoerd — klik om te publiceren"
+                                          >
+                                            <Send className="h-2.5 w-2.5" />
+                                            {changeChip}
+                                          </button>
+                                        )}
                                         <div className="text-xs text-slate-500">{item.block_category}</div>
+
                                         {item.is_custom_quote && item.custom_briefing && (
                                           <div className="text-xs text-amber-800/80 italic mt-1 line-clamp-2" title={item.custom_briefing}>
                                             Briefing: {item.custom_briefing}
@@ -2944,7 +2984,48 @@ const AdminRequestDetail = () => {
                             ];
                           });
                         })()}
+                        {(() => {
+                          const cancelled = items.filter((it) => it.day_index >= 0 && isCancelledItem(it));
+                          if (cancelled.length === 0) return null;
+                          const dates = (request.selected_dates as string[]) || [];
+                          const totalColumns = 7;
+                          return [
+                            <TableRow key="cancelled-toggle" className="hover:bg-transparent">
+                              <TableCell colSpan={totalColumns} className="py-2 px-4">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowCancelledItems((v) => !v)}
+                                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                                >
+                                  {showCancelledItems
+                                    ? `${cancelled.length} geannuleerde onderdelen verbergen`
+                                    : `${cancelled.length} geannuleerde onderdeel${cancelled.length !== 1 ? "en" : ""} tonen`}
+                                </button>
+                              </TableCell>
+                            </TableRow>,
+                            ...(showCancelledItems
+                              ? cancelled.map((it) => (
+                                  <TableRow key={`cancelled-${it.id}`} className="bg-muted/20 text-muted-foreground">
+                                    <TableCell colSpan={totalColumns} className="py-1.5 px-4 text-xs">
+                                      <span className="uppercase tracking-wide mr-2">
+                                        Dag {it.day_index + 1}
+                                        {dates[it.day_index]
+                                          ? ` — ${format(new Date(dates[it.day_index]), "EEE d MMM", { locale: nl })}`
+                                          : ""}
+                                      </span>
+                                      <span className="line-through">{it.block_name}</span>
+                                      {it.provider_name && <span className="ml-2">· {it.provider_name}</span>}
+                                      <span className="ml-2 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
+                                        Geannuleerd
+                                      </span>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              : []),
+                          ];
+                        })()}
                       </TableBody>
+
                     </Table>
                   </div>
                 </CardContent>
