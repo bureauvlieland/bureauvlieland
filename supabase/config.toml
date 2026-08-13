@@ -158,3 +158,10 @@ verify_jwt = false
 
 [functions.apply-purchase-invoice-to-lodging]
 verify_jwt = false
+
+[functions.map-book]
+verify_jwt = false
+
+[functions.map-payment-status]
+verify_jwt = false
+
