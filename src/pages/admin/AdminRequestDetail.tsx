@@ -2320,7 +2320,24 @@ const AdminRequestDetail = () => {
                                             </span>
                                           )}
                                         </div>
+                                        {changeChip && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setPublishDialogOpen(true)}
+                                            className={cn(
+                                              "mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium no-underline",
+                                              changeKind === "added"
+                                                ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                                                : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100",
+                                            )}
+                                            title="Nog niet doorgevoerd — klik om te publiceren"
+                                          >
+                                            <Send className="h-2.5 w-2.5" />
+                                            {changeChip}
+                                          </button>
+                                        )}
                                         <div className="text-xs text-slate-500">{item.block_category}</div>
+
                                         {item.is_custom_quote && item.custom_briefing && (
                                           <div className="text-xs text-amber-800/80 italic mt-1 line-clamp-2" title={item.custom_briefing}>
                                             Briefing: {item.custom_briefing}
