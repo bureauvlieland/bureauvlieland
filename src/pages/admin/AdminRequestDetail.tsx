@@ -2256,7 +2256,7 @@ const AdminRequestDetail = () => {
                       </TableHeader>
                       <TableBody>
                         {(() => {
-                          const programItems = items.filter(item => item.day_index >= 0);
+                          const programItems = items.filter(item => item.day_index >= 0 && !isCancelledItem(item));
                           const dayGroups = programItems.reduce<Record<number, typeof programItems>>((acc, item) => {
                             if (!acc[item.day_index]) acc[item.day_index] = [];
                             acc[item.day_index].push(item);
@@ -2269,7 +2269,7 @@ const AdminRequestDetail = () => {
                           return sortedDays.flatMap((dayIdx) => {
                             const dayDate = dates[dayIdx] ? format(new Date(dates[dayIdx]), "EEE d MMM", { locale: nl }) : null;
                             const dayLabel = `Dag ${dayIdx + 1}${dayDate ? ` — ${dayDate}` : ""}`;
-                            const dayItems = dayGroups[dayIdx];
+                            const dayItems = sortByEffectiveTime(dayGroups[dayIdx] as any[]) as typeof dayGroups[number];
 
                             return [
                               <TableRow key={`day-header-${dayIdx}`} className="bg-muted/40 hover:bg-muted/40">
@@ -2288,8 +2288,21 @@ const AdminRequestDetail = () => {
                                   !item.customer_accepted_at &&
                                   (item.status === "confirmed" || item.status === "alternative") &&
                                   hasOpenAdminPriceChange(item as any, item.override_people ?? request.number_of_people, numDaysForItem);
+                                const changeKind = pendingChangeKind(item as any);
+                                const changeChip = pendingChangeChipLabel(item as any);
                                 return (
-                                  <TableRow key={item.id} className="group">
+                                  <TableRow
+                                    key={item.id}
+                                    className={cn(
+                                      "group",
+                                      changeKind === "removed" && "opacity-60 line-through decoration-amber-600/70 bg-amber-50/40",
+                                      changeKind === "added" && "bg-emerald-50/40",
+                                      changeKind === "changed" && "bg-amber-50/40",
+                                      changeKind && "border-l-4",
+                                      changeKind === "added" ? "border-l-emerald-500" : changeKind ? "border-l-amber-500" : undefined,
+                                    )}
+                                  >
+
                                     <TableCell>
                                       <div>
                                         <div className="font-medium flex items-center gap-1.5">
