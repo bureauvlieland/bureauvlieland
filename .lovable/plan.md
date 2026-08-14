@@ -17,24 +17,28 @@ die nog niet.
    - naam, e-mail, telefoon; optioneel kortingscode;
    - live prijsindicatie (volwassenen x p.p. + kinderen x kindprijs) met de tekst dat de aanbieder
      het definitieve bedrag berekent;
+   - de melding blijft staan: u boekt en betaalt rechtstreeks bij de aanbieder; wij regelen alleen
+     het boekingsverzoek;
    - knop "Doorgaan naar betalen".
 
-2. **Betalen**
-   De dialoog roept `map-book` aan. Bij `mode: "checkout"` gaat de bezoeker naar de betaalpagina.
-   Bij `mode: "redirect"` (aanbieder zonder eigen checkout) openen we de MAP-pagina van die
-   aanbieder als terugvaloptie, met een korte uitleg.
+2. **Betalen bij de aanbieder zelf**
+   De dialoog roept `map-book` aan. Bij `mode: "checkout"` gaat de bezoeker naar de betaalpagina die
+   MAP aanmaakt — dat is de Mollie-checkout van de aanbieder zelf, dus de betaling loopt niet via
+   Bureau Vlieland. Bij `mode: "redirect"` (aanbieder zonder API-sleutel) openen we de MAP-pagina van
+   die aanbieder als terugvaloptie, met een korte uitleg.
 
 3. **Retourpagina `/boeking-status`**
    Na betalen komt de bezoeker hier terug (`?b=<boeking>&t=<aanbieder>`). De pagina pollt
    `map-payment-status` en toont: gelukt (met boekingsnummer en de melding dat de bevestiging per
-   e-mail komt), mislukt (opnieuw proberen) of nog in behandeling. Cross-sell naar logies en
-   programma samenstellen onderaan, zoals nu in het detailpaneel. Pagina is `noindex`.
+   e-mail van de aanbieder komt), mislukt (opnieuw proberen) of nog in behandeling. Cross-sell naar
+   logies en programma samenstellen onderaan, zoals nu in het detailpaneel. Pagina is `noindex`.
 
 4. **Vertrektijden worden acties, geen links**
-   In `MapActivityCard` en `MapActivityDetailSheet` verdwijnen de externe links en het
-   "u boekt rechtstreeks bij ..."-blok; volgeboekte tijden blijven uitgeschakeld. Bij meerdere
-   tijden vraagt de kaartknop eerst om een tijd (detailpaneel), bij één tijd gaat hij direct
-   naar de dialoog.
+   In `MapActivityCard` en `MapActivityDetailSheet` verdwijnt de externe link; de tekst "u boekt
+   rechtstreeks bij <aanbieder>" blijft, maar zonder "opent in een nieuw venster". Volgeboekte tijden
+   blijven uitgeschakeld. Bij meerdere tijden vraagt de kaartknop eerst om een tijd (detailpaneel),
+   bij één tijd gaat hij direct naar de dialoog.
+
 
 ## Technisch
 
