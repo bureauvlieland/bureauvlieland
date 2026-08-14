@@ -181,6 +181,61 @@ export const MapBookingDialog = ({
 
   const bookableTimes = times.filter((t) => t.slotsLeft > 0);
 
+  if (unavailable) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-xl leading-tight">
+              Online betalen lukt hier nog niet
+            </DialogTitle>
+            <DialogDescription>
+              {unavailable.providerName ?? partnerName ?? "Deze aanbieder"} heeft online betalen
+              via onze site nog niet aanstaan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <p>
+              Er is nog niets geboekt en niets afgeschreven. U kunt dit moment direct bij de
+              aanbieder reserveren, of wij regelen het voor u.
+            </p>
+            <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+              {unavailable.providerPhone && (
+                <p>
+                  Telefonisch:{" "}
+                  <a className="underline" href={`tel:${unavailable.providerPhone}`}>
+                    {unavailable.providerPhone}
+                  </a>
+                </p>
+              )}
+              <p>
+                Via Bureau Vlieland:{" "}
+                <a className="underline" href={`mailto:${GENERAL_CONTACT_EMAIL}`}>
+                  {GENERAL_CONTACT_EMAIL}
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Sluiten
+            </Button>
+            {unavailable.providerUrl && (
+              <Button asChild>
+                <a href={unavailable.providerUrl} target="_blank" rel="noopener noreferrer">
+                  Naar de site van de aanbieder
+                  <ExternalLink className="h-4 w-4 ml-2" />
+                </a>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -194,6 +249,7 @@ export const MapBookingDialog = ({
         </DialogHeader>
 
         <div className="space-y-5">
+
           {/* Vast: datum + tijd */}
           <div className="rounded-md border bg-muted/30 p-3 space-y-2 text-sm">
             <p className="flex items-center gap-2 capitalize">
