@@ -5,6 +5,7 @@ import {
   formatEuro,
   hasBookingErrors,
   validateBookingForm,
+  normalizeWebsiteUrl,
 } from "../mapBooking";
 
 const base = {
