@@ -21,14 +21,16 @@ De retour-URL die we sturen is `https://bureauvlieland.nl/boeking-status?b=...&t
 3. **Retour-URL configureerbaar per aanbieder.** Optioneel veld op de partner (`map_return_origin`) zodat we, als MAP een specifieke host per sleutel whitelist (bijv. `visitvlieland.nl`), die zonder code-wijziging kunnen instellen. Standaard blijft `bureauvlieland.nl`.
 4. **Tests**: unit-tests op de nieuwe terugval-logica en op het kiezen van de retour-origin, plus een Deno-test op de foutclassificatie in `map-book`.
 
-## Wat jij moet doen (buiten de code)
+## Wat jij (of de aanbieder) in het MAP-portaal moet zetten
 
-Vraag MAP/NORISK om deze hosts toe te voegen aan `AllowedReturnUrls` op de API-sleutel(s) van elke aanbieder:
+Volgens de MAP-handleiding is het geen support-verzoek maar een instelling die per API-key in het portaal staat, onder **Return-URLs**. Voeg daar per key toe:
 
-- `bureauvlieland.nl` en `www.bureauvlieland.nl`
-- `visitvlieland.nl` en `www.visitvlieland.nl`
+- `https://bureauvlieland.nl/boeking-status`
+- `https://www.bureauvlieland.nl/boeking-status`
+- `https://visitvlieland.nl/boeking-status` en `https://www.visitvlieland.nl/boeking-status` (voor de Visit Vlieland-site)
 
-Zolang dat niet gebeurd is, kan er via onze site niet online betaald worden — dan tonen we de nette terugval uit punt 1. Ik kan een kant-en-klare mail voor MAP opstellen als je wilt.
+Zodra dat voor Kaasbunker staat, kunnen we direct opnieuw testen (boeking + betaling). Zolang een aanbieder dat niet heeft staan, kan er via onze site niet online betaald worden — dan tonen we de nette terugval uit punt 1 in plaats van de 404. Ik kan een korte instructiemail voor aanbieders opstellen als je wilt.
+
 
 
 ## Technisch
