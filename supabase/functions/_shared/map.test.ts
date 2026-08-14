@@ -1,5 +1,11 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { fallbackBookingUrl, safeReturnUrl } from "./map.ts";
+import {
+  isReturnUrlRejection,
+  providerFallbackUrl,
+  resolveReturnUrl,
+  safeReturnUrl,
+} from "./map.ts";
+
 
 Deno.test("safeReturnUrl accepteert toegestane hosts", () => {
   assertEquals(
