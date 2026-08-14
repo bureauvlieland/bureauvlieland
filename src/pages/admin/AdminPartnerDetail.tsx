@@ -900,6 +900,15 @@ const AdminPartnerDetail = () => {
                     </div>
                   )}
 
+                  {formData.map_tenant_slug && (
+                    <MapPaymentSelftestPanel
+                      tenantSlug={formData.map_tenant_slug}
+                      partnerName={formData.name}
+                    />
+                  )}
+
+
+
 
                   <Separator />
 
