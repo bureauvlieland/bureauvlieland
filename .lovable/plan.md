@@ -21,15 +21,19 @@ De retour-URL die we sturen is `https://bureauvlieland.nl/boeking-status?b=...&t
 3. **Retour-URL configureerbaar per aanbieder.** Optioneel veld op de partner (`map_return_origin`) zodat we, als MAP een specifieke host per sleutel whitelist (bijv. `visitvlieland.nl`), die zonder code-wijziging kunnen instellen. Standaard blijft `bureauvlieland.nl`.
 4. **Tests**: unit-tests op de nieuwe terugval-logica en op het kiezen van de retour-origin, plus een Deno-test op de foutclassificatie in `map-book`.
 
-## Wat jij (of de aanbieder) in het MAP-portaal moet zetten
+## Wat er in MAP moet gebeuren (per aanbieder, 1 minuut werk)
 
-Volgens de MAP-handleiding is het geen support-verzoek maar een instelling die per API-key in het portaal staat, onder **Return-URLs**. Voeg daar per key toe:
+Op de pagina **API Keys** die je nu open hebt staat bij beide keys in de kolom **RETURN-URLS** de waarde "geen". Daarom weigert MAP elke betaling. Oplossing:
 
-- `https://bureauvlieland.nl/boeking-status`
-- `https://www.bureauvlieland.nl/boeking-status`
-- `https://visitvlieland.nl/boeking-status` en `https://www.visitvlieland.nl/boeking-status` (voor de Visit Vlieland-site)
+1. Klik bij de key `bureau_vlieland` op de knop **RETURN-URLS**.
+2. Voeg toe (elk op een eigen regel):
+   - `https://bureauvlieland.nl/boeking-status`
+   - `https://www.bureauvlieland.nl/boeking-status`
+   - `https://visitvlieland.nl/boeking-status` en `https://www.visitvlieland.nl/boeking-status` (voor de Visit Vlieland-site)
+3. Opslaan. De kolom toont dan de hosts in plaats van "geen".
 
-Zodra dat voor Kaasbunker staat, kunnen we direct opnieuw testen (boeking + betaling). Zolang een aanbieder dat niet heeft staan, kan er via onze site niet online betaald worden — dan tonen we de nette terugval uit punt 1 in plaats van de 404. Ik kan een korte instructiemail voor aanbieders opstellen als je wilt.
+Let op: dit staat per aanbiedersaccount (dit scherm is dat van Zeehondentochten & Watertaxi). Elke aanbieder waarvan we de sleutel gebruiken — Kaasbunker, Vliehors Expres, Brouwerij Vlieland, Lepelaar, Geus, Paal 50 — moet dit één keer instellen op de key die wij gebruiken. Zolang een aanbieder dat niet heeft staan, tonen we de nette terugval uit punt 1 in plaats van de 404. Ik kan een korte instructiemail voor aanbieders opstellen als je wilt.
+
 
 
 
