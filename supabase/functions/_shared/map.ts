@@ -141,7 +141,48 @@ export function safeReturnUrl(url: string | null | undefined): string | null {
   return null;
 }
 
-/** Publieke MAP-boekingspagina van de aanbieder als terugvaloptie. */
-export function fallbackBookingUrl(tenantSlug: string): string {
-  return `${MAP_BASE_URL}/${tenantSlug}`;
+/**
+ * Terugvaloptie wanneer online betalen bij deze aanbieder niet kan.
+ * Nooit een gegokte MAP-portal-URL (die geeft een 404), alleen de eigen site.
+ */
+export function providerFallbackUrl(
+  provider: Pick<MapProvider, "websiteUrl">,
+): string | null {
+  const raw = provider.websiteUrl?.trim();
+  if (!raw) return null;
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
+
+/**
+ * Kiest de retour-URL: een per aanbieder ingestelde origin krijgt voorrang,
+ * omdat MAP de host per API-sleutel moet toestaan (Return-URLs).
+ */
+export function resolveReturnUrl(
+  clientReturnUrl: string | null | undefined,
+  providerReturnOrigin: string | null | undefined,
+): string | null {
+  const fromClient = safeReturnUrl(clientReturnUrl);
+  const origin = providerReturnOrigin?.trim();
+  if (!origin) return fromClient;
+  try {
+    const base = new URL(/^https?:\/\//i.test(origin) ? origin : `https://${origin}`);
+    if (base.protocol !== "https:") return fromClient;
+    const path = fromClient ? new URL(fromClient).pathname : "/boeking-status";
+    return new URL(path, base.origin).toString();
+  } catch {
+    return fromClient;
+  }
+}
+
+/** Herkent de MAP-melding dat de retour-host niet is toegestaan op de sleutel. */
+export function isReturnUrlRejection(status: number, body: string): boolean {
+  return status === 400 && /returnurl/i.test(body) && /whitelist|allowed/i.test(body);
+}
+
