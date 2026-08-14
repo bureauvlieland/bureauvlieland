@@ -160,3 +160,22 @@ export function formatMapDuration(minutes: number | null | undefined): string {
     : hours.toFixed(1).replace(".", ",");
   return `${label} uur`;
 }
+
+/**
+ * Partner-websites staan soms zonder schema in de database ("www.voorbeeld.nl").
+ * Zonder schema leest de browser dat als relatief pad en blijft de bezoeker op
+ * onze eigen site hangen. Normaliseer daarom voor gebruik als externe link.
+ */
+export function normalizeWebsiteUrl(raw: string | null | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    if (!parsed.hostname.includes(".")) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
