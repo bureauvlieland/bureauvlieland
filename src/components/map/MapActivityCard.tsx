@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Users, Ticket, ExternalLink } from "lucide-react";
+import { Calendar, Clock, Users, Ticket } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { MapActivity } from "@/hooks/useMapActivities";
@@ -19,31 +19,18 @@ interface MapActivityCardProps {
     _partnerSlug?: string;
     _image?: string | null;
   };
-  onBook?: (activity: MapActivity & { _partnerId?: string; _partnerSlug?: string }) => void;
+  /** Start de boekdialoog; timeId is het MAP-activiteit-Id van het gekozen moment. */
+  onBook?: (
+    activity: MapActivity & { _partnerId?: string; _partnerSlug?: string },
+    timeId: number | null,
+  ) => void;
   onSelect?: () => void;
   showPartner?: boolean;
-  /** When provided, renders all departure times as chips and uses external booking link */
+  /** When provided, renders all departure times as chips */
   times?: BundledTime[];
   /** Total spots remaining across all bundled times */
   totalSlotsLeft?: number;
 }
-
-// MAP-slug: lowercase + accenten weg, '&'/'+' -> 'en', spaties -> '-'.
-// Overige leestekens (komma, en/em-dash, apostrof, punt, etc.) blijven behouden
-// en worden via encodeURIComponent veilig in de URL gezet — exact zoals MAP doet.
-const slugify = (s: string) =>
-  s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/&/g, " en ")
-    .replace(/\+/g, " en ")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .split("-")
-    .map((segment) => encodeURIComponent(segment))
-    .join("-");
 
 export const MapActivityCard = ({
   activity,
@@ -61,13 +48,10 @@ export const MapActivityCard = ({
   const isFull = spotsLeft <= 0;
   const activityName = activity.ActivityTypeName;
   const imageUrl = (activity as any)._image;
-  const partnerSlug = (activity as any)._partnerSlug as string | undefined;
-
-  const bookingUrl = partnerSlug
-    ? `https://boeking.mijnactiviteitenplanner.nl/${partnerSlug}/${slugify(activityName)}/list`
-    : null;
 
   const hasTimes = times && times.length > 0;
+  const bookableTimes = (times ?? []).filter((t) => t.slotsLeft > 0);
+
 
   return (
     <Card
@@ -187,32 +171,22 @@ export const MapActivityCard = ({
                 </span>
               )}
             </div>
-            {!isFull && bookingUrl ? (
-              <Button size="sm" asChild>
-                <a
-                  href={bookingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Boeken
-                  <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-                </a>
+            {!isFull && onBook && (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (hasTimes && bookableTimes.length > 1 && onSelect) {
+                    onSelect();
+                    return;
+                  }
+                  onBook(activity, bookableTimes[0]?.id ?? activity.Id);
+                }}
+              >
+                Boeken
               </Button>
-            ) : (
-              !isFull &&
-              onBook && (
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBook(activity);
-                  }}
-                >
-                  Boeken
-                </Button>
-              )
             )}
+
           </div>
         </CardContent>
       </div>

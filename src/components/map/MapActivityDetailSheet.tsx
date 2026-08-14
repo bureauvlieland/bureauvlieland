@@ -32,21 +32,13 @@ interface Props {
   totalSlotsLeft: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Start de boekdialoog voor het gekozen vertrekmoment. */
+  onBook?: (activity: EnrichedActivity, timeId: number) => void;
 }
 
-const slugify = (s: string) =>
-  s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/&/g, " en ")
-    .replace(/\+/g, " en ")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .split("-")
-    .map((segment) => encodeURIComponent(segment))
-    .join("-");
+
+
+
 
 const trackEvent = (event: string, payload: Record<string, unknown>) => {
   try {
@@ -62,17 +54,15 @@ export const MapActivityDetailSheet = ({
   totalSlotsLeft,
   open,
   onOpenChange,
+  onBook,
 }: Props) => {
   if (!activity) return null;
 
   const departureDate = new Date(activity.Departure);
-  const partnerSlug = activity._partnerSlug;
   const partnerName = activity._partnerName;
-  const bookingBaseUrl = partnerSlug
-    ? `https://boeking.mijnactiviteitenplanner.nl/${partnerSlug}/${slugify(activity.ActivityTypeName)}/list`
-    : null;
 
   const isFull = totalSlotsLeft <= 0;
+
 
   const handleBookClick = (time: string) => {
     trackEvent("activity_book_click", {
@@ -193,29 +183,28 @@ export const MapActivityDetailSheet = ({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {times.map((t) => {
                   const timeFull = t.slotsLeft <= 0;
-                  const url = bookingBaseUrl;
                   return (
                     <Button
                       key={t.id}
                       variant={timeFull ? "outline" : "default"}
-                      disabled={timeFull || !url}
-                      asChild={!timeFull && !!url}
+                      disabled={timeFull || !onBook}
                       className="h-auto py-3 flex-col gap-0.5"
-                      onClick={() => !timeFull && handleBookClick(t.time)}
+                      onClick={() => {
+                        if (timeFull || !onBook) return;
+                        handleBookClick(t.time);
+                        onBook(activity, t.id);
+                      }}
                     >
-                      {!timeFull && url ? (
-                        <a href={url} target="_blank" rel="noopener noreferrer">
-                          <span className="text-base font-semibold">{t.time}</span>
-                          <span className="text-[10px] opacity-90">
-                            {t.slotsLeft <= 5 ? `nog ${t.slotsLeft}` : "boeken"}
-                          </span>
-                        </a>
-                      ) : (
-                        <>
-                          <span className="text-base font-semibold">{t.time}</span>
-                          <span className="text-[10px] text-muted-foreground">vol</span>
-                        </>
-                      )}
+                      <span className="text-base font-semibold">{t.time}</span>
+                      <span
+                        className={
+                          timeFull
+                            ? "text-[10px] text-muted-foreground"
+                            : "text-[10px] opacity-90"
+                        }
+                      >
+                        {timeFull ? "vol" : t.slotsLeft <= 5 ? `nog ${t.slotsLeft}` : "boeken"}
+                      </span>
                     </Button>
                   );
                 })}
@@ -224,15 +213,17 @@ export const MapActivityDetailSheet = ({
           )}
 
           {/* Disclaimer */}
-          {bookingBaseUrl && partnerName && (
+          {partnerName && (
             <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
               <ExternalLink className="h-4 w-4 flex-shrink-0 mt-0.5" />
               <p>
-                U boekt rechtstreeks bij <span className="font-medium text-foreground">{partnerName}</span>.
-                De boekingspagina opent in een nieuw venster.
+                U boekt en betaalt rechtstreeks bij{" "}
+                <span className="font-medium text-foreground">{partnerName}</span>. Wij verzorgen
+                alleen het boekingsverzoek.
               </p>
             </div>
           )}
+
 
           {/* Cross-sell */}
           <div>

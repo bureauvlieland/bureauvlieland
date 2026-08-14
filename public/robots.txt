@@ -6,6 +6,7 @@ Disallow: /mijn-programma/
 Disallow: /mijn-logies/
 Disallow: /programma/
 Disallow: /binnenkort
+Disallow: /boeking-status
 
 User-agent: Bingbot
 Allow: /
@@ -15,6 +16,7 @@ Disallow: /mijn-programma/
 Disallow: /mijn-logies/
 Disallow: /programma/
 Disallow: /binnenkort
+Disallow: /boeking-status
 
 User-agent: Twitterbot
 Allow: /
@@ -30,5 +32,6 @@ Disallow: /mijn-programma/
 Disallow: /mijn-logies/
 Disallow: /programma/
 Disallow: /binnenkort
+Disallow: /boeking-status
 
 Sitemap: https://bureauvlieland.nl/sitemap.xml

@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapActivityCard, type BundledTime } from "@/components/map/MapActivityCard";
 import { MapActivityDetailSheet } from "@/components/map/MapActivityDetailSheet";
+import { MapBookingDialog } from "@/components/map/MapBookingDialog";
+
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
 import { Search, CalendarDays, Ticket, Loader2 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -37,6 +39,9 @@ const ActiviteitenBoeken = () => {
   const [search, setSearch] = useState("");
   const [daysWindow, setDaysWindow] = useState(INITIAL_DAYS);
   const [selectedBundle, setSelectedBundle] = useState<BundledActivity | null>(null);
+  const [bookingBundle, setBookingBundle] = useState<BundledActivity | null>(null);
+  const [bookingTimeId, setBookingTimeId] = useState<number | null>(null);
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset window when date selection changes
@@ -240,6 +245,11 @@ const ActiviteitenBoeken = () => {
                             times={bundle.times}
                             totalSlotsLeft={bundle.totalSlotsLeft}
                             showPartner
+                            onBook={(_activity, timeId) => {
+                              setBookingBundle(bundle);
+                              setBookingTimeId(timeId);
+                            }}
+
                             onSelect={() => {
                               setSelectedBundle(bundle);
                               try {
@@ -283,7 +293,26 @@ const ActiviteitenBoeken = () => {
         totalSlotsLeft={selectedBundle?.totalSlotsLeft ?? 0}
         open={!!selectedBundle}
         onOpenChange={(o) => !o && setSelectedBundle(null)}
+        onBook={(_activity, timeId) => {
+          if (!selectedBundle) return;
+          setBookingBundle(selectedBundle);
+          setBookingTimeId(timeId);
+        }}
       />
+
+      <MapBookingDialog
+        activity={bookingBundle?.representative ?? null}
+        times={bookingBundle?.times ?? []}
+        selectedTimeId={bookingTimeId}
+        open={!!bookingBundle}
+        onOpenChange={(o) => {
+          if (!o) {
+            setBookingBundle(null);
+            setBookingTimeId(null);
+          }
+        }}
+      />
+
 
       <RelatedLinks />
       <Footer />
