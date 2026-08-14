@@ -10,7 +10,7 @@ De boeking bij Kaasbunker wordt wél aangemaakt (booking 120206), maar het start
 
 Onze code valt dan terug op de "boek bij de aanbieder"-link `portal.mijnactiviteitenplanner.nl/kaasbunker`. Die pagina bestaat niet (404) — dat is de foutmelding op je screenshot. Er gaan dus twee dingen mis: MAP accepteert de retour-URL niet, en onze terugvaloptie stuurt de bezoeker naar een dode pagina.
 
-De retour-URL die we sturen is `https://bureauvlieland.nl/boeking-status?b=...&t=...`. Die host moet per API-sleutel aan de MAP-kant gewhitelist worden; dat kunnen wij niet zelf zetten.
+De retour-URL die we sturen is `https://bureauvlieland.nl/boeking-status?b=...&t=...`. De Swagger van MAP bevestigt dat ons verzoek qua veldnamen klopt (`BookingId` + `ReturnUrl` op `POST /api/v1/payments`) en dat geldt: *"Its host must be whitelisted on the API key (AllowedReturnUrls)"*. Het is dus puur een instelling aan de MAP-kant per API-sleutel — niet iets in onze code.
 
 ## Wat ik ga bouwen
 
@@ -23,12 +23,13 @@ De retour-URL die we sturen is `https://bureauvlieland.nl/boeking-status?b=...&t
 
 ## Wat jij moet doen (buiten de code)
 
-Vraag MAP/de aanbieder om deze hosts te whitelisten op de API-sleutel(s):
+Vraag MAP/NORISK om deze hosts toe te voegen aan `AllowedReturnUrls` op de API-sleutel(s) van elke aanbieder:
 
 - `bureauvlieland.nl` en `www.bureauvlieland.nl`
 - `visitvlieland.nl` en `www.visitvlieland.nl`
 
 Zolang dat niet gebeurd is, kan er via onze site niet online betaald worden — dan tonen we de nette terugval uit punt 1. Ik kan een kant-en-klare mail voor MAP opstellen als je wilt.
+
 
 ## Technisch
 
