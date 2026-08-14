@@ -10,6 +10,7 @@ import {
   Lightbulb,
   ClipboardList,
   HelpCircle,
+  Zap,
 } from "lucide-react";
 
 interface NavItem {
