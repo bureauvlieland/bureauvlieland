@@ -186,3 +186,23 @@ export function isReturnUrlRejection(status: number, body: string): boolean {
   return status === 400 && /returnurl/i.test(body) && /whitelist|allowed/i.test(body);
 }
 
+
+export type SelftestResult =
+  | "ok"
+  | "no_api_key"
+  | "no_activity"
+  | "return_url_not_whitelisted"
+  | "booking_failed"
+  | "payment_unavailable";
+
+/** Zet een MAP-betaalrespons om in een testuitslag. */
+export function classifySelftest(
+  status: number,
+  body: string,
+  checkoutUrl: string | null,
+): SelftestResult {
+  if (checkoutUrl && status >= 200 && status < 300) return "ok";
+  if (isReturnUrlRejection(status, body)) return "return_url_not_whitelisted";
+  return "payment_unavailable";
+}
+

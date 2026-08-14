@@ -5,6 +5,7 @@ import {
   formatEuro,
   hasBookingErrors,
   validateBookingForm,
+  normalizeWebsiteUrl,
 } from "../mapBooking";
 
 const base = {
@@ -90,3 +91,22 @@ describe("bookingReturnUrl", () => {
   });
 });
 
+
+describe("normalizeWebsiteUrl", () => {
+  it("voegt https toe als het schema ontbreekt", () => {
+    expect(normalizeWebsiteUrl("www.zeehondentochtenvlieland.nl")).toBe(
+      "https://www.zeehondentochtenvlieland.nl/",
+    );
+  });
+
+  it("laat bestaande http(s)-urls intact", () => {
+    expect(normalizeWebsiteUrl("https://paal50.nl/boeken")).toBe("https://paal50.nl/boeken");
+  });
+
+  it("weigert lege waarden en onzin", () => {
+    expect(normalizeWebsiteUrl(null)).toBeNull();
+    expect(normalizeWebsiteUrl("   ")).toBeNull();
+    expect(normalizeWebsiteUrl("javascript:alert(1)")).toBeNull();
+    expect(normalizeWebsiteUrl("geenpunt")).toBeNull();
+  });
+});
