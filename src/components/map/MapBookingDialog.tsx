@@ -68,13 +68,20 @@ export const MapBookingDialog = ({
   const [couponCode, setCouponCode] = useState("");
   const [errors, setErrors] = useState<BookingFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [unavailable, setUnavailable] = useState<{
+    providerName: string | null;
+    providerUrl: string | null;
+    providerPhone: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (open) {
       setTimeId(selectedTimeId ?? times.find((t) => t.slotsLeft > 0)?.id ?? null);
       setErrors({});
+      setUnavailable(null);
     }
   }, [open, selectedTimeId, times]);
+
 
   const selectedTime = useMemo(
     () => times.find((t) => t.id === timeId) ?? null,
