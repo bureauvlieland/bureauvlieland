@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
+  isAllowedMapSecretName,
   isReturnUrlRejection,
   providerFallbackUrl,
   resolveReturnUrl,
@@ -93,3 +94,12 @@ Deno.test("isReturnUrlRejection herkent de MAP-whitelistmelding", () => {
   assertEquals(isReturnUrlRejection(500, "returnUrl not whitelisted"), false);
 });
 
+
+Deno.test("isAllowedMapSecretName laat alleen MAP-sleutelnamen door", () => {
+  assertEquals(isAllowedMapSecretName("MAP_API_KEY_TUKTUK"), true);
+  assertEquals(isAllowedMapSecretName("MAP_API_KEY_PAAL_50"), true);
+  assertEquals(isAllowedMapSecretName("SUPABASE_SERVICE_ROLE_KEY"), false);
+  assertEquals(isAllowedMapSecretName("MAP_API_KEY_"), false);
+  assertEquals(isAllowedMapSecretName("map_api_key_tuktuk"), false);
+  assertEquals(isAllowedMapSecretName("MAP_API_KEY_TUKTUK; rm -rf /"), false);
+});
