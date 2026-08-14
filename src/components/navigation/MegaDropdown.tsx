@@ -36,6 +36,12 @@ const watWeOrganiserenItems: NavItem[] = [
     highlight: true,
   },
   {
+    label: "Direct boeken",
+    href: "/activiteiten-boeken",
+    description: "Bekijk vertrektijden en boek losse activiteiten direct online",
+    icon: Zap,
+  },
+  {
     label: "Overnachten",
     href: "/logies-vlieland",
     description: "Hotels, groepsaccommodaties en kamperen",
