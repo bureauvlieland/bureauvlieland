@@ -878,6 +878,24 @@ const AdminPartnerDetail = () => {
                     </div>
                   )}
 
+                  {formData.map_tenant_slug && (
+                    <div className="space-y-2">
+                      <Label htmlFor="map_return_origin">MAP return-origin</Label>
+                      <Input
+                        id="map_return_origin"
+                        value={formData.map_return_origin}
+                        onChange={(e) => handleChange("map_return_origin", e.target.value)}
+                        placeholder="bijv. https://visitvlieland.nl"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Alleen invullen als de klant na betalen op een ánder domein terug moet komen
+                        dan bureauvlieland.nl. Deze host moet in MAP bij de API-sleutel onder
+                        "Return-URLs" staan, anders weigert MAP de betaling.
+                      </p>
+                    </div>
+                  )}
+
+
                   <Separator />
 
                   <div className="flex items-center justify-between">
