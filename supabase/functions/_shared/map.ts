@@ -85,7 +85,10 @@ export async function cancelBooking(
 const ALLOWED_RETURN_HOSTS = new Set([
   "visitvlieland.nl",
   "www.visitvlieland.nl",
+  "bureauvlieland.nl",
+  "www.bureauvlieland.nl",
 ]);
+
 
 /** Valideert een return-URL: alleen https en toegestane hosts. */
 export function safeReturnUrl(url: string | null | undefined): string | null {
