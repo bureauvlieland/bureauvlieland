@@ -66,7 +66,7 @@ const populairItems: NavItem[] = [
   { label: "Activiteiten Vlieland", href: "/activiteiten-vlieland" },
   { label: "Zeehondentochten", href: "/zeehondentochten-vlieland" },
   { label: "Wadlopen", href: "/wadlopen-vlieland" },
-  { label: "Losse activiteiten", href: "/activiteiten-boeken" },
+  { label: "Direct boeken", href: "/activiteiten-boeken" },
   { label: "Catering aanvragen", href: "/catering-aanvragen" },
 ];
 
