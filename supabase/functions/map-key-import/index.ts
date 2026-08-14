@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAllowedMapSecretName } from "../_shared/map.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
