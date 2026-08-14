@@ -158,6 +158,7 @@ const AdminPartnerDetail = () => {
     accommodation_commission_percentage: 10,
     extras_commission_percentage: null as number | null,
     map_tenant_slug: "",
+    map_return_origin: "",
     map_api_key: "",
   });
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -216,6 +217,7 @@ const AdminPartnerDetail = () => {
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
         extras_commission_percentage: (data as any).extras_commission_percentage ?? null,
         map_tenant_slug: (data as any).map_tenant_slug || "",
+        map_return_origin: (data as any).map_return_origin || "",
         map_api_key: (data as any).map_api_key || "",
       });
     } catch (error) {
@@ -377,6 +379,7 @@ const AdminPartnerDetail = () => {
               ? formData.extras_commission_percentage
               : null,
            map_tenant_slug: formData.map_tenant_slug || null,
+           map_return_origin: formData.map_return_origin || null,
            map_api_key: formData.map_api_key || null,
         });
 
@@ -435,6 +438,7 @@ const AdminPartnerDetail = () => {
                 ? formData.extras_commission_percentage
                 : null,
             map_tenant_slug: formData.map_tenant_slug || null,
+            map_return_origin: formData.map_return_origin || null,
             map_api_key: formData.map_api_key || null,
           } as any)
           .eq("id", id);
