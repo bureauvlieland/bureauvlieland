@@ -10,6 +10,7 @@ import {
   Lightbulb,
   ClipboardList,
   HelpCircle,
+  Zap,
 } from "lucide-react";
 
 interface NavItem {
@@ -33,6 +34,12 @@ const watWeOrganiserenItems: NavItem[] = [
     description: "Inspiratie: alle activiteiten op een rij",
     icon: Compass,
     highlight: true,
+  },
+  {
+    label: "Direct boeken",
+    href: "/activiteiten-boeken",
+    description: "Bekijk vertrektijden en boek losse activiteiten direct online",
+    icon: Zap,
   },
   {
     label: "Overnachten",
@@ -59,7 +66,7 @@ const populairItems: NavItem[] = [
   { label: "Activiteiten Vlieland", href: "/activiteiten-vlieland" },
   { label: "Zeehondentochten", href: "/zeehondentochten-vlieland" },
   { label: "Wadlopen", href: "/wadlopen-vlieland" },
-  { label: "Losse activiteiten", href: "/activiteiten-boeken" },
+  { label: "Direct boeken", href: "/activiteiten-boeken" },
   { label: "Catering aanvragen", href: "/catering-aanvragen" },
 ];
 
