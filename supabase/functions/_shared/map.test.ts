@@ -24,7 +24,9 @@ Deno.test("safeReturnUrl accepteert de Bureau Vlieland hosts", () => {
   assertEquals(
     safeReturnUrl("https://www.bureauvlieland.nl/boeking-status"),
     "https://www.bureauvlieland.nl/boeking-status",
-  );
+});
+
+
 
 
 Deno.test("safeReturnUrl weigert http, onbekende hosts en rommel", () => {
