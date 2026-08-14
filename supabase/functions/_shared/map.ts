@@ -206,3 +206,11 @@ export function classifySelftest(
   return "payment_unavailable";
 }
 
+
+/**
+ * Alleen expliciet gevormde MAP-secretnamen mogen uit de omgeving gelezen worden,
+ * zodat een import-aanroep nooit een willekeurige env-variabele kan uitlezen.
+ */
+export function isAllowedMapSecretName(name: string): boolean {
+  return /^MAP_API_KEY_[A-Z0-9_]{2,40}$/.test(name);
+}
