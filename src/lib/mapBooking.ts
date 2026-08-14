@@ -122,3 +122,18 @@ export function clearPendingBooking() {
 export function bookingReturnUrl(origin: string): string {
   return `${origin.replace(/\/$/, "")}/boeking-status`;
 }
+
+/**
+ * MAP levert de duur in minuten. Toon minuten onder het uur, daarboven uren
+ * (met een half uur als "1,5 uur").
+ */
+export function formatMapDuration(minutes: number | null | undefined): string {
+  const value = Number(minutes);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (value < 60) return `${Math.round(value)} min`;
+  const hours = value / 60;
+  const label = Number.isInteger(hours)
+    ? String(hours)
+    : hours.toFixed(1).replace(".", ",");
+  return `${label} uur`;
+}
