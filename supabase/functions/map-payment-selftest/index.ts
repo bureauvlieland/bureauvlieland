@@ -1,10 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   cancelBooking,
-  isReturnUrlRejection,
   mapFetch,
   providerFor,
   resolveReturnUrl,
+  classifySelftest,
+  type SelftestResult,
 } from "../_shared/map.ts";
 
 const corsHeaders = {
@@ -18,25 +19,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-
-export type SelftestResult =
-  | "ok"
-  | "no_api_key"
-  | "no_activity"
-  | "return_url_not_whitelisted"
-  | "booking_failed"
-  | "payment_unavailable";
-
-/** Zet een MAP-betaalrespons om in een testuitslag. */
-export function classifySelftest(
-  status: number,
-  body: string,
-  checkoutUrl: string | null,
-): SelftestResult {
-  if (checkoutUrl && status >= 200 && status < 300) return "ok";
-  if (isReturnUrlRejection(status, body)) return "return_url_not_whitelisted";
-  return "payment_unavailable";
-}
 
 const DEFAULT_RETURN_URL = "https://bureauvlieland.nl/boeking-status";
 

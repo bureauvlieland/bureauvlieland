@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { classifySelftest } from "./index.ts";
+import { classifySelftest } from "../_shared/map.ts";
 
 const WHITELIST_BODY =
   '{"Message":"returnUrl is missing, invalid, or its host is not whitelisted for this API key."}';
