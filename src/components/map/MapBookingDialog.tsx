@@ -26,6 +26,7 @@ import {
   storePendingBooking,
   validateBookingForm,
   type BookingFormErrors,
+  normalizeWebsiteUrl,
 } from "@/lib/mapBooking";
 import { GENERAL_CONTACT_EMAIL } from "@/lib/bureauContact";
 
@@ -153,7 +154,9 @@ export const MapBookingDialog = ({
       if (payload?.mode === "unavailable") {
         setUnavailable({
           providerName: payload.providerName ? String(payload.providerName) : null,
-          providerUrl: payload.providerUrl ? String(payload.providerUrl) : null,
+          providerUrl: normalizeWebsiteUrl(
+            payload.providerUrl ? String(payload.providerUrl) : null,
+          ),
           providerPhone: payload.providerPhone ? String(payload.providerPhone) : null,
         });
         return;
