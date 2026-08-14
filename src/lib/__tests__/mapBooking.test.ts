@@ -79,4 +79,14 @@ describe("bookingReturnUrl", () => {
       "https://bureauvlieland.nl/boeking-status",
     );
   });
+
+  it("valt terug op productie voor niet-gewhitelist hosts (preview)", () => {
+    expect(bookingReturnUrl("https://id-preview--abc.lovable.app")).toBe(
+      "https://bureauvlieland.nl/boeking-status",
+    );
+    expect(bookingReturnUrl("http://localhost:8080")).toBe(
+      "https://bureauvlieland.nl/boeking-status",
+    );
+  });
 });
+

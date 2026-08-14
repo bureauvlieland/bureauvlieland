@@ -118,10 +118,33 @@ export function clearPendingBooking() {
   }
 }
 
+/**
+ * Hosts die bij MAP per API-sleutel zijn gewhitelist als retour-host.
+ * Preview-domeinen (*.lovable.app) staan daar niet in; dan gebruiken we de
+ * productie-URL zodat de betaling wél gestart kan worden.
+ */
+const PRODUCTION_ORIGIN = "https://bureauvlieland.nl";
+const WHITELISTED_RETURN_HOSTS = new Set([
+  "bureauvlieland.nl",
+  "www.bureauvlieland.nl",
+  "visitvlieland.nl",
+  "www.visitvlieland.nl",
+]);
+
 /** Retour-URL voor de betaalpagina; map-book voegt `b` en `t` toe. */
 export function bookingReturnUrl(origin: string): string {
-  return `${origin.replace(/\/$/, "")}/boeking-status`;
+  let host = "";
+  try {
+    host = new URL(origin).hostname.toLowerCase();
+  } catch {
+    host = "";
+  }
+  const base = WHITELISTED_RETURN_HOSTS.has(host)
+    ? origin.replace(/\/$/, "")
+    : PRODUCTION_ORIGIN;
+  return `${base}/boeking-status`;
 }
+
 
 /**
  * MAP levert de duur in minuten. Toon minuten onder het uur, daarboven uren
