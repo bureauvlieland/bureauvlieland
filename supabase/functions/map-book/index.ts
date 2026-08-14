@@ -1,11 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  apiKeyFor,
   cancelBooking,
-  fallbackBookingUrl,
+  isReturnUrlRejection,
   mapFetch,
+  providerFallbackUrl,
+  providerFor,
+  resolveReturnUrl,
   safeReturnUrl,
 } from "../_shared/map.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,19 +101,30 @@ Deno.serve(async (req) => {
       return json({ error: "Ongeldige kortingscode." }, 400);
     }
 
-    const safeReturn = safeReturnUrl(typeof returnUrl === "string" ? returnUrl : null);
-    if (!safeReturn) {
+    const clientReturn = safeReturnUrl(typeof returnUrl === "string" ? returnUrl : null);
+    if (!clientReturn) {
       return json({ error: "De terugkeer-URL is niet toegestaan." }, 400);
     }
 
-    const apiKey = await apiKeyFor(tenantSlug);
+    const provider = await providerFor(tenantSlug);
+    const providerUrl = providerFallbackUrl(provider);
+    const apiKey = provider.apiKey;
     if (!apiKey) {
+      await logEvent({
+        tenant_slug: tenantSlug,
+        status: "no_api_key",
+      });
       return json({
-        mode: "redirect",
-        redirectUrl: fallbackBookingUrl(tenantSlug),
+        mode: "unavailable",
         reason: "no_api_key",
+        providerName: provider.name,
+        providerUrl,
+        providerPhone: provider.phone,
       });
     }
+
+    const safeReturn = resolveReturnUrl(clientReturn, provider.returnOrigin) ?? clientReturn;
+
 
     // 1. Boeking aanmaken — bedragen komen nooit uit de aanvraag, MAP rekent zelf.
     const bookingPayload: Record<string, unknown> = {
@@ -177,19 +191,23 @@ Deno.serve(async (req) => {
       null;
 
     if (!paymentRes.ok || !checkoutUrl) {
+      const returnUrlRejected = isReturnUrlRejection(paymentRes.status, paymentRes.body);
       await logEvent({
         tenant_slug: tenantSlug,
         booking_id: bookingId,
-        status: "payment_start_failed",
+        status: returnUrlRejected ? "payment_return_url_rejected" : "payment_start_failed",
         note: `status=${paymentRes.status} body=${paymentRes.body.slice(0, 500)}`,
       });
       await cancelBooking(bookingId, apiKey);
       return json({
-        mode: "redirect",
-        redirectUrl: fallbackBookingUrl(tenantSlug),
-        reason: "payment_unavailable",
+        mode: "unavailable",
+        reason: returnUrlRejected ? "return_url_not_whitelisted" : "payment_unavailable",
+        providerName: provider.name,
+        providerUrl,
+        providerPhone: provider.phone,
       });
     }
+
 
     const paymentId =
       (paymentRes.data?.Id as unknown) ??

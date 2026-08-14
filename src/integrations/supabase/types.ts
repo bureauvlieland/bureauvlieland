@@ -2612,6 +2612,7 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           map_api_key: string | null
+          map_return_origin: string | null
           map_tenant_slug: string | null
           name: string
           partner_token: string
@@ -2661,6 +2662,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           map_api_key?: string | null
+          map_return_origin?: string | null
           map_tenant_slug?: string | null
           name: string
           partner_token?: string
@@ -2710,6 +2712,7 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           map_api_key?: string | null
+          map_return_origin?: string | null
           map_tenant_slug?: string | null
           name?: string
           partner_token?: string

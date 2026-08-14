@@ -1,0 +1,2 @@
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS map_return_origin text;
+COMMENT ON COLUMN public.partners.map_return_origin IS 'Optionele retour-origin (https://host) die bij MijnActiviteitenPlanner op de API-sleutel van deze aanbieder is toegestaan onder Return-URLs.';

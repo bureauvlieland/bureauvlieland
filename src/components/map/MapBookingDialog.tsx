@@ -27,6 +27,8 @@ import {
   validateBookingForm,
   type BookingFormErrors,
 } from "@/lib/mapBooking";
+import { GENERAL_CONTACT_EMAIL } from "@/lib/bureauContact";
+
 
 type EnrichedActivity = MapActivity & {
   _partnerId?: string;
@@ -68,13 +70,20 @@ export const MapBookingDialog = ({
   const [couponCode, setCouponCode] = useState("");
   const [errors, setErrors] = useState<BookingFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [unavailable, setUnavailable] = useState<{
+    providerName: string | null;
+    providerUrl: string | null;
+    providerPhone: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (open) {
       setTimeId(selectedTimeId ?? times.find((t) => t.slotsLeft > 0)?.id ?? null);
       setErrors({});
+      setUnavailable(null);
     }
   }, [open, selectedTimeId, times]);
+
 
   const selectedTime = useMemo(
     () => times.find((t) => t.id === timeId) ?? null,
@@ -141,9 +150,12 @@ export const MapBookingDialog = ({
         return;
       }
 
-      if (payload?.mode === "redirect" && payload.redirectUrl) {
-        toast.info("U wordt doorgestuurd naar de boekingspagina van de aanbieder.");
-        window.location.href = payload.redirectUrl as string;
+      if (payload?.mode === "unavailable") {
+        setUnavailable({
+          providerName: payload.providerName ? String(payload.providerName) : null,
+          providerUrl: payload.providerUrl ? String(payload.providerUrl) : null,
+          providerPhone: payload.providerPhone ? String(payload.providerPhone) : null,
+        });
         return;
       }
 
@@ -159,6 +171,7 @@ export const MapBookingDialog = ({
         return;
       }
 
+
       toast.error("Boeken lukte niet. Probeer het later opnieuw.");
     } catch (e) {
       toast.error("Boeken lukte niet. Probeer het later opnieuw.");
@@ -169,6 +182,61 @@ export const MapBookingDialog = ({
   };
 
   const bookableTimes = times.filter((t) => t.slotsLeft > 0);
+
+  if (unavailable) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-xl leading-tight">
+              Online betalen lukt hier nog niet
+            </DialogTitle>
+            <DialogDescription>
+              {unavailable.providerName ?? partnerName ?? "Deze aanbieder"} heeft online betalen
+              via onze site nog niet aanstaan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <p>
+              Er is nog niets geboekt en niets afgeschreven. U kunt dit moment direct bij de
+              aanbieder reserveren, of wij regelen het voor u.
+            </p>
+            <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+              {unavailable.providerPhone && (
+                <p>
+                  Telefonisch:{" "}
+                  <a className="underline" href={`tel:${unavailable.providerPhone}`}>
+                    {unavailable.providerPhone}
+                  </a>
+                </p>
+              )}
+              <p>
+                Via Bureau Vlieland:{" "}
+                <a className="underline" href={`mailto:${GENERAL_CONTACT_EMAIL}`}>
+                  {GENERAL_CONTACT_EMAIL}
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Sluiten
+            </Button>
+            {unavailable.providerUrl && (
+              <Button asChild>
+                <a href={unavailable.providerUrl} target="_blank" rel="noopener noreferrer">
+                  Naar de site van de aanbieder
+                  <ExternalLink className="h-4 w-4 ml-2" />
+                </a>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,6 +251,7 @@ export const MapBookingDialog = ({
         </DialogHeader>
 
         <div className="space-y-5">
+
           {/* Vast: datum + tijd */}
           <div className="rounded-md border bg-muted/30 p-3 space-y-2 text-sm">
             <p className="flex items-center gap-2 capitalize">

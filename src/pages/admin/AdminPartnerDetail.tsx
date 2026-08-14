@@ -79,6 +79,7 @@ interface Partner {
   partner_type: string | null;
   accommodation_commission_percentage: number | null;
   map_tenant_slug: string | null;
+  map_return_origin: string | null;
   map_api_key: string | null;
 }
 
@@ -157,6 +158,7 @@ const AdminPartnerDetail = () => {
     accommodation_commission_percentage: 10,
     extras_commission_percentage: null as number | null,
     map_tenant_slug: "",
+    map_return_origin: "",
     map_api_key: "",
   });
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -215,6 +217,7 @@ const AdminPartnerDetail = () => {
         accommodation_commission_percentage: data.accommodation_commission_percentage ?? 10,
         extras_commission_percentage: (data as any).extras_commission_percentage ?? null,
         map_tenant_slug: (data as any).map_tenant_slug || "",
+        map_return_origin: (data as any).map_return_origin || "",
         map_api_key: (data as any).map_api_key || "",
       });
     } catch (error) {
@@ -376,6 +379,7 @@ const AdminPartnerDetail = () => {
               ? formData.extras_commission_percentage
               : null,
            map_tenant_slug: formData.map_tenant_slug || null,
+           map_return_origin: formData.map_return_origin || null,
            map_api_key: formData.map_api_key || null,
         });
 
@@ -434,6 +438,7 @@ const AdminPartnerDetail = () => {
                 ? formData.extras_commission_percentage
                 : null,
             map_tenant_slug: formData.map_tenant_slug || null,
+            map_return_origin: formData.map_return_origin || null,
             map_api_key: formData.map_api_key || null,
           } as any)
           .eq("id", id);
@@ -877,6 +882,24 @@ const AdminPartnerDetail = () => {
                       </p>
                     </div>
                   )}
+
+                  {formData.map_tenant_slug && (
+                    <div className="space-y-2">
+                      <Label htmlFor="map_return_origin">MAP return-origin</Label>
+                      <Input
+                        id="map_return_origin"
+                        value={formData.map_return_origin}
+                        onChange={(e) => handleChange("map_return_origin", e.target.value)}
+                        placeholder="bijv. https://visitvlieland.nl"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Alleen invullen als de klant na betalen op een ánder domein terug moet komen
+                        dan bureauvlieland.nl. Deze host moet in MAP bij de API-sleutel onder
+                        "Return-URLs" staan, anders weigert MAP de betaling.
+                      </p>
+                    </div>
+                  )}
+
 
                   <Separator />
 

@@ -1,5 +1,11 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { fallbackBookingUrl, safeReturnUrl } from "./map.ts";
+import {
+  isReturnUrlRejection,
+  providerFallbackUrl,
+  resolveReturnUrl,
+  safeReturnUrl,
+} from "./map.ts";
+
 
 Deno.test("safeReturnUrl accepteert toegestane hosts", () => {
   assertEquals(
@@ -42,9 +48,48 @@ Deno.test("safeReturnUrl weigert http, onbekende hosts en rommel", () => {
   assertEquals(safeReturnUrl(""), null);
 });
 
-Deno.test("fallbackBookingUrl wijst naar de MAP-pagina van de aanbieder", () => {
+Deno.test("providerFallbackUrl gebruikt de eigen site of niets", () => {
   assertEquals(
-    fallbackBookingUrl("zeehondentochten"),
-    "https://portal.mijnactiviteitenplanner.nl/zeehondentochten",
+    providerFallbackUrl({ websiteUrl: "https://kaasbunker.nl" }),
+    "https://kaasbunker.nl/",
+  );
+  assertEquals(
+    providerFallbackUrl({ websiteUrl: "kaasbunker.nl/boeken" }),
+    "https://kaasbunker.nl/boeken",
+  );
+  assertEquals(providerFallbackUrl({ websiteUrl: null }), null);
+  assertEquals(providerFallbackUrl({ websiteUrl: "   " }), null);
+});
+
+Deno.test("resolveReturnUrl geeft de aanbieder-origin voorrang", () => {
+  assertEquals(
+    resolveReturnUrl("https://bureauvlieland.nl/boeking-status", "https://visitvlieland.nl"),
+    "https://visitvlieland.nl/boeking-status",
+  );
+  assertEquals(
+    resolveReturnUrl("https://bureauvlieland.nl/boeking-status", "visitvlieland.nl"),
+    "https://visitvlieland.nl/boeking-status",
+  );
+  assertEquals(
+    resolveReturnUrl("https://bureauvlieland.nl/boeking-status", null),
+    "https://bureauvlieland.nl/boeking-status",
+  );
+  // onbruikbare origin valt terug op de client-URL
+  assertEquals(
+    resolveReturnUrl("https://bureauvlieland.nl/boeking-status", "http://onveilig.nl"),
+    "https://bureauvlieland.nl/boeking-status",
   );
 });
+
+Deno.test("isReturnUrlRejection herkent de MAP-whitelistmelding", () => {
+  assertEquals(
+    isReturnUrlRejection(
+      400,
+      '{"Message":"returnUrl is missing, invalid, or its host is not whitelisted for this API key."}',
+    ),
+    true,
+  );
+  assertEquals(isReturnUrlRejection(400, '{"Message":"Booking already paid"}'), false);
+  assertEquals(isReturnUrlRejection(500, "returnUrl not whitelisted"), false);
+});
+
