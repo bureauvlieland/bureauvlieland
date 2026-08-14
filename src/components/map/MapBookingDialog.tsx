@@ -141,9 +141,12 @@ export const MapBookingDialog = ({
         return;
       }
 
-      if (payload?.mode === "redirect" && payload.redirectUrl) {
-        toast.info("U wordt doorgestuurd naar de boekingspagina van de aanbieder.");
-        window.location.href = payload.redirectUrl as string;
+      if (payload?.mode === "unavailable") {
+        setUnavailable({
+          providerName: payload.providerName ? String(payload.providerName) : null,
+          providerUrl: payload.providerUrl ? String(payload.providerUrl) : null,
+          providerPhone: payload.providerPhone ? String(payload.providerPhone) : null,
+        });
         return;
       }
 
@@ -158,6 +161,7 @@ export const MapBookingDialog = ({
         window.location.href = payload.checkoutUrl as string;
         return;
       }
+
 
       toast.error("Boeken lukte niet. Probeer het later opnieuw.");
     } catch (e) {
