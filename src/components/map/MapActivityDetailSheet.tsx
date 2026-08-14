@@ -137,7 +137,7 @@ export const MapActivityDetailSheet = ({
                 <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-xs text-muted-foreground">Duur</p>
-                  <p className="font-medium">{activity.Duration} uur</p>
+                  <p className="font-medium">{formatMapDuration(activity.Duration)}</p>
                 </div>
               </div>
             )}
