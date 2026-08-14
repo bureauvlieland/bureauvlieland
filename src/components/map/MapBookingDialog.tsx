@@ -27,6 +27,8 @@ import {
   validateBookingForm,
   type BookingFormErrors,
 } from "@/lib/mapBooking";
+import { GENERAL_CONTACT_EMAIL } from "@/lib/bureauContact";
+
 
 type EnrichedActivity = MapActivity & {
   _partnerId?: string;
