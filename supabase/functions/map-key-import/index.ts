@@ -13,9 +13,6 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-/** Alleen expliciet toegestane secretnamen; nooit willekeurige env uitlezen. */
-const ALLOWED_SECRET_NAMES = /^MAP_API_KEY_[A-Z0-9_]{2,40}$/;
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -48,7 +45,7 @@ Deno.serve(async (req) => {
     const tenantSlugRaw = typeof body?.tenantSlug === "string" ? body.tenantSlug.trim() : "";
 
     if (!partnerId) return json({ error: "partnerId ontbreekt." }, 400);
-    if (!ALLOWED_SECRET_NAMES.test(secretName)) {
+    if (!isAllowedMapSecretName(secretName)) {
       return json({ error: "secretName ontbreekt of is niet toegestaan." }, 400);
     }
     if (tenantSlugRaw && !/^[a-z0-9-]{2,60}$/i.test(tenantSlugRaw)) {
