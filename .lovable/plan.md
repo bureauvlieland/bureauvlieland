@@ -23,12 +23,13 @@ De retour-URL die we sturen is `https://bureauvlieland.nl/boeking-status?b=...&t
 
 ## Wat jij moet doen (buiten de code)
 
-Vraag MAP/de aanbieder om deze hosts te whitelisten op de API-sleutel(s):
+Vraag MAP/NORISK om deze hosts toe te voegen aan `AllowedReturnUrls` op de API-sleutel(s) van elke aanbieder:
 
 - `bureauvlieland.nl` en `www.bureauvlieland.nl`
 - `visitvlieland.nl` en `www.visitvlieland.nl`
 
 Zolang dat niet gebeurd is, kan er via onze site niet online betaald worden — dan tonen we de nette terugval uit punt 1. Ik kan een kant-en-klare mail voor MAP opstellen als je wilt.
+
 
 ## Technisch
 
