@@ -2,25 +2,60 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const MAP_BASE_URL = "https://portal.mijnactiviteitenplanner.nl";
 
+export interface MapProvider {
+  /** Nooit naar de browser sturen. */
+  apiKey: string | null;
+  name: string | null;
+  websiteUrl: string | null;
+  phone: string | null;
+  /** Optionele retour-origin die bij MAP op deze sleutel is toegestaan. */
+  returnOrigin: string | null;
+}
+
 /**
- * Haalt de MAP API-sleutel op voor een aanbieder op basis van de tenant-slug.
- * Retourneert null wanneer de aanbieder geen eigen checkout heeft.
+ * Haalt de aanbiedergegevens (inclusief API-sleutel) op via de tenant-slug.
  * De sleutel verlaat de server nooit.
  */
-export async function apiKeyFor(tenantSlug: string): Promise<string | null> {
-  if (!tenantSlug) return null;
+export async function providerFor(tenantSlug: string): Promise<MapProvider> {
+  const empty: MapProvider = {
+    apiKey: null,
+    name: null,
+    websiteUrl: null,
+    phone: null,
+    returnOrigin: null,
+  };
+  if (!tenantSlug) return empty;
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
   const { data } = await supabase
     .from("partners")
-    .select("map_api_key")
+    .select("name, map_api_key, website_url, phone, map_return_origin")
     .eq("map_tenant_slug", tenantSlug)
     .maybeSingle();
 
-  return data?.map_api_key ?? null;
+  if (!data) return empty;
+  return {
+    apiKey: (data.map_api_key as string | null) ?? null,
+    name: (data.name as string | null) ?? null,
+    websiteUrl: (data.website_url as string | null) ?? null,
+    phone: (data.phone as string | null) ?? null,
+    returnOrigin: (data.map_return_origin as string | null) ?? null,
+  };
 }
+
+/**
+ * Haalt de MAP API-sleutel op voor een aanbieder op basis van de tenant-slug.
+ * Retourneert null wanneer de aanbieder geen eigen checkout heeft.
+ * De sleutel verlaat de server nooit.
+ */
+export async function apiKeyFor(tenantSlug: string): Promise<string | null> {
+  const provider = await providerFor(tenantSlug);
+  return provider.apiKey;
+}
+
 
 export interface MapFetchResult<T = unknown> {
   ok: boolean;
