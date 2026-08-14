@@ -101,19 +101,30 @@ Deno.serve(async (req) => {
       return json({ error: "Ongeldige kortingscode." }, 400);
     }
 
-    const safeReturn = safeReturnUrl(typeof returnUrl === "string" ? returnUrl : null);
-    if (!safeReturn) {
+    const clientReturn = safeReturnUrl(typeof returnUrl === "string" ? returnUrl : null);
+    if (!clientReturn) {
       return json({ error: "De terugkeer-URL is niet toegestaan." }, 400);
     }
 
-    const apiKey = await apiKeyFor(tenantSlug);
+    const provider = await providerFor(tenantSlug);
+    const providerUrl = providerFallbackUrl(provider);
+    const apiKey = provider.apiKey;
     if (!apiKey) {
+      await logEvent({
+        tenant_slug: tenantSlug,
+        status: "no_api_key",
+      });
       return json({
-        mode: "redirect",
-        redirectUrl: fallbackBookingUrl(tenantSlug),
+        mode: "unavailable",
         reason: "no_api_key",
+        providerName: provider.name,
+        providerUrl,
+        providerPhone: provider.phone,
       });
     }
+
+    const safeReturn = resolveReturnUrl(clientReturn, provider.returnOrigin) ?? clientReturn;
+
 
     // 1. Boeking aanmaken — bedragen komen nooit uit de aanvraag, MAP rekent zelf.
     const bookingPayload: Record<string, unknown> = {
