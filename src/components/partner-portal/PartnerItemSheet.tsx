@@ -538,7 +538,25 @@ export const PartnerItemSheet = ({
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   Omschrijving van de activiteit
                 </h3>
+                {(activityDate || item.duration || effectiveTime) && (
+                  <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span className="font-medium text-foreground">
+                      {activityDate
+                        ? format(parseISO(activityDate), "EEE d MMM yyyy", { locale: nl })
+                        : `Dag ${item.day_index + 1}`}
+                    </span>
+                    {formatDurationWindow(effectiveTime, item.duration) && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <Timer className="h-3.5 w-3.5" />
+                        <span>{formatDurationWindow(effectiveTime, item.duration)}</span>
+                      </>
+                    )}
+                  </p>
+                )}
                 <div className="bg-muted/30 border rounded-lg p-3 space-y-2">
+
                   {item.block_short_description && (
                     <p className="text-sm font-medium leading-relaxed">
                       {item.block_short_description}
