@@ -125,6 +125,7 @@ interface DesktopProgramViewProps {
   onCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   onOpenBilling: () => void;
   onOpenEdit: () => void;
+  onOpenAccommodationSetup?: () => void;
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
   onRefresh: () => void;
@@ -177,6 +178,7 @@ export const DesktopProgramView = ({
 
   onOpenBilling,
   onOpenEdit,
+  onOpenAccommodationSetup,
   onOpenCancel,
   onSubmitChanges,
   onRefresh,
@@ -350,6 +352,8 @@ export const DesktopProgramView = ({
                   onSelectQuote={onSelectAccommodationQuote}
                   selectedDates={selectedDates}
                   onEditAccommodation={onOpenEdit}
+            onEditAccommodationSetup={onOpenAccommodationSetup}
+                  onEditAccommodationSetup={onOpenAccommodationSetup}
                   customerToken={program.customer_token}
                   numberOfPeople={program.number_of_people}
                   invoicingMode={invoicingMode}

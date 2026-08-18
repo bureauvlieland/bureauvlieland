@@ -62,6 +62,7 @@ const CustomerProgram = () => {
     isPendingRemoval,
     updateProgramDetails,
     updateGuestDetails,
+    updateAccommodationSetup,
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
@@ -84,6 +85,7 @@ const CustomerProgram = () => {
   const [activeDay, setActiveDay] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showBillingDialog, setShowBillingDialog] = useState(false);
   const [showGuestDialog, setShowGuestDialog] = useState(false);
@@ -420,6 +422,7 @@ const CustomerProgram = () => {
     onOpenEdit: () => setShowEditDialog(true),
     onOpenCancel: () => setShowCancelDialog(true),
     onOpenGuestDetails: () => setShowGuestDialog(true),
+    onOpenAccommodationSetup: () => setShowSetupDialog(true),
     guestDetails,
     onSubmitChanges: () => setShowConfirmDialog(true),
     onRefresh: refetch,
