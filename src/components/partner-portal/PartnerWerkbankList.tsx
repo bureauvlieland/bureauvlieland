@@ -22,6 +22,7 @@ import type {
 import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
 import { DismissInvoiceDialog } from "./DismissInvoiceDialog";
 import { canPartnerDismissInvoiceItem } from "@/lib/partnerInvoiceDismiss";
+import { formatDurationWindow, getEffectiveTime } from "@/lib/timeUtils";
 
 interface Props {
   data: PartnerDashboardData;
@@ -38,6 +39,7 @@ interface WerkbankRow {
   customerLabel: string;
   date: Date | null;
   itemLabel: string;
+  timeLabel?: string | null;
   hint: string;
   dismissable?: boolean;
 }
@@ -92,6 +94,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
       customerLabel,
       date,
       itemLabel: i.block_name,
+      timeLabel: formatDurationWindow(getEffectiveTime(i as any), (i as any).duration),
     };
 
     if (i.status === "counter_proposed") {
