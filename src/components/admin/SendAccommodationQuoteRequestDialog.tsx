@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Eye, Edit2, Mail, Users, Calendar, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { getBoardLabel } from "@/types/accommodation";
+import { accommodationSetupEmailLines } from "@/lib/accommodationSetup";
 
 interface Partner {
   id: string;
@@ -37,6 +37,9 @@ interface AccommodationRequest {
   accommodation_type: string;
   special_requests?: string;
   board_preference?: string | null;
+  room_count?: number | null;
+  room_occupancy?: string | null;
+  room_types?: string[];
 }
 
 interface SendAccommodationQuoteRequestDialogProps {
@@ -73,6 +76,15 @@ export function SendAccommodationQuoteRequestDialog({
       (1000 * 60 * 60 * 24)
   );
 
+  // Kamers + verzorging: gedeelde regels, zodat admin-mail en portaal dezelfde
+  // wensen tonen.
+  const setupLines = accommodationSetupEmailLines({
+    room_count: request.room_count ?? null,
+    room_occupancy: request.room_occupancy ?? null,
+    room_types: request.room_types ?? [],
+    board_preference: request.board_preference ?? null,
+  });
+
   // Generate default email content
   useEffect(() => {
     if (open) {
@@ -86,7 +98,7 @@ We ontvingen een logiesaanvraag die goed bij jullie aanbod past. Graag ontvangen
 - Klant: ${request.customer_name}${request.customer_company ? ` (${request.customer_company})` : ""}
 - Periode: ${format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl })} - ${format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl })} (${nights} nachten)
 - Aantal gasten: ${request.number_of_guests} personen
-- Type accommodatie: ${TYPE_LABELS[request.accommodation_type] || request.accommodation_type}${getBoardLabel(request.board_preference) ? `\n- Gewenste verzorging: ${getBoardLabel(request.board_preference)}` : ""}
+- Type accommodatie: ${TYPE_LABELS[request.accommodation_type] || request.accommodation_type}${setupLines.length > 0 ? `\n${setupLines.join("\n")}` : ""}
 ${request.special_requests ? `\n**Bijzondere wensen:**\n${request.special_requests}` : ""}
 
 Jullie kunnen de offerte indienen via het partnerportaal. We zien jullie offerte graag binnen 5 werkdagen tegemoet.
@@ -98,7 +110,7 @@ Bureau Vlieland`;
       setEmailBody(defaultBody);
       setIsEditing(false);
     }
-  }, [open, request, nights]);
+  }, [open, request, nights, setupLines.join("|")]);
 
   const handleSend = () => {
     onSend(emailSubject, emailBody);
