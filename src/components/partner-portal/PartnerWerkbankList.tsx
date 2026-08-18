@@ -237,7 +237,9 @@ export function PartnerWerkbankList({ data, onDismissed }: Props) {
                     <div className="text-xs text-muted-foreground truncate">
                       {row.customerLabel}
                       {row.date && ` · ${format(row.date, "EEE d MMM", { locale: nl })}`}
+                      {row.timeLabel && ` · ${row.timeLabel}`}
                     </div>
+
                     <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
                   </Link>
                   {row.bucket === "invoice" && row.dismissable && partnerToken && (
