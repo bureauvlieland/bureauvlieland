@@ -49,6 +49,12 @@ interface UseCustomerProgramReturn {
   isPendingRemoval: (itemId: string) => boolean;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
   updateGuestDetails: (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => Promise<boolean>;
+  updateAccommodationSetup: (setup: {
+    room_count: number | null;
+    room_occupancy: string | null;
+    room_types: string[];
+    board_preference: string | null;
+  }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
   acceptTerms: (signatureName?: string) => Promise<boolean>;
   cancelRequest: (reason?: string, cancelAccommodation?: boolean) => Promise<boolean>;
@@ -628,6 +634,32 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
+  // Kamers & verzorging: dezelfde edge function, aparte payload zodat de
+  // klant deze wensen ook na het versturen van offerte-aanvragen kan bijsturen.
+  const updateAccommodationSetup = useCallback(async (setup: {
+    room_count: number | null;
+    room_occupancy: string | null;
+    room_types: string[];
+    board_preference: string | null;
+  }): Promise<boolean> => {
+    if (!program) return false;
+    try {
+      const { error } = await supabase.functions.invoke("update-customer-program", {
+        body: {
+          token,
+          accommodationSetup: setup,
+          origin: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      await fetchProgram();
+      return true;
+    } catch (err) {
+      console.error("Error updating accommodation setup:", err);
+      return false;
+    }
+  }, [program, token, fetchProgram]);
+
   const updateBillingDetails = useCallback(async (details: BillingDetails): Promise<boolean> => {
     if (!program) return false;
 
@@ -1005,6 +1037,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
 
     updateProgramDetails,
     updateGuestDetails,
+    updateAccommodationSetup,
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
