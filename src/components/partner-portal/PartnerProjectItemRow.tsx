@@ -16,7 +16,10 @@ import {
   Play,
   MapPin,
   Users,
+  Timer,
 } from "lucide-react";
+import { formatDurationWindow } from "@/lib/timeUtils";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -225,9 +228,16 @@ export const PartnerProjectItemRow = ({
             {effectiveTime && (
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {effectiveTime}
+                {formatDurationWindow(effectiveTime, item.duration)}
               </span>
             )}
+            {!effectiveTime && item.duration && (
+              <span className="inline-flex items-center gap-1">
+                <Timer className="h-3 w-3" />
+                {item.duration}
+              </span>
+            )}
+
             <span className="inline-flex items-center gap-1">
               <Users className="h-3 w-3" />
               {effectivePeople} pers.

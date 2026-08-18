@@ -41,6 +41,48 @@ export const formatTimeHHmm = (value: string | null | undefined): string | null 
 };
 
 /**
+ * Bepaal of een duurstring eenduidig te herleiden is naar een aantal minuten.
+ * Bereiken ("2-3 uur", "4-6") en marges ("Max 4 uur", "ca. 2 uur") zijn NIET
+ * eenduidig — daarvoor tonen we geen berekende eindtijd.
+ */
+export const isExactDuration = (duration: string | null | undefined): boolean => {
+  if (!duration) return false;
+  const v = String(duration).trim();
+  if (!v) return false;
+  if (/(max|min\.|minimaal|ongeveer|ca\.?|circa|±|~)/i.test(v)) return false;
+  if (/\d\s*[-–/]\s*\d/.test(v)) return false;
+  return /\d/.test(v);
+};
+
+/**
+ * Label voor het tijdvenster van een onderdeel: starttijd, eventuele berekende
+ * eindtijd en de duur zoals ingevuld.
+ * - "18:30" + "1,5 uur" → "18:30 – 20:00 (1,5 uur)"
+ * - "18:30" + "2-3 uur" → "18:30 (2-3 uur)"
+ * - null    + "1,5 uur" → "1,5 uur"
+ * - "18:30" + null      → "18:30"
+ */
+export const formatDurationWindow = (
+  startTime: string | null | undefined,
+  duration: string | null | undefined,
+): string | null => {
+  const start = formatTimeHHmm(startTime);
+  const dur = duration ? String(duration).trim() : "";
+  const startIsClock = !!start && /^\d{2}:\d{2}$/.test(start);
+
+  if (!dur) return start || null;
+  if (!startIsClock) return start ? `${start} (${dur})` : dur;
+
+  if (isExactDuration(dur)) {
+    const end = addMinutesToTime(start!, parseDuration(dur));
+    return `${start} – ${end} (${dur})`;
+  }
+  return `${start} (${dur})`;
+};
+
+
+
+/**
  * Parse duration string to minutes
  * Examples: "2 uur" → 120, "1,5 uur" → 90, "30 min" → 30, "1 uur 30 min" → 90
  */
