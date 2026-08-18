@@ -46,6 +46,8 @@ import {
   getBlockedTimeSlotsFromPartnerItems, 
   isTimeSlotBlocked,
   minutesToTime,
+  formatDurationWindow,
+
   type PartnerConflictItem 
 } from "@/lib/timeUtils";
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
