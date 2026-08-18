@@ -21,12 +21,15 @@ Hetzelfde blok (kamers, bezetting, verzorging) toevoegen aan "Nieuwe logiesaanvr
 ### 3. Meesturen naar de logiespartner
 De offerte-aanvraagmail krijgt de kamerbezetting en de gevraagde verzorging in het aanvraagblok, zodat partners direct de juiste kamers en verzorging kunnen aanbieden. De partner-offerte houdt zijn eigen (definitieve) verzorgingsveld — de aanvraag is de wens, de offerte het aanbod.
 
-### 4. Zichtbaarheid richting klant
-De gevraagde verzorging en kamerbezetting worden meegenomen in de weergave van de aanvraag in het klantportaal (logiesblok), zodat de klant ziet wat er is uitgevraagd.
+### 4. De klant kan het zelf ook invullen en wijzigen
+In het klantportaal (tab Logies) krijgt de kaart "Uw Logiesaanvraag" hetzelfde blok: kamerbezetting (aantal kamers + personen per kamer) en gewenste verzorging, invulbaar via "Gegevens wijzigen". De klant ziet altijd wat er nu is uitgevraagd, ook als het nog leeg is ("Nog niet opgegeven"). Wijzigt de klant iets terwijl er al offertes lopen, dan komt dat in het communicatielog en zie jij het terug op de aanvraagpagina, zodat je de partners kunt bijpraten.
 
 ## Technisch
 
 - Geen migratie nodig: kolommen bestaan al. `board_preference` staat al in `src/types/accommodation.ts` (`BOARD_PREFERENCE_OPTIONS`, `getBoardLabel`).
-- Nieuwe component `src/components/admin/EditAccommodationSetupDialog.tsx` (kamers + bezetting + types + verzorging), hergebruikt `ROOM_TYPES`, `ROOM_OCCUPANCY_OPTIONS`, `BOARD_PREFERENCE_OPTIONS`.
-- Aanpassingen: `src/pages/admin/AdminAccommodationDetail.tsx` (tegels altijd tonen + dialog + update/refetch + historie-log), `src/components/admin/AdminCreateAccommodationSheet.tsx` (extra velden in insert), `src/components/admin/SendAccommodationQuoteRequestDialog.tsx` en `supabase/functions/send-accommodation-quote-request/index.ts` (kamers/verzorging in mailtekst), klantportaal-logiesblok.
-- Tests: unit tests op de kamer-suggestie/validatie-helper (aantal kamers ≥ 1, bezetting × kamers ≥ gasten geeft waarschuwing, verzorgingslabel-fallback) toevoegen aan de bestaande suite.
+- Nieuwe gedeelde component `src/components/shared/AccommodationSetupFields.tsx` (kamers + bezetting + types + verzorging), hergebruikt `ROOM_TYPES`, `ROOM_OCCUPANCY_OPTIONS`, `BOARD_PREFERENCE_OPTIONS`; gebruikt in een admin-dialog (`EditAccommodationSetupDialog.tsx`) en in de klantdialog.
+- Admin: `src/pages/admin/AdminAccommodationDetail.tsx` (tegels altijd tonen + dialog + update/refetch + historie-log), `src/components/admin/AdminCreateAccommodationSheet.tsx` (extra velden in insert).
+- Klant: nieuwe `src/components/customer-portal/EditAccommodationSetupDialog.tsx`, aangeroepen vanuit `AccommodationSection.tsx` / `CustomerProgram.tsx`; opslaan via bestaande edge function `update-customer-program` met een nieuw `accommodationSetup`-blok (token-gevalideerd, Zod-schema, waarden gecheckt tegen de toegestane lijsten) + logging in `project_communications`.
+- Partnermail: `src/components/admin/SendAccommodationQuoteRequestDialog.tsx` en `supabase/functions/send-accommodation-quote-request/index.ts` (kamers/verzorging in de aanvraagtekst).
+- Tests: unit tests op de kamer-/verzorgingsvalidatie (aantal kamers ≥ 1, bezetting × kamers < gasten geeft waarschuwing, ongeldige verzorgingswaarde geweigerd) plus een Deno-test op het nieuwe `accommodationSetup`-schema in `update-customer-program`.
+
