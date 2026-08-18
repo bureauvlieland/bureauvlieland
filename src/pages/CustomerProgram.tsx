@@ -699,6 +699,21 @@ const CustomerProgram = () => {
         isSubmitting={isSubmitting}
       />
 
+      {accommodation && (
+        <EditAccommodationSetupDialog
+          isOpen={showSetupDialog}
+          onClose={() => setShowSetupDialog(false)}
+          initialValue={{
+            room_count: (accommodation as any).room_count ?? null,
+            room_occupancy: (accommodation as any).room_occupancy ?? null,
+            room_types: ((accommodation as any).room_types as string[]) || [],
+            board_preference: (accommodation as any).board_preference ?? null,
+          }}
+          numberOfGuests={(accommodation as any).number_of_guests ?? program.number_of_people}
+          onSave={updateAccommodationSetup}
+        />
+      )}
+
       <EditProgramDetailsDialog
         isOpen={showEditDialog}
         onClose={() => setShowEditDialog(false)}
