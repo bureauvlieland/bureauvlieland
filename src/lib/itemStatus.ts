@@ -16,6 +16,7 @@ export type ItemDisplayStatus =
   | "wacht_op_klant"
   | "prijs_gewijzigd"
   | "klant_akkoord_wacht_partner"
+  | "tegenvoorstel_klant"
   | "klant_akkoord_bureau"
   | "geaccepteerd"
   | "uitgevoerd"
@@ -103,6 +104,18 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
+  },
+  tegenvoorstel_klant: {
+    adminLabel: "Tegenvoorstel van klant",
+    customerLabel: "Uw tegenvoorstel — wacht op aanbieder",
+    partnerLabel: "Tegenvoorstel van klant — reageer",
+    adminTooltip: "De klant stelt een andere tijd/datum voor. De aanbieder moet dit accepteren of een alternatief geven.",
+    customerTooltip: "Wij hebben uw voorkeur doorgegeven aan de aanbieder en wachten op bevestiging.",
+    partnerTooltip: "De klant stelt een andere tijd voor. Ga akkoord met de klanttijd of stel een alternatief voor.",
+    actor: "partner",
+    color: "text-purple-700 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-950/50",
+    icon: "AlertCircle",
   },
   klant_akkoord_bureau: {
     adminLabel: "Klant akkoord — Bureau regelt zelf",
@@ -240,6 +253,9 @@ export function deriveItemDisplayStatus(
   if (item.status === "executed" || item.status === "invoiced") return "uitgevoerd";
   if (item.status === "unavailable") return "niet_beschikbaar";
   if ((item as any).auto_closed_reason === "auto_past_execution") return "afgesloten_automatisch";
+  // Klant heeft een andere tijd/datum voorgesteld: de aanbieder is aan zet,
+  // ongeacht een eerder gegeven klant-akkoord.
+  if (item.status === "counter_proposed") return "tegenvoorstel_klant";
   if (ctx.isPostExecution) return "uitgevoerd";
 
   // Een eerder gegeven klant-akkoord vervalt zodra de aanbieder een
