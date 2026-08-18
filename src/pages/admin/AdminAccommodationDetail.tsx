@@ -611,6 +611,49 @@ export default function AdminAccommodationDetail() {
     setShowStatusEmailSheet(true);
   };
 
+  // Kamerbezetting & verzorging opslaan. Wordt door de offerte-aanvraagmail en
+  // het partnerportaal gelezen, dus we loggen de wijziging ook in de tijdlijn.
+  const handleSaveSetup = async (setup: AccommodationSetup): Promise<boolean> => {
+    if (!request) return false;
+    try {
+      const { error } = await supabase
+        .from("accommodation_requests")
+        .update({
+          room_count: setup.room_count,
+          room_occupancy: setup.room_occupancy,
+          room_types: setup.room_types,
+          board_preference: setup.board_preference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", request.id);
+      if (error) throw error;
+
+      await supabase.from("project_communications").insert({
+        accommodation_id: request.id,
+        request_id: request.linked_program_id || null,
+        communication_type: "note",
+        direction: "internal",
+        subject: "Kamers & verzorging bijgewerkt",
+        content: [
+          `Kamers: ${summarizeRooms(setup) || "niet ingevuld"}`,
+          `Verzorging: ${summarizeBoard(setup) || "niet ingevuld"}`,
+        ].join("\n"),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["project-communications", undefined, id] });
+      toast({ title: "Kamers & verzorging opgeslagen" });
+      return true;
+    } catch (err: any) {
+      toast({
+        title: "Opslaan mislukt",
+        description: err?.message || "Onbekende fout",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   if (requestLoading) {
     return (
       <AdminLayout>
