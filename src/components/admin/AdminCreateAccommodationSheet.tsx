@@ -75,6 +75,11 @@ export const AdminCreateAccommodationSheet = ({
     }
 
     const normalizedSetup = normalizeAccommodationSetup(setup);
+    const setupError = validateAccommodationSetup(normalizedSetup, numberOfGuests);
+    if (setupError) {
+      toast.error(setupError);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
