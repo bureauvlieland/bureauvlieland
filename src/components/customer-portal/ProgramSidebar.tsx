@@ -5,7 +5,7 @@ import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
 import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import olivaImg from "@/assets/oliva.jpg";
-import cafeBovenImg from "@/assets/cafe-boven.jpg";
+import cafeBovenImg from "@/assets/cafe-boven-feest.jpg";
 import { cn } from "@/lib/utils";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { isFeeExcluded } from "@/lib/excludedFees";

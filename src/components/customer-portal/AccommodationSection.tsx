@@ -32,6 +32,7 @@ import {
   BUDGET_RANGES,
   getBoardDisplay,
 } from "@/types/accommodation";
+import { summarizeBoard, summarizeRooms } from "@/lib/accommodationSetup";
 import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
@@ -45,6 +46,7 @@ interface AccommodationSectionProps {
   onSelectQuote: (quoteId: string) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;
+  onEditAccommodationSetup?: () => void;
   customerToken?: string;
   numberOfPeople?: number;
   invoicingMode?: string | null;
@@ -57,6 +59,7 @@ export const AccommodationSection = ({
   onSelectQuote,
   selectedDates,
   onEditAccommodation,
+  onEditAccommodationSetup,
   customerToken,
   numberOfPeople,
   invoicingMode,
@@ -478,6 +481,17 @@ export const AccommodationSection = ({
                 Datum, aantal personen of doel wijzigen
               </Button>
             )}
+            {onEditAccommodationSetup && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEditAccommodationSetup}
+                className="w-full sm:w-auto"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Kamers &amp; verzorging aanpassen
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -802,6 +816,32 @@ export const AccommodationSection = ({
             </div>
           </div>
         )}
+
+        {/* Kamers & verzorging — klant kan dit zelf bijsturen */}
+        <div className="rounded-lg border p-3 space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Kamers &amp; verzorging
+          </p>
+          <p className="text-sm">
+            <span className="text-muted-foreground">Kamers: </span>
+            {summarizeRooms(accommodation) || "nog niet opgegeven"}
+          </p>
+          <p className="text-sm">
+            <span className="text-muted-foreground">Verzorging: </span>
+            {summarizeBoard(accommodation) || "nog niet opgegeven"}
+          </p>
+          {onEditAccommodationSetup && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEditAccommodationSetup}
+              className="mt-2 w-full sm:w-auto"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Kamers &amp; verzorging aanpassen
+            </Button>
+          )}
+        </div>
 
         {/* Edit button */}
         {onEditAccommodation && (

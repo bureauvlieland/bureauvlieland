@@ -64,6 +64,7 @@ import {
   CheckCircle2,
   MessageSquare,
   RotateCcw,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -81,6 +82,12 @@ import { CompletionActions } from "@/components/admin/CompletionActions";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
 import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
+import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
+import {
+  summarizeBoard,
+  summarizeRooms,
+  type AccommodationSetup,
+} from "@/lib/accommodationSetup";
 
 interface LinkedProgram {
   id: string;
@@ -193,6 +200,7 @@ export default function AdminAccommodationDetail() {
   const [showCloseEmailSheet, setShowCloseEmailSheet] = useState(false);
   const [closeEmailDefaults, setCloseEmailDefaults] = useState({ subject: "", body: "" });
   const [showGuestDialog, setShowGuestDialog] = useState(false);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
 
   // Fetch accommodation request
   const { data: request, isLoading: requestLoading } = useQuery({
@@ -604,6 +612,49 @@ export default function AdminAccommodationDetail() {
     setShowStatusEmailSheet(true);
   };
 
+  // Kamerbezetting & verzorging opslaan. Wordt door de offerte-aanvraagmail en
+  // het partnerportaal gelezen, dus we loggen de wijziging ook in de tijdlijn.
+  const handleSaveSetup = async (setup: AccommodationSetup): Promise<boolean> => {
+    if (!request) return false;
+    try {
+      const { error } = await supabase
+        .from("accommodation_requests")
+        .update({
+          room_count: setup.room_count,
+          room_occupancy: setup.room_occupancy,
+          room_types: setup.room_types,
+          board_preference: setup.board_preference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", request.id);
+      if (error) throw error;
+
+      await supabase.from("project_communications").insert({
+        accommodation_id: request.id,
+        request_id: request.linked_program_id || null,
+        communication_type: "note",
+        direction: "internal",
+        subject: "Kamers & verzorging bijgewerkt",
+        content: [
+          `Kamers: ${summarizeRooms(setup) || "niet ingevuld"}`,
+          `Verzorging: ${summarizeBoard(setup) || "niet ingevuld"}`,
+        ].join("\n"),
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["project-communications", undefined, id] });
+      toast({ title: "Kamers & verzorging opgeslagen" });
+      return true;
+    } catch (err: any) {
+      toast({
+        title: "Opslaan mislukt",
+        description: err?.message || "Onbekende fout",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   if (requestLoading) {
     return (
       <AdminLayout>
@@ -745,15 +796,30 @@ export default function AdminAccommodationDetail() {
                       <Pencil className="h-3 w-3" />
                     </Button>
                   </div>
-                  {request.room_count && (
-                    <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
-                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">Kamers</p>
-                        <p className="font-medium text-sm">{request.room_count} ({request.room_occupancy || "?"} p.p.k.)</p>
-                      </div>
+                  <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Kamers</p>
+                      <p className={cn("font-medium text-sm", !summarizeRooms(request as any) && "text-muted-foreground italic font-normal")}>
+                        {summarizeRooms(request as any) || "Niet ingevuld"}
+                      </p>
                     </div>
-                  )}
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setShowSetupDialog(true)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-3 p-2.5 bg-muted/50 rounded-lg">
+                    <UtensilsCrossed className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Verzorging</p>
+                      <p className={cn("font-medium text-sm", !summarizeBoard(request as any) && "text-muted-foreground italic font-normal")}>
+                        {summarizeBoard(request as any) || "Niet ingevuld"}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setShowSetupDialog(true)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Inline preferences */}
@@ -1314,6 +1380,10 @@ export default function AdminAccommodationDetail() {
             number_of_guests: request.number_of_guests,
             accommodation_type: request.accommodation_type,
             special_requests: request.special_requests || undefined,
+            room_count: request.room_count ?? null,
+            room_occupancy: request.room_occupancy ?? null,
+            room_types: (request.room_types as string[]) || [],
+            board_preference: (request as any).board_preference ?? null,
           }}
           selectedPartners={partners.filter(p => selectedPartners.includes(p.id)).map(p => ({ id: p.id, name: p.name, email: p.email }))}
           onSend={(emailSubject, emailBody) => createQuotesMutation.mutate({ emailSubject, emailBody })}
@@ -1366,6 +1436,20 @@ export default function AdminAccommodationDetail() {
         onSave={(newGuests, selectedQuoteIds) =>
           updateGuestsMutation.mutateAsync({ newGuests, selectedQuoteIds })
         }
+      />
+
+      {/* Kamers & verzorging */}
+      <EditAccommodationSetupDialog
+        isOpen={showSetupDialog}
+        onClose={() => setShowSetupDialog(false)}
+        initialValue={{
+          room_count: request?.room_count ?? null,
+          room_occupancy: request?.room_occupancy ?? null,
+          room_types: (request?.room_types as string[]) || [],
+          board_preference: (request as any)?.board_preference ?? null,
+        }}
+        numberOfGuests={request?.number_of_guests ?? null}
+        onSave={handleSaveSetup}
       />
 
       {request && (

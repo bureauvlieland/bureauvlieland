@@ -123,6 +123,7 @@ interface MobileProgramViewProps {
   onCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
   onOpenBilling: () => void;
   onOpenEdit: () => void;
+  onOpenAccommodationSetup?: () => void;
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
   onAcceptTerms: (signatureName: string) => Promise<boolean>;
@@ -173,6 +174,7 @@ export const MobileProgramView = ({
 
   onOpenBilling,
   onOpenEdit,
+  onOpenAccommodationSetup,
   onOpenCancel,
   onSubmitChanges,
   onAcceptTerms,
@@ -402,6 +404,7 @@ export const MobileProgramView = ({
             onSelectQuote={onSelectAccommodationQuote}
             selectedDates={selectedDates}
             onEditAccommodation={onOpenEdit}
+            onEditAccommodationSetup={onOpenAccommodationSetup}
             customerToken={program.customer_token}
             numberOfPeople={program.number_of_people}
             invoicingMode={invoicingMode}

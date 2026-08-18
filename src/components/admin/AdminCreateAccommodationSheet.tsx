@@ -27,6 +27,13 @@ import {
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
+import { AccommodationSetupFields } from "@/components/shared/AccommodationSetupFields";
+import {
+  EMPTY_ACCOMMODATION_SETUP,
+  normalizeAccommodationSetup,
+  validateAccommodationSetup,
+  type AccommodationSetup,
+} from "@/lib/accommodationSetup";
 
 interface AdminCreateAccommodationSheetProps {
   open: boolean;
@@ -58,11 +65,19 @@ export const AdminCreateAccommodationSheet = ({
   const [numberOfGuests, setNumberOfGuests] = useState(project.number_of_people);
   const [accommodationType, setAccommodationType] = useState("no_preference");
   const [specialRequests, setSpecialRequests] = useState("");
+  const [setup, setSetup] = useState<AccommodationSetup>(EMPTY_ACCOMMODATION_SETUP);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (!arrivalDate || !departureDate) {
       toast.error("Vul aankomst- en vertrekdatum in");
+      return;
+    }
+
+    const normalizedSetup = normalizeAccommodationSetup(setup);
+    const setupError = validateAccommodationSetup(normalizedSetup, numberOfGuests);
+    if (setupError) {
+      toast.error(setupError);
       return;
     }
 
@@ -81,6 +96,10 @@ export const AdminCreateAccommodationSheet = ({
           number_of_guests: numberOfGuests,
           accommodation_type: accommodationType,
           special_requests: specialRequests || null,
+          room_count: normalizedSetup.room_count,
+          room_occupancy: normalizedSetup.room_occupancy,
+          room_types: normalizedSetup.room_types,
+          board_preference: normalizedSetup.board_preference,
           linked_program_id: project.id,
           status: "submitted",
         })
@@ -197,6 +216,16 @@ export const AdminCreateAccommodationSheet = ({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Kamers & verzorging */}
+          <div className="space-y-3 rounded-md border p-3">
+            <p className="text-sm font-medium">Kamers &amp; verzorging</p>
+            <AccommodationSetupFields
+              value={setup}
+              onChange={setSetup}
+              numberOfGuests={numberOfGuests}
+            />
           </div>
 
           {/* Special requests */}

@@ -170,13 +170,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, guestDetails, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, guestDetails, accommodationSetup, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
       programDetails?: ProgramDetailsUpdate;
       billingDetails?: BillingDetailsUpdate;
       guestDetails?: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null };
+      accommodationSetup?: {
+        room_count?: number | null;
+        room_occupancy?: string | null;
+        room_types?: string[] | null;
+        board_preference?: string | null;
+      };
       acceptTerms?: boolean;
       signatureName?: string;
       acceptItemId?: string;
@@ -206,7 +212,7 @@ Deno.serve(async (req) => {
     }
     
     // Must have at least one type of update
-    if ((!changes || !items) && !programDetails && !billingDetails && !guestDetails && !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal) {
+    if ((!changes || !items) && !programDetails && !billingDetails && !guestDetails && !accommodationSetup && !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -221,7 +227,7 @@ Deno.serve(async (req) => {
     // Guest details (gastenlijst, dieetwensen, kamerindeling) blijven bewerkbaar
     // tot/na aankomst — voor die branch laten we verlopen tokens toe.
     const isGuestDetailsOnly =
-      !!guestDetails && !changes && !items && !programDetails && !billingDetails &&
+      !!(guestDetails || accommodationSetup) && !changes && !items && !programDetails && !billingDetails &&
       !acceptTerms && !acceptItemId && !cancelItemId && !counterProposal;
 
     let programQuery = supabase
@@ -602,6 +608,57 @@ Deno.serve(async (req) => {
           notes: `Bijgewerkt: ${changedFields.join(", ")}`,
         });
       }
+    }
+
+    // Handle accommodation setup update (kamers + verzorging).
+    // Bedoeld voor klant en admin: wij normaliseren en valideren serverside,
+    // zodat partners nooit onmogelijke wensen krijgen doorgestuurd.
+    if (accommodationSetup && program.linked_accommodation_id) {
+      const now = new Date().toISOString();
+      // Waarden gespiegeld aan src/types/accommodation.ts (ROOM_OCCUPANCY_OPTIONS,
+      // BOARD_PREFERENCE_OPTIONS, ROOM_TYPES).
+      const allowedOccupancy = ["1", "2", "3", "4+", "mixed"];
+      const allowedBoard = ["room_only", "breakfast", "half_board", "full_board", "all_inclusive", "no_preference"];
+      const allowedRoomTypes = ["single", "double", "twin", "triple", "family", "suite"];
+
+      const rawCount = accommodationSetup.room_count;
+      const roomCount =
+        rawCount === null || rawCount === undefined || !Number.isFinite(Number(rawCount))
+          ? null
+          : Math.min(Math.max(Math.round(Number(rawCount)), 1), 100);
+
+      const occupancy =
+        accommodationSetup.room_occupancy && allowedOccupancy.includes(accommodationSetup.room_occupancy)
+          ? accommodationSetup.room_occupancy
+          : null;
+
+      const roomTypes = Array.isArray(accommodationSetup.room_types)
+        ? accommodationSetup.room_types.filter((t) => allowedRoomTypes.includes(t)).slice(0, 8)
+        : [];
+
+      const board =
+        accommodationSetup.board_preference && allowedBoard.includes(accommodationSetup.board_preference)
+          ? accommodationSetup.board_preference
+          : null;
+
+      await supabase
+        .from("accommodation_requests")
+        .update({
+          room_count: roomCount,
+          room_occupancy: occupancy,
+          room_types: roomTypes,
+          board_preference: board,
+          updated_at: now,
+        })
+        .eq("id", program.linked_accommodation_id);
+
+      await supabase.from("program_request_history").insert({
+        request_id: program.id,
+        action: "accommodation_setup_updated",
+        actor: "customer",
+        actor_name: program.customer_name,
+        notes: `Kamers: ${roomCount ?? "?"}${occupancy ? ` (${occupancy} p.p.k.)` : ""} | Verzorging: ${board || "geen voorkeur"}`,
+      });
     }
 
     // Handle individual item acceptance (klant akkoord op partner voorstel)

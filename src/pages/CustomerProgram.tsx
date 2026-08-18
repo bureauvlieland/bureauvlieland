@@ -9,6 +9,7 @@ import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDe
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigation";
+import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
 import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
@@ -62,6 +63,7 @@ const CustomerProgram = () => {
     isPendingRemoval,
     updateProgramDetails,
     updateGuestDetails,
+    updateAccommodationSetup,
     updateBillingDetails,
     acceptTerms,
     cancelRequest,
@@ -84,6 +86,7 @@ const CustomerProgram = () => {
   const [activeDay, setActiveDay] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showBillingDialog, setShowBillingDialog] = useState(false);
   const [showGuestDialog, setShowGuestDialog] = useState(false);
@@ -420,6 +423,7 @@ const CustomerProgram = () => {
     onOpenEdit: () => setShowEditDialog(true),
     onOpenCancel: () => setShowCancelDialog(true),
     onOpenGuestDetails: () => setShowGuestDialog(true),
+    onOpenAccommodationSetup: () => setShowSetupDialog(true),
     guestDetails,
     onSubmitChanges: () => setShowConfirmDialog(true),
     onRefresh: refetch,
@@ -695,6 +699,21 @@ const CustomerProgram = () => {
         changes={pendingChanges as PendingChange[]}
         isSubmitting={isSubmitting}
       />
+
+      {accommodation && (
+        <EditAccommodationSetupDialog
+          isOpen={showSetupDialog}
+          onClose={() => setShowSetupDialog(false)}
+          initialValue={{
+            room_count: (accommodation as any).room_count ?? null,
+            room_occupancy: (accommodation as any).room_occupancy ?? null,
+            room_types: ((accommodation as any).room_types as string[]) || [],
+            board_preference: (accommodation as any).board_preference ?? null,
+          }}
+          numberOfGuests={(accommodation as any).number_of_guests ?? program.number_of_people}
+          onSave={updateAccommodationSetup}
+        />
+      )}
 
       <EditProgramDetailsDialog
         isOpen={showEditDialog}
