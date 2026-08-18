@@ -352,7 +352,6 @@ export const DesktopProgramView = ({
                   onSelectQuote={onSelectAccommodationQuote}
                   selectedDates={selectedDates}
                   onEditAccommodation={onOpenEdit}
-            onEditAccommodationSetup={onOpenAccommodationSetup}
                   onEditAccommodationSetup={onOpenAccommodationSetup}
                   customerToken={program.customer_token}
                   numberOfPeople={program.number_of_people}
