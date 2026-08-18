@@ -64,6 +64,7 @@ import {
   CheckCircle2,
   MessageSquare,
   RotateCcw,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
