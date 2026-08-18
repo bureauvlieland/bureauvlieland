@@ -1438,6 +1438,20 @@ export default function AdminAccommodationDetail() {
         }
       />
 
+      {/* Kamers & verzorging */}
+      <EditAccommodationSetupDialog
+        isOpen={showSetupDialog}
+        onClose={() => setShowSetupDialog(false)}
+        initialValue={{
+          room_count: request?.room_count ?? null,
+          room_occupancy: request?.room_occupancy ?? null,
+          room_types: (request?.room_types as string[]) || [],
+          board_preference: (request as any)?.board_preference ?? null,
+        }}
+        numberOfGuests={request?.number_of_guests ?? null}
+        onSave={handleSaveSetup}
+      />
+
       {request && (
         <AdminGuestDetailsDialog
           open={showGuestDialog}
