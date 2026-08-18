@@ -324,14 +324,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
             const priceLine = item.quoted_price != null
               ? `<p><strong>Bevestigde prijs:</strong> €${Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>`
               : "";
-            const emailSubject = `Klant akkoord op uw voorstel: ${item.block_name} — ${program.reference_number || ""}`;
+            const alreadyConfirmedByPartner =
+              item.status === "confirmed" || item.status === "accepted" || item.status === "executed";
+            const knownTime = item.confirmed_time || item.proposed_time || item.preferred_time || null;
+            const actionLine = alreadyConfirmedByPartner
+              ? (knownTime
+                  ? `<p>Je had dit onderdeel al bevestigd${knownTime ? ` voor ${sanitizeHtml(String(knownTime))}` : ""} — <strong>je hoeft nu niets te doen</strong>. Zet het definitief in je planning.</p>`
+                  : `<p>Je had dit onderdeel al bevestigd. Er staat nog geen tijd vast: geef de tijd door via je partnerportal.</p>`)
+              : `<p>Bevestig dit onderdeel in je partnerportal zodat we het definitief kunnen inplannen.</p>`;
+            const emailSubject = alreadyConfirmedByPartner
+              ? `Klant akkoord (geen actie nodig): ${item.block_name} — ${program.reference_number || ""}`
+              : `Klant akkoord op uw voorstel: ${item.block_name} — ${program.reference_number || ""}`;
             const emailHtml = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
                 <h2 style="color: #1a365d;">Klant geeft akkoord op uw voorstel</h2>
                 <p>Hoi ${sanitizeHtml(item.provider_name)},</p>
                 <p>Goed nieuws: de klant heeft definitief akkoord gegeven op je aangepaste voorstel voor <strong>${sanitizeHtml(item.block_name)}</strong> (aanvraag ${sanitizeHtml(program.reference_number || "")}).</p>
                 ${priceLine}
-                <p>Bevestig dit onderdeel in je partnerportal zodat we het definitief kunnen inplannen.</p>
+                ${actionLine}
                 <p><a href="${partnerPortalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">Open partnerportal</a></p>
                 <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
               </div>

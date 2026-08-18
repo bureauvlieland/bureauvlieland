@@ -94,7 +94,18 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
       itemLabel: i.block_name,
     };
 
-    if (i.status === "pending" || i.status === "counter_proposed") {
+    if (i.status === "counter_proposed") {
+      const wanted = (i as any).customer_counter_time;
+      rows.push({
+        ...base,
+        bucket: "review",
+        hint: wanted
+          ? `De klant wil liever ${wanted} — ga akkoord of stel een andere tijd voor.`
+          : "De klant stelt een andere tijd voor — reageer.",
+      });
+      return;
+    }
+    if (i.status === "pending") {
       rows.push({ ...base, bucket: "review", hint: "Beoordeel deze aanvraag." });
       return;
     }
