@@ -615,9 +615,11 @@ Deno.serve(async (req) => {
     // zodat partners nooit onmogelijke wensen krijgen doorgestuurd.
     if (accommodationSetup && program.linked_accommodation_id) {
       const now = new Date().toISOString();
-      const allowedOccupancy = ["1", "2", "3", "4", "mixed"];
-      const allowedBoard = ["room_only", "bed_breakfast", "half_board", "full_board", "self_catering", "no_preference"];
-      const allowedRoomTypes = ["single", "double", "twin", "triple", "family", "suite", "apartment", "dorm"];
+      // Waarden gespiegeld aan src/types/accommodation.ts (ROOM_OCCUPANCY_OPTIONS,
+      // BOARD_PREFERENCE_OPTIONS, ROOM_TYPES).
+      const allowedOccupancy = ["1", "2", "3", "4+", "mixed"];
+      const allowedBoard = ["room_only", "breakfast", "half_board", "full_board", "all_inclusive", "no_preference"];
+      const allowedRoomTypes = ["single", "double", "twin", "triple", "family", "suite"];
 
       const rawCount = accommodationSetup.room_count;
       const roomCount =
