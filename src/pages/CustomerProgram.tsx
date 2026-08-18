@@ -9,6 +9,7 @@ import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDe
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigation";
+import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
 import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
