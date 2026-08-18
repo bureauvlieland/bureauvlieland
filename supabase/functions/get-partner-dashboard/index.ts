@@ -137,11 +137,31 @@ Deno.serve(async (req) => {
     const cancelledCutoff = new Date();
     cancelledCutoff.setFullYear(cancelledCutoff.getFullYear() - 1);
 
+    // Startdatum van de aanvraag (laatste geselecteerde datum) — voor het opruimen
+    // van concept-aanvragen die nooit zijn vrijgegeven en waarvan de datum verstreken is.
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const lastRequestDate = (req: any): string | null => {
+      const dates: unknown = req?.selected_dates;
+      if (!Array.isArray(dates) || dates.length === 0) return null;
+      const parsed = dates
+        .map((d) => (typeof d === "string" ? d.slice(0, 10) : null))
+        .filter((d): d is string => !!d)
+        .sort();
+      return parsed.length ? parsed[parsed.length - 1] : null;
+    };
+
     const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
     const activeItems = (items || []).filter(item => {
       // Partner heeft factureren zelf gesloten → uit werkbank halen.
       if (item.partner_dismissed_at) return false;
       const req = item.program_requests;
+      // Concept-onderdelen (nog niet vrijgegeven) met een verstreken datum: opruimen.
+      const isConceptItem = !!item.skip_partner_notification && item.status === "pending";
+      if (isConceptItem) {
+        const endDate = lastRequestDate(req);
+        if (endDate && endDate < todayIso) return false;
+      }
+
       const reqCancelled = req?.status === "cancelled" || !!req?.cancelled_at;
       const itemCancelled = item.status === "cancelled" || item.status === "unavailable";
       if (reqCancelled || itemCancelled) {
