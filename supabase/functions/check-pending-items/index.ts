@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
         // Send reminder email to partner
         if (canSendEmail && partner) {
           const partnerEmail = partner.contact_email || partner.email;
-          const portalUrl = "https://bureauvlieland.nl/partner";
+          const portalUrl = `https://bureauvlieland.nl/partner/project/${request.id}`;
           await sendReminderEmail({
             templateId: "reminder_activity_pending",
             recipientEmail: partnerEmail,
@@ -410,7 +410,9 @@ Deno.serve(async (req) => {
         // Send reminder email to partner
         if (canSendEmail && partnerData) {
           const partnerEmail = partnerData.contact_email || partnerData.email;
-          const portalUrl = "https://bureauvlieland.nl/partner/logies";
+          const portalUrl = quote.request_id
+            ? `https://bureauvlieland.nl/partner/logies/${quote.request_id}`
+            : "https://bureauvlieland.nl/partner/logies";
           const arrivalFormatted = req?.arrival_date ? new Date(req.arrival_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
           const departureFormatted = req?.departure_date ? new Date(req.departure_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
 
@@ -676,7 +678,9 @@ Deno.serve(async (req) => {
               day: "numeric",
             });
 
-            const portalUrl = "https://bureauvlieland.nl/partner/logies";
+            const portalUrl = quote.request_id
+              ? `https://bureauvlieland.nl/partner/logies/${quote.request_id}`
+              : "https://bureauvlieland.nl/partner/logies";
             const subject = template
               ? template.subject
                   .replace(/\{\{customer_name\}\}/g, customerName)
@@ -902,7 +906,7 @@ Deno.serve(async (req) => {
                 customer_name: customerName,
                 reference_number: referenceNumber,
                 amount_excl_vat: amountExcl,
-                portal_url: "https://bureauvlieland.nl/partner",
+                portal_url: "https://bureauvlieland.nl/partner/facturatie",
               },
               fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een paar dagen geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Wanneer het uitkomt: stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
               logExtra: {
@@ -969,7 +973,7 @@ Deno.serve(async (req) => {
                   customer_name: customerName,
                   reference_number: referenceNumber,
                   amount_excl_vat: amountExcl,
-                  portal_url: "https://bureauvlieland.nl/partner",
+                  portal_url: "https://bureauvlieland.nl/partner/facturatie",
                 },
                 fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je deze deze week alsnog sturen?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
                 logExtra: {
@@ -1163,7 +1167,7 @@ Deno.serve(async (req) => {
         const partnerEmail = partner.contact_email || partner.email;
         const partnerName = partner.name || item.provider_name || "partner";
         const customerName = reqRow.customer_company || reqRow.customer_name || "Onbekend";
-        const portalUrl = "https://bureauvlieland.nl/partner";
+        const portalUrl = `https://bureauvlieland.nl/partner/project/${item.request_id}`;
 
         // T-7: still pending
         if (daysUntil === 7 && item.status === "pending") {
