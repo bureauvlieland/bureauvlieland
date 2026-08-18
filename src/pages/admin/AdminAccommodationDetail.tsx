@@ -81,6 +81,12 @@ import { CompletionActions } from "@/components/admin/CompletionActions";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
 import { AdminGuestDetailsDialog } from "@/components/admin/AdminGuestDetailsDialog";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
+import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
+import {
+  summarizeBoard,
+  summarizeRooms,
+  type AccommodationSetup,
+} from "@/lib/accommodationSetup";
 
 interface LinkedProgram {
   id: string;
