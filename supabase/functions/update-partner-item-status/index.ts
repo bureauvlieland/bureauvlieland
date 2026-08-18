@@ -317,6 +317,16 @@ export const handler = async (req: Request): Promise<Response> => {
       updateData.proposed_date = proposedDate || null;
     }
 
+    if (status === "confirmed") {
+      // Bevestigen betekent: deze tijd/datum staat vast. Bij een tegenvoorstel
+      // van de klant stuurt de portal de klanttijd mee, zodat alle weergaven
+      // (admin, klantpagina, planning, e-mails) dezelfde bevestigde tijd tonen.
+      const finalTime = proposedTime || item.customer_counter_time || item.proposed_time || item.preferred_time;
+      if (finalTime) updateData.confirmed_time = finalTime;
+      const finalDate = proposedDate || item.proposed_date || null;
+      if (finalDate) updateData.proposed_date = finalDate;
+    }
+
     if (status === "alternative") {
       // Store proposed time/date and optional price for alternatives
       if (proposedTime) updateData.proposed_time = proposedTime;
