@@ -109,7 +109,12 @@ export const PartnerProjectItemRow = ({
     item.status !== "executed";
 
   const lineTotal = getDisplayLineTotal(item, effectivePeople, numDays);
-  const effectiveTime = item.confirmed_time || item.proposed_time || item.preferred_time;
+  const isCounterProposed = item.status === "counter_proposed";
+  const counterTime = isCounterProposed ? item.customer_counter_time : null;
+  // Bij een tegenvoorstel is de klanttijd de tijd die we willen vastleggen.
+  const confirmTime = counterTime || item.proposed_time || item.preferred_time || undefined;
+  const effectiveTime =
+    counterTime || item.confirmed_time || item.proposed_time || item.preferred_time;
 
   const reset = () => {
     setMode("idle");
@@ -141,7 +146,7 @@ export const PartnerProjectItemRow = ({
       undefined,
       p,
       notes || undefined,
-      item.preferred_time || undefined,
+      confirmTime,
     );
     setBusy(false);
     if (ok) reset();
@@ -245,10 +250,10 @@ export const PartnerProjectItemRow = ({
             <>
               <Button size="sm" onClick={() => openMode("confirm")}>
                 <CheckCircle2 className="h-4 w-4 mr-1" />
-                Bevestigen
+                {counterTime ? `Akkoord met ${counterTime}` : "Bevestigen"}
               </Button>
               <Button size="sm" variant="outline" onClick={onOpenDetails}>
-                Alternatief
+                {counterTime ? "Andere tijd voorstellen" : "Alternatief"}
               </Button>
               <Button
                 size="sm"
@@ -285,6 +290,26 @@ export const PartnerProjectItemRow = ({
           </Button>
         </div>
       </div>
+
+      {/* Tegenvoorstel van de klant */}
+      {isCounterProposed && mode === "idle" && (
+        <div className="mx-4 mb-3 -mt-1 rounded-md border border-purple-300 bg-purple-50 dark:bg-purple-950/30 dark:border-purple-800 px-3 py-2 text-xs">
+          <p className="font-medium text-purple-900 dark:text-purple-200 mb-0.5">
+            De klant stelt een andere tijd voor
+          </p>
+          <p className="text-purple-900 dark:text-purple-100">
+            {item.proposed_time ? `Jouw voorstel: ${item.proposed_time} — ` : ""}
+            <span className="font-semibold">
+              klant wil liever: {item.customer_counter_time ?? "andere tijd"}
+            </span>
+          </p>
+          {item.customer_counter_note && (
+            <p className="mt-1 whitespace-pre-wrap text-purple-900 dark:text-purple-100">
+              "{item.customer_counter_note}"
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Awaiting terms hint */}
       {awaitingTerms && mode === "idle" && (

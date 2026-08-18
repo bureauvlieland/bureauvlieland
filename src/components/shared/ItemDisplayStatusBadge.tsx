@@ -22,6 +22,7 @@ const TONE_BY_STATUS: Record<ItemDisplayStatus, MicroPillTone> = {
   wacht_op_klant: "amber",
   prijs_gewijzigd: "amber",
   klant_akkoord_wacht_partner: "emerald",
+  tegenvoorstel_klant: "purple",
   klant_akkoord_bureau: "emerald",
   geaccepteerd: "emerald",
   uitgevoerd: "emerald",
