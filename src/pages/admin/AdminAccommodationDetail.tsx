@@ -1380,6 +1380,10 @@ export default function AdminAccommodationDetail() {
             number_of_guests: request.number_of_guests,
             accommodation_type: request.accommodation_type,
             special_requests: request.special_requests || undefined,
+            room_count: request.room_count ?? null,
+            room_occupancy: request.room_occupancy ?? null,
+            room_types: (request.room_types as string[]) || [],
+            board_preference: (request as any).board_preference ?? null,
           }}
           selectedPartners={partners.filter(p => selectedPartners.includes(p.id)).map(p => ({ id: p.id, name: p.name, email: p.email }))}
           onSend={(emailSubject, emailBody) => createQuotesMutation.mutate({ emailSubject, emailBody })}
