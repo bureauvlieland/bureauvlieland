@@ -1,35 +1,22 @@
-# Tegenvoorstel klant duidelijk in partnerportaal
+# Tijdsduur zichtbaar bij de activiteit in de partnerportal
 
-Guido heeft gelijk: het portaal laat niet zien wat de mail vertelt. Ik heb het project BV-2606-0028 nagekeken.
+## Doel
+Partners moeten bij een onderdeel direct zien hoe lang de activiteit duurt (en tot hoe laat die dan loopt), zodat ze hun planning erop kunnen afstemmen.
 
-## Wat er nu echt gebeurt
+## Wat er verandert
 
-- **Watertaxi Vlieland-Harlingen** staat in de database wél op "tegenvoorstel van klant" met de gewenste tijd **19:00** (jouw voorstel 19:30). Maar het label op de kaart wordt afgeleid uit een lijst die deze situatie niet kent, dus toont hij "Klant akkoord — bevestig in planning". De 19:00 staat alleen verstopt in het detailpaneel, niet op de regel. Erger: de knop "Bevestigen" stuurt de **oude** tijd 19:30 mee — precies het tegenovergestelde van wat de klant vroeg.
-- **Watertaxi Harlingen-Vlieland** staat al op bevestigd, daarom is alleen "Markeer uitgevoerd" beschikbaar. De mail "Klant akkoord op uw voorstel — bevestig dit onderdeel in je partnerportal" wordt echter ook verstuurd als de aanbieder al bevestigd heeft. Vandaar de tegenstrijdigheid.
-- Bij bevestigen slaan we alleen `proposed_time` op en nooit `confirmed_time`, waardoor "bevestigde tijd" nergens hard vastligt.
+1. **Omschrijvingsblok in het onderdeel-venster**
+   Boven de omschrijving komt een compacte regel met datum, starttijd en duur, bijvoorbeeld:
+   `woe 17 jun. 2026 · 18:30 – 20:00 (1,5 uur)`
+   - Eindtijd wordt berekend uit starttijd + duur; is de duur niet te herleiden (bijv. "2-3 uur", "Max 4 uur"), dan wordt alleen de duur als tekst getoond.
+   - Ontbreekt een starttijd, dan staat er alleen datum + duur.
+   - De bestaande duur-regel in "Details" blijft staan (dat blok is de volledige specificatie).
 
-## Wat ik ga aanpassen
-
-1. **Nieuwe herkenbare status "Tegenvoorstel van klant"** in de gedeelde statuslijst (paars/amber, actor = aanbieder), zodat admin, klantpagina en partnerportaal dezelfde taal spreken.
-2. **Regelweergave partnerportaal**: bij een tegenvoorstel direct op de kaart zichtbaar "Jouw voorstel 19:30 → klant wil 19:00" plus eventuele opmerking van de klant.
-3. **Duidelijke keuzeknoppen** bij een tegenvoorstel:
-   - "Akkoord met 19:00" — bevestigt met de **klanttijd**, niet de oude tijd.
-   - "Andere tijd voorstellen" — bestaande alternatief-flow.
-   - "Niet beschikbaar" — bestaande flow.
-4. **Mailtekst herbevestiging** (`approve-quote-item`): als het onderdeel al bevestigd is door de aanbieder, geen "bevestig dit onderdeel" meer maar "de klant heeft opnieuw akkoord gegeven, je hoeft niets te doen" (met eventueel "plan de tijd nog in" als er geen tijd bekend is).
-5. **`confirmed_time` wél vastleggen** bij bevestigen in `update-partner-item-status`, zodat de werkbank-bucket "Plan tijd in en bevestig" niet onterecht blijft hangen.
-6. **Werkbank**: tegenvoorstellen krijgen de hint "De klant stelt een andere tijd voor — reageer." in plaats van de generieke "Beoordeel deze aanvraag."
+2. **Onderdelen-lijst (projectregel en werkbank)**
+   Achter de tijd komt de duur, dus in plaats van `— · voorkeur 18:30` wordt het `— · voorkeur 18:30 (1,5 uur)`. Alleen tonen als er een duur is ingevuld.
 
 ## Technisch
-
-- `src/lib/itemStatus.ts`: status `tegenvoorstel_klant` toevoegen + afleiding vóór de `hasAcceptance`-tak (`item.status === "counter_proposed"`).
-- `src/components/partner-portal/PartnerProjectItemRow.tsx`: counter-blok, knopset en `submitConfirm` met `item.customer_counter_time` als tijd.
-- `src/components/partner-portal/PartnerItemSheet.tsx`: zelfde knop/tijd-logica gelijktrekken.
-- `src/components/partner-portal/PartnerWerkbankList.tsx`: aparte hint voor `counter_proposed`.
-- `supabase/functions/approve-quote-item/index.ts`: conditionele mailtekst; daarna deployen.
-- `supabase/functions/update-partner-item-status/index.ts`: `confirmed_time` bij confirm; daarna deployen.
-- Tests: uitbreiding in `src/lib/__tests__` voor de nieuwe statusafleiding en voor "bevestigen gebruikt de tegenvoorsteltijd".
-
-## Direct voor dit project
-
-Na de fix kan Guido bij Watertaxi Vlieland-Harlingen in één klik akkoord gaan met 19:00; wil je dat ik daarna niets handmatig omzet, of dat ik het onderdeel meteen op 19:00 zet zodra hij bevestigt?
+- Duur-parsing hergebruiken uit `src/lib/timeUtils.ts` (`parseDuration`, `formatTimeHHmm`); alleen een eindtijd tonen als de duurstring eenduidig te parsen is (geen bereik zoals "2-3" en geen "max").
+- Wijzigingen in `src/components/partner-portal/PartnerItemSheet.tsx` (blok bij "Omschrijving van de activiteit") en in de regelweergave `PartnerProjectItemRow.tsx` / werkbank-regel.
+- Presentatie-only: geen database- of API-wijzigingen.
+- Unit-test voor de helper die "starttijd + duur → eindtijd/label" bepaalt, inclusief de gevallen waarin geen eindtijd berekend mag worden.
