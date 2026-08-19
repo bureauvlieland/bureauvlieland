@@ -304,7 +304,7 @@ export function deriveItemDisplayStatus(
     ) {
       return "prijs_gewijzigd";
     }
-    if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
+    if (isBureauItem(item)) return "klant_akkoord_bureau";
     // Klant heeft (her)bevestigd; bij een alternatief moet de aanbieder de
     // nieuwe tijd/prijs nog definitief vastleggen.
     if (item.status === "pending" || item.status === "alternative") {
