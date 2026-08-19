@@ -147,6 +147,7 @@ export function PublishChangesDialog({
   requestId,
   customerEmail,
   customerName,
+  quoteStatus,
   pendingItems,
   partners,
   onPublished,
