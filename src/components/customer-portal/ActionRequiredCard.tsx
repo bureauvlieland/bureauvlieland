@@ -38,6 +38,8 @@ interface ActionRequiredCardProps {
   customerActionsCount?: number;
   /** Aantal alternatieven binnen die acties — voor copy. */
   alternativeActionsCount?: number;
+  /** Aantal ná het klantakkoord toegevoegde onderdelen die nog goedkeuring vragen. */
+  newItemActionsCount?: number;
   /** Datums van het project — nodig om te bepalen of uitvoering al voorbij is. */
   selectedDates?: string[] | null;
   /** completion_status uit program_requests — nodig voor executie-state. */
@@ -78,6 +80,7 @@ export const ActionRequiredCard = ({
   onOpenGuestDetails,
   customerActionsCount = 0,
   alternativeActionsCount = 0,
+  newItemActionsCount = 0,
   selectedDates = null,
   completionStatus = null,
   cancelledAt = null,
@@ -146,6 +149,28 @@ export const ActionRequiredCard = ({
     // en per onderdeel goedkeuren zodra partner heeft gereageerd.
     if (isApprovalPhase) {
       // 3a — onderdelen waar klant nu akkoord op kan geven (partner heeft gereageerd).
+      // 3a-nieuw — onderdelen die ná uw akkoord zijn toegevoegd.
+      if (newItemActionsCount > 0) {
+        const multiple = newItemActionsCount > 1;
+        return {
+          type: "pending",
+          title: multiple
+            ? `${newItemActionsCount} nieuwe onderdelen wachten op uw goedkeuring`
+            : "Nieuw onderdeel wacht op uw goedkeuring",
+          description: multiple
+            ? "Bureau Vlieland heeft nieuwe onderdelen aan uw programma toegevoegd. Bekijk de details en geef per onderdeel uw goedkeuring; daarna vragen wij de aanbieder aan."
+            : "Bureau Vlieland heeft een nieuw onderdeel aan uw programma toegevoegd. Bekijk de details en geef uw goedkeuring; daarna vragen wij de aanbieder aan.",
+          icon: <AlertCircle className="h-5 w-5" />,
+          variant: "warning",
+          cta: {
+            label: multiple ? "Naar onderdelen" : "Naar onderdeel",
+            onClick: () => {
+              document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
+            },
+          },
+        };
+      }
+
       if (customerActionsCount > 0) {
         const onlyAlternatives = alternativeActionsCount === customerActionsCount;
         const someAlternatives = alternativeActionsCount > 0;
