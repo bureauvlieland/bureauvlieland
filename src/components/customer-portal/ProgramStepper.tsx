@@ -204,17 +204,21 @@ function buildProgramTrack(
   }
   if (!providersDone) {
     const bureauManaged = statusSummary.bureauManaged ?? 0;
-    const partnerTotal = statusSummary.partnerTotal ?? statusSummary.total;
-    const partnerConfirmed = statusSummary.partnerConfirmed ?? statusSummary.confirmed;
+    const totalItems = statusSummary.total;
+    const confirmedItems = statusSummary.confirmed;
+    const openItems = Math.max(0, totalItems - confirmedItems);
     const bureauLine = bureauManaged > 0
       ? ` ${bureauManaged} onderde${bureauManaged === 1 ? "el regelt" : "len regelt"} Bureau Vlieland zelf.`
+      : "";
+    const openLine = openItems > 0
+      ? ` — ${openItems} onderde${openItems === 1 ? "el wacht" : "len wachten"} nog op de aanbieder.`
       : "";
     return {
       ...base,
       statusLine:
         statusSummary.alternative > 0
           ? `${statusSummary.alternative} alternatief voorgesteld — uw aandacht is gewenst.`
-          : `${partnerConfirmed} van ${partnerTotal} partner onderdelen bevestigd door partner.${bureauLine}`,
+          : `${confirmedItems} van ${totalItems} onderdelen bevestigd${openLine}${bureauLine}`,
 
       cta:
         statusSummary.alternative > 0 || (statusSummary.counter_proposed || 0) > 0
@@ -223,6 +227,7 @@ function buildProgramTrack(
       done: false,
     };
   }
+
   return { ...base, statusLine: "Programma bevestigd door alle aanbieders.", done: true };
 }
 
