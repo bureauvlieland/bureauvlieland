@@ -376,7 +376,7 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
   const confirmed = relevantItems.filter(isItemTrulyConfirmed).length;
   // Bureau-onderdelen tellen we niet als "pending" — die regelt het bureau zelf
   // en zouden de klant onnodig laten "wachten op aanbieders".
-  const pending = items.filter(i => i.status === "pending" && i.provider_id !== "bureau").length;
+  const pending = items.filter(i => i.status === "pending" && !isBureauItem(i) && i.status !== "cancelled").length;
   const alternative = items.filter(i => i.status === "alternative" && !isItemTrulyConfirmed(i)).length;
   const unavailable = items.filter(i => i.status === "unavailable").length;
   const cancelled = items.filter(i => i.status === "cancelled").length;
