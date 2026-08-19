@@ -123,6 +123,7 @@ Deno.serve(async (req) => {
       origin,
       dryRun = false,
       approvalScope,
+      newItemApproval = "require",
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
@@ -131,12 +132,19 @@ Deno.serve(async (req) => {
       origin?: string;
       dryRun?: boolean;
       approvalScope?: { customer?: "reset" | "keep"; partner?: "reset" | "keep" };
+      newItemApproval?: "require" | "skip";
     };
     // Default: bij ontbreken (oudere clients) doen we 'reset' op beide kanten
     // — dat spiegelt het nieuwe UI-default en is conservatief (klant/partner
     // worden niet stilzwijgend als 'akkoord' bestempeld).
     const resetCustomerApproval = (approvalScope?.customer ?? "reset") === "reset";
     const resetPartnerApproval = (approvalScope?.partner ?? "reset") === "reset";
+    // Nieuwe onderdelen (pending_added) in een project dat al akkoord is:
+    // admin kiest of de klant hier nog akkoord op moet geven ('require', default)
+    // of dat het al is afgestemd ('skip' → direct als klant-akkoord gemarkeerd,
+    // zodat partner-mails meteen mee kunnen).
+    const skipNewItemCustomerApproval = newItemApproval === "skip";
+
 
     // Hulpfunctie: tijdwaarde naar HH:mm voor status_note.
     const fmtHHmm = (v: string | null | undefined): string | null => {
