@@ -679,6 +679,12 @@ Deno.serve(async (req) => {
         upd.customer_approved_at = null;
         upd.customer_accepted_at = null;
       }
+      // Nieuw onderdeel dat de admin als "al afgestemd" publiceert: direct
+      // als klant-akkoord vastleggen (beide stempels samen — zie werkafspraak).
+      if (!wasLive && skipNewItemCustomerApproval) {
+        upd.customer_approved_at = nowIso;
+        upd.customer_accepted_at = nowIso;
+      }
       if (wasLive && resetPartnerApproval && effectiveBlockType !== "bureau") {
         const partnerWasAlreadySent = it.skip_partner_notification === false;
         const currentItemQuoteStatus = typeof it.item_quote_status === "string" ? it.item_quote_status : null;
