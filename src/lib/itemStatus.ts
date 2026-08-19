@@ -10,6 +10,8 @@
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
+import { isBureauItem } from "@/lib/bureauItem";
+
 
 export type ItemDisplayStatus =
   | "wacht_op_partner"
@@ -95,15 +97,15 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   },
   klant_akkoord_wacht_partner: {
     adminLabel: "Klant akkoord — wacht op aanbieder",
-    customerLabel: "Door u goedgekeurd",
+    customerLabel: "Wacht op bevestiging aanbieder",
     partnerLabel: "Klant akkoord — reactie gevraagd",
     adminTooltip: "Klant heeft dit onderdeel goedgekeurd. We wachten nog op bevestiging van de aanbieder.",
     customerTooltip: "U hebt dit onderdeel goedgekeurd. Wij wachten nog op bevestiging van de aanbieder en houden u op de hoogte.",
     partnerTooltip: "De klant heeft dit onderdeel goedgekeurd. Bevestig of stel een alternatief voor.",
     actor: "partner",
-    color: "text-green-700 dark:text-green-400",
-    bgColor: "bg-green-100 dark:bg-green-950/50",
-    icon: "CheckCircle",
+    color: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-950/50",
+    icon: "Clock",
   },
   tegenvoorstel_klant: {
     adminLabel: "Tegenvoorstel van klant",
@@ -119,10 +121,10 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   },
   klant_akkoord_bureau: {
     adminLabel: "Klant akkoord — Bureau regelt zelf",
-    customerLabel: "Door u goedgekeurd",
+    customerLabel: "Geregeld door Bureau Vlieland",
     partnerLabel: "Door Bureau Vlieland geregeld",
     adminTooltip: "Klant heeft dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig.",
-    customerTooltip: "U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig.",
+    customerTooltip: "U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt en boekt dit zelf voor u — geen aanbieder-bevestiging nodig.",
     partnerTooltip: "Bureau Vlieland regelt dit onderdeel zelf.",
     actor: "geen",
     color: "text-green-700 dark:text-green-400",
@@ -131,7 +133,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
   },
   geaccepteerd: {
     adminLabel: "Klant akkoord — aanbieder bevestigd",
-    customerLabel: "Door u goedgekeurd",
+    customerLabel: "Bevestigd door aanbieder",
     partnerLabel: "Klant akkoord — bevestig in planning",
     adminTooltip: "Klant heeft goedgekeurd en de aanbieder heeft bevestigd. Geen actie nodig tot uitvoering.",
     customerTooltip: "U hebt dit onderdeel goedgekeurd. De aanbieder heeft het bevestigd.",
@@ -141,6 +143,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
   },
+
   uitgevoerd: {
     adminLabel: "Uitgevoerd",
     customerLabel: "Uitgevoerd",
@@ -303,7 +306,7 @@ export function deriveItemDisplayStatus(
     ) {
       return "prijs_gewijzigd";
     }
-    if ((item as any).provider_id === "bureau") return "klant_akkoord_bureau";
+    if (isBureauItem(item)) return "klant_akkoord_bureau";
     // Klant heeft (her)bevestigd; bij een alternatief moet de aanbieder de
     // nieuwe tijd/prijs nog definitief vastleggen.
     if (item.status === "pending" || item.status === "alternative") {

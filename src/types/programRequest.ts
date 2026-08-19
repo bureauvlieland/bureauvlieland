@@ -1,3 +1,5 @@
+import { isBureauItem } from "@/lib/bureauItem";
+
 // Status types for program request items
 export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced" | "counter_proposed";
 
@@ -354,8 +356,10 @@ export interface ProgramRequestWithItems extends ProgramRequest {
 // booking_reference hebben of al op status confirmed/executed staan — er is
 // geen externe partner die nog moet reageren.
 const isItemTrulyConfirmed = (i: ProgramRequestItem): boolean => {
-  if (i.provider_id === "bureau") {
-    return !!i.booking_reference
+  if (isBureauItem(i)) {
+    return !!i.customer_accepted_at
+      || !!i.customer_approved_at
+      || !!i.booking_reference
       || i.status === "confirmed"
       || i.status === "executed";
   }
@@ -364,6 +368,7 @@ const isItemTrulyConfirmed = (i: ProgramRequestItem): boolean => {
   return i.skip_partner_notification === false;
 };
 
+
 // Helper to calculate status summary
 export function calculateStatusSummary(items: ProgramRequestItem[]) {
   const relevantItems = items.filter(i => i.block_type !== "self_arranged" && i.status !== "cancelled");
@@ -371,7 +376,7 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
   const confirmed = relevantItems.filter(isItemTrulyConfirmed).length;
   // Bureau-onderdelen tellen we niet als "pending" — die regelt het bureau zelf
   // en zouden de klant onnodig laten "wachten op aanbieders".
-  const pending = items.filter(i => i.status === "pending" && i.provider_id !== "bureau").length;
+  const pending = items.filter(i => i.status === "pending" && !isBureauItem(i)).length;
   const alternative = items.filter(i => i.status === "alternative" && !isItemTrulyConfirmed(i)).length;
   const unavailable = items.filter(i => i.status === "unavailable").length;
   const cancelled = items.filter(i => i.status === "cancelled").length;
@@ -387,8 +392,9 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
   }).length;
 
   // Splitsing bureau (door Bureau Vlieland zelf geregeld) vs partner-onderdelen.
-  const bureauItems = relevantItems.filter(i => i.provider_id === "bureau");
-  const partnerItems = relevantItems.filter(i => i.provider_id !== "bureau");
+  const bureauItems = relevantItems.filter(i => isBureauItem(i));
+  const partnerItems = relevantItems.filter(i => !isBureauItem(i));
+
   const bureauManaged = bureauItems.length;
   const partnerTotal = partnerItems.length;
   const partnerConfirmed = partnerItems.filter(isItemTrulyConfirmed).length;

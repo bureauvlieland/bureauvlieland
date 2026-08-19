@@ -34,7 +34,7 @@ const RLS_WHITELIST = new Set<string>([
 // nieuwe items toe zonder review.
 const GRANT_BASELINE = new Set<string>([
   "shared_programs", "partners", "user_roles", "admin_todos",
-  "admin_activity_log", "building_blocks", "bureau_invoices",
+  "admin_activity_log", "bureau_invoices",
   "accommodation_requests", "accommodation_quotes", "email_log",
   "email_templates", "app_settings", "accepted_terms_log",
   "partner_unavailability", "program_templates", "program_template_items",
