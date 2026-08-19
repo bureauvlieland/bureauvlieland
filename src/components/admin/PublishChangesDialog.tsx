@@ -72,6 +72,8 @@ interface Props {
   requestId: string;
   customerEmail: string;
   customerName: string;
+  /** Offertefase van het project — bepaalt of de keuze voor klantgoedkeuring op nieuwe onderdelen relevant is. */
+  quoteStatus?: string | null;
   pendingItems: PendingChangeItem[];
   partners: PartnerOpt[];
   onPublished: () => void;
