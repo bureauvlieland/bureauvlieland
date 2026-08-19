@@ -40,6 +40,7 @@ export interface CustomerPortalStatus {
   customerActionsCount: number;
   proposalActionsCount: number;
   alternativeActionsCount: number;
+  newItemActionsCount: number;
   customerApprovedCount: number;
   customerApprovableTotal: number;
   showApprovalActions: boolean;
@@ -122,6 +123,14 @@ export function getCustomerApprovalStats(
       : 0,
     proposalActionsCount,
     alternativeActionsCount: customerActionableItems.filter((item) => item.status === "alternative").length,
+    // Nieuw toegevoegde onderdelen ná het klantakkoord: nooit eerder goedgekeurd
+    // en geen partner-alternatief. Hiervoor toont het portaal eigen copy.
+    newItemActionsCount:
+      isApprovalPhase && !options.suppressApprovalActions
+        ? customerActionableItems.filter(
+            (item) => item.status !== "alternative" && !item.customer_approved_at,
+          ).length
+        : 0,
     customerApprovedCount,
     customerApprovableTotal,
   };
