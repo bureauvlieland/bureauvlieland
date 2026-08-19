@@ -166,6 +166,20 @@ export function PublishChangesDialog({
   // (bv. wijziging is al telefonisch afgestemd → 'keep').
   const [approvalCustomer, setApprovalCustomer] = useState<"reset" | "keep">("reset");
   const [approvalPartner, setApprovalPartner] = useState<"reset" | "keep">("reset");
+  // Nieuw toegevoegde onderdelen in een project dat de klant al heeft
+  // goedgekeurd: moet de klant hier nog akkoord op geven?
+  const [newItemApproval, setNewItemApproval] = useState<"require" | "skip">("require");
+
+  const addedItems = useMemo(
+    () => pendingItems.filter((it) => it.pending_added),
+    [pendingItems],
+  );
+  const projectAlreadyApproved =
+    quoteStatus === "akkoord_ontvangen" ||
+    pendingItems.some(
+      (it) => !it.pending_added && (it.customer_approved_at || it.customer_accepted_at),
+    );
+  const showNewItemApproval = addedItems.length > 0 && projectAlreadyApproved;
 
   // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
   // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
