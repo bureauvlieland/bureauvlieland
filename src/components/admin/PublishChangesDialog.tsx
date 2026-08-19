@@ -465,6 +465,46 @@ export function PublishChangesDialog({
             </div>
           )}
 
+          {showNewItemApproval && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Nieuw onderdeel — moet de klant nog akkoord geven?
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Dit project is al door de klant goedgekeurd. Je voegt{" "}
+                {addedItems.length} nieuw onderdeel{addedItems.length !== 1 ? "en" : ""} toe (
+                {addedItems.map((i) => i.pending_block_name ?? i.block_name).join(", ")}).
+              </p>
+              <RadioGroup
+                value={newItemApproval}
+                onValueChange={(v) => setNewItemApproval(v as "require" | "skip")}
+                className="space-y-1.5 rounded-md border p-3"
+              >
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem id="nia-require" value="require" className="mt-0.5" />
+                  <Label htmlFor="nia-require" className="cursor-pointer text-sm font-normal leading-snug">
+                    Klant moet dit nieuwe onderdeel nog goedkeuren
+                    <div className="text-xs text-muted-foreground">
+                      In de klantpagina komt het onderdeel op "Wacht op uw goedkeuring". Vink
+                      hieronder de klant aan om de mail "nieuw onderdeel — graag uw goedkeuring"
+                      te versturen. Partner wordt pas gemaild na goedkeuring.
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem id="nia-skip" value="skip" className="mt-0.5" />
+                  <Label htmlFor="nia-skip" className="cursor-pointer text-sm font-normal leading-snug">
+                    Geen klantgoedkeuring nodig — al afgestemd
+                    <div className="text-xs text-muted-foreground">
+                      Het onderdeel wordt direct als klant-akkoord vastgelegd en mag meteen naar
+                      de partner. Mail naar de klant blijft optioneel.
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
           {liveChangedCount > 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Akkoordstatus na deze wijzigingen</Label>
