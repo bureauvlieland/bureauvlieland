@@ -205,10 +205,17 @@ export function PublishChangesDialog({
     () =>
       new Set(
         pendingItems
-          .filter((i) => i.customer_approved_at || i.customer_accepted_at)
+          .filter(
+            (i) =>
+              i.customer_approved_at ||
+              i.customer_accepted_at ||
+              // Nieuw onderdeel dat als "al afgestemd" wordt gepubliceerd geldt
+              // vanaf publicatie als klant-akkoord → partner mag gemaild worden.
+              (i.pending_added && newItemApproval === "skip"),
+          )
           .map((i) => i.id),
       ),
-    [pendingItems],
+    [pendingItems, newItemApproval],
   );
   const unapprovedCount = pendingItems.length - approvedItemIds.size;
 
