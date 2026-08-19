@@ -816,16 +816,17 @@ Deno.serve(async (req) => {
         pendingLogs.push({
           idx,
           payload: {
-            email_type: TemplateIds.ITEM_CHANGES_CUSTOMER,
+            email_type: customerTemplateId,
             subject: rendered.subject,
             recipient_email: to,
             recipient_name: program.customer_name,
             related_request_id: requestId,
             sent_by: "publish-program-changes",
             metadata: {
-              template_name: TemplateIds.ITEM_CHANGES_CUSTOMER,
+              template_name: customerTemplateId,
               actor: "admin → klant (gebundelde publicatie)",
               change_count: changeRows.length,
+              new_items_awaiting_approval: addedItemsNeedingApproval.length,
             },
           },
         });
