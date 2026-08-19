@@ -10,6 +10,8 @@
  */
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
+import { isBureauItem } from "@/lib/bureauItem";
+
 
 export type ItemDisplayStatus =
   | "wacht_op_partner"
