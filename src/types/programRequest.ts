@@ -392,8 +392,9 @@ export function calculateStatusSummary(items: ProgramRequestItem[]) {
   }).length;
 
   // Splitsing bureau (door Bureau Vlieland zelf geregeld) vs partner-onderdelen.
-  const bureauItems = relevantItems.filter(i => i.provider_id === "bureau");
-  const partnerItems = relevantItems.filter(i => i.provider_id !== "bureau");
+  const bureauItems = relevantItems.filter(i => isBureauItem(i));
+  const partnerItems = relevantItems.filter(i => !isBureauItem(i));
+
   const bureauManaged = bureauItems.length;
   const partnerTotal = partnerItems.length;
   const partnerConfirmed = partnerItems.filter(isItemTrulyConfirmed).length;
