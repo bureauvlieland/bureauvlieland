@@ -1,3 +1,5 @@
+import { isBureauItem } from "@/lib/bureauItem";
+
 // Status types for program request items
 export type ItemStatus = "pending" | "confirmed" | "accepted" | "unavailable" | "alternative" | "cancelled" | "executed" | "invoiced" | "counter_proposed";
 
