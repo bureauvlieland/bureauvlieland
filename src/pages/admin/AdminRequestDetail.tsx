@@ -3418,6 +3418,7 @@ const AdminRequestDetail = () => {
         requestId={request.id}
         customerEmail={request.customer_email}
         customerName={request.customer_name}
+        quoteStatus={request.quote_status ?? null}
         pendingItems={pendingItems.map((i) => ({
           id: i.id,
           block_name: i.block_name,
