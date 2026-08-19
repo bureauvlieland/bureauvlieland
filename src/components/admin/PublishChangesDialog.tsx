@@ -72,6 +72,8 @@ interface Props {
   requestId: string;
   customerEmail: string;
   customerName: string;
+  /** Offertefase van het project — bepaalt of de keuze voor klantgoedkeuring op nieuwe onderdelen relevant is. */
+  quoteStatus?: string | null;
   pendingItems: PendingChangeItem[];
   partners: PartnerOpt[];
   onPublished: () => void;
@@ -145,6 +147,7 @@ export function PublishChangesDialog({
   requestId,
   customerEmail,
   customerName,
+  quoteStatus,
   pendingItems,
   partners,
   onPublished,
@@ -163,6 +166,20 @@ export function PublishChangesDialog({
   // (bv. wijziging is al telefonisch afgestemd → 'keep').
   const [approvalCustomer, setApprovalCustomer] = useState<"reset" | "keep">("reset");
   const [approvalPartner, setApprovalPartner] = useState<"reset" | "keep">("reset");
+  // Nieuw toegevoegde onderdelen in een project dat de klant al heeft
+  // goedgekeurd: moet de klant hier nog akkoord op geven?
+  const [newItemApproval, setNewItemApproval] = useState<"require" | "skip">("require");
+
+  const addedItems = useMemo(
+    () => pendingItems.filter((it) => it.pending_added),
+    [pendingItems],
+  );
+  const projectAlreadyApproved =
+    quoteStatus === "akkoord_ontvangen" ||
+    pendingItems.some(
+      (it) => !it.pending_added && (it.customer_approved_at || it.customer_accepted_at),
+    );
+  const showNewItemApproval = addedItems.length > 0 && projectAlreadyApproved;
 
   // Welke partners zijn betrokken bij wijzigingen? Zowel huidige uitvoerder
   // als (bij wissel) de nieuwe uitvoerder krijgen een notificatie-optie.
@@ -188,10 +205,17 @@ export function PublishChangesDialog({
     () =>
       new Set(
         pendingItems
-          .filter((i) => i.customer_approved_at || i.customer_accepted_at)
+          .filter(
+            (i) =>
+              i.customer_approved_at ||
+              i.customer_accepted_at ||
+              // Nieuw onderdeel dat als "al afgestemd" wordt gepubliceerd geldt
+              // vanaf publicatie als klant-akkoord → partner mag gemaild worden.
+              (i.pending_added && newItemApproval === "skip"),
+          )
           .map((i) => i.id),
       ),
-    [pendingItems],
+    [pendingItems, newItemApproval],
   );
   const unapprovedCount = pendingItems.length - approvedItemIds.size;
 
@@ -243,6 +267,7 @@ export function PublishChangesDialog({
     setNotifyCustomer(false);
     setApprovalCustomer("reset");
     setApprovalPartner("reset");
+    setNewItemApproval("require");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
@@ -263,6 +288,7 @@ export function PublishChangesDialog({
             customer: approvalCustomer,
             partner: approvalPartner,
           },
+          newItemApproval,
         },
       });
       if (error) {
@@ -321,6 +347,7 @@ export function PublishChangesDialog({
           notifyPartnerIds: partnerIds,
           adminNote: adminNote.trim(),
           origin: window.location.origin,
+          newItemApproval,
           dryRun: true,
         },
       });
@@ -435,6 +462,46 @@ export function PublishChangesDialog({
                   <span>{w.message}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {showNewItemApproval && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Nieuw onderdeel — moet de klant nog akkoord geven?
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Dit project is al door de klant goedgekeurd. Je voegt{" "}
+                {addedItems.length} nieuw onderdeel{addedItems.length !== 1 ? "en" : ""} toe (
+                {addedItems.map((i) => i.pending_block_name ?? i.block_name).join(", ")}).
+              </p>
+              <RadioGroup
+                value={newItemApproval}
+                onValueChange={(v) => setNewItemApproval(v as "require" | "skip")}
+                className="space-y-1.5 rounded-md border p-3"
+              >
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem id="nia-require" value="require" className="mt-0.5" />
+                  <Label htmlFor="nia-require" className="cursor-pointer text-sm font-normal leading-snug">
+                    Klant moet dit nieuwe onderdeel nog goedkeuren
+                    <div className="text-xs text-muted-foreground">
+                      In de klantpagina komt het onderdeel op "Wacht op uw goedkeuring". Vink
+                      hieronder de klant aan om de mail "nieuw onderdeel — graag uw goedkeuring"
+                      te versturen. Partner wordt pas gemaild na goedkeuring.
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem id="nia-skip" value="skip" className="mt-0.5" />
+                  <Label htmlFor="nia-skip" className="cursor-pointer text-sm font-normal leading-snug">
+                    Geen klantgoedkeuring nodig — al afgestemd
+                    <div className="text-xs text-muted-foreground">
+                      Het onderdeel wordt direct als klant-akkoord vastgelegd en mag meteen naar
+                      de partner. Mail naar de klant blijft optioneel.
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
           )}
 

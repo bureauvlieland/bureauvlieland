@@ -123,6 +123,7 @@ Deno.serve(async (req) => {
       origin,
       dryRun = false,
       approvalScope,
+      newItemApproval = "require",
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
@@ -131,12 +132,19 @@ Deno.serve(async (req) => {
       origin?: string;
       dryRun?: boolean;
       approvalScope?: { customer?: "reset" | "keep"; partner?: "reset" | "keep" };
+      newItemApproval?: "require" | "skip";
     };
     // Default: bij ontbreken (oudere clients) doen we 'reset' op beide kanten
     // — dat spiegelt het nieuwe UI-default en is conservatief (klant/partner
     // worden niet stilzwijgend als 'akkoord' bestempeld).
     const resetCustomerApproval = (approvalScope?.customer ?? "reset") === "reset";
     const resetPartnerApproval = (approvalScope?.partner ?? "reset") === "reset";
+    // Nieuwe onderdelen (pending_added) in een project dat al akkoord is:
+    // admin kiest of de klant hier nog akkoord op moet geven ('require', default)
+    // of dat het al is afgestemd ('skip' → direct als klant-akkoord gemarkeerd,
+    // zodat partner-mails meteen mee kunnen).
+    const skipNewItemCustomerApproval = newItemApproval === "skip";
+
 
     // Hulpfunctie: tijdwaarde naar HH:mm voor status_note.
     const fmtHHmm = (v: string | null | undefined): string | null => {
@@ -277,9 +285,20 @@ Deno.serve(async (req) => {
     // gebruikelijke offerte-flow alsnog naar de partner.
     const approvedItemIds = new Set<string>(
       items
-        .filter((i: any) => i.customer_approved_at || i.customer_accepted_at)
+        .filter(
+          (i: any) =>
+            i.customer_approved_at ||
+            i.customer_accepted_at ||
+            // Nieuw onderdeel dat de admin als "al afgestemd" publiceert:
+            // geldt vanaf nu als klant-akkoord, dus partner mag gemaild worden.
+            (skipNewItemCustomerApproval && i.pending_added),
+        )
         .map((i: any) => i.id),
     );
+    const addedItemsNeedingApproval = items.filter(
+      (i: any) => i.pending_added && !skipNewItemCustomerApproval,
+    );
+
 
     const changeRows: ChangeRow[] = [];
     const logRows: any[] = [];
@@ -660,6 +679,12 @@ Deno.serve(async (req) => {
         upd.customer_approved_at = null;
         upd.customer_accepted_at = null;
       }
+      // Nieuw onderdeel dat de admin als "al afgestemd" publiceert: direct
+      // als klant-akkoord vastleggen (beide stempels samen — zie werkafspraak).
+      if (!wasLive && skipNewItemCustomerApproval) {
+        upd.customer_approved_at = nowIso;
+        upd.customer_accepted_at = nowIso;
+      }
       if (wasLive && resetPartnerApproval && effectiveBlockType !== "bureau") {
         const partnerWasAlreadySent = it.skip_partner_notification === false;
         const currentItemQuoteStatus = typeof it.item_quote_status === "string" ? it.item_quote_status : null;
@@ -760,11 +785,22 @@ Deno.serve(async (req) => {
       const noteBlock = adminNote
         ? `<p style="margin:16px 0;padding:12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;">${adminNote.replace(/\n/g, "<br>")}</p>`
         : "";
-      const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
+      // Nieuwe onderdelen waarvoor de klant nog akkoord moet geven → aparte
+      // template met een expliciete goedkeuringsvraag. Anders de reguliere
+      // "programma bijgewerkt"-bevestiging.
+      const customerTemplateId =
+        addedItemsNeedingApproval.length > 0
+          ? TemplateIds.ITEM_ADDED_CUSTOMER_APPROVAL
+          : TemplateIds.ITEM_CHANGES_CUSTOMER;
+      const rendered = await getRenderedTemplate(customerTemplateId, {
         customer_name: program.customer_name,
         changes_summary: html + noteBlock,
         portal_url: customerPortalUrl,
         reference_number: program.reference_number || "",
+        new_item_count: String(addedItemsNeedingApproval.length),
+        new_item_names: addedItemsNeedingApproval
+          .map((i: any) => i.pending_block_name ?? i.block_name)
+          .join(", "),
       });
       if (rendered) {
         const to = recipientFor(program.customer_email, origin);
@@ -780,16 +816,17 @@ Deno.serve(async (req) => {
         pendingLogs.push({
           idx,
           payload: {
-            email_type: TemplateIds.ITEM_CHANGES_CUSTOMER,
+            email_type: customerTemplateId,
             subject: rendered.subject,
             recipient_email: to,
             recipient_name: program.customer_name,
             related_request_id: requestId,
             sent_by: "publish-program-changes",
             metadata: {
-              template_name: TemplateIds.ITEM_CHANGES_CUSTOMER,
+              template_name: customerTemplateId,
               actor: "admin → klant (gebundelde publicatie)",
               change_count: changeRows.length,
+              new_items_awaiting_approval: addedItemsNeedingApproval.length,
             },
           },
         });

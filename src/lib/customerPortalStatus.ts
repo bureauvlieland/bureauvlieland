@@ -40,6 +40,7 @@ export interface CustomerPortalStatus {
   customerActionsCount: number;
   proposalActionsCount: number;
   alternativeActionsCount: number;
+  newItemActionsCount: number;
   customerApprovedCount: number;
   customerApprovableTotal: number;
   showApprovalActions: boolean;
@@ -83,12 +84,18 @@ export function getCustomerApprovalStats(
   const isProposalPhase = quoteStatus === "offerte_verstuurd";
   const isApprovalPhase = quoteStatus === "akkoord_ontvangen";
 
+  // In de fase "akkoord ontvangen" kunnen er ná het klantakkoord nieuwe
+  // onderdelen zijn toegevoegd. Die hebben nog geen klant-akkoord en vragen
+  // dus alsnog een goedkeuring van de klant.
   const customerActionableItems = options.suppressApprovalActions
     ? []
     : items.filter(
         (item) =>
           isCustomerActionableCandidate(item) &&
-          (isProposalPhase || item.status === "confirmed" || item.status === "alternative") &&
+          (isProposalPhase ||
+            isApprovalPhase ||
+            item.status === "confirmed" ||
+            item.status === "alternative") &&
           !hasLiveCustomerApproval(item),
       );
 
@@ -98,6 +105,7 @@ export function getCustomerApprovalStats(
         (item) =>
           isCustomerActionableCandidate(item) &&
           (isProposalPhase ||
+            isApprovalPhase ||
             item.status === "confirmed" ||
             item.status === "alternative" ||
             !!item.customer_approved_at),
@@ -115,6 +123,14 @@ export function getCustomerApprovalStats(
       : 0,
     proposalActionsCount,
     alternativeActionsCount: customerActionableItems.filter((item) => item.status === "alternative").length,
+    // Nieuw toegevoegde onderdelen ná het klantakkoord: nooit eerder goedgekeurd
+    // en geen partner-alternatief. Hiervoor toont het portaal eigen copy.
+    newItemActionsCount:
+      isApprovalPhase && !options.suppressApprovalActions
+        ? customerActionableItems.filter(
+            (item) => item.status !== "alternative" && !item.customer_approved_at,
+          ).length
+        : 0,
     customerApprovedCount,
     customerApprovableTotal,
   };

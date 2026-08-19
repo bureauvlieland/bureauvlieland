@@ -221,6 +221,7 @@ export const DesktopProgramView = ({
     totalCost,
     customerActionsCount,
     alternativeActionsCount,
+    newItemActionsCount,
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
     isPostExecution,
@@ -325,6 +326,7 @@ export const DesktopProgramView = ({
               programPublishedAt={program.program_published_at}
               customerActionsCount={customerActionsCount}
               alternativeActionsCount={alternativeActionsCount}
+              newItemActionsCount={newItemActionsCount}
               guestDetailsIncomplete={
                 !!guestDetails &&
                 (!guestDetails.guest_names ||
