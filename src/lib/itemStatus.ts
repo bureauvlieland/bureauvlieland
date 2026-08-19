@@ -321,10 +321,14 @@ export function deriveItemDisplayStatus(
   // aanbieder ná klant-akkoord een ALTERNATIEF voorstel heeft gedaan (status
   // "alternative" zonder herbevestiging) valt het onderdeel terug op de
   // partner-flow hieronder.
+  // Ook in de fase "akkoord ontvangen" kan een onderdeel nog zonder klant-akkoord
+  // staan: dat is een ná het akkoord toegevoegd (nieuw) onderdeel. Ook dan is de
+  // klant aan zet — anders zou het onderdeel stilzwijgend als goedgekeurd tonen.
   const isPreApprovalPhase =
     ctx.quoteStatus === "concept" ||
     ctx.quoteStatus === "in_afstemming" ||
-    ctx.quoteStatus === "offerte_verstuurd";
+    ctx.quoteStatus === "offerte_verstuurd" ||
+    ctx.quoteStatus === "akkoord_ontvangen";
   if (isPreApprovalPhase && !hasApproval && item.status !== "alternative") {
     return "wacht_op_klant";
   }
