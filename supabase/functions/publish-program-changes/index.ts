@@ -285,9 +285,20 @@ Deno.serve(async (req) => {
     // gebruikelijke offerte-flow alsnog naar de partner.
     const approvedItemIds = new Set<string>(
       items
-        .filter((i: any) => i.customer_approved_at || i.customer_accepted_at)
+        .filter(
+          (i: any) =>
+            i.customer_approved_at ||
+            i.customer_accepted_at ||
+            // Nieuw onderdeel dat de admin als "al afgestemd" publiceert:
+            // geldt vanaf nu als klant-akkoord, dus partner mag gemaild worden.
+            (skipNewItemCustomerApproval && i.pending_added),
+        )
         .map((i: any) => i.id),
     );
+    const addedItemsNeedingApproval = items.filter(
+      (i: any) => i.pending_added && !skipNewItemCustomerApproval,
+    );
+
 
     const changeRows: ChangeRow[] = [];
     const logRows: any[] = [];
