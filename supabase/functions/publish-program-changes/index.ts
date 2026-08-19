@@ -785,11 +785,22 @@ Deno.serve(async (req) => {
       const noteBlock = adminNote
         ? `<p style="margin:16px 0;padding:12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;">${adminNote.replace(/\n/g, "<br>")}</p>`
         : "";
-      const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
+      // Nieuwe onderdelen waarvoor de klant nog akkoord moet geven → aparte
+      // template met een expliciete goedkeuringsvraag. Anders de reguliere
+      // "programma bijgewerkt"-bevestiging.
+      const customerTemplateId =
+        addedItemsNeedingApproval.length > 0
+          ? TemplateIds.ITEM_ADDED_CUSTOMER_APPROVAL
+          : TemplateIds.ITEM_CHANGES_CUSTOMER;
+      const rendered = await getRenderedTemplate(customerTemplateId, {
         customer_name: program.customer_name,
         changes_summary: html + noteBlock,
         portal_url: customerPortalUrl,
         reference_number: program.reference_number || "",
+        new_item_count: String(addedItemsNeedingApproval.length),
+        new_item_names: addedItemsNeedingApproval
+          .map((i: any) => i.pending_block_name ?? i.block_name)
+          .join(", "),
       });
       if (rendered) {
         const to = recipientFor(program.customer_email, origin);
