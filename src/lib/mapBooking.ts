@@ -147,19 +147,19 @@ export function bookingReturnUrl(origin: string): string {
 
 
 /**
- * MAP levert de duur in minuten. Toon minuten onder het uur, daarboven uren
- * (met een half uur als "1,5 uur").
+ * MAP levert de duur in uren (bijv. 1.5 = anderhalf uur). Toon uren, en onder
+ * het uur minuten ("0,5" -> "30 min").
  */
-export function formatMapDuration(minutes: number | null | undefined): string {
-  const value = Number(minutes);
+export function formatMapDuration(hours: number | null | undefined): string {
+  const value = Number(hours);
   if (!Number.isFinite(value) || value <= 0) return "";
-  if (value < 60) return `${Math.round(value)} min`;
-  const hours = value / 60;
-  const label = Number.isInteger(hours)
-    ? String(hours)
-    : hours.toFixed(1).replace(".", ",");
+  if (value < 1) return `${Math.round(value * 60)} min`;
+  const label = Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(1).replace(".", ",");
   return `${label} uur`;
 }
+
 
 /**
  * Partner-websites staan soms zonder schema in de database ("www.voorbeeld.nl").
