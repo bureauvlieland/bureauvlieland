@@ -311,11 +311,22 @@ describe("regressie: projectfase offerte_verstuurd — klant moet hele voorstel 
     )).toBe("klant_akkoord_wacht_partner");
   });
 
-  it("akkoord_ontvangen-fase blijft bestaande logica volgen (pending → wacht_op_partner)", () => {
+  it("akkoord_ontvangen-fase: nieuw onderdeel zonder klant-akkoord vraagt alsnog goedkeuring", () => {
     expect(deriveItemDisplayStatus(
       makeItem({ status: "pending" } as any),
       { ...ctx, quoteStatus: "akkoord_ontvangen" },
-    )).toBe("wacht_op_partner");
+    )).toBe("wacht_op_klant");
+  });
+
+  it("akkoord_ontvangen-fase: goedgekeurd pending onderdeel wacht op de aanbieder", () => {
+    expect(deriveItemDisplayStatus(
+      makeItem({
+        status: "pending",
+        customer_approved_at: "2024-05-01T10:00:00Z",
+        customer_accepted_at: "2024-05-01T10:00:00Z",
+      } as any),
+      { ...ctx, quoteStatus: "akkoord_ontvangen" },
+    )).toBe("klant_akkoord_wacht_partner");
   });
 
   it("zonder quoteStatus-context blijft bestaande logica gelden (backwards-compat)", () => {
