@@ -354,8 +354,10 @@ export interface ProgramRequestWithItems extends ProgramRequest {
 // booking_reference hebben of al op status confirmed/executed staan — er is
 // geen externe partner die nog moet reageren.
 const isItemTrulyConfirmed = (i: ProgramRequestItem): boolean => {
-  if (i.provider_id === "bureau") {
-    return !!i.booking_reference
+  if (isBureauItem(i)) {
+    return !!i.customer_accepted_at
+      || !!i.customer_approved_at
+      || !!i.booking_reference
       || i.status === "confirmed"
       || i.status === "executed";
   }
@@ -363,6 +365,7 @@ const isItemTrulyConfirmed = (i: ProgramRequestItem): boolean => {
   if (i.item_quote_status === "bevestigd") return true;
   return i.skip_partner_notification === false;
 };
+
 
 // Helper to calculate status summary
 export function calculateStatusSummary(items: ProgramRequestItem[]) {
