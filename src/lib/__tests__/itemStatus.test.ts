@@ -116,12 +116,12 @@ describe("deriveItemDisplayStatus — klant-akkoord scenarios", () => {
     )).toBe("geaccepteerd");
   });
 
-  it("alle drie klant-akkoord-varianten tonen hetzelfde klantlabel", () => {
-    const label = "Door u goedgekeurd";
-    expect(itemDisplayStatusConfig.klant_akkoord_wacht_partner.customerLabel).toBe(label);
-    expect(itemDisplayStatusConfig.klant_akkoord_bureau.customerLabel).toBe(label);
-    expect(itemDisplayStatusConfig.geaccepteerd.customerLabel).toBe(label);
+  it("de drie klant-akkoord-varianten hebben onderscheidende klantlabels", () => {
+    expect(itemDisplayStatusConfig.klant_akkoord_wacht_partner.customerLabel).toBe("Wacht op bevestiging aanbieder");
+    expect(itemDisplayStatusConfig.klant_akkoord_bureau.customerLabel).toBe("Geregeld door Bureau Vlieland");
+    expect(itemDisplayStatusConfig.geaccepteerd.customerLabel).toBe("Bevestigd door aanbieder");
   });
+
 
   it("admin-prijswijziging ná klant-akkoord → prijs_gewijzigd", () => {
     expect(deriveItemDisplayStatus(
