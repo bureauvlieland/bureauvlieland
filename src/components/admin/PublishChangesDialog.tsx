@@ -267,6 +267,7 @@ export function PublishChangesDialog({
     setNotifyCustomer(false);
     setApprovalCustomer("reset");
     setApprovalPartner("reset");
+    setNewItemApproval("require");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
@@ -287,6 +288,7 @@ export function PublishChangesDialog({
             customer: approvalCustomer,
             partner: approvalPartner,
           },
+          newItemApproval,
         },
       });
       if (error) {
@@ -345,6 +347,7 @@ export function PublishChangesDialog({
           notifyPartnerIds: partnerIds,
           adminNote: adminNote.trim(),
           origin: window.location.origin,
+          newItemApproval,
           dryRun: true,
         },
       });
