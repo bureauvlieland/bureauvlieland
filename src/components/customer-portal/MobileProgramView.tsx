@@ -212,6 +212,7 @@ export const MobileProgramView = ({
     hasSelectedAccommodation,
     isPreApproval,
     alternativeActionsCount,
+    newItemActionsCount,
     customerActionsCount,
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
@@ -374,6 +375,7 @@ export const MobileProgramView = ({
             programPublishedAt={program.program_published_at}
             customerActionsCount={customerActionsCount}
             alternativeActionsCount={alternativeActionsCount}
+              newItemActionsCount={newItemActionsCount}
             guestDetailsIncomplete={
               !!guestDetails &&
               (!guestDetails.guest_names ||
