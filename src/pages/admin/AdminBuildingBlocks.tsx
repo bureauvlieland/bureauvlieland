@@ -49,9 +49,19 @@ const AdminBuildingBlocks = () => {
   const [categoryFilter, setCategoryFilter] = useState<BuildingBlockCategory | "all">("all");
   const [typeFilter, setTypeFilter] = useState<BuildingBlockType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<BuildingBlockStatus | "all">("all");
+  const [partnerFilter, setPartnerFilter] = useState<string>("all");
   
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<BuildingBlock | null>(null);
+  
+  // Unique partners present in the building blocks
+  const partnerOptions = Array.from(
+    new Map(
+      (blocks ?? [])
+        .filter((b) => b.provider_id && b.provider?.name)
+        .map((b) => [b.provider_id as string, b.provider!.name as string]),
+    ).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1], "nl"));
   
   // Filter blocks
   const filteredBlocks = blocks?.filter((block) => {
@@ -60,9 +70,13 @@ const AdminBuildingBlocks = () => {
     const matchesCategory = categoryFilter === "all" || block.category === categoryFilter;
     const matchesType = typeFilter === "all" || block.block_type === typeFilter;
     const matchesStatus = statusFilter === "all" || block.status === statusFilter;
+    const matchesPartner =
+      partnerFilter === "all" ||
+      (partnerFilter === "none" ? !block.provider_id : block.provider_id === partnerFilter);
     
-    return matchesSearch && matchesCategory && matchesType && matchesStatus;
+    return matchesSearch && matchesCategory && matchesType && matchesStatus && matchesPartner;
   }) || [];
+
   
   const handleEdit = (block: BuildingBlock) => {
     setSelectedBlock(block);
