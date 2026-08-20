@@ -198,6 +198,21 @@ const AdminBuildingBlocks = () => {
                 <SelectItem value="published">Gepubliceerd</SelectItem>
               </SelectContent>
             </Select>
+            
+            <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Partner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle partners</SelectItem>
+                <SelectItem value="none">Zonder partner</SelectItem>
+                {partnerOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
