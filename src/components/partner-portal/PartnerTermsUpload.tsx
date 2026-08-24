@@ -129,8 +129,8 @@ export const PartnerTermsUpload = ({
         await supabase.storage.from("partner-terms").remove([termsPdfPath]);
       }
 
-      // Upload new file
-      const fileName = `${partnerId}/algemene-voorwaarden.pdf`;
+      // Upload new file — random suffix zodat het publieke pad niet te raden is
+      const fileName = `${partnerId}/${crypto.randomUUID()}-algemene-voorwaarden.pdf`;
       const { error: uploadError } = await supabase.storage
         .from("partner-terms")
         .upload(fileName, file, { upsert: true });
