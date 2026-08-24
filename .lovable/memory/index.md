@@ -17,6 +17,7 @@ Updated: nu
 - Bedragen: alle invoer en primaire weergave is **incl. BTW**. Excl. BTW alleen als afgeleide breakdown of op formele factuur-PDF (NL factuurplicht).
 
 ## Memories
+- [Organisatiefee 2.0](mem://business/organisatiefee-2-0) — Nieuwe staffels/extra dagen/spoedtoeslag/3% centrale opslag + fee_snapshot bevriest bestaande projecten
 - [Social Contentplan](mem://features/social-contentplan) — 5 contentpijlers, weekritme en vaste UTM-CTA's per pijler (FB deep link, IG via /links)
 - [Social Media Publisher](mem://features/social-media-publisher) — IG+FB publisher via Meta Graph API, AI-concepten, altijd handmatig goedkeuren
 - [Customer Status Todo Pacing](mem://features/customer-status-todo-pacing) — Anker op laatste klantcontact + leadtime-schaling (≥90d→3×, ≥30d→2×); admin_project_email sluit de taak
