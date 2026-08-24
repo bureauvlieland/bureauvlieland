@@ -963,6 +963,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     let approved = 0;
     let failed = 0;
     let autoSentToPartner = 0;
+    const failureReasons: string[] = [];
 
     for (const item of candidates) {
       try {
@@ -976,16 +977,24 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
         });
         if (error || data?.error) {
           failed++;
+          const reason = data?.error
+            ? String(data.error)
+            : await extractEdgeError(error, "Onbekende fout");
+          if (reason && !failureReasons.includes(reason)) failureReasons.push(reason);
         } else {
           approved++;
           if (data?.auto_partner_sent) autoSentToPartner++;
         }
-      } catch {
+      } catch (err: any) {
         failed++;
+        const reason = await extractEdgeError(err, "Onbekende fout");
+        if (reason && !failureReasons.includes(reason)) failureReasons.push(reason);
       }
     }
 
     await fetchProgram();
+
+    const reasonSuffix = failureReasons.length > 0 ? ` — ${failureReasons.join(" · ")}` : "";
 
     if (approved > 0 && failed === 0) {
       toast.success(
@@ -994,10 +1003,11 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
           : `${approved} onderdelen goedgekeurd`,
       );
     } else if (approved > 0 && failed > 0) {
-      toast.warning(`${approved} goedgekeurd, ${failed} mislukt`);
+      toast.warning(`${approved} goedgekeurd, ${failed} mislukt${reasonSuffix}`);
     } else if (failed > 0) {
-      toast.error("Goedkeuren mislukt. Probeer het later opnieuw.");
+      toast.error(`Goedkeuren mislukt${reasonSuffix || ". Probeer het later opnieuw."}`);
     }
+
 
     return { approved, failed, autoSentToPartner };
   }, [program, token, fetchProgram]);
