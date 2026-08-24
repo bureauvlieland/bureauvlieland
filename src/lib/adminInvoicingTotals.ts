@@ -39,6 +39,14 @@ export interface AdminInvoicingSettings {
   touristTaxPerPersonPerDay: number;
   natureContributionPerPerson: number;
   bureauCentralSurchargePerPerson: number;
+  /**
+   * Vastgelegde/actieve feestructuur. Aanwezig → organisatiefee en opslag
+   * centrale facturatie komen uit de fee-engine i.p.v. de losse scalars.
+   */
+  feeStructure?: FeeStructureSet | null;
+  requestDate?: string | null;
+  /** Som van de aangevinkte wijzigingsrondes na klantakkoord. */
+  revisionFeesTotal?: number;
 }
 
 export interface AdminInvoicingTotals {
@@ -48,11 +56,14 @@ export interface AdminInvoicingTotals {
   touristTax: number;
   natureContribution: number;
   centralSurcharge: number;
+  revisionFees: number;
   accommodationTotal: number;
   grandTotalInclVat: number;
   invoicedTotal: number;
   outstanding: number;
+  feeBreakdown?: FeeBreakdown;
 }
+
 
 const sumBillingLines = (lines: AdminInvoicingBillingLineLike[]) =>
   lines.reduce((sum, line) => sum + Number(line.amount_incl_vat || 0), 0);
