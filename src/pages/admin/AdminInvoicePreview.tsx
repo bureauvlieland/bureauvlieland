@@ -187,6 +187,8 @@ const AdminInvoicePreview = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { getSetting, settings, isLoading: isAppSettingsLoading } = useAppSettings();
+  const { activeStructure } = usePricingStructures();
+
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
   const [items, setItems] = useState<ProgramItem[]>([]);
