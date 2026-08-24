@@ -30,7 +30,7 @@ interface TodayViewProps {
 }
 
 const getEffectiveTime = (i: ProgramRequestItem) =>
-  i.confirmed_time || i.proposed_time || i.preferred_time || "";
+  formatTimeHHmm(i.confirmed_time || i.proposed_time || i.preferred_time) || "";
 
 const sortByTime = (a: ProgramRequestItem, b: ProgramRequestItem) => {
   const ta = getEffectiveTime(a);
