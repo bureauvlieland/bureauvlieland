@@ -768,11 +768,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update programma
+    // Update programma. Als er nieuwe onderdelen zijn die de klant nog moet
+    // goedkeuren, mag een verlopen offertegeldigheid dat niet blokkeren →
+    // schuif quote_valid_until 14 dagen vooruit als die in het verleden ligt.
+    const programUpdate: Record<string, unknown> = { last_published_at: nowIso, updated_at: nowIso };
+    if (addedItemsNeedingApproval.length > 0) {
+      const currentValid = program.quote_valid_until ? new Date(program.quote_valid_until) : null;
+      if (!currentValid || currentValid.getTime() < Date.now()) {
+        const extended = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        programUpdate.quote_valid_until = extended.toISOString().split("T")[0];
+      }
+    }
     await supabase
       .from("program_requests")
-      .update({ last_published_at: nowIso, updated_at: nowIso })
+      .update(programUpdate)
       .eq("id", requestId);
+
 
     // Verzamel mail-ontvangers
     const notifiedEmails: string[] = [];
