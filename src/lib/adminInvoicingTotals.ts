@@ -96,17 +96,41 @@ export function calculateAdminInvoicingTotals(
   const isExcluded = (key: string) =>
     Array.isArray(request.excluded_fees) && request.excluded_fees.includes(key);
 
-  const coordinationFee = isExcluded("coordination_fee") ? 0 : settings.coordinationFee;
   const touristTax = isExcluded("tourist_tax")
     ? 0
     : settings.touristTaxPerPersonPerDay * request.number_of_people * numberOfDays;
   const natureContribution = isExcluded("nature_contribution")
     ? 0
     : settings.natureContributionPerPerson * request.number_of_people;
-  const centralSurcharge = request.invoicing_mode === "bureau_central" && !isExcluded("central_surcharge")
-    ? settings.bureauCentralSurchargePerPerson * request.number_of_people
-    : 0;
   const accommodationTotal = Number(request.selected_accommodation_total ?? 0);
+
+  // Organisatiefee + opslag centrale facturatie: via de fee-engine wanneer een
+  // (gesnapshotte) structuur beschikbaar is, anders de oude scalar-logica.
+  const feeBreakdown = settings.feeStructure
+    ? computeProjectFees({
+        structure: settings.feeStructure,
+        numberOfPeople: request.number_of_people,
+        numberOfDays,
+        isBureauCentral: request.invoicing_mode === "bureau_central",
+        partnerCostsTotal: programItemsTotal + extraCostsTotal + accommodationTotal,
+        excludedFees: request.excluded_fees,
+        requestDate: settings.requestDate,
+        arrivalDate: request.selected_dates?.[0],
+        revisionFeesTotal: settings.revisionFeesTotal,
+      })
+    : undefined;
+
+  const coordinationFee = feeBreakdown
+    ? feeBreakdown.coordinationFee
+    : isExcluded("coordination_fee")
+      ? 0
+      : settings.coordinationFee;
+  const centralSurcharge = feeBreakdown
+    ? feeBreakdown.centralSurcharge
+    : request.invoicing_mode === "bureau_central" && !isExcluded("central_surcharge")
+      ? settings.bureauCentralSurchargePerPerson * request.number_of_people
+      : 0;
+  const revisionFees = feeBreakdown ? feeBreakdown.revisionFeesTotal : 0;
 
   const grandTotalInclVat =
     programItemsTotal +
@@ -115,6 +139,7 @@ export function calculateAdminInvoicingTotals(
     touristTax +
     natureContribution +
     centralSurcharge +
+    revisionFees +
     accommodationTotal;
 
   // Registraties zijn werkelijke factuurbedragen: deel- en eindfacturen tellen
@@ -132,9 +157,12 @@ export function calculateAdminInvoicingTotals(
     touristTax,
     natureContribution,
     centralSurcharge,
+    revisionFees,
     accommodationTotal,
     grandTotalInclVat,
     invoicedTotal,
     outstanding: Math.max(0, grandTotalInclVat - invoicedTotal),
+    feeBreakdown,
   };
+
 }
