@@ -145,7 +145,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // 3. Check validity (admin override may bypass expired-quote block for backdated approvals).
     // Already definitively confirmed projects skip the validity check too — items added/changed
     // after definitief bevestigd moeten altijd geaccordeerd kunnen worden.
-    const skipValidityCheck = admin_override || program.quote_status === "definitief_bevestigd";
+    const skipValidityCheck =
+      admin_override || ["akkoord_ontvangen", "definitief_bevestigd"].includes(program.quote_status);
+
     if (!skipValidityCheck && program.quote_valid_until) {
       const validUntil = new Date(program.quote_valid_until);
       if (validUntil < new Date()) {
