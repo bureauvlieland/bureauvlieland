@@ -26,6 +26,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
+import { usePricingStructures } from "@/hooks/usePricing";
+import { resolveFeeStructure } from "@/lib/feeEngine";
 import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
 import { CheckCircle2, Mail, Hotel, Download } from "lucide-react";
@@ -118,6 +120,7 @@ const formatCurrency = (amount: number) =>
 const AdminInvoicing = () => {
   const queryClient = useQueryClient();
   const { getCoordinationFee, getVatRate, settings } = useAppSettings();
+  const { activeStructure } = usePricingStructures();
   const [activeTab, setActiveTab] = useState("ready");
   const [selectedRequest, setSelectedRequest] = useState<ProgramRequestWithItems | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
@@ -135,6 +138,8 @@ const AdminInvoicing = () => {
         request,
         {
           coordinationFee: getCoordinationFee(request.number_of_people),
+          feeStructure: resolveFeeStructure((request as any).fee_snapshot, activeStructure),
+          requestDate: (request as any).created_at ?? null,
           touristTaxPerPersonPerDay: settings.tourist_tax_pp_per_day,
           natureContributionPerPerson: settings.nature_contribution_pp,
           bureauCentralSurchargePerPerson: settings.bureau_central_surcharge_pp,
