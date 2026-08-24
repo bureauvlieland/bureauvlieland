@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.snapshot_fee_structure() FROM PUBLIC, anon, authenticated;
