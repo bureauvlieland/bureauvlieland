@@ -2779,6 +2779,39 @@ export type Database = {
           },
         ]
       }
+      pricing_structures: {
+        Row: {
+          created_at: string
+          effective_from: string
+          id: string
+          key: string
+          label: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       program_change_log: {
         Row: {
           admin_note: string | null
@@ -3444,6 +3477,7 @@ export type Database = {
           dietary_notes: string | null
           excluded_fees: string[]
           expires_at: string
+          fee_snapshot: Json | null
           general_notes: string | null
           guest_details_updated_at: string | null
           guest_names: string | null
@@ -3511,6 +3545,7 @@ export type Database = {
           dietary_notes?: string | null
           excluded_fees?: string[]
           expires_at?: string
+          fee_snapshot?: Json | null
           general_notes?: string | null
           guest_details_updated_at?: string | null
           guest_names?: string | null
@@ -3578,6 +3613,7 @@ export type Database = {
           dietary_notes?: string | null
           excluded_fees?: string[]
           expires_at?: string
+          fee_snapshot?: Json | null
           general_notes?: string | null
           guest_details_updated_at?: string | null
           guest_names?: string | null
@@ -3625,6 +3661,53 @@ export type Database = {
             columns: ["linked_accommodation_id"]
             isOneToOne: true
             referencedRelation: "partner_accommodation_requests_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_revision_charges: {
+        Row: {
+          amount: number
+          billable: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          published_at: string
+          request_id: string
+          round: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          billable?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          published_at?: string
+          request_id: string
+          round: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billable?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          published_at?: string
+          request_id?: string
+          round?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_revision_charges_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
             referencedColumns: ["id"]
           },
         ]
