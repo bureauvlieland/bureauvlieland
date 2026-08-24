@@ -191,6 +191,8 @@ const AdminInvoicePreview = () => {
 
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
+  const { billableTotal: revisionBillableTotal } = useRevisionCharges(request?.id);
+
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
