@@ -1,4 +1,7 @@
 import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
+import { computeProjectFees, type FeeBreakdown } from "@/lib/feeEngine";
+import type { FeeStructureSet } from "@/types/pricing";
+
 
 export interface AdminInvoicingItemLike {
   id: string;
@@ -39,6 +42,14 @@ export interface AdminInvoicingSettings {
   touristTaxPerPersonPerDay: number;
   natureContributionPerPerson: number;
   bureauCentralSurchargePerPerson: number;
+  /**
+   * Vastgelegde/actieve feestructuur. Aanwezig → organisatiefee en opslag
+   * centrale facturatie komen uit de fee-engine i.p.v. de losse scalars.
+   */
+  feeStructure?: FeeStructureSet | null;
+  requestDate?: string | null;
+  /** Som van de aangevinkte wijzigingsrondes na klantakkoord. */
+  revisionFeesTotal?: number;
 }
 
 export interface AdminInvoicingTotals {
@@ -48,11 +59,14 @@ export interface AdminInvoicingTotals {
   touristTax: number;
   natureContribution: number;
   centralSurcharge: number;
+  revisionFees: number;
   accommodationTotal: number;
   grandTotalInclVat: number;
   invoicedTotal: number;
   outstanding: number;
+  feeBreakdown?: FeeBreakdown;
 }
+
 
 const sumBillingLines = (lines: AdminInvoicingBillingLineLike[]) =>
   lines.reduce((sum, line) => sum + Number(line.amount_incl_vat || 0), 0);
@@ -85,17 +99,41 @@ export function calculateAdminInvoicingTotals(
   const isExcluded = (key: string) =>
     Array.isArray(request.excluded_fees) && request.excluded_fees.includes(key);
 
-  const coordinationFee = isExcluded("coordination_fee") ? 0 : settings.coordinationFee;
   const touristTax = isExcluded("tourist_tax")
     ? 0
     : settings.touristTaxPerPersonPerDay * request.number_of_people * numberOfDays;
   const natureContribution = isExcluded("nature_contribution")
     ? 0
     : settings.natureContributionPerPerson * request.number_of_people;
-  const centralSurcharge = request.invoicing_mode === "bureau_central" && !isExcluded("central_surcharge")
-    ? settings.bureauCentralSurchargePerPerson * request.number_of_people
-    : 0;
   const accommodationTotal = Number(request.selected_accommodation_total ?? 0);
+
+  // Organisatiefee + opslag centrale facturatie: via de fee-engine wanneer een
+  // (gesnapshotte) structuur beschikbaar is, anders de oude scalar-logica.
+  const feeBreakdown = settings.feeStructure
+    ? computeProjectFees({
+        structure: settings.feeStructure,
+        numberOfPeople: request.number_of_people,
+        numberOfDays,
+        isBureauCentral: request.invoicing_mode === "bureau_central",
+        partnerCostsTotal: programItemsTotal + extraCostsTotal + accommodationTotal,
+        excludedFees: request.excluded_fees,
+        requestDate: settings.requestDate,
+        arrivalDate: request.selected_dates?.[0],
+        revisionFeesTotal: settings.revisionFeesTotal,
+      })
+    : undefined;
+
+  const coordinationFee = feeBreakdown
+    ? feeBreakdown.coordinationFee
+    : isExcluded("coordination_fee")
+      ? 0
+      : settings.coordinationFee;
+  const centralSurcharge = feeBreakdown
+    ? feeBreakdown.centralSurcharge
+    : request.invoicing_mode === "bureau_central" && !isExcluded("central_surcharge")
+      ? settings.bureauCentralSurchargePerPerson * request.number_of_people
+      : 0;
+  const revisionFees = feeBreakdown ? feeBreakdown.revisionFeesTotal : 0;
 
   const grandTotalInclVat =
     programItemsTotal +
@@ -104,6 +142,7 @@ export function calculateAdminInvoicingTotals(
     touristTax +
     natureContribution +
     centralSurcharge +
+    revisionFees +
     accommodationTotal;
 
   // Registraties zijn werkelijke factuurbedragen: deel- en eindfacturen tellen
@@ -121,9 +160,12 @@ export function calculateAdminInvoicingTotals(
     touristTax,
     natureContribution,
     centralSurcharge,
+    revisionFees,
     accommodationTotal,
     grandTotalInclVat,
     invoicedTotal,
     outstanding: Math.max(0, grandTotalInclVat - invoicedTotal),
+    feeBreakdown,
   };
+
 }

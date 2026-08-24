@@ -12,6 +12,7 @@ import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
 import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 import { computeAutomaticFees } from "@/lib/customerFeeTotals";
+import type { FeeStructureSet } from "@/types/pricing";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -29,6 +30,14 @@ interface PriceSummaryCardProps {
   accommodationExtrasOverride?: any[];
   /** Per-project uitgesloten automatische kostenposten (program_requests.excluded_fees). */
   excludedFees?: string[] | null;
+  /** Feestructuur van dit project (snapshot). Aanwezig → organisatiefee 2.0. */
+  feeStructure?: FeeStructureSet | null;
+  /** Datum van de aanvraag — bepaalt of de spoedtoeslag gold. */
+  requestDate?: string | null;
+  /** Eerste programmadag. */
+  arrivalDate?: string | null;
+  /** Gefactureerde wijzigingsrondes na klantakkoord. */
+  revisionFeesTotal?: number;
 }
 
 const calcVatBreakdown = (amountInclVat: number, vatRate: number = 21) => ({
@@ -49,6 +58,10 @@ export const PriceSummaryCard = ({
   blockVatRates: blockVatRatesProp,
   accommodationExtrasOverride,
   excludedFees,
+  feeStructure,
+  requestDate,
+  arrivalDate,
+  revisionFeesTotal = 0,
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
   const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
@@ -164,6 +177,13 @@ export const PriceSummaryCard = ({
     const pendingLines = orderLines.filter(l => l.effectivePrice === null);
 
     // Automatische posten — respecteert per-project uitsluitingen (excluded_fees).
+    // Grondslag voor de opslag centrale facturatie: alle doorbelaste
+    // partnerkosten incl. logies en logies-extra's.
+    const partnerCostsTotal =
+      pricedLines.reduce((s, l) => s + (l.effectivePrice ?? 0), 0) +
+      (selectedAccommodationQuote?.price_total || 0) +
+      accommodationExtras.reduce((s, e) => s + calculateExtraTotal(e), 0);
+
     const fees = computeAutomaticFees({
       numberOfPeople,
       numberOfDays,
@@ -175,6 +195,11 @@ export const PriceSummaryCard = ({
         bureau_central_surcharge_pp: appSettings.bureau_central_surcharge_pp,
       },
       excludedFees,
+      feeStructure,
+      partnerCostsTotal,
+      requestDate,
+      arrivalDate,
+      revisionFeesTotal,
     });
     const { touristTax, natureContribution, coordinationFee, centralSurcharge } = fees;
     const standardVatRate = getVatRate("standard");
@@ -258,7 +283,7 @@ export const PriceSummaryCard = ({
       grandTotalInclVat,
       hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral, excludedFees]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral, excludedFees, feeStructure, requestDate, arrivalDate, revisionFeesTotal]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {

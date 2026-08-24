@@ -26,6 +26,7 @@ import { formatFeeTierRange } from "@/lib/appSettings";
 import { TodoThresholdsEditor } from "@/components/admin/TodoThresholdsEditor";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { PricingStructurePanel } from "@/components/admin/PricingStructurePanel";
 
 export default function AdminSettings() {
   const { rawSettings, isLoading, updateSetting, feeTiers } = useAppSettings();
@@ -255,6 +256,8 @@ export default function AdminSettings() {
             Beheer applicatie-brede business rules en instellingen
           </p>
         </div>
+
+        <PricingStructurePanel />
 
         <div className="grid gap-6">
           {Object.entries(SETTING_CATEGORIES).map(([categoryKey, categoryLabel]) => {

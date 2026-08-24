@@ -1,5 +1,6 @@
 import { calculateAdminInvoicingTotals, type AdminInvoicingBillingLineLike } from "@/lib/adminInvoicingTotals";
 import type { AppSettingsMap } from "@/types/appSettings";
+import type { FeeStructureSet } from "@/types/pricing";
 import type { AccommodationQuoteExtra } from "@/types/accommodationExtras";
 
 interface InvoiceTotalsItemLike {
@@ -37,6 +38,10 @@ interface InvoiceTotalsArgs {
   selectedAccommodationTotal?: number | null;
   accommodationExtras?: AccommodationQuoteExtra[];
   linesByItem?: Record<string, AdminInvoicingBillingLineLike[]>;
+  /** Feestructuur van het project (snapshot) — aanwezig → organisatiefee 2.0. */
+  feeStructure?: FeeStructureSet | null;
+  requestDate?: string | null;
+  revisionFeesTotal?: number;
 }
 
 export function calculateUnifiedInvoiceTotals({
@@ -47,6 +52,9 @@ export function calculateUnifiedInvoiceTotals({
   selectedAccommodationTotal = 0,
   accommodationExtras = [],
   linesByItem = {},
+  feeStructure,
+  requestDate,
+  revisionFeesTotal = 0,
 }: InvoiceTotalsArgs) {
   const accommodationExtrasTotal = accommodationExtras.reduce((sum, extra) => {
     const quantity = extra.pricing_type === "fixed" ? 1 : Number(extra.quantity || 0);
@@ -68,6 +76,9 @@ export function calculateUnifiedInvoiceTotals({
       touristTaxPerPersonPerDay: Number(appSettings.tourist_tax_pp_per_day || 0),
       natureContributionPerPerson: Number(appSettings.nature_contribution_pp || 0),
       bureauCentralSurchargePerPerson: Number(appSettings.bureau_central_surcharge_pp || 0),
+      feeStructure,
+      requestDate,
+      revisionFeesTotal,
     },
     linesByItem,
   );

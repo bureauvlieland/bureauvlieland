@@ -40,6 +40,8 @@ import {
   type BureauInvoiceForForward,
 } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
+import { usePricingStructures, useRevisionCharges } from "@/hooks/usePricing";
+import { resolveFeeStructure } from "@/lib/feeEngine";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
@@ -185,8 +187,12 @@ const AdminInvoicePreview = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pdfRef = useRef<HTMLDivElement>(null);
   const { getSetting, settings, isLoading: isAppSettingsLoading } = useAppSettings();
+  const { activeStructure } = usePricingStructures();
+
 
   const [request, setRequest] = useState<ProgramRequest | null>(null);
+  const { billableTotal: revisionBillableTotal } = useRevisionCharges(request?.id);
+
   const [items, setItems] = useState<ProgramItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -499,6 +505,9 @@ const AdminInvoicePreview = () => {
           selectedAccommodationTotal: accommodationQuote?.price_total ?? 0,
           accommodationExtras: accommodationExtras as any,
           linesByItem,
+          feeStructure: resolveFeeStructure((request as any).fee_snapshot, activeStructure),
+          requestDate: (request as any).created_at ?? null,
+          revisionFeesTotal: revisionBillableTotal,
         })
       : {
           coordinationFee: 0,
