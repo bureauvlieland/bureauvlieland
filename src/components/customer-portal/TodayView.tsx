@@ -18,6 +18,7 @@ import {
 import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramRequestItem } from "@/types/programRequest";
+import { formatTimeHHmm } from "@/lib/timeUtils";
 
 interface TodayViewProps {
   selectedDates: Date[];
