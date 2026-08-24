@@ -2433,9 +2433,12 @@ const AdminRequestDetail = () => {
                                           // Pending-change flow: schrijf naar pending_preferred_time,
                                           // niet direct naar live kolommen. Wordt pas gepubliceerd
                                           // (en gecommuniceerd) na klik op "Publiceer & notificeer".
-                                          // Als de nieuwe waarde gelijk is aan de live waarde → clear pending.
-                                          const live = item.preferred_time;
-                                          const clearPending = time === live || (time === null && !live);
+                                          // Vergelijken met de ACTIEF getoonde tijd (confirmed/voorstel/
+                                          // preferred): zo blijft een admin-correctie die teruggaat naar
+                                          // de oorspronkelijke wenstijd bewaard en overruled hij het
+                                          // openstaande voorstel.
+                                          const clearPending = time === activeTime || (time === null && !activeTime);
+
                                           const updatePayload: Record<string, unknown> = clearPending
                                             ? {
                                                 pending_preferred_time: null,

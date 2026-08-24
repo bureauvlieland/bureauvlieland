@@ -623,7 +623,15 @@ Deno.serve(async (req) => {
       if (it.pending_preferred_time !== null && it.pending_preferred_time !== undefined) {
         upd.preferred_time = it.pending_preferred_time;
         upd.confirmed_time = it.pending_preferred_time;
+        // Admin-tijd is leidend: een openstaand tijdvoorstel (partner of klant)
+        // wordt hiermee overruled en verdwijnt uit de weergave.
+        upd.proposed_time = null;
+        upd.customer_counter_time = null;
+        if (it.status === "counter_proposed") {
+          upd.status = "confirmed";
+        }
       }
+
       if (it.pending_day_index !== null && it.pending_day_index !== undefined) {
         upd.day_index = it.pending_day_index;
       }
