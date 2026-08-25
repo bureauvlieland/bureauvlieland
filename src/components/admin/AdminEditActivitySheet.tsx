@@ -246,23 +246,30 @@ export const AdminEditActivitySheet = ({
       return;
     }
     const rawPrice = priceOverride.trim();
-    if (rawPrice === "") {
+    const priceProvided = rawPrice !== "";
+    // Prijs is alleen verplicht bij een nog niet gepubliceerd (concept) onderdeel.
+    // Bij bestaande onderdelen kan de prijs elders vastliggen (partnerofferte /
+    // bouwsteenprijs); dan mag je bv. alleen de locatie aanpassen.
+    if (!priceProvided && item.pending_added === true) {
       toast.error("Prijs is verplicht — vul een bedrag in groter dan €0");
       return;
     }
-    const price = parseFloat(rawPrice);
-    if (!isFinite(price)) {
-      toast.error("Prijs is geen geldig getal");
-      return;
+    const price = priceProvided ? parseFloat(rawPrice) : null;
+    if (priceProvided) {
+      if (!isFinite(price as number)) {
+        toast.error("Prijs is geen geldig getal");
+        return;
+      }
+      if ((price as number) < 0) {
+        toast.error("Prijs mag niet negatief zijn");
+        return;
+      }
+      if (price === 0) {
+        toast.error("Prijs moet groter zijn dan €0");
+        return;
+      }
     }
-    if (price < 0) {
-      toast.error("Prijs mag niet negatief zijn");
-      return;
-    }
-    if (price === 0) {
-      toast.error("Prijs moet groter zijn dan €0");
-      return;
-    }
+
     if (!["per_person", "per_person_per_day", "total"].includes(priceType)) {
       toast.error("Ongeldig prijstype geselecteerd");
       return;
