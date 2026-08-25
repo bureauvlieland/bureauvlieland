@@ -317,7 +317,7 @@ export const AdminEditActivitySheet = ({
                 // ziet dit item nog niet, dus er is geen wijziging te melden.
               }
             : {}),
-          admin_price_override: price,
+          ...(priceProvided ? { admin_price_override: price } : {}),
           price_type: priceType,
           customer_notes: notes || null,
           partner_instructions: partnerInstructions || null,
