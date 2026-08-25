@@ -337,6 +337,12 @@ export const PriceSummaryCard = ({
               <span>€{formatPrice(summary.coordinationFee)}</span>
             </div>
           )}
+          {summary.revisionFees > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Programmawijzigingen</span>
+              <span>€{formatPrice(summary.revisionFees)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-1.5 border-t">
             <span className="font-medium">Totaal incl. BTW</span>
             <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
