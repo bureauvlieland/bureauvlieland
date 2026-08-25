@@ -1,6 +1,6 @@
 # Antwoord aan Mirjam (BV-2605-0001) + administratieve correctie
 
-## Wat er echt gebeurd is (reconstruieerd uit database, PDF's en bankmutaties)
+## Wat er echt gebeurd is (bevestigd via database, PDF's, bankmutaties én jouw toelichting)
 
 De klant heeft **5 factuurdocumenten** ontvangen voor één project — vandaar de verwarring:
 
@@ -9,13 +9,13 @@ De klant heeft **5 factuurdocumenten** ontvangen voor één project — vandaar 
 | 11 jun | Factuur 001 | € 1.524,75 | Hele programma incl. koffie & gebak, excl. plateservice |
 | 19 jun | Factuur 002 (eerste versie) | € 407,40 | Restant: plateservice Doeksen + resterende fees |
 | **25 jun** | **Betaling klant** | **€ 1.932,15** | Betaald: "001/002" → **project volledig voldaan** |
-| 24 jul | Factuur 002 (tweede versie) | € 1.932,15 | FOUT: bevatte per abuis het volledige projecttotaal opnieuw |
+| 24 jul | Factuur 002 (tweede versie) | € 1.932,15 | FOUT: volledige projecttotaal opnieuw — ontstaan toen we de deelfactuur-versturing aan het inrichten/testen waren; had € 407,40 moeten zijn |
 | 26 jul | Creditnota C002 | −€ 1.932,15 | Crediteert de foute 002 |
-| 26 jul | Factuur 003 | € 407,40 | "Restant na 001" — maar dat restant was op 25 jun al betaald via de eerste 002 |
+| 26 jul | Factuur 003 | € 407,40 | Het juiste restant — maar dat was op 25 jun al betaald via de eerste 002 |
 
-**Kern:** koffie & gebak staat maar één keer op een factuur (001). Plateservice is maar één keer gefactureerd (via het restant van € 407,40). De betaling van 25 juni (€ 1.932,15) dekt het volledige projecttotaal. De dubbele 002 en daarna 003 waren een administratieve vergissing — er staat **niets meer open**, ook de plateservice niet (tegenstrijdig met wat Mirjam vermoedt).
+**Kern:** koffie & gebak staat maar één keer op een factuur (001). De plateservice is maar één keer gefactureerd (via het restant van € 407,40). De betaling van 25 juni (€ 1.932,15) dekt het volledige projecttotaal — **alles is dus al betaald, ook de plateservice** (anders dan Mirjam vermoedt). De dubbele 002 en daarna 003 waren een administratieve vergissing aan onze kant.
 
-Rekenkundig klopt dit exact: € 1.524,75 + € 407,40 = € 1.932,15 = betaald bedrag = projecttotaal.
+Rekenkundig exact: € 1.524,75 + € 407,40 = € 1.932,15 = betaald bedrag = projecttotaal.
 
 ## Wat we doen
 
@@ -27,28 +27,28 @@ Verstuurd als reply op haar mailthread van 17 aug via het bestaande projectmail-
 >
 > Geachte mevrouw Oostenveld,
 >
-> Dank voor uw bericht — en u heeft gelijk: het is verwarrend geweest. Graag leg ik uit hoe het zit. Het goede nieuws: er is niets dubbel gefactureerd en er staat niets meer open.
+> Dank voor uw oplettendheid — en u heeft gelijk dat het er verwarrend uitziet. Ik heb het volledig uitgezocht en kan u geruststellen: er is niets dubbel gefactureerd, en er staat niets meer open. Uw betaling van 25 juni (€ 1.932,15) dekt het volledige projecttotaal, inclusief de plateservice.
 >
-> Dit heeft u van ons ontvangen:
-> - 11 juni — factuur 001 (€ 1.524,75): het volledige programma, inclusief koffie & gebak aan boord. De plateservice stond hier bewust nog niet op, omdat wij de kosten van Rederij Doeksen toen nog niet definitief hadden.
-> - 19 juni — deelfactuur 002 (€ 407,40): het restant, met de plateservice.
-> - 25 juni — uw betaling van € 1.932,15 voor beide facturen. Hiermee was het project volledig voldaan.
-> - 24 juli — per abuis opnieuw een factuur 002 verstuurd, nu ten onrechte met het volledige projecttotaal. Deze hebben wij volledig gecrediteerd (creditnota C002) en vervangen door factuur 003 (€ 407,40).
+> Zo zit het in elkaar:
+> - 11 juni — factuur 001 (€ 1.524,75): het programma, inclusief koffie & gebak aan boord. De plateservice stond hier nog niet op, omdat wij de kosten van Rederij Doeksen toen nog niet definitief hadden.
+> - 19 juni — deelfactuur 002 (€ 407,40): het restant, met daarin de plateservice.
+> - 25 juni — uw betaling van € 1.932,15 voor beide facturen. Hiermee was alles voldaan.
+> - 24 juli — door een fout bij het inrichten van onze deelfacturatie is opnieuw een factuur 002 verstuurd, nu ten onrechte met het volledige projecttotaal. Deze hebben wij volledig gecrediteerd (creditnota C002) en vervangen door factuur 003 (€ 407,40).
 >
-> Factuur 003 betreft echter hetzelfde restant dat u al op 25 juni heeft betaald. U hoeft dus niets meer te voldoen: wij boeken uw betaling van 25 juni af op factuur 001 en 003, en factuur 003 komt hiermee te vervallen.
+> Factuur 003 betrof echter hetzelfde restant dat u al op 25 juni had betaald. Die factuur komt daarom te vervallen; u hoeft niets meer te voldoen.
 >
-> Samengevat: koffie & gebak is eenmalig gefactureerd op factuur 001, de plateservice eenmalig via het restant van € 407,40, en uw betaling van 25 juni dekt het volledige projecttotaal. Onze excuses voor de verwarring die de correctieronde van eind juli heeft veroorzaakt.
+> Samengevat: koffie & gebak is eenmalig gefactureerd op factuur 001, de plateservice eenmalig via het restant van € 407,40, en uw betaling van 25 juni dekt het totaal. Onze excuses voor de verwarring die de correctieronde van eind juli heeft veroorzaakt — en dank dat u het meldde.
 >
 > Met vriendelijke groet, Erwin Soolsma — Bureau Vlieland
 
 ### 2. Administratieve correctie in de admin
 
-- Bankbetaling van 25 juni (€ 1.932,15, "Timmerfabriek de Houtmolen") koppelen aan factuur 001 én 003.
-- Factuur 001 en 003 op status **betaald** zetten, zodat er geen betaalherinneringen meer uitgaan en het financiële dashboard klopt.
-- Geen nieuwe creditnota nodig: de betaling dekt 001 + 003 precies.
+- Banktransactie van 25 juni (€ 1.932,15, "Timmerfabriek de Houtmolen Makkum B.V.", omschrijving "5-0001-001/5-0001-002") markeren als bevestigd gematcht, met notitie dat deze factuur 001 + 003 dekt.
+- Factuur 001 en 003 op status **betaald** zetten (met koppeling aan de bankregel), zodat er geen betaalherinneringen meer uitgaan en het financiële dashboard klopt.
+- 002 en C002 heffen elkaar al op; die blijven ongemoeid.
+- Geen nieuwe creditnota nodig.
 
 ## Technisch
 
-- Verzenden via bestaande edge function voor projectmail (reply op de thread, formele 'u', logt in `email_log` + `project_communications`).
-- Betalingskoppeling via de bestaande match-logica op `bank_statement_lines` / `bureau_invoices` (status `paid`, `paid_at`).
-- Geen code- of schemawijzigingen.
+- Verzenden via de bestaande projectmail edge function (reply op de thread, formele 'u', logt in `email_log` + `project_communications`).
+- Correcties via data-updates op `bureau_invoices` (status betaald + bankregel-koppeling) en `bank_statement_lines` (status bevestigd + notitie). Geen code- of schemawijzigingen.
