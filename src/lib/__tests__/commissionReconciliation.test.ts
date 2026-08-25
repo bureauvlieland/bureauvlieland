@@ -398,3 +398,37 @@ describe("regressie: partnerregels met default commissiestatus blijven zichtbaar
     expect(row.defaultBasis).toBe("sales");
   });
 });
+
+describe("verzamelfactuur-allocaties", () => {
+  const allocInvoice = invoice({
+    id: "inv-collectief",
+    invoice_number: "20260013",
+    amount_excl_vat: 1102.96,
+    amount_incl_vat: 1230,
+    item_id: null,
+    allocated_item_ids: ["trip-a", "trip-b"],
+    allocation_amounts: { "trip-a": 440.37, "trip-b": 431.19 },
+  });
+  const allocItems = [
+    item({ id: "trip-a", quoted_price: 480, vat_rate: 9 }),
+    item({ id: "trip-b", quoted_price: 470, vat_rate: 9 }),
+  ];
+  const rows = buildReconciliationRows({ items: allocItems, invoices: [allocInvoice], projects, partners });
+
+  it("verdeelt de verzamelfactuur over de gealloceerde onderdelen (geen dubbeltelling)", () => {
+    expect(rows.find((r) => r.itemId === "trip-a")!.purchaseExclVat).toBeCloseTo(440.37, 6);
+    expect(rows.find((r) => r.itemId === "trip-b")!.purchaseExclVat).toBeCloseTo(431.19, 6);
+    expect(rows.find((r) => r.itemId === "trip-a")!.status).toBe("match");
+    expect(rows.find((r) => r.itemId === "trip-b")!.status).toBe("match");
+  });
+
+  it("telt zonder allocaties het volledige factuurbedrag per gekoppeld onderdeel", () => {
+    const plain = buildReconciliationRows({
+      items: [item({ id: "x1" })],
+      invoices: [invoice({ id: "inv-plain", item_id: "x1", allocated_item_ids: [], allocation_amounts: null })],
+      projects,
+      partners,
+    });
+    expect(plain.find((r) => r.itemId === "x1")!.purchaseExclVat).toBeCloseTo(1000, 6);
+  });
+});
