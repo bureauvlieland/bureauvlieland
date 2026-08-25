@@ -67,6 +67,7 @@ interface ProgramRequestItem {
   admin_price_notes: string | null;
   partner_instructions?: string | null;
   pending_partner_instructions?: string | null;
+  pending_admin_price_override?: number | null;
   pending_block_name?: string | null;
   pending_admin_price_notes?: string | null;
   pending_customer_notes?: string | null;
@@ -106,7 +107,12 @@ export const AdminEditActivitySheet = ({
   const [customDescription, setCustomDescription] = useState(item?.admin_price_notes ?? "");
   const [selectedDayIndex, setSelectedDayIndex] = useState(item?.day_index ?? 0);
   const [preferredTime, setPreferredTime] = useState(item?.preferred_time ?? "flexibel");
-  const [priceOverride, setPriceOverride] = useState(item?.admin_price_override?.toString() ?? "");
+  // Seed van de effectieve prijs (pending gaat vóór op live), anders wordt een
+  // klaargezette prijswijziging stilletjes leeggemaakt zodra je bv. alleen de
+  // locatie aanpast en opslaat.
+  const [priceOverride, setPriceOverride] = useState(
+    (item?.pending_admin_price_override ?? item?.admin_price_override)?.toString() ?? ""
+  );
   const [priceType, setPriceType] = useState<"per_person" | "per_person_per_day" | "total">(
     (item?.price_type === "per_person_per_day" || item?.price_type === "total")
       ? item.price_type
@@ -513,7 +519,7 @@ export const AdminEditActivitySheet = ({
   const otherDirty = (() => {
     if (!item) return false;
     const liveTime = item.preferred_time || "flexibel";
-    const livePrice = item.admin_price_override?.toString() ?? "";
+    const livePrice = (item.pending_admin_price_override ?? item.admin_price_override)?.toString() ?? "";
     const livePT = (item.price_type === "per_person_per_day" || item.price_type === "total")
       ? item.price_type
       : "per_person";
