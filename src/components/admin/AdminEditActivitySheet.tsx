@@ -363,7 +363,10 @@ export const AdminEditActivitySheet = ({
           pending_admin_price_notes: diff(item.admin_price_notes ?? null, customDescription || null),
           pending_day_index: diff(item.day_index, selectedDayIndex),
           pending_preferred_time: diff(item.preferred_time ?? null, time),
-          pending_admin_price_override: diff(item.admin_price_override ?? null, price),
+          pending_admin_price_override: priceProvided
+            ? diff(item.admin_price_override ?? null, price)
+            : null,
+
           pending_price_type: diff(item.price_type ?? "per_person", priceType),
           pending_customer_notes: diff(item.customer_notes ?? null, notes || null),
           pending_partner_instructions: diff(item.partner_instructions ?? null, partnerInstructions || null),
