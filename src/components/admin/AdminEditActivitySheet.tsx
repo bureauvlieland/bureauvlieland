@@ -688,6 +688,14 @@ export const AdminEditActivitySheet = ({
             <Label htmlFor="editPrice">
               Prijs voor klant (€){item?.pending_added === true ? "" : " — optioneel"}
             </Label>
+            {item?.pending_added !== true && (
+              <p className="text-xs text-muted-foreground">
+                Laat leeg om de bestaande prijs (partnerofferte of bouwsteenprijs) te behouden — handig als je alleen
+                de locatie of tijd aanpast.
+              </p>
+            )}
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+
 
               <Input
                 id="editPrice"
