@@ -435,7 +435,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       customerName: project?.customer_name ?? null,
 
       itemId: item.id,
-      invoiceId: activeInvoices[0]?.id ?? null,
+      invoiceId: activeInvoices[0]?.inv.id ?? null,
       itemType: item.item_type ?? "activity",
       label: item.block_name ?? "Onbekend onderdeel",
       salesExclVat: salesExcl,
@@ -452,8 +452,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       exemptReason: item.commission_exempt_reason ?? null,
       exemptAt: item.commission_exempt_at ?? null,
       readiness,
-      invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
-      invoiceDate: activeInvoices[0]?.invoice_date ?? null,
+      invoiceNumber: activeInvoices[0]?.inv.invoice_number ?? item.invoiced_number,
+      invoiceDate: activeInvoices[0]?.inv.invoice_date ?? null,
 
       executionDate,
       commissionStatus: item.commission_status,
