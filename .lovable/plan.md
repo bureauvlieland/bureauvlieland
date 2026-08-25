@@ -2,18 +2,20 @@
 
 ## Wat er echt gebeurd is (bevestigd via database, PDF's, bankmutaties én jouw toelichting)
 
-De klant heeft **5 factuurdocumenten** ontvangen voor één project — vandaar de verwarring:
+De klant heeft **5 factuurdocumenten** ontvangen voor één project — vandaar de verwarring. Let op: in de Financiën-tab staat achter het factuurnummer de **factuurdatum** (opmaakdatum); het badge "Naar klant …" is de echte **verzenddatum** van de e-mail:
 
-| Datum | Document | Bedrag | Inhoud |
-|---|---|---|---|
-| 11 jun | Factuur 001 | € 1.524,75 | Hele programma incl. koffie & gebak, excl. plateservice |
-| 19 jun | Factuur 002 (eerste versie) | € 407,40 | Restant: plateservice Doeksen + resterende fees |
-| **25 jun** | **Betaling klant** | **€ 1.932,15** | Betaald: "001/002" → **project volledig voldaan** |
-| 24 jul | Factuur 002 (tweede versie) | € 1.932,15 | FOUT: volledige projecttotaal opnieuw — ontstaan toen we de deelfactuur-versturing aan het inrichten/testen waren; had € 407,40 moeten zijn |
-| 26 jul | Creditnota C002 | −€ 1.932,15 | Crediteert de foute 002 |
-| 26 jul | Factuur 003 | € 407,40 | Het juiste restant — maar dat was op 25 jun al betaald via de eerste 002 |
+| Factuurdatum | Verstuurd | Document | Bedrag | Inhoud |
+|---|---|---|---|---|
+| 11 jun | 11 jun | Factuur 001 | € 1.524,75 | Hele programma incl. koffie & gebak, excl. plateservice |
+| 19 jun | 19 jun | Factuur 002 (eerste versie) | € 407,40 | Restant: plateservice Doeksen + resterende fees |
+| — | **25 jun** | **Betaling klant** | **€ 1.932,15** | Betaald: "001/002" → **project volledig voldaan** |
+| 24 jul | 24 jul | Factuur 002 (tweede versie) | € 1.932,15 | FOUT: volledige projecttotaal opnieuw — ontstaan tijdens het inrichten/testen van de deelfactuur-versturing; had € 407,40 moeten zijn |
+| 24 jul | 26 jul | Creditnota C002 | −€ 1.932,15 | Crediteert de foute 002 |
+| 24 jul | 26 jul | Factuur 003 | € 407,40 | Het juiste restant — maar dat was op 25 jun al betaald via de eerste 002 |
 
-**Kern:** koffie & gebak staat maar één keer op een factuur (001). De plateservice is maar één keer gefactureerd (via het restant van € 407,40). De betaling van 25 juni (€ 1.932,15) dekt het volledige projecttotaal — **alles is dus al betaald, ook de plateservice** (anders dan Mirjam vermoedt). De dubbele 002 en daarna 003 waren een administratieve vergissing aan onze kant.
+De eerste 002 (19 jun) staat niet meer in de Financiën-tab — die is toen verwijderd en op 24 jul. opnieuw aangemaakt. Zijn sporen leven voort in de maillog en in de bankomschrijving van de betaling.
+
+**Kern:** koffie & gebak staat maar één keer op een factuur (001). De plateservice is maar één keer gefactureerd (via het restant van € 407,40). De betaling van 25 juni (€ 1.932,15) dekt het volledige projecttotaal — **alles is dus al betaald, ook de plateservice** (anders dan Mirjam vermoedt).
 
 Rekenkundig exact: € 1.524,75 + € 407,40 = € 1.932,15 = betaald bedrag = projecttotaal.
 
