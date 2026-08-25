@@ -84,6 +84,13 @@ export interface ReconInvoiceInput {
   commission_invoiced_at?: string | null;
   /** item_ids uit partner_purchase_invoice_allocations. */
   allocated_item_ids?: string[];
+  /**
+   * Bedrag ex btw per gealloceerd item (item_id → bedrag). Als deze gezet is en
+   * minstens één allocatie bevat, telt alleen het gealloceerde bedrag mee voor
+   * een item (niet het volledige factuurbedrag) — voorkomt dubbeltelling bij
+   * verzamelfacturen die over meerdere onderdelen zijn verdeeld.
+   */
+  allocation_amounts?: Record<string, number> | null;
 }
 
 export interface ReconProjectInput {
@@ -343,10 +350,20 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
   }
 
   // Index: facturen per item (via item_id, allocaties of factuurnummer).
-  const invoicesByItem = new Map<string, ReconInvoiceInput[]>();
+  // Per koppeling bewaren we het bedrag dat voor díT item meetelt: bij
+  // verzamelfacturen met allocaties is dat het gealloceerde deelbedrag.
+  const invoicesByItem = new Map<string, { inv: ReconInvoiceInput; amount: number | null }[]>();
+  const amountForItem = (itemId: string, inv: ReconInvoiceInput): number | null => {
+    const allocs = inv.allocation_amounts;
+    if (allocs && Object.keys(allocs).length > 0) {
+      const allocAmount = allocs[itemId];
+      return allocAmount === undefined ? 0 : toNumber(allocAmount);
+    }
+    return toNumber(inv.amount_excl_vat);
+  };
   const pushInvoice = (itemId: string, inv: ReconInvoiceInput) => {
     const arr = invoicesByItem.get(itemId) ?? [];
-    if (!arr.some((i) => i.id === inv.id)) arr.push(inv);
+    if (!arr.some((e) => e.inv.id === inv.id)) arr.push({ inv, amount: amountForItem(itemId, inv) });
     invoicesByItem.set(itemId, arr);
   };
 
@@ -376,10 +393,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const salesExcl = quoted === null ? null : exclVatFromIncl(quoted, toNumber(item.vat_rate));
     const commissionPct = toNumber(item.commission_percentage) ?? toNumber(partner?.commission_percentage) ?? 10;
 
-    const invoices = invoicesByItem.get(item.id) ?? [];
-    const activeInvoices = invoices.filter((i) => i.commission_exempt !== true);
+    const activeInvoices = (invoicesByItem.get(item.id) ?? []).filter((e) => e.inv.commission_exempt !== true);
     const purchaseExcl = activeInvoices.length > 0
-      ? activeInvoices.reduce((sum, i) => sum + (toNumber(i.amount_excl_vat) ?? 0), 0)
+      ? activeInvoices.reduce((sum, e) => sum + (e.amount ?? 0), 0)
       : (toNumber(item.invoiced_amount) !== null && item.invoiced_number ? toNumber(item.invoiced_amount) : null);
 
     const executionDate = item.execution_date ?? firstSelectedDate(project?.selected_dates);
@@ -419,7 +435,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       customerName: project?.customer_name ?? null,
 
       itemId: item.id,
-      invoiceId: activeInvoices[0]?.id ?? null,
+      invoiceId: activeInvoices[0]?.inv.id ?? null,
       itemType: item.item_type ?? "activity",
       label: item.block_name ?? "Onbekend onderdeel",
       salesExclVat: salesExcl,
@@ -436,8 +452,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       exemptReason: item.commission_exempt_reason ?? null,
       exemptAt: item.commission_exempt_at ?? null,
       readiness,
-      invoiceNumber: activeInvoices[0]?.invoice_number ?? item.invoiced_number,
-      invoiceDate: activeInvoices[0]?.invoice_date ?? null,
+      invoiceNumber: activeInvoices[0]?.inv.invoice_number ?? item.invoiced_number,
+      invoiceDate: activeInvoices[0]?.inv.invoice_date ?? null,
 
       executionDate,
       commissionStatus: item.commission_status,

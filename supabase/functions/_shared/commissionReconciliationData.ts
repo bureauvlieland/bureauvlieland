@@ -89,7 +89,7 @@ export async function loadReconciliationInputs(
   let itemsQuery = client
     .from("program_request_items")
     .select(
-      "id, request_id, provider_id, block_name, quoted_price, vat_rate, commission_percentage, " +
+      "id, request_id, provider_id, block_id, block_name, quoted_price, vat_rate, commission_percentage, " +
         "commission_status, commission_basis, invoiced_number, invoiced_amount, " +
         "status, block_type, proposed_date, commission_exempt, commission_exempt_reason, " +
         "commission_exempt_at",
@@ -144,10 +144,11 @@ export async function loadReconciliationInputs(
   // ── Allocaties ───────────────────────────────────────────────────────────
   const invoiceIds = rawInvoices.map((i) => i.id);
   const allocMap = new Map<string, string[]>();
+  const allocAmountMap = new Map<string, Record<string, number>>();
   if (invoiceIds.length) {
     const { data: allocations, error: allocError } = await client
       .from("partner_purchase_invoice_allocations")
-      .select("invoice_id, item_id")
+      .select("invoice_id, item_id, amount_excl_vat")
       .in("invoice_id", invoiceIds);
     if (allocError) {
       throw new Error(
@@ -158,6 +159,33 @@ export async function loadReconciliationInputs(
       const arr = allocMap.get(a.invoice_id) ?? [];
       if (a.item_id) arr.push(a.item_id);
       allocMap.set(a.invoice_id, arr);
+      if (a.item_id) {
+        const rec = allocAmountMap.get(a.invoice_id) ?? {};
+        rec[a.item_id] = (rec[a.item_id] ?? 0) + (Number(a.amount_excl_vat) || 0);
+        allocAmountMap.set(a.invoice_id, rec);
+      }
+    }
+  }
+
+  // ── Btw-fallback vanuit de bouwsteen ─────────────────────────────────────
+  // Items zonder eigen vat_rate erven het tarief van de gekoppelde bouwsteen,
+  // zodat ex-btw-verkoop niet onterecht tegen 21% wordt teruggerekend.
+  const blockIds = [
+    ...new Set(
+      rawItems.filter((i) => i.vat_rate == null && i.block_id).map((i) => i.block_id as string),
+    ),
+  ];
+  const blockVatMap = new Map<string, number>();
+  if (blockIds.length) {
+    const { data: blocks, error: blocksError } = await client
+      .from("building_blocks")
+      .select("id, vat_rate")
+      .in("id", blockIds);
+    if (blocksError) {
+      throw new Error(`building_blocks lookup failed: ${blocksError.message}`);
+    }
+    for (const b of blocks ?? []) {
+      if (b.vat_rate != null) blockVatMap.set(b.id, Number(b.vat_rate));
     }
   }
 
@@ -229,7 +257,7 @@ export async function loadReconciliationInputs(
       provider_id: i.provider_id,
       block_name: i.block_name,
       quoted_price: i.quoted_price,
-      vat_rate: i.vat_rate,
+      vat_rate: i.vat_rate ?? blockVatMap.get(i.block_id) ?? null,
       commission_percentage: i.commission_percentage,
       commission_status: i.commission_status,
       commission_basis: i.commission_basis,
@@ -303,6 +331,7 @@ export async function loadReconciliationInputs(
       commission_invoiced_at: i.commission_invoiced_at,
       created_at: i.created_at,
       allocated_item_ids: allocMap.get(i.id) ?? [],
+      allocation_amounts: allocAmountMap.get(i.id) ?? null,
     }));
 
   const linkedInvoiceKeys = new Set<string>();
