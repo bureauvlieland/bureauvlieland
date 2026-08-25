@@ -84,6 +84,13 @@ export interface ReconInvoiceInput {
   commission_invoiced_at?: string | null;
   /** item_ids uit partner_purchase_invoice_allocations. */
   allocated_item_ids?: string[];
+  /**
+   * Bedrag ex btw per gealloceerd item (item_id → bedrag). Als deze gezet is en
+   * minstens één allocatie bevat, telt alleen het gealloceerde bedrag mee voor
+   * een item (niet het volledige factuurbedrag) — voorkomt dubbeltelling bij
+   * verzamelfacturen die over meerdere onderdelen zijn verdeeld.
+   */
+  allocation_amounts?: Record<string, number> | null;
 }
 
 export interface ReconProjectInput {
@@ -343,10 +350,20 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
   }
 
   // Index: facturen per item (via item_id, allocaties of factuurnummer).
-  const invoicesByItem = new Map<string, ReconInvoiceInput[]>();
+  // Per koppeling bewaren we het bedrag dat voor díT item meetelt: bij
+  // verzamelfacturen met allocaties is dat het gealloceerde deelbedrag.
+  const invoicesByItem = new Map<string, { inv: ReconInvoiceInput; amount: number | null }[]>();
+  const amountForItem = (itemId: string, inv: ReconInvoiceInput): number | null => {
+    const allocs = inv.allocation_amounts;
+    if (allocs && Object.keys(allocs).length > 0) {
+      const allocAmount = allocs[itemId];
+      return allocAmount === undefined ? 0 : toNumber(allocAmount);
+    }
+    return toNumber(inv.amount_excl_vat);
+  };
   const pushInvoice = (itemId: string, inv: ReconInvoiceInput) => {
     const arr = invoicesByItem.get(itemId) ?? [];
-    if (!arr.some((i) => i.id === inv.id)) arr.push(inv);
+    if (!arr.some((e) => e.inv.id === inv.id)) arr.push({ inv, amount: amountForItem(itemId, inv) });
     invoicesByItem.set(itemId, arr);
   };
 
