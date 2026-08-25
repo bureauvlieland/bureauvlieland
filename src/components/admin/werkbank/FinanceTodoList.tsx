@@ -51,7 +51,7 @@ interface FinanceRow {
   projectStatus: string | null;
 }
 
-async function loadFinanceTodos(): Promise<FinanceRow[]> {
+export async function loadFinanceTodos(): Promise<FinanceRow[]> {
   const { data: todos, error } = await supabase
     .from("admin_todos")
     .select("id, title, priority, due_date, auto_type, related_request_id")
@@ -99,6 +99,7 @@ async function loadFinanceTodos(): Promise<FinanceRow[]> {
   }
   return rows;
 }
+
 
 export function FinanceTodoList({
   selectedProjectId,

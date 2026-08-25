@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw, ArrowLeft, Moon } from "lucide-react";
 import { useReconcileTodos } from "@/hooks/useReconcileTodos";
+import { useFinanceTodoCount } from "@/hooks/useFinanceTodoCount";
 import {
   listProjectsForWerkbank,
   type ProjectSummary,
@@ -221,6 +222,7 @@ export default function AdminWerkbank() {
   }, [projects]);
 
   const [claudiaOpen, setClaudiaOpen] = useState(false);
+  const { data: financeCount = 0 } = useFinanceTodoCount();
   const reconcile = useReconcileTodos();
   const autoRanRef = useRef(false);
 
@@ -260,7 +262,14 @@ export default function AdminWerkbank() {
               <TabsList>
                 <TabsTrigger value="inbox">Inbox</TabsTrigger>
                 <TabsTrigger value="projecten">Projecten</TabsTrigger>
-                <TabsTrigger value="financieel">Financieel / afgerond</TabsTrigger>
+                <TabsTrigger value="financieel" className="gap-1.5">
+                  Financieel / afgerond
+                  {financeCount > 0 && (
+                    <Badge className="bg-amber-500 text-white text-[10px] h-4 min-w-4 flex items-center justify-center px-1">
+                      {financeCount > 99 ? "99+" : financeCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
             </Tabs>
             <Button
