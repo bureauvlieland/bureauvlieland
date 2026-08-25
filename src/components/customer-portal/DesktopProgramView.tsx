@@ -153,6 +153,8 @@ interface DesktopProgramViewProps {
   // Pre-resolved server data from get-customer-program edge function
   billingLinesByItem?: Record<string, any[]>;
   blockVatRates?: Record<string, number>;
+  /** Som van billable wijzigingsrondes (uit get-customer-program). */
+  revisionFeesTotal?: number;
   onNavigate?: (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => void;
 }
 
@@ -195,10 +197,22 @@ export const DesktopProgramView = ({
   guestDetails,
   billingLinesByItem,
   blockVatRates,
+  revisionFeesTotal,
   onNavigate,
 }: DesktopProgramViewProps) => {
   const [isAddActivityOpen, setIsAddActivityOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Organisatiefee 2.0: reken met dezelfde (snapshot-)structuur als de admin-factuur,
+  // zodat het klanttotaal nooit afwijkt van de factuur.
+  const feeStructure = useMemo(() => resolveFeeStructure((program as any).fee_snapshot), [program]);
+  const requestDate = (program as any).created_at ?? null;
+  const arrivalDate = useMemo(() => {
+    if (!selectedDates?.length) return null;
+    const first = [...selectedDates].sort((a, b) => a.getTime() - b.getTime())[0];
+    return first ? first.toISOString() : null;
+  }, [selectedDates]);
+
 
   const isPublished = !!program.program_published_at;
   const isQuoteMode = true; // All projects use unified quote pipeline
@@ -629,6 +643,10 @@ export const DesktopProgramView = ({
                 blockVatRates={blockVatRates}
                 accommodationExtrasByQuoteId={accommodationExtrasByQuoteId}
                 excludedFees={program.excluded_fees}
+                feeStructure={feeStructure}
+                requestDate={requestDate}
+                arrivalDate={arrivalDate}
+                revisionFeesTotal={revisionFeesTotal}
               />
             </div>
             {termsAccepted && (
