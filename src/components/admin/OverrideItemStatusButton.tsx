@@ -46,10 +46,25 @@ export const OverrideItemStatusButton = ({
       },
     );
     setSubmitting(false);
+
+    // Bij een non-2xx zit de echte server-melding in de response-body van de
+    // FunctionsHttpError; die is veel bruikbaarder dan de generieke invoke-tekst.
+    let serverMsg: string | undefined;
+    const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } } | null)
+      ?.context;
+    if (ctx?.json) {
+      try {
+        serverMsg = (await ctx.json())?.error;
+      } catch {
+        /* body niet leesbaar — val terug op generieke melding */
+      }
+    }
+
     if (error || (data as any)?.error) {
       toast({
         title: "Kon item niet bevestigen",
-        description: error?.message || (data as any)?.error || "Onbekende fout",
+        description:
+          serverMsg || (data as any)?.error || error?.message || "Onbekende fout",
         variant: "destructive",
       });
       return;

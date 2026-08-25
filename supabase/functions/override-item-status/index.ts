@@ -88,6 +88,11 @@ Deno.serve(async (req) => {
       .update({
         status: new_status,
         item_quote_status: "bevestigd",
+        // Deze kolom is de expliciete bypass voor guard_item_status_consistency
+        // (tegelijkertijd audit-spoor op het item zelf). Partners kunnen hem
+        // niet zetten (guard_partner_request_item_self_update).
+        admin_status_override_reason:
+          (reason && reason.trim()) || "Handmatig bevestigd door admin",
       })
       .eq("id", item_id);
     if (updErr) throw updErr;

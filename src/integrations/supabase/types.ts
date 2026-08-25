@@ -3073,6 +3073,7 @@ export type Database = {
           admin_price_notes: string | null
           admin_price_override: number | null
           admin_price_override_updated_at: string | null
+          admin_status_override_reason: string | null
           auto_closed_reason: string | null
           awaiting_customer_for_partner_send: boolean
           block_category: string
@@ -3190,6 +3191,7 @@ export type Database = {
           admin_price_notes?: string | null
           admin_price_override?: number | null
           admin_price_override_updated_at?: string | null
+          admin_status_override_reason?: string | null
           auto_closed_reason?: string | null
           awaiting_customer_for_partner_send?: boolean
           block_category: string
@@ -3307,6 +3309,7 @@ export type Database = {
           admin_price_notes?: string | null
           admin_price_override?: number | null
           admin_price_override_updated_at?: string | null
+          admin_status_override_reason?: string | null
           auto_closed_reason?: string | null
           awaiting_customer_for_partner_send?: boolean
           block_category?: string

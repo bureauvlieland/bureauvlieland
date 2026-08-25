@@ -312,6 +312,8 @@ export interface ProgramRequestItem {
   // Admin-driven price-change tracking (synced with portalPricing.hasOpenAdminPriceChange)
   admin_price_override_updated_at?: string | null;
   partner_price_change_acknowledged_at?: string | null;
+  /** Reden van handmatige status-override door admin (audit-spoor; bypass voor guard_item_status_consistency) */
+  admin_status_override_reason?: string | null;
   // Location fields
   location_lat?: number | null;
   location_lng?: number | null;
