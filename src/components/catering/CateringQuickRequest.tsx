@@ -135,7 +135,9 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
             },
             items: [],
             indicativeTotal: null,
-            origin: "catering_only",
+            // URL-origin voor test-modus-detectie in de edge function.
+            // Het type "catering_only" zit al in program_requests.origin (regel hierboven).
+            origin: window.location.origin,
           },
         });
         if (mailErr) console.error("send-catering-request invoke error", mailErr);
