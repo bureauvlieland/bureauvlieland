@@ -55,9 +55,11 @@ import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useSalesInboxCount } from "@/hooks/useSalesInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
+import { useWerkbankInboxCount } from "@/hooks/useWerkbankInboxCount";
 import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 import { InboxBell } from "@/components/admin/InboxBell";
 import { useAdminInbox } from "@/hooks/useAdminInbox";
+
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -118,6 +120,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { data: todoCount = 0 } = useOpenTodoCount();
+  const { data: werkbankCount = 0 } = useWerkbankInboxCount();
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
   const { data: salesInboxCount = 0 } = useSalesInboxCount();
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
@@ -126,11 +129,12 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: inboxData } = useAdminInbox();
   const messagesBadge = inboxData?.totalUnread ?? 0;
 
+
   const menuSections: MenuSection[] = [
     {
       label: "Operationeel",
       items: [
-        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: todoCount },
+        { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: werkbankCount },
         { title: "Projecten", url: "/admin/projecten", icon: CalendarDays },
         { title: "Sales Inbox", url: "/admin/sales-inbox", icon: Mail, badge: salesInboxCount },
         { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
