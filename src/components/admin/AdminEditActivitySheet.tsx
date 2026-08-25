@@ -685,8 +685,10 @@ export const AdminEditActivitySheet = ({
 
           {/* Price override */}
           <div className="space-y-2">
-            <Label htmlFor="editPrice">Prijs voor klant (€)</Label>
-            <div className="grid grid-cols-[1fr_auto] gap-2">
+            <Label htmlFor="editPrice">
+              Prijs voor klant (€){item?.pending_added === true ? "" : " — optioneel"}
+            </Label>
+
               <Input
                 id="editPrice"
                 type="number"
