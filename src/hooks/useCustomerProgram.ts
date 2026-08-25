@@ -74,6 +74,8 @@ interface UseCustomerProgramReturn {
   billingLinesByItem: Record<string, any[]>;
   blockVatRates: Record<string, number>;
   extrasByQuoteId: Record<string, any[]>;
+  /** Som van billable wijzigingsrondes — zelfde grondslag als de admin-factuur. */
+  revisionFeesTotal: number;
 }
 
 
@@ -120,6 +122,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
   const [billingLinesByItem, setBillingLinesByItem] = useState<Record<string, any[]>>({});
   const [blockVatRates, setBlockVatRates] = useState<Record<string, number>>({});
   const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, any[]>>({});
+  const [revisionFeesTotal, setRevisionFeesTotal] = useState(0);
   const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -268,6 +271,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       setBillingLinesByItem(payload.billingLinesByItem || {});
       setBlockVatRates(payload.blockVatRates || {});
       setExtrasByQuoteId(payload.extrasByQuoteId || {});
+      setRevisionFeesTotal(Number(payload.revisionFeesTotal) || 0);
     } catch (err) {
       console.error("Error fetching program:", err);
       setError("Er ging iets mis bij het ophalen van uw programma");
@@ -1067,6 +1071,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     billingLinesByItem,
     blockVatRates,
     extrasByQuoteId,
+    revisionFeesTotal,
   };
 
 };

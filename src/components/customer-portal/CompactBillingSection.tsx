@@ -5,6 +5,7 @@ import { BillingDetailsCard } from "./BillingDetailsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
+import type { FeeStructureSet } from "@/types/pricing";
 
 interface CompactBillingSectionProps {
   program: {
@@ -30,6 +31,11 @@ interface CompactBillingSectionProps {
   accommodationExtrasByQuoteId?: Record<string, any[]>;
   /** Per-project uitgesloten automatische kostenposten. */
   excludedFees?: string[] | null;
+  /** Feestructuur van dit project (snapshot) — zelfde als de admin-factuur. */
+  feeStructure?: FeeStructureSet | null;
+  requestDate?: string | null;
+  arrivalDate?: string | null;
+  revisionFeesTotal?: number;
 }
 
 export const CompactBillingSection = ({
@@ -45,6 +51,10 @@ export const CompactBillingSection = ({
   blockVatRates,
   accommodationExtrasByQuoteId,
   excludedFees,
+  feeStructure,
+  requestDate,
+  arrivalDate,
+  revisionFeesTotal,
 }: CompactBillingSectionProps) => {
   const billingComplete = !!(
     program.billing_company_name &&
@@ -94,6 +104,10 @@ export const CompactBillingSection = ({
         blockVatRates={blockVatRates}
         accommodationExtrasOverride={extrasOverride}
         excludedFees={excludedFees}
+        feeStructure={feeStructure}
+        requestDate={requestDate}
+        arrivalDate={arrivalDate}
+        revisionFeesTotal={revisionFeesTotal}
       />
     </div>
   );

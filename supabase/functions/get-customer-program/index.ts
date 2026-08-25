@@ -147,6 +147,16 @@ Deno.serve(async (req) => {
       it.quote_lines = quoteLinesByItem[it.id] || [];
     }
 
+    // 4c) Gefactureerde wijzigingsrondes (alleen billable) — nodig zodat het
+    // klantportaal dezelfde organisatiefee-totalen toont als de admin-factuur.
+    const { data: revisionCharges } = await supabase
+      .from("program_revision_charges")
+      .select("amount, billable")
+      .eq("request_id", program.id);
+    const revisionFeesTotal = (revisionCharges || [])
+      .filter((c: any) => c.billable)
+      .reduce((s: number, c: any) => s + (Number(c.amount) || 0), 0);
+
     // 5) History
     const { data: historyData } = await supabase
       .from("program_request_history")
@@ -259,6 +269,7 @@ Deno.serve(async (req) => {
         billingLinesByItem,
         quoteLinesByItem,
         blockVatRates,
+        revisionFeesTotal,
         linkedAccommodation,
         accommodationQuotes,
         extrasByQuoteId,

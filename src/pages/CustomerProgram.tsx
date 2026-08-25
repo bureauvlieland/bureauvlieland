@@ -80,6 +80,7 @@ const CustomerProgram = () => {
     selectAccommodationQuote,
     billingLinesByItem,
     blockVatRates,
+    revisionFeesTotal,
   } = useCustomerProgram(token || "");
 
 
@@ -441,6 +442,7 @@ const CustomerProgram = () => {
     // Pre-resolved server data (lock-down readiness)
     billingLinesByItem,
     blockVatRates,
+    revisionFeesTotal,
   };
 
   // Decision 2: Single-day programs skip the splash and go directly to program

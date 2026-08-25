@@ -201,7 +201,7 @@ export const PriceSummaryCard = ({
       arrivalDate,
       revisionFeesTotal,
     });
-    const { touristTax, natureContribution, coordinationFee, centralSurcharge } = fees;
+    const { touristTax, natureContribution, coordinationFee, centralSurcharge, revisionFees } = fees;
     const standardVatRate = getVatRate("standard");
 
     // Accommodation
@@ -243,7 +243,7 @@ export const PriceSummaryCard = ({
         addVat(l.effectivePrice, getItemVatRate(l.item));
       }
     });
-    if (coordinationFee + centralSurcharge > 0) addVat(coordinationFee + centralSurcharge, standardVatRate);
+    if (coordinationFee + centralSurcharge + revisionFees > 0) addVat(coordinationFee + centralSurcharge + revisionFees, standardVatRate);
     if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
     // Each extra has its own VAT rate (often 9% for F&B, 21% for services)
     extrasWithTotals.forEach(({ extra, total }) => {
@@ -254,7 +254,7 @@ export const PriceSummaryCard = ({
     const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
     const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
     const itemsTotal = pricedLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
-    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + accommodationTotal + accommodationExtrasTotal + touristTax + natureContribution;
+    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + revisionFees + accommodationTotal + accommodationExtrasTotal + touristTax + natureContribution;
     const hasPreliminaryItems = orderLines.some(l => l.isPreliminary);
 
     return {
@@ -264,6 +264,7 @@ export const PriceSummaryCard = ({
       hasPreliminaryItems,
       coordinationFee,
       centralSurcharge,
+      revisionFees,
       standardVatRate,
       touristTax,
       natureContribution,
@@ -334,6 +335,12 @@ export const PriceSummaryCard = ({
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Coördinatiefee</span>
               <span>€{formatPrice(summary.coordinationFee)}</span>
+            </div>
+          )}
+          {summary.revisionFees > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Programmawijzigingen</span>
+              <span>€{formatPrice(summary.revisionFees)}</span>
             </div>
           )}
           <div className="flex items-center justify-between pt-1.5 border-t">
@@ -502,6 +509,16 @@ export const PriceSummaryCard = ({
               <div className="flex items-center justify-between">
                 <span className="text-sm">Opslag centrale facturatie</span>
                 <span className="text-sm whitespace-nowrap">€{formatPrice(summary.centralSurcharge)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Revision fees line (wijzigingsrondes na akkoord) */}
+          {summary.revisionFees > 0 && (
+            <div className="py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Programmawijzigingen</span>
+                <span className="text-sm whitespace-nowrap">€{formatPrice(summary.revisionFees)}</span>
               </div>
             </div>
           )}
