@@ -148,6 +148,7 @@ const REGISTRY: Row[] = [
   { name: "reconcile-admin-todos", category: "workflow", critical: false },
   { name: "cleanup-stale-todos", category: "workflow", critical: false },
   { name: "create-quote-review-todo", category: "workflow", critical: false },
+  { name: "decline-accommodation-quote", category: "workflow", critical: false },
   { name: "create-request-from-sales-inbox", category: "workflow", critical: true },
   { name: "resolve-customer-token", category: "workflow", critical: true },
   { name: "check-pending-items", category: "workflow", critical: false },
