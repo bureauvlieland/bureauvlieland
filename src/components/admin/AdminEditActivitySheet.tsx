@@ -246,23 +246,30 @@ export const AdminEditActivitySheet = ({
       return;
     }
     const rawPrice = priceOverride.trim();
-    if (rawPrice === "") {
+    const priceProvided = rawPrice !== "";
+    // Prijs is alleen verplicht bij een nog niet gepubliceerd (concept) onderdeel.
+    // Bij bestaande onderdelen kan de prijs elders vastliggen (partnerofferte /
+    // bouwsteenprijs); dan mag je bv. alleen de locatie aanpassen.
+    if (!priceProvided && item.pending_added === true) {
       toast.error("Prijs is verplicht — vul een bedrag in groter dan €0");
       return;
     }
-    const price = parseFloat(rawPrice);
-    if (!isFinite(price)) {
-      toast.error("Prijs is geen geldig getal");
-      return;
+    const price = priceProvided ? parseFloat(rawPrice) : null;
+    if (priceProvided) {
+      if (!isFinite(price as number)) {
+        toast.error("Prijs is geen geldig getal");
+        return;
+      }
+      if ((price as number) < 0) {
+        toast.error("Prijs mag niet negatief zijn");
+        return;
+      }
+      if (price === 0) {
+        toast.error("Prijs moet groter zijn dan €0");
+        return;
+      }
     }
-    if (price < 0) {
-      toast.error("Prijs mag niet negatief zijn");
-      return;
-    }
-    if (price === 0) {
-      toast.error("Prijs moet groter zijn dan €0");
-      return;
-    }
+
     if (!["per_person", "per_person_per_day", "total"].includes(priceType)) {
       toast.error("Ongeldig prijstype geselecteerd");
       return;
@@ -310,7 +317,7 @@ export const AdminEditActivitySheet = ({
                 // ziet dit item nog niet, dus er is geen wijziging te melden.
               }
             : {}),
-          admin_price_override: price,
+          ...(priceProvided ? { admin_price_override: price } : {}),
           price_type: priceType,
           customer_notes: notes || null,
           partner_instructions: partnerInstructions || null,
@@ -356,7 +363,10 @@ export const AdminEditActivitySheet = ({
           pending_admin_price_notes: diff(item.admin_price_notes ?? null, customDescription || null),
           pending_day_index: diff(item.day_index, selectedDayIndex),
           pending_preferred_time: diff(item.preferred_time ?? null, time),
-          pending_admin_price_override: diff(item.admin_price_override ?? null, price),
+          pending_admin_price_override: priceProvided
+            ? diff(item.admin_price_override ?? null, price)
+            : null,
+
           pending_price_type: diff(item.price_type ?? "per_person", priceType),
           pending_customer_notes: diff(item.customer_notes ?? null, notes || null),
           pending_partner_instructions: diff(item.partner_instructions ?? null, partnerInstructions || null),
@@ -675,8 +685,18 @@ export const AdminEditActivitySheet = ({
 
           {/* Price override */}
           <div className="space-y-2">
-            <Label htmlFor="editPrice">Prijs voor klant (€)</Label>
+            <Label htmlFor="editPrice">
+              Prijs voor klant (€){item?.pending_added === true ? "" : " — optioneel"}
+            </Label>
+            {item?.pending_added !== true && (
+              <p className="text-xs text-muted-foreground">
+                Laat leeg om de bestaande prijs (partnerofferte of bouwsteenprijs) te behouden — handig als je alleen
+                de locatie of tijd aanpast.
+              </p>
+            )}
             <div className="grid grid-cols-[1fr_auto] gap-2">
+
+
               <Input
                 id="editPrice"
                 type="number"
