@@ -301,26 +301,32 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
   const handleQuoteDecline = async (
     declineReason: string,
-    _proposedArrival?: string,
-    _proposedDeparture?: string
+    proposedArrival?: string,
+    proposedDeparture?: string
   ) => {
     if (!accommodationQuote) return false;
     try {
-      const { error } = await supabase
-        .from("accommodation_quotes")
-        .update({
-          status: "declined",
-          partner_notes: declineReason || null,
-          submitted_at: new Date().toISOString(),
-        })
-        .eq("id", accommodationQuote.id);
+      // Status + werkbanktaak + historie lopen via de edge function (service role);
+      // directe inserts in admin_todos/historie zouden door RLS stilletjes falen.
+      const { data, error } = await supabase.functions.invoke("decline-accommodation-quote", {
+        body: {
+          quoteId: accommodationQuote.id,
+          declineReason: declineReason || null,
+          proposedArrival: proposedArrival ?? null,
+          proposedDeparture: proposedDeparture ?? null,
+        },
+      });
       if (error) throw error;
-      toast({ title: "Aanvraag afgewezen" });
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: data?.alternativeDates ? "Alternatieve datums verstuurd" : "Aanvraag afgewezen",
+      });
       await refetch();
       setShowQuoteSheet(false);
       return true;
-    } catch {
-      toast({ title: "Fout", variant: "destructive" });
+    } catch (err) {
+      console.error("Error declining quote:", err);
+      toast({ title: "Fout", description: "Kon aanvraag niet afwijzen.", variant: "destructive" });
       return false;
     }
   };
