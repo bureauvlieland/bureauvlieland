@@ -393,10 +393,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const salesExcl = quoted === null ? null : exclVatFromIncl(quoted, toNumber(item.vat_rate));
     const commissionPct = toNumber(item.commission_percentage) ?? toNumber(partner?.commission_percentage) ?? 10;
 
-    const invoices = invoicesByItem.get(item.id) ?? [];
-    const activeInvoices = invoices.filter((i) => i.commission_exempt !== true);
+    const activeInvoices = (invoicesByItem.get(item.id) ?? []).filter((e) => e.inv.commission_exempt !== true);
     const purchaseExcl = activeInvoices.length > 0
-      ? activeInvoices.reduce((sum, i) => sum + (toNumber(i.amount_excl_vat) ?? 0), 0)
+      ? activeInvoices.reduce((sum, e) => sum + (e.amount ?? 0), 0)
       : (toNumber(item.invoiced_amount) !== null && item.invoiced_number ? toNumber(item.invoiced_amount) : null);
 
     const executionDate = item.execution_date ?? firstSelectedDate(project?.selected_dates);
