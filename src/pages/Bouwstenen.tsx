@@ -219,13 +219,16 @@ const Bouwstenen = () => {
               <div className="flex justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : filtered.length === 0 ? (
+            ) : filtered.length === 0 && extraBundles.length === 0 ? (
               <p className="text-center text-muted-foreground py-12">
                 Geen bouwstenen gevonden voor deze selectie.
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map((block) => (
+                {filtered.map((block) => {
+                  const bundle = matched.get(block.id);
+                  const next = bundle ? formatNextDeparture(bundle.nextDeparture) : null;
+                  return (
                   <Card key={block.id} className="overflow-hidden flex flex-col group hover:shadow-lg transition-shadow">
                     <Link
                       to={`/activiteit/${block.slug ?? block.id}`}
@@ -243,6 +246,14 @@ const Bouwstenen = () => {
                           {categoryLabels[block.category] ?? block.category}
                         </Badge>
                       </div>
+                      {bundle && (
+                        <div className="absolute top-3 right-3">
+                          <Badge className="gap-1 bg-accent text-accent-foreground shadow-sm hover:bg-accent">
+                            <Zap className="h-3 w-3" />
+                            Direct boekbaar
+                          </Badge>
+                        </div>
+                      )}
                     </Link>
                     <CardContent className="flex-1 flex flex-col p-5 gap-3">
                       <div>
@@ -261,6 +272,12 @@ const Bouwstenen = () => {
                       {block.short_description && (
                         <p className="text-sm text-muted-foreground line-clamp-3">
                           {block.short_description}
+                        </p>
+                      )}
+                      {next && (
+                        <p className="text-xs text-accent-foreground/90 flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          Eerstvolgend: {next}
                         </p>
                       )}
                       <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-border">
@@ -282,9 +299,17 @@ const Bouwstenen = () => {
                             </Button>
                           </Link>
                         </div>
+                        {bundle && (
+                          <Link to={buildBookingLink(bundle)} className="contents">
+                            <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+                              <Ticket className="h-4 w-4" />
+                              Direct reserveren
+                            </Button>
+                          </Link>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                           <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">
-                            <Button size="sm" className="w-full">
+                            <Button size="sm" variant={bundle ? "outline" : "default"} className="w-full">
                               Direct aanvragen
                             </Button>
                           </Link>
@@ -297,9 +322,15 @@ const Bouwstenen = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  );
+                })}
+
+                {extraBundles.map((bundle) => (
+                  <BookableOnlyCard key={`map-${bundle.activityTypeId}`} bundle={bundle} />
                 ))}
               </div>
             )}
+
           </div>
         </section>
 
