@@ -70,6 +70,8 @@ const formSchema = z.object({
   category: z.enum(["outdoor", "excursies", "entertainment", "locaties", "catering", "vervoer", "services", "overig", "activiteiten"]),
   block_type: z.enum(["bureau", "partner", "self_arranged"]),
   provider_id: z.string().optional(),
+  map_activity_type_id: z.string().optional(),
+
   min_people: z.coerce.number().nullable().optional(),
   max_people: z.coerce.number().nullable().optional(),
   duration: z.string().optional(),
