@@ -191,6 +191,16 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       location_address: "",
     },
   });
+
+  // MAP-koppeling: activiteitstypes van de gekozen partner (indien MAP-partner)
+  const providerId = form.watch("provider_id");
+  const providerMapSlug =
+    partners?.find((p) => p.id === providerId)?.map_tenant_slug ?? null;
+  const { data: mapActivityTypes, isLoading: isLoadingMapTypes } = useMapActivityTypes(
+    providerMapSlug,
+    !!providerMapSlug,
+  );
+
   
   // Reset form when block changes
   useEffect(() => {
