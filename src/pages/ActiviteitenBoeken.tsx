@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet";
+import { useSearchParams } from "react-router-dom";
+
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
@@ -35,12 +37,22 @@ const LOAD_MORE_DAYS = 14;
 const MAX_DAYS = 90;
 
 const ActiviteitenBoeken = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [searchParams] = useSearchParams();
+  const preselectTypeId = Number(searchParams.get("type")) || null;
+  const preselectPartner = searchParams.get("partner");
+  const preselectDate = searchParams.get("date");
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    preselectDate && /^\d{4}-\d{2}-\d{2}$/.test(preselectDate)
+      ? new Date(`${preselectDate}T00:00:00`)
+      : undefined,
+  );
   const [search, setSearch] = useState("");
   const [daysWindow, setDaysWindow] = useState(INITIAL_DAYS);
   const [selectedBundle, setSelectedBundle] = useState<BundledActivity | null>(null);
   const [bookingBundle, setBookingBundle] = useState<BundledActivity | null>(null);
   const [bookingTimeId, setBookingTimeId] = useState<number | null>(null);
+  const preselectDone = useRef(false);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -48,6 +60,7 @@ const ActiviteitenBoeken = () => {
   useEffect(() => {
     setDaysWindow(INITIAL_DAYS);
   }, [selectedDate]);
+
 
   const dateStart = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
@@ -138,6 +151,24 @@ const ActiviteitenBoeken = () => {
         return [dateKey, list] as [string, BundledActivity[]];
       });
   }, [filtered]);
+
+  // Voorgeselecteerde activiteit uit /bouwstenen: open eenmalig de tijden-sheet.
+  useEffect(() => {
+    if (preselectDone.current || !preselectTypeId || grouped.length === 0) return;
+    for (const [, bundles] of grouped) {
+      const hit = bundles.find(
+        (b) =>
+          b.representative.ActivityTypeId === preselectTypeId &&
+          (!preselectPartner || b.representative._partnerSlug === preselectPartner),
+      );
+      if (hit) {
+        preselectDone.current = true;
+        setSelectedBundle(hit);
+        return;
+      }
+    }
+  }, [grouped, preselectTypeId, preselectPartner]);
+
 
   return (
     <>

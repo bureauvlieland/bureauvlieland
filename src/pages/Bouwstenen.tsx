@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { Loader2, Search, Info, Clock, Users, MapPin } from "lucide-react";
+import { Loader2, Search, Info, Clock, Users, MapPin, Ticket, Zap } from "lucide-react";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import {
+  matchBundlesToBlocks,
+  buildBookingLink,
+  type BookableBundle,
+} from "@/lib/directBookable";
 import {
   getBlockImage,
   getProviderName,
@@ -41,16 +49,103 @@ const HIDDEN_IDS = new Set([
   "fiets-huur",
 ]);
 
+const formatNextDeparture = (iso: string) => {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return format(d, "EEE d MMM HH:mm", { locale: nl });
+};
+
+/** Kaart voor een live boekbare MAP-activiteit zonder eigen bouwsteen. */
+const BookableOnlyCard = ({ bundle }: { bundle: BookableBundle }) => {
+  const next = formatNextDeparture(bundle.nextDeparture);
+  return (
+    <Card className="overflow-hidden flex flex-col group hover:shadow-lg transition-shadow">
+      <Link
+        to={buildBookingLink(bundle)}
+        className="block relative h-44 overflow-hidden bg-muted"
+        aria-label={`Reserveer ${bundle.name}`}
+      >
+        {bundle.image ? (
+          <img
+            src={bundle.image}
+            alt={bundle.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/10" />
+        )}
+        <div className="absolute top-3 right-3">
+          <Badge className="gap-1 bg-accent text-accent-foreground shadow-sm hover:bg-accent">
+            <Zap className="h-3 w-3" />
+            Direct boekbaar
+          </Badge>
+        </div>
+      </Link>
+      <CardContent className="flex-1 flex flex-col p-5 gap-3">
+        <div>
+          <h3 className="font-display font-semibold text-lg text-foreground leading-tight mb-1">
+            {bundle.name}
+          </h3>
+          {bundle.partnerName && (
+            <p className="text-xs text-muted-foreground">door {bundle.partnerName}</p>
+          )}
+        </div>
+        {bundle.description && (
+          <p className="text-sm text-muted-foreground line-clamp-3">{bundle.description}</p>
+        )}
+        {next && (
+          <p className="text-xs text-accent-foreground/90 flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            Eerstvolgend: {next}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-border">
+          <div className="flex items-baseline justify-between gap-2">
+            <div>
+              <span className="text-base font-semibold text-foreground">
+                {bundle.pricePerPerson
+                  ? `€ ${bundle.pricePerPerson.toFixed(2).replace(".", ",")}`
+                  : "Op aanvraag"}
+              </span>
+              {bundle.pricePerPerson ? (
+                <span className="text-xs text-muted-foreground ml-1">p.p.</span>
+              ) : null}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {bundle.momentCount} {bundle.momentCount === 1 ? "moment" : "momenten"}
+            </span>
+          </div>
+          <Link to={buildBookingLink(bundle)} className="contents">
+            <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+              <Ticket className="h-4 w-4" />
+              Direct reserveren
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+
 const Bouwstenen = () => {
   const kenBurns = useKenBurns();
   const { data: blocks, isLoading } = usePublishedBuildingBlocks();
+  const { bundles } = useDirectBookableActivities();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<BuildingBlockCategory | "all">("all");
+  const [onlyBookable, setOnlyBookable] = useState(false);
   const [detailBlock, setDetailBlock] = useState<BuildingBlock | null>(null);
 
   const visibleBlocks = useMemo(() => {
     return (blocks ?? []).filter((b) => !HIDDEN_IDS.has(b.id));
   }, [blocks]);
+
+  const { matched, unmatched } = useMemo(
+    () => matchBundlesToBlocks(visibleBlocks, bundles),
+    [visibleBlocks, bundles],
+  );
 
   const categories = useMemo(() => {
     const set = new Set<BuildingBlockCategory>();
@@ -58,8 +153,11 @@ const Bouwstenen = () => {
     return Array.from(set);
   }, [visibleBlocks]);
 
+  const bookableCount = matched.size + unmatched.length;
+
   const filtered = useMemo(() => {
     return visibleBlocks.filter((b) => {
+      if (onlyBookable && !matched.has(b.id)) return false;
       if (activeCategory !== "all" && b.category !== activeCategory) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -68,7 +166,23 @@ const Bouwstenen = () => {
       }
       return true;
     });
-  }, [visibleBlocks, activeCategory, search]);
+  }, [visibleBlocks, activeCategory, search, onlyBookable, matched]);
+
+  // MAP-activiteiten zonder eigen bouwsteen: als losse kaart in de catalogus.
+  const extraBundles = useMemo(() => {
+    return unmatched.filter((bundle) => {
+      // Losse MAP-activiteiten vallen buiten de categorie-indeling; alleen tonen
+      // bij "Alles" of wanneer expliciet op direct boekbaar gefilterd wordt.
+      if (activeCategory !== "all") return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const hay = `${bundle.name} ${bundle.partnerName ?? ""} ${bundle.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [unmatched, activeCategory, search]);
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,7 +265,23 @@ const Bouwstenen = () => {
                     </Button>
                   );
                 })}
+                {bookableCount > 0 && (
+                  <Button
+                    variant={onlyBookable ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={onlyBookable}
+                    className="gap-1.5"
+                    onClick={() => {
+                      setOnlyBookable((v) => !v);
+                      setActiveCategory("all");
+                    }}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    Direct boekbaar ({bookableCount})
+                  </Button>
+                )}
               </div>
+
             </div>
           </div>
         </section>
@@ -163,13 +293,16 @@ const Bouwstenen = () => {
               <div className="flex justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : filtered.length === 0 ? (
+            ) : filtered.length === 0 && extraBundles.length === 0 ? (
               <p className="text-center text-muted-foreground py-12">
                 Geen bouwstenen gevonden voor deze selectie.
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map((block) => (
+                {filtered.map((block) => {
+                  const bundle = matched.get(block.id);
+                  const next = bundle ? formatNextDeparture(bundle.nextDeparture) : null;
+                  return (
                   <Card key={block.id} className="overflow-hidden flex flex-col group hover:shadow-lg transition-shadow">
                     <Link
                       to={`/activiteit/${block.slug ?? block.id}`}
@@ -187,6 +320,14 @@ const Bouwstenen = () => {
                           {categoryLabels[block.category] ?? block.category}
                         </Badge>
                       </div>
+                      {bundle && (
+                        <div className="absolute top-3 right-3">
+                          <Badge className="gap-1 bg-accent text-accent-foreground shadow-sm hover:bg-accent">
+                            <Zap className="h-3 w-3" />
+                            Direct boekbaar
+                          </Badge>
+                        </div>
+                      )}
                     </Link>
                     <CardContent className="flex-1 flex flex-col p-5 gap-3">
                       <div>
@@ -205,6 +346,12 @@ const Bouwstenen = () => {
                       {block.short_description && (
                         <p className="text-sm text-muted-foreground line-clamp-3">
                           {block.short_description}
+                        </p>
+                      )}
+                      {next && (
+                        <p className="text-xs text-accent-foreground/90 flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          Eerstvolgend: {next}
                         </p>
                       )}
                       <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-border">
@@ -226,9 +373,17 @@ const Bouwstenen = () => {
                             </Button>
                           </Link>
                         </div>
+                        {bundle && (
+                          <Link to={buildBookingLink(bundle)} className="contents">
+                            <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+                              <Ticket className="h-4 w-4" />
+                              Direct reserveren
+                            </Button>
+                          </Link>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                           <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">
-                            <Button size="sm" className="w-full">
+                            <Button size="sm" variant={bundle ? "outline" : "default"} className="w-full">
                               Direct aanvragen
                             </Button>
                           </Link>
@@ -241,9 +396,15 @@ const Bouwstenen = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  );
+                })}
+
+                {extraBundles.map((bundle) => (
+                  <BookableOnlyCard key={`map-${bundle.activityTypeId}`} bundle={bundle} />
                 ))}
               </div>
             )}
+
           </div>
         </section>
 

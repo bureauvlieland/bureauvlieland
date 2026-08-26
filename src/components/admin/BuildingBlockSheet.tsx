@@ -57,6 +57,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useMapActivityTypes } from "@/hooks/useMapActivities";
 import { MediaPickerDialog } from "./MediaPickerDialog";
 import { BlockComponentsEditor } from "./BlockComponentsEditor";
 import { TierEditor } from "./TierEditor";
@@ -70,6 +71,8 @@ const formSchema = z.object({
   category: z.enum(["outdoor", "excursies", "entertainment", "locaties", "catering", "vervoer", "services", "overig", "activiteiten"]),
   block_type: z.enum(["bureau", "partner", "self_arranged"]),
   provider_id: z.string().optional(),
+  map_activity_type_id: z.string().optional(),
+
   min_people: z.coerce.number().nullable().optional(),
   max_people: z.coerce.number().nullable().optional(),
   duration: z.string().optional(),
@@ -138,7 +141,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name")
+        .select("id, name, map_tenant_slug")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -146,6 +149,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     },
   });
   
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -156,6 +160,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       category: "outdoor",
       block_type: "partner",
       provider_id: "",
+      map_activity_type_id: "",
       min_people: null,
       max_people: null,
       duration: "",
@@ -186,6 +191,16 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       location_address: "",
     },
   });
+
+  // MAP-koppeling: activiteitstypes van de gekozen partner (indien MAP-partner)
+  const providerId = form.watch("provider_id");
+  const providerMapSlug =
+    partners?.find((p) => p.id === providerId)?.map_tenant_slug ?? null;
+  const { data: mapActivityTypes, isLoading: isLoadingMapTypes } = useMapActivityTypes(
+    providerMapSlug,
+    !!providerMapSlug,
+  );
+
   
   // Reset form when block changes
   useEffect(() => {
@@ -198,6 +213,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         category: block.category,
         block_type: block.block_type,
         provider_id: block.provider_id || "",
+        map_activity_type_id: block.map_activity_type_id != null ? String(block.map_activity_type_id) : "",
         min_people: block.min_people,
         max_people: block.max_people,
         duration: block.duration || "",
@@ -239,6 +255,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         category: "outdoor",
         block_type: "partner",
         provider_id: "",
+        map_activity_type_id: "",
         min_people: null,
         max_people: null,
         duration: "",
@@ -298,6 +315,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
 
       const submitData = {
         ...data,
+        map_activity_type_id: data.map_activity_type_id ? Number(data.map_activity_type_id) : null,
         tags: tagsArray,
         is_published: data.status === "published",
         is_active: data.status !== "concept",
@@ -581,6 +599,46 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                       </FormItem>
                     )}
                   />
+
+                  {providerMapSlug && (
+                    <FormField
+                      control={form.control}
+                      name="map_activity_type_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gekoppelde MAP-activiteit (direct boekbaar)</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "__auto__" ? "" : value)}
+                            value={field.value || "__auto__"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Automatisch op naam" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="__auto__">Automatisch op naam</SelectItem>
+                              {mapActivityTypes?.map((t) => (
+                                <SelectItem key={t.Id} value={String(t.Id)}>
+                                  {t.Name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            {isLoadingMapTypes
+                              ? "MAP-activiteiten laden…"
+                              : field.value
+                                ? "Handmatig vastgezet — deze bouwsteen is direct boekbaar via deze MAP-activiteit."
+                                : "Zonder keuze matchen we automatisch op de naam van de bouwsteen binnen deze partner."}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+
                   
                   <Separator />
                   
