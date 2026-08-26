@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet";
+import { useSearchParams } from "react-router-dom";
+
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
