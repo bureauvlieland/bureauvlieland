@@ -35,12 +35,22 @@ const LOAD_MORE_DAYS = 14;
 const MAX_DAYS = 90;
 
 const ActiviteitenBoeken = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [searchParams] = useSearchParams();
+  const preselectTypeId = Number(searchParams.get("type")) || null;
+  const preselectPartner = searchParams.get("partner");
+  const preselectDate = searchParams.get("date");
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    preselectDate && /^\d{4}-\d{2}-\d{2}$/.test(preselectDate)
+      ? new Date(`${preselectDate}T00:00:00`)
+      : undefined,
+  );
   const [search, setSearch] = useState("");
   const [daysWindow, setDaysWindow] = useState(INITIAL_DAYS);
   const [selectedBundle, setSelectedBundle] = useState<BundledActivity | null>(null);
   const [bookingBundle, setBookingBundle] = useState<BundledActivity | null>(null);
   const [bookingTimeId, setBookingTimeId] = useState<number | null>(null);
+  const preselectDone = useRef(false);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -48,6 +58,7 @@ const ActiviteitenBoeken = () => {
   useEffect(() => {
     setDaysWindow(INITIAL_DAYS);
   }, [selectedDate]);
+
 
   const dateStart = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
