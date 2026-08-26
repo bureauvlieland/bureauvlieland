@@ -140,7 +140,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name")
+        .select("id, name, map_tenant_slug")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -158,6 +158,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       category: "outdoor",
       block_type: "partner",
       provider_id: "",
+      map_activity_type_id: "",
       min_people: null,
       max_people: null,
       duration: "",
@@ -200,6 +201,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         category: block.category,
         block_type: block.block_type,
         provider_id: block.provider_id || "",
+        map_activity_type_id: block.map_activity_type_id != null ? String(block.map_activity_type_id) : "",
         min_people: block.min_people,
         max_people: block.max_people,
         duration: block.duration || "",
@@ -241,6 +243,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         category: "outdoor",
         block_type: "partner",
         provider_id: "",
+        map_activity_type_id: "",
         min_people: null,
         max_people: null,
         duration: "",
@@ -300,6 +303,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
 
       const submitData = {
         ...data,
+        map_activity_type_id: data.map_activity_type_id ? Number(data.map_activity_type_id) : null,
         tags: tagsArray,
         is_published: data.status === "published",
         is_active: data.status !== "concept",
