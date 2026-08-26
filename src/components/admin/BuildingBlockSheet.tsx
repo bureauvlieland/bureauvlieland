@@ -57,6 +57,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useMapActivityTypes } from "@/hooks/useMapActivities";
 import { MediaPickerDialog } from "./MediaPickerDialog";
 import { BlockComponentsEditor } from "./BlockComponentsEditor";
 import { TierEditor } from "./TierEditor";
@@ -148,6 +149,8 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     },
   });
   
+  const providerId = form_provider_placeholder;
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
