@@ -82,6 +82,10 @@ export interface BuildingBlock {
   suggested_addons?: string[] | null;
   scaling_rules?: Array<{ min_guests?: number; suggest?: string }> | null;
 
+  // Koppeling met MijnActiviteitenPlanner (direct boekbaar)
+  map_activity_type_id?: number | null;
+
+
   // Audit
   created_by: string | null;
   created_at: string;
