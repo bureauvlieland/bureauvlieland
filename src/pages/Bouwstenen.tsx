@@ -191,7 +191,23 @@ const Bouwstenen = () => {
                     </Button>
                   );
                 })}
+                {bookableCount > 0 && (
+                  <Button
+                    variant={onlyBookable ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={onlyBookable}
+                    className="gap-1.5"
+                    onClick={() => {
+                      setOnlyBookable((v) => !v);
+                      setActiveCategory("all");
+                    }}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    Direct boekbaar ({bookableCount})
+                  </Button>
+                )}
               </div>
+
             </div>
           </div>
         </section>
