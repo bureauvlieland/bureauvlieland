@@ -599,6 +599,46 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                       </FormItem>
                     )}
                   />
+
+                  {providerMapSlug && (
+                    <FormField
+                      control={form.control}
+                      name="map_activity_type_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gekoppelde MAP-activiteit (direct boekbaar)</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "__auto__" ? "" : value)}
+                            value={field.value || "__auto__"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Automatisch op naam" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="__auto__">Automatisch op naam</SelectItem>
+                              {mapActivityTypes?.map((t) => (
+                                <SelectItem key={t.Id} value={String(t.Id)}>
+                                  {t.Name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            {isLoadingMapTypes
+                              ? "MAP-activiteiten laden…"
+                              : field.value
+                                ? "Handmatig vastgezet — deze bouwsteen is direct boekbaar via deze MAP-activiteit."
+                                : "Zonder keuze matchen we automatisch op de naam van de bouwsteen binnen deze partner."}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+
                   
                   <Separator />
                   
