@@ -152,6 +152,24 @@ const ActiviteitenBoeken = () => {
       });
   }, [filtered]);
 
+  // Voorgeselecteerde activiteit uit /bouwstenen: open eenmalig de tijden-sheet.
+  useEffect(() => {
+    if (preselectDone.current || !preselectTypeId || grouped.length === 0) return;
+    for (const [, bundles] of grouped) {
+      const hit = bundles.find(
+        (b) =>
+          b.representative.ActivityTypeId === preselectTypeId &&
+          (!preselectPartner || b.representative._partnerSlug === preselectPartner),
+      );
+      if (hit) {
+        preselectDone.current = true;
+        setSelectedBundle(hit);
+        return;
+      }
+    }
+  }, [grouped, preselectTypeId, preselectPartner]);
+
+
   return (
     <>
       <Helmet>
