@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { Loader2, Search, Info, Clock, Users, MapPin } from "lucide-react";
+import { Loader2, Search, Info, Clock, Users, MapPin, Ticket, Zap } from "lucide-react";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import {
+  matchBundlesToBlocks,
+  buildBookingLink,
+  type BookableBundle,
+} from "@/lib/directBookable";
 import {
   getBlockImage,
   getProviderName,
@@ -41,16 +49,29 @@ const HIDDEN_IDS = new Set([
   "fiets-huur",
 ]);
 
+const formatNextDeparture = (iso: string) => {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return format(d, "EEE d MMM HH:mm", { locale: nl });
+};
+
 const Bouwstenen = () => {
   const kenBurns = useKenBurns();
   const { data: blocks, isLoading } = usePublishedBuildingBlocks();
+  const { bundles } = useDirectBookableActivities();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<BuildingBlockCategory | "all">("all");
+  const [onlyBookable, setOnlyBookable] = useState(false);
   const [detailBlock, setDetailBlock] = useState<BuildingBlock | null>(null);
 
   const visibleBlocks = useMemo(() => {
     return (blocks ?? []).filter((b) => !HIDDEN_IDS.has(b.id));
   }, [blocks]);
+
+  const { matched, unmatched } = useMemo(
+    () => matchBundlesToBlocks(visibleBlocks, bundles),
+    [visibleBlocks, bundles],
+  );
 
   const categories = useMemo(() => {
     const set = new Set<BuildingBlockCategory>();
@@ -58,8 +79,11 @@ const Bouwstenen = () => {
     return Array.from(set);
   }, [visibleBlocks]);
 
+  const bookableCount = matched.size + unmatched.length;
+
   const filtered = useMemo(() => {
     return visibleBlocks.filter((b) => {
+      if (onlyBookable && !matched.has(b.id)) return false;
       if (activeCategory !== "all" && b.category !== activeCategory) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -68,7 +92,23 @@ const Bouwstenen = () => {
       }
       return true;
     });
-  }, [visibleBlocks, activeCategory, search]);
+  }, [visibleBlocks, activeCategory, search, onlyBookable, matched]);
+
+  // MAP-activiteiten zonder eigen bouwsteen: als losse kaart in de catalogus.
+  const extraBundles = useMemo(() => {
+    return unmatched.filter((bundle) => {
+      // Losse MAP-activiteiten vallen buiten de categorie-indeling; alleen tonen
+      // bij "Alles" of wanneer expliciet op direct boekbaar gefilterd wordt.
+      if (activeCategory !== "all") return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const hay = `${bundle.name} ${bundle.partnerName ?? ""} ${bundle.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [unmatched, activeCategory, search]);
+
 
   return (
     <div className="min-h-screen bg-background">
