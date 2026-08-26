@@ -55,6 +55,80 @@ const formatNextDeparture = (iso: string) => {
   return format(d, "EEE d MMM HH:mm", { locale: nl });
 };
 
+/** Kaart voor een live boekbare MAP-activiteit zonder eigen bouwsteen. */
+const BookableOnlyCard = ({ bundle }: { bundle: BookableBundle }) => {
+  const next = formatNextDeparture(bundle.nextDeparture);
+  return (
+    <Card className="overflow-hidden flex flex-col group hover:shadow-lg transition-shadow">
+      <Link
+        to={buildBookingLink(bundle)}
+        className="block relative h-44 overflow-hidden bg-muted"
+        aria-label={`Reserveer ${bundle.name}`}
+      >
+        {bundle.image ? (
+          <img
+            src={bundle.image}
+            alt={bundle.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-primary/10" />
+        )}
+        <div className="absolute top-3 right-3">
+          <Badge className="gap-1 bg-accent text-accent-foreground shadow-sm hover:bg-accent">
+            <Zap className="h-3 w-3" />
+            Direct boekbaar
+          </Badge>
+        </div>
+      </Link>
+      <CardContent className="flex-1 flex flex-col p-5 gap-3">
+        <div>
+          <h3 className="font-display font-semibold text-lg text-foreground leading-tight mb-1">
+            {bundle.name}
+          </h3>
+          {bundle.partnerName && (
+            <p className="text-xs text-muted-foreground">door {bundle.partnerName}</p>
+          )}
+        </div>
+        {bundle.description && (
+          <p className="text-sm text-muted-foreground line-clamp-3">{bundle.description}</p>
+        )}
+        {next && (
+          <p className="text-xs text-accent-foreground/90 flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            Eerstvolgend: {next}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 mt-auto pt-3 border-t border-border">
+          <div className="flex items-baseline justify-between gap-2">
+            <div>
+              <span className="text-base font-semibold text-foreground">
+                {bundle.pricePerPerson
+                  ? `€ ${bundle.pricePerPerson.toFixed(2).replace(".", ",")}`
+                  : "Op aanvraag"}
+              </span>
+              {bundle.pricePerPerson ? (
+                <span className="text-xs text-muted-foreground ml-1">p.p.</span>
+              ) : null}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {bundle.momentCount} {bundle.momentCount === 1 ? "moment" : "momenten"}
+            </span>
+          </div>
+          <Link to={buildBookingLink(bundle)} className="contents">
+            <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+              <Ticket className="h-4 w-4" />
+              Direct reserveren
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+
 const Bouwstenen = () => {
   const kenBurns = useKenBurns();
   const { data: blocks, isLoading } = usePublishedBuildingBlocks();
