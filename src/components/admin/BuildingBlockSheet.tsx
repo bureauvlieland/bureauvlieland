@@ -149,7 +149,6 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     },
   });
   
-  const providerId = form_provider_placeholder;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
