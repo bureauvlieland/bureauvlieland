@@ -4257,6 +4257,45 @@ export type Database = {
           },
         ]
       }
+      selftest_runs: {
+        Row: {
+          alerted_at: string | null
+          autofixes: Json
+          checks: Json
+          error_message: string | null
+          failed_count: number
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          alerted_at?: string | null
+          autofixes?: Json
+          checks?: Json
+          error_message?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          alerted_at?: string | null
+          autofixes?: Json
+          checks?: Json
+          error_message?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       shared_programs: {
         Row: {
           cart_items: Json
@@ -4899,6 +4938,7 @@ export type Database = {
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       scan_stale_pending_changes: { Args: never; Returns: number }
+      selftest_autofix: { Args: never; Returns: Json }
       slugify: { Args: { value: string }; Returns: string }
       submit_self_service_program_request: {
         Args: { p_items: Json; p_request: Json }
