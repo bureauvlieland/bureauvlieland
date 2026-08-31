@@ -1,10 +1,13 @@
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { PaymentStatusCard } from "./PaymentStatusCard";
-import { FileText, Info, CheckCircle2 } from "lucide-react";
+import { PendingConfirmationExplainer } from "./PendingConfirmationExplainer";
+import { Info, CheckCircle2, Clock } from "lucide-react";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
+import { getUnconfirmedItemsForTerms } from "@/lib/customerPortalStatus";
 
 interface AcceptViewProps {
   program: any;
@@ -20,7 +23,7 @@ interface AcceptViewProps {
   termsAcceptedAt?: string;
   signatureName?: string | null;
   signatureId?: string | null;
-  onAcceptTerms: (signatureName: string) => Promise<boolean>;
+  onAcceptTerms: (signatureName: string, underReservation?: boolean) => Promise<boolean>;
   onOpenBilling: () => void;
 }
 
@@ -41,6 +44,15 @@ export const AcceptView = ({
   onAcceptTerms,
   onOpenBilling,
 }: AcceptViewProps) => {
+  const [showUnderReservation, setShowUnderReservation] = useState(false);
+
+  const unconfirmedItems = useMemo(
+    () => getUnconfirmedItemsForTerms(items),
+    [items],
+  );
+
+  const hasPending = !allConfirmed && unconfirmedItems.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Intro strip */}
@@ -50,19 +62,28 @@ export const AcceptView = ({
           <p className="font-medium">Wat kunt u hier doen?</p>
           <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
             {termsAccepted
-              ? "Hier ziet u uw ondertekende akkoord en de status van betalingen. Het programma is definitief bevestigd."
+              ? "Hier ziet u uw ondertekende akkoord en de status van betalingen. Het programma is bevestigd."
               : allConfirmed
               ? "Controleer uw facturatiegegevens en geef akkoord op de voorwaarden. Daarmee bevestigt u uw boeking definitief."
-              : "Zodra alle programmaonderdelen bevestigd zijn, kunt u hier akkoord geven op de voorwaarden en uw boeking definitief maken."}
+              : "Eén of meer onderdelen wachten nog op bevestiging van de aanbieder. U kunt wachten tot alles rond is, of nu al ondertekenen onder voorbehoud."}
           </p>
         </div>
       </div>
 
+      {/* Uitleg openstaande bevestigingen */}
+      {!termsAccepted && hasPending && (
+        <PendingConfirmationExplainer
+          items={unconfirmedItems}
+          selectedDates={selectedDates}
+          canAcceptUnderReservation={!showUnderReservation}
+          onSignUnderReservation={() => setShowUnderReservation(true)}
+        />
+      )}
 
       {/* Akkoord */}
       {!termsAccepted ? (
         <div id="terms-section" className="scroll-mt-20">
-          {allConfirmed ? (
+          {allConfirmed || showUnderReservation ? (
             <AcceptTermsCard
               onAccept={onAcceptTerms}
               isBillingComplete={billingComplete}
@@ -70,33 +91,43 @@ export const AcceptView = ({
               items={items}
               accommodationQuotes={accommodationQuotes}
               selectedDates={selectedDates}
+              unconfirmedItems={allConfirmed ? [] : unconfirmedItems}
             />
-          ) : (
-            <Card className="border-dashed bg-muted/30">
+          ) : null}
+        </div>
+      ) : (
+        <>
+          {hasPending && (
+            <Card className="border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  Voorwaarden
+                  <Clock className="h-4 w-4 text-amber-700 dark:text-amber-300" />
+                  Ondertekend onder voorbehoud
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Zodra alle activiteiten in uw programma bevestigd zijn,
-                  verschijnen hier de voorwaarden ter ondertekening.
+              <CardContent className="text-sm text-muted-foreground">
+                <p>
+                  {unconfirmedItems.length === 1
+                    ? "Dit onderdeel wacht nog op bevestiging van de aanbieder:"
+                    : "Deze onderdelen wachten nog op bevestiging van de aanbieder:"}{" "}
+                  <span className="font-medium text-foreground">
+                    {unconfirmedItems.map((item) => item.block_name).join(", ")}
+                  </span>
+                  . Wij houden dit voor u in de gaten en laten weten zodra het rond is.
                 </p>
               </CardContent>
             </Card>
           )}
-        </div>
-      ) : (
-        acceptedTerms && acceptedTerms.length > 0 && termsAcceptedAt && (
-          <AcceptedTermsCard
-            termsAcceptedAt={termsAcceptedAt}
-            signatureName={signatureName ?? null}
-            signatureId={signatureId ?? null}
-            acceptedTerms={acceptedTerms}
-          />
-        )
+
+          {acceptedTerms && acceptedTerms.length > 0 && termsAcceptedAt && (
+            <AcceptedTermsCard
+              termsAcceptedAt={termsAcceptedAt}
+              signatureName={signatureName ?? null}
+              signatureId={signatureId ?? null}
+              acceptedTerms={acceptedTerms}
+            />
+          )}
+        </>
       )}
 
       {/* Betaalstatus */}
@@ -104,7 +135,7 @@ export const AcceptView = ({
         <PaymentStatusCard items={items} termsAcceptedAt={termsAcceptedAt} />
       )}
 
-      {termsAccepted && (
+      {termsAccepted && !hasPending && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           Uw boeking is definitief bevestigd.

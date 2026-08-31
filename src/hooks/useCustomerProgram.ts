@@ -56,7 +56,7 @@ interface UseCustomerProgramReturn {
     board_preference: string | null;
   }) => Promise<boolean>;
   updateBillingDetails: (details: BillingDetails) => Promise<boolean>;
-  acceptTerms: (signatureName?: string) => Promise<boolean>;
+  acceptTerms: (signatureName?: string, underReservation?: boolean) => Promise<boolean>;
   cancelRequest: (reason?: string, cancelAccommodation?: boolean) => Promise<boolean>;
   acceptItem: (itemId: string) => Promise<boolean>;
   cancelItem: (itemId: string) => Promise<boolean>;
@@ -686,7 +686,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     }
   }, [program, token, fetchProgram]);
 
-  const acceptTerms = useCallback(async (signatureName?: string): Promise<boolean> => {
+  const acceptTerms = useCallback(async (signatureName?: string, underReservation?: boolean): Promise<boolean> => {
     if (!program) return false;
 
     try {
@@ -695,6 +695,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
           token: token,
           acceptTerms: true,
           signatureName: signatureName || null,
+          underReservation: underReservation === true,
           origin: window.location.origin,
         },
       });

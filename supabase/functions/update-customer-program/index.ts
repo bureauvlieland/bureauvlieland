@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, guestDetails, accommodationSetup, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, guestDetails, accommodationSetup, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, underReservation, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
       };
       acceptTerms?: boolean;
       signatureName?: string;
+      underReservation?: boolean;
       acceptItemId?: string;
       cancelItemId?: string;
       counterProposal?: CounterProposal;
@@ -1076,6 +1077,21 @@ Deno.serve(async (req) => {
       const signatureId = crypto.randomUUID();
       const acceptedAt = new Date().toISOString();
       const termsVersion = "2024-v1";
+
+      const { data: programItems } = await supabase
+        .from("program_request_items")
+        .select("provider_id, provider_name, block_type, block_category, block_name, status, item_quote_status")
+        .eq("request_id", program.id)
+        .neq("status", "cancelled");
+
+      // Onderdelen die op moment van ondertekening nog niet door de aanbieder
+      // bevestigd zijn — bij "onder voorbehoud" leggen we dit expliciet vast.
+      const unconfirmedAtSigning = (programItems || []).filter((i: any) =>
+        !["confirmed", "accepted", "executed", "invoiced"].includes(i.status) &&
+        i.item_quote_status !== "bevestigd"
+      );
+      const signedUnderReservation = underReservation === true && unconfirmedAtSigning.length > 0;
+      const reservationNames = unconfirmedAtSigning.map((i: any) => i.block_name).join(", ");
       
       // Update program with signature info
       await supabase
@@ -1097,21 +1113,20 @@ Deno.serve(async (req) => {
         action: "terms_accepted",
         actor: "customer",
         actor_name: signatureName || program.customer_name,
-        notes: `Voorwaarden geaccepteerd (versie ${termsVersion}). Handtekening-ID: ${signatureId}`,
+        notes: signedUnderReservation
+          ? `Voorwaarden geaccepteerd ONDER VOORBEHOUD (versie ${termsVersion}). Nog niet bevestigd: ${reservationNames}. Handtekening-ID: ${signatureId}`
+          : `Voorwaarden geaccepteerd (versie ${termsVersion}). Handtekening-ID: ${signatureId}`,
         new_value: { 
           terms_version: termsVersion, 
           signature_id: signatureId,
           signature_name: signatureName || program.customer_name,
           client_ip: clientIp,
+          under_reservation: signedUnderReservation,
+          unconfirmed_items: unconfirmedAtSigning.map((i: any) => i.block_name),
         },
       });
 
       // --- Accepted terms log ---
-      const { data: programItems } = await supabase
-        .from("program_request_items")
-        .select("provider_id, provider_name, block_type, block_category")
-        .eq("request_id", program.id)
-        .neq("status", "cancelled");
 
       const uniquePartnerIds = [...new Set(
         (programItems || [])
@@ -1232,8 +1247,8 @@ Deno.serve(async (req) => {
         await supabase.from("admin_todos").insert({
           title: `Facturatie: ${customerName}`,
           description: snoozeUntil
-            ? `Klant heeft de voorwaarden geaccepteerd. Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).`
-            : `Klant heeft de voorwaarden geaccepteerd. Programma is klaar voor facturatie.`,
+            ? `Klant heeft de voorwaarden geaccepteerd${signedUnderReservation ? ` (ONDER VOORBEHOUD — nog niet bevestigd: ${reservationNames})` : ""}. Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).`
+            : `Klant heeft de voorwaarden geaccepteerd${signedUnderReservation ? ` (ONDER VOORBEHOUD — nog niet bevestigd: ${reservationNames})` : ""}. Programma is klaar voor facturatie.`,
           priority: "normal",
           status: "todo",
           related_request_id: program.id,
@@ -1373,6 +1388,14 @@ Deno.serve(async (req) => {
         </table>
       `;
 
+      const reservationNoticeHtml = signedUnderReservation
+        ? `<div style="background:#fff8e1; padding:14px 18px; border-left:4px solid #f59e0b; border-radius:6px; margin:16px 0;">
+             <p style="margin:0 0 6px;"><strong>Onder voorbehoud</strong></p>
+             <p style="margin:0; font-size:14px;">De volgende onderdelen wachten nog op bevestiging van de aanbieder: ${sanitizeHtml(reservationNames)}.
+             Wij houden dit voor u in de gaten en laten u weten zodra het rond is. Lukt een onderdeel niet, dan zoeken wij een alternatief of vervalt het onderdeel zonder kosten.</p>
+           </div>`
+        : "";
+
       const partnerTermsNote = providerItems.size > 0 
         ? ` en de voorwaarden van ${providerItems.size} betrokken partner(s)` 
         : "";
@@ -1386,17 +1409,25 @@ Deno.serve(async (req) => {
         reference_number: sanitizeHtml(program.reference_number || ""),
         signature_details: signatureTableHtml,
         partner_terms_note: partnerTermsNote,
+        reservation_notice: reservationNoticeHtml,
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
         portal_link: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
 
 
-      const bookingCustomerSubject = bookingCustomerTemplate?.subject || "Boeking definitief bevestigd";
-      const bookingCustomerBody = bookingCustomerTemplate?.body || `
+      const bookingCustomerSubject = signedUnderReservation
+        ? "Uw akkoord is vastgelegd (onder voorbehoud)"
+        : (bookingCustomerTemplate?.subject || "Boeking definitief bevestigd");
+      const bookingCustomerBody = (bookingCustomerTemplate?.body
+        ? (bookingCustomerTemplate.body.includes("Onder voorbehoud")
+            ? bookingCustomerTemplate.body
+            : `${reservationNoticeHtml}${bookingCustomerTemplate.body}`)
+        : null) || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Je boeking is definitief!</h2>
             <p>Beste ${sanitizeHtml(program.customer_name)},</p>
-            <p>Bedankt voor je boeking bij Bureau Vlieland. Alle activiteiten zijn bevestigd en je akkoord op de algemene voorwaarden is geregistreerd.</p>
+            <p>Bedankt voor uw boeking bij Bureau Vlieland. Uw akkoord op de algemene voorwaarden is geregistreerd.</p>
+            ${reservationNoticeHtml}
             
             <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
               <h3 style="margin-top: 0;">Boekingsoverzicht</h3>

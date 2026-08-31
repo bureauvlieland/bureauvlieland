@@ -27,12 +27,14 @@ interface AccommodationQuote {
 }
 
 interface AcceptTermsCardProps {
-  onAccept: (signatureName: string) => Promise<boolean>;
+  onAccept: (signatureName: string, underReservation?: boolean) => Promise<boolean>;
   isBillingComplete: boolean;
   onOpenBilling: () => void;
   items: ProgramRequestItem[];
   accommodationQuotes?: AccommodationQuote[];
   selectedDates?: Date[];
+  /** Onderdelen die nog op bevestiging van de aanbieder wachten (ondertekenen onder voorbehoud). */
+  unconfirmedItems?: ProgramRequestItem[];
 }
 
 const DEFAULT_TERMS_URL = "/partner-voorwaarden";
@@ -46,7 +48,9 @@ export const AcceptTermsCard = ({
   items,
   accommodationQuotes = [],
   selectedDates = [],
+  unconfirmedItems = [],
 }: AcceptTermsCardProps) => {
+
   const navigate = useNavigate();
   const [isChecked, setIsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +58,8 @@ export const AcceptTermsCard = ({
   const [partnerTerms, setPartnerTerms] = useState<PartnerTermsInfo[]>([]);
   const [isLoadingPartners, setIsLoadingPartners] = useState(true);
   const [showAccommodationWarning, setShowAccommodationWarning] = useState(false);
+  const [reservationAcknowledged, setReservationAcknowledged] = useState(false);
+
 
   // Check if this is a multi-day program without accommodation
   const isMultiDay = selectedDates.length > 1;
@@ -99,8 +105,10 @@ export const AcceptTermsCard = ({
     return data.publicUrl;
   };
 
+  const isUnderReservation = unconfirmedItems.length > 0;
+
   const handleAcceptClick = () => {
-    if (!isChecked || !isBillingComplete || !signatureName.trim()) return;
+    if (!canSubmit) return;
 
     // Check if multi-day without accommodation - show warning
     if (isMultiDay && !hasSelectedAccommodation) {
@@ -115,7 +123,7 @@ export const AcceptTermsCard = ({
   const handleAccept = async () => {
     setIsSubmitting(true);
     try {
-      await onAccept(signatureName.trim());
+      await onAccept(signatureName.trim(), isUnderReservation);
     } finally {
       setIsSubmitting(false);
     }
@@ -131,7 +139,12 @@ export const AcceptTermsCard = ({
     handleAccept();
   };
 
-  const canSubmit = isChecked && isBillingComplete && signatureName.trim().length >= 2;
+  const canSubmit =
+    isChecked &&
+    isBillingComplete &&
+    signatureName.trim().length >= 2 &&
+    (!isUnderReservation || reservationAcknowledged);
+
 
   // Helper to get the appropriate terms link/label for a partner
   const getPartnerTermsInfo = (partner: PartnerTermsInfo) => {
@@ -177,21 +190,53 @@ export const AcceptTermsCard = ({
   const lodgingSignatureName = selectedQuote?.customer_signature_name || null;
 
   return (
-    <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+    <Card
+      className={cn(
+        isUnderReservation
+          ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+          : "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20",
+      )}
+    >
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
-          <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/50">
-            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <div
+            className={cn(
+              "p-2 rounded-full",
+              isUnderReservation
+                ? "bg-amber-100 dark:bg-amber-900/50"
+                : "bg-green-100 dark:bg-green-900/50",
+            )}
+          >
+            <CheckCircle
+              className={cn(
+                "h-6 w-6",
+                isUnderReservation
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-green-600 dark:text-green-400",
+              )}
+            />
           </div>
           
           <div className="flex-1 space-y-4">
             <div>
-              <h3 className="font-semibold text-lg">Alle activiteiten zijn bevestigd!</h3>
+              <h3 className="font-semibold text-lg">
+                {isUnderReservation
+                  ? "Ondertekenen onder voorbehoud"
+                  : "Alle activiteiten zijn bevestigd!"}
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                De aanbieders hebben alle activiteiten in je programma bevestigd. 
-                Voordat de definitieve boeking ingaat, vragen we je akkoord op de voorwaarden.
+                {isUnderReservation
+                  ? `U legt uw programma en de voorwaarden nu vast. ${
+                      unconfirmedItems.length === 1
+                        ? "Eén onderdeel wacht"
+                        : `${unconfirmedItems.length} onderdelen wachten`
+                    } nog op bevestiging van de aanbieder en blijft daarom onder voorbehoud.`
+                  : "De aanbieders hebben alle activiteiten in uw programma bevestigd. Voordat de definitieve boeking ingaat, vragen we uw akkoord op de voorwaarden."}
               </p>
             </div>
+
+
+
 
             {!isBillingComplete && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
@@ -343,7 +388,35 @@ export const AcceptTermsCard = ({
                   )}
                 </Label>
               </div>
+
+              {isUnderReservation && (
+                <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30 p-3">
+                  <Checkbox
+                    id="reservation-checkbox"
+                    checked={reservationAcknowledged}
+                    onCheckedChange={(checked) => setReservationAcknowledged(checked === true)}
+                    disabled={!isBillingComplete}
+                  />
+                  <Label
+                    htmlFor="reservation-checkbox"
+                    className="text-sm cursor-pointer leading-relaxed"
+                  >
+                    Ik begrijp dat{" "}
+                    {unconfirmedItems.length === 1
+                      ? "het volgende onderdeel"
+                      : "de volgende onderdelen"}{" "}
+                    nog onder voorbehoud van bevestiging door de aanbieder{" "}
+                    {unconfirmedItems.length === 1 ? "staat" : "staan"}:{" "}
+                    <span className="font-medium">
+                      {unconfirmedItems.map((item) => item.block_name).join(", ")}
+                    </span>
+                    . Lukt een onderdeel niet, dan zoekt Bureau Vlieland een alternatief of
+                    vervalt het onderdeel zonder kosten.
+                  </Label>
+                </div>
+              )}
             </div>
+
 
             {/* Digital Signature Section - simplified per briefing */}
             <div className={cn(
@@ -370,7 +443,11 @@ export const AcceptTermsCard = ({
               </div>
 
               <ul className="text-xs text-muted-foreground space-y-1 pl-4">
-                <li>• Reserveringen worden definitief bevestigd</li>
+                <li>
+                  {isUnderReservation
+                    ? "• Bevestigde onderdelen worden definitief gereserveerd"
+                    : "• Reserveringen worden definitief bevestigd"}
+                </li>
                 <li>• Annuleringsvoorwaarden zijn van toepassing</li>
               </ul>
             </div>
@@ -382,7 +459,10 @@ export const AcceptTermsCard = ({
             >
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <PenLine className="h-4 w-4 mr-2" />
-              Ondertekenen & Definitief boeken
+              {isUnderReservation
+                ? "Ondertekenen onder voorbehoud"
+                : "Ondertekenen & Definitief boeken"}
+
             </Button>
           </div>
         </div>

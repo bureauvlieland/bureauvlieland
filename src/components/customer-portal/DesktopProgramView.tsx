@@ -130,7 +130,7 @@ interface DesktopProgramViewProps {
   onOpenCancel: () => void;
   onSubmitChanges: () => void;
   onRefresh: () => void;
-  onAcceptTerms: (signatureName: string) => Promise<boolean>;
+  onAcceptTerms: (signatureName: string, underReservation?: boolean) => Promise<boolean>;
   onAddActivity: (blockId: string) => void;
   // Accommodation
   accommodation: AccommodationRequest | null;

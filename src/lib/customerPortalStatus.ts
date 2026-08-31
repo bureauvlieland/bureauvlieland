@@ -37,6 +37,10 @@ export interface CustomerPortalStatus {
   isProposalPhase: boolean;
   isApprovalPhase: boolean;
   allConfirmed: boolean;
+  /** Niet-geannuleerde onderdelen die nog niet door de aanbieder bevestigd zijn. */
+  unconfirmedItems: ProgramRequestItem[];
+  /** Klant mag onder voorbehoud ondertekenen: nog niet alles bevestigd, maar er is wél iets open. */
+  canAcceptUnderReservation: boolean;
   customerActionsCount: number;
   proposalActionsCount: number;
   alternativeActionsCount: number;
@@ -46,6 +50,22 @@ export interface CustomerPortalStatus {
   showApprovalActions: boolean;
   showPartnerWaiting: boolean;
 }
+
+/** Geldt een onderdeel als bevestigd voor de akkoord-stap? */
+export const isItemConfirmedForTerms = (item: ProgramRequestItem): boolean =>
+  item.status === "cancelled" ||
+  item.status === "confirmed" ||
+  item.status === "accepted" ||
+  item.status === "executed" ||
+  item.status === "invoiced" ||
+  (item as { item_quote_status?: string | null }).item_quote_status === "bevestigd";
+
+/** Onderdelen die nog op bevestiging van de aanbieder wachten. */
+export const getUnconfirmedItemsForTerms = (
+  items: ProgramRequestItem[],
+): ProgramRequestItem[] =>
+  items.filter((item) => item.status !== "cancelled" && !isItemConfirmedForTerms(item));
+
 
 const POST_EXECUTION_COMPLETION_STATUSES = new Set([
   "ready_for_invoice",
@@ -170,21 +190,25 @@ export function getCustomerPortalStatus(args: {
   const isPreApproval = !!program.quote_status &&
     ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
 
+  const unconfirmedItems = getUnconfirmedItemsForTerms(items);
   const rawAllConfirmed = items.some((item) => item.status !== "cancelled") &&
-    items.every((item) =>
-      item.status === "cancelled" ||
-      item.status === "confirmed" ||
-      item.status === "accepted" ||
-      item.status === "executed" ||
-      item.status === "invoiced" ||
-      item.item_quote_status === "bevestigd",
-    );
+    unconfirmedItems.length === 0;
   const allConfirmed = isPostExecution || rawAllConfirmed;
+
   const showApprovalActions = !isPostExecution;
   const showPartnerWaiting = !isPostExecution;
   const approvalStats = getCustomerApprovalStats(items, program.quote_status, {
     suppressApprovalActions: !showApprovalActions,
   });
+  // Onder voorbehoud ondertekenen mag zodra de klant zelf niets meer hoeft te
+  // doen en er alleen nog aanbieder-bevestigingen open staan.
+  const canAcceptUnderReservation =
+    !allConfirmed &&
+    !termsAccepted &&
+    !isProposalPhase &&
+    unconfirmedItems.length > 0 &&
+    approvalStats.customerActionsCount === 0;
+
   const guestDetailsIncomplete = !!guestDetails && (
     !guestDetails.guest_names ||
     (!!guestDetails.showDietary && !guestDetails.dietary_notes) ||
@@ -205,6 +229,9 @@ export function getCustomerPortalStatus(args: {
     isProposalPhase,
     isApprovalPhase,
     allConfirmed,
+    unconfirmedItems,
+    canAcceptUnderReservation,
+
     showApprovalActions,
     showPartnerWaiting,
     ...approvalStats,
