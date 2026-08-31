@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
                 block_name: "Zelftest-onderdeel",
                 block_category: "activiteit",
                 provider_name: "Zelftest",
+                provider_id: "zelftest",
                 block_type: "activity",
                 day_index: 0,
                 status: "pending",
@@ -247,7 +248,7 @@ Deno.serve(async (req) => {
         "warning",
         "Controleer public.get_shared_program(text) en de EXECUTE-rechten voor anon.",
         async () => {
-          const { error } = await anon.rpc("get_shared_program", { p_token: "selftest-onbekend" });
+          const { error } = await anon.rpc("get_shared_program", { _share_code: "selftest-onbekend" });
           if (error && !/not found|niet gevonden|no rows/i.test(error.message)) {
             throw new Error(`${error.code ?? ""} ${error.message}`.trim());
           }
