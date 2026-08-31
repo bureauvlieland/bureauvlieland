@@ -232,6 +232,10 @@ export const AcceptTermsCard = ({
                         : `${unconfirmedItems.length} onderdelen wachten`
                     } nog op bevestiging van de aanbieder en blijft daarom onder voorbehoud.`
                   : "De aanbieders hebben alle activiteiten in uw programma bevestigd. Voordat de definitieve boeking ingaat, vragen we uw akkoord op de voorwaarden."}
+              </p>
+            </div>
+
+
 
 
             {!isBillingComplete && (
