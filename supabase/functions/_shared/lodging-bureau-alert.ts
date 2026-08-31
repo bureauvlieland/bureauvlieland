@@ -188,7 +188,7 @@ export async function sendLodgingBureauAlert(
     const baseUrl = getPortalBaseUrl(input.origin);
     const adminUrl = input.request.linked_program_id
       ? `${baseUrl}/admin/aanvragen/${input.request.linked_program_id}`
-      : `${baseUrl}/admin/logies`;
+      : `${baseUrl}/admin/werkbank?kind=logies`;
 
     const html = buildHtml(input, adminUrl, hasAltDates);
 
