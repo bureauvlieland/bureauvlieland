@@ -54,6 +54,10 @@ export interface CustomerPortalStatus {
 
 /** Geldt een onderdeel als bevestigd voor de akkoord-stap? */
 export const isItemConfirmedForTerms = (item: ProgramRequestItem): boolean =>
+  // Bureau-eigen onderdelen (veerboten, fietsen, bagage, eigen activiteiten)
+  // regelen wij zelf; ze hoeven niet expliciet door een externe aanbieder
+  // bevestigd te worden om het akkoord te kunnen geven.
+  isBureauItem(item) ||
   item.status === "cancelled" ||
   item.status === "confirmed" ||
   item.status === "accepted" ||
