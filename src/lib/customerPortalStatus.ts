@@ -1,6 +1,7 @@
 import type { AccommodationQuote } from "@/types/accommodation";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { getProjectExecutionState, type ProjectExecutionState } from "@/lib/projectExecutionState";
+import { isBureauItem } from "@/lib/bureauItem";
 
 export interface CustomerPortalProgramLike {
   terms_accepted_at?: string | null;
