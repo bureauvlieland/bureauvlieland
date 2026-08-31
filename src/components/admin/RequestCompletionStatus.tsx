@@ -159,6 +159,19 @@ export const RequestCompletionStatus = ({
           </span>
         </div>
 
+        {/* Ondertekend terwijl er nog onderdelen open staan → onder voorbehoud */}
+        {termsAccepted && !allItemsConfirmed && (
+          <div className="flex items-start gap-2 text-sm">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <span className="text-amber-700">
+              Ondertekend onder voorbehoud — {partnerActionableItems.length - confirmedItems.length}{" "}
+              onderde{partnerActionableItems.length - confirmedItems.length === 1 ? "el" : "len"} nog
+              niet bevestigd door de aanbieder.
+            </span>
+          </div>
+        )}
+
+
         {/* Outstanding amount */}
         {effectiveStatus !== "in_progress" && (
           <div className="flex items-center gap-2 text-sm">
