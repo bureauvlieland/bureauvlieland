@@ -37,6 +37,10 @@ export interface CustomerPortalStatus {
   isProposalPhase: boolean;
   isApprovalPhase: boolean;
   allConfirmed: boolean;
+  /** Niet-geannuleerde onderdelen die nog niet door de aanbieder bevestigd zijn. */
+  unconfirmedItems: ProgramRequestItem[];
+  /** Klant mag onder voorbehoud ondertekenen: nog niet alles bevestigd, maar er is wél iets open. */
+  canAcceptUnderReservation: boolean;
   customerActionsCount: number;
   proposalActionsCount: number;
   alternativeActionsCount: number;
@@ -46,6 +50,22 @@ export interface CustomerPortalStatus {
   showApprovalActions: boolean;
   showPartnerWaiting: boolean;
 }
+
+/** Geldt een onderdeel als bevestigd voor de akkoord-stap? */
+export const isItemConfirmedForTerms = (item: ProgramRequestItem): boolean =>
+  item.status === "cancelled" ||
+  item.status === "confirmed" ||
+  item.status === "accepted" ||
+  item.status === "executed" ||
+  item.status === "invoiced" ||
+  (item as { item_quote_status?: string | null }).item_quote_status === "bevestigd";
+
+/** Onderdelen die nog op bevestiging van de aanbieder wachten. */
+export const getUnconfirmedItemsForTerms = (
+  items: ProgramRequestItem[],
+): ProgramRequestItem[] =>
+  items.filter((item) => item.status !== "cancelled" && !isItemConfirmedForTerms(item));
+
 
 const POST_EXECUTION_COMPLETION_STATUSES = new Set([
   "ready_for_invoice",
