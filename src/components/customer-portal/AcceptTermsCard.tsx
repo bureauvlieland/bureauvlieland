@@ -103,8 +103,10 @@ export const AcceptTermsCard = ({
     return data.publicUrl;
   };
 
+  const isUnderReservation = unconfirmedItems.length > 0;
+
   const handleAcceptClick = () => {
-    if (!isChecked || !isBillingComplete || !signatureName.trim()) return;
+    if (!canSubmit) return;
 
     // Check if multi-day without accommodation - show warning
     if (isMultiDay && !hasSelectedAccommodation) {
@@ -119,7 +121,7 @@ export const AcceptTermsCard = ({
   const handleAccept = async () => {
     setIsSubmitting(true);
     try {
-      await onAccept(signatureName.trim());
+      await onAccept(signatureName.trim(), isUnderReservation);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +137,12 @@ export const AcceptTermsCard = ({
     handleAccept();
   };
 
-  const canSubmit = isChecked && isBillingComplete && signatureName.trim().length >= 2;
+  const canSubmit =
+    isChecked &&
+    isBillingComplete &&
+    signatureName.trim().length >= 2 &&
+    (!isUnderReservation || reservationAcknowledged);
+
 
   // Helper to get the appropriate terms link/label for a partner
   const getPartnerTermsInfo = (partner: PartnerTermsInfo) => {
