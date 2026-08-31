@@ -1098,21 +1098,34 @@ Deno.serve(async (req) => {
         action: "terms_accepted",
         actor: "customer",
         actor_name: signatureName || program.customer_name,
-        notes: `Voorwaarden geaccepteerd (versie ${termsVersion}). Handtekening-ID: ${signatureId}`,
+        notes: signedUnderReservation
+          ? `Voorwaarden geaccepteerd ONDER VOORBEHOUD (versie ${termsVersion}). Nog niet bevestigd: ${reservationNames}. Handtekening-ID: ${signatureId}`
+          : `Voorwaarden geaccepteerd (versie ${termsVersion}). Handtekening-ID: ${signatureId}`,
         new_value: { 
           terms_version: termsVersion, 
           signature_id: signatureId,
           signature_name: signatureName || program.customer_name,
           client_ip: clientIp,
+          under_reservation: signedUnderReservation,
+          unconfirmed_items: unconfirmedAtSigning.map((i: any) => i.block_name),
         },
       });
 
       // --- Accepted terms log ---
       const { data: programItems } = await supabase
         .from("program_request_items")
-        .select("provider_id, provider_name, block_type, block_category")
+        .select("provider_id, provider_name, block_type, block_category, block_name, status, item_quote_status")
         .eq("request_id", program.id)
         .neq("status", "cancelled");
+
+      // Onderdelen die op moment van ondertekening nog niet door de aanbieder
+      // bevestigd zijn — bij "onder voorbehoud" leggen we dit expliciet vast.
+      const unconfirmedAtSigning = (programItems || []).filter((i: any) =>
+        !["confirmed", "accepted", "executed", "invoiced"].includes(i.status) &&
+        i.item_quote_status !== "bevestigd"
+      );
+      const signedUnderReservation = underReservation === true && unconfirmedAtSigning.length > 0;
+      const reservationNames = unconfirmedAtSigning.map((i: any) => i.block_name).join(", ");
 
       const uniquePartnerIds = [...new Set(
         (programItems || [])
