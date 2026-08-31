@@ -119,9 +119,9 @@ describe("getCustomerPortalStatus", () => {
       },
       selectedDates: [new Date("2026-12-01T00:00:00Z")],
       items: [
-        item({ id: "item-1", status: "pending", provider_id: "bureau", block_type: "bureau", block_category: "vervoer", block_name: "Overtocht Harlingen → Vlieland" }),
-        item({ id: "item-2", status: "pending", provider_id: "bureau", block_type: "bureau", block_category: "vervoer", block_name: "Fietsuur (E-bike)" }),
-        item({ id: "item-3", status: "pending", provider_id: "zeehondentochten", block_name: "Zeehondentocht Exclusief" }),
+        item({ id: "item-1", status: "pending", provider_id: "bureau", block_type: "bureau", block_category: "vervoer", block_name: "Overtocht Harlingen → Vlieland", customer_approved_at: "2026-06-29T10:00:00Z", customer_accepted_at: "2026-06-29T10:00:00Z" }),
+        item({ id: "item-2", status: "pending", provider_id: "bureau", block_type: "bureau", block_category: "vervoer", block_name: "Fietsuur (E-bike)", customer_approved_at: "2026-06-29T10:00:00Z", customer_accepted_at: "2026-06-29T10:00:00Z" }),
+        item({ id: "item-3", status: "pending", provider_id: "zeehondentochten", block_name: "Zeehondentocht Exclusief", customer_approved_at: "2026-06-29T10:00:00Z", customer_accepted_at: "2026-06-29T10:00:00Z" }),
       ],
     });
 
