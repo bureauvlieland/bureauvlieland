@@ -95,7 +95,8 @@ Deno.serve(async (req) => {
           reference_number,
           linked_program_id,
           arrival_date,
-          departure_date
+          departure_date,
+          number_of_guests
         )
       `)
       .eq("id", quoteId)
