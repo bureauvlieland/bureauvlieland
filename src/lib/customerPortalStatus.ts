@@ -229,6 +229,9 @@ export function getCustomerPortalStatus(args: {
     isProposalPhase,
     isApprovalPhase,
     allConfirmed,
+    unconfirmedItems,
+    canAcceptUnderReservation,
+
     showApprovalActions,
     showPartnerWaiting,
     ...approvalStats,
