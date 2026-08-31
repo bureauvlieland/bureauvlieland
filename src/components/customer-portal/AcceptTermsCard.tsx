@@ -27,12 +27,14 @@ interface AccommodationQuote {
 }
 
 interface AcceptTermsCardProps {
-  onAccept: (signatureName: string) => Promise<boolean>;
+  onAccept: (signatureName: string, underReservation?: boolean) => Promise<boolean>;
   isBillingComplete: boolean;
   onOpenBilling: () => void;
   items: ProgramRequestItem[];
   accommodationQuotes?: AccommodationQuote[];
   selectedDates?: Date[];
+  /** Onderdelen die nog op bevestiging van de aanbieder wachten (ondertekenen onder voorbehoud). */
+  unconfirmedItems?: ProgramRequestItem[];
 }
 
 const DEFAULT_TERMS_URL = "/partner-voorwaarden";
@@ -46,7 +48,9 @@ export const AcceptTermsCard = ({
   items,
   accommodationQuotes = [],
   selectedDates = [],
+  unconfirmedItems = [],
 }: AcceptTermsCardProps) => {
+
   const navigate = useNavigate();
   const [isChecked, setIsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
