@@ -1247,8 +1247,8 @@ Deno.serve(async (req) => {
         await supabase.from("admin_todos").insert({
           title: `Facturatie: ${customerName}`,
           description: snoozeUntil
-            ? `Klant heeft de voorwaarden geaccepteerd. Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).`
-            : `Klant heeft de voorwaarden geaccepteerd. Programma is klaar voor facturatie.`,
+            ? `Klant heeft de voorwaarden geaccepteerd${signedUnderReservation ? ` (ONDER VOORBEHOUD — nog niet bevestigd: ${reservationNames})` : ""}. Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).`
+            : `Klant heeft de voorwaarden geaccepteerd${signedUnderReservation ? ` (ONDER VOORBEHOUD — nog niet bevestigd: ${reservationNames})` : ""}. Programma is klaar voor facturatie.`,
           priority: "normal",
           status: "todo",
           related_request_id: program.id,
@@ -1388,6 +1388,14 @@ Deno.serve(async (req) => {
         </table>
       `;
 
+      const reservationNoticeHtml = signedUnderReservation
+        ? `<div style="background:#fff8e1; padding:14px 18px; border-left:4px solid #f59e0b; border-radius:6px; margin:16px 0;">
+             <p style="margin:0 0 6px;"><strong>Onder voorbehoud</strong></p>
+             <p style="margin:0; font-size:14px;">De volgende onderdelen wachten nog op bevestiging van de aanbieder: ${sanitizeHtml(reservationNames)}.
+             Wij houden dit voor u in de gaten en laten u weten zodra het rond is. Lukt een onderdeel niet, dan zoeken wij een alternatief of vervalt het onderdeel zonder kosten.</p>
+           </div>`
+        : "";
+
       const partnerTermsNote = providerItems.size > 0 
         ? ` en de voorwaarden van ${providerItems.size} betrokken partner(s)` 
         : "";
@@ -1401,17 +1409,25 @@ Deno.serve(async (req) => {
         reference_number: sanitizeHtml(program.reference_number || ""),
         signature_details: signatureTableHtml,
         partner_terms_note: partnerTermsNote,
+        reservation_notice: reservationNoticeHtml,
         portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
         portal_link: `https://bureauvlieland.nl/mijn-programma/${token}`,
       });
 
 
-      const bookingCustomerSubject = bookingCustomerTemplate?.subject || "Boeking definitief bevestigd";
-      const bookingCustomerBody = bookingCustomerTemplate?.body || `
+      const bookingCustomerSubject = signedUnderReservation
+        ? "Uw akkoord is vastgelegd (onder voorbehoud)"
+        : (bookingCustomerTemplate?.subject || "Boeking definitief bevestigd");
+      const bookingCustomerBody = (bookingCustomerTemplate?.body
+        ? (bookingCustomerTemplate.body.includes("Onder voorbehoud")
+            ? bookingCustomerTemplate.body
+            : `${reservationNoticeHtml}${bookingCustomerTemplate.body}`)
+        : null) || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Je boeking is definitief!</h2>
             <p>Beste ${sanitizeHtml(program.customer_name)},</p>
-            <p>Bedankt voor je boeking bij Bureau Vlieland. Alle activiteiten zijn bevestigd en je akkoord op de algemene voorwaarden is geregistreerd.</p>
+            <p>Bedankt voor uw boeking bij Bureau Vlieland. Uw akkoord op de algemene voorwaarden is geregistreerd.</p>
+            ${reservationNoticeHtml}
             
             <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
               <h3 style="margin-top: 0;">Boekingsoverzicht</h3>
