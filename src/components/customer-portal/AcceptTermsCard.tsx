@@ -58,6 +58,8 @@ export const AcceptTermsCard = ({
   const [partnerTerms, setPartnerTerms] = useState<PartnerTermsInfo[]>([]);
   const [isLoadingPartners, setIsLoadingPartners] = useState(true);
   const [showAccommodationWarning, setShowAccommodationWarning] = useState(false);
+  const [reservationAcknowledged, setReservationAcknowledged] = useState(false);
+
 
   // Check if this is a multi-day program without accommodation
   const isMultiDay = selectedDates.length > 1;
