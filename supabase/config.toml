@@ -165,3 +165,6 @@ verify_jwt = false
 [functions.map-payment-status]
 verify_jwt = false
 
+
+[functions.temp-invoice-pdf-audit]
+verify_jwt = false
