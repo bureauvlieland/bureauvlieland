@@ -190,21 +190,49 @@ export const AcceptTermsCard = ({
   const lodgingSignatureName = selectedQuote?.customer_signature_name || null;
 
   return (
-    <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+    <Card
+      className={cn(
+        isUnderReservation
+          ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+          : "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20",
+      )}
+    >
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
-          <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/50">
-            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <div
+            className={cn(
+              "p-2 rounded-full",
+              isUnderReservation
+                ? "bg-amber-100 dark:bg-amber-900/50"
+                : "bg-green-100 dark:bg-green-900/50",
+            )}
+          >
+            <CheckCircle
+              className={cn(
+                "h-6 w-6",
+                isUnderReservation
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-green-600 dark:text-green-400",
+              )}
+            />
           </div>
           
           <div className="flex-1 space-y-4">
             <div>
-              <h3 className="font-semibold text-lg">Alle activiteiten zijn bevestigd!</h3>
+              <h3 className="font-semibold text-lg">
+                {isUnderReservation
+                  ? "Ondertekenen onder voorbehoud"
+                  : "Alle activiteiten zijn bevestigd!"}
+              </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                De aanbieders hebben alle activiteiten in je programma bevestigd. 
-                Voordat de definitieve boeking ingaat, vragen we je akkoord op de voorwaarden.
-              </p>
-            </div>
+                {isUnderReservation
+                  ? `U legt uw programma en de voorwaarden nu vast. ${
+                      unconfirmedItems.length === 1
+                        ? "Eén onderdeel wacht"
+                        : `${unconfirmedItems.length} onderdelen wachten`
+                    } nog op bevestiging van de aanbieder en blijft daarom onder voorbehoud.`
+                  : "De aanbieders hebben alle activiteiten in uw programma bevestigd. Voordat de definitieve boeking ingaat, vragen we uw akkoord op de voorwaarden."}
+
 
             {!isBillingComplete && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
