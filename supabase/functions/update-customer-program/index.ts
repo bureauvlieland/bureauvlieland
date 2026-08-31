@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, changes, items, programDetails, billingDetails, guestDetails, accommodationSetup, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, origin } = await req.json() as {
+    const { token, changes, items, programDetails, billingDetails, guestDetails, accommodationSetup, acceptTerms, signatureName, acceptItemId, cancelItemId, counterProposal, underReservation, origin } = await req.json() as {
       token: string;
       changes?: PendingChange[];
       items?: ProgramRequestItem[];
@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
       };
       acceptTerms?: boolean;
       signatureName?: string;
+      underReservation?: boolean;
       acceptItemId?: string;
       cancelItemId?: string;
       counterProposal?: CounterProposal;
