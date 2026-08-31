@@ -25,6 +25,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useEffect } from "react";
 import { TestCoverageCard } from "@/components/admin/email-health/TestCoverageCard";
+import { CriticalSelftestCard } from "@/components/admin/email-health/CriticalSelftestCard";
+
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
