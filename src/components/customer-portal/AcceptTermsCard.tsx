@@ -388,7 +388,35 @@ export const AcceptTermsCard = ({
                   )}
                 </Label>
               </div>
+
+              {isUnderReservation && (
+                <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30 p-3">
+                  <Checkbox
+                    id="reservation-checkbox"
+                    checked={reservationAcknowledged}
+                    onCheckedChange={(checked) => setReservationAcknowledged(checked === true)}
+                    disabled={!isBillingComplete}
+                  />
+                  <Label
+                    htmlFor="reservation-checkbox"
+                    className="text-sm cursor-pointer leading-relaxed"
+                  >
+                    Ik begrijp dat{" "}
+                    {unconfirmedItems.length === 1
+                      ? "het volgende onderdeel"
+                      : "de volgende onderdelen"}{" "}
+                    nog onder voorbehoud van bevestiging door de aanbieder{" "}
+                    {unconfirmedItems.length === 1 ? "staat" : "staan"}:{" "}
+                    <span className="font-medium">
+                      {unconfirmedItems.map((item) => item.block_name).join(", ")}
+                    </span>
+                    . Lukt een onderdeel niet, dan zoekt Bureau Vlieland een alternatief of
+                    vervalt het onderdeel zonder kosten.
+                  </Label>
+                </div>
+              )}
             </div>
+
 
             {/* Digital Signature Section - simplified per briefing */}
             <div className={cn(
