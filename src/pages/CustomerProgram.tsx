@@ -256,14 +256,17 @@ const CustomerProgram = () => {
     return success;
   };
 
-  const handleAcceptTerms = async (signatureName: string) => {
-    const success = await acceptTerms(signatureName);
+  const handleAcceptTerms = async (signatureName: string, underReservation?: boolean) => {
+    const success = await acceptTerms(signatureName, underReservation);
 
     if (success) {
       toast({
-        title: "Boeking ondertekend",
-        description: "Uw boeking is nu definitief bevestigd. U ontvangt een bevestigingsmail.",
+        title: underReservation ? "Ondertekend onder voorbehoud" : "Boeking ondertekend",
+        description: underReservation
+          ? "Uw akkoord is vastgelegd. De onderdelen die nog op bevestiging wachten houden wij voor u in de gaten."
+          : "Uw boeking is nu definitief bevestigd. U ontvangt een bevestigingsmail.",
       });
+
     } else {
       toast({
         title: "Er ging iets mis",
