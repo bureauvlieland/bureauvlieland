@@ -169,7 +169,8 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2 } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw } from "lucide-react";
+import { ReopenRequestDialog } from "@/components/admin/ReopenRequestDialog";
 import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
 import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 
@@ -357,6 +358,7 @@ const AdminRequestDetail = () => {
     import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[]
   >([]);
   const [isLoadingRetroCancel, setIsLoadingRetroCancel] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
