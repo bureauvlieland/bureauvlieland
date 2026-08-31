@@ -1077,6 +1077,21 @@ Deno.serve(async (req) => {
       const signatureId = crypto.randomUUID();
       const acceptedAt = new Date().toISOString();
       const termsVersion = "2024-v1";
+
+      const { data: programItems } = await supabase
+        .from("program_request_items")
+        .select("provider_id, provider_name, block_type, block_category, block_name, status, item_quote_status")
+        .eq("request_id", program.id)
+        .neq("status", "cancelled");
+
+      // Onderdelen die op moment van ondertekening nog niet door de aanbieder
+      // bevestigd zijn — bij "onder voorbehoud" leggen we dit expliciet vast.
+      const unconfirmedAtSigning = (programItems || []).filter((i: any) =>
+        !["confirmed", "accepted", "executed", "invoiced"].includes(i.status) &&
+        i.item_quote_status !== "bevestigd"
+      );
+      const signedUnderReservation = underReservation === true && unconfirmedAtSigning.length > 0;
+      const reservationNames = unconfirmedAtSigning.map((i: any) => i.block_name).join(", ");
       
       // Update program with signature info
       await supabase
@@ -1112,20 +1127,6 @@ Deno.serve(async (req) => {
       });
 
       // --- Accepted terms log ---
-      const { data: programItems } = await supabase
-        .from("program_request_items")
-        .select("provider_id, provider_name, block_type, block_category, block_name, status, item_quote_status")
-        .eq("request_id", program.id)
-        .neq("status", "cancelled");
-
-      // Onderdelen die op moment van ondertekening nog niet door de aanbieder
-      // bevestigd zijn — bij "onder voorbehoud" leggen we dit expliciet vast.
-      const unconfirmedAtSigning = (programItems || []).filter((i: any) =>
-        !["confirmed", "accepted", "executed", "invoiced"].includes(i.status) &&
-        i.item_quote_status !== "bevestigd"
-      );
-      const signedUnderReservation = underReservation === true && unconfirmedAtSigning.length > 0;
-      const reservationNames = unconfirmedAtSigning.map((i: any) => i.block_name).join(", ");
 
       const uniquePartnerIds = [...new Set(
         (programItems || [])
