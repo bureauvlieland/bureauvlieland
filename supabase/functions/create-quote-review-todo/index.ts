@@ -81,6 +81,28 @@ Deno.serve(async (req) => {
     const customerDisplay = request.customer_company || request.customer_name;
     const refPrefix = request.reference_number ? ` (${request.reference_number})` : "";
 
+    // Bureau-melding per mail (naast de werkbanktaak). Een herziening telt als
+    // eigen gebeurtenis, dus de versie zit in de idempotency-key.
+    const { count: historyCount } = await supabase
+      .from("accommodation_quote_history")
+      .select("id", { count: "exact", head: true })
+      .eq("quote_id", quoteId);
+
+    const version = historyCount ?? 0;
+    const origin = req.headers.get("origin") ?? undefined;
+
+    await sendLodgingBureauAlert({
+      kind: version > 0 ? "revised" : "submitted",
+      quoteId,
+      partner: { id: partner.id, name: partner.name },
+      accommodationName: quote.accommodation_name,
+      priceTotal: quote.price_total,
+      validUntil: (quote as { valid_until?: string | null }).valid_until ?? null,
+      request,
+      origin,
+      versionKey: version,
+    });
+
     // Check if auto-todo already exists
     const { data: existingTodo } = await supabase
       .from("admin_todos")
