@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendLodgingBureauAlert } from "../_shared/lodging-bureau-alert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,7 +95,8 @@ Deno.serve(async (req) => {
           reference_number,
           linked_program_id,
           arrival_date,
-          departure_date
+          departure_date,
+          number_of_guests
         )
       `)
       .eq("id", quoteId)
@@ -114,6 +116,7 @@ Deno.serve(async (req) => {
       linked_program_id: string | null;
       arrival_date: string | null;
       departure_date: string | null;
+      number_of_guests: number | null;
     } | null;
 
     if (!partner || !request) {
@@ -236,6 +239,18 @@ Deno.serve(async (req) => {
         contact_name: partner.name,
       });
     }
+
+    // 11) Bureau-melding per mail (naast de werkbanktaak)
+    await sendLodgingBureauAlert({
+      kind: "declined",
+      quoteId,
+      partner: { id: partner.id, name: partner.name },
+      request,
+      declineReason: declineReason || null,
+      proposedArrival,
+      proposedDeparture,
+      origin: req.headers.get("origin") ?? undefined,
+    });
 
     console.log(
       `Quote ${quoteId} declined by ${partner.name}${hasAlternativeDates ? " with alternative dates" : ""}`,

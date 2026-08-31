@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendLodgingBureauAlert } from "../_shared/lodging-bureau-alert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +33,7 @@ Deno.serve(async (req) => {
         id,
         accommodation_name,
         price_total,
+        valid_until,
         partner_id,
         request_id,
         partner:partners(id, name, email),
@@ -40,7 +42,10 @@ Deno.serve(async (req) => {
           customer_name,
           customer_company,
           reference_number,
-          linked_program_id
+          linked_program_id,
+          arrival_date,
+          departure_date,
+          number_of_guests
         )
       `)
       .eq("id", quoteId)
@@ -61,6 +66,9 @@ Deno.serve(async (req) => {
       customer_company: string | null;
       reference_number: string | null;
       linked_program_id: string | null;
+      arrival_date: string | null;
+      departure_date: string | null;
+      number_of_guests: number | null;
     } | null;
 
     if (!partner || !request) {
@@ -72,6 +80,28 @@ Deno.serve(async (req) => {
 
     const customerDisplay = request.customer_company || request.customer_name;
     const refPrefix = request.reference_number ? ` (${request.reference_number})` : "";
+
+    // Bureau-melding per mail (naast de werkbanktaak). Een herziening telt als
+    // eigen gebeurtenis, dus de versie zit in de idempotency-key.
+    const { count: historyCount } = await supabase
+      .from("accommodation_quote_history")
+      .select("id", { count: "exact", head: true })
+      .eq("quote_id", quoteId);
+
+    const version = historyCount ?? 0;
+    const origin = req.headers.get("origin") ?? undefined;
+
+    await sendLodgingBureauAlert({
+      kind: version > 0 ? "revised" : "submitted",
+      quoteId,
+      partner: { id: partner.id, name: partner.name },
+      accommodationName: quote.accommodation_name,
+      priceTotal: quote.price_total,
+      validUntil: (quote as { valid_until?: string | null }).valid_until ?? null,
+      request,
+      origin,
+      versionKey: version,
+    });
 
     // Check if auto-todo already exists
     const { data: existingTodo } = await supabase
