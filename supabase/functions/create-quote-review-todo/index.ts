@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
       customer_company: string | null;
       reference_number: string | null;
       linked_program_id: string | null;
+      arrival_date: string | null;
+      departure_date: string | null;
+      number_of_guests: number | null;
     } | null;
 
     if (!partner || !request) {
