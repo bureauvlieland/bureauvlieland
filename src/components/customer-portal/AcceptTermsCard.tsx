@@ -443,7 +443,11 @@ export const AcceptTermsCard = ({
               </div>
 
               <ul className="text-xs text-muted-foreground space-y-1 pl-4">
-                <li>• Reserveringen worden definitief bevestigd</li>
+                <li>
+                  {isUnderReservation
+                    ? "• Bevestigde onderdelen worden definitief gereserveerd"
+                    : "• Reserveringen worden definitief bevestigd"}
+                </li>
                 <li>• Annuleringsvoorwaarden zijn van toepassing</li>
               </ul>
             </div>
@@ -455,7 +459,10 @@ export const AcceptTermsCard = ({
             >
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <PenLine className="h-4 w-4 mr-2" />
-              Ondertekenen & Definitief boeken
+              {isUnderReservation
+                ? "Ondertekenen onder voorbehoud"
+                : "Ondertekenen & Definitief boeken"}
+
             </Button>
           </div>
         </div>
