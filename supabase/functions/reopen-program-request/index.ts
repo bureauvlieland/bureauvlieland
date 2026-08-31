@@ -141,6 +141,7 @@ export const handler = async (req: Request): Promise<Response> => {
     await supabase.from("program_request_history").insert({
       request_id: requestId,
       action: "reopened",
+      actor: "admin",
       actor_name: user.email ?? "admin",
       new_value: {
         reason,
