@@ -257,7 +257,10 @@ export default function AdminEmailHealth() {
 
         <AuditReportCard />
 
+        <CriticalSelftestCard />
+
         <TestCoverageCard />
+
 
         <AutoCloseCard />
 
