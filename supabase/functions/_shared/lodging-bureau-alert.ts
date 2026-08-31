@@ -166,7 +166,7 @@ export async function sendLodgingBureauAlert(
       .select("id")
       .eq("email_type", emailType)
       .eq("status", "sent")
-      .contains("metadata", { idempotency_key: idempotencyKey })
+      .eq("idempotency_key", idempotencyKey)
       .limit(1)
       .maybeSingle();
 
