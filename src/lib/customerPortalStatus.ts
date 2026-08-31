@@ -194,20 +194,21 @@ export function getCustomerPortalStatus(args: {
   const rawAllConfirmed = items.some((item) => item.status !== "cancelled") &&
     unconfirmedItems.length === 0;
   const allConfirmed = isPostExecution || rawAllConfirmed;
-  // Onder voorbehoud ondertekenen mag zodra de klant zelf akkoord is op het
-  // voorstel en er alleen nog aanbieder-bevestigingen open staan.
-  const canAcceptUnderReservation =
-    !allConfirmed &&
-    !termsAccepted &&
-    !isProposalPhase &&
-    unconfirmedItems.length > 0 &&
-    approvalStatsPlaceholderApprovedAll(items, program.quote_status);
 
   const showApprovalActions = !isPostExecution;
   const showPartnerWaiting = !isPostExecution;
   const approvalStats = getCustomerApprovalStats(items, program.quote_status, {
     suppressApprovalActions: !showApprovalActions,
   });
+  // Onder voorbehoud ondertekenen mag zodra de klant zelf niets meer hoeft te
+  // doen en er alleen nog aanbieder-bevestigingen open staan.
+  const canAcceptUnderReservation =
+    !allConfirmed &&
+    !termsAccepted &&
+    !isProposalPhase &&
+    unconfirmedItems.length > 0 &&
+    approvalStats.customerActionsCount === 0;
+
   const guestDetailsIncomplete = !!guestDetails && (
     !guestDetails.guest_names ||
     (!!guestDetails.showDietary && !guestDetails.dietary_notes) ||
