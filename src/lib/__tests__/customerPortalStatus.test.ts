@@ -110,4 +110,24 @@ describe("getCustomerPortalStatus", () => {
     expect(status.customerActionsCount).toBe(1);
     expect(status.showApprovalActions).toBe(true);
   });
+
+  it("telt bureau-eigen onderdelen niet als 'nog niet bevestigd'", () => {
+    const status = getCustomerPortalStatus({
+      program: {
+        quote_status: "akkoord_ontvangen",
+        selected_dates: ["2026-12-01"],
+      },
+      selectedDates: [new Date("2026-12-01T00:00:00Z")],
+      items: [
+        item({ id: "item-1", status: "pending", provider_id: "bureau", block_type: "bureau", block_category: "vervoer", block_name: "Overtocht Harlingen → Vlieland" }),
+        item({ id: "item-2", status: "pending", provider_id: "bureau", block_type: "bureau", block_category: "vervoer", block_name: "Fietsuur (E-bike)" }),
+        item({ id: "item-3", status: "pending", provider_id: "zeehondentochten", block_name: "Zeehondentocht Exclusief" }),
+      ],
+    });
+
+    expect(status.unconfirmedItems).toHaveLength(1);
+    expect(status.unconfirmedItems[0].block_name).toBe("Zeehondentocht Exclusief");
+    expect(status.allConfirmed).toBe(false);
+    expect(status.canAcceptUnderReservation).toBe(true);
+  });
 });
