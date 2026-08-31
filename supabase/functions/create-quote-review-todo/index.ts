@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
         id,
         accommodation_name,
         price_total,
+        valid_until,
         partner_id,
         request_id,
         partner:partners(id, name, email),
@@ -41,7 +42,10 @@ Deno.serve(async (req) => {
           customer_name,
           customer_company,
           reference_number,
-          linked_program_id
+          linked_program_id,
+          arrival_date,
+          departure_date,
+          number_of_guests
         )
       `)
       .eq("id", quoteId)
