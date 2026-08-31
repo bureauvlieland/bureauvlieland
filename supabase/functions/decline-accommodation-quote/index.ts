@@ -240,6 +240,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 11) Bureau-melding per mail (naast de werkbanktaak)
+    await sendLodgingBureauAlert({
+      kind: "declined",
+      quoteId,
+      partner: { id: partner.id, name: partner.name },
+      request,
+      declineReason: declineReason || null,
+      proposedArrival,
+      proposedDeparture,
+      origin: req.headers.get("origin") ?? undefined,
+    });
+
     console.log(
       `Quote ${quoteId} declined by ${partner.name}${hasAlternativeDates ? " with alternative dates" : ""}`,
     );
