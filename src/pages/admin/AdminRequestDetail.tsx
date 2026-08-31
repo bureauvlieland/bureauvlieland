@@ -169,7 +169,8 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2 } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw } from "lucide-react";
+import { ReopenRequestDialog } from "@/components/admin/ReopenRequestDialog";
 import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
 import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 
@@ -357,6 +358,7 @@ const AdminRequestDetail = () => {
     import("@/components/admin/PartnerCancellationNotifyDialog").AccommodationPartner[]
   >([]);
   const [isLoadingRetroCancel, setIsLoadingRetroCancel] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
@@ -1819,7 +1821,7 @@ const AdminRequestDetail = () => {
                   {request.cancelled_at && <>Op {format(new Date(request.cancelled_at), "EEE d MMMM yyyy 'om' HH:mm", { locale: nl })}</>}
                   {request.cancellation_reason && <> · {request.cancellation_reason}</>}
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -1829,10 +1831,24 @@ const AdminRequestDetail = () => {
                     <Mail className="h-3.5 w-3.5 mr-1.5" />
                     {isLoadingRetroCancel ? "Partners ophalen..." : "Partners (alsnog) informeren over annulering"}
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => setReopenDialogOpen(true)}>
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                    Aanvraag heropenen
+                  </Button>
                 </div>
               </AlertDescription>
             </Alert>
           )}
+
+          <ReopenRequestDialog
+            open={reopenDialogOpen}
+            onOpenChange={setReopenDialogOpen}
+            requestId={request.id}
+            referenceNumber={request.reference_number}
+            quoteValidUntil={(request as any).quote_valid_until ?? null}
+            onReopened={fetchRequestData}
+          />
+
 
           {/* Catering-only meta card */}
           {request.origin === "catering_only" && (
