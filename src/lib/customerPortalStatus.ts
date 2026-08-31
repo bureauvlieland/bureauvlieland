@@ -190,16 +190,19 @@ export function getCustomerPortalStatus(args: {
   const isPreApproval = !!program.quote_status &&
     ["concept", "in_afstemming", "offerte_verstuurd"].includes(program.quote_status);
 
+  const unconfirmedItems = getUnconfirmedItemsForTerms(items);
   const rawAllConfirmed = items.some((item) => item.status !== "cancelled") &&
-    items.every((item) =>
-      item.status === "cancelled" ||
-      item.status === "confirmed" ||
-      item.status === "accepted" ||
-      item.status === "executed" ||
-      item.status === "invoiced" ||
-      item.item_quote_status === "bevestigd",
-    );
+    unconfirmedItems.length === 0;
   const allConfirmed = isPostExecution || rawAllConfirmed;
+  // Onder voorbehoud ondertekenen mag zodra de klant zelf akkoord is op het
+  // voorstel en er alleen nog aanbieder-bevestigingen open staan.
+  const canAcceptUnderReservation =
+    !allConfirmed &&
+    !termsAccepted &&
+    !isProposalPhase &&
+    unconfirmedItems.length > 0 &&
+    approvalStatsPlaceholderApprovedAll(items, program.quote_status);
+
   const showApprovalActions = !isPostExecution;
   const showPartnerWaiting = !isPostExecution;
   const approvalStats = getCustomerApprovalStats(items, program.quote_status, {
