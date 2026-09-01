@@ -25,6 +25,19 @@ interface SelectQuoteRequest {
   acceptedTerms?: boolean;
 }
 
+/**
+ * Leest de Mailjet MessageID uit een verzendrespons. Zonder deze koppeling
+ * kan de Mailjet-webhook (delivered/open/click/bounce) de mail nooit aan de
+ * email_log-rij matchen — daarom hier expliciet per send uitgelezen.
+ */
+async function readMessageId(resp: Response): Promise<string | null> {
+  try {
+    return extractMessageIds(await resp.clone().json())[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
@@ -461,7 +474,7 @@ Deno.serve(async (req) => {
         `;
 
         try {
-          await fetch("https://api.mailjet.com/v3.1/send", {
+          const mjPartnerResp = await fetch("https://api.mailjet.com/v3.1/send", {
             method: "POST",
             headers: {
               Authorization: `Basic ${auth}`,
@@ -479,6 +492,7 @@ Deno.serve(async (req) => {
               ],
             }),
           });
+          mailjetMessageId = await readMessageId(mjPartnerResp);
 
           await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
@@ -614,7 +628,7 @@ Deno.serve(async (req) => {
         }
 
         try {
-          await fetch("https://api.mailjet.com/v3.1/send", {
+          const mjCustomerResp = await fetch("https://api.mailjet.com/v3.1/send", {
             method: "POST",
             headers: {
               Authorization: `Basic ${auth}`,
@@ -630,6 +644,7 @@ Deno.serve(async (req) => {
               }],
             }),
           });
+          mailjetMessageId = await readMessageId(mjCustomerResp);
 
           await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
@@ -699,7 +714,7 @@ Deno.serve(async (req) => {
 
           const rejectedEmail = getRecipientEmail(rqPartner.contact_email || rqPartner.email, origin);
           try {
-            await fetch("https://api.mailjet.com/v3.1/send", {
+            const mjRejectedResp = await fetch("https://api.mailjet.com/v3.1/send", {
               method: "POST",
               headers: {
                 Authorization: `Basic ${auth}`,
@@ -714,6 +729,7 @@ Deno.serve(async (req) => {
                 }],
               }),
             });
+            mailjetMessageId = await readMessageId(mjRejectedResp);
 
             await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
