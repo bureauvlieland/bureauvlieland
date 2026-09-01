@@ -257,7 +257,7 @@ export const AdminEditActivitySheet = ({
     // Bij bestaande onderdelen kan de prijs elders vastliggen (partnerofferte /
     // bouwsteenprijs); dan mag je bv. alleen de locatie aanpassen.
     if (!priceProvided && item.pending_added === true) {
-      toast.error("Prijs is verplicht — vul een bedrag in groter dan €0");
+      toast.error("Prijs is verplicht — vul een bedrag in (0 mag ook)");
       return;
     }
     const price = priceProvided ? parseFloat(rawPrice) : null;
@@ -268,10 +268,6 @@ export const AdminEditActivitySheet = ({
       }
       if ((price as number) < 0) {
         toast.error("Prijs mag niet negatief zijn");
-        return;
-      }
-      if (price === 0) {
-        toast.error("Prijs moet groter zijn dan €0");
         return;
       }
     }
@@ -727,12 +723,13 @@ export const AdminEditActivitySheet = ({
               const fmt = (n: number) =>
                 n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
               const price = parseFloat(priceOverride);
-              const hasPrice = isFinite(price) && price > 0;
+              const hasValue = priceOverride.trim() !== "" && isFinite(price) && price >= 0;
+              const hasPrice = hasValue && price > 0;
               const days = Math.max(selectedDates.length, 1);
               // Mirror portalPricing: gebruik override_people indien gezet, anders programma-totaal
               const effectivePeople = Math.max(item?.override_people ?? numberOfPeople, 1);
 
-              const total = !hasPrice
+              const total = !hasValue
                 ? 0
                 : priceType === "total"
                   ? price
@@ -749,17 +746,20 @@ export const AdminEditActivitySheet = ({
 
               return (
                 <div className="space-y-2 rounded-md border bg-muted/40 p-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm text-muted-foreground">{breakdown}</span>
-                    <span className="text-base font-semibold text-foreground">
-                      €{fmt(total)}
-                    </span>
-                  </div>
-                  {!hasPrice && (
+                  {hasValue && (
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm text-muted-foreground">{breakdown}</span>
+                      <span className="text-base font-semibold text-foreground">
+                        €{fmt(total)}
+                      </span>
+                    </div>
+                  )}
+                  {!hasValue && (
                     <p className="text-xs text-muted-foreground italic">
                       Vul een bedrag in om het totaal te berekenen.
                     </p>
                   )}
+
                   {priceType === "per_person" && hasPrice && price > 500 && (
                     <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 text-sm">
                       <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
