@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { resolveFeeStructure } from "@/lib/feeEngine";
+import { usePricingStructures } from "@/hooks/usePricing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -206,7 +207,11 @@ export const DesktopProgramView = ({
 
   // Organisatiefee 2.0: reken met dezelfde (snapshot-)structuur als de admin-factuur,
   // zodat het klanttotaal nooit afwijkt van de factuur.
-  const feeStructure = useMemo(() => resolveFeeStructure((program as any).fee_snapshot), [program]);
+  const { activeStructure } = usePricingStructures();
+  const feeStructure = useMemo(
+    () => resolveFeeStructure((program as any).fee_snapshot, activeStructure),
+    [program, activeStructure],
+  );
   const requestDate = (program as any).created_at ?? null;
   const arrivalDate = useMemo(() => {
     if (!selectedDates?.length) return null;
@@ -229,6 +234,7 @@ export const DesktopProgramView = ({
     termsAccepted,
     billingComplete,
     allConfirmed,
+    canAcceptUnderReservation,
     isMultiDay,
     hasSelectedAccommodation,
     isQuoteAwaitingApproval,
@@ -679,6 +685,7 @@ export const DesktopProgramView = ({
             termsAccepted={termsAccepted}
             billingComplete={billingComplete}
             allConfirmed={allConfirmed}
+            canAcceptUnderReservation={canAcceptUnderReservation}
             accommodationQuotes={accommodationQuotes}
             invoicingMode={invoicingMode}
             acceptedTerms={program.acceptedTerms}

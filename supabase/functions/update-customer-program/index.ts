@@ -16,6 +16,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
+import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1086,9 +1087,12 @@ Deno.serve(async (req) => {
 
       // Onderdelen die op moment van ondertekening nog niet door de aanbieder
       // bevestigd zijn — bij "onder voorbehoud" leggen we dit expliciet vast.
+      // Bureau-eigen onderdelen (overtochten, fietsen, bagagevervoer) regelen wij
+      // zelf en horen niet in de "nog niet bevestigd"-lijst richting de klant.
       const unconfirmedAtSigning = (programItems || []).filter((i: any) =>
         !["confirmed", "accepted", "executed", "invoiced"].includes(i.status) &&
-        i.item_quote_status !== "bevestigd"
+        i.item_quote_status !== "bevestigd" &&
+        !isBureauItem(i)
       );
       const signedUnderReservation = underReservation === true && unconfirmedAtSigning.length > 0;
       const reservationNames = unconfirmedAtSigning.map((i: any) => i.block_name).join(", ");
