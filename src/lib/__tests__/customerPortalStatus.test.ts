@@ -131,3 +131,64 @@ describe("getCustomerPortalStatus", () => {
     expect(status.canAcceptUnderReservation).toBe(true);
   });
 });
+describe("goedkeuring geldt de activiteit zelf (geen herbevestiging bij wijzigingen)", () => {
+  const program = {
+    quote_status: "akkoord_ontvangen",
+    completion_status: null,
+    selected_dates: ["2026-12-01"],
+  };
+
+  it("een partner-alternatief na het klantakkoord vraagt géén nieuwe goedkeuring", () => {
+    const status = getCustomerPortalStatus({
+      program,
+      selectedDates: [new Date("2026-12-01T00:00:00Z")],
+      items: [
+        item({
+          id: "item-1",
+          status: "alternative",
+          customer_approved_at: "2026-06-01T10:00:00Z",
+          customer_accepted_at: "2026-06-01T10:00:00Z",
+          // Partner reageerde later: mag het akkoord niet laten verlopen.
+          status_updated_at: "2026-07-15T10:00:00Z",
+        }),
+      ],
+    });
+
+    expect(status.customerActionsCount).toBe(0);
+    expect(status.alternativeActionsCount).toBe(0);
+    expect(status.customerApprovedCount).toBe(1);
+  });
+
+  it("een nieuw onderdeel zonder akkoord blijft wél een actiepunt", () => {
+    const status = getCustomerPortalStatus({
+      program,
+      selectedDates: [new Date("2026-12-01T00:00:00Z")],
+      items: [
+        item({ id: "item-1", customer_approved_at: "2026-06-01T10:00:00Z", customer_accepted_at: "2026-06-01T10:00:00Z" }),
+        item({ id: "item-2", block_name: "Nieuw onderdeel" }),
+      ],
+    });
+
+    expect(status.customerActionsCount).toBe(1);
+    expect(status.newItemActionsCount).toBe(1);
+    expect(status.customerApprovedCount).toBe(1);
+    expect(status.customerApprovableTotal).toBe(2);
+  });
+
+  it("losse facturabele kosten (day_index -1) zijn geen goed te keuren onderdeel", () => {
+    const status = getCustomerPortalStatus({
+      program,
+      selectedDates: [new Date("2026-12-01T00:00:00Z")],
+      items: [
+        item({ id: "item-1", status: "confirmed", item_quote_status: "bevestigd", customer_approved_at: "2026-06-01T10:00:00Z", customer_accepted_at: "2026-06-01T10:00:00Z" }),
+        item({ id: "kosten-1", block_name: "Begeleiding Erwin - 4 uur", day_index: -1, block_type: "bureau", provider_id: "bureau" }),
+      ],
+    });
+
+    expect(status.customerActionsCount).toBe(0);
+    expect(status.newItemActionsCount).toBe(0);
+    expect(status.customerApprovableTotal).toBe(1);
+    expect(status.unconfirmedItems.map((i) => i.id)).not.toContain("kosten-1");
+    expect(status.allConfirmed).toBe(true);
+  });
+});

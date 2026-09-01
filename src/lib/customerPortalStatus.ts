@@ -69,7 +69,12 @@ export const isItemConfirmedForTerms = (item: ProgramRequestItem): boolean =>
 export const getUnconfirmedItemsForTerms = (
   items: ProgramRequestItem[],
 ): ProgramRequestItem[] =>
-  items.filter((item) => item.status !== "cancelled" && !isItemConfirmedForTerms(item));
+  items.filter(
+    (item) =>
+      item.status !== "cancelled" &&
+      !isExtraCostItem(item) &&
+      !isItemConfirmedForTerms(item),
+  );
 
 
 const POST_EXECUTION_COMPLETION_STATUSES = new Set([
@@ -90,16 +95,28 @@ function toExecutionDateValues(
   return null;
 }
 
-export const isCustomerActionableCandidate = (item: ProgramRequestItem) =>
-  item.block_type !== "self_arranged" && item.status !== "cancelled";
+/**
+ * Losse facturabele kosten buiten het programma (day_index -1, bv.
+ * "Begeleiding Erwin - 4 uur") zijn geen programmaonderdeel: de klant hoeft
+ * ze niet als activiteit goed te keuren.
+ */
+export const isExtraCostItem = (item: ProgramRequestItem): boolean =>
+  (item as { day_index?: number | null }).day_index === -1;
 
-export const hasLiveCustomerApproval = (item: ProgramRequestItem): boolean => {
-  if (!item.customer_approved_at) return false;
-  if (item.status !== "alternative") return true;
-  const statusUpdatedAt = (item as any).status_updated_at as string | null | undefined;
-  if (!statusUpdatedAt) return false;
-  return new Date(item.customer_approved_at).getTime() >= new Date(statusUpdatedAt).getTime();
-};
+export const isCustomerActionableCandidate = (item: ProgramRequestItem) =>
+  item.block_type !== "self_arranged" &&
+  item.status !== "cancelled" &&
+  !isExtraCostItem(item);
+
+/**
+ * Heeft dit onderdeel een geldig klantakkoord?
+ *
+ * WERKAFSPRAAK: goedkeuren gaat over de activiteit zelf. Latere wijzigingen
+ * (tijd, prijs, aantal personen, locatie) of een partner-alternatief zijn
+ * meldingen — ze laten een bestaand akkoord niet verlopen.
+ */
+export const hasLiveCustomerApproval = (item: ProgramRequestItem): boolean =>
+  !!item.customer_approved_at;
 
 /**
  * Onderdelen waarop de klant nu zelf akkoord moet geven. Zelfde filter als

@@ -71,7 +71,6 @@ describe("update-partner-item-status — clear-both-together invariant", () => {
     lines.forEach((l, i) => {
       if (/customer_approved_at\s*[:=]\s*null/.test(l)) clearApproved.push(i);
     });
-    expect(clearApproved.length).toBeGreaterThan(0);
     for (const idx of clearApproved) {
       const window = lines.slice(Math.max(0, idx - 3), idx + 4).join("\n");
       expect(
@@ -81,23 +80,14 @@ describe("update-partner-item-status — clear-both-together invariant", () => {
     }
   });
 
-  it("verlopen alternative/unavailable status wist BEIDE timestamps (regressie-guard)", () => {
-    // Deze paden gingen historisch stuk: als de partner "alternative" of
-    // "unavailable" stuurt, moet klantakkoord op DIT item vervallen zodat het
-    // niet meer meetelt in "alles goedgekeurd" en de klant opnieuw kan tekenen.
-    for (const label of ["alternative", "unavailable"] as const) {
-      // Zoek het update-blok (niet de validatie-guards eerder in de file):
-      // dat is de laatste `if (status === "<label>") {` gevolgd door een
-      // updateData-toewijzing binnen ~500 chars.
-      const re = new RegExp(`if \\(status === "${label}"\\)\\s*\\{[^}]*updateData\\.`, "g");
-      const matches = [...src.matchAll(re)];
-      expect(matches.length, `${label}: update-blok niet gevonden`).toBeGreaterThan(0);
-      const startIdx = matches[matches.length - 1].index!;
-      const region = src.slice(startIdx, startIdx + 1500);
-      expect(region, `${label}: mist customer_approved_at reset`).toMatch(/customer_approved_at\s*=\s*null/);
-      expect(region, `${label}: mist customer_accepted_at reset`).toMatch(/customer_accepted_at\s*=\s*null/);
-    }
+  it("alternative/unavailable wissen het klantakkoord NIET (werkafspraak: wijziging = melding)", () => {
+    // Goedkeuren gaat over de activiteit zelf. Een partner-alternatief of een
+    // "niet beschikbaar" is een wijziging die we melden — de klant hoeft het
+    // onderdeel niet opnieuw goed te keuren.
+    expect(src).not.toMatch(/customer_approved_at\s*=\s*null/);
+    expect(src).not.toMatch(/customer_accepted_at\s*=\s*null/);
   });
+
 });
 
 describe("notify-partner-cancellation — items-cancelled-vóór-mail invariant", () => {

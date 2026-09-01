@@ -134,10 +134,12 @@ Deno.serve(async (req) => {
       approvalScope?: { customer?: "reset" | "keep"; partner?: "reset" | "keep" };
       newItemApproval?: "require" | "skip";
     };
-    // Default: bij ontbreken (oudere clients) doen we 'reset' op beide kanten
-    // — dat spiegelt het nieuwe UI-default en is conservatief (klant/partner
-    // worden niet stilzwijgend als 'akkoord' bestempeld).
-    const resetCustomerApproval = (approvalScope?.customer ?? "reset") === "reset";
+    // Klantgoedkeuring gaat over de activiteit zelf. Is een onderdeel eenmaal
+    // goedgekeurd, dan blijft dat akkoord staan bij wijzigingen (tijd, prijs,
+    // aantal personen, locatie, ...): die communiceren we als melding.
+    // Default is dus 'keep'; alleen een expliciete admin-keuze reset.
+    const resetCustomerApproval = approvalScope?.customer === "reset";
+    // Partnerkant blijft conservatief: bij ontbreken 'reset'.
     const resetPartnerApproval = (approvalScope?.partner ?? "reset") === "reset";
     // Nieuwe onderdelen (pending_added) in een project dat al akkoord is:
     // admin kiest of de klant hier nog akkoord op moet geven ('require', default)
