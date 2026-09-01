@@ -125,7 +125,7 @@ export function WebhookStatusCard() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Er komt geen terugkoppeling binnen</AlertTitle>
             <AlertDescription>
-              Laatste event: {fmt(lastEvent)}. Zet de onderstaande URL in Mailzet → Account settings →
+              Laatste event: {fmt(lastEvent)}. Zet de onderstaande URL in Mailjet → Account settings →
               Event notifications (webhook) voor alle event-types: sent, open, click, bounce, blocked,
               spam en unsub. Eerdere events komen niet terug; vanaf dat moment loopt het weer live.
             </AlertDescription>
