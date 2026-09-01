@@ -7,6 +7,8 @@ interface PendingConfirmationExplainerProps {
   items: ProgramRequestItem[];
   selectedDates: Date[];
   canAcceptUnderReservation: boolean;
+  /** Heeft de klant het voorstel al goedgekeurd? */
+  customerApproved?: boolean;
   onSignUnderReservation: () => void;
 }
 
@@ -24,6 +26,7 @@ export const PendingConfirmationExplainer = ({
   items,
   selectedDates,
   canAcceptUnderReservation,
+  customerApproved = false,
   onSignUnderReservation,
 }: PendingConfirmationExplainerProps) => {
   if (items.length === 0) return null;
@@ -42,9 +45,9 @@ export const PendingConfirmationExplainer = ({
                 : `Nog ${items.length} onderdelen wachten op bevestiging van de aanbieder`}
             </h3>
             <p className="text-sm text-muted-foreground">
-              U heeft uw programma al goedgekeurd. Wij hebben de aanbieder(s) hieronder
-              gevraagd de afspraak definitief vast te leggen. Zodra dat rond is, ziet u
-              dat hier terug en ontvangt u bericht van ons.
+              {customerApproved
+                ? "U heeft uw programma al goedgekeurd. Wij hebben de aanbieder(s) hieronder gevraagd de afspraak definitief vast te leggen. Zodra dat rond is, ziet u dat hier terug en ontvangt u bericht van ons."
+                : "Deze onderdelen worden nog met de aanbieder(s) afgestemd. Geef eerst uw akkoord op het voorstel in uw programma; daarna kunt u de voorwaarden ondertekenen."}
             </p>
           </div>
         </div>

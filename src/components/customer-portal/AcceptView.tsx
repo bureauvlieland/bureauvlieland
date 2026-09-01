@@ -85,6 +85,7 @@ export const AcceptView = ({
           items={unconfirmedItems}
           selectedDates={selectedDates}
           canAcceptUnderReservation={maySignUnderReservation && !showUnderReservation}
+          customerApproved={canAcceptUnderReservation}
           onSignUnderReservation={() => setShowUnderReservation(true)}
         />
       )}
