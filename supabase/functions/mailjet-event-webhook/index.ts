@@ -165,11 +165,12 @@ Deno.serve(async (req) => {
       // met dezelfde mailjet_message_id, zodat de item-popover per rij een
       // related_item_id kan tonen. Elk Mailjet-event moet ALLE rijen
       // bijwerken — anders krijgt maar één item zijn open/click/delivered.
-      const { data: rows, error: fetchErr } = await supabase
+      const selectCols =
+        "id, status, mailjet_message_id, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, unsub_at";
+
+      const { data: exactRows, error: fetchErr } = await supabase
         .from("email_log")
-        .select(
-          "id, status, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, unsub_at",
-        )
+        .select(selectCols)
         .eq("mailjet_message_id", messageId);
 
       if (fetchErr) {
@@ -177,11 +178,44 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      if (!rows || rows.length === 0) {
+      let rows = exactRows ?? [];
+
+      // Fallback op ontvangeradres. Groepsmails loggen per item een rij maar
+      // bewaren alleen de MessageID van de eerste ontvanger, waardoor de
+      // events van de andere ontvangers nergens op matchen. In dat geval
+      // pakken we de meest recente verzonden rij naar hetzelfde adres
+      // (max 30 dagen oud) en vullen de MessageID alsnog aan.
+      if (rows.length === 0 && ev.email) {
+        const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+        const { data: byEmail } = await supabase
+          .from("email_log")
+          .select(selectCols)
+          .ilike("recipient_email", ev.email.trim())
+          .not("sent_at", "is", null)
+          .gte("sent_at", since)
+          .order("sent_at", { ascending: false })
+          .limit(1);
+        if (byEmail && byEmail.length > 0) {
+          rows = byEmail;
+          const target = byEmail[0] as { id: string; mailjet_message_id: string | null };
+          if (!target.mailjet_message_id) {
+            await supabase
+              .from("email_log")
+              .update({ mailjet_message_id: messageId })
+              .eq("id", target.id);
+          }
+          console.log(
+            `Matched event=${eventType} MessageID=${messageId} via recipient ${ev.email}`,
+          );
+        }
+      }
+
+      if (rows.length === 0) {
         unmatched++;
         console.log(`No email_log row for MessageID=${messageId} event=${eventType}`);
         continue;
       }
+
 
       const updates = await Promise.all(
         rows.map(async (row) => {
