@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
             Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
           },
           body: JSON.stringify({
-            Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+            Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
               From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
               To: [{ Email: getRecipientEmail(opts.recipientEmail, req.headers.get("origin") || undefined), Name: opts.recipientName }],
               Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,
@@ -708,7 +708,7 @@ Deno.serve(async (req) => {
                   Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
                 },
                 body: JSON.stringify({
-                  Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+                  Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
                     From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                     To: [{ Email: getRecipientEmail(partnerEmail, req.headers.get("origin") || undefined), Name: partnerName }],
                     Subject: `${getSubjectPrefix(req.headers.get("origin") || undefined)}${subject}`,

@@ -189,7 +189,7 @@ export const handler = async (req: Request): Promise<Response> => {
           Authorization: "Basic " + btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`),
         },
         body: JSON.stringify({
-          Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+          Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: recipientEmail, Name: group.name }],
             Subject: templateResult?.subject || subject,
@@ -328,7 +328,7 @@ export const handler = async (req: Request): Promise<Response> => {
               },
               body: JSON.stringify({
                 Messages: [{
-                  TrackClicks: "disabled", TrackOpens: "disabled",
+                  TrackClicks: "disabled", TrackOpens: "enabled",
                   From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
                   To: [{ Email: recipientEmail, Name: partnerName }],
                   Subject: subject,

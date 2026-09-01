@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`)}` },
         body: JSON.stringify({
-          Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+          Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: partner.name }],
             Subject: subject,

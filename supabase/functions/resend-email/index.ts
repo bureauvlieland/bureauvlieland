@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
 
     const mjPayload: Record<string, unknown> = {
       TrackClicks: "disabled",
-      TrackOpens: "disabled",
+      TrackOpens: "enabled",
       From: { Email: fromEmail, Name: fromName },
       To: [{ Email: recipientEmail, Name: recipientName }],
       Subject: log.subject,

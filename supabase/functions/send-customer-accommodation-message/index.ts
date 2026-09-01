@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         Messages: [
-          { TrackClicks: "disabled", TrackOpens: "disabled",
+          { TrackClicks: "disabled", TrackOpens: "enabled",
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: recipientEmail, Name: partner.name }],
             Bcc: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],

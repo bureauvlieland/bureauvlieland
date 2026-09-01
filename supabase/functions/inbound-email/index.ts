@@ -285,7 +285,7 @@ async function notifyCustomer(
 
     const mailjetPayload = {
       Messages: [
-        { TrackClicks: "disabled", TrackOpens: "disabled",
+        { TrackClicks: "disabled", TrackOpens: "enabled",
           From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
           To: [{ Email: recipientEmail, Name: customerDisplayName }],
           Subject: `${subjectPrefix}${rendered.subject}`,

@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     }
 
     emailMessage.TrackClicks = "disabled";
-    emailMessage.TrackOpens = "disabled";
+    emailMessage.TrackOpens = "enabled";
 
     const mailjetResponse = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",

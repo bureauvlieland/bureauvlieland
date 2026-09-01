@@ -34,7 +34,7 @@ async function sendEmailNotification(
       },
       body: JSON.stringify({
         Messages: [
-          { TrackClicks: "disabled", TrackOpens: "disabled",
+          { TrackClicks: "disabled", TrackOpens: "enabled",
             From: {
               Email: "hallo@bureauvlieland.nl",
               Name: "Bureau Vlieland",

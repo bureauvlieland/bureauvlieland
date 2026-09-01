@@ -247,7 +247,7 @@ export const handler = async (req: Request): Promise<Response> => {
     if (replyTo) message.ReplyTo = replyTo;
 
     message.TrackClicks = "disabled";
-    message.TrackOpens = "disabled";
+    message.TrackOpens = "enabled";
     const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
       method: "POST",
       headers: {
