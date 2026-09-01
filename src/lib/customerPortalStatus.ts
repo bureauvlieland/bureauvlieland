@@ -101,7 +101,30 @@ export const hasLiveCustomerApproval = (item: ProgramRequestItem): boolean => {
   return new Date(item.customer_approved_at).getTime() >= new Date(statusUpdatedAt).getTime();
 };
 
+/**
+ * Onderdelen waarop de klant nu zelf akkoord moet geven. Zelfde filter als
+ * getCustomerApprovalStats gebruikt, maar levert de items zelf op zodat het
+ * portaal kan benoemen wélke onderdelen het zijn.
+ */
+export function getCustomerActionableItems(
+  items: ProgramRequestItem[],
+  quoteStatus?: string | null,
+): ProgramRequestItem[] {
+  const isProposalPhase = quoteStatus === "offerte_verstuurd";
+  const isApprovalPhase = quoteStatus === "akkoord_ontvangen";
+  return items.filter(
+    (item) =>
+      isCustomerActionableCandidate(item) &&
+      (isProposalPhase ||
+        isApprovalPhase ||
+        item.status === "confirmed" ||
+        item.status === "alternative") &&
+      !hasLiveCustomerApproval(item),
+  );
+}
+
 export function getCustomerApprovalStats(
+
   items: ProgramRequestItem[],
   quoteStatus?: string | null,
   options: { suppressApprovalActions?: boolean } = {},

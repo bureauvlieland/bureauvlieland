@@ -34,6 +34,7 @@ import { hasQuoteItemsAwaitingCustomerApproval } from "@/lib/customerQuoteApprov
 import { resolveFeeStructure } from "@/lib/feeEngine";
 import { usePricingStructures } from "@/hooks/usePricing";
 import { isMaatwerkProject } from "@/lib/projectOrigin";
+import { getCustomerActionableItems } from "@/lib/customerPortalStatus";
 import {
   Calendar,
   FileText,
@@ -397,6 +398,7 @@ export const MobileProgramView = ({
             customerActionsCount={customerActionsCount}
             alternativeActionsCount={alternativeActionsCount}
               newItemActionsCount={newItemActionsCount}
+              pendingApprovalNames={getCustomerActionableItems(program.items, program.quote_status).map((i) => i.block_name).filter(Boolean)}
             guestDetailsIncomplete={
               !!guestDetails &&
               (!guestDetails.guest_names ||
