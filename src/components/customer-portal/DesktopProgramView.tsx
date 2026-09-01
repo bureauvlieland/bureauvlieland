@@ -32,6 +32,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
 import { hasQuoteItemsAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
 import { isMaatwerkProject } from "@/lib/projectOrigin";
+import { getCustomerActionableItems } from "@/lib/customerPortalStatus";
 import {
   Calendar,
   Settings,
@@ -348,6 +349,7 @@ export const DesktopProgramView = ({
               customerActionsCount={customerActionsCount}
               alternativeActionsCount={alternativeActionsCount}
               newItemActionsCount={newItemActionsCount}
+              pendingApprovalNames={getCustomerActionableItems(program.items, program.quote_status).map((i) => i.block_name).filter(Boolean)}
               guestDetailsIncomplete={
                 !!guestDetails &&
                 (!guestDetails.guest_names ||
