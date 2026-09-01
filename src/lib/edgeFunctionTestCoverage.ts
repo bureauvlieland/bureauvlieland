@@ -227,23 +227,30 @@ export interface CoverageStats {
   tested: number;
   critical: number;
   criticalTested: number;
+  /** Kritieke functies die alleen door de generieke contract-suite gedekt zijn. */
+  criticalContractOnly: EdgeFunctionCoverage[];
+  /** Functies zonder enige dekking (zou leeg moeten zijn). */
   criticalMissing: EdgeFunctionCoverage[];
+  contractOnly: number;
 }
 
 export function computeCoverageStats(
   rows: EdgeFunctionCoverage[] = EDGE_FUNCTION_COVERAGE,
 ): CoverageStats {
-  const tested = rows.filter((r) => r.tested).length;
+  const deep = (r: EdgeFunctionCoverage) => r.testKind === "deno" || r.testKind === "e2e";
+  const contract = (r: EdgeFunctionCoverage) => r.testKind === "contract";
+  const tested = rows.filter(deep).length;
   const critical = rows.filter((r) => r.critical);
-  const criticalTested = critical.filter((r) => r.tested).length;
-  const criticalMissing = critical
-    .filter((r) => !r.tested)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const criticalTested = critical.filter(deep).length;
+  const byName = (a: EdgeFunctionCoverage, b: EdgeFunctionCoverage) =>
+    a.name.localeCompare(b.name);
   return {
     total: rows.length,
     tested,
     critical: critical.length,
     criticalTested,
-    criticalMissing,
+    criticalContractOnly: critical.filter(contract).sort(byName),
+    criticalMissing: critical.filter((r) => !deep(r) && !contract(r)).sort(byName),
+    contractOnly: rows.filter(contract).length,
   };
 }
