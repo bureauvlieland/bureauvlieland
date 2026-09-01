@@ -26,7 +26,7 @@ export interface EdgeFunctionCoverage {
   category: EdgeFunctionCategory;
   critical: boolean;
   tested: boolean;
-  testKind?: "deno" | "e2e";
+  testKind?: "deno" | "e2e" | "contract";
 }
 
 /**
@@ -53,6 +53,12 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "send-items-to-partners": "deno",
   "send-quote-offer": "deno",
   "send-ticket-email": "deno",
+  "check-pending-items": "deno",
+  "email-webhook-heartbeat": "deno",
+  "map-payment-selftest": "deno",
+  "reopen-program-request": "deno",
+  "set-project-completion": "deno",
+  "update-partner-item-status": "deno",
 };
 
 type Row = { name: string; category: EdgeFunctionCategory; critical: boolean };
