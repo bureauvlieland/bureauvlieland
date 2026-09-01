@@ -25,14 +25,17 @@ export const useDirectBookableActivities = (enabled = true) => {
   const bundles = useMemo<BookableBundle[]>(() => {
     if (!data) return [];
     const now = Date.now();
-    const map = new Map<number, BookableBundle>();
+    // ActivityTypeId is alleen uniek per MAP-tenant, dus altijd groeperen op
+    // activiteit + partner om te voorkomen dat partners door elkaar lopen.
+    const map = new Map<string, BookableBundle>();
 
     for (const raw of data as Enriched[]) {
       const departure = new Date(raw.Departure).getTime();
       if (isNaN(departure) || departure <= now) continue;
       if (raw.IsCancelled || raw.IsActive === false) continue;
 
-      const existing = map.get(raw.ActivityTypeId);
+      const groupKey = `${raw.ActivityTypeId}::${raw._partnerId ?? raw._partnerSlug ?? "unknown"}`;
+      const existing = map.get(groupKey);
       if (existing) {
         existing.totalSlotsLeft += Math.max(0, raw.RemainingSlots ?? 0);
         existing.momentCount += 1;
@@ -40,7 +43,7 @@ export const useDirectBookableActivities = (enabled = true) => {
           existing.nextDeparture = raw.Departure;
         }
       } else {
-        map.set(raw.ActivityTypeId, {
+        map.set(groupKey, {
           activityTypeId: raw.ActivityTypeId,
           partnerId: raw._partnerId ?? null,
           partnerName: raw._partnerName ?? null,
