@@ -136,7 +136,9 @@ Deno.serve(async (req) => {
     if (quote.status === "declined") {
       return jsonResponse({ success: true, alreadyDeclined: true });
     }
-    if (quote.status !== "pending") {
+    // Een partner mag zich ook nog terugtrekken nadat er al een prijs is
+    // ingediend (status "submitted") — bv. bij plotselinge onbeschikbaarheid.
+    if (!["pending", "submitted"].includes(quote.status)) {
       return jsonResponse(
         { error: `Offerte kan niet worden afgewezen vanuit status "${quote.status}"` },
         409,
