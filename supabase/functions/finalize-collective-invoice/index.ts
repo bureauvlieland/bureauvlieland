@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
           To: [{ Email: snelstartEmail, Name: "Boekhouding" }],
           Subject: subject,
           HTMLPart: html,
-          TrackOpens: "disabled",
+          TrackOpens: "enabled",
           TrackClicks: "disabled",
         };
 

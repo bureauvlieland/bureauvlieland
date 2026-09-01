@@ -98,7 +98,7 @@ export const handler = async (req: Request): Promise<Response> => {
           Authorization: `Basic ${btoa(`${apiKey}:${secret}`)}`,
         },
         body: JSON.stringify({
-          Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+          Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: r.customer_name }],
             Subject: subject,

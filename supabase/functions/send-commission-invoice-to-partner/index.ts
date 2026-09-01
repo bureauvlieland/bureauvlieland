@@ -202,7 +202,7 @@ export async function handler(req: Request): Promise<Response> {
     if (replyTo) message.ReplyTo = replyTo;
 
     message.TrackClicks = "disabled";
-    message.TrackOpens = "disabled";
+    message.TrackOpens = "enabled";
 
     // Idempotency: geen dubbele commissiefactuur naar dezelfde partner binnen 10 min.
     const idempotencyKey = `commission-invoice-${invoice.id}-${finalRecipient}`;

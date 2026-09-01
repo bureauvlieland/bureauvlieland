@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
                   Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
                 },
                 body: JSON.stringify({
-                  Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+                  Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
                     From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                     To: [{ Email: recipientEmail, Name: partner.name }],
                     ...(replyTo ? { ReplyTo: replyTo } : {}),
@@ -331,7 +331,7 @@ Deno.serve(async (req) => {
                   Authorization: `Basic ${btoa(`${mailjetApiKey}:${mailjetSecretKey}`)}`,
                 },
                 body: JSON.stringify({
-                  Messages: [{ TrackClicks: "disabled", TrackOpens: "disabled",
+                  Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
                     From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                     To: [{ Email: recipientEmail, Name: partner.name }],
                     ...(accReplyTo ? { ReplyTo: accReplyTo } : {}),

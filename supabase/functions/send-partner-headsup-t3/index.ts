@@ -314,7 +314,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           Messages: [{
             TrackClicks: "disabled",
-            TrackOpens: "disabled",
+            TrackOpens: "enabled",
             From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
             To: [{ Email: recipientEmail, Name: partnerName }],
             ...(replyTo ? { ReplyTo: replyTo } : {}),

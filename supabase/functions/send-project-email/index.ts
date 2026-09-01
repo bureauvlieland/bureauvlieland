@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         Messages: [
-          { TrackClicks: "disabled", TrackOpens: "disabled",
+          { TrackClicks: "disabled", TrackOpens: "enabled",
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: getRecipientEmail(recipientEmail, req.headers.get("origin") || undefined), Name: recipientName || recipientEmail }],
             ...(replyTo ? { ReplyTo: replyTo } : {}),
