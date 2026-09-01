@@ -32,6 +32,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
 import { hasQuoteItemsAwaitingCustomerApproval } from "@/lib/customerQuoteApproval";
 import { resolveFeeStructure } from "@/lib/feeEngine";
+import { usePricingStructures } from "@/hooks/usePricing";
 import { isMaatwerkProject } from "@/lib/projectOrigin";
 import {
   Calendar,
@@ -200,7 +201,11 @@ export const MobileProgramView = ({
 
   // Organisatiefee 2.0: reken met dezelfde (snapshot-)structuur als de admin-factuur,
   // zodat het klanttotaal nooit afwijkt van de factuur.
-  const feeStructure = useMemo(() => resolveFeeStructure((program as any).fee_snapshot), [program]);
+  const { activeStructure } = usePricingStructures();
+  const feeStructure = useMemo(
+    () => resolveFeeStructure((program as any).fee_snapshot, activeStructure),
+    [program, activeStructure],
+  );
   const requestDate = (program as any).created_at ?? null;
   const arrivalDate = useMemo(() => {
     if (!selectedDates?.length) return null;
@@ -223,6 +228,7 @@ export const MobileProgramView = ({
     termsAccepted,
     billingComplete,
     allConfirmed,
+    canAcceptUnderReservation,
     isMultiDay,
     hasSelectedAccommodation,
     isPreApproval,
@@ -689,6 +695,7 @@ export const MobileProgramView = ({
           termsAccepted={termsAccepted}
           billingComplete={billingComplete}
           allConfirmed={allConfirmed}
+          canAcceptUnderReservation={canAcceptUnderReservation}
           accommodationQuotes={accommodationQuotes}
           invoicingMode={invoicingMode}
           acceptedTerms={program.acceptedTerms}
