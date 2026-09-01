@@ -337,12 +337,10 @@ export const handler = async (req: Request): Promise<Response> => {
         updateData.quoted_notes = quotedNotes || null;
         updateData.partner_price_change_acknowledged_at = new Date().toISOString();
       }
-      // Substantieel ander voorstel — klant moet voor DIT onderdeel opnieuw
-      // expliciet akkoord geven. Beide vlaggen wissen zodat het onderdeel in
-      // klant/admin/partner-views terugvalt op "Akkoord nodig" en niet meer
-      // meetelt als goedgekeurd in aggregaten ("Alles goedgekeurd").
-      updateData.customer_accepted_at = null;
-      updateData.customer_approved_at = null;
+      // WERKAFSPRAAK: klantgoedkeuring gaat over de activiteit zelf. Een
+      // alternatief voor tijd of prijs is een WIJZIGING waarvan we de klant op
+      // de hoogte brengen — een bestaand akkoord blijft dus staan en wordt hier
+      // NIET gewist (was historisch wel zo, gaf onnodige herbevestigingen).
       // LET OP: alleen de waarden uit program_request_items_quote_status_check zijn
       // toegestaan ('concept' | 'offerte_verstuurd' | 'in_afstemming' | 'bevestigd' |
       // 'optioneel'). Weergavestatussen zoals "wacht_op_klant" worden nooit opgeslagen —
