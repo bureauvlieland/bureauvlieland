@@ -69,7 +69,12 @@ export const isItemConfirmedForTerms = (item: ProgramRequestItem): boolean =>
 export const getUnconfirmedItemsForTerms = (
   items: ProgramRequestItem[],
 ): ProgramRequestItem[] =>
-  items.filter((item) => item.status !== "cancelled" && !isItemConfirmedForTerms(item));
+  items.filter(
+    (item) =>
+      item.status !== "cancelled" &&
+      !isExtraCostItem(item) &&
+      !isItemConfirmedForTerms(item),
+  );
 
 
 const POST_EXECUTION_COMPLETION_STATUSES = new Set([
