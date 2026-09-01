@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractWebhookToken } from "./token.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,11 +94,7 @@ Deno.serve(async (req) => {
   // Token mag via query-param (?token=) of via header komen. Mailjet-
   // configuraties verschillen; met beide varianten kan een verkeerd
   // ingestelde URL niet stilletjes alle feedback blokkeren.
-  const url = new URL(req.url);
-  const providedToken =
-    url.searchParams.get("token") ??
-    req.headers.get("x-mailjet-token") ??
-    req.headers.get("x-webhook-token");
+  const providedToken = extractWebhookToken(req.url, req.headers);
 
   const attemptLogger = createClient(
     Deno.env.get("SUPABASE_URL")!,
