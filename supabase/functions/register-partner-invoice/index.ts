@@ -18,10 +18,10 @@ async function sendEmailNotification(
   subject: string,
   htmlContent: string,
   referenceNumber?: string | null
-) {
+): Promise<{ ok: boolean; messageId: string | null }> {
   if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
     console.error("Mailjet credentials not configured");
-    return false;
+    return { ok: false, messageId: null };
   }
 
   try {
@@ -47,18 +47,22 @@ async function sendEmailNotification(
         ],
       }),
     });
-    try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+    // MessageID hier teruggeven i.p.v. naar een niet-bestaande module-scope
+    // variabele schrijven (dat gooide een ReferenceError die stil werd
+    // opgevangen, waardoor elke mail zonder MessageID werd gelogd).
+    let messageId: string | null = null;
+    try { messageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* non-JSON */ }
 
     if (!response.ok) {
       const error = await response.text();
       console.error("Mailjet error:", error);
-      return false;
+      return { ok: false, messageId };
     }
 
-    return true;
+    return { ok: true, messageId };
   } catch (error) {
     console.error("Error sending email:", error);
-    return false;
+    return { ok: false, messageId: null };
   }
 }
 
@@ -389,13 +393,15 @@ Deno.serve(async (req) => {
 
     const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
     const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd${isViaEmail ? " (via e-mail)" : ""}: ${partner.name} - ${project.reference_number || customerName}`;
-    const sendOk = await sendEmailNotification(
+    const sendResult = await sendEmailNotification(
       bureauRecipient,
       "Bureau Vlieland",
       bureauSubject,
       bureauEmailHtml,
       project.reference_number || null
     );
+    const sendOk = sendResult.ok;
+    mailjetMessageId = sendResult.messageId;
 
     await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
