@@ -511,8 +511,9 @@ export function PublishChangesDialog({
               <Label className="text-sm font-medium">Akkoordstatus na deze wijzigingen</Label>
               <p className="text-xs text-muted-foreground">
                 {liveChangedCount} onderdeel{liveChangedCount !== 1 ? "en" : ""} was al live.
-                Bepaal per kant of het bestaande akkoord blijft staan of opnieuw moet worden bevestigd.
-                Dit staat los van of er een mail uitgaat.
+                Standaard blijft een bestaand klantakkoord staan — de klant krijgt de wijziging
+                alleen als melding. Zet "Klant moet opnieuw akkoord geven" alleen aan bij
+                uitzonderingen. Dit staat los van of er een mail uitgaat.
               </p>
               <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
                 <div className="space-y-2">
