@@ -11,6 +11,7 @@ import {
 } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
+import { isCustomerActionableCandidate, hasLiveCustomerApproval } from "@/lib/customerPortalStatus";
 
 export interface BillingDetails {
   billing_company_name: string;
@@ -957,13 +958,25 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
 
     const adminOverride = isAdminImpersonating();
     const isProposalPhase = program.quote_status === "offerte_verstuurd";
+    const isApprovalPhase = program.quote_status === "akkoord_ontvangen";
+    // Zelfde selectie als de teller op de knop (getCustomerApprovalStats),
+    // zodat "Alle N onderdelen goedkeuren" exact die N onderdelen behandelt —
+    // inclusief later toegevoegde 'concept'-onderdelen na het klantakkoord.
     const candidates = program.items.filter(
-      (i: any) =>
-        i.status !== "cancelled" &&
-        i.block_type !== "self_arranged" &&
-        !i.customer_approved_at &&
-        (isProposalPhase || ["offerte_verstuurd", "in_afstemming", "bevestigd"].includes(i.item_quote_status || "")),
+      (item) =>
+        isCustomerActionableCandidate(item) &&
+        (isProposalPhase ||
+          isApprovalPhase ||
+          item.status === "confirmed" ||
+          item.status === "alternative") &&
+        !hasLiveCustomerApproval(item),
     );
+
+    if (candidates.length === 0) {
+      toast.info("Er zijn geen onderdelen die op uw goedkeuring wachten");
+      return { approved: 0, failed: 0, autoSentToPartner: 0 };
+    }
+
 
     let approved = 0;
     let failed = 0;
