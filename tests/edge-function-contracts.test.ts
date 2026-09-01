@@ -37,6 +37,12 @@ function readIndex(name: string): string {
 
 const FUNCTION_DIRS = listFunctionDirs();
 
+/**
+ * Functies die per definitie geen CORS-preflight krijgen: OAuth-redirect
+ * callbacks worden door de browser als top-level navigatie aangeroepen.
+ */
+const NO_PREFLIGHT = new Set(["social-meta-oauth-callback"]);
+
 describe("edge function contracts", () => {
   it("vindt edge functions om te controleren", () => {
     expect(FUNCTION_DIRS.length).toBeGreaterThan(50);
@@ -49,7 +55,7 @@ describe("edge function contracts", () => {
       expect(/(^|[^.\w])serve\s*\(|Deno\.serve\s*\(/.test(source)).toBe(true);
     });
 
-    it("handelt de CORS preflight (OPTIONS) af", () => {
+    it.skipIf(NO_PREFLIGHT.has(name))("handelt de CORS preflight (OPTIONS) af", () => {
       expect(source).toMatch(/OPTIONS/);
       expect(source).toMatch(/Access-Control-Allow-Origin|corsHeaders/);
     });
