@@ -348,12 +348,9 @@ export const handler = async (req: Request): Promise<Response> => {
       updateData.item_quote_status = "in_afstemming";
     }
 
-    if (status === "unavailable") {
-      // Partner kan niet leveren — klant-acceptatie van het oorspronkelijke voorstel
-      // op dit onderdeel vervalt; bureau moet vervanging zoeken.
-      updateData.customer_accepted_at = null;
-      updateData.customer_approved_at = null;
-    }
+    // Partner kan niet leveren: bureau zoekt vervanging. Het klantakkoord op de
+    // activiteit blijft staan (het onderdeel valt uit de "bevestigd"-aggregaten
+    // via status='unavailable'); de klant hoeft niets opnieuw goed te keuren.
 
     if (isPriceAck) {
       // Bevestiging van of tegenvoorstel op een admin-prijswijziging.
