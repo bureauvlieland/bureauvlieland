@@ -49,8 +49,19 @@ export const findBundleForBlock = (
   bundles: BookableBundle[],
 ): BookableBundle | null => {
   if (block.map_activity_type_id != null) {
-    const byId = bundles.find((b) => b.activityTypeId === block.map_activity_type_id);
-    if (byId) return byId;
+    // ActivityTypeId is per MAP-tenant uniek: eerst binnen de eigen partner zoeken.
+    const byIdAndPartner = block.provider_id
+      ? bundles.find(
+          (b) =>
+            b.activityTypeId === block.map_activity_type_id &&
+            b.partnerId === block.provider_id,
+        )
+      : null;
+    if (byIdAndPartner) return byIdAndPartner;
+    if (!block.provider_id) {
+      const byId = bundles.find((b) => b.activityTypeId === block.map_activity_type_id);
+      if (byId) return byId;
+    }
   }
   if (!block.provider_id) return null;
   const target = normalizeActivityName(block.name);
@@ -71,19 +82,20 @@ export const matchBundlesToBlocks = (
   bundles: BookableBundle[],
 ): { matched: Map<string, BookableBundle>; unmatched: BookableBundle[] } => {
   const matched = new Map<string, BookableBundle>();
-  const used = new Set<number>();
+  const used = new Set<string>();
+  const bundleKey = (b: BookableBundle) => `${b.activityTypeId}::${b.partnerId ?? b.partnerSlug ?? "unknown"}`;
 
   for (const block of blocks) {
     const bundle = findBundleForBlock(block, bundles);
     if (bundle && !matched.has(block.id)) {
       matched.set(block.id, bundle);
-      used.add(bundle.activityTypeId);
+      used.add(bundleKey(bundle));
     }
   }
 
   return {
     matched,
-    unmatched: bundles.filter((b) => !used.has(b.activityTypeId)),
+    unmatched: bundles.filter((b) => !used.has(bundleKey(b))),
   };
 };
 
