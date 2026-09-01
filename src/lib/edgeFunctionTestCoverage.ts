@@ -41,7 +41,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "confirm-partner-commission": "deno",
   "get-admin-commissions": "deno",
   "inbound-purchase-invoice": "e2e",
-  "mailjet-event-webhook": "e2e",
+  "mailjet-event-webhook": "deno",
   "notify-partner-cancellation": "deno",
   "register-accommodation-invoice": "deno",
   "register-partner-invoice": "deno",
@@ -196,6 +196,23 @@ const REGISTRY: Row[] = [
   { name: "social-refresh-token", category: "internal", critical: false },
   { name: "social-meta-oauth-callback", category: "internal", critical: false },
   { name: "social-meta-oauth-start", category: "internal", critical: false },
+
+  // ── Aanvullingen (gesynchroniseerd met supabase/functions) ─────────────
+  { name: "auto-close-monitor", category: "workflow", critical: false },
+  { name: "critical-selftest", category: "internal", critical: false },
+  { name: "dismiss-partner-invoice-item", category: "invoicing", critical: false },
+  { name: "email-webhook-heartbeat", category: "webhook", critical: true },
+  { name: "flag-missing-partner-invoices", category: "invoicing", critical: false },
+  { name: "get-commission-reconciliation", category: "invoicing", critical: false },
+  { name: "mailjet-webhook-status", category: "webhook", critical: false },
+  { name: "map-book", category: "utility", critical: false },
+  { name: "map-key-import", category: "internal", critical: false },
+  { name: "map-payment-selftest", category: "internal", critical: false },
+  { name: "map-payment-status", category: "utility", critical: false },
+  { name: "reopen-program-request", category: "workflow", critical: true },
+  { name: "set-commission-exempt", category: "invoicing", critical: true },
+  { name: "temp-invoice-pdf-audit", category: "internal", critical: false },
+  { name: "whatsapp-diagnostics", category: "internal", critical: false },
 ];
 
 /**
