@@ -17,6 +17,8 @@ interface AcceptViewProps {
   termsAccepted: boolean;
   billingComplete: boolean;
   allConfirmed: boolean;
+  /** Mag de klant nu onder voorbehoud ondertekenen? (bepaald in customerPortalStatus) */
+  canAcceptUnderReservation?: boolean;
   accommodationQuotes: AccommodationQuote[];
   invoicingMode?: string;
   acceptedTerms?: AcceptedTermsEntry[];
@@ -35,6 +37,7 @@ export const AcceptView = ({
   termsAccepted,
   billingComplete,
   allConfirmed,
+  canAcceptUnderReservation = false,
   accommodationQuotes,
   invoicingMode,
   acceptedTerms,
@@ -52,6 +55,10 @@ export const AcceptView = ({
   );
 
   const hasPending = !allConfirmed && unconfirmedItems.length > 0;
+  // Onder voorbehoud ondertekenen mag alleen als de klant zelf niets meer moet
+  // doen (voorstel al goedgekeurd) en er enkel aanbieder-bevestigingen open staan.
+  const maySignUnderReservation = hasPending && canAcceptUnderReservation;
+  const signingUnderReservation = maySignUnderReservation && showUnderReservation;
 
   return (
     <div className="space-y-6">
@@ -65,7 +72,9 @@ export const AcceptView = ({
               ? "Hier ziet u uw ondertekende akkoord en de status van betalingen. Het programma is bevestigd."
               : allConfirmed
               ? "Controleer uw facturatiegegevens en geef akkoord op de voorwaarden. Daarmee bevestigt u uw boeking definitief."
-              : "Eén of meer onderdelen wachten nog op bevestiging van de aanbieder. U kunt wachten tot alles rond is, of nu al ondertekenen onder voorbehoud."}
+              : canAcceptUnderReservation
+              ? "Eén of meer onderdelen wachten nog op bevestiging van de aanbieder. U kunt wachten tot alles rond is, of nu al ondertekenen onder voorbehoud."
+              : "Geef eerst uw akkoord op het voorstel in uw programma. Daarna kunt u hier de voorwaarden ondertekenen."}
           </p>
         </div>
       </div>
@@ -75,7 +84,7 @@ export const AcceptView = ({
         <PendingConfirmationExplainer
           items={unconfirmedItems}
           selectedDates={selectedDates}
-          canAcceptUnderReservation={!showUnderReservation}
+          canAcceptUnderReservation={maySignUnderReservation && !showUnderReservation}
           onSignUnderReservation={() => setShowUnderReservation(true)}
         />
       )}
@@ -83,7 +92,7 @@ export const AcceptView = ({
       {/* Akkoord */}
       {!termsAccepted ? (
         <div id="terms-section" className="scroll-mt-20">
-          {allConfirmed || showUnderReservation ? (
+          {allConfirmed || signingUnderReservation ? (
             <AcceptTermsCard
               onAccept={onAcceptTerms}
               isBillingComplete={billingComplete}
