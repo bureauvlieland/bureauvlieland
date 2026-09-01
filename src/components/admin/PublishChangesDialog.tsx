@@ -161,10 +161,11 @@ export function PublishChangesDialog({
   const [publishing, setPublishing] = useState(false);
   const [dryRunLoading, setDryRunLoading] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<DryRunResult | null>(null);
-  // Akkoordstatus: standaard moeten klant én partner opnieuw bevestigen
-  // wanneer een live onderdeel wijzigt. Admin kan dit per kant overrulen
-  // (bv. wijziging is al telefonisch afgestemd → 'keep').
-  const [approvalCustomer, setApprovalCustomer] = useState<"reset" | "keep">("reset");
+  // Akkoordstatus: klantgoedkeuring gaat over de activiteit zelf. Een
+  // wijziging (tijd, prijs, personen, locatie) is een melding, geen nieuwe
+  // goedkeuringsronde — daarom standaard 'keep'. De partnerkant blijft
+  // standaard opnieuw bevestigen. Admin kan dit per kant overrulen.
+  const [approvalCustomer, setApprovalCustomer] = useState<"reset" | "keep">("keep");
   const [approvalPartner, setApprovalPartner] = useState<"reset" | "keep">("reset");
   // Nieuw toegevoegde onderdelen in een project dat de klant al heeft
   // goedgekeurd: moet de klant hier nog akkoord op geven?
