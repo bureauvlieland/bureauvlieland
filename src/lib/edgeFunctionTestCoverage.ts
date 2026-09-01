@@ -26,7 +26,7 @@ export interface EdgeFunctionCoverage {
   category: EdgeFunctionCategory;
   critical: boolean;
   tested: boolean;
-  testKind?: "deno" | "e2e";
+  testKind?: "deno" | "e2e" | "contract";
 }
 
 /**
@@ -41,7 +41,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "confirm-partner-commission": "deno",
   "get-admin-commissions": "deno",
   "inbound-purchase-invoice": "e2e",
-  "mailjet-event-webhook": "e2e",
+  "mailjet-event-webhook": "deno",
   "notify-partner-cancellation": "deno",
   "register-accommodation-invoice": "deno",
   "register-partner-invoice": "deno",
@@ -53,6 +53,12 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "send-items-to-partners": "deno",
   "send-quote-offer": "deno",
   "send-ticket-email": "deno",
+  "check-pending-items": "deno",
+  "email-webhook-heartbeat": "deno",
+  "map-payment-selftest": "deno",
+  "reopen-program-request": "deno",
+  "set-project-completion": "deno",
+  "update-partner-item-status": "deno",
 };
 
 type Row = { name: string; category: EdgeFunctionCategory; critical: boolean };
@@ -190,12 +196,37 @@ const REGISTRY: Row[] = [
   { name: "social-refresh-token", category: "internal", critical: false },
   { name: "social-meta-oauth-callback", category: "internal", critical: false },
   { name: "social-meta-oauth-start", category: "internal", critical: false },
+
+  // ── Aanvullingen (gesynchroniseerd met supabase/functions) ─────────────
+  { name: "auto-close-monitor", category: "workflow", critical: false },
+  { name: "critical-selftest", category: "internal", critical: false },
+  { name: "dismiss-partner-invoice-item", category: "invoicing", critical: false },
+  { name: "email-webhook-heartbeat", category: "webhook", critical: true },
+  { name: "flag-missing-partner-invoices", category: "invoicing", critical: false },
+  { name: "get-commission-reconciliation", category: "invoicing", critical: false },
+  { name: "mailjet-webhook-status", category: "webhook", critical: false },
+  { name: "map-book", category: "utility", critical: false },
+  { name: "map-key-import", category: "internal", critical: false },
+  { name: "map-payment-selftest", category: "internal", critical: false },
+  { name: "map-payment-status", category: "utility", critical: false },
+  { name: "reopen-program-request", category: "workflow", critical: true },
+  { name: "set-commission-exempt", category: "invoicing", critical: true },
+  { name: "temp-invoice-pdf-audit", category: "internal", critical: false },
+  { name: "whatsapp-diagnostics", category: "internal", critical: false },
 ];
+
+/**
+ * Elke edge function wordt afgedekt door de generieke contract-suite
+ * (`tests/edge-function-contracts.test.ts`): handler aanwezig, CORS/OPTIONS,
+ * geen hardgecodeerde secrets, geen service-role lek. Functies met een eigen
+ * Deno- of E2E-test hebben daarbovenop gedragsdekking.
+ */
+export const CONTRACT_TESTED_KINDS = ["deno", "e2e", "contract"] as const;
 
 export const EDGE_FUNCTION_COVERAGE: EdgeFunctionCoverage[] = REGISTRY.map((r) => ({
   ...r,
   tested: r.name in TESTED,
-  testKind: TESTED[r.name],
+  testKind: TESTED[r.name] ?? ("contract" as const),
 })).sort((a, b) => a.name.localeCompare(b.name));
 
 export const CATEGORY_LABELS: Record<EdgeFunctionCategory, string> = {
@@ -213,23 +244,30 @@ export interface CoverageStats {
   tested: number;
   critical: number;
   criticalTested: number;
+  /** Kritieke functies die alleen door de generieke contract-suite gedekt zijn. */
+  criticalContractOnly: EdgeFunctionCoverage[];
+  /** Functies zonder enige dekking (zou leeg moeten zijn). */
   criticalMissing: EdgeFunctionCoverage[];
+  contractOnly: number;
 }
 
 export function computeCoverageStats(
   rows: EdgeFunctionCoverage[] = EDGE_FUNCTION_COVERAGE,
 ): CoverageStats {
-  const tested = rows.filter((r) => r.tested).length;
+  const deep = (r: EdgeFunctionCoverage) => r.testKind === "deno" || r.testKind === "e2e";
+  const contract = (r: EdgeFunctionCoverage) => r.testKind === "contract";
+  const tested = rows.filter(deep).length;
   const critical = rows.filter((r) => r.critical);
-  const criticalTested = critical.filter((r) => r.tested).length;
-  const criticalMissing = critical
-    .filter((r) => !r.tested)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const criticalTested = critical.filter(deep).length;
+  const byName = (a: EdgeFunctionCoverage, b: EdgeFunctionCoverage) =>
+    a.name.localeCompare(b.name);
   return {
     total: rows.length,
     tested,
     critical: critical.length,
     criticalTested,
-    criticalMissing,
+    criticalContractOnly: critical.filter(contract).sort(byName),
+    criticalMissing: critical.filter((r) => !deep(r) && !contract(r)).sort(byName),
+    contractOnly: rows.filter(contract).length,
   };
 }

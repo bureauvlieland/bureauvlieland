@@ -17,7 +17,7 @@ import {
 } from "@/lib/edgeFunctionTestCoverage";
 
 type CategoryFilter = "all" | EdgeFunctionCategory;
-type StatusFilter = "all" | "tested" | "missing" | "critical_missing";
+type StatusFilter = "all" | "tested" | "contract" | "missing" | "critical_missing";
 
 export function TestCoverageCard() {
   const [expanded, setExpanded] = useState(false);
@@ -33,9 +33,11 @@ export function TestCoverageCard() {
   const filtered = useMemo(() => {
     return EDGE_FUNCTION_COVERAGE.filter((r) => {
       if (category !== "all" && r.category !== category) return false;
-      if (status === "tested" && !r.tested) return false;
-      if (status === "missing" && r.tested) return false;
-      if (status === "critical_missing" && (r.tested || !r.critical)) return false;
+      const deep = r.testKind === "deno" || r.testKind === "e2e";
+      if (status === "tested" && !deep) return false;
+      if (status === "contract" && r.testKind !== "contract") return false;
+      if (status === "missing" && deep) return false;
+      if (status === "critical_missing" && (deep || !r.critical)) return false;
       if (search && !r.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
@@ -51,10 +53,15 @@ export function TestCoverageCard() {
             <Badge variant="outline" className="ml-2">
               {stats.tested}/{stats.total} · {coveragePct}%
             </Badge>
-            {criticalGap > 0 ? (
+            {stats.criticalMissing.length > 0 ? (
               <Badge variant="destructive" className="gap-1">
                 <ShieldAlert className="h-3 w-3" />
-                {criticalGap} kritiek zonder test
+                {stats.criticalMissing.length} kritiek zonder test
+              </Badge>
+            ) : criticalGap > 0 ? (
+              <Badge className="bg-amber-500 hover:bg-amber-500 text-white gap-1">
+                <ShieldAlert className="h-3 w-3" />
+                {criticalGap} kritiek alleen contracttest
               </Badge>
             ) : (
               <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
@@ -76,14 +83,14 @@ export function TestCoverageCard() {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ProgressBlock
-            label="Totale dekking"
+            label="Gedragstests"
             value={stats.tested}
             total={stats.total}
             pct={coveragePct}
             tone={coveragePct >= 60 ? "ok" : coveragePct >= 30 ? "warn" : "danger"}
           />
           <ProgressBlock
-            label="Kritieke functies"
+            label="Kritieke functies met gedragstest"
             value={stats.criticalTested}
             total={stats.critical}
             pct={criticalPct}
@@ -95,15 +102,34 @@ export function TestCoverageCard() {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>
-              {stats.criticalMissing.length} kritieke edge function(s) zonder automatische test
+              {stats.criticalMissing.length} kritieke edge function(s) zonder enige test
+            </AlertTitle>
+            <AlertDescription>
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-auto">
+                {stats.criticalMissing.map((r) => (
+                  <Badge key={r.name} variant="outline" className="text-[11px] font-mono">
+                    {r.name}
+                  </Badge>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {stats.criticalContractOnly.length > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>
+              {stats.criticalContractOnly.length} kritieke function(s) alleen door de contracttest gedekt
             </AlertTitle>
             <AlertDescription>
               <p className="text-sm mb-2">
-                Deze functies raken facturatie, klant- of partnercommunicatie. Voeg minimaal een
-                Deno-test toe met OPTIONS/CORS, auth- en validatie-paden.
+                De contract-suite controleert bij elke edge function de handler, CORS/OPTIONS,
+                afwezigheid van hardgecodeerde secrets en service-role-lekken. Gedragstests
+                (validatie, mailinhoud, statusovergangen) ontbreken hier nog.
               </p>
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-auto">
-                {stats.criticalMissing.map((r) => (
+                {stats.criticalContractOnly.map((r) => (
                   <Badge key={r.name} variant="outline" className="text-[11px] font-mono">
                     {r.name}
                   </Badge>
@@ -134,9 +160,10 @@ export function TestCoverageCard() {
               <Select value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
                 <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="critical_missing">Kritiek zonder test</SelectItem>
-                  <SelectItem value="missing">Alle zonder test</SelectItem>
-                  <SelectItem value="tested">Met test</SelectItem>
+                  <SelectItem value="critical_missing">Kritiek zonder gedragstest</SelectItem>
+                  <SelectItem value="missing">Alle zonder gedragstest</SelectItem>
+                  <SelectItem value="contract">Alleen contracttest</SelectItem>
+                  <SelectItem value="tested">Met gedragstest</SelectItem>
                   <SelectItem value="all">Alles</SelectItem>
                 </SelectContent>
               </Select>
@@ -169,7 +196,8 @@ export function TestCoverageCard() {
 
             <p className="text-xs text-muted-foreground">
               Registry: <code className="text-[11px]">src/lib/edgeFunctionTestCoverage.ts</code> —
-              werk deze bij bij elke nieuwe edge function of nieuw <code>*_test.ts</code>-bestand.
+              gesynchroniseerd door <code className="text-[11px]">tests/edge-function-contracts.test.ts</code>,
+              die faalt zodra een function of test ontbreekt in de registry.
             </p>
           </div>
         )}
@@ -212,17 +240,19 @@ function CoverageRow({ row }: { row: EdgeFunctionCoverage }) {
         )}
       </TableCell>
       <TableCell>
-        {row.tested ? (
+        {row.testKind === "deno" || row.testKind === "e2e" ? (
           <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1 text-[11px]">
             <CheckCircle2 className="h-3 w-3" />
             {row.testKind === "e2e" ? "E2E" : "Deno"}
           </Badge>
-        ) : row.critical ? (
+        ) : row.testKind === "contract" ? (
+          <Badge variant="outline" className="gap-1 text-[11px] border-amber-500 text-amber-700">
+            <CheckCircle2 className="h-3 w-3" /> Contract
+          </Badge>
+        ) : (
           <Badge variant="destructive" className="gap-1 text-[11px]">
             <AlertTriangle className="h-3 w-3" /> Ontbreekt
           </Badge>
-        ) : (
-          <Badge variant="outline" className="text-[11px]">Geen</Badge>
         )}
       </TableCell>
     </TableRow>
