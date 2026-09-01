@@ -34,7 +34,8 @@ const sendEmailViaMailjet = async (messages: any[]) => {
     },
     body: JSON.stringify({ Messages: messages }),
   });
-  try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+  let parsed: unknown = null;
+  try { parsed = await response.clone().json(); } catch { /* non-JSON */ }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -42,7 +43,10 @@ const sendEmailViaMailjet = async (messages: any[]) => {
     throw new Error("EMAIL_SERVICE_ERROR");
   }
 
-  return await response.json();
+  // Geef de MessageID terug aan de aanroeper: een module-scope variabele
+  // bestond hier niet, waardoor de extractie stil faalde en elke mail
+  // zonder mailjet_message_id werd gelogd (geen webhook-koppeling).
+  return { raw: parsed, messageId: extractMessageIds(parsed)[0] ?? null };
 };
 
 // Fallback template if database template not found
@@ -261,7 +265,7 @@ Deno.serve(async (req) => {
     const replyTo = buildReplyTo(request.reference_number);
 
     const subjectPrefix = getSubjectPrefix(origin);
-    await sendEmailViaMailjet([
+    const sendResult = await sendEmailViaMailjet([
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: getRecipientEmail(request.customer_email, origin), Name: request.customer_name }],
@@ -270,6 +274,7 @@ Deno.serve(async (req) => {
         HTMLPart: emailHtml,
       },
     ]);
+    mailjetMessageId = sendResult.messageId;
 
     // Log email
     await logEmail({

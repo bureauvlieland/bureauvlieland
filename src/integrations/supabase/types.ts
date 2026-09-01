@@ -1920,6 +1920,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_webhook_attempts: {
+        Row: {
+          authorized: boolean
+          event_count: number
+          id: string
+          reason: string
+          received_at: string
+          source_ip: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          authorized: boolean
+          event_count?: number
+          id?: string
+          reason: string
+          received_at?: string
+          source_ip?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          authorized?: boolean
+          event_count?: number
+          id?: string
+          reason?: string
+          received_at?: string
+          source_ip?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       google_reviews_cache: {
         Row: {
           fetched_at: string

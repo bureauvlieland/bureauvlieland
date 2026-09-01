@@ -168,3 +168,6 @@ verify_jwt = false
 
 [functions.temp-invoice-pdf-audit]
 verify_jwt = false
+
+[functions.email-webhook-heartbeat]
+verify_jwt = false
