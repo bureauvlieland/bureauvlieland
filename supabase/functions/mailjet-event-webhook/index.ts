@@ -90,8 +90,39 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  // Token mag via query-param (?token=) of via header komen. Mailjet-
+  // configuraties verschillen; met beide varianten kan een verkeerd
+  // ingestelde URL niet stilletjes alle feedback blokkeren.
   const url = new URL(req.url);
-  if (url.searchParams.get("token") !== expectedToken) {
+  const providedToken =
+    url.searchParams.get("token") ??
+    req.headers.get("x-mailjet-token") ??
+    req.headers.get("x-webhook-token");
+
+  const attemptLogger = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const logAttempt = async (authorized: boolean, reason: string, eventCount = 0) => {
+    try {
+      await attemptLogger.from("email_webhook_attempts").insert({
+        authorized,
+        reason,
+        event_count: eventCount,
+        source_ip: req.headers.get("x-forwarded-for"),
+        user_agent: req.headers.get("user-agent"),
+      });
+    } catch (err) {
+      console.error("Kon webhook-poging niet loggen:", err);
+    }
+  };
+
+  if (providedToken !== expectedToken) {
+    console.warn(
+      `mailjet-event-webhook: unauthorized attempt (token ${providedToken ? "onjuist" : "ontbreekt"})`,
+    );
+    await logAttempt(false, providedToken ? "token_mismatch" : "token_missing");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -109,11 +140,9 @@ Deno.serve(async (req) => {
   }
 
   const events: MailjetEvent[] = Array.isArray(payload) ? payload : [payload];
+  await logAttempt(true, "ok", events.length);
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const supabase = attemptLogger;
 
   let processed = 0;
   let unmatched = 0;
