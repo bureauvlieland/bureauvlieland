@@ -198,10 +198,18 @@ const REGISTRY: Row[] = [
   { name: "social-meta-oauth-start", category: "internal", critical: false },
 ];
 
+/**
+ * Elke edge function wordt afgedekt door de generieke contract-suite
+ * (`tests/edge-function-contracts.test.ts`): handler aanwezig, CORS/OPTIONS,
+ * geen hardgecodeerde secrets, geen service-role lek. Functies met een eigen
+ * Deno- of E2E-test hebben daarbovenop gedragsdekking.
+ */
+export const CONTRACT_TESTED_KINDS = ["deno", "e2e", "contract"] as const;
+
 export const EDGE_FUNCTION_COVERAGE: EdgeFunctionCoverage[] = REGISTRY.map((r) => ({
   ...r,
   tested: r.name in TESTED,
-  testKind: TESTED[r.name],
+  testKind: TESTED[r.name] ?? ("contract" as const),
 })).sort((a, b) => a.name.localeCompare(b.name));
 
 export const CATEGORY_LABELS: Record<EdgeFunctionCategory, string> = {
