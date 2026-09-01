@@ -65,6 +65,13 @@ export interface SendMailjetOptions {
    * technische alerts naar admins die altijd door moeten.
    */
   checkSuppression?: boolean;
+  /**
+   * Testbare seam: standaard `checkEmailSuppressed`. Alleen tests geven hier
+   * een eigen lookup mee; productiecode laat dit leeg.
+   */
+  suppressionLookup?: (
+    email: string,
+  ) => Promise<{ reason: string; source?: string | null } | null>;
 }
 
 export type SendMailjetResult =
@@ -278,7 +285,8 @@ export async function sendMailjet(
   if (opts.checkSuppression !== false) {
     for (const msg of opts.messages) {
       for (const to of msg.To ?? []) {
-        const supp = await checkEmailSuppressed(to.Email);
+        const lookup = opts.suppressionLookup ?? checkEmailSuppressed;
+        const supp = await lookup(to.Email);
         if (supp) {
           console.warn(
             `[mailjet-send:${source}] Skipping — recipient ${to.Email} is suppressed (${supp.reason})`,
