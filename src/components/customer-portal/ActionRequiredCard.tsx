@@ -40,6 +40,8 @@ interface ActionRequiredCardProps {
   alternativeActionsCount?: number;
   /** Aantal ná het klantakkoord toegevoegde onderdelen die nog goedkeuring vragen. */
   newItemActionsCount?: number;
+  /** Namen van de onderdelen waarop de klant nu akkoord moet geven. */
+  pendingApprovalNames?: string[];
   /** Datums van het project — nodig om te bepalen of uitvoering al voorbij is. */
   selectedDates?: string[] | null;
   /** completion_status uit program_requests — nodig voor executie-state. */
@@ -56,6 +58,7 @@ interface ActionConfig {
   type: ActionType;
   title: string;
   description: string;
+  itemNames?: string[];
   icon: React.ReactNode;
   variant: "warning" | "info" | "success" | "neutral";
   cta?: {
@@ -81,6 +84,7 @@ export const ActionRequiredCard = ({
   customerActionsCount = 0,
   alternativeActionsCount = 0,
   newItemActionsCount = 0,
+  pendingApprovalNames = [],
   selectedDates = null,
   completionStatus = null,
   cancelledAt = null,
@@ -160,6 +164,7 @@ export const ActionRequiredCard = ({
           description: multiple
             ? "Bureau Vlieland heeft nieuwe onderdelen aan uw programma toegevoegd. Bekijk de details en geef per onderdeel uw goedkeuring; daarna vragen wij de aanbieder aan."
             : "Bureau Vlieland heeft een nieuw onderdeel aan uw programma toegevoegd. Bekijk de details en geef uw goedkeuring; daarna vragen wij de aanbieder aan.",
+          itemNames: pendingApprovalNames,
           icon: <AlertCircle className="h-5 w-5" />,
           variant: "warning",
           cta: {
@@ -187,6 +192,7 @@ export const ActionRequiredCard = ({
           type: "alternative",
           title: label,
           description,
+          itemNames: pendingApprovalNames,
           icon: <AlertCircle className="h-5 w-5" />,
           variant: "warning",
           cta: {
@@ -353,6 +359,16 @@ export const ActionRequiredCard = ({
             <p className={cn("text-sm mt-0.5", descriptionStyles[action.variant])}>
               {action.description}
             </p>
+            {action.itemNames && action.itemNames.length > 0 && (
+              <ul className={cn("text-sm mt-2 space-y-1", descriptionStyles[action.variant])}>
+                {action.itemNames.map((name) => (
+                  <li key={name} className="flex items-start gap-1.5">
+                    <span aria-hidden>&bull;</span>
+                    <span className="font-medium">{name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           {action.cta && (
             <Button 
