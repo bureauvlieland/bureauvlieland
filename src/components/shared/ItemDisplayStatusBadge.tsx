@@ -21,7 +21,8 @@ const TONE_BY_STATUS: Record<ItemDisplayStatus, MicroPillTone> = {
   wacht_op_partner: "blue",
   wacht_op_klant: "amber",
   prijs_gewijzigd: "amber",
-  klant_akkoord_wacht_partner: "emerald",
+  // Nog niet definitief: aanbieder moet nog bevestigen → amber, niet groen.
+  klant_akkoord_wacht_partner: "amber",
   tegenvoorstel_klant: "purple",
   klant_akkoord_bureau: "emerald",
   geaccepteerd: "emerald",
