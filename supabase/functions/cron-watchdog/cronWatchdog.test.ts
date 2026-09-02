@@ -68,3 +68,19 @@ Deno.test("expectedSilenceHours leidt de cadans uit het schema af", () => {
   assertEquals(expectedSilenceHours("*/10 * * * *"), 3);
   assertEquals(expectedSilenceHours("0 6 * * *"), 26);
 });
+
+Deno.test("net ingestelde taak die nog niet gedraaid heeft is info, geen alarm", () => {
+  const v = judge(
+    job({ last_run_start: null, known_since: new Date(NOW - 3600_000).toISOString() }),
+    NOW,
+  );
+  assertEquals(v?.level, "info");
+});
+
+Deno.test("taak die al langer bekend is en nooit draaide blijft alarm", () => {
+  const v = judge(
+    job({ last_run_start: null, known_since: new Date(NOW - 72 * 3600_000).toISOString() }),
+    NOW,
+  );
+  assertEquals(v?.level, "alarm");
+});
