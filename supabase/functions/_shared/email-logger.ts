@@ -124,6 +124,12 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
     }
   }
 
+  if (entry.status === "sent" && !html && !text) {
+    console.warn(
+      `[email-logger] "${entry.email_type}" → ${entry.recipient_email} zonder html_body/text_body gelogd — 'opnieuw versturen' kan het origineel niet reproduceren.`,
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -142,7 +148,13 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
       error_message: entry.error_message || null,
       mailjet_message_id: exactMessageId || null,
       sent_by: entry.sent_by,
-      metadata: entry.metadata || {},
+      metadata: {
+        ...(entry.metadata || {}),
+        // Eerlijkheid in de UI: markeer expliciet als de originele inhoud niet
+        // bewaard kon worden. De admin ziet dan "inhoud niet bewaard" in plaats
+        // van een gereconstrueerde benadering die echt lijkt.
+        body_missing: !html && !text ? true : undefined,
+      },
       html_body: html || null,
       text_body: text || null,
       from_email: fromEmail || null,
