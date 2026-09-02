@@ -226,13 +226,22 @@ Deno.test({
 Deno.test("installMailjetBodyCapture onthoudt de verstuurde inhoud", async () => {
   __clearSentBodies();
   await withFetchStub(
-    () =>
-      Promise.resolve(
+    (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      // Niet-Mailjet verkeer is de suppressie-lookup: geen treffers.
+      if (!url.includes("api.mailjet.com")) {
+        return Promise.resolve(
+          new Response("null", { status: 200, headers: { "content-type": "application/json" } }),
+        );
+      }
+      return Promise.resolve(
         new Response(
           JSON.stringify({ Messages: [{ To: [{ Email: "k@example.com", MessageID: 555 }] }] }),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
-      ),
+      );
+    },
+
     async () => {
       // Capture ná het plaatsen van de stub installeren, zodat de wrapper
       // de stub-fetch omsluit (in productie wrapt hij de echte fetch).
