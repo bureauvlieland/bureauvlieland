@@ -131,30 +131,36 @@ Deno.serve(async (req) => {
       ],
     });
 
+    const sentOk = result.ok;
+    const messageId = result.ok ? result.messageId : null;
+    const skipped = result.ok ? (result.skipped ?? null) : null;
+    const sendError = result.ok ? null : result.error;
+
     await logEmail({
       email_type: "email_chain_probe",
       subject,
       recipient_email: recipient,
-      status: result.ok && !result.skipped ? "sent" : result.ok ? "sent" : "failed",
-      error_message: result.error,
-      mailjet_message_id: result.messageId ?? undefined,
+      status: sentOk ? "sent" : "failed",
+      error_message: sendError ?? undefined,
+      mailjet_message_id: messageId ?? undefined,
       sent_by: user.email ?? "admin",
       html_body: html,
       metadata: {
         template_name: "email_chain_probe",
         actor: "admin → bureau",
         probe: true,
-        skipped: result.skipped ?? null,
+        skipped,
       },
     });
 
     return json({
-      ok: result.ok,
-      messageId: result.messageId,
+      ok: sentOk,
+      messageId,
       recipient,
-      skipped: result.skipped ?? null,
-      error: result.error ?? null,
-      hint: result.ok
+      skipped,
+      error: sendError,
+      hint: sentOk
+
         ? "Proefmail verstuurd. Open hem en verwacht binnen enkele minuten 'afgeleverd' en 'geopend'."
         : "Verzenden mislukte — zie foutmelding.",
     });
