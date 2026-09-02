@@ -13,6 +13,11 @@ export interface JobHealth {
   outcome: string;
   runs_last_24h: number;
   failures_last_7d: number;
+  /**
+   * Moment waarop we deze taak voor het eerst zagen (public.cron_job_first_seen).
+   * Een net ingestelde taak die nog niet aan de beurt was is géén storing.
+   */
+  known_since?: string | null;
 }
 
 /** Verwachte maximale stilte in uren, afgeleid uit de cron-expressie. */
@@ -36,8 +41,17 @@ export function judge(job: JobHealth, now: number): Verdict | null {
   const silenceLimit = expectedSilenceHours(job.schedule) * 3600_000;
 
   if (!job.last_run_start) {
+    const knownFor = job.known_since ? now - new Date(job.known_since).getTime() : Infinity;
+    if (knownFor < silenceLimit) {
+      return {
+        jobname: job.jobname,
+        level: "info",
+        reason: "net ingesteld, eerste run nog niet verwacht",
+      };
+    }
     return { jobname: job.jobname, level: "alarm", reason: "heeft nog nooit gedraaid" };
   }
+
   const age = now - new Date(job.last_run_start).getTime();
   if (age > silenceLimit) {
     const hours = Math.round(age / 3600_000);
