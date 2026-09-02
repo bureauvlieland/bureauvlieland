@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractWebhookToken } from "./token.ts";
+import { parseEventsPreservingIds } from "../_shared/mailjet-message-id.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -193,6 +194,24 @@ Deno.serve(async (req) => {
 
       let rows = exactRows ?? [];
 
+      // Fallback op de AFGERONDE ID. Verzendingen van vóór de precisie-fix
+      // staan met een afgerond getal in de database (1152921544126870000 in
+      // plaats van ...016). Zonder deze fallback blijven al die historische
+      // rijen onbereikbaar voor events die nu binnenkomen.
+      if (rows.length === 0) {
+        const rounded = String(Number(messageId));
+        if (rounded !== messageId && /^\d+$/.test(rounded)) {
+          const { data: roundedRows } = await supabase
+            .from("email_log")
+            .select(selectCols)
+            .eq("mailjet_message_id", rounded);
+          if (roundedRows && roundedRows.length > 0) {
+            rows = roundedRows;
+            console.log(`Matched event=${ev.event} via afgeronde MessageID ${rounded}`);
+          }
+        }
+      }
+
       // Fallback op ontvangeradres. Groepsmails loggen per item een rij maar
       // bewaren alleen de MessageID van de eerste ontvanger, waardoor de
       // events van de andere ontvangers nergens op matchen. In dat geval
@@ -337,7 +356,7 @@ Deno.serve(async (req) => {
 
 
   return new Response(
-    JSON.stringify({ ok: true, processed, unmatched, total: events.length }),
+    JSON.stringify({ ok: true, processed, unmatched, total: rawEvents.length }),
     { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });
