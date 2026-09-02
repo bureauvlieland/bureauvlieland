@@ -1723,6 +1723,51 @@ export type Database = {
           },
         ]
       }
+      cron_dispatch_log: {
+        Row: {
+          dispatched_at: string
+          http_status: number | null
+          id: string
+          jobname: string
+          request_id: number | null
+          resolved_at: string | null
+          response_error: string | null
+        }
+        Insert: {
+          dispatched_at?: string
+          http_status?: number | null
+          id?: string
+          jobname: string
+          request_id?: number | null
+          resolved_at?: string | null
+          response_error?: string | null
+        }
+        Update: {
+          dispatched_at?: string
+          http_status?: number | null
+          id?: string
+          jobname?: string
+          request_id?: number | null
+          resolved_at?: string | null
+          response_error?: string | null
+        }
+        Relationships: []
+      }
+      cron_job_first_seen: {
+        Row: {
+          first_seen_at: string
+          jobname: string
+        }
+        Insert: {
+          first_seen_at?: string
+          jobname: string
+        }
+        Update: {
+          first_seen_at?: string
+          jobname?: string
+        }
+        Relationships: []
+      }
       email_log: {
         Row: {
           blocked_at: string | null
@@ -4856,6 +4901,22 @@ export type Database = {
           invoicing_mode: string
         }[]
       }
+      get_scheduled_job_health: {
+        Args: never
+        Returns: {
+          active: boolean
+          failures_last_7d: number
+          jobid: number
+          jobname: string
+          last_http_error: string
+          last_http_status: number
+          last_run_start: string
+          last_run_status: string
+          outcome: string
+          runs_last_24h: number
+          schedule: string
+        }[]
+      }
       get_shared_program: {
         Args: { _share_code: string }
         Returns: {
@@ -4967,6 +5028,7 @@ export type Database = {
           }
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
+      resolve_cron_dispatches: { Args: never; Returns: number }
       scan_stale_pending_changes: { Args: never; Returns: number }
       selftest_autofix: { Args: never; Returns: Json }
       slugify: { Args: { value: string }; Returns: string }

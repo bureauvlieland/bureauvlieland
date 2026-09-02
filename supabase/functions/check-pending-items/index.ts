@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
             }],
           }),
         });
-        try { mailjetMessageId = extractMessageIds(await resp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+        try { mailjetMessageId = extractMessageIds(await resp.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
         const status = resp.ok ? "sent" : "failed";
         if (!resp.ok) console.error(`Failed to send ${opts.logExtra.email_type}:`, await resp.text());
@@ -716,7 +716,7 @@ Deno.serve(async (req) => {
                   }],
                 }),
               });
-              try { mailjetMessageId = extractMessageIds(await emailResp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+              try { mailjetMessageId = extractMessageIds(await emailResp.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
               if (emailResp.ok) {
                 console.log(`Sent expired quote email to ${partnerEmail}`);

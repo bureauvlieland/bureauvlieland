@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({ Messages: [emailMessage] }),
         });
-        try { mailjetMessageId = extractMessageIds(await mjResp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+        try { mailjetMessageId = extractMessageIds(await mjResp.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
         if (mjResp.ok) {
           forwarded = true;

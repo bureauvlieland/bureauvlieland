@@ -140,7 +140,7 @@ Bureau Vlieland`,
           }],
         }),
       });
-      try { mailjetMessageId = extractMessageIds(await emailResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+      try { mailjetMessageId = extractMessageIds(await emailResponse.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
       if (!emailResponse.ok) {
         emailError = await emailResponse.text();

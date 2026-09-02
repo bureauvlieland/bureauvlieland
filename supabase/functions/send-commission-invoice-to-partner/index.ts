@@ -223,7 +223,7 @@ export async function handler(req: Request): Promise<Response> {
       },
       body: JSON.stringify({ Messages: [message] }),
     });
-    try { mailjetMessageId = extractMessageIds(await mjResponse.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+    try { mailjetMessageId = extractMessageIds(await mjResponse.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!mjResponse.ok) {
       const errText = await mjResponse.text();

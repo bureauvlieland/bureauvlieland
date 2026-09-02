@@ -51,7 +51,7 @@ async function sendEmailNotification(
     // variabele schrijven (dat gooide een ReferenceError die stil werd
     // opgevangen, waardoor elke mail zonder MessageID werd gelogd).
     let messageId: string | null = null;
-    try { messageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* non-JSON */ }
+    try { messageId = extractMessageIds(await response.clone().text())[0] ?? null; } catch { /* non-JSON */ }
 
     if (!response.ok) {
       const error = await response.text();

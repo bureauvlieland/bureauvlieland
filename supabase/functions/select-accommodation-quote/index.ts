@@ -32,7 +32,7 @@ interface SelectQuoteRequest {
  */
 async function readMessageId(resp: Response): Promise<string | null> {
   try {
-    return extractMessageIds(await resp.clone().json())[0] ?? null;
+    return extractMessageIds(await resp.clone().text())[0] ?? null;
   } catch {
     return null;
   }

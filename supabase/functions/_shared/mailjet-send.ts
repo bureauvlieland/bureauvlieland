@@ -20,6 +20,10 @@
  * af. Retries doet Mailjet zelf; wij loggen alleen wat er gebeurde.
  */
 
+import {
+  extractMessageIdsFromRawText,
+} from "./mailjet-message-id.ts";
+
 const MAILJET_API_URL = "https://api.mailjet.com/v3.1/send";
 
 export interface MailjetMessage {
@@ -135,7 +139,47 @@ function registryKeys(msg: MailjetMessage, messageId?: string | null): string[] 
   return keys;
 }
 
+// Exacte (niet-afgeronde) MessageID's, zodat `logEmail` een afgeronde ID van
+// een aanroeper kan corrigeren. Veel functions lezen de ID nog uit
+// `await res.json()`, waar 64-bits getallen worden afgerond; de interceptor
+// hierboven ziet de RUWE tekst en kent dus de echte waarde.
+const exactMessageIds = new Map<string, string>();
+
+function rememberExactId(msg: MailjetMessage, messageId?: string | null): void {
+  if (!messageId || !/^\d+$/.test(messageId)) return;
+  exactMessageIds.set(`rounded:${String(Number(messageId))}`, messageId);
+  for (const to of msg.To ?? []) {
+    if (to?.Email) exactMessageIds.set(`to:${to.Email.trim().toLowerCase()}`, messageId);
+  }
+  while (exactMessageIds.size > MAX_REGISTRY_ENTRIES * 2) {
+    const oldest = exactMessageIds.keys().next().value;
+    if (oldest === undefined) break;
+    exactMessageIds.delete(oldest);
+  }
+}
+
+/**
+ * Corrigeer een mogelijk afgeronde MessageID naar de exacte waarde uit de
+ * ruwe Mailjet-respons. Geeft de input onveranderd terug als er niets
+ * bekend is (of als hij al exact was).
+ */
+export function resolveExactMessageId(
+  messageId?: string | null,
+  recipientEmail?: string | null,
+): string | null {
+  if (!messageId) return messageId ?? null;
+  const byRounded = exactMessageIds.get(`rounded:${String(Number(messageId))}`);
+  if (byRounded) return byRounded;
+  if (recipientEmail) {
+    const byTo = exactMessageIds.get(`to:${recipientEmail.trim().toLowerCase()}`);
+    // Alleen gebruiken als het om dezelfde (afgeronde) verzending gaat.
+    if (byTo && String(Number(byTo)) === String(Number(messageId))) return byTo;
+  }
+  return messageId;
+}
+
 function rememberBody(msg: MailjetMessage, messageId?: string | null): void {
+  rememberExactId(msg, messageId);
   const body: SentBody = {
     html_body: msg.HTMLPart,
     text_body: msg.TextPart,
@@ -173,6 +217,7 @@ export function lookupSentBody(opts: {
 /** Alleen voor tests. */
 export function __clearSentBodies(): void {
   sentBodies.clear();
+  exactMessageIds.clear();
 }
 
 /**
@@ -211,17 +256,46 @@ export function installMailjetBodyCapture(): void {
       }
     }
 
+    // SUPPRESSIE-HANDHAVING VOOR ALLE VERZENDPADEN.
+    // Slechts een handvol functions gebruikt `sendMailjet` (met eigen
+    // suppressie-check); de rest post rechtstreeks naar de Mailjet-API. Door
+    // de check hier te doen geldt hij overal: naar een geblokkeerd adres
+    // (harde bounce, spamklacht, afmelding) gaat NIETS meer de deur uit.
+    if (isMailjetSend && messages.length > 0) {
+      const blocked: Array<{ email: string; reason: string }> = [];
+      for (const msg of messages) {
+        for (const to of msg.To ?? []) {
+          if (!to?.Email) continue;
+          const supp = await checkEmailSuppressed(to.Email);
+          if (supp) blocked.push({ email: to.Email, reason: supp.reason });
+        }
+      }
+      if (blocked.length > 0) {
+        const detail = blocked
+          .map((b) => `${b.email} (${b.reason})`)
+          .join(", ");
+        console.error(
+          `[mailjet-capture] Verzending geweigerd — ontvanger op suppressielijst: ${detail}`,
+        );
+        return new Response(
+          JSON.stringify({
+            Suppressed: true,
+            ErrorMessage: `Ontvanger staat op de suppressielijst: ${detail}`,
+            Messages: [],
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const response = await originalFetch(input as RequestInfo, init);
 
     if (isMailjetSend && messages.length > 0 && response.ok) {
       try {
-        const raw = JSON.parse(await response.clone().text()) as {
-          Messages?: Array<{ To?: Array<{ MessageID?: unknown }> }>;
-        };
-        messages.forEach((msg, i) => {
-          const id = raw?.Messages?.[i]?.To?.[0]?.MessageID;
-          rememberBody(msg, id !== undefined && id !== null ? String(id) : null);
-        });
+        // Precisie-veilig: MessageID uit de RUWE tekst, niet uit JSON.parse
+        // (64-bits ID's worden anders afgerond en matchen nooit meer).
+        const ids = extractMessageIdsFromRawText(await response.clone().text());
+        messages.forEach((msg, i) => rememberBody(msg, ids[i] ?? null));
       } catch {
         messages.forEach((msg) => rememberBody(msg, null));
       }
@@ -233,9 +307,16 @@ export function installMailjetBodyCapture(): void {
 
 
 export function extractMessageIds(raw: unknown): string[] {
+  // Geef bij voorkeur de RUWE responstekst mee (`await res.text()`): 64-bits
+  // MessageID's overleven `JSON.parse` niet en worden dan afgerond, waardoor
+  // webhook-events nooit meer matchen.
+  if (typeof raw === "string") return extractMessageIdsFromRawText(raw);
 
   const ids: string[] = [];
   if (!raw || typeof raw !== "object") return ids;
+  console.warn(
+    "[mailjet-send] extractMessageIds kreeg een geparseerd object — MessageID kan afgerond zijn. Geef de ruwe tekst mee.",
+  );
   const messages = (raw as { Messages?: unknown }).Messages;
   if (!Array.isArray(messages)) return ids;
   for (const msg of messages) {
@@ -362,7 +443,8 @@ export async function sendMailjet(
     };
   }
 
-  const messageIds = extractMessageIds(parsed);
+  // Precisie-veilig uit de ruwe tekst (zie mailjet-message-id.ts).
+  const messageIds = extractMessageIdsFromRawText(text);
   if (messageIds.length === 0) {
     console.warn(
       `[mailjet-send:${source}] No MessageID in response — feedback tracking blind for this send.`,
@@ -372,14 +454,7 @@ export async function sendMailjet(
 
   // Bewaar de verstuurde inhoud per bericht (op MessageID én op ontvanger),
   // zodat logEmail die zonder extra werk in `email_log` kan opslaan.
-  const perMessage = Array.isArray((parsed as { Messages?: unknown })?.Messages)
-    ? ((parsed as { Messages: unknown[] }).Messages)
-    : [];
-  opts.messages.forEach((msg, i) => {
-    const to = (perMessage[i] as { To?: Array<{ MessageID?: unknown }> } | undefined)?.To;
-    const id = to?.[0]?.MessageID;
-    rememberBody(msg, id !== undefined && id !== null ? String(id) : null);
-  });
+  opts.messages.forEach((msg, i) => rememberBody(msg, messageIds[i] ?? null));
 
 
 

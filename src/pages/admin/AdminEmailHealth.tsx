@@ -27,6 +27,7 @@ import { useEffect } from "react";
 import { TestCoverageCard } from "@/components/admin/email-health/TestCoverageCard";
 import { CriticalSelftestCard } from "@/components/admin/email-health/CriticalSelftestCard";
 import { WebhookStatusCard } from "@/components/admin/email-health/WebhookStatusCard";
+import { ScheduledJobsCard } from "@/components/admin/email-health/ScheduledJobsCard";
 
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -261,6 +262,8 @@ export default function AdminEmailHealth() {
         <WebhookStatusCard />
 
         <AuditReportCard />
+
+        <ScheduledJobsCard />
 
         <CriticalSelftestCard />
 

@@ -256,7 +256,7 @@ export const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({ Messages: [message] }),
     });
-    try { mailjetMessageId = extractMessageIds(await mjRes.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+    try { mailjetMessageId = extractMessageIds(await mjRes.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     const mjOk = mjRes.ok;
     const errText = mjOk ? "" : await mjRes.text();
