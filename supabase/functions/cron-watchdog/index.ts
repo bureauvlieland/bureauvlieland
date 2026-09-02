@@ -138,21 +138,22 @@ Deno.serve(async (req) => {
 
     // Admin-todo per falende taak (max één open).
     for (const alarm of alarms) {
-      const marker = `cron-watchdog:${alarm.jobname}`;
       const { data: existing } = await supabase
         .from("admin_todos")
         .select("id")
-        .eq("todo_type", "system_cron_failure")
-        .ilike("description", `%${marker}%`)
-        .is("completed_at", null)
+        .eq("auto_type", "system_cron_failure")
+        .eq("auto_entity_id", alarm.jobname)
+        .neq("status", "done")
         .limit(1);
       if (existing && existing.length > 0) continue;
 
       await supabase.from("admin_todos").insert({
-        todo_type: "system_cron_failure",
+        auto_type: "system_cron_failure",
+        auto_entity_id: alarm.jobname,
         title: `Automatische taak faalt: ${alarm.jobname}`,
-        description: `${alarm.reason}\n\n[${marker}]`,
+        description: alarm.reason,
         priority: "high",
+        status: "open",
       });
     }
 
