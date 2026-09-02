@@ -247,10 +247,17 @@ export function WebhookStatusCard() {
               <AlertDescription>Het webhook-token ontbreekt op de server.</AlertDescription>
             </Alert>
           )}
-          <Button variant="secondary" size="sm" onClick={runSelftest} disabled={testing}>
-            <PlayCircle className="mr-2 h-4 w-4" />
-            {testing ? "Testen…" : "Test webhook"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={runSelftest} disabled={testing}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              {testing ? "Testen…" : "Test webhook"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={runProbe} disabled={probing}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              {probing ? "Versturen…" : "Proefmail versturen"}
+            </Button>
+          </div>
+
           {testResult && (
             <p className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-destructive"}`}>
               {testResult.hint ?? (testResult.ok ? "Geslaagd" : "Gefaald")}
