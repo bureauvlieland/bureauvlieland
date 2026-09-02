@@ -223,7 +223,12 @@ Deno.test({
   );
 });
 
-Deno.test("installMailjetBodyCapture onthoudt de verstuurde inhoud", async () => {
+Deno.test({
+  name: "installMailjetBodyCapture onthoudt de verstuurde inhoud",
+  sanitizeOps: false,
+  sanitizeResources: false,
+}, async () => {
+
   __clearSentBodies();
   await withFetchStub(
     (input: RequestInfo | URL) => {
