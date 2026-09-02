@@ -1753,6 +1753,21 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_job_first_seen: {
+        Row: {
+          first_seen_at: string
+          jobname: string
+        }
+        Insert: {
+          first_seen_at?: string
+          jobname: string
+        }
+        Update: {
+          first_seen_at?: string
+          jobname?: string
+        }
+        Relationships: []
+      }
       email_log: {
         Row: {
           blocked_at: string | null
