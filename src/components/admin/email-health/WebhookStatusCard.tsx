@@ -40,7 +40,9 @@ type WebhookStatus = {
   missingMessageIdByType: Array<{ email_type: string; count: number; last: string }>;
   eventsTotal24h: number;
   eventsMatched24h: number;
+  eventsForeign24h?: number;
   unmatchedTopRecipients: Array<{ recipient_email: string; count: number }>;
+
   recentEvents: Array<{
     event_type: string;
     matched: boolean;
