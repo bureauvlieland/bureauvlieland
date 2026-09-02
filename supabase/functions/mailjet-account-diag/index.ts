@@ -3,7 +3,12 @@
  * app gebruikt? Geeft niets terug in de response; het resultaat gaat naar de
  * functielogs zodat er geen accountgegevens over een open endpoint lekken.
  */
-Deno.serve(async () => {
+const DIAG_KEY = "d97269c75c2d35ddcd0b95e272c46182";
+
+Deno.serve(async (req) => {
+  if (new URL(req.url).searchParams.get("k") !== DIAG_KEY) {
+    return new Response("nope", { status: 401 });
+  }
   const apiKey = Deno.env.get("MAILJET_API_KEY");
   const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
   if (!apiKey || !secretKey) {
@@ -42,5 +47,8 @@ Deno.serve(async () => {
   console.log("DIAG_SENDERS", JSON.stringify(senderList));
   console.log("DIAG_CALLBACKS", JSON.stringify(cbList));
   console.log("DIAG_USER", JSON.stringify(userList));
-  return new Response("ok");
+  return new Response(
+    JSON.stringify({ senders: senderList, callbacks: cbList, user: userList }, null, 2),
+    { headers: { "Content-Type": "application/json" } },
+  );
 });
