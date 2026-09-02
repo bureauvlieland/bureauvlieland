@@ -17,9 +17,9 @@ export interface JobHealth {
 
 /** Verwachte maximale stilte in uren, afgeleid uit de cron-expressie. */
 export function expectedSilenceHours(schedule: string): number {
-  const minute = schedule.trim().split(/\s+/)[1] ?? "*";
+  const hourField = schedule.trim().split(/\s+/)[1] ?? "*";
   // "15 * * * *" → elk uur; alles met een concreet uur → dagelijks.
-  if (minute === "*" || minute.startsWith("*/")) return 3;
+  if (hourField === "*" || hourField.startsWith("*/")) return 3;
   return 26;
 }
 
