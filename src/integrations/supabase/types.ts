@@ -4856,6 +4856,21 @@ export type Database = {
           invoicing_mode: string
         }[]
       }
+      get_scheduled_job_health: {
+        Args: never
+        Returns: {
+          active: boolean
+          jobid: number
+          jobname: string
+          last_http_error: string
+          last_http_status: number
+          last_return_message: string
+          last_run_start: string
+          last_run_status: string
+          runs_last_24h: number
+          schedule: string
+        }[]
+      }
       get_shared_program: {
         Args: { _share_code: string }
         Returns: {
