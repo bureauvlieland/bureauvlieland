@@ -59,9 +59,30 @@ Deno.serve(async (req) => {
 
     const jobs = (data ?? []) as JobHealth[];
     const now = Date.now();
+
+    // Nieuwe taken registreren + hun eerste-registratie ophalen, zodat een
+    // taak die simpelweg nog niet aan de beurt was geen valse storing geeft.
+    if (jobs.length > 0) {
+      await supabase
+        .from("cron_job_first_seen")
+        .upsert(jobs.map((j) => ({ jobname: j.jobname })), {
+          onConflict: "jobname",
+          ignoreDuplicates: true,
+        });
+    }
+    const { data: seenRows } = await supabase
+      .from("cron_job_first_seen")
+      .select("jobname, first_seen_at");
+    const firstSeen = new Map<string, string>(
+      ((seenRows ?? []) as Array<{ jobname: string; first_seen_at: string }>).map((
+        r,
+      ) => [r.jobname, r.first_seen_at]),
+    );
+
     const verdicts = jobs
-      .map((j) => judge(j, now))
+      .map((j) => judge({ ...j, known_since: firstSeen.get(j.jobname) ?? null }, now))
       .filter((v): v is Verdict => v !== null);
+
 
     const alarms = verdicts.filter((v) => v.level === "alarm");
     const infos = verdicts.filter((v) => v.level === "info");
