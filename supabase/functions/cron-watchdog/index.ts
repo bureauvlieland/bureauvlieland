@@ -19,6 +19,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -171,27 +172,43 @@ Deno.serve(async (req) => {
         const rows = alarms
           .map((a) => `<li><strong>${a.jobname}</strong> — ${a.reason}</li>`)
           .join("");
-        await sendMailjet({
+        const subject = `[ALERT] ${alarms.length} automatische taak/taken falen`;
+        const html =
+          `<p>De volgende geplande taken draaien niet of eindigen met een fout:</p><ul>${rows}</ul>` +
+          `<p>Bekijk de status op <a href="${HEALTH_URL}">${HEALTH_URL}</a>.</p>`;
+
+        const send = await sendMailjet({
           source: "cron-watchdog",
+          // Technisch alarm naar het eigen admin-adres: altijd doorlaten.
+          checkSuppression: false,
           messages: [{
-            To: [{ Email: to }],
-            Subject: `[ALERT] ${alarms.length} automatische taak/taken falen`,
-            HTMLPart:
-              `<p>De volgende geplande taken draaien niet of eindigen met een fout:</p><ul>${rows}</ul>` +
-              `<p>Bekijk de status op <a href="${HEALTH_URL}">${HEALTH_URL}</a>.</p>`,
-          }],
-          log: {
-            email_type: "cron_watchdog_alert",
-            subject: `[ALERT] ${alarms.length} automatische taak/taken falen`,
-            recipient_email: to,
-            sent_by: "cron-watchdog",
-            metadata: {
-              template_name: "cron_watchdog_alert",
-              actor: "system",
-              jobs: alarms.map((a) => a.jobname),
+            From: {
+              Email: Deno.env.get("MAILJET_FROM_EMAIL") ?? "noreply@bureauvlieland.nl",
+              Name: "Bureau Vlieland Monitor",
             },
+            To: [{ Email: to }],
+            Subject: subject,
+            HTMLPart: html,
+            TextPart: html.replace(/<[^>]+>/g, ""),
+          }],
+        });
+
+        await logEmail({
+          email_type: "cron_watchdog_alert",
+          subject,
+          recipient_email: to,
+          status: send.ok ? "sent" : "failed",
+          error_message: send.ok ? undefined : send.error,
+          mailjet_message_id: send.ok ? send.messageId ?? undefined : undefined,
+          sent_by: "cron-watchdog",
+          html_body: html,
+          metadata: {
+            template_name: "cron_watchdog_alert",
+            actor: "system",
+            jobs: alarms.map((a) => a.jobname),
           },
         });
+
         mailed = true;
       }
     }
