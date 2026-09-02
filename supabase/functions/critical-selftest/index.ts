@@ -314,7 +314,123 @@ Deno.serve(async (req) => {
       ),
     );
 
+    // 10) Terugkoppeling uit Mailjet komt binnen én matcht op onze verzendingen
+    results.push(
+      await timed(
+        "webhook_match_ratio",
+        "Terugkoppeling e-mail (webhook-matchratio, 24 uur)",
+        "warning",
+        "Bekijk /admin/email-health → Webhook: komen er events binnen en matchen ze op email_log? 0% match = MessageID's kloppen niet.",
+        async () => {
+          const since = new Date(Date.now() - 86_400_000).toISOString();
+          const { data, error } = await admin
+            .from("email_webhook_events")
+            .select("matched")
+            .gte("received_at", since);
+          if (error) throw new Error(error.message);
+          const total = data?.length ?? 0;
+          if (total === 0) return "geen events ontvangen in 24 uur (geen meting)";
+          const matched = (data ?? []).filter((r) => r.matched === true).length;
+          if (matched === 0) {
+            throw new Error(`${total} events ontvangen, 0 gekoppeld aan een verzending`);
+          }
+          return `${matched}/${total} events gekoppeld`;
+        },
+      ),
+    );
+
+    // 10b) Staan onze verzendingen op hetzelfde Mailjet-account als de webhook?
+    //      Zolang dat niet zo is, kan er per definitie geen terugkoppeling
+    //      binnenkomen voor onze mail — hoe goed de matching ook is.
+    results.push(
+      await timed(
+        "mailjet_account_match",
+        "Verzendingen bekend op Mailjet-account",
+        "warning",
+        "Onze MessageID's zijn onbekend op het account van de API-sleutel: sleutel en webhook horen bij verschillende (sub)accounts. Registreer de webhook op hetzelfde account als de verzendsleutel.",
+        async () => {
+          const apiKey = Deno.env.get("MAILJET_API_KEY");
+          const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
+          if (!apiKey || !secretKey) throw new Error("Mailjet-credentials ontbreken");
+          const { data: rows } = await admin
+            .from("email_log")
+            .select("mailjet_message_id")
+            .not("mailjet_message_id", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(3);
+          if (!rows || rows.length === 0) return "geen verzendingen met MessageID (geen meting)";
+          const auth = "Basic " + btoa(`${apiKey}:${secretKey}`);
+          let known = 0;
+          for (const row of rows) {
+            const id = String((row as Record<string, unknown>).mailjet_message_id);
+            const res = await fetch(
+              `https://api.mailjet.com/v3/REST/message/${encodeURIComponent(id)}`,
+              { headers: { Authorization: auth } },
+            );
+            if (res.status === 200) {
+              const body = await res.json().catch(() => null);
+              if (Array.isArray(body?.Data) && body.Data.length > 0) known++;
+            } else {
+              await res.text();
+            }
+          }
+          if (known === 0) {
+            throw new Error(`0 van ${rows.length} recente MessageID's bekend op dit Mailjet-account`);
+          }
+          return `${known}/${rows.length} MessageID's bekend op dit account`;
+        },
+      ),
+    );
+
+
+
+    // 11) Suppressie is aantoonbaar afdwingbaar (dry-run, verstuurt niets)
+    results.push(
+      await timed(
+        "suppression_enforced",
+        "Blokkadelijst e-mail (dry-run)",
+        "critical",
+        "email_suppressions moet leesbaar zijn voor de service-rol; anders kan een verzendpad de blokkade niet controleren en gaat mail naar geblokkeerde adressen.",
+        async () => {
+          const { error } = await admin
+            .from("email_suppressions")
+            .select("email", { count: "exact", head: true })
+            .eq("email", "selftest-blocked@bureauvlieland.nl");
+          if (error) throw new Error(error.message);
+          return "blokkadecheck uitvoerbaar";
+        },
+      ),
+    );
+
+    // 12) Inhoud van verstuurde mail wordt bewaard (anders is 'opnieuw
+    //     versturen' onmogelijk en is de audit-trail leeg)
+    results.push(
+      await timed(
+        "email_body_storage",
+        "Inhoud verstuurde mail bewaard (7 dagen)",
+        "warning",
+        "Een verzendpad logt zonder html_body/text_body. Zoek in de functielogs op '[email-logger]' en geef de body mee aan logEmail.",
+        async () => {
+          const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
+          const { data, error } = await admin
+            .from("email_log")
+            .select("html_body,text_body")
+            .gte("created_at", since)
+            .eq("status", "sent");
+          if (error) throw new Error(error.message);
+          const total = data?.length ?? 0;
+          if (total === 0) return "geen verzendingen in 7 dagen (geen meting)";
+          const missing = (data ?? []).filter((r) => !r.html_body && !r.text_body).length;
+          if (missing > 0) {
+            throw new Error(`${missing} van ${total} verzendingen zonder bewaarde inhoud`);
+          }
+          return `alle ${total} verzendingen met inhoud bewaard`;
+        },
+      ),
+    );
+
     return results;
+
   };
 
   const cleanup = async () => {
