@@ -334,14 +334,17 @@ Deno.serve(async (req) => {
     recipient_email: string | null;
     received_at: string;
   }>;
-  const eventsTotal24h = evRows.length;
-  const eventsMatched24h = evRows.filter((r) => r.matched).length;
+  const eventsForeign24h = evRows.filter((r) => r.match_reason === "foreign_account").length;
+  const ownRows = evRows.filter((r) => r.match_reason !== "foreign_account");
+  const eventsTotal24h = ownRows.length;
+  const eventsMatched24h = ownRows.filter((r) => r.matched).length;
   const unmatchedRecipients: Record<string, number> = {};
-  for (const r of evRows) {
+  for (const r of ownRows) {
     if (r.matched) continue;
     const key = r.recipient_email ?? "(onbekend)";
     unmatchedRecipients[key] = (unmatchedRecipients[key] ?? 0) + 1;
   }
+
 
   return json({
 
