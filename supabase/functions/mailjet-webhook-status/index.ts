@@ -360,6 +360,8 @@ Deno.serve(async (req) => {
     attempts: attempts ?? [],
     eventsTotal24h,
     eventsMatched24h,
+    eventsForeign24h,
+
     unmatchedTopRecipients: Object.entries(unmatchedRecipients)
       .map(([recipient_email, count]) => ({ recipient_email, count }))
       .sort((a, b) => b.count - a.count)
