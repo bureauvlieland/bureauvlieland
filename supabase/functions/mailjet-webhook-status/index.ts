@@ -168,7 +168,97 @@ Deno.serve(async (req) => {
 
 
 
+  // ── trace: staan ónze verzendingen op hetzelfde Mailjet-account als de
+  // webhook? Vraagt Mailjet naar de laatste verzonden MessageID's, de
+  // geregistreerde event-callbacks en de afzenders. Alle events die wij nu
+  // binnenkrijgen horen bij andere afzenders; hiermee is hard aan te wijzen of
+  // dat vreemd verkeer op óns account is of dat wij op een ander account
+  // versturen dan waar de webhook staat.
+  if (action === "trace") {
+    const apiKey = Deno.env.get("MAILJET_API_KEY");
+    const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
+    if (!apiKey || !secretKey) {
+      return json({ ok: false, error: "Mailjet-credentials ontbreken op de server." });
+    }
+    const auth = "Basic " + btoa(`${apiKey}:${secretKey}`);
+    const mj = async (path: string) => {
+      const res = await fetch(`https://api.mailjet.com${path}`, { headers: { Authorization: auth } });
+      const text = await res.text();
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = text.slice(0, 300);
+      }
+      return { status: res.status, body: parsed };
+    };
+
+    const { data: recent } = await admin
+      .from("email_log")
+      .select("id, recipient_email, subject, created_at, mailjet_message_id")
+      .not("mailjet_message_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    const traced: Array<Record<string, unknown>> = [];
+    for (const row of recent ?? []) {
+      const id = String((row as Record<string, unknown>).mailjet_message_id);
+      const res = await mj(`/v3/REST/message/${encodeURIComponent(id)}`);
+      const first = Array.isArray((res.body as { Data?: unknown[] })?.Data)
+        ? ((res.body as { Data: Array<Record<string, unknown>> }).Data[0] ?? null)
+        : null;
+      traced.push({
+        email_log_id: (row as Record<string, unknown>).id,
+        recipient: (row as Record<string, unknown>).recipient_email,
+        created_at: (row as Record<string, unknown>).created_at,
+        message_id: id,
+        mailjet_http_status: res.status,
+        /** 404 = deze MessageID bestaat niet op dit account. */
+        mailjet_known: res.status === 200 && first !== null,
+        mailjet_status: first?.Status ?? null,
+      });
+    }
+
+    const [callbacks, senders] = await Promise.all([
+      mj("/v3/REST/eventcallbackurl"),
+      mj("/v3/REST/sender?Limit=50"),
+    ]);
+
+    const callbackList = Array.isArray((callbacks.body as { Data?: unknown[] })?.Data)
+      ? (callbacks.body as { Data: Array<Record<string, unknown>> }).Data.map((c) => ({
+        eventType: c.EventType,
+        url: typeof c.Url === "string" ? c.Url.replace(/token=[^&]+/, "token=***") : c.Url,
+        isBackup: c.IsBackup,
+        status: c.Status,
+      }))
+      : [];
+
+    const senderList = Array.isArray((senders.body as { Data?: unknown[] })?.Data)
+      ? (senders.body as { Data: Array<Record<string, unknown>> }).Data.map((s) => ({
+        email: s.Email,
+        status: s.Status,
+      }))
+      : [];
+
+    const unknownCount = traced.filter((t) => t.mailjet_known === false).length;
+
+    return json({
+      ok: true,
+      traced,
+      callbacks: callbackList,
+      senders: senderList,
+      verdict: traced.length === 0
+        ? "Geen verzendingen met MessageID om te controleren."
+        : unknownCount === traced.length
+        ? "Geen enkele van onze laatste verzendingen is bekend op dit Mailjet-account: wij versturen via een ander account dan waar de webhook staat, of de API-sleutel hoort bij een ander (sub)account."
+        : unknownCount === 0
+        ? "Al onze laatste verzendingen zijn bekend op dit account; de terugkoppeling hoort dus te matchen."
+        : `${unknownCount} van ${traced.length} verzendingen onbekend op dit account.`,
+    });
+  }
+
   // ── status ────────────────────────────────────────────────────────────────
+
   const pick = async (column: string) => {
     const { data } = await admin
       .from("email_log")

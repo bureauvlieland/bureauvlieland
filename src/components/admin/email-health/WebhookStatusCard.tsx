@@ -111,6 +111,47 @@ export function WebhookStatusCard() {
     }
   };
 
+  const [tracing, setTracing] = useState(false);
+  const [traceVerdict, setTraceVerdict] = useState<string | null>(null);
+
+  /**
+   * Controleert of onze eigen verzendingen bekend zijn op het Mailjet-account
+   * van de verzendsleutel, en welke webhooks en afzenders daar staan. Dit is de
+   * enige manier om onderscheid te maken tussen "terugkoppeling matcht niet"
+   * en "wij versturen via een ander account dan waar de webhook staat".
+   */
+  const runTrace = async () => {
+    setTracing(true);
+    setTraceVerdict(null);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("mailjet-webhook-status", {
+        body: { action: "trace" },
+      });
+      if (error) throw error;
+      const r = result as {
+        ok: boolean;
+        error?: string;
+        verdict?: string;
+        senders?: Array<{ email?: string }>;
+        callbacks?: Array<{ eventType?: string }>;
+      };
+      if (!r.ok) {
+        toast.error(r.error || "Controle mislukte.");
+        return;
+      }
+      const senders = (r.senders ?? []).map((s) => s.email).filter(Boolean).join(", ");
+      setTraceVerdict(
+        `${r.verdict ?? ""}${r.callbacks?.length ? ` — ${r.callbacks.length} webhook(s) geregistreerd` : ""}${
+          senders ? ` — afzenders op dit account: ${senders}` : ""
+        }`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Controle mislukte.");
+    } finally {
+      setTracing(false);
+    }
+  };
+
 
   const runSelftest = async () => {
     setTesting(true);
@@ -256,7 +297,18 @@ export function WebhookStatusCard() {
               <PlayCircle className="mr-2 h-4 w-4" />
               {probing ? "Versturen…" : "Proefmail versturen"}
             </Button>
+            <Button variant="outline" size="sm" onClick={runTrace} disabled={tracing}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              {tracing ? "Controleren…" : "Verzendaccount controleren"}
+            </Button>
           </div>
+          {traceVerdict && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">{traceVerdict}</AlertDescription>
+            </Alert>
+          )}
+
 
           {testResult && (
             <p className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-destructive"}`}>
