@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -43,12 +43,14 @@ export function ResendEmailDialog({
 }: ResendEmailDialogProps) {
   const [recipientEmail, setRecipientEmail] = useState("");
 
-  // Reset recipient email when dialog opens with new email
-  useState(() => {
-    if (email) {
+  // Reset het adres telkens als het dialoog met een andere mail opent.
+  // (Stond eerder in `useState(() => ...)`, die maar één keer draait — dan
+  // bleef het adres van de vorige mail staan.)
+  useEffect(() => {
+    if (open && email) {
       setRecipientEmail(email.recipient_email);
     }
-  });
+  }, [open, email]);
 
   const resendMutation = useMutation({
     mutationFn: async () => {
@@ -57,11 +59,17 @@ export function ResendEmailDialog({
       const { data, error } = await supabase.functions.invoke("resend-email", {
         body: {
           email_log_id: email.id,
-          recipient_email: recipientEmail || email.recipient_email,
+          // De edge function verwacht `override_recipient_email`; met
+          // `recipient_email` werd het ingevulde adres stil genegeerd en ging
+          // de mail alsnog naar de originele ontvanger.
+          override_recipient_email: recipientEmail || email.recipient_email,
         },
       });
 
       if (error) throw error;
+      if ((data as { error?: string } | null)?.error) {
+        throw new Error((data as { error: string }).error);
+      }
       return data;
     },
     onSuccess: () => {
