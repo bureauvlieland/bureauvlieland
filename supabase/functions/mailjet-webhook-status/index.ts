@@ -3,10 +3,17 @@
  *
  * Geeft de volledige, kant-en-klare webhook-URL inclusief token (het token
  * staat als secret op de server en mag nooit in de client-bundle staan), de
- * laatst ontvangen events, de laatste geweigerde pogingen, en kan met
- * `action: "selftest"` een synthetisch event door de échte keten sturen.
+ * laatst ontvangen events, de laatste geweigerde pogingen, de matchratio van
+ * binnengekomen events, en kan met `action: "selftest"` een synthetisch event
+ * door de échte keten sturen of met `action: "probe"` een échte proefmail
+ * versturen om de volledige keten (verzenden → afgeleverd → geopend) aantoonbaar
+ * te volgen.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,6 +101,73 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ── probe: échte proefmail door de hele keten ─────────────────────────────
+  // Verstuurt een echte mail naar het bureau-adres, logt die zoals elke andere
+  // verzending, en geeft de exacte MessageID terug. Daarmee is verifieerbaar of
+  // Mailjet voor ÓNZE verzendingen events terugstuurt (afgeleverd/geopend) —
+  // los van de vraag of er ander verkeer op het account binnenkomt.
+  if (action === "probe") {
+    const recipient =
+      typeof body.recipient === "string" && body.recipient.includes("@")
+        ? body.recipient
+        : GENERAL_CONTACT_EMAIL;
+    const stamp = new Date().toISOString();
+    const subject = `Proefverzending e-mailketen — ${stamp}`;
+    const html = `<p>Dit is een proefverzending om de terugkoppeling van de mailprovider te controleren.</p>
+      <p>Open deze mail; daarna hoort in <strong>Admin → E-mail gezondheid</strong> binnen enkele minuten
+      "afgeleverd" en "geopend" te verschijnen bij deze verzending (${stamp}).</p>`;
+
+    const result = await sendMailjet({
+      source: "mailjet-webhook-status:probe",
+      messages: [
+        {
+          From: { Email: GENERAL_CONTACT_EMAIL, Name: "Bureau Vlieland" },
+          To: [{ Email: recipient }],
+          Subject: subject,
+          HTMLPart: html,
+          TextPart: "Proefverzending e-mailketen.",
+          TrackOpens: "enabled",
+        },
+      ],
+    });
+
+    const sentOk = result.ok;
+    const messageId = result.ok ? result.messageId : null;
+    const skipped = result.ok ? (result.skipped ?? null) : null;
+    const sendError = result.ok ? null : result.error;
+
+    await logEmail({
+      email_type: "email_chain_probe",
+      subject,
+      recipient_email: recipient,
+      status: sentOk ? "sent" : "failed",
+      error_message: sendError ?? undefined,
+      mailjet_message_id: messageId ?? undefined,
+      sent_by: user.email ?? "admin",
+      html_body: html,
+      metadata: {
+        template_name: "email_chain_probe",
+        actor: "admin → bureau",
+        probe: true,
+        skipped,
+      },
+    });
+
+    return json({
+      ok: sentOk,
+      messageId,
+      recipient,
+      skipped,
+      error: sendError,
+      hint: sentOk
+
+        ? "Proefmail verstuurd. Open hem en verwacht binnen enkele minuten 'afgeleverd' en 'geopend'."
+        : "Verzenden mislukte — zie foutmelding.",
+    });
+  }
+
+
+
   // ── status ────────────────────────────────────────────────────────────────
   const pick = async (column: string) => {
     const { data } = await admin
@@ -152,7 +226,35 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── matchratio: komen events binnen én landen ze op onze verzendingen? ────
+  // Dit is de stille faalmodus die we niet meer accepteren: 100% van de events
+  // binnen, 0% gekoppeld — dan is de rapportage per definitie leeg.
+  const eventsSince = new Date(Date.now() - 24 * 3_600_000).toISOString();
+  const { data: recentEvents } = await admin
+    .from("email_webhook_events")
+    .select("event_type, matched, match_reason, recipient_email, received_at")
+    .gte("received_at", eventsSince)
+    .order("received_at", { ascending: false })
+    .limit(2000);
+
+  const evRows = (recentEvents ?? []) as Array<{
+    event_type: string;
+    matched: boolean;
+    match_reason: string;
+    recipient_email: string | null;
+    received_at: string;
+  }>;
+  const eventsTotal24h = evRows.length;
+  const eventsMatched24h = evRows.filter((r) => r.matched).length;
+  const unmatchedRecipients: Record<string, number> = {};
+  for (const r of evRows) {
+    if (r.matched) continue;
+    const key = r.recipient_email ?? "(onbekend)";
+    unmatchedRecipients[key] = (unmatchedRecipients[key] ?? 0) + 1;
+  }
+
   return json({
+
     ok: true,
     tokenConfigured: !!token,
     webhookUrl,
@@ -163,6 +265,14 @@ Deno.serve(async (req) => {
     lastBounced,
     suppressionCount: suppressionCount ?? 0,
     attempts: attempts ?? [],
+    eventsTotal24h,
+    eventsMatched24h,
+    unmatchedTopRecipients: Object.entries(unmatchedRecipients)
+      .map(([recipient_email, count]) => ({ recipient_email, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10),
+    recentEvents: evRows.slice(0, 20),
+
     missingMessageIdByType: Object.entries(missingByType)
       .map(([email_type, v]) => ({ email_type, ...v }))
       .sort((a, b) => b.count - a.count),

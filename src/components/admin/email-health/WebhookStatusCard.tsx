@@ -38,7 +38,18 @@ type WebhookStatus = {
   suppressionCount: number;
   attempts: WebhookAttempt[];
   missingMessageIdByType: Array<{ email_type: string; count: number; last: string }>;
+  eventsTotal24h: number;
+  eventsMatched24h: number;
+  unmatchedTopRecipients: Array<{ recipient_email: string; count: number }>;
+  recentEvents: Array<{
+    event_type: string;
+    matched: boolean;
+    match_reason: string;
+    recipient_email: string | null;
+    received_at: string;
+  }>;
 };
+
 
 function fmt(value: string | null) {
   if (!value) return "nooit";
@@ -68,6 +79,38 @@ export function WebhookStatusCard() {
 
   const stale =
     !lastEvent || Date.now() - new Date(lastEvent).getTime() > 48 * 3600_000;
+
+  // Stille faalmodus: er komen wél events binnen, maar geen enkel event hoort
+  // bij een verzending van ons. Dan is elke statistiek per definitie leeg,
+  // terwijl de webhook "werkt".
+  const eventsIn = data?.eventsTotal24h ?? 0;
+  const eventsMatched = data?.eventsMatched24h ?? 0;
+  const matchBlind = eventsIn > 0 && eventsMatched === 0;
+
+  const [probing, setProbing] = useState(false);
+
+  const runProbe = async () => {
+    setProbing(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("mailjet-webhook-status", {
+        body: { action: "probe" },
+      });
+      if (error) throw error;
+      const r = result as { ok: boolean; hint?: string; error?: string; messageId?: string | null };
+      if (r.ok) {
+        toast.success(
+          r.hint ?? "Proefmail verstuurd — open hem en verwacht binnen enkele minuten terugkoppeling.",
+        );
+      } else {
+        toast.error(r.error || "Proefverzending mislukte.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Proefverzending mislukte.");
+    } finally {
+      setProbing(false);
+    }
+  };
+
 
   const runSelftest = async () => {
     setTesting(true);
@@ -132,6 +175,19 @@ export function WebhookStatusCard() {
           </Alert>
         )}
 
+        {matchBlind && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Terugkoppeling komt binnen, maar hoort niet bij onze mail</AlertTitle>
+            <AlertDescription>
+              Laatste 24 uur: {eventsIn} events ontvangen, waarvan 0 gekoppeld aan een eigen verzending.
+              De adressen hieronder horen bij ander verkeer op hetzelfde mailaccount. Zolang dit zo is,
+              blijven "afgeleverd" en "geopend" leeg — niet omdat mail niet aankomt, maar omdat er geen
+              meting is. Gebruik "Proefmail versturen" om dat te controleren.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid gap-2 sm:grid-cols-2 text-sm">
           <div>Laatste mail verstuurd: <span className="text-muted-foreground">{fmt(data?.lastSentAt ?? null)}</span></div>
           <div>Laatst afgeleverd: <span className="text-muted-foreground">{fmt(data?.lastDelivered ?? null)}</span></div>
@@ -139,7 +195,37 @@ export function WebhookStatusCard() {
           <div>Laatst geklikt: <span className="text-muted-foreground">{fmt(data?.lastClicked ?? null)}</span></div>
           <div>Laatste bounce: <span className="text-muted-foreground">{fmt(data?.lastBounced ?? null)}</span></div>
           <div>Geblokkeerde adressen: <span className="text-muted-foreground">{data?.suppressionCount ?? 0}</span></div>
+          <div>
+            Events laatste 24 uur:{" "}
+            <span className="text-muted-foreground">
+              {eventsIn} ontvangen · {eventsMatched} gekoppeld
+              {eventsIn > 0 ? ` (${Math.round((eventsMatched / eventsIn) * 100)}%)` : ""}
+            </span>
+          </div>
         </div>
+
+        {(data?.unmatchedTopRecipients?.length ?? 0) > 0 && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Niet-gekoppelde events (24 uur)</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ontvanger</TableHead>
+                  <TableHead className="text-right">Events</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data!.unmatchedTopRecipients.map((row) => (
+                  <TableRow key={row.recipient_email}>
+                    <TableCell className="font-mono text-xs">{row.recipient_email}</TableCell>
+                    <TableCell className="text-right">{row.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
 
         <div className="space-y-2">
           <div className="text-sm font-medium">Webhook-URL voor Mailjet</div>
@@ -161,10 +247,17 @@ export function WebhookStatusCard() {
               <AlertDescription>Het webhook-token ontbreekt op de server.</AlertDescription>
             </Alert>
           )}
-          <Button variant="secondary" size="sm" onClick={runSelftest} disabled={testing}>
-            <PlayCircle className="mr-2 h-4 w-4" />
-            {testing ? "Testen…" : "Test webhook"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={runSelftest} disabled={testing}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              {testing ? "Testen…" : "Test webhook"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={runProbe} disabled={probing}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              {probing ? "Versturen…" : "Proefmail versturen"}
+            </Button>
+          </div>
+
           {testResult && (
             <p className={`text-xs ${testResult.ok ? "text-emerald-600" : "text-destructive"}`}>
               {testResult.hint ?? (testResult.ok ? "Geslaagd" : "Gefaald")}

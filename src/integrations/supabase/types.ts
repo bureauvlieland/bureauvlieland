@@ -1995,6 +1995,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_webhook_events: {
+        Row: {
+          event_time: string | null
+          event_type: string
+          id: string
+          match_reason: string
+          matched: boolean
+          matched_row_count: number
+          message_id: string | null
+          payload: Json | null
+          received_at: string
+          recipient_email: string | null
+        }
+        Insert: {
+          event_time?: string | null
+          event_type: string
+          id?: string
+          match_reason: string
+          matched?: boolean
+          matched_row_count?: number
+          message_id?: string | null
+          payload?: Json | null
+          received_at?: string
+          recipient_email?: string | null
+        }
+        Update: {
+          event_time?: string | null
+          event_type?: string
+          id?: string
+          match_reason?: string
+          matched?: boolean
+          matched_row_count?: number
+          message_id?: string | null
+          payload?: Json | null
+          received_at?: string
+          recipient_email?: string | null
+        }
+        Relationships: []
+      }
       google_reviews_cache: {
         Row: {
           fetched_at: string
