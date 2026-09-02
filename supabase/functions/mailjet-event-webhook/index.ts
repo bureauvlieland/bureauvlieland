@@ -158,12 +158,45 @@ Deno.serve(async (req) => {
   let processed = 0;
   let unmatched = 0;
 
+  /**
+   * Elk binnengekomen event wordt vastgelegd — ook (juist!) als het niet aan
+   * een verzending gekoppeld kan worden. Zonder dit spoor is niet na te gaan
+   * of de terugkoppeling wél binnenkomt maar op iets anders hoort (bijv. ander
+   * verkeer op hetzelfde Mailjet-account) of dat onze eigen ID's mismatchen.
+   */
+  const logEvent = async (args: {
+    ev: MailjetEvent;
+    messageId: string | null;
+    matched: boolean;
+    reason: string;
+    rowCount?: number;
+  }) => {
+    try {
+      await supabase.from("email_webhook_events").insert({
+        event_type: args.ev.event ?? "unknown",
+        message_id: args.messageId,
+        recipient_email: args.ev.email?.trim().toLowerCase() ?? null,
+        event_time: args.ev.time ? new Date(args.ev.time * 1000).toISOString() : null,
+        matched: args.matched,
+        match_reason: args.reason,
+        matched_row_count: args.rowCount ?? 0,
+        payload: args.ev as unknown as Record<string, unknown>,
+      });
+    } catch (err) {
+      console.error("Kon webhook-event niet vastleggen:", err);
+    }
+  };
+
   for (const { event: ev, messageId } of rawEvents) {
     try {
       if (!messageId) {
         unmatched++;
+        await logEvent({ ev, messageId: null, matched: false, reason: "no_message_id" });
         continue;
       }
+
+      let matchReason = "exact_message_id";
+
 
 
       const eventType = ev.event;
@@ -189,6 +222,7 @@ Deno.serve(async (req) => {
 
       if (fetchErr) {
         console.error("Lookup error:", fetchErr);
+        await logEvent({ ev, messageId, matched: false, reason: "lookup_error" });
         continue;
       }
 
@@ -207,6 +241,7 @@ Deno.serve(async (req) => {
             .eq("mailjet_message_id", rounded);
           if (roundedRows && roundedRows.length > 0) {
             rows = roundedRows;
+            matchReason = "rounded_message_id";
             console.log(`Matched event=${ev.event} via afgeronde MessageID ${rounded}`);
           }
         }
@@ -229,6 +264,7 @@ Deno.serve(async (req) => {
           .limit(1);
         if (byEmail && byEmail.length > 0) {
           rows = byEmail;
+          matchReason = "recipient_fallback";
           const target = byEmail[0] as { id: string; mailjet_message_id: string | null };
           if (!target.mailjet_message_id) {
             await supabase
@@ -244,9 +280,19 @@ Deno.serve(async (req) => {
 
       if (rows.length === 0) {
         unmatched++;
+        await logEvent({ ev, messageId, matched: false, reason: "no_matching_send" });
         console.log(`No email_log row for MessageID=${messageId} event=${eventType}`);
         continue;
       }
+
+      await logEvent({
+        ev,
+        messageId,
+        matched: true,
+        reason: matchReason,
+        rowCount: rows.length,
+      });
+
 
 
       const updates = await Promise.all(
