@@ -126,31 +126,44 @@ Deno.serve(async (req) => {
     });
   }
 
-  let payload: MailjetEvent | MailjetEvent[];
+  // BELANGRIJK: eerst de RUWE tekst lezen. Mailjet MessageID's zijn 64-bits
+  // integers; `req.json()` rondt die af (2^53-grens) waardoor het event nooit
+  // meer op de opgeslagen ID matcht. Zie _shared/mailjet-message-id.ts.
+  let rawText: string;
   try {
-    payload = await req.json();
+    rawText = await req.text();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+    return new Response(JSON.stringify({ error: "Unreadable body" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  const events: MailjetEvent[] = Array.isArray(payload) ? payload : [payload];
-  await logAttempt(true, "ok", events.length);
+  const { events: rawEvents, skipped } = parseEventsPreservingIds<MailjetEvent>(rawText);
+  if (rawEvents.length === 0) {
+    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (skipped > 0) {
+    console.warn(`mailjet-event-webhook: ${skipped} onparseerbare event-chunk(s) overgeslagen`);
+  }
+
+  await logAttempt(true, "ok", rawEvents.length);
 
   const supabase = attemptLogger;
 
   let processed = 0;
   let unmatched = 0;
 
-  for (const ev of events) {
+  for (const { event: ev, messageId } of rawEvents) {
     try {
-      const messageId = ev.MessageID != null ? String(ev.MessageID) : null;
       if (!messageId) {
         unmatched++;
         continue;
       }
+
 
       const eventType = ev.event;
       const column = EVENT_TO_COLUMN[eventType] ?? null;
