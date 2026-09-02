@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { expectedSilenceHours, judge } from "./index.ts";
+import { expectedSilenceHours, judge } from "./logic.ts";
 
 const NOW = new Date("2026-09-02T08:00:00Z").getTime();
 
