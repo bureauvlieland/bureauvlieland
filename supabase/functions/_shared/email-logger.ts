@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { lookupSentBody, installMailjetBodyCapture } from "./mailjet-send.ts";
+import {
+  lookupSentBody,
+  installMailjetBodyCapture,
+  resolveExactMessageId,
+} from "./mailjet-send.ts";
 
 // Activeer de centrale Mailjet-body capture zodra een function de logger
 // importeert (dat doet elke verzendende function).
@@ -90,13 +94,26 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
   // Vul de inhoud automatisch aan uit de mailjet-send registry als de
   // aanroeper die niet expliciet meegaf. Zo blijft elk bericht terug te
   // lezen (en opnieuw te versturen) in het admin-dialoog.
+  // Corrigeer een afgeronde MessageID (JSON.parse-precisieverlies) naar de
+  // exacte waarde uit de ruwe Mailjet-respons. Zonder dit matcht geen enkel
+  // webhook-event (open/afgeleverd/bounce) op deze rij.
+  const exactMessageId = resolveExactMessageId(
+    entry.mailjet_message_id ?? null,
+    entry.recipient_email ?? null,
+  );
+  if (entry.status === "sent" && !exactMessageId) {
+    console.warn(
+      `[email-logger] "${entry.email_type}" → ${entry.recipient_email} gelogd als verzonden ZONDER MessageID — feedback (open/bounce) blijft blind.`,
+    );
+  }
+
   let html = entry.html_body;
   let text = entry.text_body;
   let fromEmail = entry.from_email;
   let replyTo = entry.reply_to;
   if (!html && !text) {
     const remembered = lookupSentBody({
-      messageId: entry.mailjet_message_id ?? null,
+      messageId: exactMessageId,
       recipientEmail: entry.recipient_email ?? null,
     });
     if (remembered) {
@@ -123,7 +140,7 @@ export async function logEmail(entry: EmailLogEntry): Promise<void> {
       related_item_id: entry.related_item_id || null,
       status: entry.status,
       error_message: entry.error_message || null,
-      mailjet_message_id: entry.mailjet_message_id || null,
+      mailjet_message_id: exactMessageId || null,
       sent_by: entry.sent_by,
       metadata: entry.metadata || {},
       html_body: html || null,

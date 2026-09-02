@@ -139,7 +139,47 @@ function registryKeys(msg: MailjetMessage, messageId?: string | null): string[] 
   return keys;
 }
 
+// Exacte (niet-afgeronde) MessageID's, zodat `logEmail` een afgeronde ID van
+// een aanroeper kan corrigeren. Veel functions lezen de ID nog uit
+// `await res.json()`, waar 64-bits getallen worden afgerond; de interceptor
+// hierboven ziet de RUWE tekst en kent dus de echte waarde.
+const exactMessageIds = new Map<string, string>();
+
+function rememberExactId(msg: MailjetMessage, messageId?: string | null): void {
+  if (!messageId || !/^\d+$/.test(messageId)) return;
+  exactMessageIds.set(`rounded:${String(Number(messageId))}`, messageId);
+  for (const to of msg.To ?? []) {
+    if (to?.Email) exactMessageIds.set(`to:${to.Email.trim().toLowerCase()}`, messageId);
+  }
+  while (exactMessageIds.size > MAX_REGISTRY_ENTRIES * 2) {
+    const oldest = exactMessageIds.keys().next().value;
+    if (oldest === undefined) break;
+    exactMessageIds.delete(oldest);
+  }
+}
+
+/**
+ * Corrigeer een mogelijk afgeronde MessageID naar de exacte waarde uit de
+ * ruwe Mailjet-respons. Geeft de input onveranderd terug als er niets
+ * bekend is (of als hij al exact was).
+ */
+export function resolveExactMessageId(
+  messageId?: string | null,
+  recipientEmail?: string | null,
+): string | null {
+  if (!messageId) return messageId ?? null;
+  const byRounded = exactMessageIds.get(`rounded:${String(Number(messageId))}`);
+  if (byRounded) return byRounded;
+  if (recipientEmail) {
+    const byTo = exactMessageIds.get(`to:${recipientEmail.trim().toLowerCase()}`);
+    // Alleen gebruiken als het om dezelfde (afgeronde) verzending gaat.
+    if (byTo && String(Number(byTo)) === String(Number(messageId))) return byTo;
+  }
+  return messageId;
+}
+
 function rememberBody(msg: MailjetMessage, messageId?: string | null): void {
+  rememberExactId(msg, messageId);
   const body: SentBody = {
     html_body: msg.HTMLPart,
     text_body: msg.TextPart,
@@ -177,6 +217,7 @@ export function lookupSentBody(opts: {
 /** Alleen voor tests. */
 export function __clearSentBodies(): void {
   sentBodies.clear();
+  exactMessageIds.clear();
 }
 
 /**
