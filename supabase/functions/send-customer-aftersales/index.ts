@@ -150,7 +150,7 @@ export const handler = async (req: Request): Promise<Response> => {
         ],
       }),
     });
-    try { mailjetMessageId = extractMessageIds(await mjRes.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+    try { mailjetMessageId = extractMessageIds(await mjRes.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!mjRes.ok) {
       const errTxt = await mjRes.text();

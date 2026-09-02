@@ -266,9 +266,16 @@ export function installMailjetBodyCapture(): void {
 
 
 export function extractMessageIds(raw: unknown): string[] {
+  // Geef bij voorkeur de RUWE responstekst mee (`await res.text()`): 64-bits
+  // MessageID's overleven `JSON.parse` niet en worden dan afgerond, waardoor
+  // webhook-events nooit meer matchen.
+  if (typeof raw === "string") return extractMessageIdsFromRawText(raw);
 
   const ids: string[] = [];
   if (!raw || typeof raw !== "object") return ids;
+  console.warn(
+    "[mailjet-send] extractMessageIds kreeg een geparseerd object — MessageID kan afgerond zijn. Geef de ruwe tekst mee.",
+  );
   const messages = (raw as { Messages?: unknown }).Messages;
   if (!Array.isArray(messages)) return ids;
   for (const msg of messages) {

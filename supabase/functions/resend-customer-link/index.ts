@@ -33,7 +33,7 @@ const sendEmailViaMailjet = async (messages: any[]) => {
     headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
     body: JSON.stringify({ Messages: messages }),
   });
-  try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+  try { mailjetMessageId = extractMessageIds(await response.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Mailjet API error:", errorText);

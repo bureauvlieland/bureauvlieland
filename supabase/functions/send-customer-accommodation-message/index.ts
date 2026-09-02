@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
         ],
       }),
     });
-    try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+    try { mailjetMessageId = extractMessageIds(await response.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!response.ok) {
       const errorText = await response.text();

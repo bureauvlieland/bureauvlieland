@@ -45,7 +45,7 @@ async function sendEmailNotification(
         ],
       }),
     });
-    try { mailjetMessageId = extractMessageIds(await response.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+    try { mailjetMessageId = extractMessageIds(await response.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
     if (!response.ok) {
       const error = await response.text();

@@ -106,7 +106,7 @@ export const handler = async (req: Request): Promise<Response> => {
           }],
         }),
       });
-      try { mailjetMessageId = extractMessageIds(await resp.clone().json())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
+      try { mailjetMessageId = extractMessageIds(await resp.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
       if (resp.ok) {
         await logEmail({
