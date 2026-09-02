@@ -44,11 +44,31 @@ Deno.serve(async (req) => {
     ? (user.body as { Data: Array<Record<string, unknown>> }).Data.map((u) => `${u.Email}/${u.Username}`)
     : user.body;
 
+  // probe: echte proefmail via ditzelfde sleutelpaar
+  let probe: unknown = null;
+  if (new URL(req.url).searchParams.get("probe") === "1") {
+    const res = await fetch("https://api.mailjet.com/v3.1/send", {
+      method: "POST",
+      headers: { Authorization: auth, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        Messages: [{
+          From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: "hallo@bureauvlieland.nl" }],
+          Subject: `Ketentest ${new Date().toISOString()}`,
+          TextPart: "Ketentest webhook.",
+          HTMLPart: "<p>Ketentest webhook. Open deze mail.</p>",
+          TrackOpens: "enabled",
+        }],
+      }),
+    });
+    probe = { status: res.status, body: (await res.text()).slice(0, 800) };
+  }
+
   console.log("DIAG_SENDERS", JSON.stringify(senderList));
   console.log("DIAG_CALLBACKS", JSON.stringify(cbList));
   console.log("DIAG_USER", JSON.stringify(userList));
   return new Response(
-    JSON.stringify({ senders: senderList, callbacks: cbList, user: userList }, null, 2),
+    JSON.stringify({ senders: senderList, callbacks: cbList, user: userList, probe }, null, 2),
     { headers: { "Content-Type": "application/json" } },
   );
 });
