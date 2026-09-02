@@ -4890,13 +4890,14 @@ export type Database = {
         Args: never
         Returns: {
           active: boolean
+          failures_last_7d: number
           jobid: number
           jobname: string
           last_http_error: string
           last_http_status: number
-          last_return_message: string
           last_run_start: string
           last_run_status: string
+          outcome: string
           runs_last_24h: number
           schedule: string
         }[]
