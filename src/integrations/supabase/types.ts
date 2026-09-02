@@ -1723,6 +1723,36 @@ export type Database = {
           },
         ]
       }
+      cron_dispatch_log: {
+        Row: {
+          dispatched_at: string
+          http_status: number | null
+          id: string
+          jobname: string
+          request_id: number | null
+          resolved_at: string | null
+          response_error: string | null
+        }
+        Insert: {
+          dispatched_at?: string
+          http_status?: number | null
+          id?: string
+          jobname: string
+          request_id?: number | null
+          resolved_at?: string | null
+          response_error?: string | null
+        }
+        Update: {
+          dispatched_at?: string
+          http_status?: number | null
+          id?: string
+          jobname?: string
+          request_id?: number | null
+          resolved_at?: string | null
+          response_error?: string | null
+        }
+        Relationships: []
+      }
       email_log: {
         Row: {
           blocked_at: string | null
@@ -4982,6 +5012,7 @@ export type Database = {
           }
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
+      resolve_cron_dispatches: { Args: never; Returns: number }
       scan_stale_pending_changes: { Args: never; Returns: number }
       selftest_autofix: { Args: never; Returns: Json }
       slugify: { Args: { value: string }; Returns: string }
