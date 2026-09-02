@@ -325,17 +325,24 @@ Deno.serve(async (req) => {
           const since = new Date(Date.now() - 86_400_000).toISOString();
           const { data, error } = await admin
             .from("email_webhook_events")
-            .select("matched")
+            .select("matched, match_reason")
             .gte("received_at", since);
           if (error) throw new Error(error.message);
-          const total = data?.length ?? 0;
-          if (total === 0) return "geen events ontvangen in 24 uur (geen meting)";
-          const matched = (data ?? []).filter((r) => r.matched === true).length;
+          const rows = (data ?? []) as Array<{ matched: boolean; match_reason: string | null }>;
+          // Events voor adressen die wij nooit hebben aangeschreven horen bij
+          // een ander project op hetzelfde Mailjet-account; die tellen niet mee.
+          const foreign = rows.filter((r) => r.match_reason === "foreign_account").length;
+          const own = rows.filter((r) => r.match_reason !== "foreign_account");
+          const total = own.length;
+          const suffix = foreign > 0 ? ` (+${foreign} van ander account genegeerd)` : "";
+          if (total === 0) return `geen eigen events ontvangen in 24 uur (geen meting)${suffix}`;
+          const matched = own.filter((r) => r.matched === true).length;
           if (matched === 0) {
-            throw new Error(`${total} events ontvangen, 0 gekoppeld aan een verzending`);
+            throw new Error(`${total} eigen events ontvangen, 0 gekoppeld aan een verzending${suffix}`);
           }
-          return `${matched}/${total} events gekoppeld`;
+          return `${matched}/${total} events gekoppeld${suffix}`;
         },
+
       ),
     );
 

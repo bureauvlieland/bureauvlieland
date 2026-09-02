@@ -40,7 +40,9 @@ type WebhookStatus = {
   missingMessageIdByType: Array<{ email_type: string; count: number; last: string }>;
   eventsTotal24h: number;
   eventsMatched24h: number;
+  eventsForeign24h?: number;
   unmatchedTopRecipients: Array<{ recipient_email: string; count: number }>;
+
   recentEvents: Array<{
     event_type: string;
     matched: boolean;
@@ -239,10 +241,17 @@ export function WebhookStatusCard() {
           <div>
             Events laatste 24 uur:{" "}
             <span className="text-muted-foreground">
-              {eventsIn} ontvangen · {eventsMatched} gekoppeld
+              {eventsIn} eigen · {eventsMatched} gekoppeld
               {eventsIn > 0 ? ` (${Math.round((eventsMatched / eventsIn) * 100)}%)` : ""}
             </span>
           </div>
+          <div>
+            Events van ander account:{" "}
+            <span className="text-muted-foreground">
+              {data?.eventsForeign24h ?? 0} (genegeerd)
+            </span>
+          </div>
+
         </div>
 
         {(data?.unmatchedTopRecipients?.length ?? 0) > 0 && (

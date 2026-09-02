@@ -251,9 +251,9 @@ Deno.serve(async (req) => {
       // bewaren alleen de MessageID van de eerste ontvanger, waardoor de
       // events van de andere ontvangers nergens op matchen. In dat geval
       // pakken we de meest recente verzonden rij naar hetzelfde adres
-      // (max 30 dagen oud) en vullen de MessageID alsnog aan.
+      // (max 7 dagen oud; ruimer koppelen levert verkeerde toeschrijving op).
       if (rows.length === 0 && ev.email) {
-        const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+        const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
         const { data: byEmail } = await supabase
           .from("email_log")
           .select(selectCols)
@@ -280,10 +280,23 @@ Deno.serve(async (req) => {
 
       if (rows.length === 0) {
         unmatched++;
-        await logEvent({ ev, messageId, matched: false, reason: "no_matching_send" });
-        console.log(`No email_log row for MessageID=${messageId} event=${eventType}`);
+        // Onderscheid: hoort dit event überhaupt bij ons? De webhook staat op
+        // een Mailjet-account waar ook andere projecten op versturen. Events
+        // voor adressen die wij nooit hebben aangeschreven zijn vreemd
+        // verkeer — die mogen de matchratio niet vervuilen.
+        let reason = "no_matching_send";
+        if (ev.email) {
+          const { count } = await supabase
+            .from("email_log")
+            .select("id", { count: "exact", head: true })
+            .ilike("recipient_email", ev.email.trim());
+          if (!count) reason = "foreign_account";
+        }
+        await logEvent({ ev, messageId, matched: false, reason });
+        console.log(`No email_log row for MessageID=${messageId} event=${eventType} (${reason})`);
         continue;
       }
+
 
       await logEvent({
         ev,
