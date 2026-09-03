@@ -27,6 +27,9 @@
 # Product pages redirects
 /product/*                                   /bouwstenen              301
 
+# Social-preview afbeelding is JPEG geworden (965 KB → ~60 KB)
+/og-image.png                                /og-image.jpg            301
+
 # Partner portal redirect
 /partner                                     /partner/login           301
 

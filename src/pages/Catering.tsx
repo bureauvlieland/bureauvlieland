@@ -97,7 +97,7 @@ const Catering = () => {
         <link rel="canonical" href="https://bureauvlieland.nl/catering" />
         <meta property="og:title" content="Catering op Vlieland – koken op locatie door eigen chefs" />
         <meta property="og:description" content="Lunch, borrel, Beach Grill of high-end diner. Door eigen chefs op uw locatie. Eén aanspreekpunt, één factuur." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content="https://bureauvlieland.nl/catering" />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="nl_NL" />

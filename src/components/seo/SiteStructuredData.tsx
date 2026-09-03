@@ -23,8 +23,8 @@ const organizationSchema = {
   name: "Bureau Vlieland",
   legalName: "Bureau Vlieland",
   url: SITE_URL,
-  logo: `${SITE_URL}/og-image.png`,
-  image: `${SITE_URL}/og-image.png`,
+  logo: `${SITE_URL}/og-image.jpg`,
+  image: `${SITE_URL}/og-image.jpg`,
   description:
     "Bureau Vlieland is het lokale boekingskantoor en programmabureau voor Vlieland. Wij regelen activiteiten, catering, logies en de overtocht voor groepen — één aanspreekpunt, één factuur.",
   email: "hallo@bureauvlieland.nl",

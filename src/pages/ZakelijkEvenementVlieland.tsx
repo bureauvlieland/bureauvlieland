@@ -31,7 +31,7 @@ const ZakelijkEvenementVlieland = () => {
         <link rel="canonical" href="https://bureauvlieland.nl/zakelijk-evenement-vlieland" />
         <meta property="og:title" content="Zakelijk evenement op Vlieland – organisatie van A tot Z" />
         <meta property="og:description" content="Een zakelijk evenement op Vlieland organiseren? Bureau Vlieland verzorgt planning, locaties en uitvoering." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content="https://bureauvlieland.nl/zakelijk-evenement-vlieland" />
         <meta property="og:type" content="website" />
       </Helmet>
