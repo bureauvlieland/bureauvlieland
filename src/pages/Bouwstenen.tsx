@@ -345,6 +345,12 @@ const Bouwstenen = () => {
                         <p className="text-xs text-muted-foreground">
                           door {getProviderName(block)}
                         </p>
+                        {block.provider_id && (
+                          <PartnerAvailabilityNote
+                            note={unavailableByPartner.get(block.provider_id)}
+                            className="mt-1"
+                          />
+                        )}
                       </div>
                       {block.short_description && (
                         <p className="text-sm text-muted-foreground line-clamp-3">
