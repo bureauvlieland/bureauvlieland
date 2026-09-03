@@ -49,7 +49,7 @@ export const usePublicPartnerUnavailability = (enabled = true) => {
       });
     });
 
-  return { byPartner, isLoading };
+  return { byPartner, periods: data ?? [], isLoading };
 };
 
 /** True als de datum binnen een niet-beschikbare periode van deze partner valt. */
