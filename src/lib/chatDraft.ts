@@ -38,3 +38,13 @@ export function clearChatDraft(conversationId: string, storage?: DraftStorage): 
     // A successful send remains successful even if local cleanup fails.
   }
 }
+
+export async function sendChatDraft(options: {
+  conversationId: string;
+  content: string;
+  send: (content: string) => Promise<void>;
+  storage?: DraftStorage;
+}): Promise<void> {
+  await options.send(options.content);
+  clearChatDraft(options.conversationId, options.storage);
+}

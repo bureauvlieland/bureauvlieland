@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAdminChat, type ChatStatusFilter } from "@/hooks/useAdminChat";
 import { formatNL } from "@/lib/dateFormat";
 import { getWhatsappWindowState } from "@/lib/whatsappWindow";
-import { clearChatDraft, readChatDraft, saveChatDraft } from "@/lib/chatDraft";
+import { readChatDraft, saveChatDraft, sendChatDraft } from "@/lib/chatDraft";
 import { isToday, isYesterday, isSameDay } from "date-fns";
 import { useConversationProjects } from "@/hooks/useConversationProjects";
 import { ChatConversationItem } from "@/components/admin/chat/ChatConversationItem";
@@ -145,8 +145,7 @@ export function ChatPanel({
     const text = message.trim();
     setIsSending(true);
     try {
-      await sendMessage(text);
-      clearChatDraft(activeConversationId);
+      await sendChatDraft({ conversationId: activeConversationId, content: text, send: sendMessage });
       setMessage("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Versturen mislukt", {

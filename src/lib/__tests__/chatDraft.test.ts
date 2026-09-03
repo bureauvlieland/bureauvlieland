@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clearChatDraft, getChatDraftKey, readChatDraft, saveChatDraft } from "@/lib/chatDraft";
+import { clearChatDraft, getChatDraftKey, readChatDraft, saveChatDraft, sendChatDraft } from "@/lib/chatDraft";
 
 function memoryStorage() {
   const values = new Map<string, string>();
@@ -39,5 +39,33 @@ describe("chat drafts", () => {
     expect(() => saveChatDraft("gesprek-1", "Tekst", brokenStorage)).not.toThrow();
     expect(readChatDraft("gesprek-1", brokenStorage)).toBe("");
     expect(() => clearChatDraft("gesprek-1", brokenStorage)).not.toThrow();
+  });
+
+  it("behoudt het concept als verzenden mislukt", async () => {
+    const storage = memoryStorage();
+    saveChatDraft("gesprek-1", "Niet verliezen", storage);
+
+    await expect(sendChatDraft({
+      conversationId: "gesprek-1",
+      content: "Niet verliezen",
+      storage,
+      send: async () => { throw new Error("provider weigert"); },
+    })).rejects.toThrow("provider weigert");
+
+    expect(readChatDraft("gesprek-1", storage)).toBe("Niet verliezen");
+  });
+
+  it("wist het concept uitsluitend na bevestigde verzending", async () => {
+    const storage = memoryStorage();
+    saveChatDraft("gesprek-1", "Wel verzonden", storage);
+
+    await sendChatDraft({
+      conversationId: "gesprek-1",
+      content: "Wel verzonden",
+      storage,
+      send: async () => undefined,
+    });
+
+    expect(readChatDraft("gesprek-1", storage)).toBe("");
   });
 });

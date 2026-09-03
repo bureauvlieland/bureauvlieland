@@ -137,7 +137,6 @@ export function useAdminChat() {
         .is("read_at", null);
     };
     loadMessages();
-    loadMessages();
 
     const channel = supabase
       .channel(`admin-chat-msgs-${activeConversationId}`)
