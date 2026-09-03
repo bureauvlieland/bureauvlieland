@@ -35,13 +35,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
-import heroAsset from "@/assets/wadexcursie-vlieland-wad-schelpen.webp.asset.json";
-import gidsAsset from "@/assets/wadexcursie-vlieland-gids-wadworm.webp.asset.json";
-import gezinAsset from "@/assets/wadexcursie-vlieland-gezin-wadlopen.webp.asset.json";
+import heroImage from "@/assets/wadexcursie-vlieland-wad-schelpen.webp";
+import gidsImage from "@/assets/wadexcursie-vlieland-gids-wadworm.webp";
+import gezinImage from "@/assets/wadexcursie-vlieland-gezin-wadlopen.webp";
 
-const heroImage = heroAsset.url;
-const gidsImage = gidsAsset.url;
-const gezinImage = gezinAsset.url;
 
 const FAQ: { q: string; a: string }[] = [
   {

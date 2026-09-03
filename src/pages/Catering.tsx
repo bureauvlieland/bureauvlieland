@@ -14,21 +14,14 @@ import foodPlattersImage from "@/assets/food-platters.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
 import lunchBuffetImage from "@/assets/lunch-buffet.jpg";
 import cateringFoodImage from "@/assets/catering-food.jpg";
-import lexenceChefPlatingAsset from "@/assets/lexence/lexence-chef-plating.jpg.asset.json";
-import lexenceChefsPlatingAsset from "@/assets/lexence/lexence-chefs-plating.jpg.asset.json";
-import lexenceAmusesRowAsset from "@/assets/lexence/lexence-amuses-row.jpg.asset.json";
-import lexenceTablesettingAsset from "@/assets/lexence/lexence-tablesetting.jpg.asset.json";
-import lexenceDessertAsset from "@/assets/lexence/lexence-dessert.jpg.asset.json";
-import lexenceMarqueeSetupAsset from "@/assets/lexence/lexence-marquee-setup.jpg.asset.json";
-import lexenceVenueCrowdAsset from "@/assets/lexence/lexence-venue-crowd.jpg.asset.json";
+import lexence1 from "@/assets/lexence/lexence-chef-plating.jpg";
+import lexence2 from "@/assets/lexence/lexence-chefs-plating.jpg";
+import lexence3 from "@/assets/lexence/lexence-amuses-row.jpg";
+import lexence4 from "@/assets/lexence/lexence-tablesetting.jpg";
+import lexence5 from "@/assets/lexence/lexence-dessert.jpg";
+import lexence6 from "@/assets/lexence/lexence-marquee-setup.jpg";
+import lexenceVenueCrowd from "@/assets/lexence/lexence-venue-crowd.jpg";
 
-const lexence1 = lexenceChefPlatingAsset.url;
-const lexence2 = lexenceChefsPlatingAsset.url;
-const lexence3 = lexenceAmusesRowAsset.url;
-const lexence4 = lexenceTablesettingAsset.url;
-const lexence5 = lexenceDessertAsset.url;
-const lexence6 = lexenceMarqueeSetupAsset.url;
-const lexenceVenueCrowd = lexenceVenueCrowdAsset.url;
 
 const moments = [
   {
