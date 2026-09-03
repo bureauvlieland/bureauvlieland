@@ -135,6 +135,7 @@ const Bouwstenen = () => {
   const kenBurns = useKenBurns();
   const { data: blocks, isLoading } = usePublishedBuildingBlocks();
   const { bundles } = useDirectBookableActivities();
+  const { byPartner: unavailableByPartner } = usePublicPartnerUnavailability();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<BuildingBlockCategory | "all">("all");
   const [onlyBookable, setOnlyBookable] = useState(false);
