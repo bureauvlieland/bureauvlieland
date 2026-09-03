@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { reportError } from "@/lib/errorReporting";
 
 interface ResetPartnerConnectionsDialogProps {
   open: boolean;
@@ -60,7 +61,7 @@ export function ResetPartnerConnectionsDialog({
       onComplete();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error resetting partner connections:", error);
+      reportError(error, { where: "ResetPartnerConnectionsDialog: Error resetting partner connections" });
       toast({
         title: "Fout",
         description: "Kon partner koppelingen niet resetten",

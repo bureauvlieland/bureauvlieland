@@ -141,33 +141,9 @@ jobs:
           path: reports/
           if-no-files-found: warn
 
-  ci-status:
-    name: CI status
-    if: always()
-    needs: [frontend-tests, edge-function-tests]
+  build:
+    name: Productiebuild
     runs-on: ubuntu-latest
-    steps:
-      - name: Fail on any test regression
-        run: |
-          fe='${{ needs.frontend-tests.result }}'
-          ef='${{ needs.edge-function-tests.result }}'
-          {
-            echo "## CI overview"
-            echo
-            echo "| Job | Result |"
-            echo "|---|---|"
-            echo "| Frontend (Vitest) | $fe |"
-            echo "| Edge functions (Deno) | $ef |"
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$fe" != "success" ] || [ "$ef" != "success" ]; then
-            echo "One or more test suites failed."
-            exit 1
-          fi
-          
-  strict-burndown:
-    name: Strict-mode teller
-    runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -179,15 +155,83 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Tel resterende strict-fouten
+      # Draaide tot nu toe nergens in CI: een build-brekende wijziging kon
+      # ongemerkt op main belanden.
+      - name: Bouwen zoals productie
+        run: bunx vite build
+
+  quality:
+    name: Typecheck en lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Plafonds inlezen
+        run: cat .github/quality-baselines.env >> "$GITHUB_ENV"
+
+      # Harde poort: dit staat vandaag op nul en moet daar blijven.
+      - name: Typecheck (tsconfig.app.json)
+        run: bunx tsc -p tsconfig.app.json --noEmit
+
+      - name: Lint onder het plafond
+        run: |
+          bunx eslint . -f json -o eslint-report.json || true
+          n=$(node -e 'const r=require("./eslint-report.json");console.log(r.reduce((a,f)=>a+f.errorCount+f.warningCount,0))')
+          echo "## Lint: $n problemen (plafond $LINT_MAX)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$n" -gt "$LINT_MAX" ]; then
+            echo "Lint-problemen gestegen van maximaal $LINT_MAX naar $n."
+            node -e 'const r=require("./eslint-report.json");for(const f of r){if(f.errorCount+f.warningCount)for(const m of f.messages)console.log(`${f.filePath}:${m.line} ${m.ruleId ?? ""} ${m.message}`)}' | head -30
+            exit 1
+          fi
+          if [ "$n" -lt "$LINT_MAX" ]; then
+            echo "Onder het plafond ($n < $LINT_MAX). Verlaag LINT_MAX in .github/quality-baselines.env." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Strict-mode onder het plafond
         run: |
           bunx tsc -p tsconfig.strict.json --noEmit > strict.log 2>&1 || true
           n=$(grep -c "error TS" strict.log || true)
-          echo "## Strict-mode fouten: $n" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$n" != "0" ]; then
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            grep "error TS" strict.log | head -40 >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "## Strict-mode: $n fouten (plafond $STRICT_MAX)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$n" -gt "$STRICT_MAX" ]; then
+            echo "Strict-fouten gestegen van maximaal $STRICT_MAX naar $n."
+            grep "error TS" strict.log | head -30
+            exit 1
+          fi
+          if [ "$n" -lt "$STRICT_MAX" ]; then
+            echo "Onder het plafond ($n < $STRICT_MAX). Verlaag STRICT_MAX in .github/quality-baselines.env." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  ci-status:
+    name: CI status
+    if: always()
+    needs: [frontend-tests, edge-function-tests, build, quality]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail on any test regression
+        run: |
+          fe='${{ needs.frontend-tests.result }}'
+          ef='${{ needs.edge-function-tests.result }}'
+          bd='${{ needs.build.result }}'
+          ql='${{ needs.quality.result }}'
+          {
+            echo "## CI overview"
+            echo
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Frontend (Vitest) | $fe |"
+            echo "| Edge functions (Deno) | $ef |"
+            echo "| Productiebuild | $bd |"
+            echo "| Typecheck en lint | $ql |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$fe" != "success" ] || [ "$ef" != "success" ] || [ "$bd" != "success" ] || [ "$ql" != "success" ]; then
+            echo "Een of meer poorten zijn niet geslaagd."
+            exit 1
+          fi

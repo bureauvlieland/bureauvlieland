@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { InvoiceType } from "@/types/bureauInvoice";
+import { reportError } from "@/lib/errorReporting";
 
 interface SendBureauInvoiceToCustomerDialogProps {
   isOpen: boolean;
@@ -183,7 +184,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
               upsert: true,
             });
           if (uploadErr) {
-            console.error("PDF archive upload failed:", uploadErr);
+            reportError(uploadErr, { where: "SendBureauInvoiceToCustomerDialog: PDF archive upload failed" });
           } else {
             await supabase
               .from("bureau_invoices")
@@ -191,7 +192,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
               .eq("id", invoiceId);
           }
         } catch (archiveErr) {
-          console.error("PDF archive error:", archiveErr);
+          reportError(archiveErr, { where: "SendBureauInvoiceToCustomerDialog: PDF archive error" });
         }
       }
 
@@ -199,7 +200,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
       onSent?.();
       onClose();
     } catch (error) {
-      console.error("Send invoice to customer error:", error);
+      reportError(error, { where: "SendBureauInvoiceToCustomerDialog: Send invoice to customer error" });
       toast.error(
         error instanceof Error
           ? `Fout bij versturen: ${error.message}`

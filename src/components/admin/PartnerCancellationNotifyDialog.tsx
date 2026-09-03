@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Mail, AlertTriangle, Hotel, Activity } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 export interface ActivityPartner {
   partner_id: string;
@@ -134,7 +135,7 @@ export const PartnerCancellationNotifyDialog = ({
       onOpenChange(false);
       onSent?.();
     } catch (err) {
-      console.error("notify-partner-cancellation failed", err);
+      reportError(err, { where: "PartnerCancellationNotifyDialog: notify-partner-cancellation failed" });
       toast.error("Versturen mislukt — probeer opnieuw");
     } finally {
       setIsSending(false);

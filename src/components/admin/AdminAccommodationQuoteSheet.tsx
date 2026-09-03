@@ -38,6 +38,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { History } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface QuoteData {
   id: string;
@@ -107,7 +108,7 @@ function QuoteAttachmentLink({
         .from("accommodation-quote-attachments")
         .createSignedUrl(path, 60 * 60);
       if (error) {
-        console.error("Failed to sign attachment URL", error);
+        reportError(error, { where: "AdminAccommodationQuoteSheet: Failed to sign attachment URL" });
         return null;
       }
       return data?.signedUrl ?? null;

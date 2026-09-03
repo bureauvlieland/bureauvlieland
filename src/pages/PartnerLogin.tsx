@@ -12,6 +12,7 @@ import { z } from "zod";
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { loginPasswordSchema } from "@/lib/passwordPolicy";
+import { reportError } from "@/lib/errorReporting";
 
 const loginSchema = z.object({
   email: z.string().email("Vul een geldig emailadres in"),
@@ -116,7 +117,7 @@ const PartnerLogin = () => {
             })
             .eq("auth_user_id", data.user.id);
         } catch (err) {
-          console.error("Error updating login status:", err);
+          reportError(err, { where: "PartnerLogin: Error updating login status" });
         }
 
 
@@ -128,7 +129,7 @@ const PartnerLogin = () => {
         navigate("/partner/dashboard");
       }
     } catch (err) {
-      console.error("Login error:", err);
+      reportError(err, { where: "PartnerLogin: Login error" });
       toast({
         title: "Fout bij inloggen",
         description: "Er is een onverwachte fout opgetreden.",
@@ -178,7 +179,7 @@ const PartnerLogin = () => {
       });
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error("Password reset error:", err);
+      reportError(err, { where: "PartnerLogin: Password reset error" });
       toast({
         title: "Fout",
         description: "Kon geen reset email verzenden. Probeer het opnieuw of neem contact op met Bureau Vlieland.",

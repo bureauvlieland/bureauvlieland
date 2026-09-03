@@ -40,6 +40,7 @@ import { QuoteExtrasList } from "./QuoteExtrasList";
 import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
 import { usePartnerRoomTypes } from "@/hooks/usePartnerRoomTypes";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
+import { reportError } from "@/lib/errorReporting";
 
 interface AccommodationRequest {
   id: string;
@@ -385,7 +386,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const handleDecline = async () => {
     console.log("handleDecline called, onDecline:", typeof onDecline, "declineReason:", declineReason);
     if (!onDecline) {
-      console.error("onDecline is not provided!");
+      reportError("onDecline is not provided!", { where: "PartnerAccommodationQuoteSheet" });
       return;
     }
     
@@ -399,7 +400,7 @@ export const PartnerAccommodationQuoteSheet = ({
         onClose();
       }
     } catch (err) {
-      console.error("Error in handleDecline:", err);
+      reportError(err, { where: "PartnerAccommodationQuoteSheet: Error in handleDecline" });
     } finally {
       setIsSubmitting(false);
     }
@@ -438,7 +439,7 @@ export const PartnerAccommodationQuoteSheet = ({
       onRefresh?.();
       onClose();
     } catch (err) {
-      console.error("Error extending validity:", err);
+      reportError(err, { where: "PartnerAccommodationQuoteSheet: Error extending validity" });
     } finally {
       setIsExtending(false);
     }

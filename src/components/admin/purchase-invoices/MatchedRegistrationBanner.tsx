@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
+import { reportError } from "@/lib/errorReporting";
 
 interface MatchRow {
   id: string;
@@ -82,7 +83,7 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
         .order("created_at", { ascending: false })
         .limit(400);
       if (error) {
-        console.error("Match lookup failed:", error);
+        reportError(error, { where: "MatchedRegistrationBanner: Match lookup failed" });
         return [];
       }
       const all = (data || []) as unknown as MatchRow[];
@@ -187,7 +188,7 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
       toast.success("PDF gekoppeld en factuurnummer bijgewerkt");
     } catch (err) {
-      console.error("Link PDF failed:", err);
+      reportError(err, { where: "MatchedRegistrationBanner: Link PDF failed" });
       toast.error("Koppelen mislukt");
     } finally {
       setLinkingId(null);
@@ -293,7 +294,7 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
       queryClient.invalidateQueries({ queryKey: ["program-item-billing-lines"] });
       toast.success(`${billingRows.length} orderregels geboekt op het project`);
     } catch (err) {
-      console.error("Book lines failed:", err);
+      reportError(err, { where: "MatchedRegistrationBanner: Book lines failed" });
       toast.error(err instanceof Error ? err.message : "Boeken mislukt");
     } finally {
       setBookingId(null);

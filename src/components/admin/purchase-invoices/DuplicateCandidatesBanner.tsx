@@ -9,6 +9,7 @@ import { AlertTriangle, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { normalizeInvoiceNumber } from "@/lib/purchaseInvoiceDuplicateCheck";
+import { reportError } from "@/lib/errorReporting";
 
 interface RegistrationRow {
   id: string;
@@ -64,7 +65,7 @@ export function DuplicateCandidatesBanner() {
         .order("invoice_date", { ascending: false })
         .limit(500);
       if (error) {
-        console.error(error);
+        reportError(error, { where: "DuplicateCandidatesBanner" });
         return [];
       }
       return (data || []) as unknown as RegistrationRow[];
@@ -84,7 +85,7 @@ export function DuplicateCandidatesBanner() {
         .order("created_at", { ascending: false })
         .limit(300);
       if (error) {
-        console.error(error);
+        reportError(error, { where: "DuplicateCandidatesBanner" });
         return [];
       }
       return (data || []) as unknown as InboxRow[];

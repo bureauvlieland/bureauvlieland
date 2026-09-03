@@ -57,6 +57,7 @@ import {
   LodgingAllocationBlock,
   type LodgingLineAllocation,
 } from "@/components/admin/purchase-invoices/LodgingAllocationBlock";
+import { reportError } from "@/lib/errorReporting";
 
 
 
@@ -581,7 +582,7 @@ export function AddPurchaseInvoiceDialog({
       setStep("verify");
       toast.success("Factuur gescand — controleer de gegevens");
     } catch (err: any) {
-      console.error("Scan error:", err);
+      reportError(err, { where: "AddPurchaseInvoiceDialog: Scan error" });
       setScanFailed(true);
       toast.error(err.message || "Fout bij scannen factuur");
       setStep("verify");
@@ -953,7 +954,7 @@ export function AddPurchaseInvoiceDialog({
                 .eq("id", targetItemId);
               toast.success("Factuurregels overgenomen op programma-onderdeel (extra project)");
             } catch (err) {
-              console.error("copyToBillingLines (extra) failed", err);
+              reportError(err, { where: "AddPurchaseInvoiceDialog: copyToBillingLines (extra) failed" });
               toast.error("Overnemen naar factuurregels (extra project) mislukt");
             }
           }
@@ -1017,7 +1018,7 @@ export function AddPurchaseInvoiceDialog({
               .eq("id", targetItemId);
             toast.success("Factuurregels overgenomen op programma-onderdeel");
           } catch (e) {
-            console.error("copyToBillingLines failed", e);
+            reportError(e, { where: "AddPurchaseInvoiceDialog: copyToBillingLines failed" });
             toast.error("Overnemen naar factuurregels mislukt");
           }
         }
@@ -1070,7 +1071,7 @@ export function AddPurchaseInvoiceDialog({
             if (applyErr) throw applyErr;
             toast.success("Inkoopfactuur toegepast op logies-offerte");
           } catch (e: any) {
-            console.error("apply-purchase-invoice-to-lodging failed", e);
+            reportError(e, { where: "AddPurchaseInvoiceDialog: apply-purchase-invoice-to-lodging failed" });
             toast.error(e.message || "Toepassen op logies-offerte mislukt");
           }
         }
@@ -1081,7 +1082,7 @@ export function AddPurchaseInvoiceDialog({
       }
       onClose();
     } catch (err: any) {
-      console.error(err);
+      reportError(err, { where: "AddPurchaseInvoiceDialog" });
       toast.error(err.message || "Fout bij opslaan");
     } finally {
       setIsSubmitting(false);

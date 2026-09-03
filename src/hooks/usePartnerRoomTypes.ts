@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerRoomType, PartnerRoomTypeInsert, PartnerRoomTypeUpdate } from "@/types/partnerRoomTypes";
+import { reportError } from "@/lib/errorReporting";
 
 export function usePartnerRoomTypes(partnerId?: string) {
   return useQuery({
@@ -55,7 +56,7 @@ export function useAddPartnerRoomType() {
       });
     },
     onError: (error) => {
-      console.error('Error adding room type:', error);
+      reportError(error, { where: "usePartnerRoomTypes: Error adding room type" });
       toast({
         title: "Fout bij toevoegen",
         description: "Er is een fout opgetreden bij het toevoegen van het kamertype.",
@@ -89,7 +90,7 @@ export function useUpdatePartnerRoomType() {
       });
     },
     onError: (error) => {
-      console.error('Error updating room type:', error);
+      reportError(error, { where: "usePartnerRoomTypes: Error updating room type" });
       toast({
         title: "Fout bij bijwerken",
         description: "Er is een fout opgetreden bij het bijwerken van het kamertype.",
@@ -122,7 +123,7 @@ export function useDeletePartnerRoomType() {
       });
     },
     onError: (error) => {
-      console.error('Error deleting room type:', error);
+      reportError(error, { where: "usePartnerRoomTypes: Error deleting room type" });
       toast({
         title: "Fout bij verwijderen",
         description: "Er is een fout opgetreden bij het verwijderen van het kamertype.",

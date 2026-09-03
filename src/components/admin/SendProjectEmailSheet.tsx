@@ -33,6 +33,7 @@ import {
   type DossierSummary,
   type EmailIntentId,
 } from "@/lib/emailComposerIntents";
+import { reportError } from "@/lib/errorReporting";
 
 interface Recipient {
   label: string;
@@ -186,7 +187,7 @@ export function SendProjectEmailSheet({
       await callCompose({ instruction: aiInstruction.trim() || undefined });
       toast.success("Concept ingeladen — controleer voor verzending");
     } catch (err: any) {
-      console.error("AI compose error", err);
+      reportError(err, { where: "SendProjectEmailSheet: AI compose error" });
       toast.error(err?.message || "AI-suggestie mislukt");
     } finally {
       setIsComposingAi(false);
@@ -209,7 +210,7 @@ export function SendProjectEmailSheet({
       setRefineInstruction("");
       toast.success("Concept herschreven");
     } catch (err: any) {
-      console.error("AI refine error", err);
+      reportError(err, { where: "SendProjectEmailSheet: AI refine error" });
       toast.error(err?.message || "Herschrijven mislukt");
     } finally {
       setIsRefining(false);
@@ -288,7 +289,7 @@ export function SendProjectEmailSheet({
         if (error) throw error;
         okCount++;
       } catch (err) {
-        console.error("send-project-email failed for", r.email, err);
+        reportError(err, { where: "SendProjectEmailSheet: send-project-email mislukt", email: r.email });
         errors.push(r.email);
       }
     }

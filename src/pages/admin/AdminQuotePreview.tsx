@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { getDisplayLineTotal, getNumberOfDays, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
+import { reportError } from "@/lib/errorReporting";
 
 
 interface ProgramRequest {
@@ -281,7 +282,7 @@ const AdminQuotePreview = () => {
         }
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      reportError(error, { where: "AdminQuotePreview: Error fetching data" });
       toast.error("Fout bij laden offerte");
       navigate("/admin/projecten");
     } finally {
@@ -353,7 +354,7 @@ const AdminQuotePreview = () => {
 
       return pdf.output("blob");
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      reportError(error, { where: "AdminQuotePreview: Error generating PDF" });
       toast.error("Fout bij genereren PDF");
       return null;
     } finally {
@@ -398,7 +399,7 @@ const AdminQuotePreview = () => {
         .upload(storagePath, pdfBlob, { contentType: "application/pdf", upsert: true });
 
       if (uploadError) {
-        console.error("Error uploading PDF:", uploadError);
+        reportError(uploadError, { where: "AdminQuotePreview: Error uploading PDF" });
         toast.error("Kon PDF niet uploaden");
         setIsSending(false);
         return;
@@ -420,7 +421,7 @@ const AdminQuotePreview = () => {
       toast.success("Offerte met PDF verstuurd naar klant");
       navigate(`/admin/projecten/${request.id}`);
     } catch (error) {
-      console.error("Error sending quote:", error);
+      reportError(error, { where: "AdminQuotePreview: Error sending quote" });
       toast.error("Fout bij versturen offerte");
     } finally {
       setIsSending(false);

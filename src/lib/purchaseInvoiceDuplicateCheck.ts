@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { reportError } from "@/lib/errorReporting";
 
 export interface DuplicatePurchaseInvoice {
   id: string;
@@ -49,7 +50,7 @@ export async function findDuplicatePurchaseInvoice(
 
   const { data, error } = await q;
   if (error) {
-    console.error("Duplicate purchase invoice check failed:", error);
+    reportError(error, { where: "purchaseInvoiceDuplicateCheck: Duplicate purchase invoice check failed" });
     return null;
   }
 

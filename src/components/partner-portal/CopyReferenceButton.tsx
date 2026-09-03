@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { reportError } from "@/lib/errorReporting";
 
 interface CopyReferenceButtonProps {
   reference: string;
@@ -23,7 +24,7 @@ export const CopyReferenceButton = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy:", err);
+      reportError(err, { where: "CopyReferenceButton: Failed to copy" });
     }
   };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AccommodationRequest, AccommodationQuote, RoomConfiguration } from '@/types/accommodation';
 import type { AccommodationQuoteExtra } from '@/types/accommodationExtras';
+import { reportError } from "@/lib/errorReporting";
 
 interface QuotesSummary {
   total: number;
@@ -130,7 +131,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
       setQuotes(transformedQuotes);
       setExtrasByQuoteId((payload.extrasByQuoteId as Record<string, AccommodationQuoteExtra[]>) || {});
     } catch (err) {
-      console.error('Error in useAccommodationQuotes:', err);
+      reportError(err, { where: "useAccommodationQuotes: Error in useAccommodationQuotes" });
       setError(err instanceof Error ? err.message : 'Onbekende fout');
     } finally {
       setIsLoading(false);
@@ -158,7 +159,7 @@ export function useAccommodationQuotes(token: string | undefined): UseAccommodat
       await fetchData();
       return true;
     } catch (err) {
-      console.error('Error selecting quote:', err);
+      reportError(err, { where: "useAccommodationQuotes: Error selecting quote" });
       setError(err instanceof Error ? err.message : 'Fout bij selecteren offerte');
       return false;
     }

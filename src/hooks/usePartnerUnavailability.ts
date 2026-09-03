@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { isWithinInterval, isToday } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { reportError } from "@/lib/errorReporting";
 
 interface UnavailabilityPeriod {
   id: string;
@@ -76,7 +77,7 @@ export function usePartnerUnavailability(partnerIds?: string[]) {
 
       setUnavailabilityMap(map);
     } catch (error) {
-      console.error("Error fetching partner unavailability:", error);
+      reportError(error, { where: "usePartnerUnavailability: Error fetching partner unavailability" });
     } finally {
       setIsLoading(false);
     }

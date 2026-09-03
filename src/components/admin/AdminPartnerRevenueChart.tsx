@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Euro } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { reportError } from "@/lib/errorReporting";
 
 interface AdminPartnerRevenueChartProps {
   partnerId: string;
@@ -59,7 +60,7 @@ export function AdminPartnerRevenueChart({ partnerId, monthsToShow = 6 }: AdminP
       if (quotesError) throw quotesError;
       setAccommodationQuotes(quotes || []);
     } catch (error) {
-      console.error("Error fetching partner revenue:", error);
+      reportError(error, { where: "AdminPartnerRevenueChart: Error fetching partner revenue" });
     } finally {
       setIsLoading(false);
     }

@@ -74,27 +74,32 @@ const staticEntries: SitemapEntry[] = [
 ];
 
 
-async function fetchBuildingBlockSlugs(): Promise<Array<{ slug: string; updated_at: string }>> {
-  try {
-    const url = `${SUPABASE_URL}/rest/v1/building_blocks?select=id,slug,updated_at&status=eq.published`;
-    const res = await fetch(url, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-    });
-    if (!res.ok) {
-      console.warn(`[sitemap] Building-blocks fetch failed: ${res.status}`);
-      return [];
-    }
-    const rows: Array<{ id: string; slug: string | null; updated_at: string }> = await res.json();
-    return rows
-      .filter((r) => r.slug && !HIDDEN_BLOCK_IDS.has(r.id))
-      .map((r) => ({ slug: r.slug!, updated_at: r.updated_at?.slice(0, 10) ?? today }));
-  } catch (e) {
-    console.warn("[sitemap] Could not fetch building blocks:", e);
-    return [];
+/**
+ * Haalt rijen op uit PostgREST. Werpt bij elke fout: een half opgehaalde
+ * sitemap is erger dan geen nieuwe sitemap, want hij overschrijft een
+ * correcte met een kortere en dat merkt niemand.
+ */
+async function fetchRows<T>(path: string, label: string): Promise<T[]> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`${label}: HTTP ${res.status} ${await res.text().catch(() => "")}`.trim());
   }
+  return res.json() as Promise<T[]>;
+}
+
+async function fetchBuildingBlockSlugs(): Promise<Array<{ slug: string; updated_at: string }>> {
+  const rows = await fetchRows<{ id: string; slug: string | null; updated_at: string }>(
+    "building_blocks?select=id,slug,updated_at&status=eq.published",
+    "building_blocks",
+  );
+  return rows
+    .filter((r) => r.slug && !HIDDEN_BLOCK_IDS.has(r.id))
+    .map((r) => ({ slug: r.slug!, updated_at: r.updated_at?.slice(0, 10) ?? today }));
 }
 
 function buildSitemap(entries: SitemapEntry[]) {
@@ -121,25 +126,31 @@ function buildSitemap(entries: SitemapEntry[]) {
 }
 
 async function fetchTemplateSlugs(): Promise<Array<{ slug: string; updated_at: string }>> {
-  try {
-    const url = `${SUPABASE_URL}/rest/v1/program_templates?select=id,updated_at&is_published=eq.true`;
-    const res = await fetch(url, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-    });
-    if (!res.ok) {
-      console.warn(`[sitemap] Templates fetch failed: ${res.status}`);
-      return [];
-    }
-    const rows: Array<{ id: string; updated_at: string }> = await res.json();
-    return rows.map((r) => ({ slug: r.id, updated_at: r.updated_at?.slice(0, 10) ?? today }));
-  } catch (e) {
-    console.warn("[sitemap] Could not fetch templates:", e);
-    return [];
-  }
+  const rows = await fetchRows<{ id: string; updated_at: string }>(
+    "program_templates?select=id,updated_at&is_published=eq.true",
+    "program_templates",
+  );
+  return rows.map((r) => ({ slug: r.id, updated_at: r.updated_at?.slice(0, 10) ?? today }));
+}
+
+/**
+ * De dynamische bronnen leveren normaal tientallen pagina's. Leveren ze er
+ * nul, dan is er iets mis met de bron, niet met de website — en overschrijven
+ * we een goede sitemap met een die de helft van de vindbare pagina's mist.
+ */
+export function isSuspiciouslyEmpty(blockCount: number, templateCount: number): boolean {
+  return blockCount === 0 && templateCount === 0;
 }
 
 async function main() {
   const [blocks, templates] = await Promise.all([fetchBuildingBlockSlugs(), fetchTemplateSlugs()]);
+
+  if (isSuspiciouslyEmpty(blocks.length, templates.length)) {
+    throw new Error(
+      "geen enkele bouwsteen en geen enkel programma opgehaald - bron waarschijnlijk onbereikbaar",
+    );
+  }
+
   const blockEntries: SitemapEntry[] = blocks.map((b) => ({
     path: `/activiteit/${b.slug}`,
     lastmod: b.updated_at,
@@ -159,7 +170,19 @@ async function main() {
   console.log(`sitemap.xml written (${all.length} entries: ${staticEntries.length} static + ${blockEntries.length} blocks + ${templateEntries.length} templates)`);
 }
 
-main().catch((err) => {
-  console.error("[sitemap] Generation failed:", err);
-  process.exit(0); // Don't break dev/build on sitemap failure
+const isDirectRun =
+  typeof process.argv[1] === "string" && import.meta.url === `file://${process.argv[1]}`;
+
+if (isDirectRun) main().catch((err) => {
+  // Bewust NIET stilzwijgend doorgaan. Een mislukte generatie die toch een
+  // sitemap wegschreef, kostte ~50 vindbare pagina's zonder dat iemand het
+  // zag. Nu blijft de bestaande sitemap staan en faalt de build luid.
+  console.error("[sitemap] Generatie mislukt, bestaande sitemap.xml blijft staan:", err);
+
+  // Ontsnapping voor werken zonder netwerk: dan wel doorgaan, maar zichtbaar.
+  if (process.env.SITEMAP_ALLOW_STALE === "1") {
+    console.warn("[sitemap] SITEMAP_ALLOW_STALE=1 gezet - doorgaan met de bestaande sitemap.");
+    process.exit(0);
+  }
+  process.exit(1);
 });

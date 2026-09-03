@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PurchaseInvoiceInboxItem, InboxStatus } from "@/types/purchaseInvoiceInbox";
+import { reportError } from "@/lib/errorReporting";
 
 export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
   const queryClient = useQueryClient();
@@ -163,7 +164,7 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
       toast.success("Verwerking ongedaan gemaakt — klaar om opnieuw te verwerken");
     },
     onError: (err: Error) => {
-      console.error("Reprocess error:", err);
+      reportError(err, { where: "usePurchaseInvoiceInbox: Reprocess error" });
       toast.error(err.message || "Kon verwerking niet ongedaan maken");
     },
   });

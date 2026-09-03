@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ImagePlus, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { reportError } from "@/lib/errorReporting";
 
 interface ImageItem {
   url: string;
@@ -59,7 +60,7 @@ export function PartnerImageUpload({
           .upload(fileName, file, { cacheControl: "3600", upsert: false });
 
         if (uploadError) {
-          console.error("Upload error:", uploadError);
+          reportError(uploadError, { where: "PartnerImageUpload: Upload error" });
           toast({
             title: "Upload mislukt",
             description: `Kon ${file.name} niet uploaden.`,
@@ -83,7 +84,7 @@ export function PartnerImageUpload({
         });
       }
     } catch (err) {
-      console.error("Upload error:", err);
+      reportError(err, { where: "PartnerImageUpload: Upload error" });
       toast({
         title: "Fout",
         description: "Er ging iets mis bij het uploaden.",

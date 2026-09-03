@@ -56,6 +56,7 @@ import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
 import { AdminPartnerRevenueChart } from "@/components/admin/AdminPartnerRevenueChart";
 import { AdminPartnerTimeline } from "@/components/admin/AdminPartnerTimeline";
+import { reportError } from "@/lib/errorReporting";
 
 interface Partner {
   id: string;
@@ -222,7 +223,7 @@ const AdminPartnerDetail = () => {
         map_api_key: (data as any).map_api_key || "",
       });
     } catch (error) {
-      console.error("Error fetching partner:", error);
+      reportError(error, { where: "AdminPartnerDetail: Error fetching partner" });
       toast.error("Fout bij ophalen partner");
     } finally {
       setIsLoading(false);
@@ -277,7 +278,7 @@ const AdminPartnerDetail = () => {
 
       setRelatedRequests(mappedRequests);
     } catch (error) {
-      console.error("Error fetching related requests:", error);
+      reportError(error, { where: "AdminPartnerDetail: Error fetching related requests" });
     } finally {
       setIsLoadingRequests(false);
     }
@@ -309,7 +310,7 @@ const AdminPartnerDetail = () => {
         }))
       );
     } catch (error) {
-      console.error("Error fetching accommodation quotes:", error);
+      reportError(error, { where: "AdminPartnerDetail: Error fetching accommodation quotes" });
     } finally {
       setIsLoadingAccommodationQuotes(false);
     }
@@ -457,7 +458,7 @@ const AdminPartnerDetail = () => {
         fetchPartner();
       }
     } catch (error) {
-      console.error("Error saving partner:", error);
+      reportError(error, { where: "AdminPartnerDetail: Error saving partner" });
       toast.error("Fout bij opslaan partner");
     } finally {
       setIsSaving(false);
@@ -494,7 +495,7 @@ const AdminPartnerDetail = () => {
       });
       fetchPartner();
     } catch (error) {
-      console.error("Error inviting partner:", error);
+      reportError(error, { where: "AdminPartnerDetail: Error inviting partner" });
       const message = error instanceof Error ? error.message : "Fout bij versturen uitnodiging";
       toast.error("Uitnodiging mislukt", { description: message });
     } finally {
@@ -1005,7 +1006,7 @@ const AdminPartnerDetail = () => {
                                   });
                                   fetchPartner();
                                 } catch (err) {
-                                  console.error("Error sending set-password link:", err);
+                                  reportError(err, { where: "AdminPartnerDetail: Error sending set-password link" });
                                   toast.error("Versturen mislukt", {
                                     description: err instanceof Error ? err.message : "Onbekende fout",
                                   });

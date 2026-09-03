@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Plus, Receipt, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
+import { reportError } from "@/lib/errorReporting";
 
 interface Props {
   partnerId: string;
@@ -66,7 +67,7 @@ export function PartnerPostChargesSection({ partnerId, requestId, accommodationR
     else if (accommodationRequestId) q = q.eq("accommodation_request_id", accommodationRequestId);
     const { data, error } = await q;
     if (error) {
-      console.error(error);
+      reportError(error, { where: "PartnerPostChargesSection" });
     } else {
       setCharges((data ?? []) as unknown as PostCharge[]);
     }
@@ -207,7 +208,7 @@ function AddPostChargeDialog({
     } as never);
     setSaving(false);
     if (error) {
-      console.error(error);
+      reportError(error, { where: "PartnerPostChargesSection" });
       toast.error("Opslaan mislukt");
       return;
     }

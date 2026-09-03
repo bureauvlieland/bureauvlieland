@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { SendCommissionInvoiceDialog } from "@/components/admin/SendCommissionInvoiceDialog";
+import { reportError } from "@/lib/errorReporting";
 
 interface SourceItem {
   id: string;
@@ -264,7 +265,7 @@ export default function AdminCommissionInvoiceCreate() {
       const suggested = `BVC-${format(new Date(), "yyMM")}-XXXX`;
       setInvoiceNumber(suggested);
     } catch (err) {
-      console.error("Error loading commission invoice source:", err);
+      reportError(err, { where: "AdminCommissionInvoiceCreate: Error loading commission invoice source" });
       toast.error("Fout bij laden gegevens");
       navigate("/admin/commissies");
     } finally {
@@ -373,7 +374,7 @@ export default function AdminCommissionInvoiceCreate() {
             commission_invoice_id: invRow.id,
           } as any)
           .in("id", usedInvoiceIds);
-        if (markErr) console.error("Kon inkoopfacturen niet markeren:", markErr);
+        if (markErr) reportError(markErr, { where: "AdminCommissionInvoiceCreate: Kon inkoopfacturen niet markeren" });
       }
 
 
@@ -383,7 +384,7 @@ export default function AdminCommissionInvoiceCreate() {
       toast.success(`Concept ${invRow.invoice_number} opgeslagen`);
       return { id: invRow.id, invoiceNumber: invRow.invoice_number };
     } catch (err) {
-      console.error("Save commission invoice error:", err);
+      reportError(err, { where: "AdminCommissionInvoiceCreate: Save commission invoice error" });
       toast.error(err instanceof Error ? err.message : "Fout bij opslaan");
       return null;
     } finally {
@@ -480,7 +481,7 @@ export default function AdminCommissionInvoiceCreate() {
       URL.revokeObjectURL(url);
       toast.success("PDF gedownload");
     } catch (err) {
-      console.error(err);
+      reportError(err, { where: "AdminCommissionInvoiceCreate" });
       toast.error("Fout bij genereren PDF");
     } finally {
       setIsGenerating(false);

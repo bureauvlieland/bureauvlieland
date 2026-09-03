@@ -32,6 +32,7 @@ import { CalendarOff, AlertTriangle, CheckCircle2, Plus, Trash2, Edit } from "lu
 import { useToast } from "@/hooks/use-toast";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { checkConflictsForNewUnavailability } from "@/lib/conflictChecker";
+import { reportError } from "@/lib/errorReporting";
 
 interface UnavailabilityPeriod {
   id: string;
@@ -77,7 +78,7 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
       if (error) throw error;
       setPeriods(data || []);
     } catch (error) {
-      console.error("Error fetching unavailability:", error);
+      reportError(error, { where: "AdminPartnerUnavailability: Error fetching unavailability" });
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +203,7 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
       resetForm();
       fetchUnavailability();
     } catch (error) {
-      console.error("Error saving unavailability:", error);
+      reportError(error, { where: "AdminPartnerUnavailability: Error saving unavailability" });
       toast({
         title: "Fout bij opslaan",
         description: "Kon periode niet opslaan",
@@ -240,7 +241,7 @@ export function AdminPartnerUnavailability({ partnerId }: AdminPartnerUnavailabi
       setPeriodToDelete(null);
       fetchUnavailability();
     } catch (error) {
-      console.error("Error deleting unavailability:", error);
+      reportError(error, { where: "AdminPartnerUnavailability: Error deleting unavailability" });
       toast({
         title: "Fout bij verwijderen",
         variant: "destructive",

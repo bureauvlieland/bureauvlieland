@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 import type { PartnerDashboardData, PartnerItem } from "@/types/partner";
+import { reportError } from "@/lib/errorReporting";
 
 export const usePartnerDashboard = (token: string) => {
   const [data, setData] = useState<PartnerDashboardData | null>(null);
@@ -37,7 +38,7 @@ export const usePartnerDashboard = (token: string) => {
       const dashboardData = await response.json();
       setData(dashboardData);
     } catch (err) {
-      console.error("Error fetching partner dashboard:", err);
+      reportError(err, { where: "usePartnerDashboard: Error fetching partner dashboard" });
       setError(err instanceof Error ? err.message : "Er is een fout opgetreden");
     } finally {
       setIsLoading(false);
@@ -89,7 +90,7 @@ export const usePartnerDashboard = (token: string) => {
       await fetchDashboard();
       return true;
     } catch (err) {
-      console.error("Error updating item status:", err);
+      reportError(err, { where: "usePartnerDashboard: Error updating item status" });
       return false;
     }
   };
@@ -130,7 +131,7 @@ export const usePartnerDashboard = (token: string) => {
       await fetchDashboard();
       return { success: true, commission: result.commission };
     } catch (err) {
-      console.error("Error registering invoice:", err);
+      reportError(err, { where: "usePartnerDashboard: Error registering invoice" });
       return { success: false };
     }
   };

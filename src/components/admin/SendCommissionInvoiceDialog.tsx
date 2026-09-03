@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { reportError } from "@/lib/errorReporting";
 
 interface SendCommissionInvoiceDialogProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export const SendCommissionInvoiceDialog = ({
       onSent?.();
       onClose();
     } catch (error) {
-      console.error("Send commission invoice error:", error);
+      reportError(error, { where: "SendCommissionInvoiceDialog: Send commission invoice error" });
       toast.error(
         error instanceof Error
           ? `Fout bij versturen: ${error.message}`

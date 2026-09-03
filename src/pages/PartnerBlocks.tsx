@@ -25,6 +25,7 @@ import { MapTypeCard } from "@/components/partner-portal/MapTypeCard";
 import { useMapActivityTypes, type MapActivityType } from "@/hooks/useMapActivities";
 import type { PartnerBuildingBlock } from "@/types/partner";
 import { calculateBlockCompleteness } from "@/lib/partnerCompleteness";
+import { reportError } from "@/lib/errorReporting";
 
 const PartnerBlocksContent = () => {
   const navigate = useNavigate();
@@ -101,7 +102,7 @@ const PartnerBlocksContent = () => {
         .order("name");
 
       if (blocksError) {
-        console.error("Error fetching blocks:", blocksError);
+        reportError(blocksError, { where: "PartnerBlocks: Error fetching blocks" });
         setError("Kon uw aanbod niet laden.");
         setIsLoading(false);
         return;

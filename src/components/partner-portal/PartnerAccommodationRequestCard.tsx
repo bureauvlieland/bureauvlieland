@@ -73,6 +73,7 @@ interface AccommodationRequest {
 }
 
 import { AlertTriangle } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface AccommodationQuote {
   id: string;
@@ -132,7 +133,7 @@ export const PartnerAccommodationRequestCard = ({
       URL.revokeObjectURL(url);
       toast({ title: "Programma gedownload", description: "Het programma is opgeslagen als .docx." });
     } catch (err: any) {
-      console.error("docx download error:", err);
+      reportError(err, { where: "PartnerAccommodationRequestCard: docx download error" });
       toast({
         title: "Download mislukt",
         description: err?.message ?? "Kon het programma niet downloaden.",

@@ -21,6 +21,7 @@ import {
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { PartnerCompletenessBanner } from "@/components/partner-portal/PartnerCompletenessBanner";
 import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
+import { reportError } from "@/lib/errorReporting";
 
 type TabKey = "projecten" | "werkbank";
 
@@ -93,7 +94,7 @@ const PartnerDashboardContent = () => {
       if (!response.ok) throw new Error("Kon dashboard niet laden");
       setData(await response.json());
     } catch (err) {
-      console.error(err);
+      reportError(err, { where: "PartnerDashboard" });
       setError("Er is een fout opgetreden bij het laden van je dashboard.");
     } finally {
       setIsLoading(false);

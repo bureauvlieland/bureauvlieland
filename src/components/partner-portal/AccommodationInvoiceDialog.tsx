@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Euro, FileText, Calendar } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface AccommodationInvoiceDialogProps {
   isOpen: boolean;
@@ -101,7 +102,7 @@ export const AccommodationInvoiceDialog = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error registering invoice:", error);
+      reportError(error, { where: "AccommodationInvoiceDialog: Error registering invoice" });
       toast({
         title: "Fout bij registreren",
         description: error instanceof Error ? error.message : "Er ging iets mis",

@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { reportError } from "@/lib/errorReporting";
 
 type CommissionInvoiceStatus = "draft" | "sent" | "forwarded" | "paid";
 
@@ -143,7 +144,7 @@ export default function AdminCommissionInvoices() {
       toast.success(`${invoice.invoice_number} doorgestuurd naar Snelstart`);
       queryClient.invalidateQueries({ queryKey: ["commission-invoices"] });
     } catch (err) {
-      console.error(err);
+      reportError(err, { where: "AdminCommissionInvoices" });
       toast.error("Fout bij doorsturen");
     } finally {
       setForwardingId(null);
@@ -190,7 +191,7 @@ export default function AdminCommissionInvoices() {
       queryClient.invalidateQueries({ queryKey: ["commission-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
     } catch (err) {
-      console.error(err);
+      reportError(err, { where: "AdminCommissionInvoices" });
       toast.error("Fout bij markeren als betaald");
     } finally {
       setPayingId(null);
