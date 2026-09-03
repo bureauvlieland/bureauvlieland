@@ -200,11 +200,21 @@ Deno.serve(async (req) => {
       console.error("twilio error", twData);
       // 63016: free-form message outside the 24h customer service window.
       const outsideWindow = String(twData?.code ?? "") === "63016";
+      // 20003 with this provider message means the WhatsApp sender is blocked
+      // until the business compliance/KYC profile has been approved.
+      const complianceBlocked = String(twData?.code ?? "") === "20003" &&
+        String(twData?.message ?? "").toLowerCase().includes("compliance profile");
       return json(
         {
-          error: outsideWindow ? "outside_window" : "Twilio send failed",
+          error: outsideWindow
+            ? "outside_window"
+            : complianceBlocked
+            ? "compliance_not_approved"
+            : "Twilio send failed",
           details: outsideWindow
             ? "Het 24-uursvenster van WhatsApp is verlopen. De klant moet eerst opnieuw een bericht sturen, of je stuurt een goedgekeurde template."
+            : complianceBlocked
+            ? "WhatsApp-verzending is door de provider geblokkeerd omdat de bedrijfsverificatie nog niet is goedgekeurd. Je bericht is niet verzonden; het concept blijft bewaard."
             : twData?.message || twData?.code || twResp.status,
           twilio_code: twData?.code ?? null,
         },

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAdminChat, type ChatStatusFilter } from "@/hooks/useAdminChat";
 import { formatNL } from "@/lib/dateFormat";
 import { getWhatsappWindowState } from "@/lib/whatsappWindow";
+import { readChatDraft, saveChatDraft, sendChatDraft } from "@/lib/chatDraft";
 import { isToday, isYesterday, isSameDay } from "date-fns";
 import { useConversationProjects } from "@/hooks/useConversationProjects";
 import { ChatConversationItem } from "@/components/admin/chat/ChatConversationItem";
@@ -91,6 +92,7 @@ export function ChatPanel({
   const navigate = useNavigate();
 
   const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -102,6 +104,10 @@ export function ChatPanel({
       pinnedRef.current = true;
     }
   }, [initialConversationId, setActiveConversationId]);
+
+  useEffect(() => {
+    setMessage(activeConversationId ? readChatDraft(activeConversationId) : "");
+  }, [activeConversationId]);
 
   const isPresales = (id: string) => {
     const ref = projectRefs[id];
@@ -128,14 +134,6 @@ export function ChatPanel({
     });
 
 
-  const handleSendWithToast = async (text: string) => {
-    try {
-      await sendMessage(text);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Versturen mislukt");
-    }
-  };
-
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -143,10 +141,20 @@ export function ChatPanel({
   }, [messages]);
 
   const handleSend = async () => {
-    if (!message.trim()) return;
-    const text = message;
-    setMessage("");
-    await handleSendWithToast(text);
+    if (!activeConversationId || !message.trim() || isSending) return;
+    const text = message.trim();
+    setIsSending(true);
+    try {
+      await sendChatDraft({ conversationId: activeConversationId, content: text, send: sendMessage });
+      setMessage("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Versturen mislukt", {
+        duration: 10000,
+        description: "Uw tekst is als concept bewaard en kan opnieuw worden verzonden.",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -548,19 +556,25 @@ export function ChatPanel({
                 <div className="flex gap-2">
                   <Textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => {
+                      const nextMessage = e.target.value;
+                      setMessage(nextMessage);
+                      saveChatDraft(activeConversation.id, nextMessage);
+                    }}
                     onKeyDown={handleKeyDown}
                     placeholder="Typ je antwoord..."
                     className="min-h-[40px] max-h-[100px] resize-none text-sm"
                     rows={1}
+                    disabled={isSending}
                   />
                   <Button
                     size="icon"
                     onClick={handleSend}
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || isSending}
                     className="flex-shrink-0 h-10 w-10"
+                    aria-label={isSending ? "Bericht wordt verzonden" : "Bericht verzenden"}
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className={cn("h-4 w-4", isSending && "animate-pulse")} />
                   </Button>
                 </div>
               </div>
