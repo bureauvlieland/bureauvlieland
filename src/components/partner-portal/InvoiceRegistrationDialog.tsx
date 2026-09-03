@@ -23,6 +23,7 @@ import type { PartnerItem } from "@/types/partner";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
+import { reportError } from "@/lib/errorReporting";
 
 interface BillingDetails {
   billing_company_name?: string | null;
@@ -166,14 +167,14 @@ export const InvoiceRegistrationDialog = ({
         .upload(fileName, selectedFile);
 
       if (uploadError) {
-        console.error("Upload error:", uploadError);
+        reportError(uploadError, { where: "InvoiceRegistrationDialog: Upload error" });
         toast.error("Fout bij uploaden van PDF");
         return null;
       }
 
       return fileName;
     } catch (err) {
-      console.error("Upload error:", err);
+      reportError(err, { where: "InvoiceRegistrationDialog: Upload error" });
       toast.error("Fout bij uploaden van PDF");
       return null;
     } finally {

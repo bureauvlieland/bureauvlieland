@@ -20,6 +20,7 @@ import {
   CreditCard,
   Package,
 } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface PartnerCommissionData {
   commission_percentage: number;
@@ -75,7 +76,7 @@ const PartnerGuides = () => {
           setPartnerData(data);
         }
       } catch (error) {
-        console.error("Error fetching partner data:", error);
+        reportError(error, { where: "PartnerGuides: Error fetching partner data" });
       } finally {
         setIsLoading(false);
       }

@@ -11,6 +11,7 @@ import type {
 } from "@/types/purchaseInvoice";
 import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { isAwaitingPdfMatch } from "@/lib/purchaseInvoiceStatusFlow";
+import { reportError } from "@/lib/errorReporting";
 
 
 export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
@@ -130,7 +131,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           .from("purchase_invoice_lines")
           .insert(linesToInsert);
         if (linesErr) {
-          console.error("Error inserting invoice lines:", linesErr);
+          reportError(linesErr, { where: "usePurchaseInvoices: Error inserting invoice lines" });
           // non-fatal: header is already saved
         }
       }
@@ -151,7 +152,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           .from("partner_purchase_invoice_allocations")
           .insert(allocationsToInsert);
         if (allocErr) {
-          console.error("Error inserting invoice allocations:", allocErr);
+          reportError(allocErr, { where: "usePurchaseInvoices: Error inserting invoice allocations" });
           toast.error("Factuur opgeslagen, maar verdeling per onderdeel niet — controleer handmatig");
         }
       }
@@ -195,7 +196,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       toast.success("Inkoopfactuur geregistreerd");
     },
     onError: (error: any) => {
-      console.error("Error creating purchase invoice:", error);
+      reportError(error, { where: "usePurchaseInvoices: Error creating purchase invoice" });
       if (error?.code === "duplicate_invoice") {
         toast.error(error.message || "Deze factuur lijkt al geregistreerd te zijn.");
       } else {
@@ -222,7 +223,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
     },
     onError: (error) => {
-      console.error("Error updating purchase invoice:", error);
+      reportError(error, { where: "usePurchaseInvoices: Error updating purchase invoice" });
       toast.error("Fout bij bijwerken inkoopfactuur");
     },
   });
@@ -247,7 +248,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       toast.success("Factuur gemarkeerd als betaald");
     },
     onError: (error) => {
-      console.error("Error marking invoice as paid:", error);
+      reportError(error, { where: "usePurchaseInvoices: Error marking invoice as paid" });
       toast.error("Fout bij markeren als betaald");
     },
   });
@@ -354,7 +355,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       toast.success("Inkoopfactuur verwijderd");
     },
     onError: (error) => {
-      console.error("Error deleting purchase invoice:", error);
+      reportError(error, { where: "usePurchaseInvoices: Error deleting purchase invoice" });
       toast.error("Fout bij verwijderen inkoopfactuur");
     },
   });
@@ -365,7 +366,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       .createSignedUrl(filePath, 3600); // 1 hour
 
     if (error) {
-      console.error("Error getting download URL:", error);
+      reportError(error, { where: "usePurchaseInvoices: Error getting download URL" });
       toast.error("Fout bij ophalen download link");
       return null;
     }

@@ -64,6 +64,7 @@ import { PartnerOnboardingStats } from "@/components/admin/PartnerOnboardingStat
 import { BulkInviteDialog } from "@/components/admin/BulkInviteDialog";
 import { ResetPartnerConnectionsDialog } from "@/components/admin/ResetPartnerConnectionsDialog";
 import { SendPartnerMailingDialog } from "@/components/admin/SendPartnerMailingDialog";
+import { reportError } from "@/lib/errorReporting";
 
 interface Partner {
   id: string;
@@ -144,7 +145,7 @@ export const AdminPartnersContent = () => {
       if (error) throw error;
       setPartners(data || []);
     } catch (error) {
-      console.error("Error fetching partners:", error);
+      reportError(error, { where: "AdminPartners: Error fetching partners" });
       toast({
         title: "Fout",
         description: "Kon partners niet laden",
@@ -179,7 +180,7 @@ export const AdminPartnersContent = () => {
         description: `Partner is nu ${!currentActive ? "actief" : "inactief"}`,
       });
     } catch (error) {
-      console.error("Error updating partner:", error);
+      reportError(error, { where: "AdminPartners: Error updating partner" });
       toast({
         title: "Fout",
         description: "Kon partner niet bijwerken",
@@ -274,7 +275,7 @@ export const AdminPartnersContent = () => {
         description: `${partnerToDelete.name} is succesvol verwijderd.`,
       });
     } catch (error) {
-      console.error("Error deleting partner:", error);
+      reportError(error, { where: "AdminPartners: Error deleting partner" });
       toast({
         title: "Fout",
         description: "Kon partner niet verwijderen",

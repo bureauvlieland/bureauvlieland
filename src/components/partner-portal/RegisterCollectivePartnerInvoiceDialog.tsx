@@ -23,6 +23,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
 import { getItemLineTotal } from "@/lib/portalPricing";
+import { reportError } from "@/lib/errorReporting";
 
 /** Te-factureren bedrag: partner-quote heeft voorrang, anders admin-inschatting × pers × dagen. */
 const getBillableAmount = (item: PartnerItem): number => {
@@ -201,7 +202,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
       const path = `${firstItem.provider_id}/${firstItem.request_id}/collective-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("partner-invoices").upload(path, selectedFile);
       if (error) {
-        console.error(error);
+        reportError(error, { where: "RegisterCollectivePartnerInvoiceDialog" });
         toast.error("Fout bij uploaden van PDF");
         return null;
       }

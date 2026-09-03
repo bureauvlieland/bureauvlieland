@@ -12,6 +12,7 @@ import { PartnerAccommodationRequestCard } from "@/components/partner-portal/Par
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
 import { AlertCircle, RefreshCw, BedDouble, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { reportError } from "@/lib/errorReporting";
 
 interface AccommodationRequest {
   id: string;
@@ -151,7 +152,7 @@ const PartnerAccommodationContent = () => {
       .eq("partner_id", currentPartnerId);
 
     if (quotesError) {
-      console.error("Error fetching quotes:", quotesError);
+      reportError(quotesError, { where: "PartnerAccommodation: Error fetching quotes" });
       setError("Kon offertes niet laden.");
       setIsLoading(false);
       return;
@@ -175,7 +176,7 @@ const PartnerAccommodationContent = () => {
       .order("created_at", { ascending: false });
 
     if (requestsError) {
-      console.error("Error fetching requests:", requestsError);
+      reportError(requestsError, { where: "PartnerAccommodation: Error fetching requests" });
       setError("Kon aanvragen niet laden.");
       setIsLoading(false);
       return;
@@ -315,7 +316,7 @@ const PartnerAccommodationContent = () => {
           body: { quoteId: selectedRequest.quote.id },
         });
       } catch (todoError) {
-        console.error("Failed to create review todo:", todoError);
+        reportError(todoError, { where: "PartnerAccommodation: Failed to create review todo" });
       }
 
       // Log to program_request_history so the activity feed picks it up
@@ -344,7 +345,7 @@ const PartnerAccommodationContent = () => {
       setSelectedRequest(null);
       return true;
     } catch (err) {
-      console.error("Error submitting quote:", err);
+      reportError(err, { where: "PartnerAccommodation: Error submitting quote" });
       toast({
         title: "Fout",
         description: "Kon offerte niet indienen. Probeer het opnieuw.",
@@ -387,7 +388,7 @@ const PartnerAccommodationContent = () => {
       setSelectedRequest(null);
       return true;
     } catch (err) {
-      console.error("Error declining quote:", err);
+      reportError(err, { where: "PartnerAccommodation: Error declining quote" });
       toast({
         title: "Fout",
         description: "Kon aanvraag niet verwerken. Probeer het opnieuw.",

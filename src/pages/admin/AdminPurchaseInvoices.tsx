@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 import { isForwardableInvoice, isAwaitingPdfMatch, daysAwaitingPdf } from "@/lib/purchaseInvoiceStatusFlow";
+import { reportError } from "@/lib/errorReporting";
 
 export default function AdminPurchaseInvoices() {
   const [selectedRequestId, setSelectedRequestId] = useState<string>("all");
@@ -390,7 +391,7 @@ export default function AdminPurchaseInvoices() {
                         await markAsForwarded.mutateAsync(invoice.id);
                         ok++;
                       } catch (err) {
-                        console.error("Bulk forward failed for", invoice.id, err);
+                        reportError(err, { where: "AdminPurchaseInvoices: Bulk forward mislukt", invoiceId: invoice.id });
                         failed++;
                       }
                     }

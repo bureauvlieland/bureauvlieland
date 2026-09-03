@@ -9,6 +9,7 @@ import { fetchOptionalChildrenForBlock } from "@/hooks/useBlockComponents";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { BlockComponent } from "@/types/blockComponent";
 import type { BuildingBlock } from "@/types/buildingBlock";
+import { reportError } from "@/lib/errorReporting";
 
 
 interface OptionalAddOnsStripProps {
@@ -92,7 +93,7 @@ export const OptionalAddOnsStrip = ({
       // Vraag de pagina om de programma-data opnieuw te laden
       window.dispatchEvent(new CustomEvent("customer-program:refresh"));
     } catch (e) {
-      console.error(e);
+      reportError(e, { where: "OptionalAddOnsStrip" });
       toast.error("Toevoegen mislukt");
     } finally {
       setAdding(null);

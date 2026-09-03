@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
+import { reportError } from "@/lib/errorReporting";
 
 interface ThreadMessage {
   id: string;
@@ -56,7 +57,7 @@ export const PartnerCustomerMessagesPanel = ({
       .eq("audience", "customer_partner")
       .order("communication_date", { ascending: true });
     if (error) {
-      console.error(error);
+      reportError(error, { where: "PartnerCustomerMessagesPanel" });
     } else {
       setMessages((data as ThreadMessage[]) || []);
     }

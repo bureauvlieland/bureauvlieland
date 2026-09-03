@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getCommissionRate, EXTRA_CATEGORY_LABELS, type ExtraCategory } from "@/lib/commissionRates";
+import { reportError } from "@/lib/errorReporting";
 
 export type LodgingTarget = "skip" | "room" | "extra" | "tourist_tax";
 
@@ -160,7 +161,7 @@ export function LodgingAllocationBlock({
       onAllocationsChange(next);
       toast.success(`AI heeft ${suggestions.length} regel(s) geclassificeerd`);
     } catch (e: any) {
-      console.error("AI classify error:", e);
+      reportError(e, { where: "LodgingAllocationBlock: AI classify error" });
       toast.error(e.message || "AI-classificatie mislukt");
     } finally {
       setAiLoading(false);

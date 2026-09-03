@@ -45,6 +45,7 @@ import { resolveFeeStructure } from "@/lib/feeEngine";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
+import { reportError } from "@/lib/errorReporting";
 
 interface ProgramRequest {
   id: string;
@@ -424,7 +425,7 @@ const AdminInvoicePreview = () => {
       }
       // If explicitInvoiceId is set, the dedicated effect above will set the number.
     } catch (error) {
-      console.error("Error fetching data:", error);
+      reportError(error, { where: "AdminInvoicePreview: Error fetching data" });
       toast.error("Fout bij laden gegevens");
       navigate("/admin/projecten");
     } finally {
@@ -922,7 +923,7 @@ const AdminInvoicePreview = () => {
       URL.revokeObjectURL(url);
       toast.success("Factuur PDF gedownload");
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      reportError(error, { where: "AdminInvoicePreview: Error generating PDF" });
       toast.error("Fout bij genereren PDF");
     } finally {
       setIsGenerating(false);

@@ -34,6 +34,7 @@ import { nl } from "date-fns/locale";
 import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
 import { getItemLineTotal } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { reportError } from "@/lib/errorReporting";
 
 /**
  * Bepaal het te-factureren bedrag voor een partner-item.
@@ -152,7 +153,7 @@ const PartnerFinanceContent = () => {
         const dashboardData = await response.json();
         setData(dashboardData);
       } catch (err) {
-        console.error("Error fetching dashboard:", err);
+        reportError(err, { where: "PartnerFinance: Error fetching dashboard" });
         setError("Er is een fout opgetreden bij het laden van je gegevens.");
       } finally {
         setIsLoading(false);
@@ -183,7 +184,7 @@ const PartnerFinanceContent = () => {
         setData(dashboardData);
       }
     } catch (err) {
-      console.error("Error refetching dashboard:", err);
+      reportError(err, { where: "PartnerFinance: Error refetching dashboard" });
     }
   }, [partnerToken]);
 
@@ -230,7 +231,7 @@ const PartnerFinanceContent = () => {
       await refetchData();
       return { success: true, commission: result.commission };
     } catch (err: any) {
-      console.error("Error registering invoice:", err);
+      reportError(err, { where: "PartnerFinance: Error registering invoice" });
       toast.error(err?.message || "Er is een fout opgetreden bij het registreren van de factuur");
       return { success: false };
     }
@@ -278,7 +279,7 @@ const PartnerFinanceContent = () => {
       await refetchData();
       return { success: true };
     } catch (err: any) {
-      console.error("Error registering collective invoice:", err);
+      reportError(err, { where: "PartnerFinance: Error registering collective invoice" });
       toast.error(err?.message || "Er is een fout opgetreden bij het registreren van de factuur");
       return { success: false };
     }

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface UnavailabilityPeriod {
   id: string;
@@ -66,7 +67,7 @@ export function AdminPartnerConflictBanner({ items, selectedDates }: AdminPartne
       if (error) throw error;
       setUnavailability(data || []);
     } catch (error) {
-      console.error("Error fetching unavailability:", error);
+      reportError(error, { where: "AdminPartnerConflictBanner: Error fetching unavailability" });
     } finally {
       setIsLoading(false);
     }
@@ -195,7 +196,7 @@ export function useItemUnavailabilityCheck(
         if (error) throw error;
         setPeriod(data);
       } catch (error) {
-        console.error("Error checking unavailability:", error);
+        reportError(error, { where: "AdminPartnerConflictBanner: Error checking unavailability" });
       } finally {
         setIsLoading(false);
       }

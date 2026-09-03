@@ -32,6 +32,7 @@ import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { trackQuoteRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
+import { reportError } from "@/lib/errorReporting";
 
 // Event type options for the dropdown
 const EVENT_TYPE_OPTIONS = [
@@ -150,7 +151,7 @@ export default function Offerte() {
 
       form.reset();
     } catch (error) {
-      console.error("Error submitting quote request:", error);
+      reportError(error, { where: "Offerte: Error submitting quote request" });
       toast({
         title: "Er ging iets mis",
         description: "Probeer het later opnieuw of neem direct contact op.",

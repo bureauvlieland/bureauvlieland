@@ -15,6 +15,7 @@ import type { AccommodationQuote } from '@/types/accommodation';
 import { ProjectDocumentsPanel } from '@/components/shared/ProjectDocumentsPanel';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.png';
+import { reportError } from "@/lib/errorReporting";
 
 export default function AccommodationQuotes() {
   const { token } = useParams<{ token: string }>();
@@ -37,7 +38,7 @@ export default function AccommodationQuotes() {
       );
 
       if (error || !payload || payload.error) {
-        console.error('Error checking accommodation redirect:', error || payload?.error);
+        reportError(error || payload?.error, { where: "AccommodationQuotes: Error checking accommodation redirect" });
         setIsRedirecting(false);
         return;
       }

@@ -32,6 +32,7 @@ import {
   suggestQuoteValidUntil,
 } from "@/lib/quoteValidity";
 import { toast } from "sonner";
+import { reportError } from "@/lib/errorReporting";
 
 interface AdminSendQuoteDialogProps {
   requestId: string;
@@ -149,7 +150,7 @@ Bureau Vlieland`;
       setIsOpen(false);
       onSuccess?.();
     } catch (error) {
-      console.error("Error sending quote:", error);
+      reportError(error, { where: "AdminSendQuoteDialog: Error sending quote" });
       toast.error("Fout bij versturen offerte");
     } finally {
       setIsSending(false);
@@ -174,7 +175,7 @@ Bureau Vlieland`;
 
       toast.success("Testmail verstuurd naar erwin@bureauvlieland.nl");
     } catch (error) {
-      console.error("Error sending test quote:", error);
+      reportError(error, { where: "AdminSendQuoteDialog: Error sending test quote" });
       toast.error("Fout bij versturen testmail");
     } finally {
       setIsSendingTest(false);

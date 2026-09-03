@@ -38,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
+import { reportError } from "@/lib/errorReporting";
 
 const formSchema = z.object({
   invoice_number: z.string().min(1, "Factuurnummer is verplicht"),
@@ -255,7 +256,7 @@ export const RegisterBureauInvoiceDialog = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error registering invoice:", error);
+      reportError(error, { where: "RegisterBureauInvoiceDialog: Error registering invoice" });
       toast.error("Fout bij registreren factuur");
     } finally {
       setIsSubmitting(false);

@@ -1,11 +1,12 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { CartProvider } from "@/contexts/CartContext";
 import { PreSalesChatWidget } from "@/components/site/PreSalesChatWidget";
@@ -127,6 +128,19 @@ const AdminSocial = lazy(() => import("./pages/admin/AdminSocial"));
 const AdminSocialSettings = lazy(() => import("./pages/admin/AdminSocialSettings"));
 const AdminEmailHealth = lazy(() => import("./pages/admin/AdminEmailHealth"));
 
+/**
+ * Grens rond de routes. Een crash in één pagina blijft binnen die pagina,
+ * en wegnavigeren herstelt de grens vanzelf (via resetKeys).
+ */
+const RouteBoundary = ({ children }: { children: ReactNode }) => {
+  const location = useLocation();
+  return (
+    <ErrorBoundary name="route" resetKeys={[location.pathname]}>
+      {children}
+    </ErrorBoundary>
+  );
+};
+
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -145,7 +159,10 @@ const App = () => {
           <ScrollToTop />
           <SiteStructuredData />
 
-          <PreSalesChatWidget />
+          <ErrorBoundary name="presales-chat" fallback={() => null}>
+            <PreSalesChatWidget />
+          </ErrorBoundary>
+          <RouteBoundary>
           <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -303,6 +320,7 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </RouteBoundary>
         </CartProvider>
       </BrowserRouter>
     </TooltipProvider>

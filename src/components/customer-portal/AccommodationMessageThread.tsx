@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
+import { reportError } from "@/lib/errorReporting";
 
 interface ThreadMessage {
   id: string;
@@ -43,7 +44,7 @@ export const AccommodationMessageThread = ({
       if (error) throw error;
       setMessages((data?.messages as ThreadMessage[]) || []);
     } catch (e) {
-      console.error("Thread load failed", e);
+      reportError(e, { where: "AccommodationMessageThread: Thread load failed" });
     } finally {
       setLoading(false);
     }

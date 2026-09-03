@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
 import { PartnerUnavailabilityManager } from "./PartnerUnavailabilityManager";
+import { reportError } from "@/lib/errorReporting";
 
 
 interface PartnerDetails {
@@ -187,7 +188,7 @@ export const PartnerSettingsForm = () => {
         description: "Uw bedrijfsgegevens zijn bijgewerkt.",
       });
     } catch (err) {
-      console.error("Error saving partner details:", err);
+      reportError(err, { where: "PartnerSettingsForm: Error saving partner details" });
       toast({
         title: "Fout",
         description: "Kon gegevens niet opslaan. Probeer het opnieuw.",
@@ -228,7 +229,7 @@ export const PartnerSettingsForm = () => {
         description: "Uw wachtwoord is succesvol bijgewerkt.",
       });
     } catch (err: any) {
-      console.error("Error changing password:", err);
+      reportError(err, { where: "PartnerSettingsForm: Error changing password" });
       toast({
         title: "Fout",
         description: err.message || "Kon wachtwoord niet wijzigen.",

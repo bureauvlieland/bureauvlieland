@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Lock, CheckCircle, AlertTriangle } from "lucide-react";
 import { z } from "zod";
 import { strongPasswordSchema, PASSWORD_RULES_HINT } from "@/lib/passwordPolicy";
+import { reportError } from "@/lib/errorReporting";
 
 const passwordSchema = z.object({
   password: strongPasswordSchema,
@@ -105,7 +106,7 @@ const PartnerResetPassword = () => {
       try {
         await supabase.functions.invoke("update-partner-password-set");
       } catch (updateErr) {
-        console.error("Error updating password_set_at:", updateErr);
+        reportError(updateErr, { where: "PartnerResetPassword: Error updating password_set_at" });
       }
 
       setIsSuccess(true);
@@ -118,7 +119,7 @@ const PartnerResetPassword = () => {
         navigate("/partner/dashboard");
       }, 2000);
     } catch (err) {
-      console.error("Password update error:", err);
+      reportError(err, { where: "PartnerResetPassword: Password update error" });
       toast({
         title: "Fout",
         description: "Kon wachtwoord niet wijzigen. Probeer het opnieuw.",
@@ -202,7 +203,7 @@ const PartnerResetPassword = () => {
         });
       } catch (err) {
         clearTimeout(timeoutId);
-        console.error("Resend reset error:", err);
+        reportError(err, { where: "PartnerResetPassword: Resend reset error" });
         toast({
           title: "Fout",
           description: "Kon geen nieuwe link versturen. Neem contact op met Bureau Vlieland.",

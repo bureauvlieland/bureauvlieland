@@ -13,6 +13,7 @@ import { Upload, File, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PartnerItem } from "@/types/partner";
+import { reportError } from "@/lib/errorReporting";
 
 interface UploadInvoicePdfPartnerDialogProps {
   item: PartnerItem | null;
@@ -81,7 +82,7 @@ export function UploadInvoicePdfPartnerDialog({
       onUploaded?.();
       handleClose();
     } catch (err) {
-      console.error("Upload error:", err);
+      reportError(err, { where: "UploadInvoicePdfPartnerDialog: Upload error" });
       toast.error("Fout bij uploaden PDF");
     } finally {
       setIsSubmitting(false);

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProgramRequestItem } from "@/types/programRequest";
+import { reportError } from "@/lib/errorReporting";
 
 interface ProgramPdfDownloadProps {
   customerName: string;
@@ -85,7 +86,7 @@ export const ProgramPdfDownload = ({
         description: "Het programma is opgeslagen als .docx.",
       });
     } catch (err: any) {
-      console.error("docx generation error:", err);
+      reportError(err, { where: "ProgramPdfDownload: docx generation error" });
       toast({
         title: "Word-document genereren mislukt",
         description: err?.message ?? "Er ging iets mis bij het maken van het document.",

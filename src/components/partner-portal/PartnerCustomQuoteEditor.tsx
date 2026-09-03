@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, FileText, Send } from "lucide-react";
 import { computeQuoteLineTotals, isValidLine, type QuoteLine } from "@/lib/customQuoteLines";
+import { reportError } from "@/lib/errorReporting";
 
 interface Props {
   itemId: string;
@@ -105,7 +106,7 @@ export function PartnerCustomQuoteEditor({ itemId, partnerId, briefing, onSubmit
       const ok = await onSubmitted(totals.incl_vat, notes);
       if (ok) toast.success("Offerte ingediend bij Bureau Vlieland");
     } catch (e: any) {
-      console.error(e);
+      reportError(e, { where: "PartnerCustomQuoteEditor" });
       toast.error("Kon offerte niet opslaan", { description: e?.message });
     } finally {
       setSaving(false);

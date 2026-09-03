@@ -10,6 +10,7 @@ import { Loader2, Save, Globe, MapPin, Sparkles, X, Plus, FileText, Image as Ima
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerImageUpload } from "./PartnerImageUpload";
+import { reportError } from "@/lib/errorReporting";
 
 export const PartnerProfileForm = () => {
   const { toast } = useToast();
@@ -83,7 +84,7 @@ export const PartnerProfileForm = () => {
       if (error) throw error;
       toast({ title: "Profiel opgeslagen", description: "Uw bedrijfsprofiel is bijgewerkt." });
     } catch (err) {
-      console.error("Error saving profile:", err);
+      reportError(err, { where: "PartnerProfileForm: Error saving profile" });
       toast({ title: "Fout", description: "Kon profiel niet opslaan.", variant: "destructive" });
     } finally {
       setIsSaving(false);

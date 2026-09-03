@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, ImageIcon, AlertCircle, CheckCircle, Info, Euro, Settings, Image, MapPin } from "lucide-react";
 import type { PartnerBuildingBlock } from "@/types/partner";
 import { LocationPicker } from "@/components/admin/LocationPicker";
+import { reportError } from "@/lib/errorReporting";
 
 // Slugify helper
 const slugify = (text: string): string =>
@@ -356,7 +357,7 @@ export const PartnerBlockSheet = ({
         description: validation.warning || "Je afbeelding is succesvol opgeslagen.",
       });
     } catch (error) {
-      console.error("Error uploading image:", error);
+      reportError(error, { where: "PartnerBlockSheet: Error uploading image" });
       toast({
         title: "Upload mislukt",
         description: "Kon de afbeelding niet uploaden. Probeer het opnieuw.",
@@ -491,7 +492,7 @@ export const PartnerBlockSheet = ({
 
       onSaved();
     } catch (error) {
-      console.error("Error saving block:", error);
+      reportError(error, { where: "PartnerBlockSheet: Error saving block" });
       toast({
         title: "Fout",
         description: "Kon wijzigingen niet opslaan. Probeer het opnieuw.",

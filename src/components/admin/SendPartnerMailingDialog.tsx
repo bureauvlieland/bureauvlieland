@@ -27,6 +27,7 @@ import {
 import { Code, Eye, Send, Loader2, CheckCircle, XCircle, Variable } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { reportError } from "@/lib/errorReporting";
 
 interface MailingResult {
   partnerId: string;
@@ -120,7 +121,7 @@ export function SendPartnerMailingDialog({
         variant: failed > 0 ? "destructive" : "default",
       });
     } catch (error) {
-      console.error("Error sending mailing:", error);
+      reportError(error, { where: "SendPartnerMailingDialog: Error sending mailing" });
       toast({
         title: "Fout",
         description: "Kon mailing niet versturen",

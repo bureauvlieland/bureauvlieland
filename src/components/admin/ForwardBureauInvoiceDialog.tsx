@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
+import { reportError } from "@/lib/errorReporting";
 
 export interface BureauInvoiceForForward {
   id: string;
@@ -96,7 +97,7 @@ export function ForwardBureauInvoiceDialog({
       toast.success("Verkoopfactuur (incl. PDF-bijlage) doorgestuurd naar boekhouding");
       onClose();
     } catch (error) {
-      console.error("Error forwarding bureau invoice:", error);
+      reportError(error, { where: "ForwardBureauInvoiceDialog: Error forwarding bureau invoice" });
       toast.error("Fout bij doorsturen verkoopfactuur");
     } finally {
       setIsSubmitting(false);

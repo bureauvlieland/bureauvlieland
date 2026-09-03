@@ -18,6 +18,7 @@ import {
   Trash2, 
   Loader2,
 } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface UnavailabilityPeriod {
   id: string;
@@ -55,7 +56,7 @@ export const PartnerUnavailabilityManager = ({ partnerId }: PartnerUnavailabilit
       if (error) throw error;
       setPeriods(data || []);
     } catch (err) {
-      console.error("Error fetching unavailability:", err);
+      reportError(err, { where: "PartnerUnavailabilityManager: Error fetching unavailability" });
       toast.error("Kon beschikbaarheid niet laden");
     } finally {
       setIsLoading(false);
@@ -97,7 +98,7 @@ export const PartnerUnavailabilityManager = ({ partnerId }: PartnerUnavailabilit
       setReason("");
       await fetchPeriods();
     } catch (err) {
-      console.error("Error adding period:", err);
+      reportError(err, { where: "PartnerUnavailabilityManager: Error adding period" });
       toast.error("Kon periode niet toevoegen");
     } finally {
       setIsSaving(false);
@@ -117,7 +118,7 @@ export const PartnerUnavailabilityManager = ({ partnerId }: PartnerUnavailabilit
       toast.success("Periode verwijderd");
       await fetchPeriods();
     } catch (err) {
-      console.error("Error deleting period:", err);
+      reportError(err, { where: "PartnerUnavailabilityManager: Error deleting period" });
       toast.error("Kon periode niet verwijderen");
     } finally {
       setDeletingId(null);

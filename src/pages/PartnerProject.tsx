@@ -23,6 +23,7 @@ import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } fro
 import { cn } from "@/lib/utils";
 import { DismissProjectDialog } from "@/components/partner-portal/DismissProjectDialog";
 import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partnerProjectDismiss";
+import { reportError } from "@/lib/errorReporting";
 
 
 type Mode = "activities" | "accommodation";
@@ -120,7 +121,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       const dashboard = await response.json();
       setData(dashboard);
     } catch (err) {
-      console.error(err);
+      reportError(err, { where: "PartnerProject" });
       setError("Er is een fout opgetreden bij het laden.");
     } finally {
       setIsLoading(false);
@@ -325,7 +326,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       setShowQuoteSheet(false);
       return true;
     } catch (err) {
-      console.error("Error declining quote:", err);
+      reportError(err, { where: "PartnerProject: Error declining quote" });
       toast({ title: "Fout", description: "Kon aanvraag niet afwijzen.", variant: "destructive" });
       return false;
     }

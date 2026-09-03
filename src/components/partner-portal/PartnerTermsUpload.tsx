@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
+import { reportError } from "@/lib/errorReporting";
 
 interface PartnerTermsUploadProps {
   partnerId: string;
@@ -67,7 +68,7 @@ export const PartnerTermsUpload = ({
         });
         onUpdate();
       } catch (err) {
-        console.error("Error updating terms preference:", err);
+        reportError(err, { where: "PartnerTermsUpload: Error updating terms preference" });
         toast({
           title: "Opslaan mislukt",
           description: "Kon de voorkeur niet opslaan. Probeer het opnieuw.",
@@ -90,7 +91,7 @@ export const PartnerTermsUpload = ({
         if (error) throw error;
         onUpdate();
       } catch (err) {
-        console.error("Error updating terms preference:", err);
+        reportError(err, { where: "PartnerTermsUpload: Error updating terms preference" });
       } finally {
         setIsSaving(false);
       }
@@ -156,7 +157,7 @@ export const PartnerTermsUpload = ({
 
       onUpdate();
     } catch (err) {
-      console.error("Error uploading terms:", err);
+      reportError(err, { where: "PartnerTermsUpload: Error uploading terms" });
       toast({
         title: "Upload mislukt",
         description: "Kon het bestand niet uploaden. Probeer het opnieuw.",
@@ -201,7 +202,7 @@ export const PartnerTermsUpload = ({
 
       onUpdate();
     } catch (err) {
-      console.error("Error deleting terms:", err);
+      reportError(err, { where: "PartnerTermsUpload: Error deleting terms" });
       toast({
         title: "Verwijderen mislukt",
         description: "Kon het bestand niet verwijderen. Probeer het opnieuw.",

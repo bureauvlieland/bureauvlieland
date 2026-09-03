@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X, ImageIcon, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { transformImageUrl, buildSrcSet } from "@/lib/supabaseImage";
+import { reportError } from "@/lib/errorReporting";
 
 interface HotelGalleryProps {
   images: { url: string; alt?: string }[];
@@ -28,7 +29,7 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
         await document.exitFullscreen();
       }
     } catch (e) {
-      console.error("Fullscreen toggle failed", e);
+      reportError(e, { where: "HotelGallery: Fullscreen toggle failed" });
     }
   };
 

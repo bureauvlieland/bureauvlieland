@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
 import { resolveStatusAfterPdfLink } from "@/lib/purchaseInvoiceStatusFlow";
+import { reportError } from "@/lib/errorReporting";
 
 interface UploadInvoicePdfDialogProps {
   invoice: PurchaseInvoiceWithRelations | null;
@@ -84,7 +85,7 @@ export function UploadInvoicePdfDialog({ invoice, onClose }: UploadInvoicePdfDia
       toast.success("PDF toegevoegd aan factuur");
       handleClose();
     } catch (err) {
-      console.error("Upload error:", err);
+      reportError(err, { where: "UploadInvoicePdfDialog: Upload error" });
       toast.error("Fout bij uploaden PDF");
     } finally {
       setIsSubmitting(false);
