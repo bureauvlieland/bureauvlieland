@@ -4809,39 +4809,6 @@ export type Database = {
           },
         ]
       }
-      partner_unavailability_public: {
-        Row: {
-          end_date: string | null
-          partner_id: string | null
-          start_date: string | null
-        }
-        Insert: {
-          end_date?: string | null
-          partner_id?: string | null
-          start_date?: string | null
-        }
-        Update: {
-          end_date?: string | null
-          partner_id?: string | null
-          start_date?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "partner_unavailability_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_unavailability_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners_public"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       partners_public: {
         Row: {
           about_text: string | null
@@ -4971,6 +4938,14 @@ export type Database = {
         Returns: {
           id: string
           invoicing_mode: string
+        }[]
+      }
+      get_public_partner_unavailability: {
+        Args: never
+        Returns: {
+          end_date: string
+          partner_id: string
+          start_date: string
         }[]
       }
       get_scheduled_job_health: {
