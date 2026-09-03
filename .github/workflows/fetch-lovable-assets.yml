@@ -10,6 +10,11 @@ name: Lovable-uploads ophalen
 
 on:
   workflow_dispatch:
+  # GitHub kent een workflow pas via de Actions-knop als hij op main staat.
+  # Tot die tijd start hij ook bij een push van dit bestand op deze branch.
+  push:
+    branches: [claude/app-migration-lovable-e7sruy]
+    paths: ['.github/workflows/fetch-lovable-assets.yml']
 
 permissions:
   contents: write
