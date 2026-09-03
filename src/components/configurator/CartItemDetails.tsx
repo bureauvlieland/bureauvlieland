@@ -8,10 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Clock, Plus, Minus, MessageSquare, Calendar } from "lucide-react";
+import { X, Clock, Plus, Minus, MessageSquare, Calendar, CalendarOff } from "lucide-react";
 import { timeSlots, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
 
 interface CartItemDetailsProps {
   block: BuildingBlock;
