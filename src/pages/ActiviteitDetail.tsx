@@ -16,6 +16,8 @@ import {
   formatPriceNote,
 } from "@/types/buildingBlock";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import { FaqSection } from "@/components/FaqSection";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { getActivityContent } from "@/content/activityContent";
