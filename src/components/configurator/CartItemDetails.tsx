@@ -114,6 +114,17 @@ export const CartItemDetails = ({
         </div>
       )}
 
+      {isProviderUnavailable && (
+        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+          <CalendarOff className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            De aanbieder is op deze datum mogelijk niet beschikbaar. U kunt de
+            aanvraag gewoon versturen; wij zoeken dan een alternatief of andere
+            datum.
+          </span>
+        </p>
+      )}
+
       {/* Notes toggle and field */}
       {!showNotes ? (
         <Button
