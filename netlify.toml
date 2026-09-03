@@ -1,0 +1,49 @@
+# Netlify-configuratie.
+#
+# De 301-redirects van de oude website staan in public/_redirects; Vite kopieert
+# dat bestand naar dist/ en Netlify leest het daar. Die staan hier dus bewust
+# niet nog eens.
+
+[build]
+  publish = "dist"
+  # Bewust niet `npm run build`: het prebuild-script gebruikt `bunx`, en of bun
+  # beschikbaar is hangt af van welke lockfile Netlify oppikt (deze repo heeft
+  # er drie). Expliciet aanroepen is voorspelbaar. Voeg je een stap toe aan
+  # prebuild in package.json, voeg hem dan hier ook toe.
+  #
+  # VITE_RELEASE koppelt een foutmelding in Sentry aan de commit die hem
+  # veroorzaakte; COMMIT_REF wordt door Netlify gezet.
+  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # De VITE_-variabelen (Supabase, Sentry) staan in .env in de repo en worden
+  # door Vite zelf geladen; die hoeven hier niet herhaald te worden.
+
+# Previews draaien onder mode "preview", zodat fouten uit een nog niet
+# goedgekeurde wijziging in Sentry niet tussen de productiemeldingen belanden.
+[context.deploy-preview]
+  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build --mode preview && printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt"
+
+[context.branch-deploy]
+  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build --mode preview && printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt"
+
+# Bestandsnamen in /assets bevatten een inhoudshash, dus die mogen onbeperkt
+# gecachet worden: bij een wijziging verandert de naam.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html mag juist nooit blijven hangen, anders blijven bezoekers naar een
+# oude versie van de app verwezen worden.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
