@@ -37,7 +37,7 @@ const GRANT_BASELINE = new Set<string>([
   "admin_activity_log", "bureau_invoices",
   "accommodation_requests", "accommodation_quotes", "email_log",
   "email_templates", "app_settings", "accepted_terms_log",
-  "partner_unavailability", "program_templates", "program_template_items",
+  "program_templates", "program_template_items",
   "accommodation_quote_extras", "partner_room_types", "project_communications",
   "chat_conversations", "chat_messages", "chat_admin_presence", "map_bookings",
   "accommodation_quote_history", "purchase_invoice_inbox",
