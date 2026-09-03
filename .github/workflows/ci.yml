@@ -174,8 +174,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # Alleen KEY=VALUE-regels: GITHUB_ENV weigert commentaar en lege regels.
       - name: Plafonds inlezen
-        run: cat .github/quality-baselines.env >> "$GITHUB_ENV"
+        run: grep -E '^[A-Z_]+=[0-9]+$' .github/quality-baselines.env >> "$GITHUB_ENV"
 
       # Harde poort: dit staat vandaag op nul en moet daar blijven.
       - name: Typecheck (tsconfig.app.json)
