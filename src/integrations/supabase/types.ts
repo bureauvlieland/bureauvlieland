@@ -4940,6 +4940,14 @@ export type Database = {
           invoicing_mode: string
         }[]
       }
+      get_public_partner_unavailability: {
+        Args: never
+        Returns: {
+          end_date: string
+          partner_id: string
+          start_date: string
+        }[]
+      }
       get_scheduled_job_health: {
         Args: never
         Returns: {

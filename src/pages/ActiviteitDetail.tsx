@@ -16,6 +16,8 @@ import {
   formatPriceNote,
 } from "@/types/buildingBlock";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import { FaqSection } from "@/components/FaqSection";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { getActivityContent } from "@/content/activityContent";
@@ -40,6 +42,7 @@ const ActiviteitDetail = () => {
   const [related, setRelated] = useState<BuildingBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const { byPartner: unavailableByPartner } = usePublicPartnerUnavailability();
 
   useEffect(() => {
     let cancelled = false;
@@ -273,7 +276,16 @@ const ActiviteitDetail = () => {
                 </div>
               </div>
 
+              {block.provider_id && (
+                <PartnerAvailabilityNote
+                  note={unavailableByPartner.get(block.provider_id)}
+                  variant="panel"
+                  className="mb-4"
+                />
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
+
                 <Link to={`/snel-aanvragen?block=${block.id}`} className="flex-1">
                   <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
                     Direct aanvragen

@@ -24,6 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import {
   matchBundlesToBlocks,
   buildBookingLink,
@@ -133,6 +135,7 @@ const Bouwstenen = () => {
   const kenBurns = useKenBurns();
   const { data: blocks, isLoading } = usePublishedBuildingBlocks();
   const { bundles } = useDirectBookableActivities();
+  const { byPartner: unavailableByPartner } = usePublicPartnerUnavailability();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<BuildingBlockCategory | "all">("all");
   const [onlyBookable, setOnlyBookable] = useState(false);
@@ -342,6 +345,12 @@ const Bouwstenen = () => {
                         <p className="text-xs text-muted-foreground">
                           door {getProviderName(block)}
                         </p>
+                        {block.provider_id && (
+                          <PartnerAvailabilityNote
+                            note={unavailableByPartner.get(block.provider_id)}
+                            className="mt-1"
+                          />
+                        )}
                       </div>
                       {block.short_description && (
                         <p className="text-sm text-muted-foreground line-clamp-3">

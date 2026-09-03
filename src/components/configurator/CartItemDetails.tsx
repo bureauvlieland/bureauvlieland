@@ -8,10 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Clock, Plus, Minus, MessageSquare, Calendar } from "lucide-react";
+import { X, Clock, Plus, Minus, MessageSquare, Calendar, CalendarOff } from "lucide-react";
 import { timeSlots, type BuildingBlock, type CartItemDetail } from "@/types/buildingBlock";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
 
 interface CartItemDetailsProps {
   block: BuildingBlock;
@@ -31,8 +32,23 @@ export const CartItemDetails = ({
   showDaySelector = false,
 }: CartItemDetailsProps) => {
   const [showNotes, setShowNotes] = useState(item.notes.length > 0);
+  const { periods } = usePublicPartnerUnavailability();
 
   const hasMultipleDays = selectedDates.length > 1;
+
+  // Subtiele melding als de gekozen dag binnen een niet-beschikbare periode valt.
+  const itemDate = selectedDates[item.dayIndex];
+  const itemDateISO = itemDate ? format(itemDate, "yyyy-MM-dd") : null;
+  const providerId = (block as { provider_id?: string | null }).provider_id ?? null;
+  const isProviderUnavailable =
+    !!providerId &&
+    !!itemDateISO &&
+    periods.some(
+      (p) =>
+        p.partner_id === providerId &&
+        p.start_date <= itemDateISO &&
+        p.end_date >= itemDateISO,
+    );
 
   return (
     <div className="py-2.5 px-3 bg-background rounded-lg space-y-2">
@@ -96,6 +112,17 @@ export const CartItemDetails = ({
             </SelectContent>
           </Select>
         </div>
+      )}
+
+      {isProviderUnavailable && (
+        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+          <CalendarOff className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            De aanbieder is op deze datum mogelijk niet beschikbaar. U kunt de
+            aanvraag gewoon versturen; wij zoeken dan een alternatief of andere
+            datum.
+          </span>
+        </p>
       )}
 
       {/* Notes toggle and field */}
