@@ -252,7 +252,19 @@ Deno.serve(async (req) => {
       // events van de andere ontvangers nergens op matchen. In dat geval
       // pakken we de meest recente verzonden rij naar hetzelfde adres
       // (max 7 dagen oud; ruimer koppelen levert verkeerde toeschrijving op).
-      if (rows.length === 0 && ev.email) {
+      //
+      // BELANGRIJK: deze gok geldt ALLEEN voor positieve/neutrale events
+      // (sent/open/click). Terminale negatieve events (bounce, blocked, spam,
+      // unsub) mogen nooit op basis van alleen het adres aan een van onze
+      // mails worden gehangen — het account is accountbreed en zo'n event kan
+      // van een heel andere verzending komen. Dat zou een echte klant
+      // onterecht op de blokkeerlijst zetten waardoor alle vervolgmail stil
+      // wordt geweigerd.
+      const fallbackAllowed = !["bounce", "blocked", "spam", "unsub"].includes(
+        ev.event as string,
+      );
+      if (rows.length === 0 && ev.email && fallbackAllowed) {
+
         const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
         const { data: byEmail } = await supabase
           .from("email_log")
