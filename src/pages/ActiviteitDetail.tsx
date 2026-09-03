@@ -42,6 +42,7 @@ const ActiviteitDetail = () => {
   const [related, setRelated] = useState<BuildingBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const { byPartner: unavailableByPartner } = usePublicPartnerUnavailability();
 
   useEffect(() => {
     let cancelled = false;
