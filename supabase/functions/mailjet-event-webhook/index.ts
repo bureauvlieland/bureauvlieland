@@ -393,7 +393,13 @@ Deno.serve(async (req) => {
         return null;
       })();
 
-      if (suppressReason && ev.email) {
+      // Extra slot op de deur: alleen blokkeren wanneer het event op onze
+      // eigen MessageID matchte, nooit op een gok op basis van het adres.
+      const suppressionTrusted =
+        matchReason === "exact_message_id" || matchReason === "rounded_message_id";
+
+      if (suppressReason && ev.email && suppressionTrusted) {
+
         const normalized = ev.email.trim().toLowerCase();
         // Skip if adres al geblokt — we werken niet bij, oudste reden blijft leidend.
         const { data: existing } = await supabase
