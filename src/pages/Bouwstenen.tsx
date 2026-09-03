@@ -24,6 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import {
   matchBundlesToBlocks,
   buildBookingLink,
