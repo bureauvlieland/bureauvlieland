@@ -30,11 +30,6 @@
 # Social-preview afbeelding is JPEG geworden (965 KB → ~60 KB)
 /og-image.png                                /og-image.jpg            301
 
-# Lovable-uploads (13 foto's op home, /catering en /wadlopen-vlieland) staan
-# niet in de repo maar in Lovable's opslag. Netlify haalt ze daar server-side
-# op (200 = proxy, geen redirect). Tijdelijk: de foto's komen in de repo.
-/__l5e/*                                     https://bureauvlieland.lovable.app/__l5e/:splat  200
-
 # Partner portal redirect
 /partner                                     /partner/login           301
 
