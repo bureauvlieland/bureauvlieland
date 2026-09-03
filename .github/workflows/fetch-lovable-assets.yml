@@ -1,0 +1,57 @@
+# Eenmalig: haalt de foto's op die nog in Lovable's opslag staan en zet ze in
+# de repo, naast hun .asset.json. Draait op GitHub's netwerk omdat de
+# ontwikkelomgeving lovable.app niet mag bereiken.
+#
+# Start handmatig via Actions → "Lovable-uploads ophalen" → Run workflow.
+# Slaagt alleen als álle bestanden binnenkomen met exact de grootte uit hun
+# .asset.json; anders wordt er niets gecommit.
+
+name: Lovable-uploads ophalen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ophalen en controleren
+        run: |
+          python3 - <<'PY'
+          import glob, json, os, sys, urllib.request
+          BASE = "https://bureauvlieland.lovable.app"
+          fouten = []
+          for meta_path in sorted(glob.glob("src/**/*.asset.json", recursive=True)):
+              meta = json.load(open(meta_path))
+              doel = meta_path[: -len(".asset.json")]          # x.jpg.asset.json → x.jpg
+              url = BASE + meta["url"]
+              try:
+                  with urllib.request.urlopen(url, timeout=60) as r:
+                      data = r.read()
+              except Exception as e:
+                  fouten.append(f"{doel}: ophalen mislukt ({e})"); continue
+              if len(data) != meta["size"]:
+                  fouten.append(f"{doel}: {len(data)} bytes, verwacht {meta['size']}"); continue
+              open(doel, "wb").write(data)
+              print(f"ok  {len(data):>8} bytes  {doel}")
+          if fouten:
+              print("\nNIET gecommit, fouten:\n  " + "\n  ".join(fouten)); sys.exit(1)
+          PY
+
+      - name: Committen op dezelfde branch
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/assets
+          git commit -m "Lovable-uploads in de repo gezet
+
+          Dertien foto's die tot nu toe alleen in Lovable's opslag stonden,
+          opgehaald via GitHub Actions en naast hun .asset.json geplaatst.
+          Elk bestand is gecontroleerd op exact de grootte uit de metadata."
+          git push
