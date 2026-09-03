@@ -32,8 +32,23 @@ export const CartItemDetails = ({
   showDaySelector = false,
 }: CartItemDetailsProps) => {
   const [showNotes, setShowNotes] = useState(item.notes.length > 0);
+  const { periods } = usePublicPartnerUnavailability();
 
   const hasMultipleDays = selectedDates.length > 1;
+
+  // Subtiele melding als de gekozen dag binnen een niet-beschikbare periode valt.
+  const itemDate = selectedDates[item.dayIndex];
+  const itemDateISO = itemDate ? format(itemDate, "yyyy-MM-dd") : null;
+  const providerId = (block as { provider_id?: string | null }).provider_id ?? null;
+  const isProviderUnavailable =
+    !!providerId &&
+    !!itemDateISO &&
+    periods.some(
+      (p) =>
+        p.partner_id === providerId &&
+        p.start_date <= itemDateISO &&
+        p.end_date >= itemDateISO,
+    );
 
   return (
     <div className="py-2.5 px-3 bg-background rounded-lg space-y-2">
