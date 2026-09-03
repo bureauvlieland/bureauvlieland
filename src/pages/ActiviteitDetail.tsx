@@ -276,7 +276,16 @@ const ActiviteitDetail = () => {
                 </div>
               </div>
 
+              {block.provider_id && (
+                <PartnerAvailabilityNote
+                  note={unavailableByPartner.get(block.provider_id)}
+                  variant="panel"
+                  className="mb-4"
+                />
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
+
                 <Link to={`/snel-aanvragen?block=${block.id}`} className="flex-1">
                   <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
                     Direct aanvragen
