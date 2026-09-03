@@ -21,7 +21,7 @@ const Evenementen = () => {
         <link rel="canonical" href="https://bureauvlieland.nl/evenementen" />
         <meta property="og:title" content="Agenda & evenementen Vlieland | Bureau Vlieland" />
         <meta property="og:description" content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content="https://bureauvlieland.nl/evenementen" />
         <meta property="og:type" content="website" />
       </Helmet>

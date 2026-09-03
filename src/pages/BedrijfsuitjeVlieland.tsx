@@ -49,7 +49,7 @@ const BedrijfsuitjeVlieland = () => {
         <link rel="canonical" href="https://bureauvlieland.nl/bedrijfsuitje-vlieland" />
         <meta property="og:title" content="Bedrijfsuitje op Vlieland organiseren – Bureau Vlieland" />
         <meta property="og:description" content="Een bedrijfsuitje op Vlieland dat klopt van A tot Z. Activiteiten, overnachting, catering en logistiek geregeld door lokale regisseurs." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content="https://bureauvlieland.nl/bedrijfsuitje-vlieland" />
         <meta property="og:type" content="website" />
       </Helmet>

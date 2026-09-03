@@ -27,7 +27,7 @@ const OnzeWerkwijze = () => {
           property="og:description"
           content="Twee routes, één belofte: één partij, één factuur. Ontdek hoe Bureau Vlieland uw programma op Vlieland organiseert."
         />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.png" />
+        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content="https://bureauvlieland.nl/onze-werkwijze" />
         <meta property="og:type" content="website" />
       </Helmet>
