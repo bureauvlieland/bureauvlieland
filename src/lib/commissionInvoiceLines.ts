@@ -34,6 +34,11 @@ export interface CommissionLineDraft {
   expectedBaseAmount: number | null;
   /** True als de herberekende grondslag meer dan 2 cent afwijkt van de werklijst. */
   hasBaseMismatch: boolean;
+  /**
+   * True als deze logiesregel extra's bevat waarover een afwijkend percentage is
+   * afgesproken; kamer en extra's vallen hier onder één percentage.
+   */
+  extrasRateMismatch: boolean;
 }
 
 export interface BuildCommissionLinesInput {
@@ -131,6 +136,7 @@ export function buildCommissionLineDrafts(
       expectedBaseAmount,
       hasBaseMismatch:
         expectedBaseAmount !== null && Math.abs(expectedBaseAmount - baseAmountExclVat) > 0.02,
+      extrasRateMismatch: row.extrasRateMismatch === true,
     });
   }
 

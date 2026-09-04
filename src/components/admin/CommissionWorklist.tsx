@@ -457,6 +457,15 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                                 Verwacht
                               </Badge>
                             )}
+                            {row.extrasRateMismatch && (
+                              <Badge
+                                variant="outline"
+                                className="mt-1 ml-1 text-xs bg-amber-50 text-amber-800 border-amber-200"
+                                title="Kamer en extra's vallen hier onder één percentage, terwijl voor extra's een ander percentage met deze partner is afgesproken. Controleer het bedrag voordat je factureert."
+                              >
+                                Extra&rsquo;s: percentage controleren
+                              </Badge>
+                            )}
                             {row.exemptReason && (
                               <div className="mt-1 text-xs text-muted-foreground">
                                 Commissievrij: {row.exemptReason}

@@ -10,6 +10,7 @@
  * voor `buildReconciliationRows` wordt opgehaald.
  */
 
+import { getCommissionRate } from "./commissionRates.ts";
 import {
   DEFAULT_RECON_SETTINGS,
   invoiceKey,
@@ -55,6 +56,38 @@ export interface ReconciliationInputs {
 
 // deno-lint-ignore no-explicit-any
 type AnyClient = any;
+
+/** Btw-tarief dat geldt als een logiesprijs of -extra er zelf geen heeft staan. */
+export const DEFAULT_LODGING_VAT_RATE = 9;
+
+export interface QuoteExtraLike {
+  unit_price?: number | string | null;
+  quantity?: number | string | null;
+  pricing_type?: string | null;
+  vat_rate?: number | string | null;
+  price_includes_vat?: boolean | null;
+}
+
+/**
+ * Bedrag van een logiesregel (kamerprijs of extra), teruggerekend naar EX btw.
+ *
+ * Elke extra heeft een eigen btw-tarief: F&B is doorgaans 21 % terwijl de
+ * kamerprijs 9 % is. Eerder werd de som van alle extra's tegen het tarief van de
+ * kámer teruggerekend, waardoor de commissiegrondslag te hoog uitkwam — bij
+ * € 2.000 aan F&B scheelde dat € 182 grondslag en € 18 commissie.
+ *
+ * `price_includes_vat` heeft in de database default `true`, dus alleen een
+ * expliciete `false` betekent "deze prijs is al ex btw".
+ */
+export function lodgingAmountExclVat(extra: QuoteExtraLike): number {
+  const unitPrice = Number(extra.unit_price) || 0;
+  const amount = extra.pricing_type === "fixed"
+    ? unitPrice
+    : unitPrice * (Number(extra.quantity) || 0);
+  if (extra.price_includes_vat === false) return amount;
+  const rate = extra.vat_rate == null ? DEFAULT_LODGING_VAT_RATE : Number(extra.vat_rate) || 0;
+  return amount / (1 + rate / 100);
+}
 
 export async function loadReconciliationSettings(client: AnyClient): Promise<ReconSettings> {
   const { data } = await client
@@ -191,20 +224,21 @@ export async function loadReconciliationInputs(
 
   // ── Extra's bij logies-offertes (commissionabel) ─────────────────────────
   const quoteIds = rawQuotes.map((q) => q.id);
-  const extrasByQuote = new Map<string, number>();
+  /** Som van de extra's per offerte, al teruggerekend naar EX btw. */
+  const extrasExclByQuote = new Map<string, number>();
+  const quotesWithExtras = new Set<string>();
   if (quoteIds.length) {
     const { data: quoteExtras, error: extrasError } = await client
       .from("accommodation_quote_extras")
-      .select("quote_id, unit_price, quantity, pricing_type")
+      .select("quote_id, unit_price, quantity, pricing_type, vat_rate, price_includes_vat")
       .in("quote_id", quoteIds);
     if (extrasError) {
       throw new Error(`accommodation_quote_extras lookup failed: ${extrasError.message}`);
     }
     for (const extra of quoteExtras ?? []) {
-      const amount = extra.pricing_type === "fixed"
-        ? Number(extra.unit_price) || 0
-        : (Number(extra.unit_price) || 0) * (Number(extra.quantity) || 0);
-      extrasByQuote.set(extra.quote_id, (extrasByQuote.get(extra.quote_id) ?? 0) + amount);
+      const excl = lodgingAmountExclVat(extra);
+      extrasExclByQuote.set(extra.quote_id, (extrasExclByQuote.get(extra.quote_id) ?? 0) + excl);
+      quotesWithExtras.add(extra.quote_id);
     }
   }
 
@@ -228,7 +262,12 @@ export async function loadReconciliationInputs(
           )
           .in("id", requestIds)
       : Promise.resolve({ data: [], error: null }),
-    client.from("partners").select("id, name, commission_percentage, pays_by_direct_debit"),
+    client
+      .from("partners")
+      .select(
+        "id, name, commission_percentage, accommodation_commission_percentage, " +
+          "extras_commission_percentage, pays_by_direct_debit",
+      ),
   ]);
 
   if (projectsRes.error) throw new Error(`program_requests lookup failed: ${projectsRes.error.message}`);
@@ -272,6 +311,10 @@ export async function loadReconciliationInputs(
       commission_exempt_at: i.commission_exempt_at ?? null,
     }));
 
+  const partnerById = new Map<string, ReconPartnerInput>(
+    ((partnersRes.data ?? []) as ReconPartnerInput[]).map((p) => [p.id, p]),
+  );
+
   const accommodationProjects: ReconProjectInput[] = [];
   const accommodationItems: ReconItemInput[] = rawQuotes.map((q) => {
     const request = q.accommodation_requests;
@@ -286,15 +329,28 @@ export async function loadReconciliationInputs(
         completed_at: request.completed_at ?? null,
       });
     }
-    const total = (Number(q.price_total) || 0) + (extrasByQuote.get(q.id) ?? 0);
+    // Kamerprijs en extra's worden apart naar ex btw teruggerekend — ze hebben
+    // verschillende tarieven — en pas daarna opgeteld. We leveren de grondslag
+    // dus al ex btw aan, met vat_rate 0 zodat er niet nog eens door wordt gedeeld.
+    // `price_includes_vat` heeft in de database default `true`; alleen een
+    // expliciete `false` betekent dat de prijs al ex btw is. Kamer en extra's
+    // hanteren nu dezelfde regel — eerder gold een leeg veld bij de kamer als
+    // "ex btw", wat de commissiegrondslag op oude offertes te hoog maakte.
+    const roomExcl = lodgingAmountExclVat({
+      unit_price: q.price_total,
+      pricing_type: "fixed",
+      vat_rate: q.vat_rate,
+      price_includes_vat: q.price_includes_vat,
+    });
+    const totalExcl = roomExcl + (extrasExclByQuote.get(q.id) ?? 0);
+    const partner = partnerById.get(q.partner_id);
     return {
       id: q.id,
       request_id: request?.id ?? q.request_id ?? null,
       provider_id: q.partner_id,
       block_name: q.accommodation_name,
-      // quoted_price wordt als incl. btw behandeld; bij excl.-prijzen zetten we vat_rate op 0.
-      quoted_price: total,
-      vat_rate: q.price_includes_vat ? (q.vat_rate ?? 9) : 0,
+      quoted_price: totalExcl,
+      vat_rate: 0,
       commission_percentage: q.commission_percentage,
       commission_status: q.commission_status,
       commission_basis: "purchase",
@@ -307,6 +363,10 @@ export async function loadReconciliationInputs(
       commission_exempt: q.commission_exempt ?? false,
       commission_exempt_reason: q.commission_exempt_reason ?? null,
       commission_exempt_at: q.commission_exempt_at ?? null,
+      // Kamer en extra's vallen onder één percentage. Wijkt het extra's-tarief
+      // van deze partner daarvan af, dan moet de admin de regel nalopen.
+      extras_rate_mismatch: quotesWithExtras.has(q.id) &&
+        getCommissionRate(partner, "extras") !== getCommissionRate(partner, "lodging"),
     } satisfies ReconItemInput;
   });
 
@@ -359,7 +419,7 @@ export async function loadReconciliationInputs(
     items: allItems,
     invoices,
     projects,
-    partners: (partnersRes.data ?? []) as ReconPartnerInput[],
+    partners: [...partnerById.values()],
     settings,
     linkedInvoiceKeys,
   };

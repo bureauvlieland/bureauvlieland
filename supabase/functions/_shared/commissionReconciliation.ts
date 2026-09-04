@@ -11,6 +11,8 @@
  * gebruikt kan worden en volledig te testen is.
  */
 
+import { getCommissionRate, type CommissionPartner } from "./commissionRates.ts";
+
 export type ReconStatus =
   | "missing_invoice"
   | "unlinked_invoice"
@@ -64,6 +66,12 @@ export interface ReconItemInput {
   commission_exempt?: boolean | null;
   commission_exempt_reason?: string | null;
   commission_exempt_at?: string | null;
+  /**
+   * Logies met extra's waarvoor met deze partner een ánder commissiepercentage
+   * geldt dan over de kamerprijs. De regel rekent dan met één percentage over het
+   * geheel; de admin moet dat controleren. Zie `extrasRateMismatch` op de rij.
+   */
+  extras_rate_mismatch?: boolean | null;
 }
 
 
@@ -105,10 +113,9 @@ export interface ReconProjectInput {
 }
 
 
-export interface ReconPartnerInput {
+export interface ReconPartnerInput extends CommissionPartner {
   id: string;
   name: string | null;
-  commission_percentage?: number | null;
   pays_by_direct_debit?: boolean | null;
 }
 
@@ -159,6 +166,12 @@ export interface ReconRow {
   commissionBasis: string | null;
   /** Aantal dagen sinds uitvoering (missing) of registratie (unlinked). */
   ageDays: number | null;
+  /**
+   * True als deze logiesregel extra's bevat waarover een afwijkend percentage is
+   * afgesproken. Het getoonde commissiebedrag rekent met één percentage over kamer
+   * én extra's en moet dus met de hand gecontroleerd worden.
+   */
+  extrasRateMismatch: boolean;
 }
 
 
@@ -391,7 +404,11 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const project = item.request_id ? projectMap.get(item.request_id) : undefined;
     const quoted = toNumber(item.quoted_price);
     const salesExcl = quoted === null ? null : exclVatFromIncl(quoted, toNumber(item.vat_rate));
-    const commissionPct = toNumber(item.commission_percentage) ?? toNumber(partner?.commission_percentage) ?? 10;
+    // Logies valt terug op het logiespercentage van de partner, niet op het
+    // activiteitenpercentage. Beide staan in `partners`; eerder werd alleen het
+    // activiteitenpercentage geraadpleegd.
+    const commissionPct = toNumber(item.commission_percentage)
+      ?? getCommissionRate(partner, item.item_type === "accommodation" ? "lodging" : "activity");
 
     const activeInvoices = (invoicesByItem.get(item.id) ?? []).filter((e) => e.inv.commission_exempt !== true);
     const purchaseExcl = activeInvoices.length > 0
@@ -459,6 +476,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionStatus: item.commission_status,
       commissionBasis,
       ageDays: daysSince(executionDate, now),
+      extrasRateMismatch: item.extras_rate_mismatch === true,
     });
   }
 
@@ -470,7 +488,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const partner = partnerMap.get(partnerId);
     const project = inv.request_id ? projectMap.get(inv.request_id) : undefined;
     const purchaseExcl = toNumber(inv.amount_excl_vat);
-    const commissionPct = toNumber(partner?.commission_percentage) ?? 10;
+    // Een losse inkoopfactuur hangt aan geen onderdeel, dus geldt het
+    // activiteitenpercentage van de partner.
+    const commissionPct = getCommissionRate(partner, "activity");
     const exempt = inv.commission_exempt === true || COMMISSION_FREE_PARTNER_IDS.has(partnerId);
     const purchaseCommission = exempt ? 0 : (purchaseExcl ?? 0) * (commissionPct / 100);
 
@@ -508,6 +528,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionStatus: inv.commission_invoiced_at ? "invoiced" : null,
       commissionBasis: null,
       ageDays: daysSince(inv.invoice_date ?? inv.created_at ?? null, now),
+      extrasRateMismatch: false,
     });
   }
 

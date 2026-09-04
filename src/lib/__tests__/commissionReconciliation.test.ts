@@ -432,3 +432,89 @@ describe("verzamelfactuur-allocaties", () => {
     expect(plain.find((r) => r.itemId === "x1")!.purchaseExclVat).toBeCloseTo(1000, 6);
   });
 });
+
+/**
+ * K3 uit de doorlichting: voor logies gold het activiteitenpercentage van de
+ * partner in plaats van het logiespercentage, omdat alleen `commission_percentage`
+ * werd geraadpleegd. Beide staan in `partners`.
+ */
+describe("commissiepercentage per soort", () => {
+  const hotel = {
+    id: "badhotel",
+    name: "Badhotel Bruin",
+    commission_percentage: 15,
+    accommodation_commission_percentage: 10,
+    extras_commission_percentage: 0,
+  };
+
+  const lodgingItem = (overrides: Partial<ReconItemInput> = {}): ReconItemInput =>
+    item({
+      id: "quote-1",
+      provider_id: "badhotel",
+      item_type: "accommodation",
+      block_name: "Tweepersoonskamers",
+      commission_percentage: null,
+      quoted_price: 1000,
+      vat_rate: 0,
+      ...overrides,
+    });
+
+  it("logies valt terug op het logiespercentage, niet op het activiteitenpercentage", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem()],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionPercentage).toBe(10);
+    expect(row.salesCommission).toBeCloseTo(100, 6);
+  });
+
+  it("een programma-onderdeel valt terug op het activiteitenpercentage", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem({ item_type: "activity", id: "item-9" })],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionPercentage).toBe(15);
+  });
+
+  it("een percentage op de regel zelf wint van beide", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem({ commission_percentage: 7.5 })],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionPercentage).toBe(7.5);
+  });
+
+  it("zonder partnerpercentages blijft 10 % de standaard", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem({ provider_id: "onbekend" })],
+      invoices: [],
+      projects,
+      partners: [{ id: "onbekend", name: "Onbekend" }],
+    });
+    expect(row.commissionPercentage).toBe(10);
+  });
+
+  it("markeert logies met extra's waarover een afwijkend percentage geldt", () => {
+    const [flagged] = buildReconciliationRows({
+      items: [lodgingItem({ extras_rate_mismatch: true })],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(flagged.extrasRateMismatch).toBe(true);
+
+    const [plain] = buildReconciliationRows({
+      items: [lodgingItem()],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(plain.extrasRateMismatch).toBe(false);
+  });
+});
