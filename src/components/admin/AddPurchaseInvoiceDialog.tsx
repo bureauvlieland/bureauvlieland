@@ -58,6 +58,7 @@ import {
   type LodgingLineAllocation,
 } from "@/components/admin/purchase-invoices/LodgingAllocationBlock";
 import { reportError } from "@/lib/errorReporting";
+import { buildBillingLineRowsByItem } from "@/lib/purchaseInvoiceBillingLines";
 
 
 
@@ -962,118 +963,58 @@ export function AddPurchaseInvoiceDialog({
       }
 
 
-      // Optional: copy invoice lines into program_item_billing_lines (sales lines) for the linked item
+      // Doorbelasten aan de klant: de factuurregels vervangen de geoffreerde prijs
+      // van het onderdeel. Bij een verdeling over meerdere onderdelen krijgt elk
+      // onderdeel zijn eigen deel — eerder viel de doorbelasting dan stilzwijgend weg.
       if (copyToBillingLines && created?.id) {
-        const uniqueAllocItems = Array.from(new Set(validAllocations.map((a) => a.item_id)));
-        const targetItemId = uniqueAllocItems.length === 1
-          ? uniqueAllocItems[0]
-          : (validAllocations.length === 0 && itemId ? itemId : null);
-        if (targetItemId) {
+        const rowsByItem = buildBillingLineRowsByItem({
+          allocations: validAllocations,
+          lines: validLines.map((l) => ({
+            description: l.description,
+            quantity: l.quantity,
+            amount_excl_vat: l.amount_excl_vat,
+            vat_rate: l.vat_rate,
+            vat_amount: l.vat_amount,
+            amount_incl_vat: l.amount_incl_vat,
+          })),
+          headerItemId: itemId || null,
+          header: {
+            amount_excl_vat: headerExcl,
+            vat_rate: headerVatRate,
+            vat_amount: headerVat,
+            amount_incl_vat: headerIncl,
+          },
+          description,
+          invoiceNumber,
+        });
+
+        for (const [targetItemId, rowsToInsert] of rowsByItem) {
           try {
-            // Wipe existing
             await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
-            let rowsToInsert: any[];
-            if (validAllocations.length > 1 && uniqueAllocItems.length === 1) {
-              // Meerdere BTW-regels op hetzelfde onderdeel → één billing-line per allocatie
-              rowsToInsert = validAllocations.map((a, idx) => ({
-                item_id: targetItemId,
-                description: a.notes || `${description || `Factuur ${invoiceNumber}`} (BTW ${a.vat_rate}%)`,
-                quantity: 1,
-                unit_price_excl_vat: a.amount_excl_vat,
-                vat_rate: a.vat_rate,
-                vat_amount: a.vat_amount,
-                amount_excl_vat: a.amount_excl_vat,
-                amount_incl_vat: a.amount_incl_vat,
-                sort_order: idx,
-              }));
-            } else if (validLines.length > 0) {
-              rowsToInsert = validLines.map((l, idx) => ({
-                item_id: targetItemId,
-                description: l.description,
-                quantity: l.quantity,
-                unit_price_excl_vat: l.amount_excl_vat / (l.quantity || 1),
-                vat_rate: l.vat_rate,
-                vat_amount: l.vat_amount,
-                amount_excl_vat: l.amount_excl_vat,
-                amount_incl_vat: l.amount_incl_vat,
-                sort_order: idx,
-              }));
-            } else {
-              rowsToInsert = [{
-                item_id: targetItemId,
-                description: description || `Factuur ${invoiceNumber}`,
-                quantity: 1,
-                unit_price_excl_vat: headerExcl,
-                vat_rate: headerVatRate,
-                vat_amount: headerVat,
-                amount_excl_vat: headerExcl,
-                amount_incl_vat: headerIncl,
-                sort_order: 0,
-              }];
-            }
             await supabase.from("program_item_billing_lines").insert(rowsToInsert);
             await supabase
               .from("program_request_items")
               .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
               .eq("id", targetItemId);
-            toast.success("Factuurregels overgenomen op programma-onderdeel");
           } catch (e) {
-            reportError(e, { where: "AddPurchaseInvoiceDialog: copyToBillingLines failed" });
+            reportError(e, {
+              where: "AddPurchaseInvoiceDialog: copyToBillingLines failed",
+              itemId: targetItemId,
+            });
             toast.error("Overnemen naar factuurregels mislukt");
           }
         }
-      }
 
-      // Logies-allocatie: pas inkoopfactuur 1-op-1 toe op accommodation_quote
-      if (lodgingEnabled && lodgingQuoteId && created?.id && lines.length > 0) {
-        const roomLines = lines
-          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
-          .filter((x) => x.a?.target === "room")
-          .map((x) => {
-            const t = computeLineTotals(x.l);
-            return {
-              amount_incl_vat: t.amount_incl_vat,
-              amount_excl_vat: t.amount_excl_vat,
-              vat_rate: t.vat_rate,
-              description: x.l.description,
-            };
-          });
-        const extraLines = lines
-          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
-          .filter((x) => x.a?.target === "extra")
-          .map((x) => {
-            const t = computeLineTotals(x.l);
-            return {
-              category: x.a!.category || "other",
-              description: x.l.description,
-              amount_incl_vat: t.amount_incl_vat,
-              vat_rate: t.vat_rate,
-            };
-          });
-        const taxExcluded = lines
-          .map((l, i) => ({ l, a: lodgingAllocations[i] }))
-          .filter((x) => x.a?.target === "tourist_tax")
-          .reduce((s, x) => s + computeLineTotals(x.l).amount_incl_vat, 0);
-
-        if (roomLines.length > 0 || extraLines.length > 0) {
-          try {
-            const { error: applyErr } = await supabase.functions.invoke("apply-purchase-invoice-to-lodging", {
-              body: {
-                quote_id: lodgingQuoteId,
-                purchase_invoice_id: created.id,
-                partner_id: partnerId,
-                invoice_number: invoiceNumber,
-                room_lines: roomLines,
-                extra_lines: extraLines,
-                tourist_tax_total_excluded: taxExcluded,
-              },
-            });
-            if (applyErr) throw applyErr;
-            toast.success("Inkoopfactuur toegepast op logies-offerte");
-          } catch (e: any) {
-            reportError(e, { where: "AddPurchaseInvoiceDialog: apply-purchase-invoice-to-lodging failed" });
-            toast.error(e.message || "Toepassen op logies-offerte mislukt");
-          }
+        if (rowsByItem.size === 1) {
+          toast.success("Factuurregels overgenomen op programma-onderdeel");
+        } else if (rowsByItem.size > 1) {
+          toast.success(`Factuurregels overgenomen op ${rowsByItem.size} programma-onderdelen`);
+        } else {
+          // Aangevinkt, maar er is niets om over te nemen: zeg dat, want anders
+          // blijft de klant de geoffreerde prijs gefactureerd krijgen.
+          toast.warning(
+            "Doorbelasten stond aan, maar er is geen onderdeel gekoppeld — de klant houdt de geoffreerde prijs.",
+          );
         }
       }
 
