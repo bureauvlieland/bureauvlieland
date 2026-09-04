@@ -457,13 +457,9 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                                 Verwacht
                               </Badge>
                             )}
-                            {row.extrasRateMismatch && (
-                              <Badge
-                                variant="outline"
-                                className="mt-1 ml-1 text-xs bg-amber-50 text-amber-800 border-amber-200"
-                                title="Kamer en extra's vallen hier onder één percentage, terwijl voor extra's een ander percentage met deze partner is afgesproken. Controleer het bedrag voordat je factureert."
-                              >
-                                Extra&rsquo;s: percentage controleren
+                            {row.hasMixedRates && (
+                              <Badge variant="outline" className="mt-1 ml-1 text-xs">
+                                Gesplitst tarief
                               </Badge>
                             )}
                             {row.exemptReason && (
@@ -562,9 +558,19 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                           </td>
                           <td className="p-3 text-right tabular-nums font-medium">
                             {formatCurrency(commission)}
-                            <div className="text-xs text-muted-foreground">
-                              {row.commissionPercentage}% van {formatCurrency(basisAmount)}
-                            </div>
+                            {row.commissionComponents && row.hasMixedRates ? (
+                              <div className="text-xs text-muted-foreground">
+                                {row.commissionComponents.map((c, i) => (
+                                  <div key={`${c.kind}-${i}`}>
+                                    {c.commissionPct}% van {formatCurrency(c.baseExclVat)}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">
+                                {row.commissionPercentage}% van {formatCurrency(basisAmount)}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );

@@ -12,6 +12,7 @@
  */
 
 import { getCommissionRate, type CommissionPartner } from "./commissionRates.ts";
+import type { LodgingCommissionComponent } from "./lodgingCommission.ts";
 
 export type ReconStatus =
   | "missing_invoice"
@@ -67,11 +68,17 @@ export interface ReconItemInput {
   commission_exempt_reason?: string | null;
   commission_exempt_at?: string | null;
   /**
-   * Logies met extra's waarvoor met deze partner een ánder commissiepercentage
-   * geldt dan over de kamerprijs. De regel rekent dan met één percentage over het
-   * geheel; de admin moet dat controleren. Zie `extrasRateMismatch` op de rij.
+   * Per component uitgesplitste commissie (logies: kamer + extra's), elk met het
+   * btw-tarief en percentage dat bij dat component hoort. Is dit gezet, dan is het
+   * leidend boven `quoted_price × commission_percentage`.
    */
-  extras_rate_mismatch?: boolean | null;
+  commission_components?: LodgingCommissionComponent[] | null;
+  /**
+   * De eindfactuur van de partner is al 1-op-1 op deze offerte toegepast
+   * (`accommodation_quotes.purchase_invoice_id`). De offerte ís dan de factuur,
+   * minus de toeristenbelasting die er bewust uit gelaten is.
+   */
+  purchase_invoice_applied?: boolean | null;
 }
 
 
@@ -167,11 +174,14 @@ export interface ReconRow {
   /** Aantal dagen sinds uitvoering (missing) of registratie (unlinked). */
   ageDays: number | null;
   /**
-   * True als deze logiesregel extra's bevat waarover een afwijkend percentage is
-   * afgesproken. Het getoonde commissiebedrag rekent met één percentage over kamer
-   * én extra's en moet dus met de hand gecontroleerd worden.
+   * Uitsplitsing van de commissie over kamer en extra's, elk met eigen btw-tarief
+   * en percentage. Gevuld bij logies; leeg bij programma-onderdelen. Is dit gevuld,
+   * dan is `commissionAtRisk`/`salesCommission` de som van deze componenten en is
+   * `commissionPercentage` slechts het effectieve percentage om te tonen.
    */
-  extrasRateMismatch: boolean;
+  commissionComponents: LodgingCommissionComponent[] | null;
+  /** True als niet alle componenten hetzelfde percentage hebben. */
+  hasMixedRates: boolean;
 }
 
 
@@ -276,6 +286,8 @@ export const COMMISSION_FREE_PARTNER_IDS = new Set<string>([
 ]);
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const round2 = (value: number): number => Math.round(value * 100) / 100;
 
 export function daysSince(dateStr: string | null | undefined, now: Date = new Date()): number | null {
   if (!dateStr) return null;
@@ -407,13 +419,34 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     // Logies valt terug op het logiespercentage van de partner, niet op het
     // activiteitenpercentage. Beide staan in `partners`; eerder werd alleen het
     // activiteitenpercentage geraadpleegd.
-    const commissionPct = toNumber(item.commission_percentage)
-      ?? getCommissionRate(partner, item.item_type === "accommodation" ? "lodging" : "activity");
+    const components = item.commission_components ?? null;
+    const hasComponents = !!components && components.length > 0;
+    const componentCommission = hasComponents
+      ? round2(components!.reduce((sum, c) => sum + c.commissionAmount, 0))
+      : null;
+    const componentBase = hasComponents
+      ? round2(components!.reduce((sum, c) => sum + c.baseExclVat, 0))
+      : null;
+
+    // Bij logies met componenten is het rijpercentage alleen ter weergave: het is
+    // het percentage dat de som van de componenten oplevert over de som van de
+    // grondslagen. Reken ermee via `salesCommission`, niet via dit getal.
+    const commissionPct = hasComponents
+      ? (componentBase === 0 ? 0 : round2((componentCommission! / componentBase!) * 100))
+      : (toNumber(item.commission_percentage)
+        ?? getCommissionRate(partner, item.item_type === "accommodation" ? "lodging" : "activity"));
 
     const activeInvoices = (invoicesByItem.get(item.id) ?? []).filter((e) => e.inv.commission_exempt !== true);
     const purchaseExcl = activeInvoices.length > 0
       ? activeInvoices.reduce((sum, e) => sum + (e.amount ?? 0), 0)
       : (toNumber(item.invoiced_amount) !== null && item.invoiced_number ? toNumber(item.invoiced_amount) : null);
+
+    // Logies waarvan de eindfactuur al 1-op-1 op de offerte staat: de offerte ís
+    // de factuur, mét de juiste tarieven per component en zónder de
+    // toeristenbelasting die er bewust uit is gelaten. Het ruwe factuurbedrag
+    // gebruiken zou die belasting weer meetellen én de percentages platslaan.
+    const invoiceApplied = item.purchase_invoice_applied === true;
+    const salesBase = componentBase ?? salesExcl;
 
     const executionDate = item.execution_date ?? firstSelectedDate(project?.selected_dates);
 
@@ -424,15 +457,21 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       status = "exempt";
     } else if (purchaseExcl === null) {
       status = "missing_invoice";
-    } else if (salesExcl === null || isWithinTolerance(salesExcl, purchaseExcl, settings)) {
+    } else if (invoiceApplied) {
+      // De offerte is overschreven mét deze factuur; een afwijking is per definitie
+      // uitgesloten. Het verschil dat overblijft is de toeristenbelasting.
+      status = "match";
+    } else if (salesBase === null || isWithinTolerance(salesBase, purchaseExcl, settings)) {
       status = "match";
     } else {
       status = "deviation";
     }
 
-    const basisAmount = purchaseExcl ?? salesExcl ?? 0;
+    const basisAmount = purchaseExcl ?? salesBase ?? 0;
     const exemptItem = status === "exempt";
-    const commissionBasis = item.commission_basis ?? "purchase";
+    // Is de factuur al op de offerte toegepast, dan is de verkoopkant de
+    // authoritatieve grondslag — niet het ruwe factuurbedrag.
+    const commissionBasis = invoiceApplied ? "sales" : (item.commission_basis ?? "purchase");
     const projectCompleted = Boolean(
       project?.completed_at ||
         (project?.completion_status &&
@@ -455,12 +494,19 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       invoiceId: activeInvoices[0]?.inv.id ?? null,
       itemType: item.item_type ?? "activity",
       label: item.block_name ?? "Onbekend onderdeel",
-      salesExclVat: salesExcl,
+      salesExclVat: salesBase,
       purchaseExclVat: purchaseExcl,
-      differenceExclVat: salesExcl !== null && purchaseExcl !== null ? purchaseExcl - salesExcl : null,
+      differenceExclVat: salesBase !== null && purchaseExcl !== null ? purchaseExcl - salesBase : null,
       commissionPercentage: commissionPct,
-      commissionAtRisk: exemptItem ? 0 : basisAmount * (commissionPct / 100),
-      salesCommission: exemptItem || salesExcl === null ? (exemptItem ? 0 : null) : salesExcl * (commissionPct / 100),
+      commissionAtRisk: exemptItem
+        ? 0
+        : (componentCommission ?? basisAmount * (commissionPct / 100)),
+      // Bij logies met componenten is de som van de componenten de verkoopcommissie:
+      // elk component tegen zijn eigen tarief en percentage.
+      salesCommission: exemptItem
+        ? 0
+        : componentCommission ?? (salesExcl === null ? null : salesExcl * (commissionPct / 100)),
+
       purchaseCommission: exemptItem || purchaseExcl === null
         ? (exemptItem ? 0 : null)
         : purchaseExcl * (commissionPct / 100),
@@ -476,7 +522,10 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionStatus: item.commission_status,
       commissionBasis,
       ageDays: daysSince(executionDate, now),
-      extrasRateMismatch: item.extras_rate_mismatch === true,
+      commissionComponents: components,
+      hasMixedRates: components
+        ? new Set(components.map((c) => c.commissionPct)).size > 1
+        : false,
     });
   }
 
@@ -528,7 +577,8 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionStatus: inv.commission_invoiced_at ? "invoiced" : null,
       commissionBasis: null,
       ageDays: daysSince(inv.invoice_date ?? inv.created_at ?? null, now),
-      extrasRateMismatch: false,
+      commissionComponents: null,
+      hasMixedRates: false,
     });
   }
 

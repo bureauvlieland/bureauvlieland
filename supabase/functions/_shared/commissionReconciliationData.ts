@@ -11,6 +11,7 @@
  */
 
 import { getCommissionRate } from "./commissionRates.ts";
+import { calculateLodgingCommission, type LodgingExtraInput } from "./lodgingCommission.ts";
 import {
   DEFAULT_RECON_SETTINGS,
   invoiceKey,
@@ -56,38 +57,6 @@ export interface ReconciliationInputs {
 
 // deno-lint-ignore no-explicit-any
 type AnyClient = any;
-
-/** Btw-tarief dat geldt als een logiesprijs of -extra er zelf geen heeft staan. */
-export const DEFAULT_LODGING_VAT_RATE = 9;
-
-export interface QuoteExtraLike {
-  unit_price?: number | string | null;
-  quantity?: number | string | null;
-  pricing_type?: string | null;
-  vat_rate?: number | string | null;
-  price_includes_vat?: boolean | null;
-}
-
-/**
- * Bedrag van een logiesregel (kamerprijs of extra), teruggerekend naar EX btw.
- *
- * Elke extra heeft een eigen btw-tarief: F&B is doorgaans 21 % terwijl de
- * kamerprijs 9 % is. Eerder werd de som van alle extra's tegen het tarief van de
- * kámer teruggerekend, waardoor de commissiegrondslag te hoog uitkwam — bij
- * € 2.000 aan F&B scheelde dat € 182 grondslag en € 18 commissie.
- *
- * `price_includes_vat` heeft in de database default `true`, dus alleen een
- * expliciete `false` betekent "deze prijs is al ex btw".
- */
-export function lodgingAmountExclVat(extra: QuoteExtraLike): number {
-  const unitPrice = Number(extra.unit_price) || 0;
-  const amount = extra.pricing_type === "fixed"
-    ? unitPrice
-    : unitPrice * (Number(extra.quantity) || 0);
-  if (extra.price_includes_vat === false) return amount;
-  const rate = extra.vat_rate == null ? DEFAULT_LODGING_VAT_RATE : Number(extra.vat_rate) || 0;
-  return amount / (1 + rate / 100);
-}
 
 export async function loadReconciliationSettings(client: AnyClient): Promise<ReconSettings> {
   const { data } = await client
@@ -147,6 +116,7 @@ export async function loadReconciliationInputs(
     .select(
       "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
         "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
+        "purchase_invoice_id, " +
         "commission_exempt, commission_exempt_reason, commission_exempt_at, " +
         "accommodation_requests!inner(id, reference_number, customer_name, customer_company, " +
         "arrival_date, departure_date, completion_status, completed_at)",
@@ -224,21 +194,35 @@ export async function loadReconciliationInputs(
 
   // ── Extra's bij logies-offertes (commissionabel) ─────────────────────────
   const quoteIds = rawQuotes.map((q) => q.id);
-  /** Som van de extra's per offerte, al teruggerekend naar EX btw. */
-  const extrasExclByQuote = new Map<string, number>();
-  const quotesWithExtras = new Set<string>();
+  /** De extra's per offerte, elk met eigen btw-tarief en eigen commissiepercentage. */
+  const extrasByQuote = new Map<string, LodgingExtraInput[]>();
   if (quoteIds.length) {
     const { data: quoteExtras, error: extrasError } = await client
       .from("accommodation_quote_extras")
-      .select("quote_id, unit_price, quantity, pricing_type, vat_rate, price_includes_vat")
+      .select(
+        "quote_id, name, category, unit_price, quantity, pricing_type, vat_rate, " +
+          "price_includes_vat, commission_percentage",
+      )
       .in("quote_id", quoteIds);
     if (extrasError) {
       throw new Error(`accommodation_quote_extras lookup failed: ${extrasError.message}`);
     }
     for (const extra of quoteExtras ?? []) {
-      const excl = lodgingAmountExclVat(extra);
-      extrasExclByQuote.set(extra.quote_id, (extrasExclByQuote.get(extra.quote_id) ?? 0) + excl);
-      quotesWithExtras.add(extra.quote_id);
+      const unitPrice = Number(extra.unit_price) || 0;
+      const amount = extra.pricing_type === "fixed"
+        ? unitPrice
+        : unitPrice * (Number(extra.quantity) || 0);
+      const list = extrasByQuote.get(extra.quote_id) ?? [];
+      list.push({
+        label: extra.name ?? extra.category ?? "Extra",
+        amount,
+        vatRate: extra.vat_rate,
+        priceIncludesVat: extra.price_includes_vat,
+        // `apply-purchase-invoice-to-lodging` zet hier het extra's-percentage van
+        // de partner neer. Dat is de afspraak voor déze regel en gaat vóór.
+        commissionPercentage: extra.commission_percentage,
+      });
+      extrasByQuote.set(extra.quote_id, list);
     }
   }
 

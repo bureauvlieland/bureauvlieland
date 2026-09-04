@@ -83,7 +83,9 @@ export const handler = async (req: Request): Promise<Response> => {
     }
 
     // Calculate commission based on actual invoiced amount
-    const commissionPercentage = quote.commission_percentage || 10;
+    // `??` en niet `||`: een offerte met een afgesproken 0 % commissie moet 0 %
+    // blijven en niet stilzwijgend op 10 % uitkomen.
+    const commissionPercentage = quote.commission_percentage ?? 10;
     const commissionAmount = (invoicedAmount * commissionPercentage) / 100;
 
     // Update quote with invoice data
