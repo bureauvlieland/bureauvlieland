@@ -65,6 +65,7 @@ import {
   summarizeLineAssignments,
   type LineTarget,
 } from "@/lib/purchaseInvoiceLineAssignment";
+import { buildLinesFromScan } from "@/lib/purchaseInvoiceScanLines";
 
 
 
@@ -115,109 +116,6 @@ type Step = "upload" | "scanning" | "verify";
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
 
 
-
-/**
- * Build prefill LineRows from an AI scan result.
- *
- * Priority:
- * 1. If `line_items` are present AND every item has its own `vat_rate`, use those (most fine-grained).
- * 2. Otherwise, if `vat_breakdown` has multiple entries (mixed VAT invoice), create one row per VAT rate
- *    using the breakdown subtotals. This is the only correct path for invoices like watertaxi (9% + 21%).
- * 3. Otherwise, fall back to `line_items` (single-rate factuur) or no rows (header-only).
- */
-function buildLinesFromScan(result: ScanResult | null): LineRow[] {
-  if (!result) return [];
-
-  const breakdown = result.vat_breakdown || [];
-  const items = result.line_items || [];
-  const itemsAllHaveRate = items.length > 0 && items.every((li) => li.vat_rate != null);
-
-  if (itemsAllHaveRate) {
-    return items.map((li) => ({
-      description: li.description || "",
-      quantity: li.quantity != null ? String(li.quantity) : "1",
-      unit_price:
-        li.unit_price != null
-          ? String(li.unit_price)
-          : li.total_excl_vat != null && li.quantity
-          ? String(li.total_excl_vat / li.quantity)
-          : li.total_excl_vat != null
-          ? String(li.total_excl_vat)
-          : "",
-      vat_rate: String(li.vat_rate ?? result.vat_rate ?? 21),
-    }));
-  }
-
-  if (breakdown.length > 1) {
-    return breakdown
-      .filter((b) => b.amount_excl > 0 || b.vat_amount > 0)
-      .map((b) => ({
-        description: `BTW ${b.vat_rate}%`,
-        quantity: "1",
-        unit_price: String(b.amount_excl),
-        vat_rate: String(b.vat_rate),
-        // Neem de exacte BTW van de PDF mee zodat we niet herrekenen.
-        vat_amount_override: b.vat_amount != null ? String(b.vat_amount) : undefined,
-        amount_incl_override:
-          b.amount_excl != null && b.vat_amount != null
-            ? String(Math.round((b.amount_excl + b.vat_amount) * 100) / 100)
-            : undefined,
-      }));
-  }
-
-  if (items.length > 0) {
-    // Single-rate factuur: als de scanner een totaal-BTW heeft gegeven,
-    // verdelen we die over de rijen op basis van excl-aandeel zodat
-    // herrekening geen afrondingsdrift veroorzaakt.
-    const headerVat = result.vat_amount != null ? Number(result.vat_amount) : null;
-    const headerExcl = result.amount_excl_vat != null ? Number(result.amount_excl_vat) : null;
-    return items.map((li, idx, arr) => {
-      const excl =
-        li.unit_price != null && li.quantity
-          ? Number(li.unit_price) * Number(li.quantity)
-          : li.total_excl_vat != null
-          ? Number(li.total_excl_vat)
-          : 0;
-      let vatOverride: string | undefined;
-      let inclOverride: string | undefined;
-      if (headerVat != null && headerExcl && headerExcl > 0) {
-        const share =
-          idx === arr.length - 1
-            ? // laatste rij sluitend maken
-              headerVat -
-              arr
-                .slice(0, idx)
-                .reduce((s, x) => {
-                  const e =
-                    x.unit_price != null && x.quantity
-                      ? Number(x.unit_price) * Number(x.quantity)
-                      : Number(x.total_excl_vat || 0);
-                  return s + Math.round((headerVat * (e / headerExcl)) * 100) / 100;
-                }, 0)
-            : Math.round((headerVat * (excl / headerExcl)) * 100) / 100;
-        vatOverride = String(share);
-        inclOverride = String(Math.round((excl + share) * 100) / 100);
-      }
-      return {
-        description: li.description || "",
-        quantity: li.quantity != null ? String(li.quantity) : "1",
-        unit_price:
-          li.unit_price != null
-            ? String(li.unit_price)
-            : li.total_excl_vat != null && li.quantity
-            ? String(li.total_excl_vat / li.quantity)
-            : li.total_excl_vat != null
-            ? String(li.total_excl_vat)
-            : "",
-        vat_rate: String(li.vat_rate ?? result.vat_rate ?? 21),
-        vat_amount_override: vatOverride,
-        amount_incl_override: inclOverride,
-      };
-    });
-  }
-
-  return [];
-}
 
 function computeLineTotals(line: LineRow) {
   const qty = parseFloat(line.quantity) || 0;
@@ -579,6 +477,10 @@ export function AddPurchaseInvoiceDialog({
         if (!isNaN(d.getTime())) setInvoiceDate(d);
       }
       if (result.description) setDescription(result.description);
+      // Het totaal van de PDF is de controlewaarde waartegen het opslaan wordt
+      // geblokkeerd. Bij de inbox werd die al voorgevuld, bij uploaden niet —
+      // waardoor juist op deze route een verschil niet opviel.
+      setPdfTotalIncl(result.amount_incl_vat != null ? String(result.amount_incl_vat) : "");
 
       // Pre-fill lines from scan (auto-syncs header via effect).
       // Uses vat_breakdown for mixed-VAT invoices so 9% + 21% blijven correct gescheiden.
