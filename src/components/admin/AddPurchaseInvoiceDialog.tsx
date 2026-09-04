@@ -59,6 +59,12 @@ import {
 } from "@/components/admin/purchase-invoices/LodgingAllocationBlock";
 import { reportError } from "@/lib/errorReporting";
 import { buildBillingLineRowsByItem } from "@/lib/purchaseInvoiceBillingLines";
+import { LineAssignmentBlock } from "@/components/admin/purchase-invoices/LineAssignmentBlock";
+import {
+  allocationsFromLineAssignments,
+  summarizeLineAssignments,
+  type LineTarget,
+} from "@/lib/purchaseInvoiceLineAssignment";
 
 
 
@@ -276,6 +282,8 @@ export function AddPurchaseInvoiceDialog({
   const [requestId, setRequestId] = useState<string>(defaultRequestId || "");
   const [itemId, setItemId] = useState<string>("");
   const [allocations, setAllocations] = useState<Array<{ item_id: string; amount_excl_vat: string; vat_rate: string; notes?: string }>>([]);
+  /** Bestemming per gescande factuurregel; leeg = het oude handmatige verdelen. */
+  const [lineTargets, setLineTargets] = useState<LineTarget[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(undefined);
   const [amountExcl, setAmountExcl] = useState<string>("");
@@ -397,6 +405,7 @@ export function AddPurchaseInvoiceDialog({
       setRequestId(defaultRequestId || "");
       setItemId("");
       setAllocations([]);
+      setLineTargets([]);
       setInvoiceNumber(result?.invoice_number || "");
       if (result?.invoice_date) {
         const d = new Date(result.invoice_date);
@@ -427,6 +436,7 @@ export function AddPurchaseInvoiceDialog({
       setRequestId(defaultRequestId || "");
       setItemId("");
       setAllocations([]);
+      setLineTargets([]);
       setInvoiceNumber("");
       setInvoiceDate(undefined);
       setAmountExcl("");
@@ -701,6 +711,7 @@ export function AddPurchaseInvoiceDialog({
       let headerIncl: number;
 
       const round2pre = (n: number) => Math.round(n * 100) / 100;
+      const validExtrasCount = extraProjects.filter((e) => !!e.requestId).length;
 
       const primarySplitExclSum = allocations
         .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
@@ -731,10 +742,38 @@ export function AddPurchaseInvoiceDialog({
         }, 0);
       }, 0);
 
+      // Regels die als toeristenbelasting zijn gemarkeerd horen wél in het bedrag
+      // dat we de partner betalen, maar niet in de verdeling over de onderdelen.
+      // Zonder deze correctie zou de factuur voor dat bedrag te laag geregistreerd
+      // worden en zou de partner te weinig uitbetaald krijgen.
+      // De regel-toewijzing en de splitsing over extra projecten verdelen allebei
+      // dezelfde factuur. Ze staan daarom nooit tegelijk aan; extra projecten winnen.
+      const usesLineAssignment = validExtrasCount === 0
+        && lineTargets.some((t) => t?.kind === "item" || t?.kind === "tourist_tax");
+      const assignableLines = lines
+        .map((l) => {
+          const t = computeLineTotals(l);
+          return {
+            description: l.description,
+            amountExclVat: t.amount_excl_vat,
+            vatRate: t.vat_rate,
+            amountInclVat: t.amount_incl_vat,
+          };
+        })
+        .filter((l) => l.amountExclVat > 0);
+      const assignmentSummary = summarizeLineAssignments(assignableLines, lineTargets);
+      const touristTaxIncl = assignmentSummary.touristTaxInclVat;
+
       const topInputExcl = primarySplitExclSum + extrasExclTop;
       const topInputIncl = primarySplitInclSum + extrasInclTop;
 
-      if (topInputExcl > 0) {
+      if (usesLineAssignment && validLines.length > 0 && lineTotals) {
+        // De gescande regels zijn de factuur; de verdeling is een deel daarvan.
+        headerExcl = lineTotals.totalExcl;
+        headerVat = lineTotals.totalVat;
+        headerIncl = lineTotals.totalIncl;
+        headerVatRate = lineTotals.isMixed ? 0 : lineTotals.dominantRate;
+      } else if (topInputExcl > 0) {
         headerExcl = round2pre(topInputExcl);
         headerIncl = round2pre(topInputIncl);
         headerVat = round2pre(headerIncl - headerExcl);
@@ -857,19 +896,31 @@ export function AddPurchaseInvoiceDialog({
         headerVat = primaryVat;
       }
 
+      // Heb je regels toegewezen, dan mag er niets blijven liggen: een regel zonder
+      // bestemming wordt niet doorbelast en telt niet mee voor de commissie, en dat
+      // zou hier stilzwijgend gebeuren.
+      if (usesLineAssignment && !assignmentSummary.isComplete) {
+        setIsSubmitting(false);
+        return toast.error(
+          `Nog €${assignmentSummary.unassignedExclVat.toFixed(2)} niet toegewezen (${assignmentSummary.unassignedCount} ${assignmentSummary.unassignedCount === 1 ? "regel" : "regels"}). Kies een onderdeel, of markeer de regel als toeristenbelasting.`,
+        );
+      }
+
       // Validate primary allocations match adjusted primary header — met tolerantie + auto-rebalance
       if (validAllocations.length > 0) {
         const allocSum = round2(validAllocations.reduce((s, a) => s + a.amount_incl_vat, 0));
-        const diff = Math.abs(allocSum - headerIncl);
+        // Toeristenbelasting hoort niet in de verdeling, dus ook niet in het doel.
+        const allocTarget = round2(headerIncl - touristTaxIncl);
+        const diff = Math.abs(allocSum - allocTarget);
         const tol = toleranceFor(validAllocations.length);
         if (diff > tol) {
           setIsSubmitting(false);
           return toast.error(
-            `Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${headerIncl.toFixed(2)} ${validExtras.length > 0 ? "(hoofdproject)" : "factuurtotaal"} — verschil €${diff.toFixed(2)}`,
+            `Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${allocTarget.toFixed(2)} ${validExtras.length > 0 ? "(hoofdproject)" : touristTaxIncl > 0 ? "factuurtotaal minus toeristenbelasting" : "factuurtotaal"} — verschil €${diff.toFixed(2)}`,
           );
         }
         if (diff > 0.005) {
-          rebalance(validAllocations as any, headerIncl);
+          rebalance(validAllocations as any, allocTarget);
         }
       }
 
@@ -1241,6 +1292,8 @@ export function AddPurchaseInvoiceDialog({
                                 setRequestId(p.id);
                                 setItemId("");
                                 setAllocations([]);
+                                setLineTargets([]);
+      setLineTargets([]);
                                 setProjectSearchOpen(false);
                               }}
                             >
@@ -1290,6 +1343,51 @@ export function AddPurchaseInvoiceDialog({
             )}
 
 
+
+            {/* Regels toewijzen: elke gescande regel naar een onderdeel of naar
+                toeristenbelasting. Vult daarmee de verdeling hieronder. */}
+            {requestId && items && items.length > 0 && lines.length > 0
+              && extraProjects.length === 0 && (() => {
+              const assignable = lines
+                .map((l) => {
+                  const t = computeLineTotals(l);
+                  return {
+                    description: l.description,
+                    amountExclVat: t.amount_excl_vat,
+                    vatRate: t.vat_rate,
+                    amountInclVat: t.amount_incl_vat,
+                  };
+                })
+                .filter((l) => l.amountExclVat > 0);
+              if (assignable.length === 0) return null;
+
+              const applyTargets = (next: LineTarget[]) => {
+                setLineTargets(next);
+                // De toewijzing vult de verdeling: geen apart opslagpad, en de
+                // controles die er al op zitten blijven gewoon werken.
+                const drafts = allocationsFromLineAssignments(assignable, next);
+                setAllocations(
+                  drafts.map((d) => ({
+                    item_id: d.item_id,
+                    amount_excl_vat: d.amount_excl_vat.toFixed(2),
+                    vat_rate: String(d.vat_rate),
+                    notes: d.notes,
+                  })),
+                );
+              };
+
+              return (
+                <LineAssignmentBlock
+                  lines={assignable}
+                  targets={lineTargets}
+                  onTargetsChange={applyTargets}
+                  items={items.map((it: any) => ({
+                    id: it.id,
+                    label: it.block_name || "Onderdeel",
+                  }))}
+                />
+              );
+            })()}
 
             {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
             {requestId && items && items.length > 0 && (() => {
