@@ -42,6 +42,10 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
 import { SendCommissionInvoiceDialog } from "@/components/admin/SendCommissionInvoiceDialog";
 import { reportError } from "@/lib/errorReporting";
+import {
+  calculateCommissionInvoiceTotals,
+  commissionAmountForLine,
+} from "@/lib/commissionInvoiceTotals";
 
 interface SourceItem {
   id: string;
@@ -282,20 +286,8 @@ export default function AdminCommissionInvoiceCreate() {
     setLines((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const totals = useMemo(() => {
-    const exclVat = lines.reduce(
-      (sum, l) => sum + (l.baseAmountExclVat * l.commissionPct) / 100,
-      0
-    );
-    const vatRate = 21;
-    const vat = exclVat * (vatRate / 100);
-    return {
-      totalExclVat: Math.round(exclVat * 100) / 100,
-      vatRate,
-      totalVat: Math.round(vat * 100) / 100,
-      totalInclVat: Math.round((exclVat + vat) * 100) / 100,
-    };
-  }, [lines]);
+  // Eén optelling voor scherm, PDF en database: per regel afronden, dan optellen.
+  const totals = useMemo(() => calculateCommissionInvoiceTotals(lines), [lines]);
 
   // Save invoice header + lines (status=draft) and return invoice id + number
   const saveInvoice = async (): Promise<{ id: string; invoiceNumber: string } | null> => {
@@ -352,7 +344,7 @@ export default function AdminCommissionInvoiceCreate() {
         reference_number: l.reference,
         invoiced_amount_excl_vat: l.baseAmountExclVat,
         commission_percentage: l.commissionPct,
-        commission_amount: Math.round(((l.baseAmountExclVat * l.commissionPct) / 100) * 100) / 100,
+        commission_amount: commissionAmountForLine(l),
         description: l.description,
         sort_order: idx,
       }));
@@ -397,7 +389,7 @@ export default function AdminCommissionInvoiceCreate() {
     const fmt = (n: number) => formatCurrency(n);
 
     const rows: InvoiceLineRow[] = lines.map((l) => {
-      const subtotal = (l.baseAmountExclVat * l.commissionPct) / 100;
+      const subtotal = commissionAmountForLine(l);
       return {
         description: l.description,
         subDescription: l.reference ? `Ref: ${l.reference}` : undefined,
@@ -678,9 +670,9 @@ export default function AdminCommissionInvoiceCreate() {
                       </p>
                     )}
                     {lines.map((l, idx) => {
-                      const subtotal = (l.baseAmountExclVat * l.commissionPct) / 100;
+                      const subtotal = commissionAmountForLine(l);
                       return (
-                        <div key={l.source.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                        <div key={`${l.source.id}-${idx}`} className="border rounded-lg p-4 space-y-3 bg-card">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 space-y-1">
                               <Input

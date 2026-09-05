@@ -125,3 +125,77 @@ describe("URL-parsers", () => {
     expect(parseAmountParam("a:351.24,b:nope").has("b")).toBe(false);
   });
 });
+
+describe("logies met gesplitste tarieven", () => {
+  const lodgingRow = (overrides: Partial<ReconRow> = {}): ReconRow => ({
+    ...row(),
+    key: "item:quote-1",
+    itemId: "quote-1",
+    itemType: "accommodation",
+    label: "Badhotel Bruin",
+    defaultBasis: "sales",
+    salesExclVat: 6652.89,
+    salesCommission: 500,
+    commissionPercentage: 7.52,
+    commissionComponents: [
+      { kind: "room", label: "Overnachtingen", baseExclVat: 5000, commissionPct: 10, commissionAmount: 500 },
+      { kind: "extra", label: "Diner", baseExclVat: 1652.89, commissionPct: 0, commissionAmount: 0 },
+    ],
+    hasMixedRates: true,
+    ...overrides,
+  });
+
+  it("maakt één factuurregel per component zodat de partner het kan controleren", () => {
+    const drafts = buildCommissionLineDrafts({
+      rows: [lodgingRow()],
+      quoteIds: ["quote-1"],
+    });
+
+    expect(drafts).toHaveLength(2);
+    expect(drafts[0]).toMatchObject({
+      componentKind: "room",
+      baseAmountExclVat: 5000,
+      commissionPct: 10,
+      commissionAmount: 500,
+    });
+    expect(drafts[1]).toMatchObject({
+      componentKind: "extra",
+      baseAmountExclVat: 1652.89,
+      commissionPct: 0,
+      commissionAmount: 0,
+    });
+    // De som blijft gelijk aan wat de werklijst toonde.
+    expect(sumCommission(drafts)).toBe(500);
+  });
+
+  it("houdt één regel als kamer en extra's hetzelfde percentage hebben", () => {
+    const drafts = buildCommissionLineDrafts({
+      rows: [
+        lodgingRow({
+          hasMixedRates: false,
+          commissionPercentage: 10,
+          salesCommission: 665.29,
+          commissionComponents: [
+            { kind: "room", label: "Overnachtingen", baseExclVat: 5000, commissionPct: 10, commissionAmount: 500 },
+            { kind: "extra", label: "Diner", baseExclVat: 1652.89, commissionPct: 10, commissionAmount: 165.29 },
+          ],
+        }),
+      ],
+      quoteIds: ["quote-1"],
+    });
+
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0].componentKind).toBeNull();
+  });
+
+  it("splitst niet bij de inkoopgrondslag, want daarvan kennen we de uitsplitsing niet", () => {
+    const drafts = buildCommissionLineDrafts({
+      rows: [lodgingRow({ purchaseExclVat: 7000, purchaseCommission: 700 })],
+      quoteIds: ["quote-1"],
+      basisById: new Map([["quote-1", "purchase"]]),
+    });
+
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]).toMatchObject({ basis: "purchase", commissionAmount: 700 });
+  });
+});
