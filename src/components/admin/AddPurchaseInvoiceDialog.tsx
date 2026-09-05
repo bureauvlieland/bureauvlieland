@@ -1898,6 +1898,16 @@ export function AddPurchaseInvoiceDialog({
                   <div className="font-medium text-foreground">
                     Verificatie tegen PDF-totaal
                   </div>
+                  {scanResult && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                        Wat heeft de scanner gelezen?
+                      </summary>
+                      <pre className="mt-2 max-h-64 overflow-auto rounded bg-muted p-2 text-[11px] leading-relaxed whitespace-pre-wrap break-words">
+                        {JSON.stringify(scanResult, null, 2)}
+                      </pre>
+                    </details>
+                  )}
                   <div className="grid grid-cols-2 gap-2 items-center">
                     <Label className="text-xs">Totaal incl. BTW volgens PDF</Label>
                     <Input

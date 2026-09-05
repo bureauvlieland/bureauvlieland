@@ -73,14 +73,15 @@ export function lineExclVat(item: ScanLineItem): number {
  */
 export function lineItemsReconcile(
   items: ScanLineItem[],
-  result: Pick<ScanResultLike, "amount_excl_vat" | "vat_amount">,
+  result: Pick<ScanResultLike, "amount_excl_vat" | "vat_amount" | "amount_incl_vat">,
 ): boolean {
   if (items.length === 0) return false;
 
   const headerExcl = result.amount_excl_vat == null ? null : Number(result.amount_excl_vat);
   const headerVat = result.vat_amount == null ? null : Number(result.vat_amount);
+  const headerIncl = result.amount_incl_vat == null ? null : Number(result.amount_incl_vat);
   // Zonder kop valt er niets tegen te spreken; dan zijn de regels wat we hebben.
-  if (headerExcl == null && headerVat == null) return true;
+  if (headerExcl == null && headerVat == null && headerIncl == null) return true;
 
   // Eén cent per regel speling, met een ondergrens en een plafond.
   const tolerance = Math.min(0.1, Math.max(0.02, 0.01 * items.length));
@@ -92,23 +93,50 @@ export function lineItemsReconcile(
 
   if (headerExcl != null && Math.abs(totalExcl - headerExcl) > tolerance) return false;
   if (headerVat != null && Math.abs(totalVat - headerVat) > tolerance) return false;
+  // Het te betalen totaal staat groot op elke factuur en is daarmee het getal dat
+  // de scanner het betrouwbaarst leest. Ook als hij zijn eigen btw-totaal uit
+  // dezelfde gegokte tarieven heeft afgeleid — en de twee vorige controles dus
+  // met elkaar meebewegen — valt het verschil hier alsnog door de mand.
+  if (headerIncl != null && Math.abs(round2(totalExcl + totalVat) - headerIncl) > tolerance) {
+    return false;
+  }
   return true;
+}
+
+/**
+ * Grondslag van een btw-groep.
+ *
+ * Op de meeste facturen staat alleen het btw-bédrag per tarief ("BTW laag
+ * € 35,60"); de grondslag moet daaruit worden afgeleid. Geeft de scanner een
+ * grondslag die niet bij dat btw-bedrag past, dan is het btw-bedrag leidend —
+ * dat staat er letterlijk, de grondslag is gerekend.
+ */
+export function breakdownExclVat(entry: ScanVatBreakdownEntry): number {
+  const rate = Number(entry.vat_rate) || 0;
+  const vat = Number(entry.vat_amount) || 0;
+  const given = Number(entry.amount_excl) || 0;
+  if (rate <= 0) return given;
+  const derived = round2(vat / (rate / 100));
+  if (given <= 0) return derived;
+  // Een cent speling: het btw-bedrag op de factuur is zelf al afgerond.
+  return Math.abs(round2(given * (rate / 100)) - vat) <= 0.02 ? given : derived;
 }
 
 const rowsFromBreakdown = (breakdown: ScanVatBreakdownEntry[]): ScanLineRow[] =>
   breakdown
-    .filter((b) => b.amount_excl > 0 || b.vat_amount > 0)
-    .map((b) => ({
-      description: `BTW ${b.vat_rate}%`,
-      quantity: "1",
-      unit_price: String(b.amount_excl),
-      vat_rate: String(b.vat_rate),
-      vat_amount_override: b.vat_amount != null ? String(b.vat_amount) : undefined,
-      amount_incl_override:
-        b.amount_excl != null && b.vat_amount != null
-          ? String(round2(b.amount_excl + b.vat_amount))
-          : undefined,
-    }));
+    .filter((b) => (Number(b.amount_excl) || 0) > 0 || (Number(b.vat_amount) || 0) > 0)
+    .map((b) => {
+      const excl = breakdownExclVat(b);
+      const vat = Number(b.vat_amount) || 0;
+      return {
+        description: `BTW ${b.vat_rate}%`,
+        quantity: "1",
+        unit_price: String(excl),
+        vat_rate: String(b.vat_rate),
+        vat_amount_override: b.vat_amount != null ? String(vat) : undefined,
+        amount_incl_override: b.vat_amount != null ? String(round2(excl + vat)) : undefined,
+      };
+    });
 
 const rowsFromItems = (
   items: ScanLineItem[],
@@ -182,6 +210,11 @@ export function buildLinesFromScan(result: ScanResultLike | null): ScanLineRow[]
   // Eén tarief in het overzicht en regels die de kop tegenspreken: dan is dat ene
   // tarief nog altijd betrouwbaarder dan wat er per regel is ingevuld.
   if (breakdown.length === 1 && itemsAllHaveRate) return rowsFromBreakdown(breakdown);
+
+  // Regels mét een tarief die de kop tegenspreken, zonder btw-overzicht om op
+  // terug te vallen: dan liever géén regels dan verkeerde. Het scherm vult dan de
+  // totalen uit de scan in — die kloppen wel — en jij verdeelt zelf.
+  if (itemsAllHaveRate) return [];
 
   if (items.length > 0) return rowsFromItems(items, result, true);
 

@@ -62,14 +62,14 @@ describe("kloppen de gescande regels met de kop?", () => {
       { description: "b", quantity: 1, unit_price: 33.33, total_excl_vat: 33.33, vat_rate: 21 },
       { description: "c", quantity: 1, unit_price: 33.34, total_excl_vat: 33.34, vat_rate: 21 },
     ];
-    expect(lineItemsReconcile(items, { amount_excl_vat: 100, vat_amount: 21 })).toBe(true);
+    expect(lineItemsReconcile(items, { amount_excl_vat: 100, vat_amount: 21, amount_incl_vat: 121 })).toBe(true);
   });
 
   it("zonder kop valt er niets tegen te spreken", () => {
     expect(
       lineItemsReconcile(
         [{ description: "a", quantity: 1, unit_price: 10, total_excl_vat: 10, vat_rate: 21 }],
-        { amount_excl_vat: null, vat_amount: null },
+        { amount_excl_vat: null, vat_amount: null, amount_incl_vat: null },
       ),
     ).toBe(true);
   });
@@ -122,5 +122,40 @@ describe("voor te vullen factuurregels", () => {
 
   it("levert niets op zonder scanresultaat", () => {
     expect(buildLinesFromScan(null)).toEqual([]);
+  });
+});
+
+describe("wat er op de factuur staat wint van wat de scanner erbij verzint", () => {
+  it("valt door de mand op het totaal, ook als de scanner zijn btw uit dezelfde gok afleidde", () => {
+    // Ergste geval: de scanner rekent zijn eigen btw-totaal uit de gegokte tarieven,
+    // zodat kop en regels met elkaar meebewegen. Alleen het te betalen totaal — dat
+    // groot op de factuur staat — verraadt dan nog dat er iets niet klopt.
+    const zelfconsistent = {
+      ...doeksen,
+      vat_amount: 52.92,
+      amount_excl_vat: 459.18,
+      amount_incl_vat: 508.15,
+    };
+    expect(lineItemsReconcile(zelfconsistent.line_items, zelfconsistent)).toBe(false);
+  });
+
+  it("leidt de grondslag af uit het btw-bedrag als de opgegeven grondslag niet past", () => {
+    const rows = buildLinesFromScan({
+      ...doeksen,
+      // Scanner geeft een grondslag die niet bij het btw-bedrag hoort.
+      vat_breakdown: [
+        { vat_rate: 9, amount_excl: 362.57, vat_amount: 35.6 },
+        { vat_rate: 21, amount_excl: 96.61, vat_amount: 13.37 },
+      ],
+    });
+
+    // 35,60 / 0,09 = 395,56 en 13,37 / 0,21 = 63,67 — het btw-bedrag is leidend.
+    expect(rows[0].unit_price).toBe("395.56");
+    expect(rows[1].unit_price).toBe("63.67");
+  });
+
+  it("geeft liever geen regels dan verkeerde als er niets is om op terug te vallen", () => {
+    const rows = buildLinesFromScan({ ...doeksen, vat_breakdown: undefined });
+    expect(rows).toEqual([]);
   });
 });
