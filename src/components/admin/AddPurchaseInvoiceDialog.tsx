@@ -66,6 +66,10 @@ import {
   type LineTarget,
 } from "@/lib/purchaseInvoiceLineAssignment";
 import { buildLinesFromScan } from "@/lib/purchaseInvoiceScanLines";
+import {
+  PROJECT_MATCH_LABELS,
+  suggestProjectFromText,
+} from "@/lib/purchaseInvoiceProjectSuggestion";
 
 
 
@@ -421,6 +425,31 @@ export function AddPurchaseInvoiceDialog({
     );
     return partial?.id || null;
   }, [scanResult, partners]);
+
+  /**
+   * Partners zetten er vaak bij voor wie het werk was — "Groep: ..." onderaan de
+   * factuur, of ons referentienummer. Die tekst hebben we al; hier zoeken we het
+   * project erbij. Alles wat we van de factuur weten telt mee: de omschrijving
+   * die de scanner eruit haalde, de regels zelf, en het onderwerp van de mail
+   * waarmee hij binnenkwam.
+   */
+  const projectSuggestion = useMemo(() => {
+    if (!projects || projects.length === 0) return null;
+    const haystack = [
+      scanResult?.description,
+      description,
+      inboxItem?.subject,
+      ...(scanResult?.line_items ?? []).map((li) => li.description),
+      ...lines.map((l) => l.description),
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return suggestProjectFromText(haystack, projects);
+  }, [projects, scanResult, description, inboxItem, lines]);
+
+  const suggestedProject = projectSuggestion
+    ? projects?.find((p) => p.id === projectSuggestion.projectId)
+    : undefined;
 
   const processFile = async (selected: File) => {
     if (selected.type !== "application/pdf") {
@@ -1219,6 +1248,23 @@ export function AddPurchaseInvoiceDialog({
                   </Command>
                 </PopoverContent>
               </Popover>
+              {suggestedProject && suggestedProject.id !== requestId && projectSuggestion && (
+                <button
+                  type="button"
+                  onClick={() => setRequestId(suggestedProject.id)}
+                  className="text-xs text-primary hover:underline flex items-start gap-1 text-left"
+                >
+                  <Sparkles className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>
+                    AI-suggestie: {suggestedProject.reference_number || "Geen ref"} —{" "}
+                    {suggestedProject.customer_company || suggestedProject.customer_name}
+                    <span className="block text-muted-foreground">
+                      op grond van de {PROJECT_MATCH_LABELS[projectSuggestion.reason]}:
+                      {" "}&ldquo;{projectSuggestion.matchedOn}&rdquo;
+                    </span>
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* Logies-allocatie (1-op-1 doorzetten naar accommodation_quote) */}
