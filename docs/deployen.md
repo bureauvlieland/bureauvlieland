@@ -16,8 +16,13 @@ niets voor te doen.
 Alles onder `supabase/`: de edge functions (`supabase/functions/`), de
 databasemigraties (`supabase/migrations/`) en `supabase/config.toml`.
 
-**Het Supabase-project (`blhspuifehausilnzwio`) draait onder Lovable Cloud, niet
-onder een eigen Supabase-account.** Dat betekent:
+**Sinds 8 september 2026 draait de backend in een eigen Supabase-project
+(`utshmnyrjzwtrpttxdlw`); zie `docs/migratie-supabase.md`. De tekst hieronder
+beschrijft de oude situatie onder Lovable Cloud (`blhspuifehausilnzwio`) en
+geldt niet meer; deployen gaat nu via `.github/workflows/deploy-supabase.yml`.**
+
+Oude situatie: het project draaide onder Lovable Cloud, niet onder een eigen
+Supabase-account. Dat betekende:
 
 - er is geen supabase.com-dashboard en geen personal access token voor dit
   project, dus de Supabase CLI en de GitHub-workflow kunnen er niet bij;
