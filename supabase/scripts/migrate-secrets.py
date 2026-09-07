@@ -23,7 +23,8 @@ NEW_REF = need("NEW_REF"); TOKEN = need("SUPABASE_ACCESS_TOKEN")
 
 def call(url, body=None, headers=None, method=None):
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+    h = {"User-Agent": "bureauvlieland-migratie/1.0", **(headers or {})}
+    req = urllib.request.Request(url, data=data, headers=h, method=method)
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             raw = r.read()

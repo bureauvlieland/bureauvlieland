@@ -23,8 +23,8 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
 | 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
-| 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Programma's staan erop. **Nu**: jij deployt `secrets-export` in Lovable, Claude zet de wachtwoorden over |
-| 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
+| 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Klaar, 7 september (19 secrets overgezet); alleen `GEMINI_API_KEY` nog **[jij]** |
+| 5 | Mailjet, Twilio en MAP het nieuwe adres geven | **Nu aan de beurt**: jij, met exacte adressen van Claude |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
 
 Waarom stap 2 via een knop in GitHub gaat: om de kopie in de database te
@@ -213,6 +213,15 @@ Koppelingen: MAP_API_KEY DOEKSEN_API_KEY GEOAPIFY_API_KEY GOOGLE_PLACES_API_KEY
            META_APP_ID META_APP_SECRET
 Zelftest:  CI_ADMIN_EMAIL CI_ADMIN_PASSWORD CI_FIXTURE_SECRET
 ```
+
+Resultaat op 7 september: 19 secrets overgezet, gecontroleerd met de
+beheer-API en met een echte aanroep (`get-ferry-departures` op het nieuwe
+project haalt vertrektijden op met `DOEKSEN_API_KEY`). Zes namen hadden in
+het oude project ook geen waarde en hebben in de code een vaste terugval:
+`MAILJET_FROM_EMAIL` (noreply@), `MAILJET_SENDER_EMAIL` (info@),
+`MAILJET_SENDER_NAME` ("Bureau Vlieland"), `ADMIN_ALERT_EMAIL` (hallo@),
+`MAILJET_TEST_MODE` (uit) en `MAILJET_INBOUND_WEBHOOK_TOKEN` (alternatief
+voor `…_SECRET`). Gedrag is dus gelijk aan onder Lovable.
 
 Twee zijn nieuw en bestaan niet in Lovable; die zet jij zelf in het nieuwe
 project onder *Edge Functions → Secrets*:
