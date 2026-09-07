@@ -104,7 +104,11 @@ jobs:
             fi
             echo "Overschrijven aangevinkt: schema public wordt leeggemaakt."
             psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "drop schema public cascade; create schema public; grant usage on schema public to postgres, anon, authenticated, service_role; grant all on schema public to postgres, service_role;"
-            psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "delete from auth.users; delete from storage.objects;"
+            psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "delete from auth.users;"
+            # storage.objects heeft een beschermtrigger tegen per ongeluk leegmaken; deze
+            # instelling zet hem voor deze ene transactie uit. De bucket migratie (met de
+            # export zelf) blijft staan.
+            psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "set local storage.allow_delete_query = 'true'; delete from storage.objects where bucket_id <> 'migratie';"
             psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "select cron.unschedule(jobid) from cron.job;"
             psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "delete from supabase_migrations.schema_migrations;" || true
           fi
