@@ -74,7 +74,6 @@ export default function AdminPurchaseInvoices() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
-  const [forwardMethod, setForwardMethod] = useState<"outlook" | "mailjet">("outlook");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -547,20 +546,14 @@ export default function AdminPurchaseInvoices() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              setForwardMethod("outlook");
-                              setForwardDialogInvoice(invoice);
-                            }}
-                            title={invoice.status === "pending" ? "Doorsturen naar Snelstart (Outlook)" : "Opnieuw doorsturen via Outlook"}
+                            onClick={() => setForwardDialogInvoice(invoice)}
+                            title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
                           >
                             <Mail className="h-4 w-4" />
                           </Button>
                           <InvoiceForwardHistoryPopover
                             invoiceId={invoice.id}
-                            onResend={(m) => {
-                              setForwardMethod(m);
-                              setForwardDialogInvoice(invoice);
-                            }}
+                            onResend={() => setForwardDialogInvoice(invoice)}
                           />
                           {invoice.status !== "paid" && (
                             <Button
@@ -595,7 +588,6 @@ export default function AdminPurchaseInvoices() {
       {/* Forward to Accounting Dialog */}
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
-        defaultMethod={forwardMethod}
         onClose={() => setForwardDialogInvoice(null)}
       />
 

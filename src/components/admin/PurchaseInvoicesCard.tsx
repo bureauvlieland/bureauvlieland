@@ -16,16 +16,13 @@ interface PurchaseInvoicesCardProps {
   requestId: string;
 }
 
-type SendMethod = "outlook" | "mailjet";
 
 export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
   const { invoices, isLoading, stats, markAsPaid, getDownloadUrl } = usePurchaseInvoicesByRequest(requestId);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
-  const [forwardMethod, setForwardMethod] = useState<SendMethod>("outlook");
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
 
-  const openForward = (invoice: PurchaseInvoiceWithRelations, method: SendMethod = "outlook") => {
-    setForwardMethod(method);
+  const openForward = (invoice: PurchaseInvoiceWithRelations) => {
     setForwardDialogInvoice(invoice);
   };
 
@@ -175,14 +172,14 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => openForward(invoice, "outlook")}
+                          onClick={() => openForward(invoice)}
                           title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
                         >
                           <Mail className="h-3.5 w-3.5" />
                         </Button>
                         <InvoiceForwardHistoryPopover
                           invoiceId={invoice.id}
-                          onResend={(m) => openForward(invoice, m)}
+                          onResend={() => openForward(invoice)}
                         />
                         {invoice.status !== "paid" && (
                           <Button
@@ -207,7 +204,6 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
 
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}
-        defaultMethod={forwardMethod}
         onClose={() => setForwardDialogInvoice(null)}
       />
 

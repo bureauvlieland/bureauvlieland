@@ -73,7 +73,6 @@ const REGISTRY: Row[] = [
   { name: "forward-bureau-invoice", category: "invoicing", critical: true },
   { name: "forward-commission-invoice", category: "invoicing", critical: true },
   { name: "forward-purchase-invoice", category: "invoicing", critical: true },
-  { name: "forward-purchase-invoice-outlook", category: "invoicing", critical: true },
   { name: "apply-purchase-invoice-to-lodging", category: "invoicing", critical: true },
   { name: "parse-collective-invoice", category: "invoicing", critical: true },
   { name: "finalize-collective-invoice", category: "invoicing", critical: true },

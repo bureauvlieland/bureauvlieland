@@ -22,7 +22,7 @@ Volgorde aanhouden.
 | Edge functions (133) | Uit de repo deployen met de Supabase CLI | Repo is klaar |
 | Secrets van edge functions (31) | Niet in de export. Opnieuw invoeren (lijst hieronder) | Handwerk, één keer |
 | AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway. Nu via `_shared/ai.ts` met eigen sleutel | Code is klaar |
-| Outlook-doorsturen naar de boekhouding | Liep via Lovable's Microsoft-connector; die vervalt. Mailjet-route blijft werken | Beslissing nodig |
+| Outlook-doorsturen naar de boekhouding | Liep via Lovable's Microsoft-connector. Uitgefaseerd; doorsturen gaat via Mailjet | Klaar |
 | Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL. Opnieuw registreren op de nieuwe URL | Handwerk, één keer |
 | Frontend (Netlify) | Alleen `.env` wijzigen (URL, project-id, anon key) | Eén commit |
 
@@ -114,7 +114,7 @@ Koppelingen: MAP_API_KEY DOEKSEN_API_KEY GEOAPIFY_API_KEY GOOGLE_PLACES_API_KEY
            META_APP_ID META_APP_SECRET
 Zelftest:  CI_ADMIN_EMAIL CI_ADMIN_PASSWORD CI_FIXTURE_SECRET
 AI:        GEMINI_API_KEY OPENAI_API_KEY        ← nieuw, vervangen LOVABLE_API_KEY
-Vervalt:   LOVABLE_API_KEY MICROSOFT_OUTLOOK_API_KEY (zie Outlook hieronder)
+Vervalt:   LOVABLE_API_KEY MICROSOFT_OUTLOOK_API_KEY
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` en
@@ -144,18 +144,6 @@ heartbeat in de logs (cron).
 
 Pas als dat groen is: in Lovable *Remove Lovable Cloud*. Tot die tijd blijft het
 oude project als vangnet staan.
-
-## Openstaande beslissing: Outlook
-
-`forward-purchase-invoice-outlook` stuurt facturen naar de boekhouding vanuit
-je Microsoft 365-mailbox via een Lovable-connector. Na de verhuizing werkt dat
-niet meer. Twee opties:
-
-1. Mailjet-route gebruiken (bestaat al, geen werk). Snelstart filtert die soms
-   als bulk.
-2. Claude bouwt een directe Microsoft Graph-koppeling. Vraagt eenmalig een
-   app-registratie in Microsoft 365 (Entra) door jou; daarna vanuit je eigen
-   mailbox zoals nu.
 
 ## Waarom niet gewoon "Lovable koppelen aan eigen Supabase"
 

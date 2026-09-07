@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Mail, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -20,24 +19,21 @@ import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
 
-type SendMethod = "outlook" | "mailjet";
-
 interface ForwardToAccountingDialogProps {
   invoice: PurchaseInvoiceWithRelations | null;
-  defaultMethod?: SendMethod;
   onClose: () => void;
 }
 
-export function ForwardToAccountingDialog({ invoice, defaultMethod = "outlook", onClose }: ForwardToAccountingDialogProps) {
+/**
+ * Doorsturen naar de boekhouding gaat via Mailjet. De Outlook-route (via een
+ * Lovable-connector) is uitgefaseerd bij de verhuizing naar een eigen
+ * Supabase-project.
+ */
+export function ForwardToAccountingDialog({ invoice, onClose }: ForwardToAccountingDialogProps) {
   const [includePdf, setIncludePdf] = useState(true);
-  const [method, setMethod] = useState<SendMethod>(defaultMethod);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const { getSetting } = useAppSettings();
-
-  useEffect(() => {
-    if (invoice) setMethod(defaultMethod);
-  }, [invoice, defaultMethod]);
 
   const snelstartEmail = getSetting("snelstart_email", "bureauvlieland@boekhouding.nl");
 
@@ -46,11 +42,7 @@ export function ForwardToAccountingDialog({ invoice, defaultMethod = "outlook", 
 
     setIsSubmitting(true);
     try {
-      const fnName = method === "outlook"
-        ? "forward-purchase-invoice-outlook"
-        : "forward-purchase-invoice";
-
-      const { error } = await supabase.functions.invoke(fnName, {
+      const { error } = await supabase.functions.invoke("forward-purchase-invoice", {
         body: {
           invoiceId: invoice.id,
           includePdf: includePdf && !!invoice.file_path,
@@ -73,11 +65,7 @@ export function ForwardToAccountingDialog({ invoice, defaultMethod = "outlook", 
 
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoice-forward-history", invoice.id] });
-      toast.success(
-        method === "outlook"
-          ? "Factuur verstuurd via Outlook"
-          : "Factuur verstuurd via Mailjet",
-      );
+      toast.success("Factuur verstuurd via Mailjet");
       onClose();
     } catch (error: any) {
       console.error("Error forwarding invoice:", error);
@@ -105,29 +93,6 @@ export function ForwardToAccountingDialog({ invoice, defaultMethod = "outlook", 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Verzendmethode</Label>
-          <RadioGroup value={method} onValueChange={(v) => setMethod(v as SendMethod)} className="gap-2">
-            <label className="flex items-start gap-2 rounded-md border p-2 cursor-pointer hover:bg-accent/50">
-              <RadioGroupItem value="outlook" id="m-outlook" className="mt-0.5" />
-              <div className="text-sm">
-                <div className="font-medium">Outlook (aanbevolen)</div>
-                <div className="text-xs text-muted-foreground">
-                  Verstuurt vanuit jouw Microsoft 365 mailbox. Snelstart herkent dit als normale zakelijke mail.
-                </div>
-              </div>
-            </label>
-            <label className="flex items-start gap-2 rounded-md border p-2 cursor-pointer hover:bg-accent/50">
-              <RadioGroupItem value="mailjet" id="m-mailjet" className="mt-0.5" />
-              <div className="text-sm">
-                <div className="font-medium">Mailjet</div>
-                <div className="text-xs text-muted-foreground">
-                  Verstuurt via Mailjet (transactional). Snelstart filtert dit soms als bulk.
-                </div>
-              </div>
-            </label>
-          </RadioGroup>
-        </div>
 
         <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
           <div className="flex justify-between">
@@ -179,7 +144,7 @@ export function ForwardToAccountingDialog({ invoice, defaultMethod = "outlook", 
             ) : (
               <>
                 <Mail className="h-4 w-4 mr-2" />
-                Versturen via {method === "outlook" ? "Outlook" : "Mailjet"}
+                Versturen via Mailjet
               </>
             )}
           </Button>
