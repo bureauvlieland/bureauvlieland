@@ -12,6 +12,8 @@
 # Gebruik:
 #   supabase/scripts/run-migration.sh check                  # netwerk en sleutels testen
 #   supabase/scripts/run-migration.sh restore <dump.backup>  # database terugzetten + nascript
+#     (niet vanuit de Claude-omgeving: poort 5432 is daar dicht; gebruik de
+#      GitHub-workflow "Herstel database", .github/workflows/restore-database.yml)
 #   supabase/scripts/run-migration.sh storage [--dry-run]    # bestanden kopiëren
 #   supabase/scripts/run-migration.sh functions              # 134 edge functions deployen
 set -euo pipefail
