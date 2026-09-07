@@ -24,7 +24,7 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
 | 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
 | 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Klaar, 7 september (19 secrets overgezet); alleen `GEMINI_API_KEY` nog **[jij]** |
-| 5 | Mailjet, Twilio en MAP het nieuwe adres geven | **Nu aan de beurt**: jij, met exacte adressen van Claude |
+| 5 | Mailjet en Twilio het nieuwe adres geven | Voorbereid; **uitvoeren op het moment van omschakelen** (stap 6), niet eerder |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
 
 Waarom stap 2 via een knop in GitHub gaat: om de kopie in de database te
@@ -50,7 +50,7 @@ Resultaat: de hele structuur en data komen goed over. De cijfers:
 | Secrets van edge functions | Niet in de export (staan versleuteld buiten de database) | `secrets-export` + `run-migration.sh secrets` zet ze over (stap 4) |
 | AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway | Eigen Gemini-sleutel; code is klaar (`_shared/ai.ts`) |
 | Outlook-doorsturen | Liep via Lovable's Microsoft-connector | Uitgefaseerd; doorsturen gaat via Mailjet |
-| Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL | Opnieuw registreren op de nieuwe URL |
+| Externe webhooks (Mailjet, Twilio/WhatsApp) | Wijzen naar de oude URL | Bij de omschakeling omzetten (stap 5); MAP heeft niets nodig |
 | Frontend (Netlify) | n.v.t. | Alleen `.env` wijzigen |
 
 ## Stap 0 — Nieuw project en sleutels **[gedaan, op drie na]**
@@ -236,18 +236,95 @@ Vervallen: `LOVABLE_API_KEY` en `MICROSOFT_OUTLOOK_API_KEY`. `SUPABASE_URL`,
 `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` en `SUPABASE_DB_URL` zet
 Supabase zelf.
 
-## Stap 5 — Externe partijen op de nieuwe URL zetten **[jij, Claude geeft de exacte URLs]**
+## Stap 5 — Externe partijen op de nieuwe URL zetten **[jij, op het moment van omschakelen]**
 
-- **Mailjet**: event-webhook (bounces/spam), inbound parse (inkoop-inbox en
-  sales-inbox) en de heartbeat. `scripts/mailjet-webhook-setup.ps1` doet dit
-  met de nieuwe basis-URL.
-- **Twilio**: WhatsApp inbound-webhook en status-callback.
-- **MAP (Mijnfietsverhuur)**: betaal-webhook.
-- **Netlify**: niets in Netlify zelf; de nieuwe waarden komen via `.env` in de repo.
+**Timing.** Dit pas doen ná het omzetten van de frontend (stap 6), binnen
+hetzelfde uur. Wijzen Mailjet en Twilio eerder naar het nieuwe project, dan
+komen inkomende mails, leveringsstatussen en WhatsApp-berichten in de nieuwe
+database terecht terwijl iedereen nog in de oude werkt.
+
+Basis-URL van het nieuwe project: `https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1`
+(oud: `https://blhspuifehausilnzwio.supabase.co/functions/v1`). Alleen het
+project-ID verandert; de rest van elk adres blijft gelijk.
+
+### Mailjet (drie dingen)
+
+Inloggen op app.mailjet.com. Waar `<token>` staat, de waarde van de
+genoemde secret invullen (te zien in Supabase, nieuwe project, *Edge
+Functions → Secrets*, of in Lovable onder *Cloud → Secrets*; ze zijn gelijk).
+
+1. **Event-webhook** (aflevering, bounces, spam, uitschrijvingen).
+   *Account → Settings → Event tracking (Triggers)*, of via de REST API
+   zoals `scripts/mailjet-webhook-setup.ps1` doet. Voor elk van de zeven
+   events `sent`, `open`, `click`, `bounce`, `blocked`, `spam`, `unsub`
+   dezelfde URL, versie 2 (gegroepeerd):
+
+   ```
+   https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1/mailjet-event-webhook?token=<MAILJET_WEBHOOK_TOKEN>
+   ```
+
+   Zonder `?token=` weigert de functie alles met 401 en verdwijnt de
+   terugkoppeling stilzwijgend (dat is tussen 8 juli en 1 september 2026
+   gebeurd). Vanaf Windows: `.\scripts\mailjet-webhook-setup.ps1
+   -MailjetApiKey … -MailjetSecretKey … -WebhookToken … -WebhookBaseUrl
+   https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1/mailjet-event-webhook`;
+   dat script ruimt de oude registraties ook op.
+
+2. **Inbound parse** (alle mail op `reply.bureauvlieland.nl`: antwoorden van
+   klanten, inkoopfacturen op inkoop@/facturen@/invoices@, leads op
+   sales@/leads@/aanvraag@). *Account → Settings → Inbound Parse (Parseroute)*.
+   Er is één route; de URL wordt:
+
+   ```
+   https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1/inbound-email?token=<MAILJET_INBOUND_WEBHOOK_SECRET>
+   ```
+
+   De functie `inbound-email` stuurt inkoopfacturen zelf door naar
+   `inbound-purchase-invoice`; daar hoeft bij Mailjet niets voor.
+
+3. **Controle** na het omzetten: in de app *Admin → E-mail gezondheid →
+   Webhook-status*, knop *Zelftest*. De dagelijkse `email-webhook-heartbeat`
+   is een cron-job in het nieuwe project en hoeft nergens geregistreerd.
+
+### Twilio (WhatsApp)
+
+console.twilio.com → *Messaging → Senders → WhatsApp senders* (of, als het
+nummer nog via een Messaging Service loopt, *Messaging → Services → [service]
+→ Integration*). Bij het nummer uit `TWILIO_WHATSAPP_NUMBER`:
+
+```
+When a message comes in (webhook):  https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1/whatsapp-webhook   (HTTP POST)
+Status callback URL:                 leeg laten (wordt niet gebruikt)
+```
+
+Geen token in de URL: Twilio ondertekent elk bericht en de functie
+controleert die handtekening met `TWILIO_AUTH_TOKEN`. Controle: stuur een
+WhatsApp naar het bureau-nummer en kijk of hij in de Werkbank verschijnt, of
+roep *Admin → WhatsApp diagnose* aan.
+
+### MAP (Mijnfietsverhuur): niets nodig
+
+Er is geen webhook van MAP naar ons. De betaalstatus wordt door de pagina
+`/boeking` zelf opgevraagd via `map-payment-status`, en de terugkeer-URL na
+betalen is `bureauvlieland.nl`, die niet verandert.
+
+### Netlify: niets nodig
+
+De nieuwe waarden komen via `.env` in de repo (stap 6).
+
+### Alternatief: Claude zet het om
+
+Mailjet en Twilio hebben beide een API; `mailjet-webhook-setup.ps1` gebruikt
+die al. Vanuit de Claude-omgeving zijn `api.mailjet.com` en `api.twilio.com`
+nu geblokkeerd. Worden die twee toegestaan (claude.ai/code → omgeving →
+*Network*), dan kan Claude bij stap 6 de registraties omzetten met de sleutels
+die `secrets-export` levert, zonder dat er iets overgetypt hoeft te worden.
 
 ## Stap 6 — Omschakelen **[Claude]**
 
-Eén commit: `.env` (URL, project-id, anon key), `supabase/config.toml`
+Volgorde: (a) verse export uit Lovable en `restore` opnieuw met overschrijven,
+(b) `storage` opnieuw, (c) de commit hieronder, (d) zodra Netlify klaar is
+stap 5 uitvoeren. Eén commit: `.env` (URL, project-id, anon key), `supabase/config.toml`
 (project_id), en `SUPABASE_DEPLOY_ENABLED=true` als repository variable met de
 twee secrets `SUPABASE_ACCESS_TOKEN` en `SUPABASE_DB_PASSWORD`. Netlify bouwt
 de frontend tegen het nieuwe project.
