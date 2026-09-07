@@ -326,8 +326,11 @@ supabase/scripts/run-migration.sh webhooks --apply --target old   # vangnet: ter
 Vereist in de netwerkregels van de Claude-omgeving: `api.mailjet.com`,
 `api.twilio.com` en `messaging.twilio.com` (WhatsApp-senders en messaging
 services staan op die laatste). Stand op 7 september (kijk-modus): Mailjet
-zeven event-registraties en één parse-route (`@reply.bureauvlieland.nl`),
-alle naar het oude project, klaar om om te zetten.
+zeven event-registraties en één parse-route (`@reply.bureauvlieland.nl`);
+Twilio de WhatsApp-sender +31 562 700 208 (ONLINE) en de messaging service
+"Whatsapp bureauvlieland website", beide met de inbound-webhook. Alles wijst
+nog naar het oude project en is klaar om om te zetten. De sandbox-sender
++1 415 523 8886 (OFFLINE, demo-URL van Twilio) laat het script met rust.
 
 ## Stap 6 — Omschakelen **[Claude]**
 
