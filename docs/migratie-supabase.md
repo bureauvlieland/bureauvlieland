@@ -22,8 +22,8 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 0 | Nieuw, leeg Supabase-project met sleutels | Klaar |
 | 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
-| 3 | De bestanden (foto's, offertes, facturen) kopiëren | **Nu aan de beurt: Claude** |
-| 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | Claude plaatst, jij vult wachtwoorden over |
+| 3 | De bestanden (foto's, offertes, facturen) kopiëren | **Wacht op jou**: `storage-export` in Lovable deployen en het admin-wachtwoord in de Claude-omgeving corrigeren |
+| 4 | De 133 programma's plaatsen en hun wachtwoorden invoeren | Programma's staan erop (7 sep, Pro-abonnement was nodig). **Wacht op jou**: de 31 secrets overnemen uit Lovable |
 | 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
 
@@ -59,6 +59,10 @@ Nieuw project: `utshmnyrjzwtrpttxdlw` (regio eu-west-1, Ierland).
 URL `https://utshmnyrjzwtrpttxdlw.supabase.co`. Anon key staat in
 `supabase/scripts/run-migration.sh` (publiek). Databasewachtwoord en
 service_role key zijn aangeleverd.
+
+Het project moet op het **Pro-abonnement** staan: het gratis abonnement laat
+lang niet 133 edge functions toe (fout 402 bij het deployen) en pauzeert een
+project na een week zonder gebruik. Gedaan op 7 september.
 
 Nog nodig:
 
