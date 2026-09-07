@@ -312,13 +312,22 @@ betalen is `bureauvlieland.nl`, die niet verandert.
 
 De nieuwe waarden komen via `.env` in de repo (stap 6).
 
-### Alternatief: Claude zet het om
+### Claude zet het om: `run-migration.sh webhooks`
 
-Mailjet en Twilio hebben beide een API; `mailjet-webhook-setup.ps1` gebruikt
-die al. Vanuit de Claude-omgeving zijn `api.mailjet.com` en `api.twilio.com`
-nu geblokkeerd. Worden die twee toegestaan (claude.ai/code → omgeving →
-*Network*), dan kan Claude bij stap 6 de registraties omzetten met de sleutels
-die `secrets-export` levert, zonder dat er iets overgetypt hoeft te worden.
+Mailjet en Twilio hebben beide een API. `supabase/scripts/migrate-webhooks.py`
+haalt de sleutels op via `secrets-export` en zet alles in één keer om:
+
+```bash
+supabase/scripts/run-migration.sh webhooks                 # alleen tonen wat er staat
+supabase/scripts/run-migration.sh webhooks --apply         # omzetten naar nieuw
+supabase/scripts/run-migration.sh webhooks --apply --target old   # vangnet: terug
+```
+
+Vereist in de netwerkregels van de Claude-omgeving: `api.mailjet.com`,
+`api.twilio.com` en `messaging.twilio.com` (WhatsApp-senders en messaging
+services staan op die laatste). Stand op 7 september (kijk-modus): Mailjet
+zeven event-registraties en één parse-route (`@reply.bureauvlieland.nl`),
+alle naar het oude project, klaar om om te zetten.
 
 ## Stap 6 — Omschakelen **[Claude]**
 

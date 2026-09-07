@@ -17,6 +17,7 @@
 #   supabase/scripts/run-migration.sh storage [--dry-run]    # bestanden kopiëren
 #   supabase/scripts/run-migration.sh secrets [--dry-run]    # secrets van edge functions overzetten
 #   supabase/scripts/run-migration.sh functions              # 134 edge functions deployen
+#   supabase/scripts/run-migration.sh webhooks [--apply]     # Mailjet/Twilio omzetten (stap 5)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -68,6 +69,11 @@ case "$cmd" in
     ADMIN_EMAIL="${ADMIN_EMAIL:?}" ADMIN_PASSWORD="${ADMIN_PASSWORD:?}" \
     SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:?}" \
       python3 supabase/scripts/migrate-secrets.py "$@"
+    ;;
+  webhooks)
+    OLD_URL="$OLD_URL" OLD_ANON_KEY="$OLD_ANON_KEY" NEW_URL="$NEW_URL" \
+    ADMIN_EMAIL="${ADMIN_EMAIL:?}" ADMIN_PASSWORD="${ADMIN_PASSWORD:?}" \
+      python3 supabase/scripts/migrate-webhooks.py "$@"
     ;;
   functions)
     export SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:?}"
