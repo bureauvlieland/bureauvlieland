@@ -91,6 +91,8 @@ interface ScanResult {
   vat_amount: number | null;
   amount_incl_vat: number | null;
   description: string | null;
+  /** De groep of opdrachtgever waarvoor het werk was, als de partner die noemt. */
+  customer_reference?: string | null;
   line_items: ScanLineItem[];
   vat_breakdown?: Array<{ vat_rate: number; amount_excl: number; vat_amount: number }>;
 }
@@ -436,6 +438,9 @@ export function AddPurchaseInvoiceDialog({
   const projectSuggestion = useMemo(() => {
     if (!projects || projects.length === 0) return null;
     const haystack = [
+      // Het veld dat de scanner hier expliciet voor invult; de rest is vrije tekst
+      // waarin de groep soms wél en soms niet terechtkomt.
+      scanResult?.customer_reference,
       scanResult?.description,
       description,
       inboxItem?.subject,
@@ -1159,6 +1164,15 @@ export function AddPurchaseInvoiceDialog({
                   AI-suggestie: {partners?.find((p) => p.id === suggestedPartnerId)?.name}
                 </button>
               )}
+              {/* Geen suggestie is ook informatie: dan weet je of het aan de scan
+                  ligt of aan een partnernaam die bij ons anders geschreven staat. */}
+              {scanResult && !suggestedPartnerId && !partnerId && (
+                <p className="text-xs text-muted-foreground">
+                  {scanResult.supplier_name
+                    ? <>Scanner las &ldquo;{scanResult.supplier_name}&rdquo; — geen partner met die naam gevonden.</>
+                    : <>Scanner kon de leverancier niet uit de factuur halen.</>}
+                </p>
+              )}
               {showIbanSuggestion && (
                 <div className="flex items-center justify-between gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs text-blue-800">
                   <span className="truncate">
@@ -1264,6 +1278,12 @@ export function AddPurchaseInvoiceDialog({
                     </span>
                   </span>
                 </button>
+              )}
+              {scanResult && !projectSuggestion && !requestId && (
+                <p className="text-xs text-muted-foreground">
+                  Geen project af te leiden uit de factuur. Zet de partner er een groep of
+                  ons referentienummer bij, dan herkent hij het de volgende keer.
+                </p>
               )}
             </div>
 

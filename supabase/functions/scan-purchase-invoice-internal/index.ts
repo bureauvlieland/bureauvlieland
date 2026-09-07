@@ -133,6 +133,11 @@ Deno.serve(async (req) => {
                 vat_amount: { type: ["number", "null"] },
                 amount_incl_vat: { type: ["number", "null"] },
                 description: { type: ["string", "null"] },
+                customer_reference: {
+                  type: ["string", "null"],
+                  description:
+                    "Voor wie het werk was: de groep, het gezelschap of de opdrachtgever die op de factuur genoemd wordt, bijvoorbeeld achter \"Groep:\", \"T.b.v.\", \"Betreft\" of \"Referentie\". Dit is NIET de leverancier en NIET Bureau Vlieland zelf. Neem de naam letterlijk over. Staat er niets: null.",
+                },
                 vat_breakdown: {
                   type: "array",
                   items: {
@@ -165,7 +170,7 @@ Deno.serve(async (req) => {
               required: [
                 "invoice_number", "invoice_date", "supplier_name", "supplier_iban",
                 "amount_excl_vat", "vat_rate", "vat_amount", "amount_incl_vat",
-                "description", "line_items", "vat_breakdown",
+                "description", "customer_reference", "line_items", "vat_breakdown",
               ],
               additionalProperties: false,
             },
