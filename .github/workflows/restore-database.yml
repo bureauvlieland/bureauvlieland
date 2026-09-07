@@ -7,8 +7,9 @@
 # docs/migratie-supabase.md.
 #
 # Handmatig starten via Actions → "Herstel database" → Run workflow. Vooraf:
-#   1. Het exportbestand (bureauvlieland_<datum>.backup) uploaden in het nieuwe
-#      project: Storage → bucket "migratie". De bucket bestaat al en is privé.
+#   1. Het exportbestand (bureauvlieland_<datum>.backup, mag ook als .zip)
+#      uploaden in het nieuwe project: Storage → bucket "migratie". De bucket
+#      bestaat al en is privé.
 #   2. Twee repository secrets (Settings → Secrets and variables → Actions):
 #        SUPABASE_DB_PASSWORD       databasewachtwoord van het nieuwe project
 #        SUPABASE_SERVICE_ROLE_KEY  service_role key (Project Settings → API)
@@ -48,7 +49,7 @@ env:
   NEW_URL: https://utshmnyrjzwtrpttxdlw.supabase.co
   NEW_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0c2htbnlyanp3dHJwdHR4ZGx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3OTEwMTksImV4cCI6MjEwNDM2NzAxOX0.FR8Ia5dJaNtoL5yGBhiidmW1VKR1gvl-B29C7JnpZ9I
   OLD_URL: https://blhspuifehausilnzwio.supabase.co
-  POOLER_HOST: aws-0-eu-west-1.pooler.supabase.com
+  POOLER_HOST: aws-1-eu-west-1.pooler.supabase.com
   SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
   SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
@@ -103,7 +104,11 @@ jobs:
             fi
             echo "Overschrijven aangevinkt: schema public wordt leeggemaakt."
             psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "drop schema public cascade; create schema public; grant usage on schema public to postgres, anon, authenticated, service_role; grant all on schema public to postgres, service_role;"
-            psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "truncate auth.users cascade; truncate storage.objects cascade;"
+            psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "delete from auth.users;"
+            # storage.objects heeft een beschermtrigger tegen per ongeluk leegmaken; deze
+            # instelling zet hem voor deze ene transactie uit. De bucket migratie (met de
+            # export zelf) blijft staan.
+            psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "set local storage.allow_delete_query = 'true'; delete from storage.objects where bucket_id <> 'migratie';"
             psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "select cron.unschedule(jobid) from cron.job;"
             psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "delete from supabase_migrations.schema_migrations;" || true
           fi
@@ -112,16 +117,36 @@ jobs:
         run: |
           set -euo pipefail
           f="${{ github.event.inputs.bestand }}"
-          code=$(curl -sS -o export.backup -w '%{http_code}' \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            "$NEW_URL/storage/v1/object/authenticated/migratie/$f")
+          fetch() {
+            curl -sS -o download.bin -w '%{http_code}' \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              "$NEW_URL/storage/v1/object/authenticated/migratie/$1"
+          }
+          # Eerst de opgegeven naam; staat die er niet, dan dezelfde naam met .zip erachter
+          # (de browser pakt een .backup soms in bij het uploaden).
+          code=$(fetch "$f")
+          if [ "$code" != "200" ] && [ "${f%.zip}" = "$f" ]; then
+            f="$f.zip"; code=$(fetch "$f")
+          fi
           if [ "$code" != "200" ]; then
-            echo "::error::Bestand '$f' niet gevonden in bucket migratie (HTTP $code). Controleer de naam in Storage → migratie."
-            head -c 500 export.backup; echo
+            echo "::error::Bestand '${{ github.event.inputs.bestand }}' (ook niet als .zip) niet gevonden in bucket migratie (HTTP $code). Controleer de naam in Storage → migratie."
+            head -c 500 download.bin; echo
             exit 1
           fi
+          echo "Opgehaald: $f"
+          if [ "${f%.zip}" != "$f" ]; then
+            mv download.bin download.zip
+            unzip -l download.zip
+            inner=$(unzip -Z1 download.zip | grep -v '/$' | head -1)
+            unzip -o -q download.zip "$inner"
+            mv "$inner" export.backup
+          else
+            mv download.bin export.backup
+          fi
           ls -l export.backup
-          pg_restore --list export.backup | head -5
+          file export.backup
+          pg_restore --list export.backup > inhoudsopgave.txt
+          head -6 inhoudsopgave.txt
 
       - name: Terugzetten (drie fasen)
         env:
@@ -144,8 +169,10 @@ jobs:
         run: |
           # Fouten over onderdelen die Supabase zelf al heeft zijn normaal; alle andere niet.
           if [ -f restore-pre-data.log ]; then
+            # Supabase's eigen schema's (auth, storage, realtime, extensies) bestaan al en
+            # zijn niet van ons; alles wat de export daaraan wil veranderen faalt, en dat is goed.
             grep -hE "error:" restore-*.log \
-              | grep -vE "extensions|graphql_public|vault|pg_cron|pg_net|supabase_vault" \
+              | grep -vE "extensions|graphql_public|vault|pg_cron|pg_net|supabase_vault|must be owner of|permission denied for schema|realtime\.messages_|already exists|Non-superuser owned event trigger|permission denied for (table|sequence) (job|jobid_seq|runid_seq|secrets|migrations|buckets_vectors|vector_indexes|schema_migrations)" \
               | sort | uniq -c | sort -rn > onverwacht.log || true
             n=$(wc -l < onverwacht.log)
             if [ "$n" != "0" ]; then
@@ -173,6 +200,7 @@ jobs:
             echo "| Tabellen in public | $(q "select count(*) from information_schema.tables where table_schema='public'") | 67 |"
             echo "| Gebruikers | $(q "select count(*) from auth.users") | 41 |"
             echo "| Gebruikers met wachtwoord | $(q "select count(encrypted_password) from auth.users") | 41 |"
+            echo "| Gebruikers met inlogmethode (identities) | $(q "select count(distinct user_id) from auth.identities") | 41 |"
             echo "| Bestandsrijen in storage | $(q "select count(*) from storage.objects where bucket_id not like 'database_export%' and bucket_id <> 'migratie'") | 250 |"
             echo "| Cron-jobs | $(q "select count(*) from cron.job") | 16 |"
             echo "| Cron-jobs die nog naar het oude project wijzen | $(q "select count(*) from cron.job where command like '%$OLD_URL%'") | 0 |"
@@ -190,4 +218,5 @@ jobs:
             restore-*.log
             after-restore.log
             onverwacht.log
+            cron-schedule.sql
           if-no-files-found: ignore

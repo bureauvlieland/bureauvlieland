@@ -42,6 +42,31 @@ psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -c "
 echo "== Fase 3: indexes, constraints, triggers (post-data)"
 pg_restore "${COMMON[@]}" --section=post-data "$DUMP" 2>&1 | tee restore-post-data.log | grep -E "error:" || true
 
+echo "== Fase 4: wat in fase 2 niet kon"
+# a) auth.identities (de koppeling gebruiker <-> inlogmethode) staat in de export
+#    vóór auth.users; met Supabase's eigen foreign keys faalt die COPY dan.
+#    Nu de gebruikers er zijn lukt hij wel. Zonder deze rijen kan niemand inloggen.
+if [ "$(psql "$NEW_DB_URL" -Atc 'select count(*) from auth.identities')" = "0" ]; then
+  pg_restore "${COMMON[@]}" --data-only -n auth -t identities "$DUMP" 2>&1 | tee restore-identities.log | grep -E "error:" || true
+fi
+echo "identities: $(psql "$NEW_DB_URL" -Atc 'select count(*) from auth.identities') (verwacht: evenveel als gebruikers)"
+
+# b) cron.job mag niet rechtstreeks gevuld worden (alleen via cron.schedule()).
+#    De rijen uit de export gaan in een tijdelijke tabel en worden van daaruit
+#    opnieuw ingepland. Bestaande jobs met dezelfde naam worden overschreven.
+pg_restore --data-only -n cron -t job -f cron-job.sql "$DUMP"
+{
+  echo "create temp table _mig_cron_job (like cron.job);"
+  sed 's/^COPY cron\.job /COPY _mig_cron_job /'
+  cat <<'SQL'
+select cron.schedule(jobname, schedule, command) from _mig_cron_job where jobname is not null order by jobid;
+select cron.schedule(schedule, command) from _mig_cron_job where jobname is null order by jobid;
+select cron.alter_job(j.jobid, active := false) from cron.job j join _mig_cron_job m on m.jobname = j.jobname where not m.active;
+select count(*) as cron_jobs_ingepland from cron.job;
+SQL
+} < cron-job.sql > cron-schedule.sql
+psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -q -f cron-schedule.sql
+
 echo
-echo "Klaar. Controleer de logs op 'error:' regels die NIET over extensions/graphql_public/vault/pg_cron/pg_net/supabase_vault gaan."
+echo "Klaar. Controleer de logs op 'error:' regels die NIET over Supabase's eigen schema's (auth/storage/realtime/extensions/vault) gaan."
 echo "Volgende stap: supabase/scripts/after-restore.sql (zie docs/migratie-supabase.md)."
