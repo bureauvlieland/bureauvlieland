@@ -67,6 +67,13 @@ SQL
 } < cron-job.sql > cron-schedule.sql
 psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 -q -f cron-schedule.sql
 
+# --- Fase 5: toegangsrechten -----------------------------------------------
+# De drie secties draaien met --no-privileges; zonder deze fase heeft geen
+# enkele app-rol (anon, authenticated, service_role) toegang en kan niemand
+# inloggen (zo ging het op 7 september 2026).
+echo "== Fase 5: toegangsrechten op schema public"
+"$(dirname "$0")/restore-privileges.sh" "$DUMP"
+
 echo
 echo "Klaar. Controleer de logs op 'error:' regels die NIET over Supabase's eigen schema's (auth/storage/realtime/extensions/vault) gaan."
 echo "Volgende stap: supabase/scripts/after-restore.sql (zie docs/migratie-supabase.md)."

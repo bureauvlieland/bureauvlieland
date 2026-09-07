@@ -1,0 +1,139 @@
+# Herstel rechten: zet de toegangsrechten (GRANT/REVOKE) op schema public uit
+# de Lovable-export in het nieuwe Supabase-project.
+#
+# Waarom: "Herstel database" draaide pg_restore met --no-privileges, waardoor
+# na de restore van 7 september 2026 geen enkele app-rol (anon, authenticated,
+# service_role) bij de tabellen kon en niemand kon inloggen. Deze workflow
+# haalt alleen de ACL-regels voor schema public uit hetzelfde exportbestand en
+# voert ze uit; data en structuur blijven onaangeroerd. Herhaalbaar.
+#
+# Vanaf nu doet "Herstel database" dit zelf ook (fase 5 in
+# supabase/scripts/restore-from-lovable.sh); deze knop is voor het herstel
+# achteraf en voor controle.
+#
+# Starten: Actions → "Herstel rechten" → Run workflow, bestandsnaam invullen
+# (dezelfde als bij Herstel database, bijv. bureauvlieland_260907.backup).
+
+name: Herstel rechten
+
+on:
+  workflow_dispatch:
+    inputs:
+      bestand:
+        description: "Naam van het exportbestand in bucket 'migratie' (bijv. bureauvlieland_260907.backup)"
+        required: true
+
+concurrency:
+  group: restore-database
+  cancel-in-progress: false
+
+env:
+  NEW_REF: utshmnyrjzwtrpttxdlw
+  NEW_URL: https://utshmnyrjzwtrpttxdlw.supabase.co
+  POOLER_HOST: aws-1-eu-west-1.pooler.supabase.com
+  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+jobs:
+  privileges:
+    name: Toegangsrechten uit de export terugzetten
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controleer geheimen
+        run: |
+          ok=true
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then echo "::error::Repository secret SUPABASE_DB_PASSWORD ontbreekt."; ok=false; fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::error::Repository secret SUPABASE_SERVICE_ROLE_KEY ontbreekt."; ok=false; fi
+          $ok
+
+      # De export komt uit pg_dump 18; pg_restore 16 (standaard op de runner)
+      # weigert het bestand. Daarom de PostgreSQL-apt-repo en versie 18.
+      - name: PostgreSQL 18 client installeren
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/18/bin/pg_restore --version
+
+      - name: Databaseverbinding samenstellen
+        id: db
+        run: |
+          pw="$(python3 -c 'import os,urllib.parse;print(urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"],safe=""))')"
+          url="postgresql://postgres.${NEW_REF}:${pw}@${POOLER_HOST}:5432/postgres"
+          echo "::add-mask::$pw"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          psql "$url" -Atc "select version();"
+
+      - name: Exportbestand ophalen uit bucket migratie
+        run: |
+          set -euo pipefail
+          f="${{ github.event.inputs.bestand }}"
+          fetch() {
+            curl -sS -o download.bin -w '%{http_code}' \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              "$NEW_URL/storage/v1/object/authenticated/migratie/$1"
+          }
+          # Eerst de opgegeven naam; staat die er niet, dan dezelfde naam met .zip erachter
+          # (de browser pakt een .backup soms in bij het uploaden).
+          code=$(fetch "$f")
+          if [ "$code" != "200" ] && [ "${f%.zip}" = "$f" ]; then
+            f="$f.zip"; code=$(fetch "$f")
+          fi
+          if [ "$code" != "200" ]; then
+            echo "::error::Bestand '${{ github.event.inputs.bestand }}' (ook niet als .zip) niet gevonden in bucket migratie (HTTP $code). Controleer de naam in Storage → migratie."
+            head -c 500 download.bin; echo
+            exit 1
+          fi
+          echo "Opgehaald: $f"
+          if [ "${f%.zip}" != "$f" ]; then
+            mv download.bin download.zip
+            unzip -l download.zip
+            inner=$(unzip -Z1 download.zip | grep -v '/$' | head -1)
+            unzip -o -q download.zip "$inner"
+            mv "$inner" export.backup
+          else
+            mv download.bin export.backup
+          fi
+          ls -l export.backup
+          file export.backup
+          pg_restore --list export.backup > inhoudsopgave.txt
+          head -6 inhoudsopgave.txt
+
+
+      - name: Rechten terugzetten
+        env:
+          NEW_DB_URL: ${{ steps.db.outputs.url }}
+        run: |
+          set -o pipefail
+          supabase/scripts/restore-privileges.sh export.backup 2>&1 | tee restore-privileges-run.log
+
+      - name: Samenvatting
+        if: always()
+        run: |
+          {
+            echo "## Herstel rechten"
+            echo
+            echo '```'
+            grep -vE '^\s*$' restore-privileges-run.log | tail -40
+            echo '```'
+            echo
+            echo "Verwacht: rechten voor anon, authenticated, postgres en service_role; de drie controlewaarden op de laatste regel 't|t|t'."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: herstel-rechten-logs
+          path: |
+            restore-privileges-run.log
+            restore-privileges.log
+            privileges.sql
+            toc-acl.list
+          if-no-files-found: ignore
