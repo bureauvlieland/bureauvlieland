@@ -25,7 +25,7 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
 | 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Klaar, 7 september (19 secrets overgezet); alleen `GEMINI_API_KEY` nog **[jij]** |
 | 5 | Mailjet en Twilio het nieuwe adres geven | Klaar, 8 september 00:15 (`run-migration.sh webhooks --apply`) |
-| 6 | Omschakelen en controleren | **Omgeschakeld 8 september 00:00, controles lopen** (route B: export van 7 september 19:36 hergebruikt; één latere bewerking, "Lunch in de natuur" in BV-2602-0005, wordt met de hand overgedaan) |
+| 6 | Omschakelen en controleren | **Klaar, 8 september 00:50.** Nieuwe website live, bewerking "Lunch in de natuur" overgedaan, WhatsApp en zelftest groen. Oude project blijft een week als vangnet |
 
 Waarom stap 2 via een knop in GitHub gaat: om de kopie in de database te
 zetten is een rechtstreekse databaseverbinding nodig, en de omgeving waarin
@@ -351,6 +351,16 @@ Daarna de controlelijst: inloggen, een inkoopfactuur scannen (AI-sleutel), een
 partnermail sturen (Mailjet), een WhatsApp (Twilio), de logiesoffertes en
 foto's zichtbaar (storage), en de volgende ochtend `critical-selftest` en de
 heartbeat in de logs (cron).
+
+Verloop op 8 september (nacht): route B (export 19:36 hergebruikt, één
+bewerking overgedaan). Twee hobbels, beide opgelost: (1) de toegangsrechten
+ontbraken na de restore (zie stap 2, fase 5 / *Herstel rechten*); (2) daardoor
+faalde ook de Netlify-build, want `scripts/generate-sitemap.ts` leest tijdens
+de build bouwstenen en programma's uit de database met de anon key. Na het
+herstel van de rechten en *Trigger deploy* in Netlify stond de nieuwe website
+om 00:45 live. Controles: inloggen, WhatsApp (twee testberichten aangekomen),
+`critical-selftest` 13/13, Mailjet-webhookstatus in orde. Nog te doen: een
+inkoopfactuur scannen (Gemini) en een partnermail (Mailjet) op een werkdag.
 
 Pas als dat groen is: in Lovable *Remove Lovable Cloud*. Tot die tijd blijft het
 oude project als vangnet staan.
