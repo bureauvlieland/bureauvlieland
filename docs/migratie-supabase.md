@@ -143,6 +143,12 @@ actief en naar het nieuwe project, 310 migraties in de historie. De cron-jobs
 roepen edge functions aan die er pas na stap 4 staan; tot die tijd falen ze
 stilletjes, dat is verwacht.
 
+**Geleerd op 8 september:** de restore draaide met `--no-privileges`, waardoor
+na de omschakeling geen enkele app-rol bij de tabellen kon en niemand kon
+inloggen. `restore-from-lovable.sh` heeft nu een fase 5 die de ACL-regels
+voor schema public alsnog uit de export haalt (`restore-privileges.sh`), en er
+is een losse knop *Actions → Herstel rechten* voor herstel achteraf.
+
 Vanaf een eigen computer met `pg_restore` 18 kan het ook zonder GitHub:
 `supabase/scripts/run-migration.sh restore <bestand>`.
 
