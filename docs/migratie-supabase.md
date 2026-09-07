@@ -23,7 +23,7 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
 | 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
-| 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | **Nu aan de beurt**: Claude plaatst, jij vult wachtwoorden over |
+| 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Programma's staan erop. **Nu**: jij deployt `secrets-export` in Lovable, Claude zet de wachtwoorden over |
 | 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
 
@@ -47,7 +47,7 @@ Resultaat: de hele structuur en data komen goed over. De cijfers:
 | Vault | Leeg | Niets |
 | Eén data-oneffenheid | 27 template-regels wijzen naar verwijderde templates | `restore-from-lovable.sh` ruimt ze op (anders blokkeren ze een foreign key) |
 | Edge functions (134) | Niet in de export | Uit de repo deployen met de Supabase CLI |
-| Secrets van edge functions | Niet in de export | Opnieuw invoeren (lijst bij stap 4) |
+| Secrets van edge functions | Niet in de export (staan versleuteld buiten de database) | `secrets-export` + `run-migration.sh secrets` zet ze over (stap 4) |
 | AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway | Eigen Gemini-sleutel; code is klaar (`_shared/ai.ts`) |
 | Outlook-doorsturen | Liep via Lovable's Microsoft-connector | Uitgefaseerd; doorsturen gaat via Mailjet |
 | Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL | Opnieuw registreren op de nieuwe URL |
@@ -185,9 +185,23 @@ supabase/scripts/run-migration.sh functions
 
 De per-functie instelling `verify_jwt` komt uit `supabase/config.toml`.
 
-Secrets invoeren (*Edge Functions → Secrets*, of `supabase secrets set`). Dit
-zijn de 31 namen die de functies gebruiken; de waarden staan in Lovable onder
-*Cloud → Secrets* en moeten één voor één over:
+De secrets staan niet in de export: Supabase bewaart ze versleuteld buiten
+de database, en alleen de beheerder van een project (bij het oude project is
+dat Lovable) kan ze uitlezen. De edge functions zelf kunnen ze wél lezen.
+Daarom gaat het net als bij de bestanden via een tijdelijke edge function:
+
+1. **[jij]** In Lovable: "deploy de edge function secrets-export".
+2. **[Claude]** `supabase/scripts/run-migration.sh secrets --dry-run` (ophalen
+   en tellen) en daarna `run-migration.sh secrets`. Het script logt in als
+   admin, haalt de 25 waarden op en zet ze via de beheer-API
+   (`api.supabase.com`) in het nieuwe project. Het toont alleen namen en
+   lengtes; de waarden komen in geen chat of bestand terecht.
+3. **[jij]** Na de verhuizing in Lovable: "verwijder de edge function
+   secrets-export" (en `storage-export`).
+
+Dit zijn de 25 namen die overgaan; de waarden staan in Lovable onder
+*Cloud → Secrets* (daar kun je ze desnoods ook met de hand overtypen naar
+*Edge Functions → Secrets* in het nieuwe project):
 
 ```
 Mail:      MAILJET_API_KEY MAILJET_SECRET_KEY MAILJET_FROM_EMAIL MAILJET_SENDER_EMAIL
@@ -198,13 +212,20 @@ WhatsApp:  TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_API_KEY_SID TWILIO_API_KE
 Koppelingen: MAP_API_KEY DOEKSEN_API_KEY GEOAPIFY_API_KEY GOOGLE_PLACES_API_KEY
            META_APP_ID META_APP_SECRET
 Zelftest:  CI_ADMIN_EMAIL CI_ADMIN_PASSWORD CI_FIXTURE_SECRET
-AI:        GEMINI_API_KEY OPENAI_API_KEY        ← nieuw, vervangen LOVABLE_API_KEY
-Vervalt:   LOVABLE_API_KEY MICROSOFT_OUTLOOK_API_KEY
 ```
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` en
-`SUPABASE_DB_URL` zet Supabase zelf. De waarden staan in Lovable onder
-*Cloud → Secrets*; Claude kan ze niet zien, jij wel.
+Twee zijn nieuw en bestaan niet in Lovable; die zet jij zelf in het nieuwe
+project onder *Edge Functions → Secrets*:
+
+```
+GEMINI_API_KEY   aistudio.google.com/apikey        (factuurscanner, e-mailhulp, enz.)
+OPENAI_API_KEY   platform.openai.com/api-keys      (alleen Claudia's zoekindex; weglaten
+                                                    als Claudia eruit gaat)
+```
+
+Vervallen: `LOVABLE_API_KEY` en `MICROSOFT_OUTLOOK_API_KEY`. `SUPABASE_URL`,
+`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` en `SUPABASE_DB_URL` zet
+Supabase zelf.
 
 ## Stap 5 — Externe partijen op de nieuwe URL zetten **[jij, Claude geeft de exacte URLs]**
 
