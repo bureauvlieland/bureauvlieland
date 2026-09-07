@@ -89,7 +89,7 @@ En in dezelfde omgevingsinstellingen onder *Network*, toestaan:
 
 ```
 utshmnyrjzwtrpttxdlw.supabase.co
-aws-0-eu-west-1.pooler.supabase.com
+aws-1-eu-west-1.pooler.supabase.com
 api.supabase.com
 blhspuifehausilnzwio.supabase.co
 ```
