@@ -9,6 +9,29 @@ Dit document is de enige bron. Stappen met **[jij]** doe jij; stappen met
 **[Claude]** doet Claude in de repo of met de gegevens die jij aanlevert.
 Volgorde aanhouden.
 
+## Waar staan we, in gewone taal
+
+De app bestaat uit twee helften. De *website* (wat je in de browser ziet)
+staat op Netlify en verhuist niet; die hoeft straks alleen te weten waar de
+nieuwe achterkant staat. De *achterkant* (database, bestanden, gebruikers,
+en 134 kleine programma's voor mail, WhatsApp en de factuurscanner) staat nu
+bij Lovable en moet naar een Supabase-project van jezelf.
+
+| Stap | Wat het is | Stand |
+|---|---|---|
+| 0 | Nieuw, leeg Supabase-project met sleutels | Klaar |
+| 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
+| 2 | Die kopie in het nieuwe project zetten | **Nu aan de beurt: knop in GitHub** |
+| 3 | De bestanden (foto's, offertes, facturen) kopiëren | Claude, direct na stap 2 |
+| 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | Claude plaatst, jij vult wachtwoorden over |
+| 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
+| 6 | Omschakelen en controleren | Claude, daarna samen controleren |
+
+Waarom stap 2 via een knop in GitHub gaat: om de kopie in de database te
+zetten is een rechtstreekse databaseverbinding nodig, en de omgeving waarin
+Claude werkt laat alleen webverkeer door. GitHub kan die verbinding wel maken.
+Claude heeft de knop gebouwd; jij drukt erop en laat het resultaat zien.
+
 ## Wat er in de export zit (gecontroleerd op de export van 7 september 2026)
 
 De export is teruggezet op een lokale PostgreSQL 17 als generale repetitie.
@@ -71,9 +94,9 @@ api.supabase.com
 blhspuifehausilnzwio.supabase.co
 ```
 
-Omgevingsinstellingen gelden voor nieuwe sessies. Start daarna een nieuwe
-sessie met: "Draai de verhuizing volgens docs/migratie-supabase.md, begin met
-`supabase/scripts/run-migration.sh check`."
+Deze variabelen en netwerkregels staan sinds 7 september ingesteld; `check`
+bereikt de storage-API en de beheer-API van het nieuwe project. Alleen de
+databasepoort (5432) blijft dicht; daarvoor is stap 2 naar GitHub verplaatst.
 
 ## Stap 1 — Export uit Lovable **[gedaan]**
 
@@ -82,24 +105,38 @@ export van 7 september staat bij Claude; vlak voor de definitieve
 omschakeling maken we een verse (één export per dag mogelijk), zodat er geen
 werk van de tussenliggende dagen verloren gaat.
 
-## Stap 2 — Herstellen in het nieuwe project **[Claude]**
+## Stap 2 — Herstellen in het nieuwe project **[jij drukt op de knop, Claude leest het resultaat]**
 
-```bash
-supabase/scripts/run-migration.sh restore bureauvlieland_<datum>.backup
-```
+Dit is de enige stap die niet vanuit Claude kan (zie hierboven). Daarom is er
+de GitHub-workflow `.github/workflows/restore-database.yml`, zichtbaar als
+*Actions → Herstel database*. Eenmalig voorbereiden:
 
-Dat draait `restore-from-lovable.sh` en daarna `after-restore.sql`, beide
-gevalideerd op de export van 7 september.
+1. **Exportbestand uploaden.** Ga in het nieuwe project naar *Storage →
+   migratie* (die map staat al klaar, privé) en upload
+   `bureauvlieland_<datum>.backup`. Onthoud de bestandsnaam.
+2. **Twee geheimen in GitHub.** *Settings → Secrets and variables → Actions →
+   New repository secret*:
+   - `SUPABASE_DB_PASSWORD`: het databasewachtwoord van het nieuwe project.
+   - `SUPABASE_SERVICE_ROLE_KEY`: *Project Settings → API → service_role*.
+   Het eerste geheim gebruikt de deploy-workflow bij stap 6 ook.
+3. **Op de knop drukken.** *Actions → Herstel database → Run workflow*, de
+   bestandsnaam invullen, *Run workflow*. Het duurt een paar minuten.
+4. **Resultaat delen.** Onder de run staat een samenvatting met een tabel
+   (gebruikers, bestanden, cron-jobs, en of er onverwachte fouten waren).
+   Stuur die aan Claude, of de link naar de run.
 
-Het herstelscript draait in drie fasen (structuur, data, constraints) en ruimt
-tussendoor de 27 wees-rijen op. Foutmeldingen over `extensions`,
+De workflow weigert als de database al gevuld is, tenzij je *overschrijven*
+aanvinkt. Zo kan een tweede klik geen schade doen. Wat hij doet: het bestand
+ophalen, `restore-from-lovable.sh` (drie fasen: structuur, data, constraints;
+ruimt tussendoor de 27 wees-rijen op) en daarna `after-restore.sql` (vervangt
+de oude URL en anon key in alle cron-jobs, zet de migratiehistorie gelijk aan
+de repo, print de controles). Foutmeldingen over `extensions`,
 `graphql_public`, `vault`, `pg_cron`, `pg_net` en `supabase_vault` zijn
-normaal: die heeft Supabase al. Het nascript vervangt de oude URL en anon key in
-alle cron-jobs, zet de migratiehistorie gelijk aan de repo en print de
-controles (41 gebruikers met wachtwoord, bestanden per bucket, 0 wees-rijen).
+normaal: die heeft Supabase al; de workflow filtert ze eruit en meldt alleen
+de rest.
 
-Vereist `pg_restore` 17 of hoger; de export komt uit pg_dump 18. Claude heeft
-die al klaarstaan.
+Vanaf een eigen computer met `pg_restore` 18 kan het ook zonder GitHub:
+`supabase/scripts/run-migration.sh restore <bestand>`.
 
 ## Stap 3 — Bestanden kopiëren **[Claude]**
 
