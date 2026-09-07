@@ -1,70 +1,49 @@
--- Eenmalig draaien in de SQL editor van het NIEUWE project, direct na pg_restore.
--- Stap 1: vul de twee vault-secrets in (zie docs/migratie-supabase.md).
---   select vault.create_secret('https://<nieuwe ref>.supabase.co', 'project_url');
---   select vault.create_secret('<nieuwe anon key>', 'anon_key');
+-- Eenmalig draaien op het NIEUWE project, direct na restore-from-lovable.sh.
+-- Vier psql-variabelen zijn nodig:
 --
--- Stap 2: dit script. Het laat zien welke cron-jobs nog naar het oude project
--- wijzen, en zet de twee bekende jobs opnieuw via invoke_edge_function.
+--   psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 \
+--     -v old_url='https://blhspuifehausilnzwio.supabase.co' \
+--     -v new_url='https://<nieuwe ref>.supabase.co' \
+--     -v old_key='<oude anon key, staat in .env als VITE_SUPABASE_PUBLISHABLE_KEY>' \
+--     -v new_key='<nieuwe anon key>' \
+--     -f supabase/scripts/after-restore.sql
+--
+-- Getest op de export van 7 september 2026 (lokale PostgreSQL 17).
 
--- Overzicht: alles wat nog 'blhspuifehausilnzwio' of een hardcoded supabase.co-URL bevat.
-SELECT jobid, jobname, schedule, left(command, 120) AS command
+\echo '== 1. Cron-jobs: oude URL en anon key vervangen (14 van de 16 jobs roepen een edge function aan)'
+SELECT cron.alter_job(
+  jobid,
+  command := replace(replace(command, :'old_url', :'new_url'), :'old_key', :'new_key')
+)
 FROM cron.job
-WHERE command ILIKE '%supabase.co%'
-ORDER BY jobname;
+WHERE command LIKE '%' || :'old_url' || '%' OR command LIKE '%' || :'old_key' || '%';
 
--- Helper: roept een edge function aan met URL en anon key uit Vault. Zo staat
--- er nergens meer een project-ref in een cron-job.
-CREATE OR REPLACE FUNCTION public.invoke_edge_function(fn_name text, payload jsonb DEFAULT '{}'::jsonb)
-RETURNS bigint
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE
-  v_url text;
-  v_key text;
-  v_request_id bigint;
-BEGIN
-  SELECT decrypted_secret INTO v_url FROM vault.decrypted_secrets WHERE name = 'project_url' LIMIT 1;
-  SELECT decrypted_secret INTO v_key FROM vault.decrypted_secrets WHERE name = 'anon_key' LIMIT 1;
-  IF v_url IS NULL OR v_key IS NULL THEN
-    RAISE WARNING 'invoke_edge_function(%): vault secrets project_url/anon_key ontbreken, niets gedaan', fn_name;
-    RETURN NULL;
-  END IF;
-  SELECT net.http_post(
-    url := rtrim(v_url, '/') || '/functions/v1/' || fn_name,
-    headers := jsonb_build_object('Content-Type', 'application/json', 'apikey', v_key),
-    body := payload
-  ) INTO v_request_id;
-  RETURN v_request_id;
-END;
-$$;
+SELECT count(*) AS jobs_nog_naar_oud_project
+FROM cron.job
+WHERE command LIKE '%' || :'old_url' || '%' OR command LIKE '%' || :'old_key' || '%';
+-- Verwacht: 0
 
-REVOKE ALL ON FUNCTION public.invoke_edge_function(text, jsonb) FROM public, anon, authenticated;
+SELECT jobid, jobname, schedule, active FROM cron.job ORDER BY jobid;
+-- Verwacht: 16 jobs, allemaal active
 
+\echo '== 2. Migratiehistorie gelijk aan de repo (anders wil de CLI alle migraties opnieuw draaien)'
+\i supabase/scripts/mark-migrations-applied.sql
+SELECT count(*) AS migraties, max(version) FROM supabase_migrations.schema_migrations;
+-- Verwacht: evenveel als bestanden in supabase/migrations/
 
--- De twee jobs uit de repo opnieuw plannen via de helper (idempotent).
-DO $$
-BEGIN
-  PERFORM cron.unschedule('critical-selftest-daily');
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-SELECT cron.schedule(
-  'critical-selftest-daily', '45 5 * * *',
-  $cron$ SELECT public.invoke_edge_function('critical-selftest', '{"triggeredBy":"cron"}'::jsonb); $cron$
-);
-DO $$
-BEGIN
-  PERFORM cron.unschedule('email-webhook-heartbeat-daily');
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-SELECT cron.schedule(
-  'email-webhook-heartbeat-daily', '15 6 * * *',
-  $cron$ SELECT public.invoke_edge_function('email-webhook-heartbeat', '{"triggeredBy":"cron"}'::jsonb); $cron$
-);
+\echo '== 3. Controles'
+SELECT count(*) AS gebruikers, count(encrypted_password) AS met_wachtwoord FROM auth.users;
+-- Verwacht (export 7 sep): 41 en 41. Zijn ze gelijk, dan kan iedereen gewoon inloggen.
 
--- Controle: de helper moet een request-id teruggeven (geen NULL/warning).
-SELECT public.invoke_edge_function('email-webhook-heartbeat', '{"triggeredBy":"after-restore-check"}'::jsonb) AS request_id;
+SELECT bucket_id, count(*) AS objecten FROM storage.objects GROUP BY 1 ORDER BY 1;
+-- Dit zijn de rijen; de bestanden zelf zet scripts/migrate-storage.ts erbij.
+-- De buckets database_export_* zijn Lovable's eigen exportbestanden en hoeven niet mee.
 
--- Storage: bestanden zelf staan niet in de dump; scripts/migrate-storage.ts kopieert ze.
-SELECT bucket_id, count(*) AS objects FROM storage.objects GROUP BY bucket_id ORDER BY bucket_id;
+SELECT count(*) AS wees_template_items
+FROM public.program_template_items
+WHERE template_id NOT IN (SELECT id FROM public.program_templates);
+-- Verwacht: 0 (restore-from-lovable.sh heeft ze verwijderd)
+
+SELECT conname FROM pg_constraint
+WHERE conrelid = 'public.program_template_items'::regclass AND conname LIKE '%template_id%';
+-- Verwacht: program_template_items_template_id_fkey

@@ -9,22 +9,26 @@ Dit document is de enige bron. Stappen met **[jij]** doe jij; stappen met
 **[Claude]** doet Claude in de repo of met de gegevens die jij aanlevert.
 Volgorde aanhouden.
 
-## Wat er wel en niet meeverhuist
+## Wat er in de export zit (gecontroleerd op de export van 7 september 2026)
 
-| Onderdeel | Hoe | Status |
+De export is teruggezet op een lokale PostgreSQL 17 als generale repetitie.
+Resultaat: de hele structuur en data komen goed over. De cijfers:
+
+| Onderdeel | In de export | Wat er nog bij moet |
 |---|---|---|
-| Tabellen, data, RLS, functies, triggers, enums, sequences | Lovable-export (pg_dump) → pg_restore | Volledig |
-| Gebruikersaccounts (auth.users, identities) | Zit in de export | Volledig |
-| Wachtwoorden | Lovable zegt sinds juli 2026: mee in de export. Wordt gecontroleerd op de dump; zo niet, dan krijgt iedereen één keer een reset-mail | Controleren |
-| Storage-bestanden (facturen, foto's, documenten) | Niet in de export. `scripts/migrate-storage.ts` kopieert ze via de tijdelijke edge function `storage-export` | Script staat klaar |
-| Buckets zelf | Staan in de migraties én in de export | Volledig |
-| Cron-jobs (pg_cron) | Rijen zitten in de export maar wijzen naar het oude project. `supabase/scripts/after-restore.sql` zet ze recht via Vault | Script staat klaar |
-| Edge functions (133) | Uit de repo deployen met de Supabase CLI | Repo is klaar |
-| Secrets van edge functions (31) | Niet in de export. Opnieuw invoeren (lijst hieronder) | Handwerk, één keer |
-| AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway. Nu via `_shared/ai.ts` met eigen sleutel | Code is klaar |
-| Outlook-doorsturen naar de boekhouding | Liep via Lovable's Microsoft-connector. Uitgefaseerd; doorsturen gaat via Mailjet | Klaar |
-| Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL. Opnieuw registreren op de nieuwe URL | Handwerk, één keer |
-| Frontend (Netlify) | Alleen `.env` wijzigen (URL, project-id, anon key) | Eén commit |
+| Database (67 tabellen, 218 policies, functies, triggers) | Volledig, 46 MB | Niets |
+| Gebruikers | 41 accounts, alle 41 met wachtwoord-hash | Niets: iedereen logt gewoon in |
+| Storage-bestanden | Alleen de rijen (250 bestanden, ~470 MB in 11 buckets) | `scripts/migrate-storage.ts` kopieert de bestanden zelf |
+| Cron-jobs | 16 jobs, 14 daarvan met de oude URL en anon key erin | `after-restore.sql` vervangt die in één keer |
+| Migratiehistorie | 311 regels, maar met andere nummers dan de repo | `after-restore.sql` zet de historie gelijk aan de repo |
+| Vault | Leeg | Niets |
+| Eén data-oneffenheid | 27 template-regels wijzen naar verwijderde templates | `restore-from-lovable.sh` ruimt ze op (anders blokkeren ze een foreign key) |
+| Edge functions (134) | Niet in de export | Uit de repo deployen met de Supabase CLI |
+| Secrets van edge functions | Niet in de export | Opnieuw invoeren (lijst bij stap 4) |
+| AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway | Eigen Gemini-sleutel; code is klaar (`_shared/ai.ts`) |
+| Outlook-doorsturen | Liep via Lovable's Microsoft-connector | Uitgefaseerd; doorsturen gaat via Mailjet |
+| Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL | Opnieuw registreren op de nieuwe URL |
+| Frontend (Netlify) | n.v.t. | Alleen `.env` wijzigen |
 
 ## Stap 0 — Nieuwe sleutels regelen **[jij]** (kan nu al)
 
@@ -43,44 +47,50 @@ Volgorde aanhouden.
 4. **Supabase personal access token** voor de deploy-workflow:
    https://supabase.com/dashboard/account/tokens.
 
-## Stap 1 — Export uit Lovable **[jij]**
+## Stap 1 — Export uit Lovable **[gedaan]**
 
-In Lovable: *Cloud → Overview → Advanced settings → Export project data*.
-Download het bestand meteen (het staat in de Cloud-omgeving die straks
-verdwijnt). Limiet: 5 GB, één export per dag.
+In Lovable: *Cloud → Overview → Advanced settings → Export project data*. De
+export van 7 september staat bij Claude; vlak voor de definitieve
+omschakeling maken we een verse (één export per dag mogelijk), zodat er geen
+werk van de tussenliggende dagen verloren gaat.
 
-Stuur het bestand niet via chat; zet het op een plek waar Claude erbij kan
-(bijv. Google Drive) of doe stap 2 zelf met de commando's hieronder.
+## Stap 2 — Herstellen in het nieuwe project **[Claude]**
 
-## Stap 2 — Herstellen in het nieuwe project **[Claude, of jij met deze commando's]**
-
-De export is een pg_dump (zstd-gecomprimeerd; `pg_restore` 16 of hoger).
+Twee scripts, beide gevalideerd op de export:
 
 ```bash
 # Connection string: Supabase dashboard → Connect → Session pooler
-pg_restore --no-owner --no-privileges --dbname "$NEW_DB_URL" export.dump
+export NEW_DB_URL='postgresql://postgres.<ref>:<wachtwoord>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres'
+
+supabase/scripts/restore-from-lovable.sh bureauvlieland_<datum>.backup
+
+psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 \
+  -v old_url='https://blhspuifehausilnzwio.supabase.co' -v new_url='https://<ref>.supabase.co' \
+  -v old_key='<oude anon key>' -v new_key='<nieuwe anon key>' \
+  -f supabase/scripts/after-restore.sql
 ```
 
-Foutmeldingen over bestaande extensies of `auth.*`-objecten die al bestaan zijn
-normaal; kijk naar wat er *niet* is aangemaakt. Daarna in de SQL editor van het
-nieuwe project:
+Het herstelscript draait in drie fasen (structuur, data, constraints) en ruimt
+tussendoor de 27 wees-rijen op. Foutmeldingen over `extensions`,
+`graphql_public`, `vault`, `pg_cron`, `pg_net` en `supabase_vault` zijn
+normaal: die heeft Supabase al. Het nascript vervangt de oude URL en anon key in
+alle cron-jobs, zet de migratiehistorie gelijk aan de repo en print de
+controles (41 gebruikers met wachtwoord, bestanden per bucket, 0 wees-rijen).
 
-```sql
-select vault.create_secret('https://<nieuwe ref>.supabase.co', 'project_url');
-select vault.create_secret('<nieuwe anon key>', 'anon_key');
-```
+Vereist `pg_restore` 17 of hoger; de export komt uit pg_dump 18. Claude heeft
+die al klaarstaan.
 
-en dan `supabase/scripts/after-restore.sql` uitvoeren. Dat toont welke cron-jobs
-nog naar het oude project wijzen en zet de bekende jobs recht.
-
-Controle van de wachtwoorden: `select count(*) from auth.users where
-encrypted_password is not null;`. Is dat 0, dan gaat er eenmalig een
-reset-mail naar alle gebruikers (Claude regelt dat).
+**Netwerk:** de Claude-omgeving mag nu niet naar `*.supabase.co`. Zet in de
+instellingen van deze omgeving (claude.ai/code → omgeving → netwerk) de hosts
+`*.supabase.co` en `*.supabase.com` op de toegestane lijst; anders moet jij de
+twee commando's hierboven zelf draaien.
 
 ## Stap 3 — Bestanden kopiëren **[Claude]**
 
 Vereist dat de tijdelijke edge function `storage-export` in het **oude**
-project staat (Lovable: "deploy de edge function storage-export"). Daarna:
+project staat (Lovable: "deploy de edge function storage-export"). De
+buckets `database_export_*` (Lovable's eigen exports) slaat het script over.
+Daarna:
 
 ```bash
 OLD_URL=https://blhspuifehausilnzwio.supabase.co OLD_ANON_KEY=<oude anon key> \
@@ -90,8 +100,9 @@ npx tsx scripts/migrate-storage.ts --dry-run   # eerst tellen
 npx tsx scripts/migrate-storage.ts             # dan kopiëren
 ```
 
-Het script is herhaalbaar. Verwacht (per bucket) evenveel bestanden als
-`select bucket_id, count(*) from storage.objects group by 1` in beide projecten.
+Het script is herhaalbaar. Verwacht: 250 bestanden, ~470 MB (de grootste
+buckets zijn quote-documents 175 MB, building-block-images 150 MB en
+partner-images 77 MB).
 
 ## Stap 4 — Edge functions en secrets **[Claude + jij]**
 

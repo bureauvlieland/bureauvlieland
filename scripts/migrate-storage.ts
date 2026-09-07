@@ -11,6 +11,9 @@
  *   NEW_URL=https://<nieuw>.supabase.co NEW_SERVICE_ROLE_KEY=... \
  *   npx tsx scripts/migrate-storage.ts [--bucket <id>] [--dry-run]
  *
+ * Buckets die beginnen met "database_export_" zijn Lovable's eigen
+ * exportbestanden en worden overgeslagen.
+ *
  * Herhaalbaar: bestaande bestanden worden overschreven (upsert), dus een
  * tweede run na een mislukte eerste is veilig.
  */
@@ -58,7 +61,9 @@ async function main() {
   const existingIds = new Set((existing ?? []).map((b) => b.id));
 
   const { buckets } = await exportGet<{ buckets: BucketInfo[] }>("mode=buckets");
-  const todo = buckets.filter((b) => !onlyBucket || b.id === onlyBucket);
+  const todo = buckets.filter((b) =>
+    onlyBucket ? b.id === onlyBucket : !b.id.startsWith("database_export_"),
+  );
   console.log(`Buckets in oud project: ${buckets.map((b) => b.id).join(", ")}`);
 
   let copied = 0, failed = 0, bytes = 0;
