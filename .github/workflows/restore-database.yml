@@ -141,7 +141,8 @@ jobs:
           fi
           ls -l export.backup
           file export.backup
-          pg_restore --list export.backup | head -5
+          pg_restore --list export.backup > inhoudsopgave.txt
+          head -6 inhoudsopgave.txt
 
       - name: Terugzetten (drie fasen)
         env:
