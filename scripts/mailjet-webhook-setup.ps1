@@ -25,7 +25,7 @@ param(
     [Parameter(Mandatory = $true)][string] $MailjetSecretKey,
     [Parameter(Mandatory = $true)][string] $WebhookToken,
 
-    [string] $WebhookBaseUrl = "https://blhspuifehausilnzwio.supabase.co/functions/v1/mailjet-event-webhook",
+    [string] $WebhookBaseUrl = "https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1/mailjet-event-webhook",
 
     # Toon alleen de huidige registraties, wijzig niets.
     [switch] $ListOnly,
