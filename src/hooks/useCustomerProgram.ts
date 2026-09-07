@@ -12,6 +12,7 @@ import {
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 import { isCustomerActionableCandidate, hasLiveCustomerApproval } from "@/lib/customerPortalStatus";
+import { extractEdgeError } from "@/lib/edgeFunctionError";
 
 export interface BillingDetails {
   billing_company_name: string;
@@ -835,56 +836,6 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     if (typeof window === "undefined") return false;
     const params = new URLSearchParams(window.location.search);
     return params.get("impersonate") === "admin";
-  };
-
-  // Helper: extract a meaningful error from a Supabase functions.invoke error.
-  // The default `error.message` is the unhelpful "Edge Function returned a non-2xx status code".
-  // The actual JSON body returned by the edge function lives on `error.context` (a Response),
-  // so we read it once and surface its `error` field if present.
-  const extractEdgeError = async (err: any, fallback: string): Promise<string> => {
-    // Try to extract a meaningful error message from a FunctionsHttpError.
-    // The body Response on err.context can only be read once, so we try carefully.
-    try {
-      const ctx = err?.context;
-      if (ctx) {
-        // Try .json() first
-        if (typeof ctx.json === "function") {
-          try {
-            const cloned = typeof ctx.clone === "function" ? ctx.clone() : ctx;
-            const body = await cloned.json();
-            console.error("[extractEdgeError] body:", body);
-            if (body?.error) return typeof body.error === "string" ? body.error : JSON.stringify(body.error);
-            if (body?.message) return body.message;
-          } catch (jsonErr) {
-            // fallback to text
-            try {
-              const cloned = typeof ctx.clone === "function" ? ctx.clone() : ctx;
-              const text = await cloned.text();
-              console.error("[extractEdgeError] text body:", text);
-              if (text) {
-                try {
-                  const parsed = JSON.parse(text);
-                  if (parsed?.error) return parsed.error;
-                  if (parsed?.message) return parsed.message;
-                } catch {
-                  return text.length < 300 ? text : fallback;
-                }
-              }
-            } catch {
-              /* ignore */
-            }
-          }
-        }
-        if (typeof ctx.error === "string") return ctx.error;
-      }
-    } catch (e) {
-      console.error("[extractEdgeError] failed to parse:", e);
-    }
-    if (typeof err?.message === "string" && !err.message.includes("non-2xx")) {
-      return err.message;
-    }
-    console.error("[extractEdgeError] fallback used. raw err:", err);
-    return fallback;
   };
 
   // Accept quote proposal (for maatwerk quotes)

@@ -34,6 +34,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { reportError } from "@/lib/errorReporting";
+import { extractEdgeError } from "@/lib/edgeFunctionError";
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -341,7 +343,11 @@ export default function AdminAccommodationDetail() {
   const forwardQuoteMutation = useMutation({
     mutationFn: async ({ quoteId, emailSubject, emailBody }: { quoteId: string; emailSubject: string; emailBody: string }) => {
       const { error: emailError } = await supabase.functions.invoke("notify-accommodation-quote", { body: { quoteId } });
-      if (emailError) throw emailError;
+      if (emailError) {
+        // De functie stuurt de reden mee (bv. "staat op de suppressielijst");
+        // zonder dit zie je alleen "non-2xx".
+        throw new Error(await extractEdgeError(emailError, "De offerte kon niet naar de klant worden gestuurd"));
+      }
       const { error: updateError } = await supabase.from("accommodation_quotes").update({ forwarded_at: new Date().toISOString() }).eq("id", quoteId);
       if (updateError) throw updateError;
       await supabase.from("admin_todos").update({ status: "done", completed_at: new Date().toISOString() }).eq("auto_type", "quote_review").eq("auto_entity_id", quoteId).neq("status", "done");
@@ -360,7 +366,8 @@ export default function AdminAccommodationDetail() {
       setForwardQuoteId(null);
       toast({ title: "Offerte doorgestuurd naar klant" });
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      reportError(error, { where: "AdminAccommodationDetail: offerte doorsturen naar klant", quoteId: variables.quoteId });
       toast({ title: "Fout bij doorsturen", description: error.message, variant: "destructive" });
     },
   });
