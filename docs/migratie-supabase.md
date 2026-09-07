@@ -22,8 +22,8 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 0 | Nieuw, leeg Supabase-project met sleutels | Klaar |
 | 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
-| 3 | De bestanden (foto's, offertes, facturen) kopiëren | **Nu aan de beurt: Claude** |
-| 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | Claude plaatst, jij vult wachtwoorden over |
+| 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
+| 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | **Nu aan de beurt**: Claude plaatst, jij vult wachtwoorden over |
 | 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
 
@@ -146,21 +146,36 @@ stilletjes, dat is verwacht.
 Vanaf een eigen computer met `pg_restore` 18 kan het ook zonder GitHub:
 `supabase/scripts/run-migration.sh restore <bestand>`.
 
-## Stap 3 — Bestanden kopiëren **[Claude]**
-
-Vereist dat de tijdelijke edge function `storage-export` in het **oude**
-project staat (Lovable: "deploy de edge function storage-export"). De
-buckets `database_export_*` (Lovable's eigen exports) slaat het script over.
-Daarna:
+## Stap 3 — Bestanden kopiëren **[gedaan]**
 
 ```bash
 supabase/scripts/run-migration.sh storage --dry-run   # eerst tellen
 supabase/scripts/run-migration.sh storage             # dan kopiëren
 ```
 
-Het script is herhaalbaar. Verwacht: 250 bestanden, ~470 MB (de grootste
-buckets zijn quote-documents 175 MB, building-block-images 150 MB en
-partner-images 77 MB).
+Het script logt in als admin op het oude project en leest de bestanden via
+de gewone storage-API (de RLS-policies geven admins leesrecht op alle
+buckets). De tijdelijke edge function `storage-export` levert alleen nog de
+bucketlijst met instellingen; staat die er niet, dan neemt het script de
+buckets die de dump al in het nieuwe project heeft gezet. De buckets
+`database_export_*` (Lovable's eigen exports) slaat het over. Na afloop
+vergelijkt het per bucket wat het oude project laat zien met de rijen in het
+nieuwe project, zodat een bestand dat de admin niet mag zien zou opvallen.
+
+Het script is herhaalbaar (bestaande bestanden worden overschreven).
+
+Resultaat op 7 september: 249 bestanden, 459,5 MB, 0 mislukt; in alle 13
+buckets is het aantal bestanden in het oude project gelijk aan het aantal
+rijen in het nieuwe (quote-documents 13 / 175 MB, building-block-images
+57 / 150 MB, partner-images 25 / 78 MB, partner-invoices 77, ticket-documents
+25, email-attachments 30, bureau-invoices 8, payment-batches 6,
+bank-statements 6, project-documents 2, drie buckets leeg). Steekproef: een
+offerte-PDF en een foto zijn in het nieuwe project byte voor byte even groot
+als de rij aangeeft.
+
+Let op bij de definitieve omschakeling (stap 6): bestanden die tussen 7
+september en dan worden geüpload staan nog niet in het nieuwe project. Het
+script dan nog één keer draaien; dat kost een paar minuten.
 
 ## Stap 4 — Edge functions en secrets **[Claude + jij]**
 

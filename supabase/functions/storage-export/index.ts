@@ -6,7 +6,7 @@
 // zet ze in het nieuwe project. Na de verhuizing kan deze functie weg.
 //
 // GET  ?mode=buckets                 → alle buckets (naam, public, limieten)
-// GET  ?bucket=<id>&after=<name>     → max 500 objecten na <name>, met signed url
+// GET  ?bucket=<id>&after=<name>     → max 500 objecten na <name> (alfabetisch), met signed url
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -63,16 +63,31 @@ Deno.serve(async (req) => {
   if (!bucket) return json({ error: "bucket ontbreekt" }, 400);
   const after = params.get("after") ?? "";
 
-  // storage.objects rechtstreeks (recursief, mappen inbegrepen), gesorteerd op naam.
-  const { data: objects, error } = await admin
-    .schema("storage")
-    .from("objects")
-    .select("name, metadata")
-    .eq("bucket_id", bucket)
-    .gt("name", after)
-    .order("name", { ascending: true })
-    .limit(PAGE);
-  if (error) return json({ error: error.message }, 500);
+  // Via de storage-API (de tabel storage.objects is via PostgREST niet
+  // bereikbaar: "Invalid schema: storage"). Die geeft per map één niveau,
+  // dus recursief doorlopen; daarna alfabetisch pagineren op naam.
+  async function walk(prefix: string): Promise<Array<{ name: string; metadata: Record<string, unknown> | null }>> {
+    const out: Array<{ name: string; metadata: Record<string, unknown> | null }> = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await admin.storage.from(bucket!).list(prefix, {
+        limit: 1000, offset, sortBy: { column: "name", order: "asc" },
+      });
+      if (error) throw new Error(error.message);
+      for (const e of data ?? []) {
+        const name = prefix ? `${prefix}/${e.name}` : e.name;
+        if (e.id === null) out.push(...await walk(name));
+        else if (e.name !== ".emptyFolderPlaceholder") out.push({ name, metadata: (e.metadata ?? null) as Record<string, unknown> | null });
+      }
+      if ((data ?? []).length < 1000) break;
+    }
+    return out;
+  }
+  let objects: Array<{ name: string; metadata: Record<string, unknown> | null }>;
+  try {
+    objects = (await walk("")).filter((o) => o.name > after).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)).slice(0, PAGE);
+  } catch (e) {
+    return json({ error: (e as Error).message }, 500);
+  }
 
   const names = (objects ?? []).map((o) => o.name as string).filter((n) => !n.endsWith("/"));
   let signed: Array<{ path: string | null; signedUrl: string | null; error: string | null }> = [];
