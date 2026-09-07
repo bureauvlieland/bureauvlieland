@@ -30,22 +30,50 @@ Resultaat: de hele structuur en data komen goed over. De cijfers:
 | Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL | Opnieuw registreren op de nieuwe URL |
 | Frontend (Netlify) | n.v.t. | Alleen `.env` wijzigen |
 
-## Stap 0 — Nieuwe sleutels regelen **[jij]** (kan nu al)
+## Stap 0 — Nieuw project en sleutels **[gedaan, op drie na]**
 
-1. **Supabase-project aanmaken** op supabase.com: New project, regio
-   *eu-central-1 (Frankfurt)*, een sterk databasewachtwoord — **bewaar dat**.
-   Noteer daarna uit *Project Settings → API*: de project-URL, de project-ref
-   (het stukje voor `.supabase.co`), de *anon/publishable key* en de
-   *service_role key*.
-2. **Gemini API-sleutel**: https://aistudio.google.com/apikey → Create API key.
-   Dit vervangt de Lovable AI-gateway voor alle scan- en tekstfuncties (zelfde
-   modellen als nu).
-3. **OpenAI API-sleutel** (alleen voor Claudia's zoekindex, embeddings):
-   https://platform.openai.com/api-keys. Kosten: centen per maand. Wil je dit
-   niet, zeg het; dan schakelt Claude de index over op Gemini-embeddings en
-   wordt de index één keer opnieuw opgebouwd.
-4. **Supabase personal access token** voor de deploy-workflow:
-   https://supabase.com/dashboard/account/tokens.
+Nieuw project: `utshmnyrjzwtrpttxdlw` (regio eu-west-1, Ierland).
+URL `https://utshmnyrjzwtrpttxdlw.supabase.co`. Anon key staat in
+`supabase/scripts/run-migration.sh` (publiek). Databasewachtwoord en
+service_role key zijn aangeleverd.
+
+Nog nodig:
+
+1. **Gemini API-sleutel**: https://aistudio.google.com/apikey. Vervangt de
+   Lovable AI-gateway voor alle scan- en tekstfuncties (zelfde modellen).
+2. **OpenAI API-sleutel** (alleen Claudia's zoekindex, centen per maand):
+   https://platform.openai.com/api-keys.
+3. **Supabase personal access token**: https://supabase.com/dashboard/account/tokens.
+   Nodig om de edge functions te deployen.
+
+## Uitvoering vanuit Claude **[jij: instellen, Claude: draaien]**
+
+Alles wat Claude uitvoert staat in `supabase/scripts/run-migration.sh`, met
+vier subcommando's: `check`, `restore`, `storage`, `functions`. Het script
+leest de geheimen uit omgevingsvariabelen. Zet die in de instellingen van de
+Claude-omgeving (claude.ai/code → omgeving → *Environment variables*); dan
+staan ze in geen enkele chat en zijn ze in elke nieuwe sessie beschikbaar:
+
+```
+NEW_DB_PASSWORD        databasewachtwoord van het nieuwe project
+NEW_SERVICE_ROLE_KEY   service_role key van het nieuwe project
+SUPABASE_ACCESS_TOKEN  personal access token
+ADMIN_EMAIL            admin-login van de app (voor het kopiëren van bestanden)
+ADMIN_PASSWORD         idem
+```
+
+En in dezelfde omgevingsinstellingen onder *Network*, toestaan:
+
+```
+utshmnyrjzwtrpttxdlw.supabase.co
+aws-0-eu-west-1.pooler.supabase.com
+api.supabase.com
+blhspuifehausilnzwio.supabase.co
+```
+
+Omgevingsinstellingen gelden voor nieuwe sessies. Start daarna een nieuwe
+sessie met: "Draai de verhuizing volgens docs/migratie-supabase.md, begin met
+`supabase/scripts/run-migration.sh check`."
 
 ## Stap 1 — Export uit Lovable **[gedaan]**
 
@@ -56,19 +84,12 @@ werk van de tussenliggende dagen verloren gaat.
 
 ## Stap 2 — Herstellen in het nieuwe project **[Claude]**
 
-Twee scripts, beide gevalideerd op de export:
-
 ```bash
-# Connection string: Supabase dashboard → Connect → Session pooler
-export NEW_DB_URL='postgresql://postgres.<ref>:<wachtwoord>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres'
-
-supabase/scripts/restore-from-lovable.sh bureauvlieland_<datum>.backup
-
-psql "$NEW_DB_URL" -v ON_ERROR_STOP=1 \
-  -v old_url='https://blhspuifehausilnzwio.supabase.co' -v new_url='https://<ref>.supabase.co' \
-  -v old_key='<oude anon key>' -v new_key='<nieuwe anon key>' \
-  -f supabase/scripts/after-restore.sql
+supabase/scripts/run-migration.sh restore bureauvlieland_<datum>.backup
 ```
+
+Dat draait `restore-from-lovable.sh` en daarna `after-restore.sql`, beide
+gevalideerd op de export van 7 september.
 
 Het herstelscript draait in drie fasen (structuur, data, constraints) en ruimt
 tussendoor de 27 wees-rijen op. Foutmeldingen over `extensions`,
@@ -80,11 +101,6 @@ controles (41 gebruikers met wachtwoord, bestanden per bucket, 0 wees-rijen).
 Vereist `pg_restore` 17 of hoger; de export komt uit pg_dump 18. Claude heeft
 die al klaarstaan.
 
-**Netwerk:** de Claude-omgeving mag nu niet naar `*.supabase.co`. Zet in de
-instellingen van deze omgeving (claude.ai/code → omgeving → netwerk) de hosts
-`*.supabase.co` en `*.supabase.com` op de toegestane lijst; anders moet jij de
-twee commando's hierboven zelf draaien.
-
 ## Stap 3 — Bestanden kopiëren **[Claude]**
 
 Vereist dat de tijdelijke edge function `storage-export` in het **oude**
@@ -93,11 +109,8 @@ buckets `database_export_*` (Lovable's eigen exports) slaat het script over.
 Daarna:
 
 ```bash
-OLD_URL=https://blhspuifehausilnzwio.supabase.co OLD_ANON_KEY=<oude anon key> \
-ADMIN_EMAIL=<jouw admin-login> ADMIN_PASSWORD=<wachtwoord> \
-NEW_URL=https://<nieuwe ref>.supabase.co NEW_SERVICE_ROLE_KEY=<nieuwe service role> \
-npx tsx scripts/migrate-storage.ts --dry-run   # eerst tellen
-npx tsx scripts/migrate-storage.ts             # dan kopiëren
+supabase/scripts/run-migration.sh storage --dry-run   # eerst tellen
+supabase/scripts/run-migration.sh storage             # dan kopiëren
 ```
 
 Het script is herhaalbaar. Verwacht: 250 bestanden, ~470 MB (de grootste
@@ -107,9 +120,10 @@ partner-images 77 MB).
 ## Stap 4 — Edge functions en secrets **[Claude + jij]**
 
 ```bash
-supabase link --project-ref <nieuwe ref>
-supabase functions deploy --no-verify-jwt   # zelfde vlag als in config.toml per functie
+supabase/scripts/run-migration.sh functions
 ```
+
+De per-functie instelling `verify_jwt` komt uit `supabase/config.toml`.
 
 Secrets invoeren (*Edge Functions → Secrets*, of `supabase secrets set`). Dit
 zijn de 31 namen die de functies gebruiken; de waarden staan in Lovable onder
