@@ -1,49 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  INVOICE_SCAN_SYSTEM_PROMPT,
+  INVOICE_SCAN_TOOL,
+  INVOICE_SCAN_USER_INSTRUCTION,
+  normalizeScannedInvoice,
+} from "../_shared/purchaseInvoiceScan.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const SYSTEM_PROMPT = `Je bent een specialist in het analyseren van Nederlandse inkoopfacturen. Lees ALLE pagina's van de PDF zorgvuldig.
-
-Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regels:
-- Bedragen ALTIJD als getallen (geen €/EUR, geen duizendscheidingstekens, punt als decimaal — dus "1.234,56" → 1234.56).
-- Datums in formaat YYYY-MM-DD.
-- BTW-percentage als getal (0, 9 of 21 — geen %-teken).
-- supplier_name = de leverancier/afzender (NIET de geadresseerde "Bureau Vlieland").
-- supplier_iban = het IBAN-rekeningnummer van de LEVERANCIER zoals vermeld op de factuur (vaak in de voettekst of bij betaalinstructies). Schrijf zonder spaties (bv. NL12RABO0123456789). NOOIT het IBAN van Bureau Vlieland (de geadresseerde) invullen. Geen IBAN zichtbaar → null.
-- Als een veld niet zichtbaar is, gebruik null.
-
-VAT BREAKDOWN (KRITIEK):
-- Vrijwel elke factuur toont onderaan een BTW-overzicht/grondslag-tabel met de subtotalen per tarief (bv. "9% over 871,56 = 78,44" en "21% over 231,40 = 48,60"). Lees dit overzicht ZORGVULDIG.
-- Vul vat_breakdown ALTIJD in met één entry per uniek BTW-tarief dat op de factuur voorkomt (sla 0%-regels met bedrag 0 over).
-- amount_excl in vat_breakdown is ALTIJD exclusief BTW (de grondslag/Exclusief-kolom, NIET de bruto-kolom).
-- Som van vat_breakdown[].amount_excl MOET gelijk zijn aan amount_excl_vat (header).
-- Som van vat_breakdown[].vat_amount MOET gelijk zijn aan vat_amount (header).
-- BIJ GEMENGDE TARIEVEN (meerdere entries in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen — dat leidt tot foute herberekening.
-- Bij één enkel tarief mag header vat_rate gelijk zijn aan dat tarief.
-
-PRICES_INCLUDE_VAT (HEEL BELANGRIJK voor horeca/POS-bonnen):
-- Op horeca-kassabonnen, restaurant-/cafénota's en POS-bonnen staan de prijzen in de kolom "Prijs"/"Totaal" vrijwel altijd INCLUSIEF BTW. Het regeltotaal en "Op factuur"/"Totaal" matchen het BRUTO-bedrag.
-- Op zakelijke facturen (PDF met factuurlay-out, BTW-kolom per regel, "Subtotaal/Excl. BTW"-totaal) staan prijzen meestal EXCLUSIEF BTW.
-- Bepaal dit per factuur en zet prices_include_vat = true of false.
-- Heuristieken voor INCL:
-  * Kolomkoppen "Aant / Artikel / Prijs / Totaal" zonder expliciete "Excl"-aanduiding.
-  * Aanwezigheid van "Bruto"-kolom in onderstaande BTW-tabel.
-  * Sum(line_items.quantity * unit_price) ≈ amount_incl_vat (binnen €1).
-  * Sum(line_items.quantity * unit_price) > amount_excl_vat * 1.05.
-- Bij twijfel: vergelijk Σ(qty × unit_price) met amount_excl_vat en amount_incl_vat — kies het tarief waar de som het dichtst bij ligt.
-
-ORDERREGELS:
-- Vul line_items in met ALLE zichtbare regels van de factuur, indien herkenbaar.
-- unit_price = exact wat in de "Prijs"-kolom staat (kan dus incl OF excl BTW zijn — dat geeft prices_include_vat aan).
-- Per regel MOET je vat_rate invullen (BTW-tarief van die specifieke regel: 0, 9 of 21).
-- Als regel-tarieven niet duidelijk te lezen zijn maar er WEL een BTW-overzicht is, mag line_items leeg blijven — vat_breakdown is dan leidend.
-
-REKENKUNDIGE CHECK:
-- amount_excl_vat + vat_amount = amount_incl_vat (controleer dit altijd!).`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -151,15 +118,11 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: INVOICE_SCAN_SYSTEM_PROMPT },
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text:
-                  "Analyseer deze inkoopfactuur en extracteer ALLE velden via de extract_invoice tool. Vul ALTIJD line_items in met vat_rate per regel.",
-              },
+              { type: "text", text: INVOICE_SCAN_USER_INSTRUCTION },
               {
                 type: "image_url",
                 image_url: { url: `data:${pdfMime};base64,${pdfBase64}` },
@@ -167,84 +130,7 @@ Deno.serve(async (req) => {
             ],
           },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_invoice",
-              description: "Extracteer factuurgegevens incl. orderregels per BTW-tarief",
-              parameters: {
-                type: "object",
-                properties: {
-                  invoice_number: { type: ["string", "null"] },
-                  invoice_date: { type: ["string", "null"], description: "YYYY-MM-DD" },
-                  supplier_name: { type: ["string", "null"] },
-                  supplier_iban: { type: ["string", "null"], description: "IBAN van de leverancier zoals op de factuur, zonder spaties. NIET het IBAN van Bureau Vlieland." },
-                  amount_excl_vat: { type: ["number", "null"] },
-                  vat_rate: { type: ["number", "null"], description: "0, 9 of 21 (hoofdtarief)" },
-                  vat_amount: { type: ["number", "null"] },
-                  amount_incl_vat: { type: ["number", "null"] },
-                  description: { type: ["string", "null"] },
-                  customer_reference: {
-                    type: ["string", "null"],
-                    description:
-                      "Voor wie het werk was: de groep, het gezelschap of de opdrachtgever die op de factuur genoemd wordt, bijvoorbeeld achter \"Groep:\", \"T.b.v.\", \"Betreft\" of \"Referentie\". Dit is NIET de leverancier en NIET Bureau Vlieland zelf. Neem de naam letterlijk over. Staat er niets: null.",
-                  },
-                  prices_include_vat: {
-                    type: ["boolean", "null"],
-                    description:
-                      "true als de unit_price in line_items INCLUSIEF BTW is (horeca/POS-bon), false als exclusief (zakelijke factuur).",
-                  },
-                  vat_breakdown: {
-                    type: "array",
-                    description: "Eén entry per uniek BTW-tarief op de factuur",
-                    items: {
-                      type: "object",
-                      properties: {
-                        vat_rate: { type: "number" },
-                        amount_excl: { type: "number" },
-                        vat_amount: { type: "number" },
-                      },
-                      required: ["vat_rate", "amount_excl", "vat_amount"],
-                      additionalProperties: false,
-                    },
-                  },
-                  line_items: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        description: { type: "string" },
-                        quantity: { type: ["number", "null"] },
-                        unit_price: { type: ["number", "null"] },
-                        total_excl_vat: { type: ["number", "null"] },
-                        vat_rate: { type: ["number", "null"], description: "BTW-tarief van deze regel: 0, 9 of 21" },
-                      },
-                      required: ["description", "vat_rate"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: [
-                  "invoice_number",
-                  "invoice_date",
-                  "supplier_name",
-                  "supplier_iban",
-                  "amount_excl_vat",
-                  "vat_rate",
-                  "vat_amount",
-                  "amount_incl_vat",
-                  "description",
-                  "customer_reference",
-                  "line_items",
-                  "vat_breakdown",
-                  "prices_include_vat",
-                ],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
+        tools: [INVOICE_SCAN_TOOL],
         tool_choice: { type: "function", function: { name: "extract_invoice" } },
       }),
     });
@@ -289,65 +175,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Post-process: detect & correct INCL-BTW line prices (typical horeca/POS bonnen).
-    // Frontend dialog computes line totals as qty * unit_price + BTW (assumes excl),
-    // so any unit_price that is actually INCL BTW must be converted to excl here.
-    try {
-      const items: Array<{ quantity: number | null; unit_price: number | null; total_excl_vat: number | null; vat_rate: number | null }> =
-        Array.isArray(extracted.line_items) ? extracted.line_items : [];
-      const headerExcl = Number(extracted.amount_excl_vat) || 0;
-      const headerIncl = Number(extracted.amount_incl_vat) || 0;
-
-      const sumLines = items.reduce((s, li) => {
-        const q = Number(li.quantity ?? 1) || 0;
-        const u = Number(li.unit_price ?? 0) || 0;
-        return s + q * u;
-      }, 0);
-
-      let pricesIncl: boolean | null =
-        typeof extracted.prices_include_vat === "boolean" ? extracted.prices_include_vat : null;
-
-      // Auto-detect when AI didn't flag, or override when sums clearly point the other way.
-      if (items.length > 0 && headerIncl > 0 && headerExcl > 0) {
-        const distToIncl = Math.abs(sumLines - headerIncl);
-        const distToExcl = Math.abs(sumLines - headerExcl);
-        if (distToIncl + 0.5 < distToExcl) pricesIncl = true;
-        else if (distToExcl + 0.5 < distToIncl) pricesIncl = false;
-      }
-
-      if (pricesIncl === true && items.length > 0) {
-        for (const li of items) {
-          const rate = Number(li.vat_rate ?? 0) || 0;
-          const factor = 1 + rate / 100;
-          if (factor > 0) {
-            if (li.unit_price != null) {
-              li.unit_price = Math.round((Number(li.unit_price) / factor) * 100) / 100;
-            }
-            if (li.total_excl_vat != null) {
-              li.total_excl_vat = Math.round((Number(li.total_excl_vat) / factor) * 100) / 100;
-            }
-          }
-        }
-        extracted.prices_include_vat = true;
-
-        // Reconcile: scale lines proportionally if they drift > €0.50 from header excl.
-        const newSumExcl = items.reduce((s, li) => {
-          const q = Number(li.quantity ?? 1) || 0;
-          const u = Number(li.unit_price ?? 0) || 0;
-          return s + q * u;
-        }, 0);
-        if (headerExcl > 0 && newSumExcl > 0 && Math.abs(newSumExcl - headerExcl) > 0.5) {
-          const scale = headerExcl / newSumExcl;
-          for (const li of items) {
-            if (li.unit_price != null) {
-              li.unit_price = Math.round(Number(li.unit_price) * scale * 100) / 100;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error("post-process incl-vat conversion failed:", e);
-    }
+    // Regelprijzen die inclusief btw zijn omrekenen naar exclusief; het scherm
+    // rekent verderop met exclusieve prijzen.
+    normalizeScannedInvoice(extracted);
 
     return new Response(JSON.stringify({ data: extracted }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
