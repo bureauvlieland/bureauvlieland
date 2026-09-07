@@ -186,13 +186,77 @@ const rowsFromItems = (
 };
 
 /**
+ * Regels uit alleen de kop van de factuur.
+ *
+ * Als de scanner geen bruikbare regels en geen btw-overzicht geeft, staan de
+ * totalen (ex btw, btw, incl) er meestal wél goed in. Past de btw bij één
+ * tarief, dan wordt dat één regel met precies die bedragen. Past hij bij geen
+ * enkel tarief, dan zit er een mix van 9% en 21% in en volgt de verdeling uit
+ * de twee vergelijkingen (x + y = ex btw, 0,09x + 0,21y = btw). Dat is een
+ * afleiding, geen lezing — vandaar de omschrijving. Maar de totalen kloppen
+ * exact, en het is veel beter dan het scherm dat anders de hele kop tegen 21%
+ * herrekent en op een ander bedrag uitkomt dan de factuur.
+ */
+const KNOWN_RATES = [0, 9, 21];
+
+export function rowsFromHeader(result: ScanResultLike): ScanLineRow[] {
+  const excl = result.amount_excl_vat != null ? Number(result.amount_excl_vat) : null;
+  if (excl == null || !(excl > 0)) return [];
+
+  const incl = result.amount_incl_vat != null ? Number(result.amount_incl_vat) : null;
+  let vat = result.vat_amount != null ? Number(result.vat_amount) : null;
+  if (vat == null && incl != null) vat = round2(incl - excl);
+  if (vat == null) return [];
+
+  const single = KNOWN_RATES.find((rate) => Math.abs(round2(excl * (rate / 100)) - vat!) <= 0.02);
+  if (single != null) {
+    return [{
+      description: "Factuurtotaal",
+      quantity: "1",
+      unit_price: String(excl),
+      vat_rate: String(single),
+      vat_amount_override: String(vat),
+      amount_incl_override: String(round2(excl + vat)),
+    }];
+  }
+
+  // Mix van 9% en 21%: y = deel tegen 21%, x = deel tegen 9%.
+  const high = round2((vat - excl * 0.09) / 0.12);
+  const low = round2(excl - high);
+  if (high < 0 || low < 0) return [];
+  const vatHigh = round2(high * 0.21);
+  const vatLow = round2(vat - vatHigh);
+  return [
+    {
+      description: "BTW 9% (afgeleid uit de factuurtotalen)",
+      quantity: "1",
+      unit_price: String(low),
+      vat_rate: "9",
+      vat_amount_override: String(vatLow),
+      amount_incl_override: String(round2(low + vatLow)),
+    },
+    {
+      description: "BTW 21% (afgeleid uit de factuurtotalen)",
+      quantity: "1",
+      unit_price: String(high),
+      vat_rate: "21",
+      vat_amount_override: String(vatHigh),
+      amount_incl_override: String(round2(high + vatHigh)),
+    },
+  ];
+}
+
+/**
  * Bouwt de voor te vullen factuurregels uit een scanresultaat.
  *
  * Volgorde:
  * 1. Regels met elk een eigen tarief — maar alleen als ze kloppen met de kop.
  * 2. Anders het btw-overzicht, één regel per tarief. Dat staat letterlijk op de
  *    factuur en is dus leidend zodra de regels het tegenspreken.
- * 3. Anders de regels zonder eigen tarief, met de btw van de kop verdeeld.
+ * 3. Regels mét een tarief die de kop tegenspreken, zonder btw-overzicht: dan
+ *    liever de kop zelf (zie rowsFromHeader) dan gegokte tarieven.
+ * 4. Regels zonder eigen tarief, met de btw van de kop verdeeld.
+ * 5. Alleen de kop.
  */
 export function buildLinesFromScan(result: ScanResultLike | null): ScanLineRow[] {
   if (!result) return [];
@@ -205,18 +269,16 @@ export function buildLinesFromScan(result: ScanResultLike | null): ScanLineRow[]
     return rowsFromItems(items, result, false);
   }
 
-  if (breakdown.length > 1) return rowsFromBreakdown(breakdown);
-
   // Eén tarief in het overzicht en regels die de kop tegenspreken: dan is dat ene
   // tarief nog altijd betrouwbaarder dan wat er per regel is ingevuld.
-  if (breakdown.length === 1 && itemsAllHaveRate) return rowsFromBreakdown(breakdown);
+  if (breakdown.length > 1 || (breakdown.length === 1 && itemsAllHaveRate)) {
+    const rows = rowsFromBreakdown(breakdown);
+    if (rows.length > 0) return rows;
+  }
 
-  // Regels mét een tarief die de kop tegenspreken, zonder btw-overzicht om op
-  // terug te vallen: dan liever géén regels dan verkeerde. Het scherm vult dan de
-  // totalen uit de scan in — die kloppen wel — en jij verdeelt zelf.
-  if (itemsAllHaveRate) return [];
+  if (itemsAllHaveRate) return rowsFromHeader(result);
 
   if (items.length > 0) return rowsFromItems(items, result, true);
 
-  return [];
+  return rowsFromHeader(result);
 }

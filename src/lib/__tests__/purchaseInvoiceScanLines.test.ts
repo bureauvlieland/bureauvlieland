@@ -154,8 +154,54 @@ describe("wat er op de factuur staat wint van wat de scanner erbij verzint", () 
     expect(rows[1].unit_price).toBe("63.67");
   });
 
-  it("geeft liever geen regels dan verkeerde als er niets is om op terug te vallen", () => {
+  it("valt zonder btw-overzicht terug op de kop en leidt de 9/21-verdeling daaruit af", () => {
+    // Precies wat er in productie gebeurde: de scanner gaf gegokte regeltarieven
+    // en geen btw-overzicht. Voorheen bleven de regels leeg en herrekende het
+    // scherm de kop tegen 21% (€ 96,43 btw, € 555,61 totaal — de factuur zegt
+    // € 48,97 en € 508,15).
     const rows = buildLinesFromScan({ ...doeksen, vat_breakdown: undefined });
-    expect(rows).toEqual([]);
+    expect(rows.map((r) => r.vat_rate)).toEqual(["9", "21"]);
+    const excl = rows.reduce((s, r) => s + Number(r.unit_price), 0);
+    const vat = rows.reduce((s, r) => s + Number(r.vat_amount_override), 0);
+    expect(excl.toFixed(2)).toBe("459.18");
+    expect(vat.toFixed(2)).toBe("48.97");
+    expect((excl + vat).toFixed(2)).toBe("508.15");
+    // Dicht bij de echte verdeling (395,56 / 63,67); het is een afleiding en zegt dat ook.
+    expect(Number(rows[0].unit_price)).toBeCloseTo(395.5, 0);
+    expect(rows[0].description).toContain("afgeleid");
+  });
+
+  it("maakt van alleen een kop met één tarief één regel met exact die bedragen", () => {
+    const rows = buildLinesFromScan({
+      amount_excl_vat: 200,
+      vat_rate: null,
+      vat_amount: 18,
+      amount_incl_vat: 218,
+      line_items: [],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].vat_rate).toBe("9");
+    expect(rows[0].unit_price).toBe("200");
+    expect(rows[0].vat_amount_override).toBe("18");
+    expect(rows[0].amount_incl_override).toBe("218");
+  });
+
+  it("gebruikt de kop ook als het btw-overzicht er wel is maar leeg", () => {
+    const rows = buildLinesFromScan({
+      ...doeksen,
+      vat_breakdown: [
+        { vat_rate: 9, amount_excl: 0, vat_amount: 0 },
+        { vat_rate: 21, amount_excl: 0, vat_amount: 0 },
+      ],
+    });
+    expect(rows).toHaveLength(2);
+    const vat = rows.reduce((s, r) => s + Number(r.vat_amount_override), 0);
+    expect(vat.toFixed(2)).toBe("48.97");
+  });
+
+  it("geeft niets als de kop zelf ontbreekt", () => {
+    expect(buildLinesFromScan({
+      amount_excl_vat: null, vat_rate: null, vat_amount: null, amount_incl_vat: null, line_items: [],
+    })).toEqual([]);
   });
 });
