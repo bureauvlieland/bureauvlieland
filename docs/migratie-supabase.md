@@ -113,7 +113,7 @@ de GitHub-workflow `.github/workflows/restore-database.yml`, zichtbaar als
 
 1. **Exportbestand uploaden.** Ga in het nieuwe project naar *Storage →
    migratie* (die map staat al klaar, privé) en upload
-   `bureauvlieland_<datum>.backup`. Onthoud de bestandsnaam.
+   `bureauvlieland_<datum>.backup` (als zip mag ook). Onthoud de bestandsnaam.
 2. **Twee geheimen in GitHub.** *Settings → Secrets and variables → Actions →
    New repository secret*:
    - `SUPABASE_DB_PASSWORD`: het databasewachtwoord van het nieuwe project.

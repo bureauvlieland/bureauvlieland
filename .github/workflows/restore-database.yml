@@ -7,8 +7,9 @@
 # docs/migratie-supabase.md.
 #
 # Handmatig starten via Actions → "Herstel database" → Run workflow. Vooraf:
-#   1. Het exportbestand (bureauvlieland_<datum>.backup) uploaden in het nieuwe
-#      project: Storage → bucket "migratie". De bucket bestaat al en is privé.
+#   1. Het exportbestand (bureauvlieland_<datum>.backup, mag ook als .zip)
+#      uploaden in het nieuwe project: Storage → bucket "migratie". De bucket
+#      bestaat al en is privé.
 #   2. Twee repository secrets (Settings → Secrets and variables → Actions):
 #        SUPABASE_DB_PASSWORD       databasewachtwoord van het nieuwe project
 #        SUPABASE_SERVICE_ROLE_KEY  service_role key (Project Settings → API)
@@ -112,15 +113,34 @@ jobs:
         run: |
           set -euo pipefail
           f="${{ github.event.inputs.bestand }}"
-          code=$(curl -sS -o export.backup -w '%{http_code}' \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            "$NEW_URL/storage/v1/object/authenticated/migratie/$f")
+          fetch() {
+            curl -sS -o download.bin -w '%{http_code}' \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              "$NEW_URL/storage/v1/object/authenticated/migratie/$1"
+          }
+          # Eerst de opgegeven naam; staat die er niet, dan dezelfde naam met .zip erachter
+          # (de browser pakt een .backup soms in bij het uploaden).
+          code=$(fetch "$f")
+          if [ "$code" != "200" ] && [ "${f%.zip}" = "$f" ]; then
+            f="$f.zip"; code=$(fetch "$f")
+          fi
           if [ "$code" != "200" ]; then
-            echo "::error::Bestand '$f' niet gevonden in bucket migratie (HTTP $code). Controleer de naam in Storage → migratie."
-            head -c 500 export.backup; echo
+            echo "::error::Bestand '${{ github.event.inputs.bestand }}' (ook niet als .zip) niet gevonden in bucket migratie (HTTP $code). Controleer de naam in Storage → migratie."
+            head -c 500 download.bin; echo
             exit 1
           fi
+          echo "Opgehaald: $f"
+          if [ "${f%.zip}" != "$f" ]; then
+            mv download.bin download.zip
+            unzip -l download.zip
+            inner=$(unzip -Z1 download.zip | grep -v '/$' | head -1)
+            unzip -o -q download.zip "$inner"
+            mv "$inner" export.backup
+          else
+            mv download.bin export.backup
+          fi
           ls -l export.backup
+          file export.backup
           pg_restore --list export.backup | head -5
 
       - name: Terugzetten (drie fasen)
