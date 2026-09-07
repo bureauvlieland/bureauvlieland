@@ -21,8 +21,8 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 |---|---|---|
 | 0 | Nieuw, leeg Supabase-project met sleutels | Klaar |
 | 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
-| 2 | Die kopie in het nieuwe project zetten | **Nu aan de beurt: knop in GitHub** |
-| 3 | De bestanden (foto's, offertes, facturen) kopiëren | Claude, direct na stap 2 |
+| 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
+| 3 | De bestanden (foto's, offertes, facturen) kopiëren | **Nu aan de beurt: Claude** |
 | 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | Claude plaatst, jij vult wachtwoorden over |
 | 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
@@ -127,13 +127,21 @@ de GitHub-workflow `.github/workflows/restore-database.yml`, zichtbaar als
 
 De workflow weigert als de database al gevuld is, tenzij je *overschrijven*
 aanvinkt. Zo kan een tweede klik geen schade doen. Wat hij doet: het bestand
-ophalen, `restore-from-lovable.sh` (drie fasen: structuur, data, constraints;
-ruimt tussendoor de 27 wees-rijen op) en daarna `after-restore.sql` (vervangt
+ophalen, `restore-from-lovable.sh` (vier fasen: structuur, data, constraints,
+en daarna wat in de datafase niet kon: `auth.identities` en de cron-jobs, die
+opnieuw worden ingepland via `cron.schedule()`; ruimt tussendoor de 27
+wees-rijen op) en daarna `after-restore.sql` (vervangt
 de oude URL en anon key in alle cron-jobs, zet de migratiehistorie gelijk aan
 de repo, print de controles). Foutmeldingen over `extensions`,
 `graphql_public`, `vault`, `pg_cron`, `pg_net` en `supabase_vault` zijn
 normaal: die heeft Supabase al; de workflow filtert ze eruit en meldt alleen
 de rest.
+
+Resultaat op 7 september (run 6): 67 tabellen, 41 gebruikers met wachtwoord
+én inlogmethode, 218 policies, 249 bestandsrijen, 16 cron-jobs allemaal
+actief en naar het nieuwe project, 310 migraties in de historie. De cron-jobs
+roepen edge functions aan die er pas na stap 4 staan; tot die tijd falen ze
+stilletjes, dat is verwacht.
 
 Vanaf een eigen computer met `pg_restore` 18 kan het ook zonder GitHub:
 `supabase/scripts/run-migration.sh restore <bestand>`.
