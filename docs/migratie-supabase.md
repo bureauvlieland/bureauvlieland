@@ -24,8 +24,8 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
 | 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
 | 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Klaar, 7 september (19 secrets overgezet); alleen `GEMINI_API_KEY` nog **[jij]** |
-| 5 | Mailjet en Twilio het nieuwe adres geven | Voorbereid; **uitvoeren op het moment van omschakelen** (stap 6), niet eerder |
-| 6 | Omschakelen en controleren | **Bezig, nacht van 7 op 8 september** (route B: export van 7 september 19:36 hergebruikt; één latere bewerking, "Lunch in de natuur" in BV-2602-0005, wordt met de hand overgedaan) |
+| 5 | Mailjet en Twilio het nieuwe adres geven | Klaar, 8 september 00:15 (`run-migration.sh webhooks --apply`) |
+| 6 | Omschakelen en controleren | **Omgeschakeld 8 september 00:00, controles lopen** (route B: export van 7 september 19:36 hergebruikt; één latere bewerking, "Lunch in de natuur" in BV-2602-0005, wordt met de hand overgedaan) |
 
 Waarom stap 2 via een knop in GitHub gaat: om de kopie in de database te
 zetten is een rechtstreekse databaseverbinding nodig, en de omgeving waarin
