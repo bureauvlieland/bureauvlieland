@@ -98,6 +98,13 @@ api.supabase.com
 blhspuifehausilnzwio.supabase.co
 ```
 
+Let op bij stap 3: `npm ci` en `bun install` werken niet in de Claude-omgeving,
+omdat de lockbestanden naar Lovable's eigen npm-register (`*.pkg.dev`) wijzen
+en dat daar geblokkeerd is. Het kopieerscript heeft maar twee pakketten nodig;
+die installeert Claude los vanaf registry.npmjs.org
+(`npm install --registry=https://registry.npmjs.org @supabase/supabase-js tsx`
+in een tijdelijke map) en draait het script van daaruit.
+
 Deze variabelen en netwerkregels staan sinds 7 september ingesteld; `check`
 bereikt de storage-API en de beheer-API van het nieuwe project. Alleen de
 databasepoort (5432) blijft dicht; daarvoor is stap 2 naar GitHub verplaatst.
