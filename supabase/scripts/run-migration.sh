@@ -15,6 +15,7 @@
 #     (niet vanuit de Claude-omgeving: poort 5432 is daar dicht; gebruik de
 #      GitHub-workflow "Herstel database", .github/workflows/restore-database.yml)
 #   supabase/scripts/run-migration.sh storage [--dry-run]    # bestanden kopiëren
+#   supabase/scripts/run-migration.sh secrets [--dry-run]    # secrets van edge functions overzetten
 #   supabase/scripts/run-migration.sh functions              # 134 edge functions deployen
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -61,6 +62,12 @@ case "$cmd" in
     ADMIN_EMAIL="${ADMIN_EMAIL:?}" ADMIN_PASSWORD="${ADMIN_PASSWORD:?}" \
     NEW_URL="$NEW_URL" NEW_SERVICE_ROLE_KEY="${NEW_SERVICE_ROLE_KEY:?}" \
       npx tsx scripts/migrate-storage.ts "$@"
+    ;;
+  secrets)
+    OLD_URL="$OLD_URL" OLD_ANON_KEY="$OLD_ANON_KEY" NEW_REF="$NEW_REF" \
+    ADMIN_EMAIL="${ADMIN_EMAIL:?}" ADMIN_PASSWORD="${ADMIN_PASSWORD:?}" \
+    SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:?}" \
+      python3 supabase/scripts/migrate-secrets.py "$@"
     ;;
   functions)
     export SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:?}"

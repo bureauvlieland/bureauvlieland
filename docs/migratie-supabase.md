@@ -22,8 +22,8 @@ bij Lovable en moet naar een Supabase-project van jezelf.
 | 0 | Nieuw, leeg Supabase-project met sleutels | Klaar |
 | 1 | Export (een kopie van alles) uit Lovable halen | Klaar, 7 september |
 | 2 | Die kopie in het nieuwe project zetten | Klaar, 7 september (run 6 van "Herstel database") |
-| 3 | De bestanden (foto's, offertes, facturen) kopiëren | **Nu aan de beurt: Claude** |
-| 4 | De 134 programma's plaatsen en hun wachtwoorden invoeren | Claude plaatst, jij vult wachtwoorden over |
+| 3 | De bestanden (foto's, offertes, facturen) kopiëren | Klaar, 7 september (249 bestanden, 460 MB) |
+| 4 | De 134 programma's plaatsen en hun wachtwoorden overzetten | Programma's staan erop. **Nu**: jij deployt `secrets-export` in Lovable, Claude zet de wachtwoorden over |
 | 5 | Mailjet, Twilio en MAP het nieuwe adres geven | Jij, met exacte adressen van Claude |
 | 6 | Omschakelen en controleren | Claude, daarna samen controleren |
 
@@ -47,7 +47,7 @@ Resultaat: de hele structuur en data komen goed over. De cijfers:
 | Vault | Leeg | Niets |
 | Eén data-oneffenheid | 27 template-regels wijzen naar verwijderde templates | `restore-from-lovable.sh` ruimt ze op (anders blokkeren ze een foreign key) |
 | Edge functions (134) | Niet in de export | Uit de repo deployen met de Supabase CLI |
-| Secrets van edge functions | Niet in de export | Opnieuw invoeren (lijst bij stap 4) |
+| Secrets van edge functions | Niet in de export (staan versleuteld buiten de database) | `secrets-export` + `run-migration.sh secrets` zet ze over (stap 4) |
 | AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway | Eigen Gemini-sleutel; code is klaar (`_shared/ai.ts`) |
 | Outlook-doorsturen | Liep via Lovable's Microsoft-connector | Uitgefaseerd; doorsturen gaat via Mailjet |
 | Externe webhooks (Mailjet, Twilio/WhatsApp, MAP) | Wijzen naar de oude URL | Opnieuw registreren op de nieuwe URL |
@@ -146,21 +146,36 @@ stilletjes, dat is verwacht.
 Vanaf een eigen computer met `pg_restore` 18 kan het ook zonder GitHub:
 `supabase/scripts/run-migration.sh restore <bestand>`.
 
-## Stap 3 — Bestanden kopiëren **[Claude]**
-
-Vereist dat de tijdelijke edge function `storage-export` in het **oude**
-project staat (Lovable: "deploy de edge function storage-export"). De
-buckets `database_export_*` (Lovable's eigen exports) slaat het script over.
-Daarna:
+## Stap 3 — Bestanden kopiëren **[gedaan]**
 
 ```bash
 supabase/scripts/run-migration.sh storage --dry-run   # eerst tellen
 supabase/scripts/run-migration.sh storage             # dan kopiëren
 ```
 
-Het script is herhaalbaar. Verwacht: 250 bestanden, ~470 MB (de grootste
-buckets zijn quote-documents 175 MB, building-block-images 150 MB en
-partner-images 77 MB).
+Het script logt in als admin op het oude project en leest de bestanden via
+de gewone storage-API (de RLS-policies geven admins leesrecht op alle
+buckets). De tijdelijke edge function `storage-export` levert alleen nog de
+bucketlijst met instellingen; staat die er niet, dan neemt het script de
+buckets die de dump al in het nieuwe project heeft gezet. De buckets
+`database_export_*` (Lovable's eigen exports) slaat het over. Na afloop
+vergelijkt het per bucket wat het oude project laat zien met de rijen in het
+nieuwe project, zodat een bestand dat de admin niet mag zien zou opvallen.
+
+Het script is herhaalbaar (bestaande bestanden worden overschreven).
+
+Resultaat op 7 september: 249 bestanden, 459,5 MB, 0 mislukt; in alle 13
+buckets is het aantal bestanden in het oude project gelijk aan het aantal
+rijen in het nieuwe (quote-documents 13 / 175 MB, building-block-images
+57 / 150 MB, partner-images 25 / 78 MB, partner-invoices 77, ticket-documents
+25, email-attachments 30, bureau-invoices 8, payment-batches 6,
+bank-statements 6, project-documents 2, drie buckets leeg). Steekproef: een
+offerte-PDF en een foto zijn in het nieuwe project byte voor byte even groot
+als de rij aangeeft.
+
+Let op bij de definitieve omschakeling (stap 6): bestanden die tussen 7
+september en dan worden geüpload staan nog niet in het nieuwe project. Het
+script dan nog één keer draaien; dat kost een paar minuten.
 
 ## Stap 4 — Edge functions en secrets **[Claude + jij]**
 
@@ -170,9 +185,23 @@ supabase/scripts/run-migration.sh functions
 
 De per-functie instelling `verify_jwt` komt uit `supabase/config.toml`.
 
-Secrets invoeren (*Edge Functions → Secrets*, of `supabase secrets set`). Dit
-zijn de 31 namen die de functies gebruiken; de waarden staan in Lovable onder
-*Cloud → Secrets* en moeten één voor één over:
+De secrets staan niet in de export: Supabase bewaart ze versleuteld buiten
+de database, en alleen de beheerder van een project (bij het oude project is
+dat Lovable) kan ze uitlezen. De edge functions zelf kunnen ze wél lezen.
+Daarom gaat het net als bij de bestanden via een tijdelijke edge function:
+
+1. **[jij]** In Lovable: "deploy de edge function secrets-export".
+2. **[Claude]** `supabase/scripts/run-migration.sh secrets --dry-run` (ophalen
+   en tellen) en daarna `run-migration.sh secrets`. Het script logt in als
+   admin, haalt de 25 waarden op en zet ze via de beheer-API
+   (`api.supabase.com`) in het nieuwe project. Het toont alleen namen en
+   lengtes; de waarden komen in geen chat of bestand terecht.
+3. **[jij]** Na de verhuizing in Lovable: "verwijder de edge function
+   secrets-export" (en `storage-export`).
+
+Dit zijn de 25 namen die overgaan; de waarden staan in Lovable onder
+*Cloud → Secrets* (daar kun je ze desnoods ook met de hand overtypen naar
+*Edge Functions → Secrets* in het nieuwe project):
 
 ```
 Mail:      MAILJET_API_KEY MAILJET_SECRET_KEY MAILJET_FROM_EMAIL MAILJET_SENDER_EMAIL
@@ -183,13 +212,20 @@ WhatsApp:  TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_API_KEY_SID TWILIO_API_KE
 Koppelingen: MAP_API_KEY DOEKSEN_API_KEY GEOAPIFY_API_KEY GOOGLE_PLACES_API_KEY
            META_APP_ID META_APP_SECRET
 Zelftest:  CI_ADMIN_EMAIL CI_ADMIN_PASSWORD CI_FIXTURE_SECRET
-AI:        GEMINI_API_KEY OPENAI_API_KEY        ← nieuw, vervangen LOVABLE_API_KEY
-Vervalt:   LOVABLE_API_KEY MICROSOFT_OUTLOOK_API_KEY
 ```
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` en
-`SUPABASE_DB_URL` zet Supabase zelf. De waarden staan in Lovable onder
-*Cloud → Secrets*; Claude kan ze niet zien, jij wel.
+Twee zijn nieuw en bestaan niet in Lovable; die zet jij zelf in het nieuwe
+project onder *Edge Functions → Secrets*:
+
+```
+GEMINI_API_KEY   aistudio.google.com/apikey        (factuurscanner, e-mailhulp, enz.)
+OPENAI_API_KEY   platform.openai.com/api-keys      (alleen Claudia's zoekindex; weglaten
+                                                    als Claudia eruit gaat)
+```
+
+Vervallen: `LOVABLE_API_KEY` en `MICROSOFT_OUTLOOK_API_KEY`. `SUPABASE_URL`,
+`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` en `SUPABASE_DB_URL` zet
+Supabase zelf.
 
 ## Stap 5 — Externe partijen op de nieuwe URL zetten **[jij, Claude geeft de exacte URLs]**
 
