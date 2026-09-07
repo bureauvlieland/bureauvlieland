@@ -457,6 +457,11 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                                 Verwacht
                               </Badge>
                             )}
+                            {row.hasMixedRates && (
+                              <Badge variant="outline" className="mt-1 ml-1 text-xs">
+                                Gesplitst tarief
+                              </Badge>
+                            )}
                             {row.exemptReason && (
                               <div className="mt-1 text-xs text-muted-foreground">
                                 Commissievrij: {row.exemptReason}
@@ -553,9 +558,19 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
                           </td>
                           <td className="p-3 text-right tabular-nums font-medium">
                             {formatCurrency(commission)}
-                            <div className="text-xs text-muted-foreground">
-                              {row.commissionPercentage}% van {formatCurrency(basisAmount)}
-                            </div>
+                            {row.commissionComponents && row.hasMixedRates ? (
+                              <div className="text-xs text-muted-foreground">
+                                {row.commissionComponents.map((c, i) => (
+                                  <div key={`${c.kind}-${i}`}>
+                                    {c.commissionPct}% van {formatCurrency(c.baseExclVat)}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">
+                                {row.commissionPercentage}% van {formatCurrency(basisAmount)}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );

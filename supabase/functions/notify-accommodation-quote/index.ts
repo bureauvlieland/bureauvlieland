@@ -1,7 +1,7 @@
 // Using Deno.serve() instead of deprecated import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
-import { extractMessageIds } from "../_shared/mailjet-send.ts";
+import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { 
   getRenderedTemplate, 
   sanitizeHtml, 
@@ -14,39 +14,11 @@ import {
   TemplateIds 
 } from "../_shared/email-templates.ts";
 
-const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
-const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const sendEmailViaMailjet = async (messages: any[]) => {
-  const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
-  
-  const response = await fetch("https://api.mailjet.com/v3.1/send", {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ Messages: messages }),
-  });
-  let parsed: unknown = null;
-  try { parsed = await response.clone().json(); } catch { /* non-JSON */ }
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Mailjet API error:", errorText);
-    throw new Error("EMAIL_SERVICE_ERROR");
-  }
-
-  // Geef de MessageID terug aan de aanroeper: een module-scope variabele
-  // bestond hier niet, waardoor de extractie stil faalde en elke mail
-  // zonder mailjet_message_id werd gelogd (geen webhook-koppeling).
-  return { raw: parsed, messageId: extractMessageIds(parsed)[0] ?? null };
 };
 
 // Fallback template if database template not found
@@ -265,15 +237,52 @@ Deno.serve(async (req) => {
     const replyTo = buildReplyTo(request.reference_number);
 
     const subjectPrefix = getSubjectPrefix(origin);
-    const sendResult = await sendEmailViaMailjet([
-      {
-        From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
-        To: [{ Email: getRecipientEmail(request.customer_email, origin), Name: request.customer_name }],
-        ...(replyTo ? { ReplyTo: replyTo } : {}),
-        Subject: `${subjectPrefix}${emailSubject}`,
-        HTMLPart: emailHtml,
-      },
-    ]);
+    const recipientEmail = getRecipientEmail(request.customer_email, origin);
+    // Via de gedeelde verzender: die controleert de suppressielijst vóór het
+    // versturen en meldt dat als uitkomst. De eigen verzender die hier stond
+    // kreeg diezelfde blokkade als een 403 van de onderschepper terug en maakte
+    // er "Er kon geen email worden verstuurd" van — zonder oorzaak.
+    const sendResult = await sendMailjet({
+      source: "notify-accommodation-quote",
+      messages: [
+        {
+          From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+          To: [{ Email: recipientEmail, Name: request.customer_name }],
+          ...(replyTo ? { ReplyTo: replyTo } : {}),
+          Subject: `${subjectPrefix}${emailSubject}`,
+          HTMLPart: emailHtml,
+        },
+      ],
+    });
+
+    if (!sendResult.ok) {
+      console.error("notify-accommodation-quote: Mailjet weigerde", sendResult.error);
+      return new Response(
+        JSON.stringify({
+          error: `De mailprovider weigerde het bericht: ${sendResult.error}`,
+          code: "mail_rejected",
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (sendResult.skipped === "suppressed") {
+      const who = sendResult.suppressedRecipient;
+      console.warn("notify-accommodation-quote: ontvanger gesupprimeerd", who);
+      return new Response(
+        JSON.stringify({
+          error:
+            `Niet verstuurd: ${who?.email ?? recipientEmail} staat op de suppressielijst` +
+            (who?.reason ? ` (${who.reason})` : "") +
+            ". Controleer het e-mailadres van de klant, of haal het adres van de lijst als het weer werkt.",
+          code: "recipient_suppressed",
+          recipient: who?.email ?? recipientEmail,
+          reason: who?.reason ?? null,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     mailjetMessageId = sendResult.messageId;
 
     // Log email

@@ -34,6 +34,8 @@ export interface CommissionLineDraft {
   expectedBaseAmount: number | null;
   /** True als de herberekende grondslag meer dan 2 cent afwijkt van de werklijst. */
   hasBaseMismatch: boolean;
+  /** Bij een gesplitste logiesregel: waar dit deel over gaat. */
+  componentKind: "room" | "extra" | null;
 }
 
 export interface BuildCommissionLinesInput {
@@ -103,7 +105,6 @@ export function buildCommissionLineDrafts(
 
     const basis: CommissionBasis = input.basisById?.get(sourceId) ?? row.defaultBasis;
     const baseAmountExclVat = round2(basisAmountForBasis(row, basis));
-    const commissionPct = row.commissionPercentage;
     const commissionAmount = round2(commissionForBasis(row, basis));
 
     const customerLabel = row.projectLabel || row.customerName || "Klant";
@@ -113,21 +114,50 @@ export function buildCommissionLineDrafts(
 
     const expectedBaseAmount = input.amountById?.get(sourceId) ?? null;
 
-    drafts.push({
+    const common = {
       sourceId,
       partnerId: row.partnerId,
       itemType: row.itemType,
       partnerInvoiceNumber: row.invoiceNumber,
-      blockName: row.label,
-      description: `${prefix}${row.label} – ${customerLabel}${datePart}`,
-      baseAmountExclVat,
-      commissionPct,
-      commissionAmount,
       customerLabel,
       eventDate,
       reference: row.projectReference,
       basis,
       purchaseInvoiceId: row.itemType === "purchase_invoice" ? row.invoiceId : null,
+    };
+
+    // Lopen kamer en extra's op verschillende percentages, dan krijgt de partner
+    // ze als aparte regels: één regel "€ 6.652,89 × 7,52 %" is niet te controleren,
+    // twee regels van 10 % en 0 % wel. Alleen bij de verkoopgrondslag, want dat is
+    // de grondslag waarvan we de uitsplitsing kennen.
+    const components = row.commissionComponents;
+    if (basis === "sales" && components && components.length > 1 && row.hasMixedRates) {
+      for (const component of components) {
+        drafts.push({
+          ...common,
+          blockName: component.label,
+          description:
+            `${prefix}${component.label} – ${customerLabel}${datePart}`,
+          baseAmountExclVat: component.baseExclVat,
+          commissionPct: component.commissionPct,
+          commissionAmount: component.commissionAmount,
+          componentKind: component.kind,
+          // De vergelijking met de werklijst geldt de regel als geheel, niet per deel.
+          expectedBaseAmount: null,
+          hasBaseMismatch: false,
+        });
+      }
+      continue;
+    }
+
+    drafts.push({
+      ...common,
+      blockName: row.label,
+      description: `${prefix}${row.label} – ${customerLabel}${datePart}`,
+      baseAmountExclVat,
+      commissionPct: row.commissionPercentage,
+      commissionAmount,
+      componentKind: null,
       expectedBaseAmount,
       hasBaseMismatch:
         expectedBaseAmount !== null && Math.abs(expectedBaseAmount - baseAmountExclVat) > 0.02,

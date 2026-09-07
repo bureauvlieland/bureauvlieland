@@ -67,6 +67,13 @@ De 301-redirects van de oude website staan in `public/_redirects`. Vite
 kopieert dat bestand naar `dist/`, Netlify leest het daar. Dat bestand is de
 enige plek waar redirects horen.
 
+**Dit gaat alleen over de frontend.** De backend — edge functions, migraties
+en `supabase/config.toml` — gaat níet via Netlify en ging vroeger vanzelf omdat
+Lovable het deed. Hoe dat nu werkt, en wat er eenmalig voor ingericht moet
+worden, staat in [deployen.md](deployen.md). Kort: zonder die stap staat een
+backend-wijziging wel op `main`, maar draait Supabase nog de vorige versie.
+
+
 ## Wat er per ongeluk niet meer kan
 
 - Rechtstreeks naar `main` pushen (branch protection)

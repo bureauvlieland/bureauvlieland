@@ -432,3 +432,144 @@ describe("verzamelfactuur-allocaties", () => {
     expect(plain.find((r) => r.itemId === "x1")!.purchaseExclVat).toBeCloseTo(1000, 6);
   });
 });
+
+/**
+ * K3 uit de doorlichting: voor logies gold het activiteitenpercentage van de
+ * partner in plaats van het logiespercentage, omdat alleen `commission_percentage`
+ * werd geraadpleegd. Beide staan in `partners`.
+ */
+describe("commissiepercentage per soort", () => {
+  const hotel = {
+    id: "badhotel",
+    name: "Badhotel Bruin",
+    commission_percentage: 15,
+    accommodation_commission_percentage: 10,
+    extras_commission_percentage: 0,
+  };
+
+  const lodgingItem = (overrides: Partial<ReconItemInput> = {}): ReconItemInput =>
+    item({
+      id: "quote-1",
+      provider_id: "badhotel",
+      item_type: "accommodation",
+      block_name: "Tweepersoonskamers",
+      commission_percentage: null,
+      quoted_price: 1000,
+      vat_rate: 0,
+      ...overrides,
+    });
+
+  it("logies valt terug op het logiespercentage, niet op het activiteitenpercentage", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem()],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionPercentage).toBe(10);
+    expect(row.salesCommission).toBeCloseTo(100, 6);
+  });
+
+  it("een programma-onderdeel valt terug op het activiteitenpercentage", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem({ item_type: "activity", id: "item-9" })],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionPercentage).toBe(15);
+  });
+
+  it("een percentage op de regel zelf wint van beide", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem({ commission_percentage: 7.5 })],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionPercentage).toBe(7.5);
+  });
+
+  it("zonder partnerpercentages blijft 10 % de standaard", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem({ provider_id: "onbekend" })],
+      invoices: [],
+      projects,
+      partners: [{ id: "onbekend", name: "Onbekend" }],
+    });
+    expect(row.commissionPercentage).toBe(10);
+  });
+
+  it("rekent kamer en extra's elk tegen hun eigen percentage", () => {
+    // Badhotel Bruin: 10 % over de kamer, 0 % over de extra's.
+    const [row] = buildReconciliationRows({
+      items: [
+        lodgingItem({
+          commission_components: [
+            { kind: "room", label: "Kamers", baseExclVat: 5000, commissionPct: 10, commissionAmount: 500 },
+            { kind: "extra", label: "Diner", baseExclVat: 1652.89, commissionPct: 0, commissionAmount: 0 },
+          ],
+        }),
+      ],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+
+    expect(row.salesExclVat).toBeCloseTo(6652.89, 2);
+    expect(row.salesCommission).toBe(500);
+    expect(row.hasMixedRates).toBe(true);
+    // Het rijpercentage is louter ter weergave: 500 / 6652,89.
+    expect(row.commissionPercentage).toBeCloseTo(7.52, 2);
+  });
+
+  it("een regel zonder componenten houdt de gewone berekening", () => {
+    const [row] = buildReconciliationRows({
+      items: [lodgingItem()],
+      invoices: [],
+      projects,
+      partners: [hotel],
+    });
+    expect(row.commissionComponents).toBeNull();
+    expect(row.hasMixedRates).toBe(false);
+    expect(row.commissionPercentage).toBe(10);
+  });
+
+  it("telt de toeristenbelasting niet mee zodra de factuur op de offerte staat", () => {
+    // De eindfactuur is EUR 6.000 ex btw, waarvan EUR 120 toeristenbelasting die
+    // `apply-purchase-invoice-to-lodging` bewust buiten de offerte houdt.
+    const [row] = buildReconciliationRows({
+      items: [
+        lodgingItem({
+          invoiced_number: "H-2026-88",
+          purchase_invoice_applied: true,
+          commission_components: [
+            { kind: "room", label: "Kamers", baseExclVat: 5880, commissionPct: 10, commissionAmount: 588 },
+          ],
+        }),
+      ],
+      invoices: [
+        {
+          id: "inv-88",
+          partner_id: "badhotel",
+          request_id: "req-1",
+          item_id: null,
+          invoice_number: "H-2026-88",
+          invoice_date: "2026-06-12",
+          amount_excl_vat: 6000,
+          amount_incl_vat: 6540,
+        },
+      ],
+      projects,
+      partners: [hotel],
+    });
+
+    expect(row.defaultBasis).toBe("sales");
+    expect(row.salesCommission).toBe(588);
+    // Over het ruwe factuurbedrag zou het EUR 600 zijn — EUR 12 commissie over
+    // toeristenbelasting die niet van de partner is.
+    expect(row.purchaseCommission).toBeGreaterThan(row.salesCommission!);
+    // En het blijft een match: de offerte is mét deze factuur overschreven.
+    expect(row.status).toBe("match");
+  });
+});

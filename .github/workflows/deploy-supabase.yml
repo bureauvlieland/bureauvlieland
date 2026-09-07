@@ -1,0 +1,117 @@
+# Backend naar productie: edge functions en migraties naar Supabase.
+#
+# De frontend gaat vanzelf via Netlify. De backend niet: Lovable deployde edge
+# functions en migraties zelf, en dat mechanisme is met de overstap verdwenen.
+# Zonder deze workflow bereikt geen enkele wijziging onder supabase/ productie,
+# hoe groen CI ook is.
+#
+# Draait alleen op main, alleen als er iets onder supabase/ veranderd is, en
+# alleen als de geheimen bestaan (anders slaat de job zichzelf over met een
+# duidelijke melding in plaats van te falen).
+#
+# Benodigde repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_ACCESS_TOKEN  – personal access token, aanmaken op
+#                            https://supabase.com/dashboard/account/tokens
+#   SUPABASE_DB_PASSWORD   – databasewachtwoord van het project, alleen nodig
+#                            voor migraties (Dashboard → Project Settings → Database)
+#
+# Het project-ref staat in supabase/config.toml (project_id) en hoeft niet
+# geheim te zijn: het staat ook in .env als VITE_SUPABASE_PROJECT_ID.
+
+name: Deploy Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - ".github/workflows/deploy-supabase.yml"
+  workflow_dispatch:
+    inputs:
+      functions:
+        description: "Alleen deze functies deployen (spatie-gescheiden). Leeg = alle."
+        required: false
+        default: ""
+      skip_migrations:
+        description: "Migraties overslaan"
+        type: boolean
+        default: false
+
+# Nooit twee deploys door elkaar; een nieuwe push wacht op de vorige.
+concurrency:
+  group: deploy-supabase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Edge functions en migraties
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Zonder token geen deploy — en geen rode run. De reden staat in de samenvatting.
+    if: ${{ vars.SUPABASE_DEPLOY_ENABLED == 'true' }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Project-ref uit config.toml
+        id: ref
+        run: |
+          ref=$(sed -n 's/^project_id *= *"\(.*\)"/\1/p' supabase/config.toml)
+          if [ -z "$ref" ]; then echo "::error::project_id niet gevonden in supabase/config.toml"; exit 1; fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Controleer geheimen
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN ontbreekt als repository secret. Zie de toelichting bovenin deze workflow."
+            exit 1
+          fi
+
+      - name: Koppel project
+        run: supabase link --project-ref "${{ steps.ref.outputs.ref }}"
+
+      # verify_jwt per functie komt uit supabase/config.toml; de CLI leest dat.
+      - name: Deploy edge functions
+        run: |
+          set -euo pipefail
+          names="${{ github.event.inputs.functions }}"
+          if [ -n "$names" ]; then
+            for fn in $names; do
+              echo "::group::deploy $fn"
+              supabase functions deploy "$fn" --project-ref "${{ steps.ref.outputs.ref }}"
+              echo "::endgroup::"
+            done
+          else
+            supabase functions deploy --project-ref "${{ steps.ref.outputs.ref }}"
+          fi
+
+      - name: Migraties toepassen
+        if: ${{ github.event.inputs.skip_migrations != 'true' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::warning::SUPABASE_DB_PASSWORD ontbreekt — migraties overgeslagen. Functies zijn wél gedeployed."
+            echo "Migraties overgeslagen: geen SUPABASE_DB_PASSWORD." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          supabase db push --project-ref "${{ steps.ref.outputs.ref }}" -p "$SUPABASE_DB_PASSWORD"
+
+      - name: Samenvatting
+        if: always()
+        run: |
+          {
+            echo "## Supabase deploy"
+            echo
+            echo "- Project: \`${{ steps.ref.outputs.ref }}\`"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Functies: ${{ github.event.inputs.functions || 'alle' }}"
+            echo "- Migraties: ${{ github.event.inputs.skip_migrations == 'true' && 'overgeslagen' || 'toegepast (als wachtwoord aanwezig)' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
