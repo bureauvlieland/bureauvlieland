@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
 
 const heroImage =
-  "https://blhspuifehausilnzwio.supabase.co/storage/v1/object/public/building-block-images/1785853376111-Diner-online-106.jpg";
+  `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1785853376111-Diner-online-106.jpg`;
 
 export const HeroEditorial = () => {
   return (

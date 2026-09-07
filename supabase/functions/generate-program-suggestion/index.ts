@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,9 +16,8 @@ serve(async (req) => {
   try {
     const { occasion, numberOfPeople, dates, vibe, wishes, availableBlockIds } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    if (!aiConfigured()) {
+      throw new Error(AI_NOT_CONFIGURED_MESSAGE);
     }
 
     // Fetch published building blocks
@@ -67,49 +67,42 @@ ${wishes ? `- Bijzondere wensen: ${wishes}` : ""}
 
 Gebruik de suggest_program tool om de activiteiten te retourneren.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "suggest_program",
-              description: "Return a list of building block IDs with day assignments for the program.",
-              parameters: {
-                type: "object",
-                properties: {
-                  suggestions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        block_id: { type: "string", description: "The ID of the building block" },
-                        day_index: { type: "integer", description: "Zero-based day index (0 = day 1)" },
-                        preferred_time: { type: "string", description: "Start time in HH:MM 24h format (e.g. 09:30)" },
-                      },
-                      required: ["block_id", "day_index", "preferred_time"],
-                      additionalProperties: false,
+    const response = await aiChatCompletions({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "suggest_program",
+            description: "Return a list of building block IDs with day assignments for the program.",
+            parameters: {
+              type: "object",
+              properties: {
+                suggestions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      block_id: { type: "string", description: "The ID of the building block" },
+                      day_index: { type: "integer", description: "Zero-based day index (0 = day 1)" },
+                      preferred_time: { type: "string", description: "Start time in HH:MM 24h format (e.g. 09:30)" },
                     },
+                    required: ["block_id", "day_index", "preferred_time"],
+                    additionalProperties: false,
                   },
                 },
-                required: ["suggestions"],
-                additionalProperties: false,
               },
+              required: ["suggestions"],
+              additionalProperties: false,
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "suggest_program" } },
-      }),
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "suggest_program" } },
     });
 
     if (!response.ok) {

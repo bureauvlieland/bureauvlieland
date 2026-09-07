@@ -8,6 +8,7 @@ import {
   TERMINAL_COMPLETION_STATUSES,
   type CooldownLevel,
 } from "../_shared/projectActivity.ts";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -348,7 +349,7 @@ interface PrioritizedRecommendation {
   deeplink?: string;
 }
 
-async function prioritizeWithAI(signals: Signal[], apiKey: string): Promise<PrioritizedRecommendation[]> {
+async function prioritizeWithAI(signals: Signal[]): Promise<PrioritizedRecommendation[]> {
   if (signals.length === 0) return [];
 
   const systemPrompt = `Je bent Claudia, operationele co-piloot van Bureau Vlieland (lokale specialist voor groepsprogramma's op Vlieland).
@@ -374,57 +375,50 @@ Schrijf elke 'body' in 1-2 zinnen met concrete vervolgactie ("stuur reminder X",
 
 BELANGRIJK: noem in elke aanbeveling (zowel title als body) altijd de projectnaam (klantnaam of bedrijfsnaam uit de summary) én het projectreferentienummer (bijv. BV-2606-0011) wanneer die in het signaal beschikbaar zijn.`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Signalen (JSON):\n${JSON.stringify(signals, null, 2)}\n\nMaak hiervan een geprioriteerde aanbevelingenlijst.`,
-        },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "submit_recommendations",
-            description: "Submit the prioritized list of recommendations.",
-            parameters: {
-              type: "object",
-              properties: {
-                recommendations: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      kind: {
-                        type: "string",
-                        description: "Categorie zoals partner_overdue, lodging_no_quotes, etc.",
-                      },
-                      priority: { type: "string", enum: ["urgent", "normal", "info"] },
-                      title: { type: "string", description: "Korte titel, max 80 tekens" },
-                      body: { type: "string", description: "Concrete actie, 1-2 zinnen" },
-                      related_entity_type: { type: "string" },
-                      related_entity_id: { type: "string" },
-                      deeplink: { type: "string" },
+  const res = await aiChatCompletions({
+    model: AI_MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Signalen (JSON):\n${JSON.stringify(signals, null, 2)}\n\nMaak hiervan een geprioriteerde aanbevelingenlijst.`,
+      },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "submit_recommendations",
+          description: "Submit the prioritized list of recommendations.",
+          parameters: {
+            type: "object",
+            properties: {
+              recommendations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    kind: {
+                      type: "string",
+                      description: "Categorie zoals partner_overdue, lodging_no_quotes, etc.",
                     },
-                    required: ["kind", "priority", "title", "body"],
+                    priority: { type: "string", enum: ["urgent", "normal", "info"] },
+                    title: { type: "string", description: "Korte titel, max 80 tekens" },
+                    body: { type: "string", description: "Concrete actie, 1-2 zinnen" },
+                    related_entity_type: { type: "string" },
+                    related_entity_id: { type: "string" },
+                    deeplink: { type: "string" },
                   },
+                  required: ["kind", "priority", "title", "body"],
                 },
               },
-              required: ["recommendations"],
             },
+            required: ["recommendations"],
           },
         },
-      ],
-      tool_choice: { type: "function", function: { name: "submit_recommendations" } },
-    }),
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "submit_recommendations" } },
   });
 
   if (!res.ok) {
@@ -450,8 +444,7 @@ serve(async (req) => {
   let runId: string | null = null;
 
   try {
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    if (!aiConfigured()) throw new Error(AI_NOT_CONFIGURED_MESSAGE);
 
     await supabase.rpc("expire_stale_recommendations");
 
@@ -465,7 +458,7 @@ serve(async (req) => {
     const { signals, suppressed, suppressedBreakdown } = await gatherSignals(supabase);
 
     const rawRecommendations = signals.length > 0
-      ? await prioritizeWithAI(signals, apiKey)
+      ? await prioritizeWithAI(signals)
       : [];
 
     // Harde cluster-cap: per gerelateerd project maximaal 1 aanbeveling.

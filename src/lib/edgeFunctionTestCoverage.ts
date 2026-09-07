@@ -163,6 +163,7 @@ const REGISTRY: Row[] = [
 
   // ── Utility / read-only ─────────────────────────────────────────────────
   { name: "get-accommodation-portal", category: "utility", critical: false },
+  { name: "storage-export", category: "utility", critical: false }, // tijdelijk, verhuizing (docs/migratie-supabase.md)
   { name: "get-customer-accommodation-thread", category: "utility", critical: false },
   { name: "get-customer-program", category: "utility", critical: false },
   { name: "get-ferry-departures", category: "utility", critical: false },

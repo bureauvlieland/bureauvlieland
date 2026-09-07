@@ -6,6 +6,7 @@ import {
   truncate,
   type DossierEntry,
 } from "../_shared/emailComposerIntents.ts";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +26,7 @@ const corsHeaders = {
  * Met `previewOnly: true` retourneert de functie alleen de dossier-samenvatting
  * plus een aanbevolen intentie, zodat de UI kan tonen waarop de AI zich baseert.
  *
- * Alleen admins. Gebruikt Lovable AI Gateway (LOVABLE_API_KEY).
+ * Alleen admins. AI via _shared/ai.ts (GEMINI_API_KEY of LOVABLE_API_KEY).
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -34,7 +35,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const authHeader = req.headers.get("Authorization");
@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
     if (!requestId && !accommodationId) {
       return json({ error: "requestId of accommodationId verplicht" }, 400);
     }
-    if (!previewOnly && !lovableKey) {
-      return json({ error: "LOVABLE_API_KEY ontbreekt" }, 500);
+    if (!previewOnly && !aiConfigured()) {
+      return json({ error: AI_NOT_CONFIGURED_MESSAGE }, 500);
     }
 
     // ---------------------------------------------------------------
@@ -322,20 +322,13 @@ Deno.serve(async (req) => {
       summary,
     });
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.6-flash",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const aiRes = await aiChatCompletions({
+      model: "google/gemini-3.6-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      response_format: { type: "json_object" },
     });
 
     if (aiRes.status === 429) return json({ error: "AI-limiet bereikt — probeer het zo opnieuw." }, 429);

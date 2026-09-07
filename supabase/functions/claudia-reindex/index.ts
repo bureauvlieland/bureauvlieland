@@ -3,6 +3,7 @@
 // en upsert in claudia_documents. Mode "all" doet een volledige backfill.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiEmbeddings, resolveAiProvider, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,18 +30,11 @@ function trim(s: string | null | undefined, max = MAX_CONTENT): string {
   return s.length > max ? s.slice(0, max) : s;
 }
 
-async function embedBatch(texts: string[], apiKey: string): Promise<number[][]> {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: EMBED_MODEL,
-      input: texts,
-      dimensions: EMBED_DIMS,
-    }),
+async function embedBatch(texts: string[]): Promise<number[][]> {
+  const res = await aiEmbeddings({
+    model: EMBED_MODEL,
+    input: texts,
+    dimensions: EMBED_DIMS,
   });
   if (!res.ok) {
     const body = await res.text();
@@ -144,8 +138,7 @@ serve(async (req) => {
   let runId: string | null = null;
 
   try {
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    if (!resolveAiProvider(EMBED_MODEL)) throw new Error(AI_NOT_CONFIGURED_MESSAGE);
 
     const input: ReindexInput = req.method === "POST"
       ? await req.json().catch(() => ({}))
@@ -232,7 +225,7 @@ serve(async (req) => {
 
     for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
       const batch = prepared.slice(i, i + BATCH_SIZE);
-      const embeddings = await embedBatch(batch.map((b) => b.content), apiKey);
+      const embeddings = await embedBatch(batch.map((b) => b.content));
 
       const upserts = batch.map((b, idx) => ({
         source_type: b.source_type,

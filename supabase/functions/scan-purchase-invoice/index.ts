@@ -5,6 +5,7 @@ import {
   INVOICE_SCAN_USER_INSTRUCTION,
   normalizeScannedInvoice,
 } from "../_shared/purchaseInvoiceScan.ts";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,38 +102,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+    if (!aiConfigured()) {
+      return new Response(JSON.stringify({ error: AI_NOT_CONFIGURED_MESSAGE }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: INVOICE_SCAN_SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: INVOICE_SCAN_USER_INSTRUCTION },
-              {
-                type: "image_url",
-                image_url: { url: `data:${pdfMime};base64,${pdfBase64}` },
-              },
-            ],
-          },
-        ],
-        tools: [INVOICE_SCAN_TOOL],
-        tool_choice: { type: "function", function: { name: "extract_invoice" } },
-      }),
+    const aiResp = await aiChatCompletions({
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: INVOICE_SCAN_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: INVOICE_SCAN_USER_INSTRUCTION },
+            {
+              type: "image_url",
+              image_url: { url: `data:${pdfMime};base64,${pdfBase64}` },
+            },
+          ],
+        },
+      ],
+      tools: [INVOICE_SCAN_TOOL],
+      tool_choice: { type: "function", function: { name: "extract_invoice" } },
     });
 
     if (!aiResp.ok) {

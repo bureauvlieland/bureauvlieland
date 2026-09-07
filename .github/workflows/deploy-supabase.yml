@@ -1,10 +1,10 @@
 # Backend naar productie: edge functions en migraties naar Supabase.
 #
-# LET OP — STAAT BEWUST UIT. Het Supabase-project draait op dit moment onder
-# Lovable Cloud, niet onder een eigen Supabase-account. Er bestaat dan geen
-# personal access token, en deze workflow kan er niet bij. Deployen gaat nu via
-# Lovable; zie docs/deployen.md. Zet deze workflow pas aan na een verhuizing
-# naar een eigen Supabase-project.
+# LET OP — STAAT BEWUST UIT tot de verhuizing naar een eigen Supabase-project
+# is afgerond (docs/migratie-supabase.md). Onder Lovable Cloud bestaat er geen
+# personal access token en kan deze workflow er niet bij; deployen gaat dan via
+# Lovable (docs/deployen.md). Aanzetten: repository variable
+# SUPABASE_DEPLOY_ENABLED=true plus de twee secrets hieronder.
 #
 # De frontend gaat vanzelf via Netlify. De backend niet: Lovable deployde edge
 # functions en migraties zelf, en dat mechanisme is met de overstap verdwenen.

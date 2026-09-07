@@ -1,5 +1,7 @@
 # Naar productie
 
+> Verhuizing naar een eigen Supabase-project: zie [migratie-supabase.md](migratie-supabase.md).
+
 Er zijn twee helften, en ze gaan op verschillende manieren live.
 
 ## Frontend — vanzelf, via Netlify

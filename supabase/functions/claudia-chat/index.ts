@@ -3,6 +3,7 @@
 // Writing actions are intentionally NOT exposed yet (Phase 3).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,8 +209,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY niet beschikbaar");
+    if (!aiConfigured()) throw new Error(AI_NOT_CONFIGURED_MESSAGE);
 
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabase = createClient(
@@ -244,22 +244,12 @@ Deno.serve(async (req) => {
     ];
 
     for (let round = 0; round < 3; round++) {
-      const r = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: model || "google/gemini-3-flash-preview",
-            messages: working,
-            tools: TOOLS,
-            stream: false,
-          }),
-        },
-      );
+      const r = await aiChatCompletions({
+        model: model || "google/gemini-3-flash-preview",
+        messages: working,
+        tools: TOOLS,
+        stream: false,
+      });
       if (r.status === 429 || r.status === 402) {
         return new Response(
           JSON.stringify({
