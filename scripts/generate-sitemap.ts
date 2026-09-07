@@ -8,15 +8,37 @@
  *
  * Reads building_blocks via the public Supabase anon key (read-only).
  */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const BASE_URL = "https://bureauvlieland.nl";
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? "https://blhspuifehausilnzwio.supabase.co";
+/**
+ * Supabase-URL en anon key komen uit de omgeving of, als die er niet zijn,
+ * uit het meegecommitte .env-bestand (tsx laadt .env niet zelf). Geen
+ * hardcoded project-ref meer: bij een verhuizing hoeft alleen .env te wijzigen.
+ */
+function readDotEnv(): Record<string, string> {
+  try {
+    const raw = readFileSync(resolve(process.cwd(), ".env"), "utf8");
+    const out: Record<string, string> = {};
+    for (const line of raw.split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*"?([^"]*)"?\s*$/);
+      if (m) out[m[1]] = m[2];
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+const dotEnv = readDotEnv();
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? dotEnv.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
   ?? process.env.VITE_SUPABASE_ANON_KEY
-  ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsaHNwdWlmZWhhdXNpbG56d2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMTM0NDAsImV4cCI6MjA3ODg4OTQ0MH0.shiugYb4lLf9KHksbfLx5bZYgtvfoGPSoWUyl3dONRI";
+  ?? dotEnv.VITE_SUPABASE_PUBLISHABLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error("VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY ontbreken (zet ze in .env).");
+}
 
 const HIDDEN_BLOCK_IDS = new Set([
   "boot-enkel-heen",

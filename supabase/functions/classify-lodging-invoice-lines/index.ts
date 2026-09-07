@@ -2,6 +2,7 @@
 // Suggereert per regel: room | extra (met categorie) | tourist_tax | exclude.
 // Toeristenbelasting wordt expliciet uitgesloten — zit al in onze verkoopfactuur.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -69,9 +70,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "Missing LOVABLE_API_KEY" }), {
+    if (!aiConfigured()) {
+      return new Response(JSON.stringify({ error: AI_NOT_CONFIGURED_MESSAGE }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -89,49 +89,42 @@ Deno.serve(async (req) => {
       })),
     };
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Classificeer deze regels:\n${JSON.stringify(userPayload, null, 2)}` },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "classify_lines",
-            description: "Classificeer iedere factuurregel",
-            parameters: {
-              type: "object",
-              properties: {
-                suggestions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      index: { type: "number" },
-                      target: { type: "string", enum: ["room", "extra", "tourist_tax", "exclude"] },
-                      extra_category: { type: ["string", "null"], enum: ["fb", "facilities", "transport", "other", null] },
-                      confidence: { type: "number" },
-                      reason: { type: "string" },
-                    },
-                    required: ["index", "target", "confidence", "reason"],
-                    additionalProperties: false,
+    const aiResp = await aiChatCompletions({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Classificeer deze regels:\n${JSON.stringify(userPayload, null, 2)}` },
+      ],
+      tools: [{
+        type: "function",
+        function: {
+          name: "classify_lines",
+          description: "Classificeer iedere factuurregel",
+          parameters: {
+            type: "object",
+            properties: {
+              suggestions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    index: { type: "number" },
+                    target: { type: "string", enum: ["room", "extra", "tourist_tax", "exclude"] },
+                    extra_category: { type: ["string", "null"], enum: ["fb", "facilities", "transport", "other", null] },
+                    confidence: { type: "number" },
+                    reason: { type: "string" },
                   },
+                  required: ["index", "target", "confidence", "reason"],
+                  additionalProperties: false,
                 },
               },
-              required: ["suggestions"],
-              additionalProperties: false,
             },
+            required: ["suggestions"],
+            additionalProperties: false,
           },
-        }],
-        tool_choice: { type: "function", function: { name: "classify_lines" } },
-      }),
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "classify_lines" } },
     });
 
     if (!aiResp.ok) {

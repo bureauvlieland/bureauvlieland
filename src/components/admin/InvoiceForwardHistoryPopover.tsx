@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Props {
   invoiceId: string;
-  onResend: (method: "outlook" | "mailjet") => void;
+  /** Opnieuw versturen (altijd via Mailjet; Outlook is uitgefaseerd). */
+  onResend: () => void;
 }
 
 export function InvoiceForwardHistoryPopover({ invoiceId, onResend }: Props) {
@@ -71,8 +72,8 @@ export function InvoiceForwardHistoryPopover({ invoiceId, onResend }: Props) {
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-xs"
-                      onClick={() => onResend(method as "outlook" | "mailjet")}
-                      title="Opnieuw versturen via dezelfde methode"
+                      onClick={() => onResend()}
+                      title="Opnieuw versturen via Mailjet"
                     >
                       <RotateCw className="h-3 w-3 mr-1" />
                       Opnieuw

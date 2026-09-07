@@ -4,6 +4,7 @@
 // - Isla:    match per regel → program_requests.customer_name (fuzzy)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -247,8 +248,7 @@ Deno.serve(async (req) => {
     const pdfBase64 = btoa(binary);
     const pdfMime = fileData.type || "application/pdf";
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) return jsonResp({ error: "LOVABLE_API_KEY missing" }, 500);
+    if (!aiConfigured()) return jsonResp({ error: AI_NOT_CONFIGURED_MESSAGE }, 500);
 
     const systemPrompt = supplierType === "isla" ? SYSTEM_PROMPT_ISLA : SYSTEM_PROMPT_DOEKSEN;
     const tool = supplierType === "isla" ? ISLA_TOOL : DOEKSEN_TOOL;
@@ -256,27 +256,20 @@ Deno.serve(async (req) => {
       ? "Extracteer de Isla Vlieland verzamelfactuur volledig via extract_isla_invoice."
       : "Extracteer de verzamelfactuur volledig via extract_collective_invoice.";
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              { type: "image_url", image_url: { url: `data:${pdfMime};base64,${pdfBase64}` } },
-            ],
-          },
-        ],
-        tools: [tool],
-        tool_choice: { type: "function", function: { name: tool.function.name } },
-      }),
+    const aiResp = await aiChatCompletions({
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userText },
+            { type: "image_url", image_url: { url: `data:${pdfMime};base64,${pdfBase64}` } },
+          ],
+        },
+      ],
+      tools: [tool],
+      tool_choice: { type: "function", function: { name: tool.function.name } },
     });
 
     if (!aiResp.ok) {

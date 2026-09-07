@@ -2,6 +2,7 @@
 // Triggered by inbound-email after a new sales_inbox row is created; can also be
 // called from the admin UI to rescan.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,11 +95,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    if (!aiConfigured()) {
       await supabase
         .from("sales_inbox")
-        .update({ scan_status: "failed", scan_error: "LOVABLE_API_KEY not set" })
+        .update({ scan_status: "failed", scan_error: AI_NOT_CONFIGURED_MESSAGE })
         .eq("id", inbox_id);
       return new Response(JSON.stringify({ error: "No AI key" }), {
         status: 500,
@@ -114,46 +114,38 @@ Deno.serve(async (req) => {
       inbox.body_text || "(geen tekst-inhoud — alleen HTML beschikbaar)",
     ].join("\n");
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Lovable-API-Key": LOVABLE_API_KEY,
-        "Content-Type": "application/json",
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "extract_lead",
-            description: "Extract structured sales lead data from the inbound email.",
-            parameters: {
-              type: "object",
-              properties: {
-                customer_name: { type: ["string", "null"] },
-                customer_email: { type: ["string", "null"] },
-                customer_phone: { type: ["string", "null"] },
-                customer_company: { type: ["string", "null"] },
-                number_of_people: { type: ["integer", "null"] },
-                preferred_dates: { type: "array", items: { type: "string" } },
-                program_type: { type: ["string", "null"] },
-                wishes: { type: ["string", "null"] },
-                budget_indication: { type: ["string", "null"] },
-                source: { type: ["string", "null"] },
-                confidence: { type: "number" },
-              },
-              required: ["customer_name", "customer_email", "preferred_dates", "wishes", "confidence"],
-              additionalProperties: false,
+    const aiResp = await aiChatCompletions({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [{
+        type: "function",
+        function: {
+          name: "extract_lead",
+          description: "Extract structured sales lead data from the inbound email.",
+          parameters: {
+            type: "object",
+            properties: {
+              customer_name: { type: ["string", "null"] },
+              customer_email: { type: ["string", "null"] },
+              customer_phone: { type: ["string", "null"] },
+              customer_company: { type: ["string", "null"] },
+              number_of_people: { type: ["integer", "null"] },
+              preferred_dates: { type: "array", items: { type: "string" } },
+              program_type: { type: ["string", "null"] },
+              wishes: { type: ["string", "null"] },
+              budget_indication: { type: ["string", "null"] },
+              source: { type: ["string", "null"] },
+              confidence: { type: "number" },
             },
+            required: ["customer_name", "customer_email", "preferred_dates", "wishes", "confidence"],
+            additionalProperties: false,
           },
-        }],
-        tool_choice: { type: "function", function: { name: "extract_lead" } },
-      }),
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "extract_lead" } },
     });
 
     if (!aiResp.ok) {

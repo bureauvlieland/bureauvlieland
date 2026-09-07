@@ -1,5 +1,7 @@
 # Naar productie
 
+> Verhuizing naar een eigen Supabase-project: zie [migratie-supabase.md](migratie-supabase.md).
+
 Er zijn twee helften, en ze gaan op verschillende manieren live.
 
 ## Frontend — vanzelf, via Netlify
@@ -9,74 +11,83 @@ automatisch op bureauvlieland.nl. Elke pull request krijgt een eigen preview
 (`https://deploy-preview-<nummer>--bureauvlieland.netlify.app`). Hier hoef je
 niets voor te doen.
 
-## Backend — via de workflow "Deploy Supabase"
+## Backend — nu nog via Lovable
 
 Alles onder `supabase/`: de edge functions (`supabase/functions/`), de
 databasemigraties (`supabase/migrations/`) en `supabase/config.toml`.
 
-Dit ging vroeger vanzelf omdat Lovable het deed. Dat mechanisme is met de
-overstap verdwenen. Zonder de workflow hieronder bereikt een wijziging in een
-edge function of een migratie productie **nooit**, hoe groen CI ook is — de
-code staat dan wel op `main`, maar Supabase draait nog de vorige versie.
+**Het Supabase-project (`blhspuifehausilnzwio`) draait onder Lovable Cloud, niet
+onder een eigen Supabase-account.** Dat betekent:
 
-De workflow `.github/workflows/deploy-supabase.yml` doet het nu: bij elke merge
-naar `main` die iets onder `supabase/` raakt, deployt hij alle edge functions
-en past hij de migraties toe. Hij draait pas als hij aanstaat (zie hieronder);
-tot die tijd slaat hij zichzelf over in plaats van te falen.
+- er is geen supabase.com-dashboard en geen personal access token voor dit
+  project, dus de Supabase CLI en de GitHub-workflow kunnen er niet bij;
+- Lovable is de enige route om edge functions en migraties uit te rollen;
+- de database, de bestanden in de buckets, de gebruikersaccounts en de secrets
+  staan in Lovable's account. Zolang het Lovable-abonnement loopt is dat geen
+  probleem, maar het is de reden om op termijn naar een eigen project te gaan
+  (zie onderaan).
 
-### Eenmalig inrichten
+### Zo rol je backend-wijzigingen nu uit
 
-1. **Personal access token** aanmaken op
-   <https://supabase.com/dashboard/account/tokens>. Geef hem een herkenbare
-   naam ("GitHub deploy bureauvlieland").
-2. In GitHub: *Settings → Secrets and variables → Actions → Secrets* →
-   `SUPABASE_ACCESS_TOKEN` met die token.
-3. Voor migraties ook `SUPABASE_DB_PASSWORD`: het databasewachtwoord uit
-   *Supabase Dashboard → Project Settings → Database*. Zonder dit geheim worden
-   alleen de functies gedeployed en slaat de workflow migraties over met een
-   waarschuwing.
-4. Zet de workflow aan: *Settings → Secrets and variables → Actions →
-   Variables* → `SUPABASE_DEPLOY_ENABLED` = `true`.
+1. Merge de pull request naar `main`. Lovable is aan deze repo gekoppeld en
+   haalt `main` binnen.
+2. Open het project in Lovable en controleer dat de laatste commit van GitHub
+   is gesynchroniseerd.
+3. Vraag Lovable expliciet om de edge functions opnieuw te deployen, bijvoorbeeld
+   "deploy alle edge functions opnieuw" of met de naam van de gewijzigde functie.
+   Reken er niet op dat dit vanzelf gebeurt bij een sync vanuit GitHub.
+4. Migraties: Lovable past nieuwe bestanden in `supabase/migrations/` toe bij
+   het deployen; controleer in Lovable of de migratie is gelopen.
 
-Het project-ref (`blhspuifehausilnzwio`) hoeft niet geheim te zijn; hij staat
-in `supabase/config.toml` en de workflow leest hem daar.
+### Controleren of de nieuwe backend draait
 
-### Handmatig draaien
+Open in de admin een gescande inkoopfactuur en klap "Wat heeft de scanner
+gelezen?" open. Staat er een veld `customer_reference` in de JSON, dan draait de
+scanner van september 2026 of later. Een tweede check: stuur een logiesofferte
+door naar een klant die niet bestaat — de foutmelding hoort dan een reden te
+noemen in plaats van "non-2xx".
 
-Onder *Actions → Deploy Supabase → Run workflow* kun je hem ook met de hand
-starten, bijvoorbeeld om één functie opnieuw te deployen:
+## De GitHub-workflow "Deploy Supabase"
 
-- **functions**: `notify-accommodation-quote scan-purchase-invoice` (leeg = alle)
-- **skip_migrations**: aanvinken als je alleen functies wilt
+`.github/workflows/deploy-supabase.yml` deployt edge functions en migraties bij
+elke merge naar `main`. Hij is gebouwd voor de situatie waarin het project onder
+een eigen Supabase-account draait, en **staat daarom uit** (repository-variabele
+`SUPABASE_DEPLOY_ENABLED` ontbreekt). Zet hem pas aan ná een verhuizing naar een
+eigen project; daarvoor werkt hij niet.
 
-### Zonder GitHub, vanaf je eigen machine
+Na zo'n verhuizing is het inrichten:
 
-Als noodgreep werkt de Supabase CLI ook lokaal:
+1. Personal access token op <https://supabase.com/dashboard/account/tokens>.
+2. GitHub: *Settings → Secrets and variables → Actions → Secrets* →
+   `SUPABASE_ACCESS_TOKEN`.
+3. Voor migraties ook `SUPABASE_DB_PASSWORD` (Supabase → Project Settings →
+   Database). Zonder dit geheim worden alleen functies gedeployed.
+4. Variabele `SUPABASE_DEPLOY_ENABLED` = `true`.
+5. `project_id` in `supabase/config.toml` en de `VITE_SUPABASE_*`-waarden in
+   `.env` omzetten naar het nieuwe project.
 
-```bash
-npx supabase login                       # eenmalig, opent de browser
-npx supabase link --project-ref blhspuifehausilnzwio
-npx supabase functions deploy            # alle functies
-npx supabase functions deploy <naam>     # één functie
-npx supabase db push                     # migraties
-```
+Handmatig draaien kan dan via *Actions → Deploy Supabase → Run workflow*, met
+een lijst functies en een schakelaar om migraties over te slaan. Vanaf een eigen
+machine werkt ook `npx supabase login`, `npx supabase link --project-ref <ref>`,
+`npx supabase functions deploy [naam]` en `npx supabase db push`.
 
-### Wat de workflow bewust níet doet
+Wat de workflow bewust níet doet: functies verwijderen die van schijf zijn
+(`temp-invoice-pdf-audit` gaat dus mee zolang hij er staat), secrets zetten, of
+op pull requests draaien.
 
-- Hij verwijdert geen functies die niet meer op schijf staan. Een functie die
-  je uit de repo haalt, blijft op Supabase bestaan tot je hem daar weghaalt
-  (`npx supabase functions delete <naam>`). Let op: `temp-invoice-pdf-audit`
-  staat nog op schijf en wordt dus mee-gedeployed zolang hij er staat.
-- Hij zet geen secrets (`MAILJET_API_KEY` en dergelijke). Die staan in
-  *Supabase Dashboard → Edge Functions → Secrets* en blijven daar.
-- Hij draait niet op pull requests. Een edge-function-wijziging is dus pas te
-  testen tegen de echte database na de merge — of lokaal met `supabase functions
-  serve`.
+## Naar een eigen Supabase-project
+
+De reden om dit te doen is eigendom, niet gemak: database, bestanden,
+gebruikersaccounts en secrets van jou in plaats van via Lovable. Het is een
+verhuizing van enkele dagen die zorgvuldig moet, met als lastigste deel de
+gebruikersaccounts (wachtwoorden moeten versleuteld mee). Wat er precies bij
+komt kijken staat in een apart plan zodra daartoe besloten is; begin er niet
+aan zonder dat plan.
 
 ## Volgorde bij een release die beide raakt
 
 Een migratie die een kolom toevoegt, en een frontend die die kolom leest:
-merge ze samen. Netlify en de Supabase-workflow starten dan allebei op dezelfde
-commit. Netlify is meestal eerder klaar; de paar minuten waarin de frontend
-een kolom leest die er nog niet is, vang je op door de frontend tegen een
-ontbrekende kolom bestand te maken — niet door de volgorde te proberen te sturen.
+merge ze samen en deploy de backend direct daarna via Lovable. Netlify is
+meestal eerder klaar; de minuten waarin de frontend een kolom leest die er nog
+niet is, vang je op door de frontend tegen een ontbrekende kolom bestand te
+maken — niet door de volgorde te proberen te sturen.

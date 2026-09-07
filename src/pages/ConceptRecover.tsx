@@ -24,10 +24,10 @@ const ConceptRecover = () => {
 
 
         {
-          const url = `https://blhspuifehausilnzwio.supabase.co/functions/v1/get-program-draft?token=${encodeURIComponent(token)}`;
+          const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-program-draft?token=${encodeURIComponent(token)}`;
           const r = await fetch(url, {
             headers: {
-              apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsaHNwdWlmZWhhdXNpbG56d2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMTM0NDAsImV4cCI6MjA3ODg4OTQ0MH0.shiugYb4lLf9KHksbfLx5bZYgtvfoGPSoWUyl3dONRI",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             },
           });
           if (r.status === 404) { setStatus("notfound"); return; }

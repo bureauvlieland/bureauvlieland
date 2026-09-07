@@ -5,6 +5,7 @@ import {
   PILLAR_LABELS,
   pillarForSourceType,
 } from "../_shared/socialCta.ts";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,8 +46,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) return json({ error: "LOVABLE_API_KEY ontbreekt" }, 500);
+    if (!aiConfigured()) return json({ error: AI_NOT_CONFIGURED_MESSAGE }, 500);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -235,20 +235,13 @@ Geef JSON terug met velden: caption (string), alt (string), hashtags (string[]).
 
       let aiOutput: { caption: string; alt: string; hashtags: string[] } | null = null;
       try {
-        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": lovableKey,
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-          }),
+        const aiRes = await aiChatCompletions({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
         });
         if (!aiRes.ok) {
           console.error("AI gateway error", aiRes.status, await aiRes.text());
