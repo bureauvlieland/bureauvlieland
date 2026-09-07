@@ -13,7 +13,8 @@
  *
  * Uitzonderingen (allowlist) zijn:
  *  - de gedeelde helper zelf
- *  - de webhook die events ontvangt (verzendt niks)
+ *  - de webhooks die events of mail ontvangen (verzenden niks)
+ *  - de tijdelijke secrets-export van de verhuizing (noemt alleen de naam)
  */
 
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
@@ -28,6 +29,9 @@ const ALLOWLIST = new Set<string>([
   "mailjet-event-webhook/index.ts",
   // inbound-email is een Mailjet Parse webhook receiver, geen sender.
   "inbound-email/index.ts",
+  // secrets-export noemt MAILJET_API_KEY alleen als naam in de lijst met
+  // secrets die bij de verhuizing worden overgezet; verstuurt geen mail.
+  "secrets-export/index.ts",
 ]);
 
 const MAILJET_SEND_PATTERNS = [
