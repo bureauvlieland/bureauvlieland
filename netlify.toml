@@ -6,6 +6,12 @@
 
 [build]
   publish = "dist"
+  # Sla de build over als er niets voor de website is veranderd: documentatie,
+  # edge functions en migraties (supabase/), GitHub-workflows en losse
+  # markdownbestanden worden door GitHub Actions gedeployed of zijn alleen
+  # tekst. Elke overgeslagen build spaart een bouwminuut van het Netlify-plan.
+  # Exit 0 = overslaan, exit 1 = bouwen (zo werkt Netlify's ignore).
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)docs' ':(exclude)supabase' ':(exclude).github' ':(exclude,glob)*.md' ':(exclude).lovable'"
   # Bewust niet `npm run build`: het prebuild-script gebruikt `bunx`, en of bun
   # beschikbaar is hangt af van welke lockfile Netlify oppikt (deze repo heeft
   # er drie). Expliciet aanroepen is voorspelbaar. Voeg je een stap toe aan
