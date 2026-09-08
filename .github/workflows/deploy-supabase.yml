@@ -69,7 +69,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Vaste versie: "latest" vraagt de nieuwste release op bij de GitHub-API en
+          # dat verzoek loopt zonder token tegen een limiet aan ("rate limit exceeded").
+          version: 2.117.0
 
       - name: Project-ref uit config.toml
         id: ref

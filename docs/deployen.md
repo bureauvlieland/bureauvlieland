@@ -76,6 +76,17 @@ een lijst functies en een schakelaar om migraties over te slaan. Vanaf een eigen
 machine werkt ook `npx supabase login`, `npx supabase link --project-ref <ref>`,
 `npx supabase functions deploy [naam]` en `npx supabase db push`.
 
+De workflow gebruikt een vaste CLI-versie (`version:` bij `supabase/setup-cli`).
+Met `latest` vraagt de actie bij elke run de nieuwste release op bij de
+GitHub-API, en dat verzoek loopt zonder token geregeld tegen "rate limit
+exceeded" aan. Bijwerken: nieuw nummer invullen (`npm view supabase version`
+geeft de laatste).
+
+Faalt een migratie halverwege, dan zijn de migraties ervóór wél toegepast en
+geregistreerd; alleen de gefaalde en latere blijven staan. De volgende run
+probeert precies die opnieuw. Een nog niet toegepaste migratie mag je dus
+gewoon aanpassen in plaats van een nieuwe ernaast te zetten.
+
 Wat de workflow bewust níet doet: functies verwijderen die van schijf zijn
 (`temp-invoice-pdf-audit` gaat dus mee zolang hij er staat), secrets zetten, of
 op pull requests draaien. Verwijderen kan wel expliciet: *Run workflow* met
