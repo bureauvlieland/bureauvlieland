@@ -52,6 +52,21 @@ scanner van september 2026 of later. Een tweede check: stuur een logiesofferte
 door naar een klant die niet bestaat — de foutmelding hoort dan een reden te
 noemen in plaats van "non-2xx".
 
+## Netlify: bouwminuten
+
+Netlify bouwt bij elke push naar `main` en bij elke pull request (deploy
+preview). Het gratis plan heeft 300 bouwminuten per maand; op 8 september
+2026 was dat op en moest een betaald plan worden afgesloten. Twee dingen
+houden het verbruik laag:
+
+1. `netlify.toml` heeft een `ignore`-regel: wijzigt een commit alleen
+   `docs/`, `supabase/`, `.github/`, `.lovable/` of markdownbestanden, dan
+   bouwt Netlify niet. Die wijzigingen gaan via GitHub Actions of zijn tekst.
+2. Deploy previews voor pull requests kunnen uit (Netlify → Site
+   configuration → Build & deploy → Deploy Previews → "None"). GitHub Actions
+   controleert de productiebuild al op elke PR; de preview-URL is handig maar
+   niet nodig.
+
 ## De GitHub-workflow "Deploy Supabase"
 
 `.github/workflows/deploy-supabase.yml` deployt edge functions en migraties bij
