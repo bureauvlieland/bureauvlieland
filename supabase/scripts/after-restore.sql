@@ -26,6 +26,17 @@ WHERE command LIKE '%' || :'old_url' || '%' OR command LIKE '%' || :'old_key' ||
 SELECT jobid, jobname, schedule, active FROM cron.job ORDER BY jobid;
 -- Verwacht: 16 jobs, allemaal active
 
+\echo '== 1b. Cron-tellers gelijkzetten aan de teruggezette geschiedenis'
+-- De datafase zet cron.job_run_details uit de export terug (runid tot ~3600),
+-- maar de teller runid_seq blijft op de stand van het nieuwe project. Elke
+-- nieuwe uitvoering botst dan op een bestaand nummer en de pg_cron-planner
+-- crasht en herstart om de vijf minuten zonder ooit een job te draaien (zo
+-- ging het in de nacht van 7 op 8 september 2026: geen enkele job gedraaid).
+SELECT setval('cron.runid_seq', GREATEST((SELECT max(runid) FROM cron.job_run_details), 1));
+SELECT setval('cron.jobid_seq', GREATEST((SELECT max(jobid) FROM cron.job), 1));
+SELECT last_value AS runid_seq FROM cron.runid_seq;
+-- Verwacht: gelijk aan max(runid) in cron.job_run_details
+
 \echo '== 2. Migratiehistorie gelijk aan de repo (anders wil de CLI alle migraties opnieuw draaien)'
 \i supabase/scripts/mark-migrations-applied.sql
 SELECT count(*) AS migraties, max(version) FROM supabase_migrations.schema_migrations;
