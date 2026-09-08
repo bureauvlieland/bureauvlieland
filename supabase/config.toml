@@ -171,3 +171,6 @@ verify_jwt = false
 
 [functions.email-webhook-heartbeat]
 verify_jwt = false
+
+[functions.map-sync-blocks]
+verify_jwt = false

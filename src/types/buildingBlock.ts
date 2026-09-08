@@ -84,6 +84,10 @@ export interface BuildingBlock {
 
   // Koppeling met MijnActiviteitenPlanner (direct boekbaar)
   map_activity_type_id?: number | null;
+  /** Prijs uit MAP overnemen bij de nachtelijke synchronisatie */
+  map_sync_price?: boolean | null;
+  map_synced_at?: string | null;
+  map_sync_error?: string | null;
 
 
   // Audit

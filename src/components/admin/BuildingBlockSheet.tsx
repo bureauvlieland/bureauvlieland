@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -43,7 +44,9 @@ import {
   useReplaceBlockInTemplates,
   useAdminBuildingBlocks,
 } from "@/hooks/useBuildingBlocks";
-import { Loader2, Trash2, ImageIcon, AlertTriangle } from "lucide-react";
+import { Loader2, Trash2, ImageIcon, AlertTriangle, RefreshCw } from "lucide-react";
+import { format as formatDate } from "date-fns";
+import { nl as nlLocale } from "date-fns/locale";
 import type { BuildingBlock, BuildingBlockStatus } from "@/types/buildingBlock";
 import { statusLabels } from "@/types/buildingBlock";
 import { LocationPicker } from "./LocationPicker";
@@ -72,6 +75,7 @@ const formSchema = z.object({
   block_type: z.enum(["bureau", "partner", "self_arranged"]),
   provider_id: z.string().optional(),
   map_activity_type_id: z.string().optional(),
+  map_sync_price: z.boolean().optional(),
 
   min_people: z.coerce.number().nullable().optional(),
   max_people: z.coerce.number().nullable().optional(),
@@ -113,6 +117,7 @@ interface BuildingBlockSheetProps {
 
 export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockSheetProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -161,6 +166,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       block_type: "partner",
       provider_id: "",
       map_activity_type_id: "",
+      map_sync_price: false,
       min_people: null,
       max_people: null,
       duration: "",
@@ -200,6 +206,32 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     providerMapSlug,
     !!providerMapSlug,
   );
+  const mapTypeSelected = !!form.watch("map_activity_type_id");
+  const [isSyncingMap, setIsSyncingMap] = useState(false);
+
+  // Fase 3.1 van docs/plan-activiteitenaanbieders.md: één bouwsteen nu
+  // bijwerken uit MAP, buiten de nachtelijke run om.
+  const handleSyncFromMap = async () => {
+    if (!block?.id) return;
+    setIsSyncingMap(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("map-sync-blocks", { body: { blockId: block.id } });
+      if (error) throw error;
+      const result = (data as { results?: { changed: string[]; error?: string }[] })?.results?.[0];
+      if (result?.error) throw new Error(result.error);
+      toast({
+        title: "Bijgewerkt uit MAP",
+        description: result && result.changed.length > 0
+          ? `Gewijzigd: ${result.changed.join(", ")}. Sluit en open de bouwsteen om het te zien.`
+          : "Niets gewijzigd; de bouwsteen was al gelijk aan MAP.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["building-blocks"] });
+    } catch (err) {
+      toast({ title: "Synchroniseren mislukt", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setIsSyncingMap(false);
+    }
+  };
 
   
   // Reset form when block changes
@@ -214,6 +246,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
         block_type: block.block_type,
         provider_id: block.provider_id || "",
         map_activity_type_id: block.map_activity_type_id != null ? String(block.map_activity_type_id) : "",
+        map_sync_price: !!block.map_sync_price,
         min_people: block.min_people,
         max_people: block.max_people,
         duration: block.duration || "",
@@ -316,6 +349,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
       const submitData = {
         ...data,
         map_activity_type_id: data.map_activity_type_id ? Number(data.map_activity_type_id) : null,
+        map_sync_price: !!data.map_activity_type_id && !!data.map_sync_price,
         tags: tagsArray,
         is_published: data.status === "published",
         is_active: data.status !== "concept",
@@ -629,13 +663,50 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                             {isLoadingMapTypes
                               ? "MAP-activiteiten laden…"
                               : field.value
-                                ? "Handmatig vastgezet — deze bouwsteen is direct boekbaar via deze MAP-activiteit."
-                                : "Zonder keuze matchen we automatisch op de naam van de bouwsteen binnen deze partner."}
+                                ? "Vastgezet: direct boekbaar via deze MAP-activiteit, en foto, beschrijving en duur volgen elke nacht MAP."
+                                : "Zonder keuze matchen we automatisch op de naam van de bouwsteen binnen deze partner (zonder synchronisatie)."}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                  )}
+
+                  {providerMapSlug && mapTypeSelected && (
+                    <div className="rounded-lg border p-3 space-y-3">
+                      <FormField
+                        control={form.control}
+                        name="map_sync_price"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between gap-3">
+                            <div>
+                              <FormLabel>Prijs per persoon uit MAP overnemen</FormLabel>
+                              <FormDescription>
+                                Uit: de bureauprijs hieronder blijft leidend (commissie, groepstarief). Aan: elke nacht de prijs van het eerstvolgende MAP-moment.
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      {block?.id && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span>
+                            {block.map_sync_error
+                              ? `Laatste synchronisatie mislukt: ${block.map_sync_error}`
+                              : block.map_synced_at
+                                ? `Laatst gesynchroniseerd ${formatDate(new Date(block.map_synced_at), "d MMM yyyy HH:mm", { locale: nlLocale })}`
+                                : "Nog niet gesynchroniseerd"}
+                          </span>
+                          <Button type="button" variant="outline" size="sm" onClick={handleSyncFromMap} disabled={isSyncingMap}>
+                            {isSyncingMap ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+                            Nu bijwerken uit MAP
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
 
 

@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     if (blockIds.length > 0) {
       const { data: blocks } = await supabase
         .from("building_blocks")
-        .select("id, image_url, image_asset, short_description, description, external_url, vat_rate, min_people, max_people")
+        .select("id, image_url, image_asset, short_description, description, external_url, vat_rate, min_people, max_people, map_activity_type_id")
         .in("id", blockIds);
       blockMap = Object.fromEntries((blocks || []).map((b: any) => [b.id, b]));
     }
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     if (providerIds.length > 0) {
       const { data: providers } = await supabase
         .from("partners")
-        .select("id, name, about_text, gallery_images, highlight_features, website_url, address_street, address_postal, address_city, location_lat, location_lng, location_description")
+        .select("id, name, about_text, gallery_images, highlight_features, website_url, address_street, address_postal, address_city, location_lat, location_lng, location_description, map_tenant_slug")
         .in("id", providerIds)
         .eq("is_active", true);
       providerMap = Object.fromEntries((providers || []).map((p: any) => [p.id, p]));
@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
         external_url: block?.external_url || item.external_url || null,
         block_min_people: block?.min_people ?? null,
         block_max_people: block?.max_people ?? null,
+        block_map_activity_type_id: block?.map_activity_type_id ?? null,
         provider_profile: providerMap[item.provider_id] ?? null,
       };
     });

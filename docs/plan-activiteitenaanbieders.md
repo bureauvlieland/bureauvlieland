@@ -1,7 +1,7 @@
 # Plan: activiteitenaanbieders presenteren en koppelen met Mijnactiviteitenplanner
 
-Status: besluiten genomen 8 september 2026 (zie onderaan); fase 1 en 2 gebouwd
-(8 september), fase 3 (MAP) nog niet.
+Status: besluiten genomen 8 september 2026 (zie onderaan); fase 1, 2 en 3 gebouwd
+(8 september).
 
 ## Waarom
 
@@ -79,22 +79,28 @@ hier opnieuw ingevoerd.
 - Het bureau vult voor de meest gebruikte aanbieders de basis: 3 foto's,
   3 regels, highlights. Met toestemming.
 
-### Fase 3: koppeling met Mijnactiviteitenplanner (~3 dagen, in delen)
+### Fase 3: koppeling met Mijnactiviteitenplanner (gebouwd 8 september)
 
 Zeven aanbieders hebben een MAP-omgeving; daar zit de actuele informatie.
 Drie stappen, elk apart uit te rollen:
 
-1. **Bouwsteen volgt MAP.** Een bouwsteen met `map_activity_type_id` neemt
-   elke nacht foto, beschrijving, duur en maximum over uit het MAP-
-   activiteitstype (nieuwe cronfunctie `map-sync-blocks`). Prijs alleen als
-   het bureau dat per bouwsteen aanzet: de bureauprijs kan afwijken
-   (commissie, groepstarief). In admin en partnerportaal een knop "Koppel aan
-   MAP-activiteit" om de 0 gekoppelde bouwstenen alsnog te koppelen; de
-   naamvergelijking blijft als terugval.
-2. **Beschikbaarheid tonen.** Bij het toevoegen van een activiteit en op de
-   onderdeelkaart: "op 12 oktober nog 14 plaatsen om 10.00 en 14.00" uit
-   `map-proxy activities` voor de programmadatum. Geen plaatsen = melding,
-   geen blokkade (het bureau kan altijd bellen).
+1. **Bouwsteen volgt MAP.** Cronfunctie `map-sync-blocks` (elke nacht
+   04:30 UTC, job `map-sync-blocks-nightly`) neemt voor elke bouwsteen met
+   `map_activity_type_id` de beschrijving, duur en foto over uit het
+   MAP-activiteitstype van de partner; de naam blijft van het bureau. Prijs
+   per persoon alleen als `map_sync_price` aan staat (schakelaar in de
+   admin-bouwsteen, onder de MAP-koppeling); dan geldt de prijs van het
+   eerstvolgende geplande moment. `map_synced_at`/`map_sync_error` tonen de
+   stand; knop "Nu bijwerken uit MAP" voor één bouwsteen. Koppelen gebeurt
+   in dezelfde sheet (keuzelijst MAP-activiteit); de naamvergelijking blijft
+   als terugval voor direct boeken, maar synchroniseert niet.
+   Pure logica in `_shared/map-sync.ts` (Deno-test).
+2. **Beschikbaarheid tonen.** Op de programmakaart van de klant staat bij
+   een gekoppelde bouwsteen de agenda van de aanbieder voor die dag:
+   "Beschikbaar op deze dag: 10.00 (14 plaatsen) · 14.00 (6 plaatsen)",
+   rekening houdend met de groepsgrootte; vol = melding dat wij een extra
+   moment vragen; geen momenten gepland = geen regel. Live via `map-proxy`
+   (`src/lib/mapAvailability.ts`, `MapAvailabilityLine`). Geen blokkade.
 3. ~~Aanbiedersprofiel uit MAP~~: vervallen (besluit 4); het profiel blijft
    bij Bureau Vlieland.
 

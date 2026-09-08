@@ -261,6 +261,8 @@ export interface ProviderProfile {
   location_lat?: number | string | null;
   location_lng?: number | string | null;
   location_description?: string | null;
+  /** MAP-omgeving van de aanbieder (Mijnactiviteitenplanner), voor beschikbaarheid. */
+  map_tenant_slug?: string | null;
 }
 
 export interface ProgramRequestItem {
@@ -309,6 +311,7 @@ export interface ProgramRequestItem {
   block_description?: string | null;
   block_min_people?: number | null;
   block_max_people?: number | null;
+  block_map_activity_type_id?: number | null;
   provider_profile?: ProviderProfile | null;
   // Per-item customer approval (quote mode)
   customer_approved_at: string | null;

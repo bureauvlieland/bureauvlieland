@@ -2,7 +2,6 @@
 
 ## Open
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
-- [ ] Koppeling met Mijnactiviteitenplanner.nl (MAP), fase 3 van `docs/plan-activiteitenaanbieders.md`: bouwstenen volgen 's nachts hun MAP-activiteitstype (foto, tekst, duur, maximum; prijs per bouwsteen aan te zetten), beschikbaarheid tonen bij het kiezen (informatie, geen blokkade). Oorspronkelijk idee: partners die daar een omgeving hebben (`map_tenant_slug`) hun foto's, beschrijvingen, prijzen en beschikbaarheid uit MAP laten overnemen in plaats van dubbel invoeren; boeking vanuit het programma rechtstreeks in hun MAP-omgeving (bestaat al voor fietsverhuur via `map-book`); overwegen om een partnerprofiel in MAP als bron voor het profiel bij Bureau Vlieland te gebruiken
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
 - [ ] Storage-bucket `social-media` handmatig verwijderen in het Supabase-dashboard (tabellen en functies zijn al weg)
@@ -11,6 +10,8 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Activiteitenaanbieders fase 3, MAP-koppeling (8 september): bouwstenen met gekoppeld MAP-activiteitstype volgen 's nachts foto, tekst en duur (prijs per bouwsteen aan te zetten), knop "Nu bijwerken uit MAP" in admin, beschikbaarheid per dag op de klantkaart
+- [ ] MAP: de 0 gekoppelde bouwstenen daadwerkelijk koppelen aan hun MAP-activiteitstype (admin → Bouwstenen → MAP-activiteit kiezen) bij de 7 MAP-aanbieders; daarna eerste nachtelijke run controleren
 - [x] Activiteitenaanbieders fase 1 en 2 (8 september): activiteitenkaart bij de klant met grotere foto, duur, groepsgrootte, ligging en blok "Over de aanbieder"; adminoverzicht Partnerprofielen met tabbladen logies/activiteiten en herinneringsmailing per groep
 - [x] Visitvlieland.nl omgezet naar de nieuwe database (8 september); leest `partners_public` voor logies en activiteitenaanbieders met MAP-omgeving
 - [x] Logieskeuze fase 3 (8 september): volledigheidsscore uitgebreid voor logiespartners (faciliteiten, tijden, kamertypes met foto's), adminoverzicht Logiesprofielen met herinneringsmailing per partner; Google Places-import afgewezen vanwege de voorwaarden

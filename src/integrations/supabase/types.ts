@@ -1016,6 +1016,9 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           map_activity_type_id: number | null
+          map_sync_price: boolean
+          map_synced_at: string | null
+          map_sync_error: string | null
           max_people: number | null
           min_people: number | null
           name: string
@@ -1066,6 +1069,9 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           map_activity_type_id?: number | null
+          map_sync_price?: boolean
+          map_synced_at?: string | null
+          map_sync_error?: string | null
           max_people?: number | null
           min_people?: number | null
           name: string
@@ -1116,6 +1122,9 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           map_activity_type_id?: number | null
+          map_sync_price?: boolean
+          map_synced_at?: string | null
+          map_sync_error?: string | null
           max_people?: number | null
           min_people?: number | null
           name?: string
