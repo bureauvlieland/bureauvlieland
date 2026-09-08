@@ -1,7 +1,7 @@
 # Plan: logieskeuze door de klant
 
-Status: besluiten genomen 8 september 2026; fase 1 gebouwd (pull request "Logieskeuze fase 1"), fase 2 en 3 nog niet. Grafisch voorstel: https://claude.ai/code/artifact/9db83ed8-2b94-49f0-8fb5-4937dadbc43f
-(desktopkaart, detailvenster, mobiel). Niets hiervan is gebouwd; eerst akkoord.
+Status: besluiten genomen 8 september 2026; fase 1 en fase 2 gebouwd (8 september), fase 3 en 4 nog niet. Grafisch voorstel: https://claude.ai/code/artifact/9db83ed8-2b94-49f0-8fb5-4937dadbc43f
+(desktopkaart, detailvenster, mobiel).
 
 ## Waarom
 
@@ -61,18 +61,27 @@ kan zien of het aanbod erop past. Partners zonder content krijgen een nette
 lege staat ("Nog geen foto's van deze accommodatie"), geen kapotte kaart.
 Alles hiervoor wordt al opgehaald door `get-customer-program`.
 
-### Fase 2: het datamodel completer (~2 dagen)
+### Fase 2: het datamodel completer (gebouwd 8 september)
 
-- `room_configuration` krijgt `room_type_id` (plus een snapshot van naam,
-  foto's, faciliteiten, bedden, m² op het moment van offreren), zodat de
-  klant per kamer de foto's en faciliteiten ziet.
-- `accommodation_quotes.images`: eigen foto's bij een specifieke aanbieding
-  (optioneel; standaard de galerij van het bedrijf).
-- `partners.facilities` (accommodatieniveau, zelfde lijst als de aanvraag
-  gebruikt, zodat "voldoet aan uw wensen" berekend kan worden),
-  `check_in_time`, `check_out_time`. Afstand tot de boot en het dorp wordt
-  berekend uit de coördinaten (geen invoer).
-- Geocoderen vanuit het partnerprofiel (bestaat al voor bouwstenen).
+- `room_configuration` krijgt `room_type_id` plus een momentopname van naam,
+  beschrijving, foto's, faciliteiten, bedden en m² zodra de partner een
+  kamertype kiest in de offerte-sheet (`roomSnapshotFromType`). De klant
+  ziet per kamer de foto's en faciliteiten op de kaart en in het
+  detailvenster. Handmatig ingevulde kamers blijven mogelijk, zonder details.
+- `accommodation_quotes.images`: eigen foto's bij een specifieke aanbieding,
+  te uploaden in de offerte-sheet (max 6). Leeg = galerij van het bedrijf.
+- `partners.facilities` (zelfde lijst als `facilities_required` op de
+  aanvraag), `check_in_time`, `check_out_time`; in te vullen op
+  /partner/profiel (alleen bij logiespartners). De kaart toont per gewenste
+  faciliteit een vinkje of een kruisje; niets ingevuld = niets tonen.
+- Afstand tot de boot en het dorp wordt berekend uit de coördinaten
+  (`describeDistances`, hemelsbreed × 1,3; tot 20 minuten lopen, daarboven
+  fietsen). Geen invoer nodig.
+- "Zet op de kaart" op /partner/profiel zoekt de coördinaten op bij het adres
+  uit de instellingen (functie `geocode-address`) en toont een kaartvoorbeeld;
+  foutieve coördinaten worden direct gemeld.
+
+Migratie: `20260908140000_logieskeuze-fase-2.sql`.
 
 ### Fase 3: content van partners (doorlopend, start direct)
 
@@ -109,6 +118,7 @@ PDF "uw logiesoffertes" om intern te delen.
 
 ## Volgorde
 
-Fixes uit de bevindingenlijst (2 t/m 5) meteen. Daarna fase 1 en fase 3
-tegelijk starten: fase 1 is bouwen, fase 3 is organiseren. Fase 2 zodra de
-eerste partners kamertypes met foto's hebben. Fase 4 pas bij behoefte.
+Fase 1 en 2 zijn gebouwd. Nu fase 3: volledigheidsscore en adminoverzicht,
+zodat zichtbaar is welke partners nog foto's, tekst, faciliteiten en
+kamertypes missen, en een mailing aan de logiespartners. Fase 4 pas bij
+behoefte.

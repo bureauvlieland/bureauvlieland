@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Clock, ExternalLink, FileText, Globe, Mail, MapPin, Check } from "lucide-react";
+import { Clock, ExternalLink, FileText, Globe, Mail, MapPin, Check, Navigation, X, LogIn, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,8 @@ import { HotelLocationMap } from "./HotelLocationMap";
 import { getBoardDisplay } from "@/types/accommodation";
 import type { AccommodationQuote, RoomConfiguration } from "@/types/accommodation";
 import { calculateExtraTotal, calculateExtrasTotal, EXTRA_CATEGORY_LABELS, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
-import { presentQuotePartner, formatExtraMoment } from "@/lib/accommodationQuotePresentation";
+import { presentQuotePartner, presentRoom, formatExtraMoment, describeDistances, matchFacilities } from "@/lib/accommodationQuotePresentation";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface AccommodationQuoteDetailSheetProps {
   quote: AccommodationQuote | null;
@@ -22,6 +23,7 @@ interface AccommodationQuoteDetailSheetProps {
   isExpired?: boolean;
   numberOfGuests?: number | null;
   numberOfNights?: number | null;
+  facilitiesRequired?: string[] | null;
 }
 
 /**
@@ -30,11 +32,14 @@ interface AccommodationQuoteDetailSheetProps {
  * Wordt geopend vanaf de keuzekaart ("Alle details").
  */
 export const AccommodationQuoteDetailSheet = ({
-  quote, extras, open, onOpenChange, onSelect, onContact, formatPrice, isExpired, numberOfGuests, numberOfNights,
+  quote, extras, open, onOpenChange, onSelect, onContact, formatPrice, isExpired, numberOfGuests, numberOfNights, facilitiesRequired,
 }: AccommodationQuoteDetailSheetProps) => {
   if (!quote) return null;
   const partner = presentQuotePartner(quote);
-  const rooms = (Array.isArray(quote.room_configuration) ? quote.room_configuration : []) as RoomConfiguration[];
+  const rooms = ((Array.isArray(quote.room_configuration) ? quote.room_configuration : []) as RoomConfiguration[]).map(presentRoom);
+  const distances = describeDistances(partner.coordinates);
+  const facilityMatch = matchFacilities(facilitiesRequired, partner.facilities);
+  const hasTimes = !!(partner.checkInTime || partner.checkOutTime);
   const includes = Array.isArray(quote.includes) ? (quote.includes as string[]) : [];
   const board = getBoardDisplay(quote.board_type);
   const extrasTotal = calculateExtrasTotal(extras);
@@ -93,6 +98,9 @@ export const AccommodationQuoteDetailSheet = ({
                 />
               )}
               <div className="text-sm text-muted-foreground space-y-1">
+                {distances && (
+                  <p className="flex items-center gap-1.5 text-foreground"><Navigation className="h-3.5 w-3.5" />{distances.summary}</p>
+                )}
                 {partner.locationDescription && <p>{partner.locationDescription}</p>}
                 {partner.addressLine && (
                   <p className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{partner.addressLine}</p>
@@ -106,14 +114,64 @@ export const AccommodationQuoteDetailSheet = ({
             </div>
           )}
 
+          {(!facilityMatch.unknown || hasTimes) && (
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Faciliteiten &amp; tijden</p>
+              {!facilityMatch.unknown && (
+                <div className="flex flex-wrap gap-1.5 text-xs">
+                  {facilityMatch.matched.map((label) => (
+                    <span key={label} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5" title="Gevraagd en aanwezig"><Check className="h-3 w-3" />{label}</span>
+                  ))}
+                  {facilityMatch.missing.map((label) => (
+                    <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2 py-0.5" title="Gevraagd, niet opgegeven door de accommodatie"><X className="h-3 w-3" />{label}</span>
+                  ))}
+                  {facilityMatch.extra.map((label) => (
+                    <Badge key={label} variant="outline" className="font-normal text-xs">{label}</Badge>
+                  ))}
+                </div>
+              )}
+              {facilityMatch.missing.length > 0 && (
+                <p className="text-xs text-muted-foreground">Doorgestreepte wensen zijn niet opgegeven door de accommodatie; vraag het gerust na.</p>
+              )}
+              {hasTimes && (
+                <p className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                  {partner.checkInTime && <span className="inline-flex items-center gap-1.5"><LogIn className="h-3.5 w-3.5" />Inchecken vanaf {partner.checkInTime}</span>}
+                  {partner.checkOutTime && <span className="inline-flex items-center gap-1.5"><LogOut className="h-3.5 w-3.5" />Uitchecken tot {partner.checkOutTime}</span>}
+                </p>
+              )}
+            </div>
+          )}
+
           {rooms.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Kamers in deze offerte</p>
               <div className="rounded-lg border divide-y">
                 {rooms.map((room, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                    <span><strong>{room.count}×</strong> {room.type}{room.occupancy ? ` · ${room.occupancy} pers.` : ""}</span>
-                    {room.price_per_night ? <span className="text-muted-foreground">{formatPrice(room.price_per_night)} / nacht</span> : null}
+                  <div key={idx} className="px-3 py-3 text-sm space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span><strong>{room.count}×</strong> {room.name}{room.occupancy ? ` · ${room.occupancy} pers.` : ""}</span>
+                      {room.pricePerNight ? <span className="text-muted-foreground whitespace-nowrap">{formatPrice(room.pricePerNight)} / nacht</span> : null}
+                    </div>
+                    {(room.bedLabel || room.sizeSqm) && (
+                      <p className="text-xs text-muted-foreground">{[room.bedLabel, room.sizeSqm ? `${room.sizeSqm} m²` : null].filter(Boolean).join(" · ")}</p>
+                    )}
+                    {room.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{room.description}</p>}
+                    {room.images.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto">
+                        {room.images.slice(0, 6).map((img, i) => (
+                          <a key={i} href={img.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                            <img src={transformImageUrl(img.url, { width: 320 })} alt={img.alt || room.name} className="h-20 w-28 rounded object-cover" loading="lazy" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {room.facilityLabels.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {room.facilityLabels.map((label) => (
+                          <Badge key={label} variant="outline" className="font-normal text-xs">{label}</Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -596,6 +596,7 @@ export const AccommodationSection = ({
                 extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
                 numberOfGuests={accommodation.number_of_guests}
                 numberOfNights={numberOfNights}
+                facilitiesRequired={accommodation?.facilities_required ?? null}
               />
             );
           })}

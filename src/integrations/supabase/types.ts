@@ -221,6 +221,7 @@ export type Database = {
           deviation_reason: string | null
           forwarded_at: string | null
           id: string
+          images: Json
           includes: Json | null
           invoiced_amount: number | null
           invoiced_date: string | null
@@ -275,6 +276,7 @@ export type Database = {
           deviation_reason?: string | null
           forwarded_at?: string | null
           id?: string
+          images?: Json
           includes?: Json | null
           invoiced_amount?: number | null
           invoiced_date?: string | null
@@ -329,6 +331,7 @@ export type Database = {
           deviation_reason?: string | null
           forwarded_at?: string | null
           id?: string
+          images?: Json
           includes?: Json | null
           invoiced_amount?: number | null
           invoiced_date?: string | null
@@ -2567,6 +2570,9 @@ export type Database = {
           created_at: string
           email: string
           extras_commission_percentage: number | null
+          facilities: string[]
+          check_in_time: string | null
+          check_out_time: string | null
           gallery_images: Json | null
           highlight_features: Json | null
           iban: string | null
@@ -2617,6 +2623,9 @@ export type Database = {
           created_at?: string
           email: string
           extras_commission_percentage?: number | null
+          facilities?: string[]
+          check_in_time?: string | null
+          check_out_time?: string | null
           gallery_images?: Json | null
           highlight_features?: Json | null
           iban?: string | null
@@ -2667,6 +2676,9 @@ export type Database = {
           created_at?: string
           email?: string
           extras_commission_percentage?: number | null
+          facilities?: string[]
+          check_in_time?: string | null
+          check_out_time?: string | null
           gallery_images?: Json | null
           highlight_features?: Json | null
           iban?: string | null

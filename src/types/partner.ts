@@ -215,6 +215,7 @@ export interface PartnerAccommodationQuote {
   quote_attachment_path: string | null;
   quote_attachment_filename: string | null;
   room_configuration: unknown;
+  images?: { url: string; alt?: string }[] | null;
   created_at: string;
   updated_at: string;
   // Invoice fields

@@ -1,7 +1,6 @@
 # Roadmap
 
 ## Open
-- [ ] Logieskeuze fase 2 (plan: `docs/plan-logieskeuze.md`): kamertype koppelen aan de offerte, foto's per offerte, faciliteiten en in-/uitchecktijden in het partnerprofiel, adres geocoderen bij opslaan
 - [ ] Logieskeuze fase 3: volledigheidsscore per logiespartner, adminoverzicht wie foto's/tekst mist, partnermailing; optioneel Google Places als basis
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
@@ -11,6 +10,7 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Logieskeuze fase 2 (8 september): kamertype met foto's en faciliteiten gekoppeld aan de offerte, eigen foto's per offerte, faciliteiten en in-/uitchecktijden in het partnerprofiel met wensenvergelijking op de klantkaart, afstand tot boot en dorp, coördinaten opzoeken op adres
 - [x] Overstap van Lovable Cloud naar eigen Supabase-project (8 september): database, 249 bestanden, 41 gebruikers, 19 secrets, cron, Mailjet- en Twilio-webhooks, Netlify
 - [x] Deploy-workflow aan: edge functions en migraties gaan mee bij elke merge naar `main`; vaste CLI-versie na "rate limit exceeded"
 - [x] Claudia (AI-assistent) en OpenAI-koppeling verwijderd (8 september)

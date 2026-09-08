@@ -96,6 +96,9 @@ export interface AccommodationQuote {
   // Partner notes
   partner_notes: string | null;
   
+  // Eigen foto's bij deze aanbieding; leeg = galerij van de partner
+  images?: { url: string; alt?: string }[] | null;
+
   // Quote attachment/link (partner can attach their own quote document)
   quote_attachment_path: string | null;
   quote_attachment_filename: string | null;
@@ -137,6 +140,9 @@ export interface AccommodationQuote {
     gallery_images?: { url: string; alt?: string }[];
     about_text?: string;
     highlight_features?: string[];
+    facilities?: string[] | null;
+    check_in_time?: string | null;
+    check_out_time?: string | null;
   };
 }
 
@@ -145,6 +151,16 @@ export interface RoomConfiguration {
   count: number;
   price_per_night: number;
   occupancy: number;
+  /**
+   * Gekozen kamertype van de partner, met een momentopname van de gegevens op
+   * het moment van offreren (het kamertype kan daarna nog wijzigen).
+   */
+  room_type_id?: string | null;
+  description?: string | null;
+  bed_configuration?: string | null;
+  size_sqm?: number | null;
+  facilities?: string[];
+  images?: { url: string; alt?: string }[];
 }
 
 // Wizard form data

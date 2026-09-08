@@ -214,6 +214,7 @@ Deno.serve(async (req) => {
               address_street, address_postal, address_city,
               location_lat, location_lng, location_description,
               gallery_images, about_text, highlight_features,
+              facilities, check_in_time, check_out_time,
               terms_pdf_path, uses_default_terms
             )
           `)
