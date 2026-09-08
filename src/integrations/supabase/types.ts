@@ -3447,6 +3447,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_token: string
+          participant_token: string
           dietary_notes: string | null
           excluded_fees: string[]
           expires_at: string
@@ -3515,6 +3516,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_token: string
+          participant_token?: string
           dietary_notes?: string | null
           excluded_fees?: string[]
           expires_at?: string
@@ -3583,6 +3585,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           customer_token?: string
+          participant_token?: string
           dietary_notes?: string | null
           excluded_fees?: string[]
           expires_at?: string

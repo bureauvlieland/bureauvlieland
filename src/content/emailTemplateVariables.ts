@@ -1,7 +1,7 @@
 // Snapshot van de {{placeholders}} in de actieve e-mailtemplates in de database.
 // Bijwerken wanneer een template wordt gewijzigd; de test emailTemplateVariables.test.ts
 // controleert dat elke edge function alle vereiste variabelen aanlevert.
-// Gegenereerd op 8 september 2026 uit de tabel email_templates (59 templates).
+// Gegenereerd op 8 september 2026 uit de tabel email_templates (53 templates; zes ongebruikte verwijderd).
 export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
   "accommodation_quote_notification": [
     "accommodation_name",
@@ -142,26 +142,10 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "program_date_label",
     "reference_number"
   ],
-  "date_change_accommodation": [
-    "accommodation_name",
-    "arrival_date",
-    "customer_name",
-    "departure_date",
-    "number_of_people",
-    "partner_name",
-    "partner_portal_url"
-  ],
   "date_change_customer": [
     "customer_name",
     "new_dates",
     "portal_url"
-  ],
-  "date_change_partner": [
-    "activities_list",
-    "customer_name",
-    "new_dates",
-    "old_dates",
-    "partner_name"
   ],
   "guest_details_reminder": [
     "arrival_date",
@@ -256,14 +240,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
   "partner_password_reset": [
     "partner_name",
     "reset_link"
-  ],
-  "people_change_accommodation": [
-    "accommodation_name",
-    "customer_name",
-    "new_people",
-    "old_people",
-    "partner_name",
-    "partner_portal_url"
   ],
   "presales_clarification": [
     "customer_name",
@@ -368,28 +344,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "days_since",
     "partner_name",
     "portal_url"
-  ],
-  "reminder_customer_quote": [
-    "arrival_date",
-    "customer_name",
-    "departure_date",
-    "number_of_guests",
-    "portal_url",
-    "quote_count"
-  ],
-  "reminder_customer_request": [
-    "customer_name",
-    "days_since",
-    "portal_url"
-  ],
-  "reminder_partner_quote": [
-    "arrival_date",
-    "customer_name",
-    "days_ago",
-    "departure_date",
-    "number_of_guests",
-    "partner_name",
-    "portal_link"
   ],
   "reminder_quote_pending": [
     "arrival_date",

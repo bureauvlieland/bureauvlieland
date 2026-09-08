@@ -1,6 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
+import { getRecipientEmail, getSubjectPrefix, buildReplyTo, getBureauAdminEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -391,7 +391,7 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
+    const bureauRecipient = getRecipientEmail(await getBureauAdminEmail(supabase), origin);
     const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd${isViaEmail ? " (via e-mail)" : ""}: ${partner.name} - ${project.reference_number || customerName}`;
     const sendResult = await sendEmailNotification(
       bureauRecipient,

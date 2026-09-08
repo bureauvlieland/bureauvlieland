@@ -1,10 +1,10 @@
 // Catering request notification — sends customer confirmation + internal notice
 import { z } from "npm:zod@3.22.4";
-import { sanitizeHtml, isTestMode, getSubjectPrefix, SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
+import { sanitizeHtml, isTestMode, getSubjectPrefix, SENDER_EMAIL, SENDER_NAME, getBureauAdminEmail } from "../_shared/email-templates.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
-const INTERNAL_RECIPIENT = "erwin@bureauvlieland.nl";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,6 +94,9 @@ Deno.serve(async (req: Request) => {
     const p = parsed.data;
     const testMode = isTestMode(p.origin);
     const prefix = getSubjectPrefix(p.origin);
+    // Intern meldingsadres uit de instellingen ("Administratie email"); in testmodus gaat ook de klantmail daarheen.
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const bureauEmail = await getBureauAdminEmail(supabase);
 
     const safe = {
       name: sanitizeHtml(p.contact.name),
@@ -183,7 +186,7 @@ Deno.serve(async (req: Request) => {
       </div>
     `;
 
-    const customerRecipient = testMode ? INTERNAL_RECIPIENT : p.contact.email;
+    const customerRecipient = testMode ? bureauEmail : p.contact.email;
 
     await sendMailjet([
       {
@@ -194,7 +197,7 @@ Deno.serve(async (req: Request) => {
       },
       {
         From: { Email: SENDER_EMAIL, Name: "Bureau Vlieland Website" },
-        To: [{ Email: INTERNAL_RECIPIENT, Name: "Erwin Soolsma" }],
+        To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
         Subject: `${prefix}Nieuwe catering-aanvraag — ${safe.type} · ${p.guests}p · ${safe.date}`,
         HTMLPart: internalHtml,
       },

@@ -17,10 +17,7 @@ Deno.test("safeReturnUrl accepteert toegestane hosts", () => {
     safeReturnUrl("https://www.visitvlieland.nl/boeken"),
     "https://www.visitvlieland.nl/boeken",
   );
-  assertEquals(
-    safeReturnUrl("https://preview.lovable.app/retour"),
-    "https://preview.lovable.app/retour",
-  );
+  assertEquals(safeReturnUrl("https://preview.lovable.app/retour"), null);
 });
 
 Deno.test("safeReturnUrl accepteert de Bureau Vlieland hosts", () => {

@@ -7,7 +7,6 @@ const GRAPH = "https://graph.facebook.com/v21.0";
 const RETURN_URL_ALLOWLIST = [
   "https://bureauvlieland.nl",
   "https://www.bureauvlieland.nl",
-  "https://bureauvlieland.lovable.app",
 ];
 
 function sanitizeReturnUrl(candidate: string | undefined): string {

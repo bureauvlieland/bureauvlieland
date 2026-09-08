@@ -362,6 +362,9 @@ Ochtend 8 september: cron-planner stond stil door een tellerconflict
 (`runid_seq`), gerepareerd via de SQL Editor en vastgelegd in
 `after-restore.sql` (stap 1b). Claudia verwijderd (migratie
 `20260908063000_claudia-opruimen.sql`); `OPENAI_API_KEY` vervalt daarmee.
+Het Lovable-domein `bureauvlieland.lovable.app` wordt in de code niet meer
+als productie behandeld (mails vanaf die host krijgen [TEST] en gaan naar het
+testadres); na *Remove Lovable Cloud* bestaat die host niet meer.
 
 Pas als dat groen is: in Lovable *Remove Lovable Cloud*. Tot die tijd blijft het
 oude project als vangnet staan.

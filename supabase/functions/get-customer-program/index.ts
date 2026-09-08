@@ -15,7 +15,11 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    // Klantpagina: ?token=<customer_token>. Deelnemerspagina: ?participant=<participant_token>
+    // (aparte code, zonder klantgegevens, prijzen, historie en offertes).
+    const participantToken = url.searchParams.get("participant");
+    const token = participantToken ?? url.searchParams.get("token");
+    const participantMode = participantToken !== null;
 
     if (!token) {
       return new Response(
@@ -45,7 +49,7 @@ Deno.serve(async (req) => {
           created_at
         )
       `)
-      .eq("customer_token", token)
+      .eq(participantMode ? "participant_token" : "customer_token", token)
       .gt("expires_at", new Date().toISOString())
       .single();
 
@@ -56,15 +60,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fire-and-forget audit log entries
-    supabase.from("program_request_history").insert({
+    // Fire-and-forget audit log entries (niet voor deelnemers: die zijn de klant niet)
+    if (!participantMode) supabase.from("program_request_history").insert({
       request_id: program.id,
       action: "customer_portal_viewed",
       actor: "customer",
       actor_name: program.customer_name,
       notes: "Klant heeft het portaal bezocht",
     }).then(() => {});
-    if (program.quote_sent_at) {
+    if (!participantMode && program.quote_sent_at) {
       supabase.from("program_request_history").insert({
         request_id: program.id,
         action: "quote_opened",
@@ -254,6 +258,33 @@ Deno.serve(async (req) => {
           }),
         );
       }
+    }
+
+    if (participantMode) {
+      // Deelnemers zien het programma en de praktische info, niet de
+      // contactgegevens van de klant, de codes, prijzen, historie of offertes.
+      const {
+        customer_token: _ct, customer_email: _ce, customer_phone: _cp,
+        acceptedTerms: _at, quote_pdf_url: _qp, ...publicProgram
+      } = { ...program, items: enrichedItems, acceptedTerms, quote_pdf_url: quotePdfUrl } as Record<string, unknown>;
+      const publicAccommodation = linkedAccommodation
+        ? (({ customer_token: _t, customer_email: _e, customer_phone: _p, ...rest }) => rest)(linkedAccommodation as Record<string, unknown>)
+        : null;
+      return new Response(
+        JSON.stringify({
+          program: publicProgram,
+          rawItems: itemList,
+          history: [],
+          billingLinesByItem: {},
+          quoteLinesByItem: {},
+          blockVatRates,
+          revisionFeesTotal: 0,
+          linkedAccommodation: publicAccommodation,
+          accommodationQuotes: [],
+          extrasByQuoteId: {},
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(

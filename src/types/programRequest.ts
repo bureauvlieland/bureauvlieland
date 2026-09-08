@@ -209,6 +209,8 @@ export const itemStatusConfig: Record<ItemStatus, ItemStatusInfo> = {
 export interface ProgramRequest {
   id: string;
   customer_token: string;
+  /** Aparte code voor /programma-deelnemers/<code>; niet aanwezig in de deelnemersweergave zelf. */
+  participant_token?: string | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string;

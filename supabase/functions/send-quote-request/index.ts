@@ -1,7 +1,8 @@
 // Using Deno.serve() instead of deprecated import
 import { z } from "npm:zod@3.22.4";
-import { getRenderedTemplate, sanitizeHtml, TemplateIds, SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, sanitizeHtml, TemplateIds, SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix, getBureauAdminEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -202,7 +203,8 @@ const handler = async (req: Request): Promise<Response> => {
     const customerSubject = `${subjectPrefix}${customerTemplate?.subject || "Bevestiging offerte aanvraag - Bureau Vlieland"}`;
 
     // Send both emails using Mailjet
-    const bureauRecipient = getRecipientEmail("erwin@bureauvlieland.nl", origin);
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const bureauRecipient = getRecipientEmail(await getBureauAdminEmail(supabase), origin);
     const customerRecipient = getRecipientEmail(requestData.email, origin);
 
     const mailjetResponse = await sendEmailViaMailjet([

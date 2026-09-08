@@ -162,7 +162,7 @@ ${setPasswordLink}
 
 Inloggen kan daarna op: ${portalLink}/login
 
-Vragen? Neem contact op via erwin@bureauvlieland.nl
+Vragen? Neem contact op via hallo@bureauvlieland.nl
 
 Met vriendelijke groet,
 Erwin Soolsma

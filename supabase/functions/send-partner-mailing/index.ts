@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
-    const isPreview = origin.includes("lovable.app") || origin.includes("localhost");
+    const isPreview = origin.includes("localhost") || origin.includes("127.0.0.1");
     const results: MailingResult[] = [];
 
     for (let i = 0; i < partners.length; i++) {

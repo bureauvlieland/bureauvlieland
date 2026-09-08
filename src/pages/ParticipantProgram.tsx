@@ -19,7 +19,7 @@ const ParticipantProgram = () => {
     ? `${window.location.origin}/programma-deelnemers/${token}`
     : "";
 
-  const { program, isLoading, error, accommodation } = useCustomerProgram(token || "");
+  const { program, isLoading, error, accommodation } = useCustomerProgram(token || "", { participant: true });
 
   const selectedDates = useMemo(() => {
     if (!program?.selected_dates) return [] as Date[];

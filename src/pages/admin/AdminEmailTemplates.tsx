@@ -54,7 +54,6 @@ const templateCategories: Record<string, string> = {
   accommodation_selected_customer: "Logies",
   reminder_activity_pending: "Herinnering",
   reminder_quote_pending: "Herinnering",
-  reminder_partner_quote: "Herinnering",
   partner_activity_unconfirmed_t7: "Herinnering",
   partner_briefing_t3: "Partner",
   partner_invoice_reminder_t1: "Commissie",
