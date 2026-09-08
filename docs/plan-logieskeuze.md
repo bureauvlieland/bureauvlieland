@@ -1,6 +1,6 @@
 # Plan: logieskeuze door de klant
 
-Status: besluiten genomen 8 september 2026; fase 1 en fase 2 gebouwd (8 september), fase 3 en 4 nog niet. Grafisch voorstel: https://claude.ai/code/artifact/9db83ed8-2b94-49f0-8fb5-4937dadbc43f
+Status: besluiten genomen 8 september 2026; fase 1, 2 en 3 gebouwd (8 september), fase 4 nog niet. Grafisch voorstel: https://claude.ai/code/artifact/9db83ed8-2b94-49f0-8fb5-4937dadbc43f
 (desktopkaart, detailvenster, mobiel).
 
 ## Waarom
@@ -83,18 +83,30 @@ Alles hiervoor wordt al opgehaald door `get-customer-program`.
 
 Migratie: `20260908140000_logieskeuze-fase-2.sql`.
 
-### Fase 3: content van partners (doorlopend, start direct)
+### Fase 3: content van partners (gebouwd 8 september, daarna doorlopend)
 
 Dertien van de veertien partners hebben niets ingevuld; zonder content is
-het ontwerp een lege huls. Drie sporen tegelijk:
+het ontwerp een lege huls.
 
-1. **Profielvolledigheid** in het partnerportaal (score met wat ontbreekt)
-   en een overzicht in admin, plus een mailing aan alle logiespartners.
-2. **Bureau vult zelf** de basis voor de belangrijkste partners: 4 foto's,
-   3 regels tekst, highlights, ligging. Met toestemming van de partner.
-3. **Optioneel: import uit Google Places** (sleutel is er al): foto's,
-   beoordeling, adres per partner, met bronvermelding. Snelste weg naar
-   gevulde kaarten; wel afhankelijk van Googles voorwaarden.
+1. **Profielvolledigheid.** De score in het partnerportaal
+   (`calculatePartnerCompleteness`) telt bij logiespartners nu ook
+   faciliteiten, in-/uitchecktijd, minstens één kamertype en foto's bij elk
+   kamertype; onmogelijke coördinaten tellen niet als locatie. De banner op
+   het dashboard krijgt een knop "Kamertypes aanvullen" als dat ontbreekt.
+   In admin staat *Content → Logiesprofielen*: alle actieve logiespartners,
+   gesorteerd van leeg naar compleet, met per partner wat ontbreekt, laatste
+   login, "Open als partner" (impersonate) en een herinneringsmailing. Die
+   mailing gebruikt de bestaande partnermailing met een vooraf ingevulde
+   tekst en per partner de lijst van wat ontbreekt (`{{missing_list}}`).
+2. **Bureau vult zelf** de basis voor de belangrijkste partners via "Open
+   als partner": 4 foto's, 3 regels tekst, highlights, ligging. Met
+   toestemming van de partner.
+3. **Google Places: niet doen.** De voorwaarden van de Places API verbieden
+   het opslaan van foto's en het langer dan 30 dagen bewaren van
+   plaatsgegevens; een import in het partnerprofiel mag dus niet. Wat wel
+   mag en al bestaat: de eigen Google-beoordeling van Bureau Vlieland live
+   tonen (`fetch-google-reviews`). Foto's en tekst komen van de partner of
+   van het bureau.
 
 ### Fase 4: vergelijken en meenemen (~1 dag, alleen als er echt meerdere
 offertes per aanvraag komen)
@@ -118,7 +130,6 @@ PDF "uw logiesoffertes" om intern te delen.
 
 ## Volgorde
 
-Fase 1 en 2 zijn gebouwd. Nu fase 3: volledigheidsscore en adminoverzicht,
-zodat zichtbaar is welke partners nog foto's, tekst, faciliteiten en
-kamertypes missen, en een mailing aan de logiespartners. Fase 4 pas bij
-behoefte.
+Fase 1, 2 en 3 zijn gebouwd. Nu is het aan de partners (en het bureau) om
+de profielen te vullen; het adminoverzicht laat zien hoe ver dat is. Fase 4
+pas bij behoefte.

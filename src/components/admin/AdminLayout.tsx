@@ -150,6 +150,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       items: [
         { title: "Bouwstenen", url: "/admin/bouwstenen", icon: Blocks },
         { title: "Locaties", url: "/admin/locaties", icon: MapPin },
+        { title: "Logiesprofielen", url: "/admin/logiesprofielen", icon: Hotel },
         { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
         { title: "Media", url: "/admin/media", icon: ImageIcon },
       ],
@@ -467,6 +468,7 @@ const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/berichten/, title: "Berichtencentrum" },
   { match: /^\/admin\/logs/, title: "Activiteitenlog" },
   { match: /^\/admin\/bankafschriften/, title: "Bankafschriften" },
+  { match: /^\/admin\/logiesprofielen/, title: "Logiesprofielen" },
   { match: /^\/admin\/logies\/[^/]+/, title: "Logiesdetail" },
   { match: /^\/admin\/dashboard/, title: "Dashboard" },
   { match: /^\/admin\/todos/, title: "Taken" },

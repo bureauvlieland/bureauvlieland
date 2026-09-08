@@ -93,3 +93,57 @@ describe("calculateOverallCompleteness", () => {
     expect(r.score).toBe(100);
   });
 });
+
+describe("logiespartners: extra checks voor de logieskeuze", () => {
+  const base = {
+    about_text: longText(250),
+    image_url: "https://x/y.jpg",
+    gallery_images: [{ url: "a" }, { url: "b" }, { url: "c" }],
+    location_lat: 53.3,
+    location_lng: 5.0,
+    location_description: "Oost-Vlieland",
+    website_url: "https://example.com",
+    highlight_features: ["a", "b", "c"],
+  };
+
+  it("telt faciliteiten, tijden en kamertypes alleen mee bij logiespartners", () => {
+    expect(calculatePartnerCompleteness({ ...base, partner_type: "activity" }).score).toBe(100);
+    const r = calculatePartnerCompleteness({ ...base, partner_type: "accommodation" });
+    expect(r.score).toBeLessThan(100);
+    expect(r.missing).toEqual([
+      "≥ 3 faciliteiten aangevinkt",
+      "In- en uitchecktijd",
+      "≥ 1 kamertype",
+      "Foto's bij elk kamertype",
+    ]);
+  });
+
+  it("is compleet met faciliteiten, tijden en kamertypes met foto's", () => {
+    const r = calculatePartnerCompleteness({
+      ...base,
+      partner_type: "both",
+      facilities: ["wifi", "parking", "restaurant"],
+      check_in_time: "15:00",
+      check_out_time: "10:30",
+      room_types: [{ images: [{ url: "k1" }] }, { images: [{ url: "k2" }] }],
+    });
+    expect(r.score).toBe(100);
+  });
+
+  it("wijst kamertypes zonder foto's aan", () => {
+    const r = calculatePartnerCompleteness({
+      ...base,
+      partner_type: "accommodation",
+      facilities: ["wifi", "parking", "restaurant"],
+      check_in_time: "15:00",
+      check_out_time: "10:30",
+      room_types: [{ images: [] }],
+    });
+    expect(r.missing).toEqual(["Foto's bij elk kamertype"]);
+  });
+
+  it("keurt onmogelijke coördinaten af als locatie", () => {
+    const r = calculatePartnerCompleteness({ ...base, location_lat: 532964885 });
+    expect(r.missing).toContain("Locatie op de kaart");
+  });
+});

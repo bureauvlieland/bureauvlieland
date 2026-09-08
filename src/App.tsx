@@ -106,6 +106,7 @@ const AdminLocations = lazy(() => import("./pages/admin/AdminLocations"));
 const AdminInvoicing = lazy(() => import("./pages/admin/AdminInvoicing"));
 const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation"));
 const AdminAccommodationDetail = lazy(() => import("./pages/admin/AdminAccommodationDetail"));
+const AdminAccommodationProfiles = lazy(() => import("./pages/admin/AdminAccommodationProfiles"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const AdminProgramNew = lazy(() => import("./pages/admin/AdminProgramNew"));
 const AdminQuotePreview = lazy(() => import("./pages/admin/AdminQuotePreview"));
@@ -306,6 +307,7 @@ const App = () => {
             <Route path="/admin/media" element={<AdminMedia />} />
             <Route path="/admin/logies" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />
             <Route path="/admin/logies-legacy" element={<AdminAccommodation />} />
+            <Route path="/admin/logiesprofielen" element={<AdminAccommodationProfiles />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminChat />} />

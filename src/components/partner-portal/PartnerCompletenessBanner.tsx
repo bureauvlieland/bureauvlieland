@@ -98,6 +98,11 @@ export const PartnerCompletenessBanner = ({ completeness }: Props) => {
               <Button asChild size="sm" variant="outline">
                 <Link to={`/partner/aanbod${suffix}`}>Bouwstenen verbeteren</Link>
               </Button>
+              {completeness.missing.some((m) => /kamertype/i.test(m)) && (
+                <Button asChild size="sm" variant="outline">
+                  <Link to={`/partner/kamersoorten${suffix}`}>Kamertypes aanvullen</Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
+import { personalize } from "../_shared/mailing-personalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,10 @@ interface MailingRequest {
   subject: string;
   htmlBody: string;
   partnerIds?: string[];
+  /** Extra {{variabelen}} per partner-id, bijv. een lijst van wat in het profiel ontbreekt. */
+  partnerVariables?: Record<string, Record<string, string>>;
 }
+
 
 interface MailingResult {
   partnerId: string;
@@ -74,7 +78,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request
-    const { subject, htmlBody, partnerIds }: MailingRequest = await req.json();
+    const { subject, htmlBody, partnerIds, partnerVariables }: MailingRequest = await req.json();
 
     if (!subject || !htmlBody) {
       return new Response(
@@ -127,7 +131,7 @@ Deno.serve(async (req) => {
       const subjectLine = isPreview ? `[TEST] ${subject}` : subject;
 
       // Replace variables in body
-      const personalizedBody = htmlBody.replace(/\{\{partner_name\}\}/g, partner.name);
+      const personalizedBody = personalize(htmlBody, partner.name, partnerVariables?.[partner.id]);
 
       let mailjetMessageId: string | null = null;
       try {
