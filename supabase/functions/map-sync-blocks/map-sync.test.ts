@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { buildBlockUpdate, formatDurationHours, pickPricePerPerson } from "./map-sync.ts";
+import { buildBlockUpdate, formatDurationHours, pickPricePerPerson } from "../_shared/map-sync.ts";
 
 Deno.test("formatDurationHours", () => {
   assertEquals(formatDurationHours(1), "1 uur");
