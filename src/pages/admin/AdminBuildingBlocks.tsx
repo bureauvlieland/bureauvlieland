@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,19 @@ const AdminBuildingBlocks = () => {
   
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<BuildingBlock | null>(null);
+
+  // ?edit=<id> opent een bouwsteen direct (link vanuit Partnerdetail → MAP-overzicht).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  useEffect(() => {
+    if (!editId || !blocks) return;
+    const block = blocks.find((b) => b.id === editId);
+    if (block) {
+      setSelectedBlock(block);
+      setSheetOpen(true);
+    }
+    setSearchParams({}, { replace: true });
+  }, [editId, blocks, setSearchParams]);
   
   // Unique partners present in the building blocks
   const partnerOptions = Array.from(
