@@ -196,10 +196,9 @@ export function formatCurrencyNL(amount: number): string {
  * Get the base URL for portals based on environment.
  *
  * Always returns the canonical production domain `https://bureauvlieland.nl` for
- * customer- and partner-facing links, ongeacht of de trigger vanaf de Lovable-
- * preview of het gepubliceerde `bureauvlieland.lovable.app` komt. Zo landen
- * eindgebruikers nooit per ongeluk in de Lovable-editor-shell (waar ze een
- * "Verzoek toegang"-knop zien staan).
+ * customer- and partner-facing links, ongeacht vanaf welke host de trigger
+ * komt (voorheen de Lovable-preview; sinds september 2026 alleen nog
+ * bureauvlieland.nl en lokale ontwikkeling).
  *
  * Uitzondering: bij lokale ontwikkeling (`localhost` / `127.0.0.1`) wordt de
  * origin zelf teruggegeven zodat local dev nog werkt.
@@ -219,7 +218,7 @@ export function getPortalBaseUrl(origin?: string): string {
  */
 export function isTestMode(origin?: string): boolean {
   if (!origin) return false;
-  return !origin.includes("bureauvlieland.nl") && !origin.includes("bureauvlieland.lovable.app");
+  return !origin.includes("bureauvlieland.nl");
 }
 
 /**
@@ -347,9 +346,6 @@ export const TemplateIds = {
   CUSTOMER_ACCOMMODATION_MESSAGE: "customer_accommodation_message",
 
   // Update-customer-program templates
-  PEOPLE_CHANGE_ACCOMMODATION: "people_change_accommodation",
-  DATE_CHANGE_PARTNER: "date_change_partner",
-  DATE_CHANGE_ACCOMMODATION: "date_change_accommodation",
   DATE_CHANGE_CUSTOMER: "date_change_customer",
   ITEM_CANCELLED_PARTNER: "item_cancelled_partner",
   BOOKING_CONFIRMED_PARTNER: "booking_confirmed_partner",
@@ -398,6 +394,15 @@ interface BrandingSettings {
 
 let cachedBranding: BrandingSettings | null = null;
 
+/**
+ * Het interne meldingsadres van het bureau (instelling `bureau_admin_email`,
+ * "Administratie email" in Admin → Instellingen). Voor meldingen over nieuwe
+ * aanvragen, catering en factuurregistraties; niet hardcoden.
+ */
+export async function getBureauAdminEmail(supabase: Parameters<typeof getBrandingSettings>[0]): Promise<string> {
+  return (await getBrandingSettings(supabase)).admin_email;
+}
+
 async function getBrandingSettings(supabase: any): Promise<BrandingSettings> {
   if (cachedBranding) return cachedBranding;
   try {
@@ -420,7 +425,7 @@ async function getBrandingSettings(supabase: any): Promise<BrandingSettings> {
       company_name: map.bureau_company_name || "Bureau Vlieland B.V.",
       address: map.bureau_address || "",
       phone: map.bureau_phone || "+31 562 700 208",
-      admin_email: map.bureau_admin_email || "administratie@bureauvlieland.nl",
+      admin_email: map.bureau_admin_email || "hallo@bureauvlieland.nl",
       kvk: map.bureau_kvk_number || "",
       iban: map.bureau_iban || "",
     };
@@ -431,7 +436,7 @@ async function getBrandingSettings(supabase: any): Promise<BrandingSettings> {
       company_name: "Bureau Vlieland B.V.",
       address: "",
       phone: "+31 562 700 208",
-      admin_email: "administratie@bureauvlieland.nl",
+      admin_email: "hallo@bureauvlieland.nl",
       kvk: "",
       iban: "",
     };

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Hotel, Sparkles, ExternalLink, ArrowDownLeft, ArrowUpRight, MessageSquare, Check, X, ListTodo } from "lucide-react";
+import { Hotel, ExternalLink, ArrowDownLeft, ArrowUpRight, MessageSquare, Check, X, ListTodo } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
@@ -146,8 +146,6 @@ function ProjectActionsCard({ requestId }: { requestId: string }) {
     queryClient.invalidateQueries({ queryKey: ["werkbank-detail-todos", requestId] });
     queryClient.invalidateQueries({ queryKey: ["werkbank-inbox"] });
     queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] });
-    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations"] });
-    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations-count"] });
   };
 
   const setStatus = async (id: string, status: "done" | "dismissed") => {
@@ -437,18 +435,6 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
               </CardContent>
             </Card>
           </div>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Sparkles className="h-4 w-4 text-primary" /> Claudia denkt mee
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Open Claudia rechtsboven en stel een vraag — ze ziet automatisch dit project als context.
-              </p>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="programma">

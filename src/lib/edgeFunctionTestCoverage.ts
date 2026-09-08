@@ -185,9 +185,6 @@ const REGISTRY: Row[] = [
   { name: "whatsapp-send", category: "utility", critical: false },
 
   // ── Interne / operations ────────────────────────────────────────────────
-  { name: "claudia-chat", category: "internal", critical: false },
-  { name: "claudia-daily-scan", category: "internal", critical: false },
-  { name: "claudia-reindex", category: "internal", critical: false },
   { name: "mint-ci-admin-jwt", category: "internal", critical: false },
   { name: "backfill-all-responded-todos", category: "internal", critical: false },
   { name: "backfill-email-log-metadata", category: "internal", critical: false },

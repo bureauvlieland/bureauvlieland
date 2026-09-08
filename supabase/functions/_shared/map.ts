@@ -137,7 +137,6 @@ export function safeReturnUrl(url: string | null | undefined): string | null {
   if (parsed.protocol !== "https:") return null;
   const host = parsed.hostname.toLowerCase();
   if (ALLOWED_RETURN_HOSTS.has(host)) return parsed.toString();
-  if (host === "lovable.app" || host.endsWith(".lovable.app")) return parsed.toString();
   return null;
 }
 

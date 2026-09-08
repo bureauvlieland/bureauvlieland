@@ -18,7 +18,6 @@ Deno.test("productie-origin: geen rerouting, geen [TEST] prefix", () => {
   for (const origin of [
     "https://bureauvlieland.nl",
     "https://www.bureauvlieland.nl",
-    "https://bureauvlieland.lovable.app",
   ]) {
     assertEquals(isTestMode(origin), false, `origin=${origin}`);
     assertEquals(getRecipientEmail(CUSTOMER, origin), CUSTOMER);
@@ -28,6 +27,7 @@ Deno.test("productie-origin: geen rerouting, geen [TEST] prefix", () => {
 
 Deno.test("preview/dev origin: reroute naar test-adres + [TEST] prefix", () => {
   for (const origin of [
+    "https://bureauvlieland.lovable.app",
     "https://id-preview--abc.lovable.app",
     "https://foo.lovable.app",
     "http://localhost:8080",

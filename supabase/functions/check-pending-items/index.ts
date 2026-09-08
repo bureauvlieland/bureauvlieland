@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
+import { getSubjectPrefix, getRecipientEmail, getRenderedTemplate, wrapEmailHtml, getPortalBaseUrl } from "../_shared/email-templates.ts";
+
+// Een herinnering van hetzelfde type voor hetzelfde onderdeel/adres hooguit
+// eens per zoveel dagen (voorheen: nooit een tweede keer).
+const REMINDER_REPEAT_DAYS = 7;
 import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
 import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
@@ -30,6 +34,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const portalBase = getPortalBaseUrl(req.headers.get("origin") || undefined);
 
     console.log("Starting check-pending-items job...");
 
@@ -119,11 +124,13 @@ Deno.serve(async (req) => {
         dedupeFilter.related_item_id = opts.logExtra.related_item_id;
       }
       
+      const repeatSince = new Date(Date.now() - REMINDER_REPEAT_DAYS * 24 * 60 * 60 * 1000).toISOString();
       const dedupeQuery = supabase
         .from("email_log")
         .select("id")
         .eq("email_type", opts.logExtra.email_type)
-        .eq("recipient_email", opts.recipientEmail);
+        .eq("recipient_email", opts.recipientEmail)
+        .gte("created_at", repeatSince);
       
       if (opts.logExtra.related_item_id) {
         dedupeQuery.eq("related_item_id", opts.logExtra.related_item_id);
@@ -131,30 +138,16 @@ Deno.serve(async (req) => {
 
       const { data: alreadySent } = await dedupeQuery.maybeSingle();
       if (alreadySent) {
-        console.log(`Skipping ${opts.logExtra.email_type} — already sent to ${opts.recipientEmail}`);
+        console.log(`Skipping ${opts.logExtra.email_type} — al verstuurd aan ${opts.recipientEmail} in de laatste ${REMINDER_REPEAT_DAYS} dagen`);
         return;
       }
 
-      // Try DB template
-      const { data: template } = await supabase
-        .from("email_templates")
-        .select("subject, body_html")
-        .eq("id", opts.templateId)
-        .eq("is_active", true)
-        .maybeSingle();
+      // Gedeelde renderer: {{#if}}-blokken, placeholders én de huisstijl
+      // (logo, voettekst met KvK/IBAN), net als alle andere mails.
+      const rendered = await getRenderedTemplate(opts.templateId, opts.variables);
+      const subject = rendered?.subject ?? opts.subject;
+      const body = rendered?.body ?? await wrapEmailHtml(opts.fallbackHtml, supabase);
 
-      let subject = opts.subject;
-      let body = opts.fallbackHtml;
-
-      if (template) {
-        subject = template.subject;
-        body = template.body_html;
-        for (const [key, val] of Object.entries(opts.variables)) {
-          const re = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-          subject = subject.replace(re, val);
-          body = body.replace(re, val);
-        }
-      }
 
       try {
         const resp = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -300,7 +293,7 @@ Deno.serve(async (req) => {
         // Send reminder email to partner
         if (canSendEmail && partner) {
           const partnerEmail = partner.contact_email || partner.email;
-          const portalUrl = `https://bureauvlieland.nl/partner/project/${request.id}`;
+          const portalUrl = `${portalBase}/partner/project/${request.id}`;
           await sendReminderEmail({
             templateId: "reminder_activity_pending",
             recipientEmail: partnerEmail,
@@ -411,8 +404,8 @@ Deno.serve(async (req) => {
         if (canSendEmail && partnerData) {
           const partnerEmail = partnerData.contact_email || partnerData.email;
           const portalUrl = quote.request_id
-            ? `https://bureauvlieland.nl/partner/logies/${quote.request_id}`
-            : "https://bureauvlieland.nl/partner/logies";
+            ? `${portalBase}/partner/logies/${quote.request_id}`
+            : `${portalBase}/partner/logies`;
           const arrivalFormatted = req?.arrival_date ? new Date(req.arrival_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
           const departureFormatted = req?.departure_date ? new Date(req.departure_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
 
@@ -663,14 +656,6 @@ Deno.serve(async (req) => {
           const mailjetSecretKey = Deno.env.get("MAILJET_SECRET_KEY");
 
           if (mailjetApiKey && mailjetSecretKey) {
-            // Try to use DB template first
-            const { data: template } = await supabase
-              .from("email_templates")
-              .select("subject, body_html")
-              .eq("id", "quote_expired_partner")
-              .eq("is_active", true)
-              .maybeSingle();
-
             const validUntilFormatted = new Date(quote.valid_until).toLocaleDateString("nl-NL", {
               weekday: "long",
               year: "numeric",
@@ -679,26 +664,24 @@ Deno.serve(async (req) => {
             });
 
             const portalUrl = quote.request_id
-              ? `https://bureauvlieland.nl/partner/logies/${quote.request_id}`
-              : "https://bureauvlieland.nl/partner/logies";
-            const subject = template
-              ? template.subject
-                  .replace(/\{\{customer_name\}\}/g, customerName)
-                  .replace(/\{\{accommodation_name\}\}/g, quote.accommodation_name)
-              : `Uw logiesofferte voor ${customerName} is verlopen`;
-
-            const body = template
-              ? template.body_html
-                  .replace(/\{\{customer_name\}\}/g, customerName)
-                  .replace(/\{\{accommodation_name\}\}/g, quote.accommodation_name)
-                  .replace(/\{\{valid_until\}\}/g, validUntilFormatted)
-                  .replace(/\{\{partner_name\}\}/g, partnerName)
-                  .replace(/\{\{portal_url\}\}/g, portalUrl)
-              : `<p>Beste ${partnerName},</p>
+              ? `${portalBase}/partner/logies/${quote.request_id}`
+              : `${portalBase}/partner/logies`;
+            const rendered = await getRenderedTemplate("quote_expired_partner", {
+              customer_name: customerName,
+              accommodation_name: quote.accommodation_name,
+              valid_until: validUntilFormatted,
+              partner_name: partnerName,
+              portal_url: portalUrl,
+            });
+            const subject = rendered?.subject ?? `Uw logiesofferte voor ${customerName} is verlopen`;
+            const body = rendered?.body ?? await wrapEmailHtml(
+              `<p>Beste ${partnerName},</p>
                  <p>Uw offerte '<strong>${quote.accommodation_name}</strong>' voor ${customerName} was geldig tot ${validUntilFormatted} en is inmiddels verlopen.</p>
                  <p>U kunt de geldigheid verlengen via uw partnerportaal.</p>
                  <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Offerte bekijken</a></p>
-                 <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`;
+                 <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+              supabase,
+            );
 
             try {
               const emailResp = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -906,7 +889,7 @@ Deno.serve(async (req) => {
                 customer_name: customerName,
                 reference_number: referenceNumber,
                 amount_excl_vat: amountExcl,
-                portal_url: "https://bureauvlieland.nl/partner/facturatie",
+                portal_url: `${portalBase}/partner/facturatie`,
               },
               fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een paar dagen geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Wanneer het uitkomt: stuur je factuur naar Bureau Vlieland; wij factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
               logExtra: {
@@ -973,7 +956,7 @@ Deno.serve(async (req) => {
                   customer_name: customerName,
                   reference_number: referenceNumber,
                   amount_excl_vat: amountExcl,
-                  portal_url: "https://bureauvlieland.nl/partner/facturatie",
+                  portal_url: `${portalBase}/partner/facturatie`,
                 },
                 fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je deze deze week alsnog sturen?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
                 logExtra: {
@@ -1167,7 +1150,7 @@ Deno.serve(async (req) => {
         const partnerEmail = partner.contact_email || partner.email;
         const partnerName = partner.name || item.provider_name || "partner";
         const customerName = reqRow.customer_company || reqRow.customer_name || "Onbekend";
-        const portalUrl = `https://bureauvlieland.nl/partner/project/${item.request_id}`;
+        const portalUrl = `${portalBase}/partner/project/${item.request_id}`;
 
         // T-7: still pending
         if (daysUntil === 7 && item.status === "pending") {

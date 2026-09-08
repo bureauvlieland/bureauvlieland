@@ -56,7 +56,6 @@ import { useSalesInboxCount } from "@/hooks/useSalesInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { useWerkbankInboxCount } from "@/hooks/useWerkbankInboxCount";
-import { ClaudiaBadge } from "@/components/admin/ClaudiaBadge";
 import { InboxBell } from "@/components/admin/InboxBell";
 import { useAdminInbox } from "@/hooks/useAdminInbox";
 
@@ -435,7 +434,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             <span className="font-semibold text-slate-900">Admin</span>
             <div className="ml-auto flex items-center gap-2">
               <InboxBell />
-              <ClaudiaBadge />
             </div>
           </header>
 

@@ -149,7 +149,7 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
 
 // Test mode configuration
 const TEST_EMAIL = "erwin@bureauvlieland.nl";
-const PRODUCTION_DOMAINS = ["bureauvlieland.nl", "bureauvlieland.lovable.app"];
+const PRODUCTION_DOMAINS = ["bureauvlieland.nl"];
 
 const isTestMode = (origin: string | undefined): boolean => {
   if (!origin) return true;

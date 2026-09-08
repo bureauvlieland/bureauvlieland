@@ -107,7 +107,7 @@ export const handler = async (req: Request): Promise<Response> => {
       (await getSetting(
         supabase,
         "customer_aftersales_review_url",
-        "https://bureauvlieland.nl/reviews",
+        "", // geen eigen reviewpagina; leeg = knop verbergen (template: {{#if own_review_url}})
       )) as string;
 
     const dateLabel = formatDateRange(request.selected_dates as string[] | null);

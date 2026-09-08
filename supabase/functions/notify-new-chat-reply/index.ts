@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
-import { getRenderedTemplate, TemplateIds, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, TemplateIds, getSubjectPrefix, getRecipientEmail, getPortalBaseUrl } from "../_shared/email-templates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     }
 
     // Build portal link and subject
-    const baseUrl = "https://bureauvlieland.nl";
+    const baseUrl = getPortalBaseUrl(req.headers.get("origin") || undefined);
     let portalLink = `${baseUrl}/?chat=open`;
     let emailSubject = "Nieuw bericht van Bureau Vlieland";
 
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         .eq("id", conv.accommodation_id)
         .maybeSingle();
       if (ar?.customer_token) {
-        portalLink = `${baseUrl}/logies/${ar.customer_token}?chat=open`;
+        portalLink = `${baseUrl}/mijn-logies/${ar.customer_token}?chat=open`;
       }
       if (ar?.reference_number) {
         emailSubject = `Nieuw bericht over uw logiesaanvraag ${ar.reference_number}`;

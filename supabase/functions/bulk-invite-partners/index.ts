@@ -7,8 +7,7 @@ import {
   getRecipientEmail,
   SENDER_EMAIL,
   SENDER_NAME,
-  TemplateIds,
-} from "../_shared/email-templates.ts";
+  TemplateIds, getPortalBaseUrl } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
@@ -70,7 +69,7 @@ async function invitePartner(
       .insert({ user_id: authUser.user.id, role: "partner" });
     if (roleError) console.error(`Error adding partner role for ${partner.name}:`, roleError);
 
-    const portalLink = `${origin}/partner`;
+    const portalLink = `${getPortalBaseUrl(origin)}/partner/login`;
     const redirectTo = "https://bureauvlieland.nl/partner/reset-password";
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
@@ -123,7 +122,7 @@ ${setPasswordLink}
 
 Inloggen kan daarna op: ${portalLink}/login
 
-Vragen? Neem contact op via erwin@bureauvlieland.nl
+Vragen? Neem contact op via hallo@bureauvlieland.nl
 
 Met vriendelijke groet,
 Erwin Soolsma

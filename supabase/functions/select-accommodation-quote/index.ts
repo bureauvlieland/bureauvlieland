@@ -7,8 +7,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
-  TemplateIds 
-} from "../_shared/email-templates.ts";
+  TemplateIds, getPortalBaseUrl } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -363,6 +362,7 @@ Deno.serve(async (req) => {
     if (mailjetApiKey && mailjetSecretKey) {
       const auth = btoa(`${mailjetApiKey}:${mailjetSecretKey}`);
       const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
+      const baseUrl = getPortalBaseUrl(origin);
       const subjectPrefix = getSubjectPrefix(origin);
       const replyTo = buildReplyTo(request.reference_number);
 
@@ -425,9 +425,8 @@ Deno.serve(async (req) => {
       partnerTemplateVariables.customer_email = "hallo@bureauvlieland.nl";
       partnerTemplateVariables.customer_phone = "0562 700 208";
 
-      // Partner portal link
-      const partnerToken = quote.partner?.partner_token || "";
-      const partnerPortalUrl = `${origin}/partner/logies?token=${partnerToken}`;
+      // Partnerportaal: de logiesaanvraag zelf (achter partner-login).
+      const partnerPortalUrl = `${baseUrl}/partner/logies/${request.id}`;
       partnerTemplateVariables.partner_portal_link = partnerPortalUrl;
 
       const partnerTemplate = await getRenderedTemplate(TemplateIds.ACCOMMODATION_SELECTED_PARTNER, partnerTemplateVariables);
@@ -535,8 +534,8 @@ Deno.serve(async (req) => {
 
       // Customer confirmation email
       const portalLink = request.linked_program_id
-        ? `${origin}/mijn-programma/${request.customer_token}`
-        : `${origin}/logies/${request.customer_token}`;
+        ? `${baseUrl}/mijn-programma/${request.customer_token}`
+        : `${baseUrl}/mijn-logies/${request.customer_token}`;
 
       const partnerData = quote.partner || {} as any;
       const accommodationAddress = [partnerData.address_street, partnerData.address_postal, partnerData.address_city]

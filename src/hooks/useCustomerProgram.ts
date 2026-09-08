@@ -100,7 +100,13 @@ export interface PendingChange {
 // Temporary ID prefix for locally added items (before submission)
 const TEMP_ID_PREFIX = "temp-";
 
-export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
+export interface UseCustomerProgramOptions {
+  /** Deelnemersweergave: token is de aparte deelnemerscode (participant_token). */
+  participant?: boolean;
+}
+
+export const useCustomerProgram = (token: string, options: UseCustomerProgramOptions = {}): UseCustomerProgramReturn => {
+  const participant = options.participant === true;
   const [program, setProgram] = useState<ProgramRequestWithItems | null>(null);
   const [history, setHistory] = useState<ProgramRequestHistory[]>([]);
   const [originalItems, setOriginalItems] = useState<ProgramRequestItem[]>([]);
@@ -150,7 +156,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/get-customer-program?token=${encodeURIComponent(token)}`,
+        `${supabaseUrl}/functions/v1/get-customer-program?${participant ? "participant" : "token"}=${encodeURIComponent(token)}`,
         { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } },
       );
 
@@ -280,7 +286,7 @@ export const useCustomerProgram = (token: string): UseCustomerProgramReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, participant]);
 
 
   useEffect(() => {

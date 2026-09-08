@@ -1,7 +1,7 @@
 -- Gegenereerd uit supabase/migrations/ (ls | sed). Opnieuw maken na nieuwe migraties:
 --   supabase/scripts/gen-migration-history.sh > supabase/scripts/mark-migrations-applied.sql
 -- Lovable registreerde migraties onder een versienummer dat 1-2 seconden afwijkt van de
--- bestandsnaam in de repo. De Supabase CLI zou daardoor alle 310 migraties opnieuw willen
+-- bestandsnaam in de repo. De Supabase CLI zou daardoor alle migraties opnieuw willen
 -- draaien. Dit zet de historie gelijk aan de repo, zonder iets uit te voeren.
 BEGIN;
 TRUNCATE supabase_migrations.schema_migrations;
@@ -315,5 +315,6 @@ INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES
   ('20260902050849', 'a0b519ae-ece3-43c3-b2b2-993611589775'),
   ('20260902061133', '12f1b065-57ee-421e-a635-06c5f2c3bdc0'),
   ('20260903104211', '56730f9f-91cf-4d7e-b40b-781b38efd452'),
-  ('20260903104239', '67304ef8-7470-4657-b422-494d7f03918d');
+  ('20260903104239', '67304ef8-7470-4657-b422-494d7f03918d'),
+  ('20260908063000', 'claudia-opruimen');
 COMMIT;

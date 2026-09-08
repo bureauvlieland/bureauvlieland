@@ -72,6 +72,7 @@ import {
   replaceVariables,
   buildReplyTo,
   TemplateIds,
+  getBureauAdminEmail,
 } from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
@@ -150,6 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData: ProgramRequest = validationResult.data;
     const origin = requestData.origin;
     const testMode = isTestMode(origin);
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const subjectPrefix = getSubjectPrefix(origin);
     
     console.log(`Program request received for: ${requestData.email} [Test mode: ${testMode}]`);
@@ -256,22 +258,25 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`;
-    const customerSubject = customerTemplate?.subject || `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`;
+    const bureauEmail = getRecipientEmail(await getBureauAdminEmail(supabase), origin);
+
+    // Prefix ([TEST]) altijd één keer, ongeacht of het onderwerp uit de template komt.
+    const bureauSubject = `${subjectPrefix}${bureauTemplate?.subject || `Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`}`;
+    const customerSubject = `${subjectPrefix}${customerTemplate?.subject || "Bevestiging programma aanvraag - Bureau Vlieland"}`;
 
     console.log(`Sending emails: 1 to bureau, 1 to customer`);
 
     const emailResponse = await sendEmailViaMailjet([
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
-        To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin Soolsma" }],
-        Subject: bureauTemplate?.subject ? bureauSubject : `${subjectPrefix}${bureauSubject}`,
+        To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
+        Subject: bureauSubject,
         HTMLPart: bureauEmailHtml,
       },
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: requestData.email, Name: requestData.name }],
-        Subject: customerTemplate?.subject ? customerSubject : `${subjectPrefix}${customerSubject}`,
+        Subject: customerSubject,
         HTMLPart: customerEmailHtml,
       }
     ]);
@@ -284,7 +289,7 @@ const handler = async (req: Request): Promise<Response> => {
       logEmail({
         email_type: "program_request_bureau",
         subject: bureauSubject,
-        recipient_email: "erwin@bureauvlieland.nl",
+        recipient_email: bureauEmail,
         recipient_name: "Erwin Soolsma",
         status: "sent",
         sent_by: "system",

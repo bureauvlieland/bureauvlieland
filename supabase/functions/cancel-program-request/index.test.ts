@@ -34,7 +34,7 @@ Deno.test("handles CORS preflight", async () => {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/cancel-program-request`, {
     method: "OPTIONS",
     headers: {
-      Origin: "https://bureauvlieland.lovable.app",
+      Origin: "https://bureauvlieland.nl",
     },
   });
   await res.text();

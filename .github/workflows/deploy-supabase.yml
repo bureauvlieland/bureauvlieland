@@ -44,6 +44,10 @@ on:
         description: "Migraties overslaan"
         type: boolean
         default: false
+      delete_functions:
+        description: "Deze functies van het project VERWIJDEREN (spatie-gescheiden; alleen voor functies die uit de repo zijn gehaald)"
+        required: false
+        default: ""
 
 # Nooit twee deploys door elkaar; een nieuwe push wacht op de vorige.
 concurrency:
@@ -99,6 +103,21 @@ jobs:
             supabase functions deploy --project-ref "${{ steps.ref.outputs.ref }}"
           fi
 
+      # De deploy verwijdert bewust geen functies die van schijf zijn; dat gaat
+      # alleen expliciet, met deze invoer bij een handmatige run.
+      - name: Functies verwijderen
+        if: ${{ github.event.inputs.delete_functions != '' }}
+        run: |
+          set -euo pipefail
+          for fn in ${{ github.event.inputs.delete_functions }}; do
+            if [ -d "supabase/functions/$fn" ]; then
+              echo "::error::$fn staat nog in de repo; verwijder hem eerst uit supabase/functions/."; exit 1
+            fi
+            echo "::group::verwijder $fn"
+            supabase functions delete "$fn" --project-ref "${{ steps.ref.outputs.ref }}"
+            echo "::endgroup::"
+          done
+
       - name: Migraties toepassen
         if: ${{ github.event.inputs.skip_migrations != 'true' }}
         run: |
@@ -120,4 +139,5 @@ jobs:
             echo "- Commit: \`${{ github.sha }}\`"
             echo "- Functies: ${{ github.event.inputs.functions || 'alle' }}"
             echo "- Migraties: ${{ github.event.inputs.skip_migrations == 'true' && 'overgeslagen' || 'toegepast (als wachtwoord aanwezig)' }}"
+            echo "- Verwijderd: ${{ github.event.inputs.delete_functions || 'niets' }}"
           } >> "$GITHUB_STEP_SUMMARY"

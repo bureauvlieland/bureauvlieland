@@ -78,7 +78,10 @@ machine werkt ook `npx supabase login`, `npx supabase link --project-ref <ref>`,
 
 Wat de workflow bewust níet doet: functies verwijderen die van schijf zijn
 (`temp-invoice-pdf-audit` gaat dus mee zolang hij er staat), secrets zetten, of
-op pull requests draaien.
+op pull requests draaien. Verwijderen kan wel expliciet: *Run workflow* met
+bij *delete_functions* de namen (spatie-gescheiden) van functies die al uit
+`supabase/functions/` zijn gehaald; de workflow weigert namen die nog in de
+repo staan.
 
 ## Naar een eigen Supabase-project
 

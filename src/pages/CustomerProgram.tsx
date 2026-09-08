@@ -94,8 +94,9 @@ const CustomerProgram = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const participantShareUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/programma-deelnemers/${token}`
+  // Aparte deelnemerscode: geeft alleen de deelnemersweergave, nooit deze klantpagina.
+  const participantShareUrl = typeof window !== "undefined" && program?.participant_token
+    ? `${window.location.origin}/programma-deelnemers/${program.participant_token}`
     : "";
 
   const pendingChanges = getPendingChanges();

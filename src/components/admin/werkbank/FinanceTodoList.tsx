@@ -166,8 +166,6 @@ export function FinanceTodoList({
     setSelected(new Set());
     queryClient.invalidateQueries({ queryKey: ["werkbank-finance-todos"] });
     queryClient.invalidateQueries({ queryKey: ["werkbank-inbox"] });
-    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations"] });
-    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations-count"] });
   };
 
   const requestBulk = (status: "done" | "dismissed") => {

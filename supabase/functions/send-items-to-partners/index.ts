@@ -287,7 +287,7 @@ export const handler = async (req: Request): Promise<Response> => {
       // Maak per overtocht-item een todo aan om tickets te boeken bij Doeksen.
       // Boekingstaken zijn pas operationeel relevant vanaf ~3 weken voor aankomst;
       // eerder boeken bij Doeksen heeft geen zin. We zetten snoozed_until zodat de
-      // taak pas dan opduikt in de werkbank en bij Claudia.
+      // taak pas dan opduikt in de werkbank.
       const customerLabelForFerry = program.customer_company || program.customer_name;
       const arrivalDates = Array.isArray(program.selected_dates)
         ? (program.selected_dates as string[]).filter(Boolean).sort()
