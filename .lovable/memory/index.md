@@ -18,8 +18,6 @@ Updated: nu
 
 ## Memories
 - [Organisatiefee 2.0](mem://business/organisatiefee-2-0) — Nieuwe staffels/extra dagen/spoedtoeslag/3% centrale opslag + fee_snapshot bevriest bestaande projecten
-- [Social Contentplan](mem://features/social-contentplan) — 5 contentpijlers, weekritme en vaste UTM-CTA's per pijler (FB deep link, IG via /links)
-- [Social Media Publisher](mem://features/social-media-publisher) — IG+FB publisher via Meta Graph API, AI-concepten, altijd handmatig goedkeuren
 - [Customer Status Todo Pacing](mem://features/customer-status-todo-pacing) — Anker op laatste klantcontact + leadtime-schaling (≥90d→3×, ≥30d→2×); admin_project_email sluit de taak
 - [Reconcile Todos Contract](mem://infrastructure/reconcile-todos-contract) — Sluit-criteria spiegelen aanmaak-criteria; mislukte lookups aborten; geen customer_approved_at op program_requests
 - [Doeksen Verzamelfactuur](mem://features/doeksen-collective-invoice-flow) — Multi-project supplier invoices auto-matched via Resnr → program_request_items.booking_reference; partner_id="rederij"

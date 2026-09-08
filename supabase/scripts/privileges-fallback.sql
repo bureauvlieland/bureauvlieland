@@ -96,18 +96,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.partner_post_charges TO authentic
 GRANT ALL ON public.partner_post_charges TO service_role;
 -- 20260609141436_ea889066-0cf3-4fdf-9828-ba6e5c3f6fc9.sql
 GRANT ALL ON public.program_drafts TO service_role;
--- 20260615062406_9b3188ca-a0f9-4cbd-9c69-fb6de15552f5.sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.social_settings TO authenticated;
--- 20260615062406_9b3188ca-a0f9-4cbd-9c69-fb6de15552f5.sql
-GRANT ALL ON public.social_settings TO service_role;
--- 20260615062406_9b3188ca-a0f9-4cbd-9c69-fb6de15552f5.sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.social_media_assets TO authenticated;
--- 20260615062406_9b3188ca-a0f9-4cbd-9c69-fb6de15552f5.sql
-GRANT ALL ON public.social_media_assets TO service_role;
--- 20260615062406_9b3188ca-a0f9-4cbd-9c69-fb6de15552f5.sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.social_posts TO authenticated;
--- 20260615062406_9b3188ca-a0f9-4cbd-9c69-fb6de15552f5.sql
-GRANT ALL ON public.social_posts TO service_role;
 -- 20260617160238_64932371-58f0-46b3-8019-a3d31f013b9e.sql
 GRANT SELECT ON public.google_reviews_cache TO anon;
 -- 20260617160238_64932371-58f0-46b3-8019-a3d31f013b9e.sql

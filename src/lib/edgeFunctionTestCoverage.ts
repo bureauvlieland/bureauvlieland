@@ -190,11 +190,6 @@ const REGISTRY: Row[] = [
   { name: "backfill-email-log-metadata", category: "internal", critical: false },
   { name: "reset-partner-connections", category: "internal", critical: false },
   { name: "create-test-partner-user", category: "internal", critical: false },
-  { name: "social-generate-drafts", category: "internal", critical: false },
-  { name: "social-publish", category: "internal", critical: false },
-  { name: "social-refresh-token", category: "internal", critical: false },
-  { name: "social-meta-oauth-callback", category: "internal", critical: false },
-  { name: "social-meta-oauth-start", category: "internal", critical: false },
 
   // ── Aanvullingen (gesynchroniseerd met supabase/functions) ─────────────
   { name: "auto-close-monitor", category: "workflow", critical: false },

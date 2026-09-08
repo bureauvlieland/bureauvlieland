@@ -41,7 +41,8 @@ const FUNCTION_DIRS = listFunctionDirs();
  * Functies die per definitie geen CORS-preflight krijgen: OAuth-redirect
  * callbacks worden door de browser als top-level navigatie aangeroepen.
  */
-const NO_PREFLIGHT = new Set(["social-meta-oauth-callback"]);
+// Functies zonder CORS-preflight (leeg sinds de social-media-planner weg is).
+const NO_PREFLIGHT = new Set<string>([]);
 
 describe("edge function contracts", () => {
   it("vindt edge functions om te controleren", () => {
