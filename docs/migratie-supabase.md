@@ -369,6 +369,30 @@ testadres); na *Remove Lovable Cloud* bestaat die host niet meer.
 Pas als dat groen is: in Lovable *Remove Lovable Cloud*. Tot die tijd blijft het
 oude project als vangnet staan.
 
+### Eerst: visitvlieland.nl omzetten
+
+Visitvlieland.nl (apart Lovable-project met eigen database) leest de
+vermeldingen van logies en activiteiten uit **onze** database, en op 8
+september nog uit de oude (`blhspuifehausilnzwio`). Na *Remove Lovable Cloud*
+vallen die pagina's dus weg. Omzetten vóór het opruimen, in het
+visitvlieland-project in Lovable:
+
+1. Zoek in de code naar `blhspuifehausilnzwio` (meestal `.env` en
+   `src/integrations/supabase/client.ts`).
+2. Vervang de URL door `https://utshmnyrjzwtrpttxdlw.supabase.co` en de
+   publieke sleutel (`VITE_SUPABASE_PUBLISHABLE_KEY` / anon key) door die van
+   het nieuwe project (staat in `.env` van deze repo; openbaar, geen geheim).
+3. Publiceer en controleer <https://visitvlieland.nl/verblijven?type=hotel>
+   en een detailpagina. In het nieuwe project verschijnt visitvlieland.nl
+   dan als referer in de logboeken (Supabase → Logs → API).
+
+Wat visitvlieland gebruikt is al aanwezig in het nieuwe project: de
+weergave `partners_public` (leesbaar zonder inloggen), gepubliceerde
+`building_blocks`, `program_templates`, `partner_room_types` en de
+publieke bucket `partner-images`. De velden uit logieskeuze fase 2
+(`facilities`, `check_in_time`, `check_out_time`) zitten niet in
+`partners_public`; toevoegen als visitvlieland ze wil tonen.
+
 ## Waarom niet gewoon "Lovable koppelen aan eigen Supabase"
 
 Lovable kan na *Remove Lovable Cloud* een eigen Supabase-project koppelen. Dat
