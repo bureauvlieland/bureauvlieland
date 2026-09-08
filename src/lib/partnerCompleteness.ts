@@ -140,13 +140,17 @@ export const calculateBlockCompleteness = (
 export const calculateOverallCompleteness = (
   partner: Parameters<typeof calculatePartnerCompleteness>[0],
   blocks: Parameters<typeof calculateBlockCompleteness>[0][],
+  options: { profileWeight?: number } = {},
 ): CompletenessResult => {
   const profile = calculatePartnerCompleteness(partner);
   if (blocks.length === 0) return profile;
   const blockScores = blocks.map((b) => calculateBlockCompleteness(b).score);
   const avgBlocks = blockScores.reduce((a, b) => a + b, 0) / blockScores.length;
-  // Profiel telt 60%, bouwstenen 40%
-  const score = Math.round(profile.score * 0.6 + avgBlocks * 0.4);
+  // Standaard telt het profiel 60% en de bouwstenen 40%. Voor
+  // activiteitenaanbieders is de bouwsteen wat de klant kiest en weegt die
+  // zwaarder (profileWeight 0.4).
+  const w = Math.min(1, Math.max(0, options.profileWeight ?? 0.6));
+  const score = Math.round(profile.score * w + avgBlocks * (1 - w));
   const weakBlockCount = blockScores.filter((s) => s < 70).length;
   const missing = [...profile.missing];
   if (weakBlockCount > 0) {

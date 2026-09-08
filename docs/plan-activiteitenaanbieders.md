@@ -1,7 +1,7 @@
 # Plan: activiteitenaanbieders presenteren en koppelen met Mijnactiviteitenplanner
 
-Status: besluiten genomen 8 september 2026 (zie onderaan); fase 1 gebouwd
-(8 september), fase 2 en 3 nog niet.
+Status: besluiten genomen 8 september 2026 (zie onderaan); fase 1 en 2 gebouwd
+(8 september), fase 3 (MAP) nog niet.
 
 ## Waarom
 
@@ -64,15 +64,18 @@ hier opnieuw ingevoerd.
   `src/lib/providerPresentation.ts`; de plek van het onderdeel gaat voor op
   die van de aanbieder (een excursie start niet altijd bij het bedrijf).
 
-### Fase 2: content van aanbieders (~1 dag, daarna doorlopend)
+### Fase 2: content van aanbieders (gebouwd 8 september, daarna doorlopend)
 
-- De volledigheidsscore geldt al voor alle partners (profiel 60%, bouwstenen
-  40%). Het adminoverzicht *Logiesprofielen* wordt **Partnerprofielen** met
-  twee tabbladen (logies, activiteiten), zelfde herinneringsmailing met per
-  partner wat ontbreekt.
-- Voor activiteitenaanbieders telt de score de bouwstenen zwaarder: die zijn
-  wat de klant kiest. Een aanbieder met vier complete bouwstenen en een leeg
-  profiel scoort dan redelijk; het profiel is de kers op de taart.
+- Het adminoverzicht heet nu **Partnerprofielen** (*Content →
+  Partnerprofielen*, `/admin/partnerprofielen`) met twee tabbladen: logies
+  en activiteiten. Partners met type "beide" staan in allebei. Zelfde
+  herinneringsmailing, met een eigen tekst per tabblad en per partner de
+  lijst van wat ontbreekt.
+- Voor activiteitenaanbieders telt de score het profiel voor 40% en de
+  bouwstenen voor 60% (`calculateOverallCompleteness` met `profileWeight`):
+  de bouwsteen is wat de klant kiest. Geen gepubliceerde bouwstenen staat
+  bovenaan in de lijst van wat ontbreekt. "Open als partner" opent bij
+  activiteiten de bouwstenenpagina.
 - Het bureau vult voor de meest gebruikte aanbieders de basis: 3 foto's,
   3 regels, highlights. Met toestemming.
 
