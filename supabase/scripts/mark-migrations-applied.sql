@@ -322,5 +322,6 @@ INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES
   ('20260908100000', 'social-media-planner-opruimen'),
   ('20260908110000', 'partner-view-gastenlijst-dieet'),
   ('20260908120000', 'partner-coordinaten-fix'),
-  ('20260908140000', 'logieskeuze-fase-2');
+  ('20260908140000', 'logieskeuze-fase-2'),
+  ('20260908160000', 'map-sync-bouwstenen');
 COMMIT;

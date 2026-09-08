@@ -40,6 +40,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { resolveCustomerItemDescription } from "@/lib/customerItemDescription";
 import { presentProvider, itemLocationLine, groupSizeLabel } from "@/lib/providerPresentation";
 import { transformImageUrl } from "@/lib/supabaseImage";
+import { MapAvailabilityLine } from "./MapAvailabilityLine";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -236,6 +237,14 @@ export const CustomerProgramItem = ({
                 <p className="text-xs text-muted-foreground mt-0.5 flex items-start gap-1">
                   <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span>{locationLine}</span>
                 </p>
+              )}
+              {typeof item.block_map_activity_type_id === "number" && item.provider_profile?.map_tenant_slug && !isSelfArranged && item.status !== "cancelled" && (
+                <MapAvailabilityLine
+                  tenantSlug={item.provider_profile.map_tenant_slug}
+                  activityTypeId={item.block_map_activity_type_id}
+                  date={currentDate}
+                  groupSize={item.override_people ?? numberOfPeople ?? null}
+                />
               )}
               {item.block_short_description && (
                 <p className="text-sm text-muted-foreground/80 mt-0.5 line-clamp-2">
