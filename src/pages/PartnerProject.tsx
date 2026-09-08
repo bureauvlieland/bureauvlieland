@@ -763,8 +763,9 @@ const PartnerProjectContent = ({ mode }: Props) => {
           {isBureauCentral && <BureauCentralBadge variant="compact" />}
 
           <GuestDetailsBlock
-            roomAssignment={(req as any).room_assignment}
-            dietaryNotes={req.special_requests}
+            guestNames={req.program_guest_names ?? null}
+            roomAssignment={req.room_assignment ?? null}
+            dietaryNotes={req.program_dietary_notes ?? req.special_requests}
           />
 
         </Card>

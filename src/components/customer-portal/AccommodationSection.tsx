@@ -43,7 +43,7 @@ interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
   quotes: AccommodationQuote[];
   extrasByQuoteId?: Record<string, any[]>;
-  onSelectQuote: (quoteId: string) => Promise<boolean>;
+  onSelectQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;
   onEditAccommodationSetup?: () => void;
@@ -95,10 +95,10 @@ export const AccommodationSection = ({
     return paramString ? `/logies-aanvragen?${paramString}` : "/logies-aanvragen";
   }, [selectedDates, numberOfPeople, customerToken]);
 
-  const handleSelectQuote = async () => {
+  const handleSelectQuote = async (signatureName: string, acceptedTerms: boolean) => {
     if (!selectedQuoteForConfirm) return;
     setIsSelecting(true);
-    const success = await onSelectQuote(selectedQuoteForConfirm.id);
+    const success = await onSelectQuote(selectedQuoteForConfirm.id, signatureName, acceptedTerms);
     setIsSelecting(false);
     if (success) {
       setSelectedQuoteForConfirm(null);

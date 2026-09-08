@@ -135,7 +135,7 @@ interface MobileProgramViewProps {
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
   accommodationExtrasByQuoteId?: Record<string, any[]>;
-  onSelectAccommodationQuote: (quoteId: string) => Promise<boolean>;
+  onSelectAccommodationQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
   // Quote proposal
   onAcceptQuoteProposal: () => Promise<boolean>;
   onApproveQuoteItem: (itemId: string) => Promise<boolean>;

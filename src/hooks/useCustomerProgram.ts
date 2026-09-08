@@ -71,7 +71,7 @@ interface UseCustomerProgramReturn {
   accommodation: AccommodationRequest | null;
   accommodationQuotes: AccommodationQuote[];
   accommodationSummary: AccommodationSummary;
-  selectAccommodationQuote: (quoteId: string) => Promise<boolean>;
+  selectAccommodationQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
   // Server-resolved data for portal consumers (avoids extra anon DB reads)
   billingLinesByItem: Record<string, any[]>;
   blockVatRates: Record<string, number>;
@@ -497,6 +497,21 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
         });
       }
 
+      // Check for customer_notes changes (alleen een opmerking wijzigen moet ook opgeslagen worden)
+      const currentNotes = (item.customer_notes || "").trim();
+      const originalNotes = (original.customer_notes || "").trim();
+      if (currentNotes !== originalNotes) {
+        changes.push({
+          type: "notes_changed",
+          itemId: item.id,
+          itemName: item.block_name,
+          providerName: item.provider_name,
+          providerEmail: item.provider_email || undefined,
+          oldValue: originalNotes || "(geen)",
+          newValue: currentNotes || "(geen)",
+        });
+      }
+
       // Check for override_people changes (normalize: null/undefined/groupTotal all mean "use group total")
       const normalizeOverride = (val: number | null | undefined, groupTotal: number) => {
         if (val == null || val === groupTotal) return null;
@@ -743,12 +758,14 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
     }
   }, [program, token]);
 
-  const selectAccommodationQuote = useCallback(async (quoteId: string): Promise<boolean> => {
+  const selectAccommodationQuote = useCallback(async (quoteId: string, signatureName: string, acceptedTerms: boolean): Promise<boolean> => {
     if (!accommodation) return false;
 
     try {
+      // De edge function eist een handtekening en akkoord op de voorwaarden;
+      // zonder die twee weigert hij (400) en kon de klant nooit kiezen.
       const response = await supabase.functions.invoke("select-accommodation-quote", {
-        body: { token: accommodation.customer_token, quoteId },
+        body: { token: accommodation.customer_token, quoteId, signatureName, acceptedTerms },
       });
 
       if (response.error) {

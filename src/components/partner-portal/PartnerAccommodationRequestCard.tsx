@@ -65,6 +65,9 @@ interface AccommodationRequest {
   special_requests: string | null;
   room_assignment?: string | null;
   guest_details_updated_at?: string | null;
+  /** Uit het gekoppelde programma (klantpagina). */
+  program_guest_names?: string | null;
+  program_dietary_notes?: string | null;
   wants_activities: boolean;
   status: string;
   created_at: string;
@@ -241,6 +244,20 @@ export const PartnerAccommodationRequestCard = ({
           <div className="text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
             <p className="text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">Kamerindeling van de klant</p>
             <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
+          </div>
+        )}
+
+        {request.program_dietary_notes && (
+          <div className="text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-2 rounded">
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-300 uppercase tracking-wider mb-1">Dieetwensen & allergieën</p>
+            <p className="text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{request.program_dietary_notes}</p>
+          </div>
+        )}
+
+        {request.program_guest_names && (
+          <div className="text-sm bg-muted/50 p-2 rounded">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Gastenlijst</p>
+            <p className="whitespace-pre-wrap">{request.program_guest_names}</p>
           </div>
         )}
 

@@ -4376,6 +4376,8 @@ export type Database = {
           location_preference: Json | null
           number_of_guests: number | null
           reference_number: string | null
+          program_dietary_notes: string | null
+          program_guest_names: string | null
           room_assignment: string | null
           room_count: number | null
           room_occupancy: string | null
@@ -4405,6 +4407,8 @@ export type Database = {
           location_preference?: Json | null
           number_of_guests?: number | null
           reference_number?: string | null
+          program_dietary_notes?: string | null
+          program_guest_names?: string | null
           room_assignment?: string | null
           room_count?: number | null
           room_occupancy?: string | null
@@ -4434,6 +4438,8 @@ export type Database = {
           location_preference?: Json | null
           number_of_guests?: number | null
           reference_number?: string | null
+          program_dietary_notes?: string | null
+          program_guest_names?: string | null
           room_assignment?: string | null
           room_count?: number | null
           room_occupancy?: string | null

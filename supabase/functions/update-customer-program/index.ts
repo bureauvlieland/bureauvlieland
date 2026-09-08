@@ -138,6 +138,31 @@ async function enrichProviderEmails(
   }
 }
 
+/**
+ * Eén open Werkbank-taak per (auto_type, auto_entity_id): bestaat er al een die
+ * niet is afgerond, dan wordt die bijgewerkt in plaats van een dubbele aan te maken.
+ */
+async function upsertOpenTodo(
+  supabase: ReturnType<typeof createClient>,
+  todo: { auto_type: string; auto_entity_id: string; related_request_id: string; priority: "low" | "normal" | "high" | "urgent"; title: string; description: string },
+) {
+  const { data: existing } = await supabase
+    .from("admin_todos")
+    .select("id")
+    .eq("auto_type", todo.auto_type)
+    .eq("auto_entity_id", todo.auto_entity_id)
+    .not("status", "in", "(done,dismissed)")
+    .maybeSingle();
+  if (existing) {
+    await supabase
+      .from("admin_todos")
+      .update({ title: todo.title, description: todo.description, priority: todo.priority, updated_at: new Date().toISOString() })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("admin_todos").insert({ ...todo, status: "todo" });
+  }
+}
+
 const changeTypeLabels: Record<PendingChange["type"], string> = {
   time_changed: "Tijd gewijzigd",
   day_changed: "Dag gewijzigd",
@@ -609,6 +634,15 @@ Deno.serve(async (req) => {
           actor_name: program.customer_name,
           notes: `Bijgewerkt: ${changedFields.join(", ")}`,
         });
+        // Werkbank-taak (één open taak per project; bij een volgende wijziging bijgewerkt).
+        await upsertOpenTodo(supabase, {
+          auto_type: "customer_practical_info_updated",
+          auto_entity_id: program.id,
+          related_request_id: program.id,
+          priority: "normal",
+          title: `Praktische info bijgewerkt: ${program.customer_company || program.customer_name}`,
+          description: `De klant heeft ${changedFields.join(", ")} ingevuld of gewijzigd op de klantpagina. Controleer of partners dit (via portaal en briefing T-3) meekrijgen.`,
+        });
       }
     }
 
@@ -654,12 +688,30 @@ Deno.serve(async (req) => {
         })
         .eq("id", program.linked_accommodation_id);
 
+      const setupSummary = `Kamers: ${roomCount ?? "?"}${occupancy ? ` (${occupancy} p.p.k.)` : ""} | Verzorging: ${board || "geen voorkeur"}`;
       await supabase.from("program_request_history").insert({
         request_id: program.id,
         action: "accommodation_setup_updated",
         actor: "customer",
         actor_name: program.customer_name,
-        notes: `Kamers: ${roomCount ?? "?"}${occupancy ? ` (${occupancy} p.p.k.)` : ""} | Verzorging: ${board || "geen voorkeur"}`,
+        notes: setupSummary,
+      });
+
+      // Zijn er al offertes? Dan zijn die op de oude wensen gebaseerd: taak voor het bureau.
+      const { count: openQuotes } = await supabase
+        .from("accommodation_quotes")
+        .select("id", { count: "exact", head: true })
+        .eq("request_id", program.linked_accommodation_id)
+        .in("status", ["submitted", "selected"]);
+      await upsertOpenTodo(supabase, {
+        auto_type: "customer_accommodation_setup_changed",
+        auto_entity_id: program.linked_accommodation_id,
+        related_request_id: program.id,
+        priority: (openQuotes ?? 0) > 0 ? "high" : "normal",
+        title: `Klant wijzigde kamers/verzorging: ${program.customer_company || program.customer_name}`,
+        description: (openQuotes ?? 0) > 0
+          ? `${setupSummary}. Er ${openQuotes === 1 ? "is al 1 logiesofferte" : `zijn al ${openQuotes} logiesoffertes`} op de oude wensen; informeer de logiespartner(s) en laat de offerte(s) zo nodig aanpassen.`
+          : `${setupSummary}. Nog geen offertes ingediend; de uitvraag aan logiespartners gaat met de nieuwe wensen.`,
       });
     }
 
@@ -1647,6 +1699,16 @@ Deno.serve(async (req) => {
             .update({
               status: "cancelled",
               version: item.version + 1,
+            })
+            .eq("id", item.id);
+        } else if (change.type === "notes_changed") {
+          // Alleen de opmerking: opslaan zonder de status van het onderdeel te resetten.
+          await supabase
+            .from("program_request_items")
+            .update({
+              customer_notes: item.customer_notes,
+              version: item.version + 1,
+              updated_at: new Date().toISOString(),
             })
             .eq("id", item.id);
         } else if (change.type === "people_changed") {
