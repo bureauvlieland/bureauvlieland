@@ -244,6 +244,10 @@ export interface PartnerAccommodationQuote {
     created_at: string;
     linked_program_id?: string | null;
     invoicing_mode?: string | null;
+    room_assignment?: string | null;
+    /** Uit het gekoppelde programma (klantpagina): gastenlijst en dieetwensen. */
+    program_guest_names?: string | null;
+    program_dietary_notes?: string | null;
   };
 }
 

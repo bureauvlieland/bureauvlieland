@@ -1,7 +1,9 @@
 # Roadmap
 
 ## Actueel
-- [ ] Social-media-planner verwijderen (wordt niet gebruikt): functies social-*, tabellen social_posts/social_media_assets/social_settings, admin-pagina's /admin/social*, Meta-koppeling en secrets META_APP_ID/META_APP_SECRET (genoteerd 8 september)
+- [x] Praktische info van de klantpagina (gastenlijst, dieet, kamers/verzorging, kamerindeling, facturatie, opmerkingen per onderdeel) zichtbaar bij partner en admin, met Werkbank-taak bij wijziging (8 september)
+- [ ] Logieskeuze door de klant herontwerpen: foto's, ligging, faciliteiten, kamertypes bij het kiezen (plan en grafisch voorstel eerst)
+- [x] Social-media-planner verwijderen (wordt niet gebruikt): functies social-*, tabellen social_posts/social_media_assets/social_settings, admin-pagina's /admin/social*, Meta-koppeling en secrets META_APP_ID/META_APP_SECRET (genoteerd 8 september)
 - [ ] Audit e-mailteksten en gegenereerde links (klantpagina, partnerpagina, chat): inhoud nalopen per template, elke link controleren op basis-URL, token en route; fixen waar nodig (groot, belangrijk; genoteerd 8 september)
 - [x] WhatsApp-antwoorden nooit verliezen bij een externe verzendfout
 - [x] Twilio-accountblokkades begrijpelijk tonen en met gedragstests afdekken

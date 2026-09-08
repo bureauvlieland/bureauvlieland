@@ -391,7 +391,8 @@ const CustomerProgram = () => {
     (i: any) => i.status !== "cancelled" && (i.block_category === "catering" || i.category === "catering")
   );
   const guestShowDietary = hasCateringItems;
-  const guestShowRoomAssignment = isMultiDay || !!accommodation;
+  // Alleen met gekoppelde logies: zonder linked_accommodation_id wordt de kamerindeling niet opgeslagen.
+  const guestShowRoomAssignment = !!accommodation;
   const guestDetails = {
     guest_names: (program as any).guest_names ?? null,
     dietary_notes: (program as any).dietary_notes ?? null,

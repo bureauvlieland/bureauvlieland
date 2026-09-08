@@ -316,5 +316,10 @@ INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES
   ('20260902061133', '12f1b065-57ee-421e-a635-06c5f2c3bdc0'),
   ('20260903104211', '56730f9f-91cf-4d7e-b40b-781b38efd452'),
   ('20260903104239', '67304ef8-7470-4657-b422-494d7f03918d'),
-  ('20260908063000', 'claudia-opruimen');
+  ('20260908063000', 'claudia-opruimen'),
+  ('20260908090000', 'emails-ronde-2'),
+  ('20260908093000', 'deelnemerscode'),
+  ('20260908100000', 'social-media-planner-opruimen'),
+  ('20260908110000', 'partner-view-gastenlijst-dieet'),
+  ('20260908120000', 'partner-coordinaten-fix');
 COMMIT;

@@ -268,6 +268,22 @@ const PartnerProjectContent = ({ mode }: Props) => {
   const handleQuoteSubmit = async (quoteData: any) => {
     if (!accommodationQuote) return false;
     try {
+      // Bijlage (offerte-PDF) uploaden, net als op /partner/logies; voorheen
+      // werd het bestand hier stilzwijgend weggegooid.
+      let attachmentPath: string | null = (accommodationQuote as any).quote_attachment_path ?? null;
+      let attachmentFilename: string | null = (accommodationQuote as any).quote_attachment_filename ?? null;
+      if (quoteData.attachmentFile && accommodationQuote.partner_id) {
+        const file = quoteData.attachmentFile as File;
+        const ext = file.name.split(".").pop() || "pdf";
+        const filePath = `${accommodationQuote.partner_id}/${accommodationQuote.id}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("accommodation-quote-attachments")
+          .upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        attachmentPath = filePath;
+        attachmentFilename = file.name;
+      }
+
       const { error } = await supabase
         .from("accommodation_quotes")
         .update({
@@ -285,9 +301,14 @@ const PartnerProjectContent = ({ mode }: Props) => {
           board_type: quoteData.boardType || null,
           board_notes: quoteData.boardNotes || null,
           quote_external_url: quoteData.quoteExternalUrl || null,
+          quote_attachment_path: attachmentPath,
+          quote_attachment_filename: attachmentFilename,
           status: "submitted",
           submitted_at: new Date().toISOString(),
-        })
+          // Een (herziene) offerte moet opnieuw naar de klant kunnen.
+          forwarded_at: null,
+          reset_reason: null,
+        } as any)
         .eq("id", accommodationQuote.id);
       if (error) throw error;
       toast({ title: "Offerte ingediend" });
@@ -763,8 +784,9 @@ const PartnerProjectContent = ({ mode }: Props) => {
           {isBureauCentral && <BureauCentralBadge variant="compact" />}
 
           <GuestDetailsBlock
-            roomAssignment={(req as any).room_assignment}
-            dietaryNotes={req.special_requests}
+            guestNames={req.program_guest_names ?? null}
+            roomAssignment={req.room_assignment ?? null}
+            dietaryNotes={req.program_dietary_notes ?? req.special_requests}
           />
 
         </Card>

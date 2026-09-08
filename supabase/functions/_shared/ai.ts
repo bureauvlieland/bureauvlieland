@@ -2,7 +2,7 @@
  * Eén plek voor alle AI-aanroepen vanuit edge functions.
  *
  * Alle scan- en tekstfuncties (inkoopfactuurscanner, verzamelfacturen,
- * logiesregels, e-mailhulp, programmasuggesties, sales-leads, social media)
+ * logiesregels, e-mailhulp, programmasuggesties, sales-leads)
  * praten met Gemini via het OpenAI-compatibele eindpunt van Google:
  *
  *   GEMINI_API_KEY  → https://generativelanguage.googleapis.com/v1beta/openai

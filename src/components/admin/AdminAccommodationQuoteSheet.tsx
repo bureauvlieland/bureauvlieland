@@ -420,7 +420,7 @@ export function AdminAccommodationQuoteSheet({
             <>
               <Separator />
               <div>
-                <h4 className="text-sm font-semibold mb-1">Partner notities</h4>
+                <h4 className="text-sm font-semibold mb-1">Toelichting voor de klant</h4>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.partner_notes}</p>
               </div>
             </>

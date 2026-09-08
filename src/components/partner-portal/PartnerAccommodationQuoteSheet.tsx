@@ -1114,10 +1114,11 @@ export const PartnerAccommodationQuoteSheet = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="partnerNotes">Interne notities (alleen voor u)</Label>
+              <Label htmlFor="partnerNotes">Toelichting voor de klant</Label>
+              <p className="text-xs text-muted-foreground">De klant ziet deze tekst bij uw offerte. Bij afwijzen is dit de reden die de klant te zien krijgt.</p>
               <Textarea
                 id="partnerNotes"
-                placeholder="Notities voor uzelf..."
+                placeholder="Bijvoorbeeld: parkeren bij de haven, late check-in mogelijk, ..."
                 value={partnerNotes}
                 onChange={(e) => setPartnerNotes(e.target.value)}
                 disabled={isReadOnly}

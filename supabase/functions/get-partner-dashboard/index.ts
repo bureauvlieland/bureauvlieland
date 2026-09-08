@@ -322,7 +322,8 @@ Deno.serve(async (req) => {
             status,
             created_at,
             reference_number,
-            linked_program_id
+            linked_program_id,
+            room_assignment
           )
         `)
         .eq("partner_id", partner.id)
@@ -352,16 +353,25 @@ Deno.serve(async (req) => {
         ];
 
         const invoicingModeByProgramId = new Map<string, string>();
+        // Gastenlijst en dieetwensen vult de klant op het programma in; de
+        // logiespartner moet ze ook zien (voorheen zag hij alleen special_requests).
+        const guestInfoByProgramId = new Map<string, { guest_names: string | null; dietary_notes: string | null }>();
 
         if (linkedProgramIds.length > 0) {
           const { data: programModes } = await supabase
             .from("program_requests")
-            .select("id, invoicing_mode")
+            .select("id, invoicing_mode, guest_names, dietary_notes")
             .in("id", linkedProgramIds);
 
           (programModes || []).forEach((program) => {
             if (program?.id && program?.invoicing_mode) {
               invoicingModeByProgramId.set(program.id, program.invoicing_mode);
+            }
+            if (program?.id) {
+              guestInfoByProgramId.set(program.id, {
+                guest_names: program.guest_names ?? null,
+                dietary_notes: program.dietary_notes ?? null,
+              });
             }
           });
         }
@@ -371,11 +381,15 @@ Deno.serve(async (req) => {
           const invoicingMode = linkedProgramId ? invoicingModeByProgramId.get(linkedProgramId) ?? null : null;
           const isBureauCentral = invoicingMode === "bureau_central";
 
+          const guestInfo = linkedProgramId ? guestInfoByProgramId.get(linkedProgramId) : undefined;
+
           return {
             ...quote,
             accommodation_requests: {
               ...quote.accommodation_requests,
               invoicing_mode: invoicingMode,
+              program_guest_names: guestInfo?.guest_names ?? null,
+              program_dietary_notes: guestInfo?.dietary_notes ?? null,
               ...(isBureauCentral
                 ? {
                     customer_email: undefined,

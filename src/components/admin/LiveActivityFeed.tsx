@@ -76,6 +76,12 @@ function getActionMeta(item: FeedItem): { label: string; icon: React.ReactNode; 
         return { label: "Klant wijzigt tijdvoorkeur", icon: <Clock className="h-4 w-4" />, color: "text-amber-600 bg-amber-50" };
       case "billing_updated":
         return { label: "Klant heeft factuurgegevens ingevuld", icon: <Receipt className="h-4 w-4" />, color: "text-blue-600 bg-blue-50" };
+      case "guest_details_updated":
+        return { label: "Klant heeft gastenlijst/dieetwensen bijgewerkt", icon: <User className="h-4 w-4" />, color: "text-blue-600 bg-blue-50" };
+      case "accommodation_setup_updated":
+        return { label: "Klant heeft kamers/verzorging gewijzigd", icon: <BedDouble className="h-4 w-4" />, color: "text-amber-600 bg-amber-50" };
+      case "notes_changed":
+        return { label: "Klant wijzigt opmerking bij activiteit", icon: <MessageSquare className="h-4 w-4" />, color: "text-amber-600 bg-amber-50" };
       case "item_cancelled":
         return { label: "Klant verwijdert activiteit", icon: <XCircle className="h-4 w-4" />, color: "text-red-600 bg-red-50" };
       case "add_activity":

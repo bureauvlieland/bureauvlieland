@@ -16,6 +16,7 @@ import {
 } from "@/lib/projectCommunication";
 import type { ProjectSummary } from "@/lib/getProject";
 import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
+import { PracticalInfoCard } from "@/components/admin/werkbank/PracticalInfoCard";
 import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { cn } from "@/lib/utils";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
@@ -435,6 +436,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
               </CardContent>
             </Card>
           </div>
+          <PracticalInfoCard requestId={project.id} />
         </TabsContent>
 
         <TabsContent value="programma">
