@@ -159,8 +159,8 @@ const AdminAccommodationProfilesContent = () => {
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(mailable.map((r) => r.id)));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div className="p-6 space-y-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-medium flex items-center gap-2"><Hotel className="h-6 w-6 text-primary" />Logiesprofielen</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -201,7 +201,7 @@ const AdminAccommodationProfilesContent = () => {
             Gesorteerd van minst naar meest compleet. Alleen partners met een account en een score onder 80% kunnen een herinnering krijgen.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 border-t">
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : rows.length === 0 ? (
@@ -211,14 +211,14 @@ const AdminAccommodationProfilesContent = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10">
+                    <TableHead className="w-10 pl-4">
                       <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Alles selecteren" />
                     </TableHead>
                     <TableHead>Partner</TableHead>
                     <TableHead className="w-44">Score</TableHead>
                     <TableHead>Ontbreekt</TableHead>
                     <TableHead className="w-36">Laatst ingelogd</TableHead>
-                    <TableHead className="w-40"></TableHead>
+                    <TableHead className="w-40 pr-4"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -226,21 +226,21 @@ const AdminAccommodationProfilesContent = () => {
                     const canMail = r.hasAccount && r.completeness.score < 80;
                     return (
                       <TableRow key={r.id}>
-                        <TableCell>
+                        <TableCell className="pl-4 align-top pt-4">
                           <Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} disabled={!canMail} aria-label={`Selecteer ${r.name}`} />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-top py-3">
                           <Link to={`/admin/partners/${r.id}`} className="font-medium hover:underline">{r.name}</Link>
                           <p className="text-xs text-muted-foreground">{r.email}</p>
                           {!r.hasAccount && <Badge variant="outline" className="mt-1 text-xs">Geen account</Badge>}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-top py-4">
                           <div className="flex items-center gap-2">
                             <Progress value={r.completeness.score} className="h-2 flex-1" />
                             <span className={cn("text-sm font-semibold w-10 text-right", scoreTone(r.completeness.score))}>{r.completeness.score}%</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3">
                           {r.completeness.missing.length === 0 ? (
                             <span className="text-sm text-muted-foreground">Niets</span>
                           ) : (
@@ -249,10 +249,10 @@ const AdminAccommodationProfilesContent = () => {
                             </ul>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="align-top py-3 text-sm text-muted-foreground">
                           {r.lastLoginAt ? format(new Date(r.lastLoginAt), "d MMM yyyy", { locale: nl }) : "Nooit"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-top py-3 pr-4">
                           <Button asChild variant="outline" size="sm">
                             <a href={`${PORTAL_BASE}/partner/profiel?impersonate=${r.id}`} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-3.5 w-3.5 mr-1.5" />Open als partner
