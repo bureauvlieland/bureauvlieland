@@ -201,7 +201,7 @@ const AdminPartnerProfilesContent = () => {
       };
     },
   });
-  const rows = allRows?.[tab] ?? [];
+  const rows = useMemo(() => allRows?.[tab] ?? [], [allRows, tab]);
 
   const stats = useMemo(() => {
     const total = rows.length;
