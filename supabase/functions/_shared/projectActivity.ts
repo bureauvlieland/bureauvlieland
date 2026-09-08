@@ -45,7 +45,7 @@ const SUPPRESS_IN_WARM = new Set<string>([
 ]);
 
 /**
- * Project-level cooldown filter voor Claudia-signalen.
+ * Project-level cooldown filter voor werkbank-signalen.
  * Snooze (snoozed_until > now) → altijd onderdrukken (info kan blijven via aparte check).
  */
 export function shouldShowSignalDuringCooldown(

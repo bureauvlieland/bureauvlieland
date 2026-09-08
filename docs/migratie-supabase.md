@@ -48,7 +48,7 @@ Resultaat: de hele structuur en data komen goed over. De cijfers:
 | Eén data-oneffenheid | 27 template-regels wijzen naar verwijderde templates | `restore-from-lovable.sh` ruimt ze op (anders blokkeren ze een foreign key) |
 | Edge functions (134) | Niet in de export | Uit de repo deployen met de Supabase CLI |
 | Secrets van edge functions | Niet in de export (staan versleuteld buiten de database) | `secrets-export` + `run-migration.sh secrets` zet ze over (stap 4) |
-| AI (scanner, Claudia, e-mailhulp) | Liep via Lovable's AI-gateway | Eigen Gemini-sleutel; code is klaar (`_shared/ai.ts`) |
+| AI (scanner, e-mailhulp) | Liep via Lovable's AI-gateway | Eigen Gemini-sleutel (`_shared/ai.ts`); Claudia is op 8 september verwijderd |
 | Outlook-doorsturen | Liep via Lovable's Microsoft-connector | Uitgefaseerd; doorsturen gaat via Mailjet |
 | Externe webhooks (Mailjet, Twilio/WhatsApp) | Wijzen naar de oude URL | Bij de omschakeling omzetten (stap 5); MAP heeft niets nodig |
 | Frontend (Netlify) | n.v.t. | Alleen `.env` wijzigen |
@@ -64,8 +64,7 @@ Nog nodig:
 
 1. **Gemini API-sleutel**: https://aistudio.google.com/apikey. Vervangt de
    Lovable AI-gateway voor alle scan- en tekstfuncties (zelfde modellen).
-2. **OpenAI API-sleutel** (alleen Claudia's zoekindex, centen per maand):
-   https://platform.openai.com/api-keys.
+2. ~~OpenAI API-sleutel~~ Vervallen: Claudia is op 8 september verwijderd.
 3. **Supabase personal access token**: https://supabase.com/dashboard/account/tokens.
    Nodig om de edge functions te deployen.
 
@@ -234,8 +233,6 @@ project onder *Edge Functions → Secrets*:
 
 ```
 GEMINI_API_KEY   aistudio.google.com/apikey        (factuurscanner, e-mailhulp, enz.)
-OPENAI_API_KEY   platform.openai.com/api-keys      (alleen Claudia's zoekindex; weglaten
-                                                    als Claudia eruit gaat)
 ```
 
 Vervallen: `LOVABLE_API_KEY` en `MICROSOFT_OUTLOOK_API_KEY`. `SUPABASE_URL`,
@@ -361,6 +358,10 @@ herstel van de rechten en *Trigger deploy* in Netlify stond de nieuwe website
 om 00:45 live. Controles: inloggen, WhatsApp (twee testberichten aangekomen),
 `critical-selftest` 13/13, Mailjet-webhookstatus in orde. Nog te doen: een
 inkoopfactuur scannen (Gemini) en een partnermail (Mailjet) op een werkdag.
+Ochtend 8 september: cron-planner stond stil door een tellerconflict
+(`runid_seq`), gerepareerd via de SQL Editor en vastgelegd in
+`after-restore.sql` (stap 1b). Claudia verwijderd (migratie
+`20260908063000_claudia-opruimen.sql`); `OPENAI_API_KEY` vervalt daarmee.
 
 Pas als dat groen is: in Lovable *Remove Lovable Cloud*. Tot die tijd blijft het
 oude project als vangnet staan.

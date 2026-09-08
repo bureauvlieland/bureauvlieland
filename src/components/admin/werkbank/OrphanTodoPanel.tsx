@@ -99,8 +99,6 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ["werkbank-inbox"] });
     queryClient.invalidateQueries({ queryKey: ["werkbank-orphan-todo", todoId] });
-    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations"] });
-    queryClient.invalidateQueries({ queryKey: ["claudia-recommendations-count"] });
   };
 
   const setStatus = async (status: "done" | "dismissed") => {

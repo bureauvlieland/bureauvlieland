@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Sparkles, Archive, Layers, RefreshCw, ArrowLeft, Moon } from "lucide-react";
+import { Search, Hotel, Archive, Layers, RefreshCw, ArrowLeft, Moon } from "lucide-react";
 import { useReconcileTodos } from "@/hooks/useReconcileTodos";
 import { useFinanceTodoCount } from "@/hooks/useFinanceTodoCount";
 import {
@@ -22,8 +22,6 @@ import {
   type ProjectCommunicationState,
 } from "@/lib/projectCommunication";
 import { cn } from "@/lib/utils";
-import { ClaudiaChatPanel } from "@/components/admin/werkbank/ClaudiaChatPanel";
-import { ClaudiaRecommendationsCard } from "@/components/admin/werkbank/ClaudiaRecommendationsCard";
 import { AttributionWidget } from "@/components/admin/AttributionWidget";
 import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
@@ -142,8 +140,8 @@ export default function AdminWerkbank() {
     setParams(p, { replace: true });
   };
 
-  // Keep selection in sync with URL param so the Claudia badge (which clears
-  // ?id=) actually returns to the recommendations overview.
+  // Selectie gelijk houden met de URL-parameter (?id=), zodat links van
+  // buitenaf en de terugknop van de browser het juiste project openen.
   useEffect(() => {
     const idParam = params.get("id");
     setSelectedId(idParam);
@@ -221,7 +219,6 @@ export default function AdminWerkbank() {
     };
   }, [projects]);
 
-  const [claudiaOpen, setClaudiaOpen] = useState(false);
   const { data: financeCount = 0 } = useFinanceTodoCount();
   const reconcile = useReconcileTodos();
   const autoRanRef = useRef(false);
@@ -282,10 +279,6 @@ export default function AdminWerkbank() {
             >
               <RefreshCw className={cn("h-4 w-4", reconcile.isPending && "animate-spin")} />
               Actualiseer
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setClaudiaOpen(true)} className="gap-1.5">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Claudia
             </Button>
           </div>
         </header>
@@ -444,7 +437,6 @@ export default function AdminWerkbank() {
             )}
             {!selected && !selectedId?.startsWith("_orphan_") && (
               <div className="p-4 space-y-4">
-                <ClaudiaRecommendationsCard />
                 <AttributionWidget />
                 <DraftsWidget />
               </div>
@@ -461,11 +453,6 @@ export default function AdminWerkbank() {
         </div>
       </div>
 
-      <ClaudiaChatPanel
-        open={claudiaOpen}
-        onOpenChange={setClaudiaOpen}
-        contextProjectId={selected?.id ?? null}
-      />
     </AdminLayout>
   );
 }
