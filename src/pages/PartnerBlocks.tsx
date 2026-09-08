@@ -21,8 +21,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PartnerBlockSheet, type PrefillFromMap } from "@/components/partner-portal/PartnerBlockSheet";
-import { MapTypeCard } from "@/components/partner-portal/MapTypeCard";
-import { useMapActivityTypes, type MapActivityType } from "@/hooks/useMapActivities";
+import { MapOfferOverview } from "@/components/partner-portal/MapOfferOverview";
+import type { MapActivityType } from "@/hooks/useMapActivities";
 import type { PartnerBuildingBlock } from "@/types/partner";
 import { calculateBlockCompleteness } from "@/lib/partnerCompleteness";
 import { reportError } from "@/lib/errorReporting";
@@ -114,21 +114,6 @@ const PartnerBlocksContent = () => {
 
     fetchBlocks();
   }, [navigate, searchParams]);
-
-  const { data: mapTypes = [] } = useMapActivityTypes(
-    mapTenantSlug,
-    !!mapTenantSlug && !!partnerId,
-    partnerId ?? undefined,
-  );
-
-  const linkedTypeIds = new Set(
-    blocks
-      .map((b) => b.map_activity_type_id)
-      .filter((v): v is number => typeof v === "number"),
-  );
-  const availableMapTypes = (mapTypes as MapActivityType[]).filter(
-    (t) => !linkedTypeIds.has(t.Id),
-  );
 
   const handleEditBlock = (block: PartnerBuildingBlock) => {
     setSelectedBlock(block);
@@ -223,7 +208,16 @@ const PartnerBlocksContent = () => {
       </div>
 
       <div className="space-y-8">
-        {blocks.length === 0 && availableMapTypes.length === 0 ? (
+        {mapTenantSlug && partnerId && (
+          <MapOfferOverview
+            tenantSlug={mapTenantSlug}
+            partnerId={partnerId}
+            onOffer={handleEnrichFromMap}
+            refreshKey={blocks.length}
+          />
+        )}
+
+        {blocks.length === 0 && !mapTenantSlug ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -270,31 +264,6 @@ const PartnerBlocksContent = () => {
                 onEdit={handleEditBlock}
                 status="concept"
               />
-            )}
-
-            {mapTenantSlug && (
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  Beschikbaar vanuit MAP ({availableMapTypes.length})
-                </h2>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Activiteitentypes uit MijnActiviteitenPlanner. Verrijk en publiceer om als bouwsteen te gebruiken.
-                </p>
-                {availableMapTypes.length === 0 ? (
-                  <Card>
-                    <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                      Alle MAP-types zijn al toegevoegd aan uw aanbod.
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-2">
-                    {availableMapTypes.map((t) => (
-                      <MapTypeRow key={t.Id} type={t} onEnrich={handleEnrichFromMap} />
-                    ))}
-                  </div>
-                )}
-              </div>
             )}
           </>
         )}
@@ -442,61 +411,6 @@ const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
   );
 };
 
-interface MapTypeRowProps {
-  type: MapActivityType;
-  onEnrich: (type: MapActivityType) => void;
-}
-
-const mapImageUrl = (ref: string | null) =>
-  ref ? `https://portal.mijnactiviteitenplanner.nl/File/Get?reference=${encodeURIComponent(ref)}` : null;
-
-const MapTypeRow = ({ type, onEnrich }: MapTypeRowProps) => {
-  const img = mapImageUrl(type.Image);
-  return (
-    <Card
-      className="border-dashed border-accent/50 bg-accent/5 cursor-pointer hover:bg-accent/10 transition-colors"
-      onClick={() => onEnrich(type)}
-    >
-      <CardContent className="p-3">
-        <div className="flex items-center gap-3">
-          {img ? (
-            <img src={img} alt={type.Name} className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted" />
-          ) : (
-            <div className="h-14 w-20 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <Sparkles className="h-5 w-5 text-muted-foreground" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium truncate">{type.Name}</span>
-              <Badge className="bg-accent text-accent-foreground gap-1 font-normal text-xs">
-                <Sparkles className="h-3 w-3" />
-                Vanuit MAP
-              </Badge>
-            </div>
-            {(type.Duration || type.Description) && (
-              <div className="flex items-center gap-x-3 text-xs text-muted-foreground mt-0.5">
-                {type.Duration ? (
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {type.Duration} uur
-                  </span>
-                ) : null}
-                {type.Description && (
-                  <span className="truncate">{type.Description}</span>
-                )}
-              </div>
-            )}
-          </div>
-          <Button size="sm" onClick={(e) => { e.stopPropagation(); onEnrich(type); }}>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Verrijken
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 const PartnerBlocks = () => (
   <PartnerLayout>

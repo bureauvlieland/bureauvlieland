@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { MapOfferOverview } from "@/components/partner-portal/MapOfferOverview";
 import { MapPaymentSelftestPanel } from "@/components/admin/MapPaymentSelftestPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -907,6 +908,10 @@ const AdminPartnerDetail = () => {
                       tenantSlug={formData.map_tenant_slug}
                       partnerName={formData.name}
                     />
+                  )}
+
+                  {formData.map_tenant_slug && id && (
+                    <MapOfferOverview tenantSlug={formData.map_tenant_slug} partnerId={id} blockLinkBase="/admin/bouwstenen?edit=" />
                   )}
 
 

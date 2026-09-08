@@ -48,61 +48,112 @@ const REMINDER_SUBJECT: Record<ProfileTab, string> = {
   activiteiten: "Uw activiteiten bij Bureau Vlieland: klanten willen ze zien",
 };
 
-const activityReminderBody = (portalBase: string) => `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; background: #f4f7fa;">
-  <div style="background: #104860; padding: 35px 30px; text-align: center;">
-    <h1 style="color: #ffffff; margin: 0; font-size: 26px;">Bureau Vlieland</h1>
-  </div>
-  <div style="background: white; padding: 35px 30px;">
-    <h2 style="color: #104860;">Beste {{partner_name}},</h2>
-    <p>Klanten die via ons een groepsuitje samenstellen, zien bij elk programmaonderdeel een foto, de omschrijving, de duur en de ligging van de activiteit, en sinds kort ook een blok over de aanbieder: foto's, een korte tekst en kenmerken. Dat werkt alleen als die informatie is ingevuld.</p>
-    <p>Voor uw aanbod ontbreekt op dit moment:</p>
-    {{missing_list}}
-    <p>Invullen duurt een kwartier en hoeft maar één keer:</p>
-    <ol>
-      <li><a href="${portalBase}/partner/aanbod" style="color: #104860;">Uw activiteiten</a>: per activiteit een foto, een omschrijving van een paar regels, prijs, duur en het aantal personen.</li>
-      <li><a href="${portalBase}/partner/profiel" style="color: #104860;">Bedrijfsprofiel</a>: een paar foto's, een korte tekst over uw bedrijf, kenmerken en de ligging.</li>
-    </ol>
-    <p>Liever dat wij het voor u doen? Stuur een paar foto's en een korte tekst naar <a href="mailto:erwin@bureauvlieland.nl" style="color: #104860;">erwin@bureauvlieland.nl</a>, dan zetten wij het erin.</p>
-    <p style="margin-top: 30px;">Met vriendelijke groet,<br><strong>Erwin Soolsma</strong><br>Bureau Vlieland</p>
-  </div>
-  <div style="background: #e8f0f8; padding: 20px 30px; text-align: center;">
-    <p style="color: #374151; font-size: 13px; margin: 0;">
-      Vragen? <a href="mailto:erwin@bureauvlieland.nl" style="color: #104860;">erwin@bureauvlieland.nl</a> of 0562 700 208
-    </p>
-  </div>
-</body>
-</html>`;
+const MAIL_SHELL = {
+  head: (title: string, preheader: string) => `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; background: #f4f7fa;">
 
-const reminderBody = (portalBase: string) => `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; background: #f4f7fa;">
-  <div style="background: #104860; padding: 35px 30px; text-align: center;">
-    <h1 style="color: #ffffff; margin: 0; font-size: 26px;">Bureau Vlieland</h1>
+  <!-- Preheader: zichtbaar in de inbox, onzichtbaar in de mail -->
+  <div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #f4f7fa;">
+    ${preheader}
   </div>
-  <div style="background: white; padding: 35px 30px;">
-    <h2 style="color: #104860;">Beste {{partner_name}},</h2>
-    <p>Klanten die via ons een groepsuitje boeken, kiezen hun logies sinds kort op een nieuwe manier: ze zien bij uw offerte direct foto's, de ligging, de kamers en de faciliteiten van uw accommodatie. Dat werkt alleen als die informatie in uw profiel staat.</p>
-    <p>Voor uw profiel ontbreekt op dit moment:</p>
-    {{missing_list}}
-    <p>Invullen duurt een kwartier en hoeft maar één keer:</p>
-    <ol>
-      <li><a href="${portalBase}/partner/profiel" style="color: #104860;">Bedrijfsprofiel</a>: foto's, tekst, kenmerken, ligging, faciliteiten en in-/uitchecktijden.</li>
-      <li><a href="${portalBase}/partner/kamersoorten" style="color: #104860;">Kamertypes</a>: per kamertype een paar foto's, bedden en faciliteiten. Bij een offerte kiest u dan een kamertype en ziet de klant meteen wat hij krijgt.</li>
-    </ol>
-    <p>Liever dat wij het voor u doen? Stuur een paar foto's en een korte tekst naar <a href="mailto:erwin@bureauvlieland.nl" style="color: #104860;">erwin@bureauvlieland.nl</a>, dan zetten wij het erin.</p>
-    <p style="margin-top: 30px;">Met vriendelijke groet,<br><strong>Erwin Soolsma</strong><br>Bureau Vlieland</p>
-  </div>
-  <div style="background: #e8f0f8; padding: 20px 30px; text-align: center;">
-    <p style="color: #374151; font-size: 13px; margin: 0;">
-      Vragen? <a href="mailto:erwin@bureauvlieland.nl" style="color: #104860;">erwin@bureauvlieland.nl</a> of 0562 700 208
-    </p>
-  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f7fa;">
+    <tr>
+      <td align="center" style="padding: 24px 12px;">
+
+        <table role="presentation" width="650" cellpadding="0" cellspacing="0" border="0" style="max-width: 650px; width: 100%; font-family: Arial, Helvetica, sans-serif; color: #333333;">
+
+          <!-- Kop -->
+          <tr>
+            <td style="background: #104860; padding: 35px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: bold; line-height: 1.3;">Bureau Vlieland</h1>
+            </td>
+          </tr>
+
+          <!-- Inhoud -->
+          <tr>
+            <td style="background: #ffffff; padding: 35px 30px; font-size: 16px; line-height: 1.6;">
+
+              <h2 style="color: #104860; margin: 0 0 20px 0; font-size: 20px; line-height: 1.4;">Beste {{partner_name}},</h2>
+`,
+  steps: (steps: { href: string; label: string; text: string }[]) => `
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 0;">
+${steps.map((s, i) => `                <tr>
+                  <td valign="top" style="padding: 0 12px ${i < steps.length - 1 ? "12px" : "0"} 0; color: #104860; font-weight: bold; white-space: nowrap;">${i + 1}.</td>
+                  <td valign="top" style="padding: 0 0 ${i < steps.length - 1 ? "12px" : "0"} 0;"><a href="${s.href}" style="color: #104860; font-weight: bold;">${s.label}</a>: ${s.text}</td>
+                </tr>`).join("\n")}
+              </table>
+`,
+  foot: `
+              <p style="margin: 0 0 18px 0;">Loopt u ergens tegenaan of heeft u een vraag? Mail of bel gerust, dan denken we mee.</p>
+
+              <p style="margin: 0 0 18px 0;">Bedankt alvast, en tot snel op het eiland.</p>
+
+              <p style="margin: 30px 0 0 0;">Met vriendelijke groet,<br><strong>Erwin Soolsma</strong><br>Bureau Vlieland</p>
+
+            </td>
+          </tr>
+
+          <!-- Voet -->
+          <tr>
+            <td style="background: #e8f0f8; padding: 20px 30px; text-align: center;">
+              <p style="color: #374151; font-size: 13px; line-height: 1.6; margin: 0;">
+                Vragen? Bel gerust <a href="tel:+31562700208" style="color: #104860; text-decoration: none;">0562 700 208</a> of mail naar <a href="mailto:erwin@bureauvlieland.nl" style="color: #104860;">erwin@bureauvlieland.nl</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
-</html>`;
+</html>`,
+};
+
+/** Herinnering logies; tekst van Erwin, 8 september 2026. */
+const reminderBody = (portalBase: string) =>
+  MAIL_SHELL.head(
+    "Bureau Vlieland: uw accommodatie in beeld bij groepen",
+    "Groepen kiezen sneller voor uw accommodatie als ze foto's en kamers zien. Zo zet u dat in een kwartier klaar.",
+  ) + `
+              <p style="margin: 0 0 18px 0;">Groepen die via ons een uitje op Vlieland boeken, zien sinds kort bij de offerte direct waar ze slapen: foto's, de ligging, de kamers en de faciliteiten van uw accommodatie. Zo krijgen ze meteen zin in het verblijf, en dat merken we in de boekingen.</p>
+
+              <p style="margin: 0 0 18px 0;">Dat werkt natuurlijk het best als uw profiel compleet is. Op dit moment missen we nog:</p>
+
+              {{missing_list}}
+
+              <p style="margin: 0 0 18px 0;">Aanvullen kost ongeveer een kwartier en hoeft maar één keer:</p>
+` + MAIL_SHELL.steps([
+    { href: `${portalBase}/partner/profiel`, label: "Bedrijfsprofiel", text: "foto's, een korte tekst, kenmerken, ligging, faciliteiten en in- en uitchecktijden." },
+    { href: `${portalBase}/partner/kamersoorten`, label: "Kamertypes", text: "per kamertype een paar foto's, de bedden en de faciliteiten. Bij een offerte kiest u dan een kamertype en ziet de klant meteen wat hij krijgt." },
+  ]) + MAIL_SHELL.foot;
+
+/** Herinnering activiteiten, in dezelfde vorm. */
+const activityReminderBody = (portalBase: string) =>
+  MAIL_SHELL.head(
+    "Bureau Vlieland: uw activiteiten in beeld bij groepen",
+    "Groepen kiezen sneller voor uw activiteit als ze een foto, de omschrijving en de duur zien. Zo zet u dat in een kwartier klaar.",
+  ) + `
+              <p style="margin: 0 0 18px 0;">Groepen die via ons een uitje op Vlieland samenstellen, zien bij elk programmaonderdeel een foto, de omschrijving, de duur en de ligging van de activiteit, en sinds kort ook een blok over de aanbieder: foto's, een korte tekst en kenmerken. Zo krijgen ze meteen zin in het uitje, en dat merken we in de boekingen.</p>
+
+              <p style="margin: 0 0 18px 0;">Dat werkt natuurlijk het best als uw aanbod compleet is. Op dit moment missen we nog:</p>
+
+              {{missing_list}}
+
+              <p style="margin: 0 0 18px 0;">Aanvullen kost ongeveer een kwartier en hoeft maar één keer:</p>
+` + MAIL_SHELL.steps([
+    { href: `${portalBase}/partner/aanbod`, label: "Uw activiteiten", text: "per activiteit een foto, een omschrijving van een paar regels, prijs, duur en het aantal personen. Werkt u met MijnActiviteitenplanner? Dan kiest u daar welke activiteiten u via ons aanbiedt; foto, tekst en duur volgen vanzelf." },
+    { href: `${portalBase}/partner/profiel`, label: "Bedrijfsprofiel", text: "een paar foto's, een korte tekst over uw bedrijf, kenmerken en de ligging." },
+  ]) + MAIL_SHELL.foot;
 
 const missingListHtml = (missing: string[]) =>
   missing.length === 0

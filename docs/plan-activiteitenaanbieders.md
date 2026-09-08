@@ -95,6 +95,13 @@ Drie stappen, elk apart uit te rollen:
    in dezelfde sheet (keuzelijst MAP-activiteit); de naamvergelijking blijft
    als terugval voor direct boeken, maar synchroniseert niet.
    Pure logica in `_shared/map-sync.ts` (Deno-test).
+   In het partnerportaal staat bovenaan *Mijn aanbod* het volledige
+   MAP-aanbod van de partner (`MapOfferOverview`): per activiteitstype of
+   het al is aangeboden bij Bureau Vlieland en met welke status, en een knop
+   "Aanbieden" die een bouwsteen als voorstel aanmaakt met de koppeling
+   erin. Hetzelfde overzicht staat alleen-lezen bij de partner in admin
+   (Partnerdetail, onder de MAP-instellingen) met een link naar de
+   bouwsteen.
 2. **Beschikbaarheid tonen.** Op de programmakaart van de klant staat bij
    een gekoppelde bouwsteen de agenda van de aanbieder voor die dag:
    "Beschikbaar op deze dag: 10.00 (14 plaatsen) · 14.00 (6 plaatsen)",

@@ -11,7 +11,7 @@
 
 ## Gedaan
 - [x] Activiteitenaanbieders fase 3, MAP-koppeling (8 september): bouwstenen met gekoppeld MAP-activiteitstype volgen 's nachts foto, tekst en duur (prijs per bouwsteen aan te zetten), knop "Nu bijwerken uit MAP" in admin, beschikbaarheid per dag op de klantkaart
-- [ ] MAP: de 0 gekoppelde bouwstenen daadwerkelijk koppelen aan hun MAP-activiteitstype (admin → Bouwstenen → MAP-activiteit kiezen) bij de 7 MAP-aanbieders; daarna eerste nachtelijke run controleren
+- [ ] MAP: de 7 MAP-aanbieders hun activiteiten laten aanbieden via *Mijn aanbod → Uw activiteiten in MijnActiviteitenplanner* (of zelf koppelen via admin → Bouwstenen → MAP-activiteit kiezen); daarna eerste nachtelijke run controleren
 - [x] Activiteitenaanbieders fase 1 en 2 (8 september): activiteitenkaart bij de klant met grotere foto, duur, groepsgrootte, ligging en blok "Over de aanbieder"; adminoverzicht Partnerprofielen met tabbladen logies/activiteiten en herinneringsmailing per groep
 - [x] Visitvlieland.nl omgezet naar de nieuwe database (8 september); leest `partners_public` voor logies en activiteitenaanbieders met MAP-omgeving
 - [x] Logieskeuze fase 3 (8 september): volledigheidsscore uitgebreid voor logiespartners (faciliteiten, tijden, kamertypes met foto's), adminoverzicht Logiesprofielen met herinneringsmailing per partner; Google Places-import afgewezen vanwege de voorwaarden
