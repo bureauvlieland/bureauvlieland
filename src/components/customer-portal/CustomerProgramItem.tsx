@@ -38,6 +38,8 @@ import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { resolveCustomerItemDescription } from "@/lib/customerItemDescription";
+import { presentProvider, itemLocationLine, groupSizeLabel } from "@/lib/providerPresentation";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface CustomerProgramItemProps {
   item: ProgramRequestItem;
@@ -163,6 +165,12 @@ export const CustomerProgramItem = ({
   // Get thumbnail image
   const thumbnailSrc = getBlockImage({ image_url: item.image_url, image_asset: item.image_asset } as any);
 
+  // Aanbieder en ligging (docs/plan-activiteitenaanbieders.md, fase 1)
+  const provider = isSelfArranged || item.provider_id === "bureau" ? null : presentProvider(item.provider_profile);
+  const locationLine = itemLocationLine(item, provider);
+  const groupSize = groupSizeLabel(item.block_min_people, item.block_max_people);
+  const metaParts = [item.duration, groupSize].filter(Boolean) as string[];
+
   return (
     <div className={cn(
       "transition-all rounded-lg border bg-card p-4",
@@ -186,11 +194,19 @@ export const CustomerProgramItem = ({
           <div className="flex items-start gap-3">
             {/* Thumbnail */}
             {thumbnailSrc && thumbnailSrc !== "/placeholder.svg" && (
-              <img
-                src={thumbnailSrc}
-                alt={item.block_name}
-                className={cn("w-12 h-12 md:w-16 md:h-16 rounded-md object-cover shrink-0", isPendingRemoval && "grayscale opacity-60")}
-              />
+              <button
+                type="button"
+                onClick={() => setIsOpen(true)}
+                className="shrink-0"
+                aria-label={`Details van ${item.block_name}`}
+              >
+                <img
+                  src={transformImageUrl(thumbnailSrc, { width: 320 })}
+                  alt={item.block_name}
+                  className={cn("w-16 h-16 md:w-24 md:h-24 rounded-lg object-cover", isPendingRemoval && "grayscale opacity-60")}
+                  loading="lazy"
+                />
+              </button>
             )}
             {/* Content */}
             <div className="flex-1 min-w-0">
@@ -214,10 +230,16 @@ export const CustomerProgramItem = ({
 
               <p className="text-sm text-muted-foreground mt-0.5">
                 {isSelfArranged ? "Zelf te boeken en betalen" : item.provider_name}
+                {metaParts.length > 0 && <span className="text-muted-foreground/70"> · {metaParts.join(" · ")}</span>}
               </p>
-              {(item as any).block_short_description && (
+              {locationLine && (
+                <p className="text-xs text-muted-foreground mt-0.5 flex items-start gap-1">
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span>{locationLine}</span>
+                </p>
+              )}
+              {item.block_short_description && (
                 <p className="text-sm text-muted-foreground/80 mt-0.5 line-clamp-2">
-                  {(item as any).block_short_description}
+                  {item.block_short_description}
                 </p>
               )}
             </div>
@@ -587,6 +609,49 @@ export const CustomerProgramItem = ({
                 <p className="text-sm text-muted-foreground whitespace-pre-line">{desc}</p>
               ) : null;
             })()}
+
+            {/* Over de aanbieder: alleen als er iets te tonen is */}
+            {provider?.hasContent && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-2.5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Over {provider.name}
+                </div>
+                {provider.images.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto">
+                    {provider.images.slice(0, 6).map((img, i) => (
+                      <a key={i} href={img.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                        <img
+                          src={transformImageUrl(img.url, { width: 320 })}
+                          alt={img.alt || provider.name}
+                          className="h-20 w-28 rounded-md object-cover"
+                          loading="lazy"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {provider.highlights.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {provider.highlights.slice(0, 6).map((h, i) => (
+                      <Badge key={i} variant="secondary" className="font-normal text-xs">{h}</Badge>
+                    ))}
+                  </div>
+                )}
+                {provider.aboutText && (
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{provider.aboutText}</p>
+                )}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  {provider.addressLine && (
+                    <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{provider.addressLine}</span>
+                  )}
+                  {provider.websiteUrl && (
+                    <a href={provider.websiteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <ExternalLink className="h-3.5 w-3.5" />Website
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Maatwerk-specificatie */}
             {Array.isArray((item as any).quote_lines) && (item as any).quote_lines.length > 0 && (
               <div className="rounded-lg border bg-muted/30 p-3">

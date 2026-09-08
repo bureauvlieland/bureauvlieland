@@ -99,6 +99,21 @@ Deno.serve(async (req) => {
         .in("id", blockIds);
       blockMap = Object.fromEntries((blocks || []).map((b: any) => [b.id, b]));
     }
+    // 3b) Aanbiedersprofiel per onderdeel (docs/plan-activiteitenaanbieders.md,
+    //     fase 1): galerij, tekst, highlights, website en ligging van de partner,
+    //     zodat de klant ziet wie de activiteit verzorgt. Alleen openbare velden.
+    const providerIds = Array.from(new Set(
+      itemList.map((i: any) => i.provider_id).filter((id: unknown) => typeof id === "string" && id && id !== "bureau"),
+    ));
+    let providerMap: Record<string, any> = {};
+    if (providerIds.length > 0) {
+      const { data: providers } = await supabase
+        .from("partners")
+        .select("id, name, about_text, gallery_images, highlight_features, website_url, address_street, address_postal, address_city, location_lat, location_lng, location_description")
+        .in("id", providerIds)
+        .eq("is_active", true);
+      providerMap = Object.fromEntries((providers || []).map((p: any) => [p.id, p]));
+    }
     const enrichedItems = itemList.map((item: any) => {
       const block = item.block_id ? blockMap[item.block_id] : null;
       return {
@@ -110,6 +125,7 @@ Deno.serve(async (req) => {
         external_url: block?.external_url || item.external_url || null,
         block_min_people: block?.min_people ?? null,
         block_max_people: block?.max_people ?? null,
+        provider_profile: providerMap[item.provider_id] ?? null,
       };
     });
     const blockVatRates: Record<string, number> = {};

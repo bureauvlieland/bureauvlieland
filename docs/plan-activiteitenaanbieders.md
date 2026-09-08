@@ -1,7 +1,7 @@
 # Plan: activiteitenaanbieders presenteren en koppelen met Mijnactiviteitenplanner
 
-Status: voorstel, 8 september 2026. Nog niets gebouwd; eerst de besluiten
-onderaan.
+Status: besluiten genomen 8 september 2026 (zie onderaan); fase 1 gebouwd
+(8 september), fase 2 en 3 nog niet.
 
 ## Waarom
 
@@ -46,7 +46,7 @@ hier opnieuw ingevoerd.
 
 ## Voorstel in fases
 
-### Fase 1: tonen wat er al is (geen databasewijziging, ~1,5 dag)
+### Fase 1: tonen wat er al is (gebouwd 8 september)
 
 - De onderdeelkaart op de klantpagina wordt een activiteitenkaart: grotere
   foto, naam, aanbieder met ligging ("op het strand bij paal 50, 12 min
@@ -56,10 +56,13 @@ hier opnieuw ingevoerd.
   galerijstrip, tekst, highlights, website en kaartje, voor zover ingevuld
   (dezelfde presentatie als het logiesdetailvenster, zelfde componenten).
   Leeg profiel = blok weglaten, geen lege kaders.
-- Bij **Activiteit toevoegen** (klant voegt zelf iets toe): foto en korte
-  tekst per bouwsteen in de keuzelijst; nu alleen naam en categorie.
-- `get-customer-program` geeft per onderdeel de aanbiedersgegevens mee
-  (galerij, tekst, highlights, website, coördinaten); dat is één extra join.
+- **Activiteit toevoegen** toonde al foto, prijs, duur en korte tekst per
+  bouwsteen; niets aan veranderd.
+- `get-customer-program` geeft per onderdeel `provider_profile` mee
+  (galerij, tekst, highlights, website, adres, coördinaten); één extra query
+  over de aanbieders van het programma. Presentatie in
+  `src/lib/providerPresentation.ts`; de plek van het onderdeel gaat voor op
+  die van de aanbieder (een excursie start niet altijd bij het bedrijf).
 
 ### Fase 2: content van aanbieders (~1 dag, daarna doorlopend)
 
@@ -89,14 +92,8 @@ Drie stappen, elk apart uit te rollen:
    onderdeelkaart: "op 12 oktober nog 14 plaatsen om 10.00 en 14.00" uit
    `map-proxy activities` voor de programmadatum. Geen plaatsen = melding,
    geen blokkade (het bureau kan altijd bellen).
-3. **Aanbiedersprofiel uit MAP.** MAP heeft geen profiel-eindpunt. Omdat
-   MAP een eigen product is, kan dat erbij: `GET /api/v1/tenant/profile`
-   met logo, tekst, foto's, adres, website, openingstijden. Bureau Vlieland
-   leest het via `map-proxy` en gebruikt het als terugval als het eigen
-   profiel leeg is (bronvermelding "via Mijnactiviteitenplanner"). Dat
-   scheelt de zeven MAP-aanbieders dubbel invoeren, en het is een verkoop-
-   argument voor MAP bij de andere 26. Dit is werk aan de MAP-kant; hier
-   alleen het lezen.
+3. ~~Aanbiedersprofiel uit MAP~~: vervallen (besluit 4); het profiel blijft
+   bij Bureau Vlieland.
 
 ### Fase 4: later, bij behoefte
 
@@ -104,18 +101,15 @@ Direct boeken vanuit de klantpagina voor MAP-activiteiten (nu alleen via
 programma-acceptatie door het bureau), en een openbare aanbiederspagina op
 bureauvlieland.nl per partner (nu alleen de lijst op /partners).
 
-## Besluiten die ik van jou nodig heb
+## Besluiten (8 september 2026)
 
-1. **Aanbieder of activiteit voorop?** Voorstel: de activiteit (bouwsteen)
-   blijft de kaart; de aanbieder is een blok onder "Details". De klant kiest
-   een wadloopexcursie, niet een bedrijf.
+1. **Activiteit voorop.** De bouwsteen blijft de kaart; de aanbieder is een
+   blok onder "Details".
 2. **MAP als bron voor bouwstenen:** foto, tekst, duur en maximum
-   automatisch overnemen; prijs alleen per bouwsteen aan te zetten. Akkoord?
-3. **Beschikbaarheid tonen** aan de klant (fase 3.2): ja, als informatie,
-   nooit als blokkade?
-4. **Profiel-eindpunt in MAP bouwen** (fase 3.3): wil je dat aan de MAP-kant
-   laten maken? Dan schrijf ik de specificatie van het eindpunt uit
-   (velden, formaat, authenticatie met de bestaande API-sleutel).
-5. **Volgorde:** fase 1 en 2 eerst (zichtbaar resultaat voor alle 33
-   aanbieders), daarna fase 3 stap voor stap. Of MAP eerst, omdat daar de
-   beste content zit?
+   automatisch overnemen; prijs alleen per bouwsteen aan te zetten.
+3. **Beschikbaarheid tonen** aan de klant als informatie, nooit als
+   blokkade.
+4. **Aanbiedersprofiel blijft bij Bureau Vlieland.** Geen profiel-eindpunt
+   in MAP; fase 3.3 vervalt. MAP-aanbieders vullen hun profiel hier, net als
+   de anderen.
+5. **Volgorde:** fase 1 en 2 eerst, daarna MAP (fase 3.1 en 3.2).
