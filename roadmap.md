@@ -5,7 +5,6 @@
 - [ ] Activiteitenaanbieders net zo presenteren als logies: bij het kiezen en goedkeuren van programmaonderdelen foto's, ligging (afstand tot boot en dorp), highlights en de bouwsteenbeschrijving van de aanbieder tonen; volledigheidsscore en adminoverzicht voor activiteitenpartners (zelfde aanpak als logiesprofielen)
 - [ ] Koppeling met Mijnactiviteitenplanner.nl (MAP): partners die daar een omgeving hebben (`map_tenant_slug`) hun foto's, beschrijvingen, prijzen en beschikbaarheid uit MAP laten overnemen in plaats van dubbel invoeren; boeking vanuit het programma rechtstreeks in hun MAP-omgeving (bestaat al voor fietsverhuur via `map-book`); overwegen om een partnerprofiel in MAP als bron voor het profiel bij Bureau Vlieland te gebruiken
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
-- [ ] Visitvlieland.nl omzetten naar de nieuwe database (leest logies- en activiteitenvermeldingen nog uit de oude, zie `docs/migratie-supabase.md`); moet vóór het opruimen van Lovable Cloud
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
 - [ ] Storage-bucket `social-media` handmatig verwijderen in het Supabase-dashboard (tabellen en functies zijn al weg)
 - [ ] AI: Gemini vervangen door Claude (alleen nog programmasuggesties, factuurscan en verkoop-inbox gebruiken AI)
@@ -13,6 +12,7 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Visitvlieland.nl omgezet naar de nieuwe database (8 september); leest `partners_public` voor logies en activiteitenaanbieders met MAP-omgeving
 - [x] Logieskeuze fase 3 (8 september): volledigheidsscore uitgebreid voor logiespartners (faciliteiten, tijden, kamertypes met foto's), adminoverzicht Logiesprofielen met herinneringsmailing per partner; Google Places-import afgewezen vanwege de voorwaarden
 - [x] Logieskeuze fase 2 (8 september): kamertype met foto's en faciliteiten gekoppeld aan de offerte, eigen foto's per offerte, faciliteiten en in-/uitchecktijden in het partnerprofiel met wensenvergelijking op de klantkaart, afstand tot boot en dorp, coördinaten opzoeken op adres
 - [x] Overstap van Lovable Cloud naar eigen Supabase-project (8 september): database, 249 bestanden, 41 gebruikers, 19 secrets, cron, Mailjet- en Twilio-webhooks, Netlify
