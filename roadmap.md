@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Actueel
+- [ ] Audit e-mailteksten en gegenereerde links (klantpagina, partnerpagina, chat): inhoud nalopen per template, elke link controleren op basis-URL, token en route; fixen waar nodig (groot, belangrijk; genoteerd 8 september)
 - [x] WhatsApp-antwoorden nooit verliezen bij een externe verzendfout
 - [x] Twilio-accountblokkades begrijpelijk tonen en met gedragstests afdekken
 - [x] Test- en betrouwbaarheidsaudit vertalen naar concrete kritieke-ketenchecks

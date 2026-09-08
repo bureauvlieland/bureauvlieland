@@ -26,16 +26,17 @@ WHERE command LIKE '%' || :'old_url' || '%' OR command LIKE '%' || :'old_key' ||
 SELECT jobid, jobname, schedule, active FROM cron.job ORDER BY jobid;
 -- Verwacht: 16 jobs, allemaal active
 
-\echo '== 1b. Cron-tellers gelijkzetten aan de teruggezette geschiedenis'
+\echo '== 1b. Oude cron-uitvoeringsgeschiedenis weggooien (tellerconflict)'
 -- De datafase zet cron.job_run_details uit de export terug (runid tot ~3600),
--- maar de teller runid_seq blijft op de stand van het nieuwe project. Elke
--- nieuwe uitvoering botst dan op een bestaand nummer en de pg_cron-planner
--- crasht en herstart om de vijf minuten zonder ooit een job te draaien (zo
--- ging het in de nacht van 7 op 8 september 2026: geen enkele job gedraaid).
-SELECT setval('cron.runid_seq', GREATEST((SELECT max(runid) FROM cron.job_run_details), 1));
-SELECT setval('cron.jobid_seq', GREATEST((SELECT max(jobid) FROM cron.job), 1));
-SELECT last_value AS runid_seq FROM cron.runid_seq;
--- Verwacht: gelijk aan max(runid) in cron.job_run_details
+-- maar de teller runid_seq blijft op de stand van het nieuwe project en is
+-- van supabase_admin: postgres mag hem niet verzetten (setval geeft
+-- "permission denied for sequence runid_seq"). Elke nieuwe uitvoering botst
+-- dan op een bestaand nummer en de pg_cron-planner crasht en herstart om de
+-- vijf minuten zonder ooit een job te draaien (nacht van 7 op 8 september
+-- 2026). De geschiedenis van het oude project is niet nodig: weggooien.
+DELETE FROM cron.job_run_details;
+SELECT count(*) AS oude_runs_over FROM cron.job_run_details;
+-- Verwacht: 0
 
 \echo '== 2. Migratiehistorie gelijk aan de repo (anders wil de CLI alle migraties opnieuw draaien)'
 \i supabase/scripts/mark-migrations-applied.sql
