@@ -147,3 +147,21 @@ describe("logiespartners: extra checks voor de logieskeuze", () => {
     expect(r.missing).toContain("Locatie op de kaart");
   });
 });
+
+describe("calculateOverallCompleteness met profileWeight", () => {
+  it("laat bouwstenen zwaarder wegen voor activiteitenaanbieders", () => {
+    const partner = {
+      about_text: null, image_url: null, gallery_images: [], location_lat: null, location_lng: null,
+      location_description: null, website_url: null, highlight_features: [],
+    };
+    const fullBlock = {
+      short_description: longText(40), description: longText(200), image_url: "https://x/y.jpg", image_asset: null,
+      price_adult: 25, price_display_override: null, duration: "2 uur", min_people: 8, max_people: 25,
+      tags: ["a", "b"], location_address: "Havenweg 1",
+    };
+    const standard = calculateOverallCompleteness(partner, [fullBlock]);
+    const activity = calculateOverallCompleteness(partner, [fullBlock], { profileWeight: 0.4 });
+    expect(standard.score).toBe(40);
+    expect(activity.score).toBe(60);
+  });
+});

@@ -247,6 +247,22 @@ export interface ProgramRequest {
 }
 
 
+/** Openbaar profiel van de aanbieder, meegegeven door get-customer-program. */
+export interface ProviderProfile {
+  id: string;
+  name: string;
+  about_text?: string | null;
+  gallery_images?: { url: string; alt?: string }[] | null;
+  highlight_features?: string[] | null;
+  website_url?: string | null;
+  address_street?: string | null;
+  address_postal?: string | null;
+  address_city?: string | null;
+  location_lat?: number | string | null;
+  location_lng?: number | string | null;
+  location_description?: string | null;
+}
+
 export interface ProgramRequestItem {
   id: string;
   request_id: string;
@@ -288,6 +304,12 @@ export interface ProgramRequestItem {
   // Image fields (joined from building_blocks)
   image_url: string | null;
   image_asset: string | null;
+  // Bouwsteengegevens en aanbiedersprofiel (joined door get-customer-program)
+  block_short_description?: string | null;
+  block_description?: string | null;
+  block_min_people?: number | null;
+  block_max_people?: number | null;
+  provider_profile?: ProviderProfile | null;
   // Per-item customer approval (quote mode)
   customer_approved_at: string | null;
   // Quote mode fields
