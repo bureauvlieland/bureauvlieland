@@ -6,7 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Globe, MapPin, Sparkles, X, Plus, FileText, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, Globe, MapPin, Sparkles, X, Plus, FileText, Image as ImageIcon, Search, ListChecks } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FACILITIES } from "@/types/accommodation";
+import { PartnerLocationMap } from "./PartnerLocationMap";
+import { validCoordinates } from "@/lib/accommodationQuotePresentation";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerImageUpload } from "./PartnerImageUpload";
@@ -27,13 +31,19 @@ export const PartnerProfileForm = () => {
   const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
   const [highlightFeatures, setHighlightFeatures] = useState<string[]>([]);
   const [newFeature, setNewFeature] = useState("");
+  const [facilities, setFacilities] = useState<string[]>([]);
+  const [checkInTime, setCheckInTime] = useState("");
+  const [checkOutTime, setCheckOutTime] = useState("");
+  const [isAccommodation, setIsAccommodation] = useState(false);
+  const [address, setAddress] = useState("");
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
     const impersonatePartnerId = searchParams.get("impersonate");
-    let query = supabase.from("partners").select("id, about_text, website_url, location_description, location_lat, location_lng, gallery_images, highlight_features");
+    let query = supabase.from("partners").select("id, partner_type, about_text, website_url, location_description, location_lat, location_lng, gallery_images, highlight_features, facilities, check_in_time, check_out_time, address_street, address_postal, address_city");
 
     if (impersonatePartnerId) {
       const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
@@ -49,13 +59,18 @@ export const PartnerProfileForm = () => {
     const { data, error } = await query.single();
     if (data && !error) {
       setPartnerId(data.id);
-      setAboutText((data as any).about_text || "");
-      setWebsiteUrl((data as any).website_url || "");
-      setLocationDescription((data as any).location_description || "");
-      setLocationLat((data as any).location_lat?.toString() || "");
-      setLocationLng((data as any).location_lng?.toString() || "");
-      setGalleryImages((data as any).gallery_images || []);
-      setHighlightFeatures((data as any).highlight_features || []);
+      setAboutText(data.about_text || "");
+      setWebsiteUrl(data.website_url || "");
+      setLocationDescription(data.location_description || "");
+      setLocationLat(data.location_lat?.toString() || "");
+      setLocationLng(data.location_lng?.toString() || "");
+      setGalleryImages((data.gallery_images as { url: string; alt?: string }[] | null) || []);
+      setHighlightFeatures((data.highlight_features as string[] | null) || []);
+      setFacilities(Array.isArray(data.facilities) ? data.facilities : []);
+      setCheckInTime(data.check_in_time || "");
+      setCheckOutTime(data.check_out_time || "");
+      setIsAccommodation(data.partner_type === "accommodation" || data.partner_type === "both");
+      setAddress([data.address_street, data.address_postal, data.address_city].filter(Boolean).join(", "));
     }
     setIsLoading(false);
   }, [searchParams]);
@@ -78,7 +93,10 @@ export const PartnerProfileForm = () => {
           location_lng: locationLng ? parseFloat(locationLng) : null,
           gallery_images: galleryImages,
           highlight_features: highlightFeatures,
-        } as any)
+          facilities,
+          check_in_time: checkInTime || null,
+          check_out_time: checkOutTime || null,
+        })
         .eq("id", partnerId);
 
       if (error) throw error;
@@ -102,6 +120,35 @@ export const PartnerProfileForm = () => {
   const removeFeature = (index: number) => {
     setHighlightFeatures(highlightFeatures.filter((_, i) => i !== index));
   };
+
+  const toggleFacility = (value: string) => {
+    setFacilities((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  };
+
+  // Coördinaten opzoeken op het adres uit de instellingen, zodat niemand ze
+  // hoeft over te tikken (en er geen "532964885" meer ontstaat).
+  const handleGeocode = async () => {
+    if (!address) return;
+    setIsGeocoding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("geocode-address", { body: { address } });
+      const hit = !error && data && typeof data.lat === "number" ? validCoordinates(data.lat, data.lng) : null;
+      if (!hit) {
+        toast({ title: "Adres niet gevonden", description: "Vul de coördinaten handmatig in of pas het adres aan bij Instellingen.", variant: "destructive" });
+        return;
+      }
+      setLocationLat(hit.lat.toFixed(7));
+      setLocationLng(hit.lng.toFixed(7));
+      toast({ title: "Locatie gevonden", description: "Controleer de speld op de kaart en sla het profiel op." });
+    } catch (err) {
+      reportError(err, { where: "PartnerProfileForm: geocode" });
+      toast({ title: "Opzoeken mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const previewCoords = validCoordinates(locationLat, locationLng);
 
   if (isLoading) {
     return (
@@ -212,6 +259,15 @@ export const PartnerProfileForm = () => {
               rows={2}
             />
           </div>
+          {address && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border bg-muted/30 p-3">
+              <p className="text-sm flex-1"><span className="text-muted-foreground">Adres uit uw instellingen:</span> {address}</p>
+              <Button type="button" variant="outline" size="sm" onClick={handleGeocode} disabled={isGeocoding}>
+                {isGeocoding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                Zet op de kaart
+              </Button>
+            </div>
+          )}
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="location_lat">Breedtegraad</Label>
@@ -236,8 +292,55 @@ export const PartnerProfileForm = () => {
               />
             </div>
           </div>
+          {(locationLat || locationLng) && !previewCoords && (
+            <p className="text-sm text-destructive">Deze coördinaten kloppen niet (breedtegraad tussen -90 en 90, lengtegraad tussen -180 en 180). Gebruik "Zet op de kaart".</p>
+          )}
+          {previewCoords && (
+            <PartnerLocationMap lat={previewCoords.lat} lng={previewCoords.lng} label="Uw locatie" address={address || null} isVisible />
+          )}
         </CardContent>
       </Card>
+
+      {isAccommodation && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ListChecks className="h-5 w-5 text-primary" />
+              <CardTitle>Faciliteiten en tijden</CardTitle>
+            </div>
+            <CardDescription>
+              Klanten geven bij hun aanvraag aan welke faciliteiten ze belangrijk vinden. Wat u hier aanvinkt,
+              wordt bij uw offerte vergeleken met die wensen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {FACILITIES.map((facility) => (
+                <div key={facility.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`facility-${facility.value}`}
+                    checked={facilities.includes(facility.value)}
+                    onCheckedChange={() => toggleFacility(facility.value)}
+                  />
+                  <Label htmlFor={`facility-${facility.value}`} className="text-sm font-normal cursor-pointer">
+                    {facility.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="check_in_time">Inchecken vanaf</Label>
+                <Input id="check_in_time" type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="check_out_time">Uitchecken tot</Label>
+                <Input id="check_out_time" type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Photo gallery */}
       <Card>

@@ -39,6 +39,9 @@ import { AccommodationInvoiceDialog } from "./AccommodationInvoiceDialog";
 import { QuoteExtrasList } from "./QuoteExtrasList";
 import { PartnerCustomerMessagesPanel } from "./PartnerCustomerMessagesPanel";
 import { usePartnerRoomTypes } from "@/hooks/usePartnerRoomTypes";
+import { PartnerImageUpload } from "./PartnerImageUpload";
+import { roomSnapshotFromType } from "@/lib/accommodationQuotePresentation";
+import type { RoomConfiguration } from "@/types/accommodation";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { reportError } from "@/lib/errorReporting";
 
@@ -97,6 +100,7 @@ interface AccommodationQuote {
   valid_until: string;
   partner_notes: string | null;
   room_configuration: Record<string, unknown>[] | null;
+  images?: { url: string; alt?: string }[] | null;
   submitted_at: string | null;
   quote_attachment_path: string | null;
   quote_attachment_filename: string | null;
@@ -108,12 +112,7 @@ interface AccommodationQuote {
   commission_amount: number | null;
 }
 
-interface RoomConfig {
-  type: string;
-  count: number;
-  price_per_night: number;
-  occupancy: number;
-}
+type RoomConfig = RoomConfiguration;
 
 interface PartnerAccommodationQuoteSheetProps {
   isOpen: boolean;
@@ -138,6 +137,7 @@ interface PartnerAccommodationQuoteSheetProps {
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: RoomConfig[];
+    images: { url: string; alt?: string }[];
     quoteExternalUrl: string;
     attachmentFile?: File | null;
   }) => Promise<boolean>;
@@ -189,6 +189,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const [validUntil, setValidUntil] = useState("");
   const [partnerNotes, setPartnerNotes] = useState("");
   const [roomConfiguration, setRoomConfiguration] = useState<RoomConfig[]>([]);
+  const [quoteImages, setQuoteImages] = useState<{ url: string; alt?: string }[]>([]);
   const [quoteExternalUrl, setQuoteExternalUrl] = useState("");
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
@@ -254,6 +255,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setRoomConfiguration(Array.isArray(existingQuote.room_configuration) 
         ? (existingQuote.room_configuration as unknown as RoomConfig[])
         : []);
+      setQuoteImages(Array.isArray(existingQuote.images) ? existingQuote.images : []);
       setQuoteExternalUrl(existingQuote.quote_external_url || "");
       setAttachmentFile(null);
       setResponseType("submit_quote");
@@ -276,6 +278,7 @@ export const PartnerAccommodationQuoteSheet = ({
       setValidUntil(format(addDays(new Date(), 14), "yyyy-MM-dd"));
       setPartnerNotes("");
       setRoomConfiguration([]);
+      setQuoteImages([]);
       setQuoteExternalUrl("");
       setAttachmentFile(null);
       setResponseType("submit_quote");
@@ -317,12 +320,9 @@ export const PartnerAccommodationQuoteSheet = ({
   const addRoomFromPreset = (roomTypeId: string) => {
     const roomType = partnerRoomTypes.find(rt => rt.id === roomTypeId);
     if (roomType) {
-      setRoomConfiguration(prev => [...prev, {
-        type: roomType.name,
-        count: 1,
-        price_per_night: roomType.price_per_night || 0,
-        occupancy: roomType.max_occupancy,
-      }]);
+      // Momentopname van het kamertype: de klant ziet foto's en faciliteiten
+      // zoals ze op het moment van offreren waren.
+      setRoomConfiguration(prev => [...prev, roomSnapshotFromType(roomType)]);
     }
   };
 
@@ -373,6 +373,7 @@ export const PartnerAccommodationQuoteSheet = ({
       validUntil,
       partnerNotes: partnerNotes.trim(),
       roomConfiguration,
+      images: quoteImages,
       quoteExternalUrl: quoteExternalUrl.trim(),
       attachmentFile,
     });
@@ -841,13 +842,17 @@ export const PartnerAccommodationQuoteSheet = ({
             {/* Room Configuration */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Kamerconfiguratie (optioneel)</Label>
+                <Label>Kamers in deze offerte (optioneel)</Label>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Kies bij voorkeur een van uw kamertypes: de klant ziet dan de foto's, bedden en
+                faciliteiten van die kamer. Handmatig invullen kan ook.
+              </p>
 
               {/* Room Type Presets Selection */}
               {!isReadOnly && partnerRoomTypes.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Selecteer uit uw kamersoorten:</p>
+                  <p className="text-sm text-muted-foreground">Uw kamertypes:</p>
                   <div className="flex flex-wrap gap-2">
                     {partnerRoomTypes.map((roomType) => (
                       <Button
@@ -877,13 +882,20 @@ export const PartnerAccommodationQuoteSheet = ({
                 <div className="space-y-2">
                   {roomConfiguration.map((room, index) => (
                     <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 space-y-1">
                         <Input
                           placeholder="Kamertype"
                           value={room.type}
                           onChange={(e) => updateRoom(index, { type: e.target.value })}
                           disabled={isReadOnly}
                         />
+                        {room.room_type_id ? (
+                          <p className="text-[11px] text-muted-foreground">
+                            Gekoppeld aan uw kamertype · {room.images?.length ?? 0} foto's · {room.facilities?.length ?? 0} faciliteiten
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground">Handmatig; zonder foto's en faciliteiten</p>
+                        )}
                       </div>
                       <div className="w-20">
                         <Input
@@ -1073,6 +1085,34 @@ export const PartnerAccommodationQuoteSheet = ({
                 disabled={isReadOnly}
                 min={format(new Date(), "yyyy-MM-dd")}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Foto's bij deze offerte (optioneel)</Label>
+              <p className="text-xs text-muted-foreground">
+                Alleen nodig als u iets anders wilt laten zien dan de galerij van uw bedrijfsprofiel,
+                bijvoorbeeld de vleugel of het huisje dat u aanbiedt.
+              </p>
+              {isReadOnly ? (
+                quoteImages.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {quoteImages.map((img, i) => (
+                      <img key={i} src={img.url} alt={img.alt || ""} className="h-16 w-24 rounded object-cover" />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Geen eigen foto's; de galerij van uw profiel wordt getoond.</p>
+                )
+              ) : (
+                <PartnerImageUpload
+                  partnerId={partnerId}
+                  images={quoteImages}
+                  onImagesChange={setQuoteImages}
+                  storagePath={`quotes/${request.id}`}
+                  maxImages={6}
+                  label=""
+                />
+              )}
             </div>
 
             <div className="space-y-2">

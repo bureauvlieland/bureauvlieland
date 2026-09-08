@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { BedDouble, Clock, AlertTriangle, ExternalLink, FileText, ImageIcon, Mail, MapPin, Check } from "lucide-react";
+import { BedDouble, Clock, AlertTriangle, ExternalLink, FileText, ImageIcon, Mail, MapPin, Check, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { getBoardDisplay } from "@/types/accommodation";
 import type { AccommodationQuote, RoomConfiguration } from "@/types/accommodation";
 import { calculateExtraTotal, type AccommodationQuoteExtra } from "@/types/accommodationExtras";
-import { presentQuotePartner, shortText, formatExtraMoment } from "@/lib/accommodationQuotePresentation";
+import { presentQuotePartner, presentRoom, shortText, formatExtraMoment, describeDistances, matchFacilities } from "@/lib/accommodationQuotePresentation";
 import { AccommodationQuoteDetailSheet } from "./AccommodationQuoteDetailSheet";
 
 interface AccommodationQuoteCardProps {
@@ -23,6 +23,8 @@ interface AccommodationQuoteCardProps {
   extrasOverride?: AccommodationQuoteExtra[];
   numberOfGuests?: number | null;
   numberOfNights?: number | null;
+  /** Gewenste faciliteiten uit de aanvraag (waarden uit FACILITIES). */
+  facilitiesRequired?: string[] | null;
 }
 
 /**
@@ -32,13 +34,15 @@ interface AccommodationQuoteCardProps {
  * met dag en tijd. "Alle details" opent het detailvenster.
  */
 export const AccommodationQuoteCard = ({
-  quote, isExpired, validUntil, onSelect, onContact, formatPrice, extrasOverride, numberOfGuests, numberOfNights,
+  quote, isExpired, validUntil, onSelect, onContact, formatPrice, extrasOverride, numberOfGuests, numberOfNights, facilitiesRequired,
 }: AccommodationQuoteCardProps) => {
   const [detailOpen, setDetailOpen] = useState(false);
   const { data: extrasFromHook = [] } = useQuoteExtras(extrasOverride ? undefined : quote.id);
   const extras = extrasOverride ?? extrasFromHook;
   const partner = presentQuotePartner(quote);
-  const rooms = (Array.isArray(quote.room_configuration) ? quote.room_configuration : []) as RoomConfiguration[];
+  const rooms = ((Array.isArray(quote.room_configuration) ? quote.room_configuration : []) as RoomConfiguration[]).map(presentRoom);
+  const distances = describeDistances(partner.coordinates);
+  const facilityMatch = matchFacilities(facilitiesRequired, partner.facilities);
   const includes = Array.isArray(quote.includes) ? (quote.includes as string[]) : [];
   const board = getBoardDisplay(quote.board_type);
   const summary = shortText(partner.aboutText) ?? shortText(quote.description);
@@ -112,6 +116,21 @@ export const AccommodationQuoteCard = ({
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" /><span>{locationLine}</span>
               </p>
             )}
+            {distances && (
+              <p className="text-sm text-muted-foreground flex items-start gap-1.5">
+                <Navigation className="h-4 w-4 mt-0.5 shrink-0" /><span>{distances.summary}</span>
+              </p>
+            )}
+            {!facilityMatch.unknown && (facilityMatch.matched.length > 0 || facilityMatch.missing.length > 0) && (
+              <div className="flex flex-wrap gap-1.5 pt-0.5 text-xs">
+                {facilityMatch.matched.map((label) => (
+                  <span key={label} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5"><Check className="h-3 w-3" />{label}</span>
+                ))}
+                {facilityMatch.missing.map((label) => (
+                  <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2 py-0.5"><X className="h-3 w-3" />{label}</span>
+                ))}
+              </div>
+            )}
             {partner.highlights.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {partner.highlights.slice(0, 6).map((f, i) => (
@@ -137,7 +156,22 @@ export const AccommodationQuoteCard = ({
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Kamers</p>
             {rooms.length > 0 ? rooms.map((room, idx) => (
-              <p key={idx}><strong>{room.count}×</strong> {room.type}{room.occupancy ? <span className="text-muted-foreground"> · {room.occupancy} pers.</span> : null}</p>
+              <div key={idx} className="flex items-center gap-2">
+                {room.images[0] && (
+                  <button type="button" onClick={() => setDetailOpen(true)} className="shrink-0" aria-label={`Foto's van ${room.name}`}>
+                    <img src={transformImageUrl(room.images[0].url, { width: 160 })} alt={room.images[0].alt || room.name} className="h-9 w-12 rounded object-cover" loading="lazy" />
+                  </button>
+                )}
+                <p className="min-w-0">
+                  <strong>{room.count}×</strong> {room.name}
+                  {room.occupancy ? <span className="text-muted-foreground"> · {room.occupancy} pers.</span> : null}
+                  {room.hasDetails && (
+                    <button type="button" onClick={() => setDetailOpen(true)} className="block text-xs text-primary hover:underline">
+                      {[room.bedLabel, room.sizeSqm ? `${room.sizeSqm} m²` : null, room.facilityLabels.length > 0 ? `${room.facilityLabels.length} faciliteiten` : null].filter(Boolean).join(" · ") || "Bekijk kamer"}
+                    </button>
+                  )}
+                </p>
+              </div>
             )) : (
               <p className="text-muted-foreground flex items-center gap-1.5"><BedDouble className="h-4 w-4" />Kamerverdeling volgt in de offerte</p>
             )}
@@ -219,6 +253,7 @@ export const AccommodationQuoteCard = ({
         isExpired={isExpired}
         numberOfGuests={numberOfGuests}
         numberOfNights={numberOfNights}
+        facilitiesRequired={facilitiesRequired}
       />
     </div>
   );

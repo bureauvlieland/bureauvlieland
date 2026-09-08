@@ -45,6 +45,7 @@ interface AccommodationQuote {
   accommodation_name: string;
   description: string | null;
   room_configuration: Record<string, unknown>[] | null;
+  images?: { url: string; alt?: string }[] | null;
   price_total: number;
   price_per_person_per_night: number | null;
   price_includes_vat: boolean;
@@ -246,6 +247,7 @@ const PartnerAccommodationContent = () => {
     validUntil: string;
     partnerNotes: string;
     roomConfiguration: any[];
+    images?: { url: string; alt?: string }[];
     quoteExternalUrl: string;
     attachmentFile?: File | null;
   }) => {
@@ -287,6 +289,7 @@ const PartnerAccommodationContent = () => {
           valid_until: quoteData.validUntil,
           partner_notes: quoteData.partnerNotes,
           room_configuration: quoteData.roomConfiguration,
+          images: quoteData.images ?? [],
           board_type: quoteData.boardType || null,
           board_notes: quoteData.boardNotes || null,
           quote_external_url: quoteData.quoteExternalUrl || null,
