@@ -26,11 +26,11 @@ export const usePartnerCompleteness = ({ partnerId }: UsePartnerCompletenessOpti
     let cancelled = false;
     (async () => {
       setIsLoading(true);
-      const [{ data: partner }, { data: blocks }] = await Promise.all([
+      const [{ data: partner }, { data: blocks }, { data: roomTypes }] = await Promise.all([
         supabase
           .from("partners")
           .select(
-            "about_text, image_url, gallery_images, location_lat, location_lng, location_description, website_url, highlight_features",
+            "about_text, image_url, gallery_images, location_lat, location_lng, location_description, website_url, highlight_features, partner_type, accommodation_description, facilities, check_in_time, check_out_time",
           )
           .eq("id", partnerId)
           .maybeSingle(),
@@ -41,20 +41,31 @@ export const usePartnerCompleteness = ({ partnerId }: UsePartnerCompletenessOpti
           )
           .eq("provider_id", partnerId)
           .neq("status", "concept"),
+        supabase
+          .from("partner_room_types")
+          .select("images")
+          .eq("partner_id", partnerId)
+          .eq("is_active", true),
       ]);
       if (cancelled || !partner) {
         setIsLoading(false);
         return;
       }
       const input: PartnerCompletenessInput = {
-        about_text: (partner as any).about_text ?? null,
-        image_url: (partner as any).image_url ?? null,
-        gallery_images: ((partner as any).gallery_images ?? []) as any,
-        location_lat: (partner as any).location_lat ?? null,
-        location_lng: (partner as any).location_lng ?? null,
-        location_description: (partner as any).location_description ?? null,
-        website_url: (partner as any).website_url ?? null,
-        highlight_features: ((partner as any).highlight_features ?? []) as any,
+        about_text: partner.about_text ?? null,
+        image_url: partner.image_url ?? null,
+        gallery_images: (partner.gallery_images as { url: string; alt?: string }[] | null) ?? [],
+        location_lat: partner.location_lat ?? null,
+        location_lng: partner.location_lng ?? null,
+        location_description: partner.location_description ?? null,
+        website_url: partner.website_url ?? null,
+        highlight_features: (partner.highlight_features as string[] | null) ?? [],
+        partner_type: partner.partner_type ?? null,
+        accommodation_description: partner.accommodation_description ?? null,
+        facilities: partner.facilities ?? [],
+        check_in_time: partner.check_in_time ?? null,
+        check_out_time: partner.check_out_time ?? null,
+        room_types: (roomTypes ?? []).map((rt) => ({ images: rt.images })),
       };
       setData(calculateOverallCompleteness(input, (blocks ?? []) as any));
       setIsLoading(false);

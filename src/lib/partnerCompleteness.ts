@@ -15,7 +15,18 @@ export interface PartnerCompletenessInput {
   location_description: string | null;
   website_url: string | null;
   highlight_features: string[] | null;
+  /** Alleen bij logiespartners ("accommodation" of "both") tellen de extra checks hieronder mee. */
+  partner_type?: string | null;
+  accommodation_description?: string | null;
+  facilities?: string[] | null;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+  /** Actieve kamertypes van de partner, met hun foto's. */
+  room_types?: { images?: unknown }[] | null;
 }
+
+export const isAccommodationPartner = (partnerType: string | null | undefined) =>
+  partnerType === "accommodation" || partnerType === "both";
 
 export interface CompletenessResult {
   score: number; // 0..100, afgerond
@@ -49,20 +60,38 @@ export const calculatePartnerCompleteness = (
   const highlights = Array.isArray(partner.highlight_features)
     ? partner.highlight_features
     : [];
-  return compute([
+  const lat = Number(partner.location_lat);
+  const lng = Number(partner.location_lng);
+  const validCoords =
+    partner.location_lat !== null && partner.location_lng !== null &&
+    Number.isFinite(lat) && Number.isFinite(lng) &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && !(lat === 0 && lng === 0);
+  const checks: Check[] = [
     { label: "Uitgebreide omschrijving (≥ 200 tekens)", pass: hasText(partner.about_text, 200), weight: 2 },
     { label: "Hoofdafbeelding", pass: hasText(partner.image_url), weight: 2 },
     { label: "Galerij met ≥ 3 foto's", pass: gallery.length >= 3, weight: 2 },
     {
       label: "Locatie op de kaart",
-      pass:
-        typeof partner.location_lat === "number" &&
-        typeof partner.location_lng === "number" &&
-        hasText(partner.location_description),
+      pass: validCoords && hasText(partner.location_description),
     },
     { label: "Website-link", pass: hasText(partner.website_url) },
     { label: "≥ 3 highlights / kenmerken", pass: highlights.length >= 3 },
-  ]);
+  ];
+  if (isAccommodationPartner(partner.partner_type)) {
+    // Wat de klant op de logieskaart ziet (docs/plan-logieskeuze.md, fase 2/3).
+    const facilities = Array.isArray(partner.facilities) ? partner.facilities : [];
+    const roomTypes = Array.isArray(partner.room_types) ? partner.room_types : [];
+    const roomTypesWithPhotos = roomTypes.filter(
+      (rt) => Array.isArray(rt.images) && rt.images.length > 0,
+    ).length;
+    checks.push(
+      { label: "≥ 3 faciliteiten aangevinkt", pass: facilities.length >= 3 },
+      { label: "In- en uitchecktijd", pass: hasText(partner.check_in_time) && hasText(partner.check_out_time) },
+      { label: "≥ 1 kamertype", pass: roomTypes.length >= 1, weight: 2 },
+      { label: "Foto's bij elk kamertype", pass: roomTypes.length >= 1 && roomTypesWithPhotos === roomTypes.length },
+    );
+  }
+  return compute(checks);
 };
 
 export const calculateBlockCompleteness = (

@@ -58,6 +58,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "email-webhook-heartbeat": "deno",
   "map-payment-selftest": "deno",
   "reopen-program-request": "deno",
+  "send-partner-mailing": "deno",
   "set-project-completion": "deno",
   "update-partner-item-status": "deno",
 };

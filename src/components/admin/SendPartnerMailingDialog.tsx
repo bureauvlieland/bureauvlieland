@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 import {
   Sheet,
@@ -41,6 +41,11 @@ interface SendPartnerMailingDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedPartnerIds?: string[];
   totalActivePartners: number;
+  /** Vooraf ingevuld onderwerp en bericht (bijv. herinnering logiesprofiel). */
+  defaultSubject?: string;
+  defaultBody?: string;
+  /** Extra variabelen per partner, bijv. {{missing_list}}; de server vult ze in. */
+  partnerVariables?: Record<string, Record<string, string>>;
 }
 
 const DEFAULT_BODY = `<!DOCTYPE html>
@@ -68,10 +73,22 @@ export function SendPartnerMailingDialog({
   onOpenChange,
   selectedPartnerIds,
   totalActivePartners,
+  defaultSubject,
+  defaultBody,
+  partnerVariables,
 }: SendPartnerMailingDialogProps) {
   const { toast } = useToast();
-  const [subject, setSubject] = useState("");
-  const [htmlBody, setHtmlBody] = useState(DEFAULT_BODY);
+  const [subject, setSubject] = useState(defaultSubject ?? "");
+  const [htmlBody, setHtmlBody] = useState(defaultBody ?? DEFAULT_BODY);
+
+  // Bij openen met een vooraf ingevuld bericht: dat bericht tonen, niet een
+  // eerdere concepttekst.
+  useEffect(() => {
+    if (open && (defaultSubject || defaultBody)) {
+      setSubject(defaultSubject ?? "");
+      setHtmlBody(defaultBody ?? DEFAULT_BODY);
+    }
+  }, [open, defaultSubject, defaultBody]);
   const [isSending, setIsSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -84,7 +101,13 @@ export function SendPartnerMailingDialog({
   const isTargeted = selectedPartnerIds && selectedPartnerIds.length > 0;
 
   const generatePreview = () => {
-    return htmlBody.replace(/\{\{partner_name\}\}/g, "Jan de Vries");
+    const firstId = selectedPartnerIds?.[0];
+    const vars = (firstId && partnerVariables?.[firstId]) || {};
+    let html = htmlBody.replace(/\{\{partner_name\}\}/g, "Jan de Vries");
+    for (const [key, value] of Object.entries(vars)) {
+      html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    }
+    return html;
   };
 
   const handleSend = async () => {
@@ -99,6 +122,9 @@ export function SendPartnerMailingDialog({
       const body: Record<string, unknown> = { subject, htmlBody };
       if (isTargeted) {
         body.partnerIds = selectedPartnerIds;
+      }
+      if (partnerVariables) {
+        body.partnerVariables = partnerVariables;
       }
 
       const response = await supabase.functions.invoke("send-partner-mailing", { body });
@@ -143,8 +169,8 @@ export function SendPartnerMailingDialog({
   const handleReset = () => {
     setResults(null);
     setProgress(0);
-    setSubject("");
-    setHtmlBody(DEFAULT_BODY);
+    setSubject(defaultSubject ?? "");
+    setHtmlBody(defaultBody ?? DEFAULT_BODY);
   };
 
   return (
