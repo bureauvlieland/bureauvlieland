@@ -57,7 +57,7 @@ const DEFAULT_BODY = `<!DOCTYPE html>
   </div>
   <div style="background: #e8f0f8; padding: 20px 30px; text-align: center;">
     <p style="color: #374151; font-size: 13px; margin: 0;">
-      Vragen? <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a> of 0562-452090
+      Vragen? <a href="mailto:erwin@bureauvlieland.nl" style="color: #1e3a5f;">erwin@bureauvlieland.nl</a> of 0562 700 208
     </p>
   </div>
 </body>

@@ -256,8 +256,9 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    const bureauSubject = bureauTemplate?.subject || `${subjectPrefix}Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`;
-    const customerSubject = customerTemplate?.subject || `${subjectPrefix}Bevestiging programma aanvraag - Bureau Vlieland`;
+    // Prefix ([TEST]) altijd één keer, ongeacht of het onderwerp uit de template komt.
+    const bureauSubject = `${subjectPrefix}${bureauTemplate?.subject || `Nieuwe programma aanvraag - ${requestData.numberOfPeople} personen`}`;
+    const customerSubject = `${subjectPrefix}${customerTemplate?.subject || "Bevestiging programma aanvraag - Bureau Vlieland"}`;
 
     console.log(`Sending emails: 1 to bureau, 1 to customer`);
 
@@ -265,13 +266,13 @@ const handler = async (req: Request): Promise<Response> => {
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Website" },
         To: [{ Email: "erwin@bureauvlieland.nl", Name: "Erwin Soolsma" }],
-        Subject: bureauTemplate?.subject ? bureauSubject : `${subjectPrefix}${bureauSubject}`,
+        Subject: bureauSubject,
         HTMLPart: bureauEmailHtml,
       },
       {
         From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
         To: [{ Email: requestData.email, Name: requestData.name }],
-        Subject: customerTemplate?.subject ? customerSubject : `${subjectPrefix}${customerSubject}`,
+        Subject: customerSubject,
         HTMLPart: customerEmailHtml,
       }
     ]);

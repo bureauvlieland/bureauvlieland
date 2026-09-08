@@ -843,7 +843,7 @@ const PartnerGuides = () => {
                     <a href="mailto:erwin@bureauvlieland.nl" className="text-primary underline">
                       erwin@bureauvlieland.nl
                     </a>{" "}
-                    of bel 0562-452090.
+                    of bel 0562 700 208.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -875,7 +875,7 @@ const PartnerGuides = () => {
             </a>{" "}
             of bel{" "}
             <a href="tel:0562452090" className="text-primary underline">
-              0562-452090
+              0562 700 208
             </a>
           </p>
         </div>

@@ -223,6 +223,8 @@ Deno.serve(async (req) => {
       price_per_person_per_night: quote.price_per_person_per_night ? formatCurrencyNL(quote.price_per_person_per_night) : "",
       includes_list: includes.map((item: string) => `<li>${sanitizeHtml(item)}</li>`).join(""),
       valid_until: formatDateNL(quote.valid_until),
+      // Toelichting van de aanbieder bij de offerte; de template toont hem alleen als hij er is.
+      description: sanitizeHtml(quote.description || ""),
       portal_link: portalUrl,
     };
 

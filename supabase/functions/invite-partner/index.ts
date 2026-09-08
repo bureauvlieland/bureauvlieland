@@ -7,8 +7,7 @@ import {
   getRecipientEmail,
   SENDER_EMAIL,
   SENDER_NAME,
-  TemplateIds,
-} from "../_shared/email-templates.ts";
+  TemplateIds, getPortalBaseUrl } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
@@ -109,7 +108,7 @@ Deno.serve(async (req) => {
     if (roleError) console.error("Error adding partner role:", roleError);
 
     const origin = req.headers.get("origin") || "https://bureauvlieland.nl";
-    const portalLink = `${origin}/partner`;
+    const portalLink = `${getPortalBaseUrl(origin)}/partner/login`;
     const redirectTo = "https://bureauvlieland.nl/partner/reset-password";
 
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
