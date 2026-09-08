@@ -73,7 +73,6 @@ Alles hiervoor wordt al opgehaald door `get-customer-program`.
   `check_in_time`, `check_out_time`. Afstand tot de boot en het dorp wordt
   berekend uit de coördinaten (geen invoer).
 - Geocoderen vanuit het partnerprofiel (bestaat al voor bouwstenen).
-- `accommodation_quotes.visible_to_customer`: besluit nodig, zie hieronder.
 
 ### Fase 3: content van partners (doorlopend, start direct)
 
@@ -96,10 +95,9 @@ PDF "uw logiesoffertes" om intern te delen.
 
 ## Besluiten die ik van jou nodig heb
 
-1. **Curatie.** Nu staat een offerte direct in het klantportaal zodra de
-   partner hem indient; "Doorsturen" in admin stuurt alleen een mail. Wil je
-   dat het bureau eerst kiest welke offertes de klant ziet (vlag), of blijft
-   alles direct zichtbaar?
+1. **Curatie.** Besloten 8 september: offertes blijven direct zichtbaar
+   zodra de partner ze indient; geen vlag. "Doorsturen" in admin blijft
+   alleen de mail aan de klant.
 2. **Kamertype verplicht** bij het offreren, zodat foto's en faciliteiten
    altijd meekomen? Of optioneel met vrije tekst als terugval?
 3. **Content**: wie vult de profielen: partners zelf, het bureau, of Google
