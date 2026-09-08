@@ -58,7 +58,8 @@ describe("verzorging is nergens meer stil", () => {
   it("klantweergaven gebruiken de altijd-zichtbare helper", () => {
     for (const file of [
       "src/components/customer-portal/AccommodationSection.tsx",
-      "src/components/customer-portal/AccommodationQuoteItem.tsx",
+      "src/components/customer-portal/AccommodationQuoteCard.tsx",
+      "src/components/customer-portal/AccommodationQuoteDetailSheet.tsx",
       "src/components/accommodation-portal/AccommodationQuoteCard.tsx",
       "src/components/accommodation-portal/AccommodationQuoteDetailSheet.tsx",
       "src/lib/stayOverviewPdf.ts",

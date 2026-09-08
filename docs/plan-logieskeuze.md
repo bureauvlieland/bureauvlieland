@@ -1,6 +1,6 @@
 # Plan: logieskeuze door de klant
 
-Status: voorstel, 8 september 2026. Grafisch voorstel: https://claude.ai/code/artifact/9db83ed8-2b94-49f0-8fb5-4937dadbc43f
+Status: besluiten genomen 8 september 2026; fase 1 gebouwd (pull request "Logieskeuze fase 1"), fase 2 en 3 nog niet. Grafisch voorstel: https://claude.ai/code/artifact/9db83ed8-2b94-49f0-8fb5-4937dadbc43f
 (desktopkaart, detailvenster, mobiel). Niets hiervan is gebouwd; eerst akkoord.
 
 ## Waarom
@@ -37,15 +37,15 @@ hotel pas als hij getekend heeft.
 1. **Kiezen werkte niet** op /mijn-programma: de dialoog leverde handtekening
    en akkoord, maar ze werden niet doorgegeven; de server weigerde. Gefixt op
    8 september (pull request "Praktische info").
-2. **Interne notities van de partner lekten naar de klant.** Het veld heet in
-   het partnerportaal "Interne notities (alleen voor u)" en stond op drie
-   plekken in de klantweergave. Verwijderen uit de klantdata.
-3. **De offertebijlage** (PDF van de partner) wordt in de hoofdroute niet
-   getoond, hoewel de link wordt aangemaakt.
-4. **Thumbnail** van de partner is altijd leeg (`image_url` zit niet in de
-   opgehaalde velden).
-5. **Bijlage-upload** werkt maar op één van de twee partnerroutes
-   (`/partner/logies` wel, `/partner/logies/:id` niet).
+2. **"Interne notities" stonden bij de klant.** Besluit: het veld heet nu
+   "Toelichting voor de klant" in partnerportaal en admin. Gedaan.
+3. **De offertebijlage** wordt nu getoond op de kaart en in het detailvenster.
+   Gedaan.
+4. **Thumbnail**: de kaart gebruikt de galerij van de accommodatie. Gedaan.
+5. **Bijlage-upload** op `/partner/logies/:id` werkt nu ook en zet
+   `forwarded_at` terug, gelijk aan `/partner/logies`. Gedaan.
+6. **Coördinaten**: één partner had een breedtegraad zonder decimaalpunt;
+   hersteld met een controle in de database (migratie 20260908120000).
 
 ## Voorstel in fases
 
@@ -98,12 +98,14 @@ PDF "uw logiesoffertes" om intern te delen.
 1. **Curatie.** Besloten 8 september: offertes blijven direct zichtbaar
    zodra de partner ze indient; geen vlag. "Doorsturen" in admin blijft
    alleen de mail aan de klant.
-2. **Kamertype verplicht** bij het offreren, zodat foto's en faciliteiten
-   altijd meekomen? Of optioneel met vrije tekst als terugval?
-3. **Content**: wie vult de profielen: partners zelf, het bureau, of Google
-   Places als startpunt?
-4. **Interne notities**: definitief intern (advies) of hernoemen tot
-   "toelichting voor de klant"?
+2. **Kamertype**: besloten 8 september: niet verplicht, wel gewenst. De
+   offerte-sheet zet het kamertype voorop en laat vrije tekst als terugval.
+3. **Content**: besloten 8 september: de partner vult zijn profiel; Google
+   Places mag als startpunt dienen (import met bronvermelding, partner
+   controleert en vult aan).
+4. **Interne notities**: besloten 8 september: het veld wordt "Toelichting
+   voor de klant" (partnerportaal en klantweergave); de afwijsreden blijft
+   het via dit veld gebruiken.
 
 ## Volgorde
 

@@ -33,7 +33,7 @@ import {
   getBoardDisplay,
 } from "@/types/accommodation";
 import { summarizeBoard, summarizeRooms } from "@/lib/accommodationSetup";
-import { AccommodationQuoteItem } from "./AccommodationQuoteItem";
+import { AccommodationQuoteCard } from "./AccommodationQuoteCard";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
 import { HotelLocationMap } from "./HotelLocationMap";
@@ -104,6 +104,34 @@ export const AccommodationSection = ({
       setSelectedQuoteForConfirm(null);
     }
   };
+
+  // Wensen van de klant als chips boven de offertes (alleen wat is ingevuld).
+  const wishChips = useMemo(() => {
+    if (!accommodation) return [] as string[];
+    const chips: string[] = [];
+    const arrival = new Date(accommodation.arrival_date);
+    const departure = new Date(accommodation.departure_date);
+    if (!Number.isNaN(arrival.getTime()) && !Number.isNaN(departure.getTime())) {
+      const nights = differenceInDays(departure, arrival);
+      chips.push(`${format(arrival, "d MMM", { locale: nl })} t/m ${format(departure, "d MMM", { locale: nl })}${nights > 0 ? ` · ${nights} ${nights === 1 ? "nacht" : "nachten"}` : ""}`);
+    }
+    if (accommodation.number_of_guests) chips.push(`${accommodation.number_of_guests} personen`);
+    const rooms = summarizeRooms(accommodation);
+    if (rooms) chips.push(rooms);
+    const board = summarizeBoard(accommodation);
+    if (board) chips.push(board);
+    for (const v of accommodation.location_preference || []) {
+      const l = LOCATION_PREFERENCES.find((o) => o.value === v);
+      if (l && v !== "no_preference") chips.push(l.label);
+    }
+    const facilities: string[] = [];
+    for (const v of accommodation.facilities_required || []) {
+      const label = FACILITIES.find((o) => o.value === v)?.label;
+      if (label) facilities.push(label);
+    }
+    if (facilities.length > 0) chips.push(facilities.join(" · "));
+    return chips;
+  }, [accommodation]);
 
   const numberOfNights = accommodation
     ? differenceInDays(new Date(accommodation.departure_date), new Date(accommodation.arrival_date))
@@ -529,15 +557,32 @@ export const AccommodationSection = ({
             );
           })()}
           <p className="text-sm text-muted-foreground">
-            Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past.
+            {submittedQuotes.length === 1
+              ? "Bekijk de offerte en kies als het bij u past."
+              : "Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past."}
           </p>
+
+          {/* Wensen van de klant, als maatstaf bij het kiezen */}
+          {wishChips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2.5">
+              <span className="text-xs font-semibold text-primary mr-1">Uw wensen</span>
+              {wishChips.map((chip, i) => (
+                <Badge key={i} variant="outline" className="bg-background font-medium">{chip}</Badge>
+              ))}
+              {onEditAccommodationSetup && (
+                <button type="button" onClick={onEditAccommodationSetup} className="ml-auto text-xs font-medium text-primary hover:underline">
+                  Wensen aanpassen
+                </button>
+              )}
+            </div>
+          )}
 
           {submittedQuotes.map((quote) => {
             const validUntil = new Date(quote.valid_until);
             const isExpired = isPast(validUntil);
 
             return (
-              <AccommodationQuoteItem
+              <AccommodationQuoteCard
                 key={quote.id}
                 quote={quote}
                 isExpired={isExpired}
@@ -549,6 +594,8 @@ export const AccommodationSection = ({
                 } : undefined}
                 formatPrice={formatPrice}
                 extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
+                numberOfGuests={accommodation.number_of_guests}
+                numberOfNights={numberOfNights}
               />
             );
           })}
