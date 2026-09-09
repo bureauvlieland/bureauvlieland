@@ -329,3 +329,20 @@ export function buildComposerPrompt(input: ComposerPromptInput): {
 
   return { system, user: parts.join("\n\n") };
 }
+
+/**
+ * Voornaam voor de aanhef uit een klantnaam. Aanspreektitels ("Mevrouw.",
+ * "Dhr.", "De heer") tellen niet als voornaam; blijft er niets over, dan
+ * "heer/mevrouw".
+ */
+export function firstNameFrom(name: string | null | undefined): string {
+  const titles = new Set(["mevrouw", "mevr", "mw", "mevrouw.", "dhr", "de", "heer", "meneer", "mr", "mrs", "ms", "mevr.", "dhr.", "mr.", "mrs.", "ms.", "fam", "fam.", "familie"]);
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  for (const part of parts) {
+    const clean = part.replace(/[.,]+$/g, "");
+    if (!clean) continue;
+    if (titles.has(clean.toLowerCase())) continue;
+    return clean;
+  }
+  return "heer/mevrouw";
+}

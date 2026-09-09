@@ -5,11 +5,11 @@
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
 - [ ] Storage-bucket `social-media` handmatig verwijderen in het Supabase-dashboard (tabellen en functies zijn al weg)
-- [ ] AI: ANTHROPIC_API_KEY toevoegen bij de edge-function-secrets (Supabase → Edge Functions → Secrets); de code kiest dan automatisch Claude (claude-opus-5) voor e-mailhulp, factuurscans, programmasuggesties en verkoop-inbox, met Gemini als terugval. Zonder die sleutel blijft Gemini; op 9 september meldde Google dat gemini-2.5-flash niet meer beschikbaar is en gaf gemini-3.6-flash een limietfout
 - [ ] Uitschrijflink in e-mails: nu een dode link; laten hangen tot er een echte uitschrijfpagina is (besluit 8 september)
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] AI van Gemini naar Claude (9 september): alle AI-functies lopen via claude-opus-5 zodra ANTHROPIC_API_KEY er is, Gemini als terugval; e-mailhulp live getest
 - [x] Activiteitenaanbieders fase 3, MAP-koppeling (8 september): bouwstenen met gekoppeld MAP-activiteitstype volgen 's nachts foto, tekst en duur (prijs per bouwsteen aan te zetten), knop "Nu bijwerken uit MAP" in admin, beschikbaarheid per dag op de klantkaart
 - [ ] MAP: de 7 MAP-aanbieders hun activiteiten laten aanbieden via *Mijn aanbod → Uw activiteiten in MijnActiviteitenplanner* (of zelf koppelen via admin → Bouwstenen → MAP-activiteit kiezen); daarna eerste nachtelijke run controleren
 - [x] Activiteitenaanbieders fase 1 en 2 (8 september): activiteitenkaart bij de klant met grotere foto, duur, groepsgrootte, ligging en blok "Over de aanbieder"; adminoverzicht Partnerprofielen met tabbladen logies/activiteiten en herinneringsmailing per groep
