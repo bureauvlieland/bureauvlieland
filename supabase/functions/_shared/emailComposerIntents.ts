@@ -237,6 +237,10 @@ export interface ComposerPromptInput {
   projectContext: Record<string, unknown>;
   dossier: DossierEntry[];
   summary: DossierSummary;
+  /** Naam van de admin die de mail stuurt, voor de ondertekening. */
+  senderName?: string | null;
+  /** Datum van vandaag (yyyy-mm-dd), zodat "morgen", "volgende week" en termijnen kloppen. */
+  today?: string | null;
 }
 
 export function buildComposerPrompt(input: ComposerPromptInput): {
@@ -255,7 +259,9 @@ export function buildComposerPrompt(input: ComposerPromptInput): {
     "Harde regels:",
     "- Platte tekst met regeleinden. Geen markdown, geen HTML, geen opsommingstekens met sterretjes.",
     `- Begin met "Beste ${input.contactFirstName},".`,
-    '- Sluit af met "Met vriendelijke groet,\\nBureau Vlieland".',
+    input.senderName
+      ? `- Sluit af met "Met vriendelijke groet,\\n${input.senderName}\\nBureau Vlieland".`
+      : '- Sluit af met "Met vriendelijke groet,\\nBureau Vlieland".',
     "- Maximaal ongeveer 180 woorden in de body.",
     "- Geen onderwerpregel in de body.",
     "- Verzin NOOIT prijzen, data, aantallen, partners, factuurnummers of toezeggingen die niet in de context staan.",
@@ -264,6 +270,9 @@ export function buildComposerPrompt(input: ComposerPromptInput): {
     "Persoonlijk en actueel:",
     "- Sluit aan op de gespreksgeschiedenis: herhaal niets wat al gezegd is en verwijs natuurlijk naar wat eerder is besproken.",
     "- Staat er een recent bericht van de klant in het dossier, ga daar dan expliciet op in (toon, naam, gestelde vraag).",
+    "- Beantwoord elke vraag uit het laatste klantbericht afzonderlijk. Kun je iets niet beantwoorden met de context, zeg dan dat je het navraagt en wanneer de klant antwoord krijgt; verzin geen antwoord.",
+    "- Gebruik de datum van vandaag voor termijnen en relatieve tijd ('morgen', 'volgende week', 'over drie weken'); reken ze uit, gok niet.",
+    "- Schrijf zoals de eerdere uitgaande berichten in het dossier: zelfde aanspreekvorm, warmte en lengte. Die zijn de stijlvoorbeelden.",
     "- Geen standaard-template-taal; schrijf zoals een mens die dit dossier kent.",
     "",
     'Output: STRICT JSON met velden {"subject": string, "body": string}. Geen extra tekst, geen code-fences.',
@@ -277,6 +286,7 @@ export function buildComposerPrompt(input: ComposerPromptInput): {
     })`,
   );
   if (input.referenceNumber) parts.push(`REFERENTIE: ${input.referenceNumber}`);
+  if (input.today) parts.push(`VANDAAG: ${input.today}`);
   if (input.portalUrl) {
     parts.push(`PORTAL URL: ${input.portalUrl} — gebruik in de mail de placeholder {{portal_url}}`);
   }

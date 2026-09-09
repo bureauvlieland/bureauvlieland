@@ -67,7 +67,8 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    if (partnerId && !/^[0-9a-f-]{36}$/i.test(partnerId)) {
+    // partners.id is een slug ("vliehors-expres"), geen UUID.
+    if (partnerId && !/^[a-z0-9_-]{1,80}$/i.test(partnerId)) {
       return new Response(
         JSON.stringify({ error: "Invalid partnerId" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

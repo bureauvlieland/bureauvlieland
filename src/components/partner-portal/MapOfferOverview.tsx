@@ -41,7 +41,7 @@ const STATUS_LABEL: Record<string, string> = {
  * 's nachts foto, tekst en duur uit MAP.
  */
 export const MapOfferOverview = ({ tenantSlug, partnerId, onOffer, blockLinkBase, refreshKey }: MapOfferOverviewProps) => {
-  const { data: types = [], isLoading, isError } = useMapActivityTypes(tenantSlug, !!tenantSlug, partnerId);
+  const { data: types = [], isLoading, isError } = useMapActivityTypes(tenantSlug, !!tenantSlug);
   const { data: blocks = [] } = useQuery({
     queryKey: ["map-offer-blocks", partnerId, refreshKey ?? 0],
     queryFn: async (): Promise<LinkedBlock[]> => {

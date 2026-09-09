@@ -6,7 +6,7 @@ import {
   truncate,
   type DossierEntry,
 } from "../_shared/emailComposerIntents.ts";
-import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
+import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE, lastAiError } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -306,8 +306,20 @@ Deno.serve(async (req) => {
     // ---------------------------------------------------------------
     // AI
     // ---------------------------------------------------------------
-    const { system, user } = buildComposerPrompt({
+    // Ondertekening met de naam van de ingelogde admin (profiel of e-mail), niet
+    // anoniem "Bureau Vlieland": persoonlijker, en de klant weet wie hij spreekt.
+    let senderName: string | null = null;
+    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+    senderName = (profile?.full_name as string | null)?.trim() || null;
+    if (!senderName && user.email) {
+      const local = user.email.split("@")[0];
+      senderName = local.charAt(0).toUpperCase() + local.slice(1);
+    }
+
+    const { system, user: userPrompt } = buildComposerPrompt({
       intent: intent ?? suggested,
+      senderName,
+      today: new Date().toISOString().slice(0, 10),
       instruction,
       currentBody,
       refineInstruction,
@@ -323,22 +335,24 @@ Deno.serve(async (req) => {
     });
 
     const aiRes = await aiChatCompletions({
-      model: "google/gemini-3.6-flash",
+      // gemini-3.6-flash was een alias van de Lovable-gateway en geeft bij Google 429; 2.5-flash is GA.
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: system },
-        { role: "user", content: user },
+        { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
     });
 
-    if (aiRes.status === 429) return json({ error: "AI-limiet bereikt — probeer het zo opnieuw." }, 429);
-    if (aiRes.status === 402) {
-      return json({ error: "AI-credits op. Voeg credits toe in Workspace → Usage." }, 402);
-    }
     if (!aiRes.ok) {
-      const t = await aiRes.text();
-      console.error("AI gateway error", aiRes.status, t);
-      return json({ error: "AI-suggestie mislukt" }, 500);
+      const detail = lastAiError?.message ? ` (${lastAiError.model}: ${lastAiError.message})` : "";
+      if (aiRes.status === 429) {
+        return json({ error: `AI-limiet bij Google bereikt${detail}. Probeer het zo opnieuw of controleer het quotum van de Gemini-sleutel.` }, 429);
+      }
+      if (aiRes.status === 401 || aiRes.status === 403) {
+        return json({ error: `Gemini-sleutel geweigerd${detail}. Controleer GEMINI_API_KEY bij de edge-function-secrets.` }, 500);
+      }
+      return json({ error: `AI-suggestie mislukt${detail}` }, 500);
     }
 
     const aiData = await aiRes.json();
