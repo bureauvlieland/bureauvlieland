@@ -7,8 +7,8 @@ Deno.test("normalizeModel haalt de gateway-prefix weg", () => {
 });
 
 Deno.test("modelChain: gevraagde model eerst, terugval erachter, geen dubbelen", () => {
-  assertEquals(modelChain("google/gemini-3.6-flash"), ["gemini-3.6-flash", "gemini-2.5-flash"]);
-  assertEquals(modelChain("google/gemini-2.5-flash"), ["gemini-2.5-flash"]);
+  assertEquals(modelChain("google/gemini-3.6-flash"), ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-2.5-pro"]);
+  assertEquals(modelChain("google/gemini-2.5-pro"), ["gemini-2.5-pro", "gemini-3.6-flash", "gemini-3-flash-preview"]);
   assertEquals(modelChain("x", ["y", "google/y"]), ["x", "y"]);
 });
 

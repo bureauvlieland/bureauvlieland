@@ -2,34 +2,58 @@
  * Eén plek voor alle AI-aanroepen vanuit edge functions.
  *
  * Alle scan- en tekstfuncties (inkoopfactuurscanner, verzamelfacturen,
- * logiesregels, e-mailhulp, programmasuggesties, sales-leads)
- * praten met Gemini via het OpenAI-compatibele eindpunt van Google:
+ * logiesregels, e-mailhulp, programmasuggesties, sales-leads) bouwen een
+ * OpenAI-achtig verzoek (messages, tools, tool_choice, response_format) en
+ * lezen een OpenAI-achtig antwoord (choices[0].message.*). Welke aanbieder
+ * dat afhandelt, bepaalt deze module:
  *
- *   GEMINI_API_KEY  → https://generativelanguage.googleapis.com/v1beta/openai
+ *   ANTHROPIC_API_KEY  → Claude (claude-opus-5) via de Anthropic SDK; het
+ *                        gevraagde Gemini-model wordt genegeerd.
+ *   GEMINI_API_KEY     → Gemini via het OpenAI-compatibele eindpunt van Google,
+ *                        met terugval op andere Gemini-modellen bij limiet of
+ *                        verdwenen model.
  *
- * Tot de verhuizing van september 2026 liep dit via de Lovable AI Gateway
- * (LOVABLE_API_KEY) en had Claudia een OpenAI-sleutel voor embeddings; beide
- * zijn vervallen. Modelnamen mogen nog met "google/" beginnen (zoals de
- * gateway ze noemde); die prefix wordt hier weggehaald.
+ * Staan beide sleutels er, dan gaat Claude voor en is Gemini de terugval bij
+ * een storing (429/5xx) aan de Claude-kant. Modelnamen mogen nog met "google/"
+ * beginnen (zoals de oude Lovable-gateway ze noemde); die prefix gaat eraf.
  */
+
+import Anthropic from "npm:@anthropic-ai/sdk";
+import { CLAUDE_MODEL, fromAnthropicResponse, toAnthropicRequest, type OpenAiLikeRequest } from "./ai-anthropic.ts";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai";
 
 export const AI_NOT_CONFIGURED_MESSAGE =
-  "Geen AI-sleutel ingesteld: zet GEMINI_API_KEY bij de secrets van de edge functions.";
+  "Geen AI-sleutel ingesteld: zet ANTHROPIC_API_KEY (Claude) of GEMINI_API_KEY bij de secrets van de edge functions.";
 
 function apiKey(): string | undefined {
   const v = Deno.env.get("GEMINI_API_KEY");
   return v && v.trim() ? v.trim() : undefined;
 }
 
-/** True als er een werkende Gemini-sleutel is. */
-export function aiConfigured(): boolean {
-  return apiKey() !== undefined;
+function anthropicKey(): string | undefined {
+  const v = Deno.env.get("ANTHROPIC_API_KEY");
+  return v && v.trim() ? v.trim() : undefined;
 }
 
-/** Modellen die geprobeerd worden als het gevraagde model faalt (429/404/400). */
-export const AI_FALLBACK_MODELS = ["gemini-2.5-flash"];
+/** True als er een AI-sleutel is (Claude of Gemini). */
+export function aiConfigured(): boolean {
+  return anthropicKey() !== undefined || apiKey() !== undefined;
+}
+
+/** Welke aanbieder een aanroep nu zou afhandelen; voor logging en de zelftest. */
+export function aiProvider(): "anthropic" | "gemini" | null {
+  if (anthropicKey()) return "anthropic";
+  if (apiKey()) return "gemini";
+  return null;
+}
+
+/**
+ * Gemini-modellen die geprobeerd worden als het gevraagde model faalt
+ * (429/404/400). gemini-2.5-flash is per september 2026 niet meer beschikbaar
+ * voor nieuwe gebruikers; Google verwijst naar gemini-3.6-flash.
+ */
+export const AI_FALLBACK_MODELS = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-2.5-pro"];
 
 /** Kale modelnaam zonder gateway-prefix ("google/gemini-2.5-pro" → "gemini-2.5-pro"). */
 export function normalizeModel(model: string): string {
@@ -67,13 +91,12 @@ export let lastAiError: { status: number; message: string; model: string } | nul
  * eigen fout- en 429-afhandeling houden. Logt status en foutmelding (nooit
  * de sleutel).
  */
-export async function aiChatCompletions(
+async function geminiChatCompletions(
   body: Record<string, unknown> & { model: string },
   options: { fallbacks?: string[] } = {},
 ): Promise<Response> {
   const key = apiKey();
   if (!key) throw new Error(AI_NOT_CONFIGURED_MESSAGE);
-  lastAiError = null;
   let last: Response | null = null;
   for (const model of modelChain(body.model, options.fallbacks)) {
     const res = await fetch(`${GEMINI_BASE}/chat/completions`, {
@@ -85,9 +108,61 @@ export async function aiChatCompletions(
     const text = await res.clone().text();
     const message = aiErrorMessage(res.status, text);
     lastAiError = { status: res.status, message, model };
-    console.error(`AI ${model} → ${res.status}: ${message}`);
+    console.error(`AI gemini ${model} → ${res.status}: ${message}`);
     last = res;
     if (!isModelFallbackStatus(res.status)) break;
   }
   return last!;
+}
+
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
+
+async function anthropicChatCompletions(body: Record<string, unknown> & { model: string }): Promise<Response> {
+  const client = new Anthropic({ apiKey: anthropicKey() });
+  const req = toAnthropicRequest(body as unknown as OpenAiLikeRequest, CLAUDE_MODEL);
+  try {
+    // deno-lint-ignore no-explicit-any
+    const resp = await client.messages.create(req as any);
+    if (resp.stop_reason === "refusal") {
+      const message = "Claude heeft dit verzoek geweigerd (veiligheidsfilter).";
+      lastAiError = { status: 422, message, model: CLAUDE_MODEL };
+      return jsonResponse({ error: { message } }, 422);
+    }
+    return jsonResponse(fromAnthropicResponse(resp as unknown as Parameters<typeof fromAnthropicResponse>[0]));
+  } catch (err) {
+    if (err instanceof Anthropic.APIError) {
+      const status = err.status ?? 500;
+      const message = err.message.slice(0, 300);
+      lastAiError = { status, message, model: CLAUDE_MODEL };
+      console.error(`AI anthropic ${CLAUDE_MODEL} → ${status}: ${message}`);
+      return jsonResponse({ error: { message } }, status);
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    lastAiError = { status: 0, message, model: CLAUDE_MODEL };
+    console.error(`AI anthropic netwerkfout: ${message}`);
+    return jsonResponse({ error: { message } }, 502);
+  }
+}
+
+/**
+ * POST chat/completions, aanbieder-onafhankelijk. Geeft altijd een Response
+ * terug in OpenAI-vorm (choices[0].message.content / .tool_calls), zodat de
+ * aanroepers hun eigen fout- en 429-afhandeling houden.
+ */
+export async function aiChatCompletions(
+  body: Record<string, unknown> & { model: string },
+  options: { fallbacks?: string[] } = {},
+): Promise<Response> {
+  lastAiError = null;
+  if (anthropicKey()) {
+    const res = await anthropicChatCompletions(body);
+    // Storing aan de Claude-kant en er is een Gemini-sleutel: probeer Gemini.
+    if (!res.ok && (res.status === 429 || res.status >= 500) && apiKey()) {
+      console.warn(`AI: Claude gaf ${res.status}, terugval op Gemini`);
+      return await geminiChatCompletions(body, options);
+    }
+    return res;
+  }
+  return await geminiChatCompletions(body, options);
 }
