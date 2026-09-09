@@ -104,12 +104,42 @@ scroll-fix hieronder.
   Fortuna → "Rondleiding en proeverij": beide door Erwin zelf gekoppeld op
   9 september via "Koppel aan bestaande". Daarmee zijn nu 4 van de circa 45
   gepubliceerde bouwstenen daadwerkelijk direct boekbaar.
+- **Twee vervolgvondsten na het koppelen, allebei gefixt (9 september):**
+  1. De generieke activiteitpagina (`/activiteit/<slug>`, waar "Meer info"
+     op de bouwstenen-kaart naar linkt) had helemaal geen weet van directe
+     boekbaarheid — geen badge, geen "Direct reserveren", alleen "Direct
+     aanvragen". Voor alle 4 nu gekoppelde bouwstenen liet juist de pagina
+     waar de meeste bezoekers landen het directe boeken niet zien. Nu toont
+     die pagina hetzelfde patroon als de bouwstenen-kaart.
+  2. Erger: de SEO-landingspagina `/wadlopen-vlieland` (rankt op "wadlopen
+     vlieland") beweerde al "Direct online te boeken" en had knoppen "Boek
+     je wadexcursie" / "Direct boeken" — die allebei naar het
+     aanvraagformulier linkten, niet naar een echte boeking. Dat was al zo
+     vóór de koppeling van vandaag; de tekst loog dus al een tijdje. Beide
+     knoppen linken nu naar de echte boeking wanneer de koppeling bestaat,
+     en vallen terug op eerlijke "aanvragen"-tekst als dat ooit niet meer
+     zo is. **Zeehondentochten-vlieland heb ik bewust niet aangepast**: die
+     pagina vermeldt een minimum van 10 personen bij de hoofd-CTA, wat
+     duidt op een chartertocht in plaats van losse plekken op de publieke
+     "Robbentocht" in MAP — dat moet je bevestigen voordat ik die knop naar
+     instant boeken zou durven omzetten (zie besluit hieronder).
 - Grotere stap, alleen relevant zodra meer partners hun aanbod via MAP online
   boekbaar maken (staat al open op de roadmap: "MAP: de 7 MAP-aanbieders hun
   activiteiten laten aanbieden"): zodra dat aantal een stuk groter is dan 4,
   wordt het de moeite waard om de resultaten van `/activiteiten-boeken` inline
   op de bouwsteen-kaart te tonen (tijdstip kiezen zonder pagina-wissel) in
   plaats van door te linken. Nu zou dat overengineering zijn.
+
+### Zeehondentochten Vlieland — opgelost (9 september)
+
+Erwin bevestigt: als groep kan de zeehondentocht alleen exclusief (dat is de
+apart bouwsteen "Zeehondentocht Exclusief", géén online-boekbare MAP-variant —
+blijft dus aanvragen), maar individueel kun je gewoon los boeken. Inhoudelijk
+dezelfde tocht als de al gekoppelde bouwsteen "Zeehondentocht" → MAP-activiteit
+"Robbentocht". `/zeehondentochten-vlieland` heeft nu hetzelfde patroon als
+wadlopen: de twee individueel-gerichte CTA's ("Boek je zeehondentocht",
+"Direct boeken") linken naar de echte MAP-boeking, de groeps-CTA ("Offerte
+voor een groep") blijft aanvragen.
 
 ## Deel 2 — usability en conversie: visie en fasenplan
 
@@ -204,6 +234,8 @@ overal pas ná een submit-poging. Code-splitting is verder prima op orde.
 
 **Fase 1 — CTA-hiërarchie en formulieren (akkoord 9 september, deels gedaan)**
 - Bouwstenen-kaart: gedaan (deel 1).
+- Activiteitpagina (`/activiteit/<slug>`) en de landingspagina wadlopen:
+  gedaan, zie "Afgehandeld" bij deel 1. Zeehondentochten wacht op bevestiging.
 - Duplicate-submits: uitgezocht en de race-conditie gefixt (zie hierboven).
 - Nog te doen: zelfde soort keuze herzien bij Snel-aanvragen vs.
   Programma-samenstellen — één duidelijke vraag ("wilt u dit ene onderdeel

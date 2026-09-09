@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import heroImage from "@/assets/zeehondentocht-vlieland-zandbank.jpg";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
+import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import { findBundleForBlock, buildBookingLink } from "@/lib/directBookable";
 
 
 const FAQ: { q: string; a: string }[] = [
@@ -74,6 +77,16 @@ const FAQ: { q: string; a: string }[] = [
 const ZeehondentochtenVlieland = () => {
   const url = "https://bureauvlieland.nl/zeehondentochten-vlieland";
   const heroImageAbs = `https://bureauvlieland.nl${heroImage}`;
+
+  // Individuele plekken op de zeehondentocht zijn gekoppeld aan een live
+  // MAP-activiteit (Robbentocht); een exclusieve afvaart met de hele boot
+  // (groep) is een apart product en blijft aanvragen. Valt vanzelf terug op
+  // "aanvragen" als de koppeling ooit verdwijnt.
+  const { data: blocks } = usePublishedBuildingBlocks();
+  const { bundles } = useDirectBookableActivities();
+  const seaTripBlock = blocks ? getBlockById(blocks, "zeehondentocht") : undefined;
+  const seaTripBundle = seaTripBlock ? findBundleForBlock(seaTripBlock, bundles) : null;
+  const bookingLink = seaTripBundle ? buildBookingLink(seaTripBundle) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,9 +171,9 @@ const ZeehondentochtenVlieland = () => {
               Per boot vanaf de haven naar de zandbanken in de Waddenzee — gewone én grijze zeehonden van dichtbij, zonder ze te storen.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
+              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht"}>
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  Boek je zeehondentocht
+                  {bookingLink ? "Boek je zeehondentocht" : "Vraag je zeehondentocht aan"}
                 </Button>
               </Link>
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht-groep">
@@ -290,7 +303,9 @@ const ZeehondentochtenVlieland = () => {
               Boek je zeehondentocht op Vlieland
             </h2>
             <p className="text-muted-foreground mb-2">
-              Reserveer een individuele plek of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep.
+              {bookingLink
+                ? "Reserveer een individuele plek direct online, of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep."
+                : "Vraag een individuele plek aan, of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep."}
             </p>
             <p className="text-foreground mb-6">
               <strong>€32,50 per persoon</strong>{" "}
@@ -298,9 +313,9 @@ const ZeehondentochtenVlieland = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
+              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht"}>
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  Direct boeken
+                  {bookingLink ? "Direct boeken" : "Aanvragen"}
                 </Button>
               </Link>
               <Link to="/programma-samenstellen">
