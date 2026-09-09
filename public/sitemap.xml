@@ -186,6 +186,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://bureauvlieland.nl/activiteit/wadloopexcursie</loc>
+    <lastmod>2026-09-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://bureauvlieland.nl/activiteit/lunch-op-locatie</loc>
     <lastmod>2026-08-20</lastmod>
     <changefreq>monthly</changefreq>
@@ -324,12 +330,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/activiteit/rondleiding-brouwerij-fortuna</loc>
-    <lastmod>2026-06-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/activiteit/strandyoga-ontspanning</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
@@ -348,14 +348,14 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/activiteit/wadloopexcursie</loc>
+    <loc>https://bureauvlieland.nl/activiteit/watertaxi-harlingen-vlieland-met-snelle-rib</loc>
     <lastmod>2026-06-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/activiteit/watertaxi-harlingen-vlieland-met-snelle-rib</loc>
-    <lastmod>2026-06-17</lastmod>
+    <loc>https://bureauvlieland.nl/activiteit/rondleiding-brouwerij-fortuna</loc>
+    <lastmod>2026-09-09</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

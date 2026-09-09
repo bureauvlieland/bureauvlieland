@@ -1,7 +1,8 @@
 # Plan: frontend usability en conversie
 
-Status: deel 1 (bouwstenen/activiteiten-boeken) doorgevoerd 9 september; deel 2
-is een voorstel voor de roadmap, besluiten nog nodig (zie onderaan).
+Status: deel 1 (bouwstenen/activiteiten-boeken) doorgevoerd en beide
+koppelingen gezet, 9 september. Deel 2: fase 1 en 2 akkoord (9 september),
+fase 3 wacht op een GA4-export (zie onderaan hoe).
 
 Dit plan bouwt voort op `.lovable/funnel-audit.md` (9 juni 2026). Track A en B
 uit die audit zijn gedaan (bot-filter, cancellation-classificatie,
@@ -97,25 +98,18 @@ meer als gelijkwaardig alternatief. Getest (typecheck, lint, volledige
 testsuite, build) en klaar om mee te gaan in dezelfde pull request als de
 scroll-fix hieronder.
 
-### Wat nog een besluit van jou vraagt
+### Afgehandeld
 
-- **De ene echte gemiste koppeling** (Wadloopexcursie → MAP-activiteit
-  "Wadexcursie de Lepelaar") kan ik niet zelf in de database zetten — dat is
-  bewust geblokkeerd voor directe database-schrijfacties buiten de applicatie
-  om. Het kost jou een minuut: ga naar **Admin → Partners → Stichting Natuur
-  Educatie Centrum Vlieland** (of laat de partner het zelf doen via *Mijn
-  aanbod*), zoek bij de MAP-activiteiten "Wadexcursie de Lepelaar" en klik
-  "Koppel aan bestaande" → Wadloopexcursie. Zelfde knop die al bestond voor
-  dit doel.
-- De rondleiding bij Brouwerij Fortuna: wil je dat de partner zelf beoordeelt
-  of "Rondleiding en proeverij" in MAP dezelfde tour is als de bouwsteen, en
-  zo ja zelf koppelt?
+- Wadloopexcursie → "Wadexcursie de Lepelaar" en de rondleiding bij Brouwerij
+  Fortuna → "Rondleiding en proeverij": beide door Erwin zelf gekoppeld op
+  9 september via "Koppel aan bestaande". Daarmee zijn nu 4 van de circa 45
+  gepubliceerde bouwstenen daadwerkelijk direct boekbaar.
 - Grotere stap, alleen relevant zodra meer partners hun aanbod via MAP online
   boekbaar maken (staat al open op de roadmap: "MAP: de 7 MAP-aanbieders hun
-  activiteiten laten aanbieden"): zodra dat aantal een stuk groter is dan 2,
-  wordt het de moeite waard om de resultaten van `/activiteiten-boeken` inline op
-  de bouwsteen-kaart te tonen (tijdstip kiezen zonder pagina-wissel) in plaats
-  van door te linken. Nu zou dat overengineering zijn voor twee activiteiten.
+  activiteiten laten aanbieden"): zodra dat aantal een stuk groter is dan 4,
+  wordt het de moeite waard om de resultaten van `/activiteiten-boeken` inline
+  op de bouwsteen-kaart te tonen (tijdstip kiezen zonder pagina-wissel) in
+  plaats van door te linken. Nu zou dat overengineering zijn.
 
 ## Deel 2 — usability en conversie: visie en fasenplan
 
@@ -135,12 +129,15 @@ oorzaken uit de audit (test-aanvragen, duplicate-submits) waren toen al eruit
 gefilterd, dus dit is na Track A/B nog steeds het niveau. Twee, en groter: het
 **aantal aanvragen zakt sterk na juni** — van 21 in de laatste drie weken van
 juni naar 3 in juli, 6 in augustus, 3 in de eerste negen dagen van september.
-Dat kán normale seizoenspatroon zijn (Vlieland is een zomerbestemming;
-juni-boekingen gaan mogelijk over een programma later dat seizoen, en de
-site trekt na de zomer minder verkeer) — maar dat kan ik van hieruit niet
-bevestigen. Ik heb geen toegang tot GA4/bezoekersaantallen, alleen tot wat er
-in de eigen database aan aanvragen binnenkomt. Zie besluit hieronder: dit is
-een openstaande vraag, geen conclusie.
+Erwins eigen inschatting (9 september): vooral seizoen, en Google Ads is
+stopgezet. Dat laatste is een directe, aanwijsbare oorzaak voor minder
+verkeer, los van seizoen — als een relevant deel van het juni-verkeer uit
+betaalde zoekresultaten kwam, verklaart het stopzetten daarvan een groot deel
+van de terugval zonder dat er iets mis is met de site zelf. Ik kan dat van
+hieruit niet aan bezoekersaantallen toetsen (geen GA4-toegang, alleen de
+aanvragen die in de eigen database terechtkomen) — zie hieronder voor hoe we
+dat wel meetbaar maken, dan kan fase 3 uitsplitsen hoeveel van de terugval
+seizoen, Ads-stop, en eventueel echt gedragslek is.
 
 **Logies-handoff** (funnel-audit Track C1, nog open): van de 33 aanvragen
 sinds 9 juni zijn er 6 gekoppeld aan een logiesaanvraag (18%) plus 7 losse
@@ -148,12 +145,27 @@ logiesaanvragen — een verbetering ten opzichte van de ~9% uit de juni-audit
 (de prominentere banner uit Track A3 lijkt te helpen), maar nog steeds ver
 onder wat je zou verwachten als "één partij, één factuur" goed aansloeg.
 
-**Duplicate-submits**: de sessionStorage-guard uit Track B4 helpt, maar sinds
-9 juni hebben opnieuw vier klanten dezelfde aanvraag 2 tot 3 keer binnen
-enkele minuten ingediend. Ik heb dit niet verder gediagnosticeerd (mogelijk
-device- of tab-overstijgend, of via de "terug"-knop, wat de huidige
-sessionStorage-guard niet afvangt) — dat hoort thuis in fase 1 hieronder als
-een gerichte uitzoekklus, niet als aanname.
+**Duplicate-submits, uitgezocht (fase 1, 9 september)**: van de vier gevallen
+sinds 9 juni waren er maar twee echt een dubbele klik: identieke aanvraag
+(zelfde aantal personen, zelfde datums), 7 en 10 seconden na elkaar, binnen
+dezelfde sessie. De andere twee zijn geen bug: één klant diende met 2 uur
+ertussen een tweede aanvraag in met een andere datum, de ander met 11 uur
+ertussen een aanvraag voor 10 personen en daarna, apart, één voor 110 — dat
+zijn gewoon twee verschillende aanvragen van dezelfde klant, geen dubbelklik.
+
+Voor de twee echte gevallen vond ik de oorzaak: in `CheckoutContactForm.tsx`
+werd de knop pas op "bezig" gezet ná twee databasecontroles (de dedup-checks
+zelf), niet meteen bij de klik. Een snelle tweede klik kwam daardoor door alle
+guards heen voordat de eerste klik zijn eigen controles had afgerond. Ik heb
+dit vandaag al gefixt: de knop vergrendelt nu synchroon bij de klik, vóór
+enige databasecontrole. Getest (typecheck, lint, volledige testsuite, build).
+Overblijvend risico: twee losse browsertabbladen met hetzelfde e-mailadres
+zouden deze specifieke race nog steeds kunnen omzeilen, omdat elk tabblad zijn
+eigen "bezig"-status heeft. Een volledig waterdichte oplossing zou een
+controle in de database zelf vereisen (in de `submit_self_service_program_request`-functie,
+die nu geen enkele dedup-controle heeft) — dat is een aparte, kleine
+migratie; ik stel voor die pas te doen als dit na de huidige fix nog
+voorkomt.
 
 **Doorlichting van de rest van de site** (navigatie, ontwerp, formulieren,
 code): het ontwerpsysteem (Tailwind/shadcn, kleurtokens, Fraunces/Inter) is
@@ -190,15 +202,15 @@ overal pas ná een submit-poging. Code-splitting is verder prima op orde.
 
 ### Voorstel in fases
 
-**Fase 1 — CTA-hiërarchie en formulieren (klein, direct te starten)**
+**Fase 1 — CTA-hiërarchie en formulieren (akkoord 9 september, deels gedaan)**
 - Bouwstenen-kaart: gedaan (deel 1).
-- Zelfde soort keuze herzien bij Snel-aanvragen vs. Programma-samenstellen:
-  één duidelijke vraag ("wilt u dit ene onderdeel snel regelen, of een heel
-  programma samenstellen?") in plaats van twee knoppen naast elkaar.
-- Inline validatie op Offerte en Programma-samenstellen; op termijn één
-  gedeeld validatiepatroon voor nieuwe formulieren.
-- Uitzoeken waarom duplicate-submits na de guard nog voorkomen (4 gevallen
-  sinds juni) en de guard daarop aanscherpen.
+- Duplicate-submits: uitgezocht en de race-conditie gefixt (zie hierboven).
+- Nog te doen: zelfde soort keuze herzien bij Snel-aanvragen vs.
+  Programma-samenstellen — één duidelijke vraag ("wilt u dit ene onderdeel
+  snel regelen, of een heel programma samenstellen?") in plaats van twee
+  knoppen naast elkaar.
+- Nog te doen: inline validatie op Offerte en Programma-samenstellen; op
+  termijn één gedeeld validatiepatroon voor nieuwe formulieren.
 
 **Fase 2 — Logies structureel integreren (Track C1 van de audit)**
 - Logies van losse banner/flow naar een officiële, overslaanbare stap in de
@@ -214,17 +226,35 @@ overal pas ná een submit-poging. Code-splitting is verder prima op orde.
   aanwezig via `useProgramDraft`, verder uitbouwen).
 - Vereist GA4-toegang of periodieke export — zie besluit hieronder.
 
-### Besluiten die ik nodig heb
+### Besluiten (9 september)
 
-- Akkoord om fase 1 als eerste sprint te plannen (CTA-herziening
-  Snel-aanvragen/Programma-samenstellen, inline validatie, duplicate-submit
-  uitzoeken)?
-- De juni→september-terugval in aanvragen: heb je zelf zicht op de
-  bezoekersaantallen over dezelfde periode (GA4), of is dat ook voor jou
-  onbekend? Zonder die vergelijking kan ik niet zeggen of dit seizoen is of
-  een echt lek.
-- Kun je GA4-toegang delen (dashboard-uitnodiging, of een periodieke export)
-  zodat fase 3 en Track C2 uit de audit meetbaar worden?
-- Fase 2 (logies in de wizard) raakt een kernflow — akkoord om dat als aparte
-  planningsronde te doen zodra fase 1 loopt, net als bij de eerdere
-  logieskeuze- en activiteitenaanbieders-trajecten?
+- **Fase 1 akkoord** — start met CTA-herziening Snel-aanvragen/
+  Programma-samenstellen, inline validatie, duplicate-submit uitzoeken.
+- **Fase 2 akkoord** — logies als stap in de wizard, aparte planningsronde
+  zodra fase 1 loopt.
+- **Terugval juni→september**: vermoedelijk seizoen plus het stopzetten van
+  Google Ads, geen aanwijzing voor een sitefout. Wordt in fase 3 met echte
+  cijfers bevestigd zodra er een GA4-export is.
+
+### Hoe je GA4 kunt delen
+
+Er is geen directe koppeling tussen deze omgeving en Google Analytics (geen
+Google-account om toegang aan te geven, en er is geen GA4-connector
+geïnstalleerd). Twee manieren die wel werken, van makkelijk naar completer:
+
+1. **Eenmalig, snel**: in GA4 naar *Rapporten → Levenscyclus → Acquisitie →
+   Verkeersacquisitie* (of *Verkennen* voor een aangepast rapport), periode
+   op de laatste 3-4 maanden zetten, uitsplitsen per maand en eventueel per
+   landingspagina, en rechtsboven exporteren als CSV. Dat bestand kun je
+   direct in dit gesprek plaatsen (of in een volgend gesprek als dit
+   afgerond is) — dan lees en analyseer ik het meteen.
+2. **Voor herhaald gebruik**: zet hetzelfde rapport in GA4 als terugkerende
+   export naar een Google Sheet (GA4 heeft daarvoor een ingebouwde
+   Sheets-koppeling: *Verkennen → rapport → exporteren naar Sheets*, of via
+   Looker Studio met een Sheets-uitvoer), en deel die Sheet met me via
+   Google Drive — die koppeling staat al aan in deze omgeving. Dan hoef je
+   niet elke keer opnieuw te exporteren.
+
+Voor fase 3 is vooral verkeer en conversie per landingspagina relevant
+(welke SEO-pagina's leveren aanvragen op), plus totaal bezoekersaantal per
+maand om de terugval hierboven te kunnen duiden.
