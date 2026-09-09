@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Open
+- [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, 9 september): fase 1 — CTA-hiërarchie Snel-aanvragen/Programma-samenstellen, inline formuliervalidatie, duplicate-submit uitzoeken; fase 2 — logies als stap in de wizard; fase 3 — attributie per landingspagina (wacht op GA4-toegang). Wadloopexcursie nog handmatig koppelen aan MAP-activiteit "Wadexcursie de Lepelaar" via Admin → Partners → Stichting Natuur Educatie Centrum Vlieland
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
@@ -9,6 +10,7 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Bouwstenen-kaart: "Direct aanvragen" niet meer even zwaar naast "Direct reserveren" bij direct boekbare activiteiten (9 september), na twee aanvragen deze week voor een activiteit die al direct te boeken was; horizontale scroll bij lange activiteitsnamen in "Mijn aanbod" definitief opgelost — zie `docs/plan-frontend-usability.md`
 - [x] AI van Gemini naar Claude (9 september): alle AI-functies lopen via claude-opus-5 zodra ANTHROPIC_API_KEY er is, Gemini als terugval; e-mailhulp live getest
 - [x] Activiteitenaanbieders fase 3, MAP-koppeling (8 september): bouwstenen met gekoppeld MAP-activiteitstype volgen 's nachts foto, tekst en duur (prijs per bouwsteen aan te zetten), knop "Nu bijwerken uit MAP" in admin, beschikbaarheid per dag op de klantkaart
 - [ ] MAP: de 7 MAP-aanbieders hun activiteiten laten aanbieden via *Mijn aanbod → Uw activiteiten in MijnActiviteitenplanner* (of zelf koppelen via admin → Bouwstenen → MAP-activiteit kiezen); daarna eerste nachtelijke run controleren

@@ -382,26 +382,40 @@ const Bouwstenen = () => {
                             </Button>
                           </Link>
                         </div>
-                        {bundle && (
-                          <Link to={buildBookingLink(bundle)} className="contents">
-                            <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
-                              <Ticket className="h-4 w-4" />
-                              Direct reserveren
-                            </Button>
-                          </Link>
+                        {bundle ? (
+                          <>
+                            <Link to={buildBookingLink(bundle)} className="contents">
+                              <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+                                <Ticket className="h-4 w-4" />
+                                Direct reserveren
+                              </Button>
+                            </Link>
+                            <Link to={`/programma-samenstellen?block=${block.id}`} className="contents">
+                              <Button size="sm" variant="outline" className="w-full">
+                                Aan programma toevoegen
+                              </Button>
+                            </Link>
+                            <Link
+                              to={`/snel-aanvragen?block=${block.id}`}
+                              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 text-center"
+                            >
+                              Liever aanvragen in plaats van direct boeken?
+                            </Link>
+                          </>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">
+                              <Button size="sm" className="w-full">
+                                Direct aanvragen
+                              </Button>
+                            </Link>
+                            <Link to={`/programma-samenstellen?block=${block.id}`} className="contents">
+                              <Button size="sm" variant="outline" className="w-full">
+                                Aan programma
+                              </Button>
+                            </Link>
+                          </div>
                         )}
-                        <div className="grid grid-cols-2 gap-2">
-                          <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">
-                            <Button size="sm" variant={bundle ? "outline" : "default"} className="w-full">
-                              Direct aanvragen
-                            </Button>
-                          </Link>
-                          <Link to={`/programma-samenstellen?block=${block.id}`} className="contents">
-                            <Button size="sm" variant="outline" className="w-full">
-                              Aan programma
-                            </Button>
-                          </Link>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
