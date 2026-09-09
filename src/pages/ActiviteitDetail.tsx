@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Loader2, Clock, Users, MapPin, ArrowLeft, ChevronRight } from "lucide-react";
+import { Loader2, Clock, Users, MapPin, ArrowLeft, ChevronRight, Ticket, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -23,6 +23,8 @@ import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { getActivityContent } from "@/content/activityContent";
 import { buildFallbackFaq } from "@/lib/activityFallbackFaq";
 import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
+import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import { findBundleForBlock, buildBookingLink } from "@/lib/directBookable";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
@@ -43,6 +45,8 @@ const ActiviteitDetail = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { byPartner: unavailableByPartner } = usePublicPartnerUnavailability();
+  const { bundles } = useDirectBookableActivities();
+  const bundle = block ? findBundleForBlock(block, bundles) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -240,6 +244,14 @@ const ActiviteitDetail = () => {
                   {categoryLabels[block.category] ?? block.category}
                 </Badge>
               </div>
+              {bundle && (
+                <div className="absolute top-3 right-3">
+                  <Badge className="gap-1 bg-accent text-accent-foreground shadow-sm hover:bg-accent">
+                    <Zap className="h-3 w-3" />
+                    Direct boekbaar
+                  </Badge>
+                </div>
+              )}
             </div>
 
             <div>
@@ -284,19 +296,42 @@ const ActiviteitDetail = () => {
                 />
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3">
-
-                <Link to={`/snel-aanvragen?block=${block.id}`} className="flex-1">
-                  <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                    Direct aanvragen
-                  </Button>
-                </Link>
-                <Link to={`/programma-samenstellen?block=${block.id}`} className="flex-1">
-                  <Button size="lg" variant="outline" className="w-full">
-                    Toevoegen aan programma
-                  </Button>
-                </Link>
-              </div>
+              {bundle ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link to={buildBookingLink(bundle)} className="flex-1">
+                      <Button size="lg" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+                        <Ticket className="h-4 w-4" />
+                        Direct reserveren
+                      </Button>
+                    </Link>
+                    <Link to={`/programma-samenstellen?block=${block.id}`} className="flex-1">
+                      <Button size="lg" variant="outline" className="w-full">
+                        Toevoegen aan programma
+                      </Button>
+                    </Link>
+                  </div>
+                  <Link
+                    to={`/snel-aanvragen?block=${block.id}`}
+                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 text-center"
+                  >
+                    Liever aanvragen in plaats van direct boeken?
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link to={`/snel-aanvragen?block=${block.id}`} className="flex-1">
+                    <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                      Direct aanvragen
+                    </Button>
+                  </Link>
+                  <Link to={`/programma-samenstellen?block=${block.id}`} className="flex-1">
+                    <Button size="lg" variant="outline" className="w-full">
+                      Toevoegen aan programma
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </section>

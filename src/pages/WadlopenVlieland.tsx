@@ -35,6 +35,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
+import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
+import { findBundleForBlock, buildBookingLink } from "@/lib/directBookable";
 import heroImage from "@/assets/wadexcursie-vlieland-wad-schelpen.webp";
 import gidsImage from "@/assets/wadexcursie-vlieland-gids-wadworm.webp";
 import gezinImage from "@/assets/wadexcursie-vlieland-gezin-wadlopen.webp";
@@ -73,6 +76,16 @@ const FAQ: { q: string; a: string }[] = [
 
 const WadlopenVlieland = () => {
   const url = "https://bureauvlieland.nl/wadlopen-vlieland";
+
+  // De wadexcursie is sinds 9 september gekoppeld aan een live MAP-activiteit
+  // (Wadexcursie de Lepelaar). Zolang die koppeling bestaat, boekt deze pagina
+  // écht direct in plaats van naar het aanvraagformulier te sturen — valt
+  // vanzelf terug op "aanvragen" als de koppeling ooit verdwijnt.
+  const { data: blocks } = usePublishedBuildingBlocks();
+  const { bundles } = useDirectBookableActivities();
+  const wadloopBlock = blocks ? getBlockById(blocks, "wadloopexcursie") : undefined;
+  const wadloopBundle = wadloopBlock ? findBundleForBlock(wadloopBlock, bundles) : null;
+  const bookingLink = wadloopBundle ? buildBookingLink(wadloopBundle) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -155,9 +168,9 @@ const WadlopenVlieland = () => {
               Met een lokale gids het wad op — leerzaam, avontuurlijk en geschikt voor het hele gezin.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
+              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie"}>
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  Boek je wadexcursie
+                  {bookingLink ? "Boek je wadexcursie" : "Vraag je wadexcursie aan"}
                 </Button>
               </Link>
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie-groep">
@@ -200,7 +213,7 @@ const WadlopenVlieland = () => {
             <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /> Lokale, ervaren gidsen</li>
               <li className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Geschikt voor alle leeftijden</li>
-              <li className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Direct online te boeken</li>
+              <li className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {bookingLink ? "Direct online te boeken" : "Eenvoudig online aan te vragen"}</li>
             </ul>
           </div>
         </section>
@@ -320,15 +333,17 @@ const WadlopenVlieland = () => {
               Boek je wadexcursie op Vlieland
             </h2>
             <p className="text-muted-foreground mb-2">
-              Kies je datum en boek direct online, of voeg de excursie toe aan je programma op Vlieland.
+              {bookingLink
+                ? "Kies je datum en boek direct online, of voeg de excursie toe aan je programma op Vlieland."
+                : "Vraag je datum aan, of voeg de excursie toe aan je programma op Vlieland."}
             </p>
             <p className="text-foreground mb-6">
               <strong>Volwassenen €17,50</strong> <span className="text-muted-foreground">(kinderen 4 t/m 12 jaar €12,50)</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
+              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie"}>
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  Direct boeken
+                  {bookingLink ? "Direct boeken" : "Aanvragen"}
                 </Button>
               </Link>
               <Link to="/programma-samenstellen">
