@@ -35,7 +35,8 @@ import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import heroImage from "@/assets/zeehondentocht-vlieland-zandbank.jpg";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
-import { findBundleForBlock, buildBookingLink } from "@/lib/directBookable";
+import { findBundleForBlock } from "@/lib/directBookable";
+import { DirectBookingPanel } from "@/components/map/DirectBookingPanel";
 
 
 const FAQ: { q: string; a: string }[] = [
@@ -86,7 +87,6 @@ const ZeehondentochtenVlieland = () => {
   const { bundles } = useDirectBookableActivities();
   const seaTripBlock = blocks ? getBlockById(blocks, "zeehondentocht") : undefined;
   const seaTripBundle = seaTripBlock ? findBundleForBlock(seaTripBlock, bundles) : null;
-  const bookingLink = seaTripBundle ? buildBookingLink(seaTripBundle) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -171,9 +171,9 @@ const ZeehondentochtenVlieland = () => {
               Per boot vanaf de haven naar de zandbanken in de Waddenzee — gewone én grijze zeehonden van dichtbij, zonder ze te storen.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht"}>
+              <Link to={seaTripBundle ? "#boeken" : "/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht"}>
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  {bookingLink ? "Boek je zeehondentocht" : "Vraag je zeehondentocht aan"}
+                  {seaTripBundle ? "Boek je zeehondentocht" : "Vraag je zeehondentocht aan"}
                 </Button>
               </Link>
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht-groep">
@@ -297,13 +297,13 @@ const ZeehondentochtenVlieland = () => {
         </section>
 
         {/* CTA / boeken */}
-        <section className="bg-muted/30 py-16">
+        <section id="boeken" className="bg-muted/30 py-16 scroll-mt-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl text-center">
             <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
               Boek je zeehondentocht op Vlieland
             </h2>
             <p className="text-muted-foreground mb-2">
-              {bookingLink
+              {seaTripBundle
                 ? "Reserveer een individuele plek direct online, of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep."
                 : "Vraag een individuele plek aan, of laat ons de tocht inplannen als onderdeel van een compleet programma voor je groep."}
             </p>
@@ -312,18 +312,31 @@ const ZeehondentochtenVlieland = () => {
               <span className="text-muted-foreground">(exclusieve afvaart met de hele boot: €425 totaal)</span>
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht"}>
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  {bookingLink ? "Direct boeken" : "Aanvragen"}
-                </Button>
-              </Link>
-              <Link to="/programma-samenstellen">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Toevoegen aan mijn programma
-                </Button>
-              </Link>
-            </div>
+            {seaTripBundle ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-full max-w-md text-left">
+                  <DirectBookingPanel bundle={seaTripBundle} />
+                </div>
+                <Link to="/programma-samenstellen">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                    Toevoegen aan mijn programma
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
+                  <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                    Aanvragen
+                  </Button>
+                </Link>
+                <Link to="/programma-samenstellen">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                    Toevoegen aan mijn programma
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 

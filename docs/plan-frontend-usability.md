@@ -141,6 +141,36 @@ wadlopen: de twee individueel-gerichte CTA's ("Boek je zeehondentocht",
 "Direct boeken") linken naar de echte MAP-boeking, de groeps-CTA ("Offerte
 voor een groep") blijft aanvragen.
 
+### Inline boeken in plaats van doorklikken naar de kalender (9 september)
+
+Erwin's feedback op de eerste versie: "Direct reserveren" klikte door naar
+`/activiteiten-boeken` met een voorgeselecteerde datum — een andere pagina,
+die niet als vervolg op de activiteit aanvoelt. Referentie: de activiteitpagina's
+op visitvlieland.nl, die de eerstvolgende data direct op de pagina zelf tonen
+en ter plekke laten boeken.
+
+Nieuw gedeeld component `src/components/map/DirectBookingPanel.tsx`: haalt
+per activiteit de eerstvolgende data en tijden op (hergebruikt dezelfde
+`MapBookingDialog` die ook `/activiteiten-boeken` al gebruikt), toont ze
+direct als een lijst met klikbare tijden, en opent de boekdialoog zonder
+naar een andere pagina te gaan. Toegepast op:
+- de activiteitpagina (`/activiteit/<slug>`) — vervangt de losse
+  "Direct reserveren"-knop volledig;
+- de "boeken"-secties van wadlopen en zeehondentochten;
+- de hero-knoppen op diezelfde twee landingspagina's scrollen nu naar die
+  sectie op de pagina zelf in plaats van naar een andere pagina te linken.
+
+De bouwstenen-kaart linkt "Direct reserveren" nu naar de activiteitpagina
+(waar het bovenstaande paneel staat) in plaats van rechtstreeks naar de
+kalenderpagina.
+
+Getest: typecheck, lint, volledige testsuite, build. **Niet gelukt:** een
+live doorklik in de browser, omdat deze sessie geen websocket-verbindingen
+mag maken naar Supabase (een omgevingsbeperking, geen codefout) — de React-app
+laadt wel zonder fouten, maar de eigenlijke activiteitendata kon ik hier niet
+zien laden. Wil je dit zelf even doorklikken op de preview-link van de pull
+request voordat je 'm merget?
+
 ## Deel 2 — usability en conversie: visie en fasenplan
 
 ### Wat er nu is (gemeten, 9 juni – 9 september)
