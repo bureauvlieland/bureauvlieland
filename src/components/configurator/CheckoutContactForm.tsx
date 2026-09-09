@@ -105,6 +105,12 @@ export const CheckoutContactForm = ({
   const checkForDuplicateAndSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return; // belt-and-braces against double submit
+    // Lock synchroon, vóór de async dedup-checks hieronder. Anders wint een
+    // snelle tweede klik de race tegen de twee awaits hieronder (isSubmitting
+    // werd pas in executeSubmit() true) en komt er alsnog een dubbele
+    // aanvraag door — gezien in productie, twee inserts enkele seconden na
+    // elkaar op hetzelfde e-mailadres, ondanks de guards hieronder.
+    setIsSubmitting(true);
 
     const dedup = checkClientDedup();
     if (dedup.blocked) {
@@ -113,6 +119,7 @@ export const CheckoutContactForm = ({
           ? "Uw aanvraag wordt zojuist verstuurd. Een moment geduld — u krijgt binnen enkele seconden bevestiging."
           : "Deze aanvraag is zojuist al verstuurd. Controleer uw inbox en spam-folder. Bel ons gerust op 0562 700 208 als u geen bevestiging heeft ontvangen."
       );
+      setIsSubmitting(false);
       return;
     }
 
@@ -133,6 +140,7 @@ export const CheckoutContactForm = ({
         setSubmitError(
           `Uw aanvraag is zojuist al verstuurd (referentie ${recent[0].reference_number ?? "wordt aangemaakt"}). U ontvangt binnen enkele minuten een bevestiging per e-mail. Controleer uw inbox en spam-folder voordat u opnieuw verstuurt.`
         );
+        setIsSubmitting(false);
         return;
       }
 
@@ -152,6 +160,7 @@ export const CheckoutContactForm = ({
         setSubmitError(
           "We konden niet controleren of u al een aanvraag heeft lopen. Probeer het zo opnieuw, of bel ons op 0562 700 208."
         );
+        setIsSubmitting(false);
         return;
       }
 
@@ -173,6 +182,7 @@ export const CheckoutContactForm = ({
           sameDatesAndSize: sameDates && sameSize,
         });
         setDuplicateWarningOpen(true);
+        setIsSubmitting(false);
         return;
       }
     } catch (err) {
@@ -180,6 +190,7 @@ export const CheckoutContactForm = ({
       setSubmitError(
         "We konden niet controleren of u al een aanvraag heeft lopen. Probeer het zo opnieuw, of bel ons op 0562 700 208."
       );
+      setIsSubmitting(false);
       return;
     }
 
@@ -225,12 +236,14 @@ export const CheckoutContactForm = ({
     // zonder activiteiten binnen bij de admin.
     if (cartItems.length === 0) {
       setSubmitError("Uw programma bevat nog geen onderdelen. Voeg eerst activiteiten toe.");
+      setIsSubmitting(false);
       return;
     }
     if (allBlocks.length === 0) {
       setSubmitError(
         "De bouwstenen worden nog geladen. Een moment geduld en probeer het opnieuw."
       );
+      setIsSubmitting(false);
       return;
     }
 
@@ -246,6 +259,7 @@ export const CheckoutContactForm = ({
       setSubmitError(
         "Enkele onderdelen uit uw programma zijn niet meer beschikbaar. Vernieuw de pagina en stel uw programma opnieuw samen, of bel ons op 0562 700 208."
       );
+      setIsSubmitting(false);
       return;
     }
 
