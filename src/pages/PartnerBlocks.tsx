@@ -208,15 +208,6 @@ const PartnerBlocksContent = () => {
       </div>
 
       <div className="space-y-8">
-        {mapTenantSlug && partnerId && (
-          <MapOfferOverview
-            tenantSlug={mapTenantSlug}
-            partnerId={partnerId}
-            onOffer={handleEnrichFromMap}
-            refreshKey={blocks.length}
-          />
-        )}
-
         {blocks.length === 0 && !mapTenantSlug ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -267,6 +258,15 @@ const PartnerBlocksContent = () => {
             )}
           </>
         )}
+
+        {mapTenantSlug && partnerId && (
+          <MapOfferOverview
+            tenantSlug={mapTenantSlug}
+            partnerId={partnerId}
+            onOffer={handleEnrichFromMap}
+            refreshKey={blocks.map((b) => `${b.id}:${b.map_activity_type_id ?? ""}`).join(",")}
+          />
+        )}
       </div>
 
       <PartnerBlockSheet
@@ -277,6 +277,7 @@ const PartnerBlocksContent = () => {
         partnerId={partnerId || ""}
         onSaved={handleBlockSaved}
         prefillFromMap={prefillFromMap}
+        mapTenantSlug={mapTenantSlug}
       />
     </div>
   );

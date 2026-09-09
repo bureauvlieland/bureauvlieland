@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useMapActivityTypes } from "@/hooks/useMapActivities";
 import {
   Sheet,
   SheetContent,
@@ -84,6 +85,8 @@ interface PartnerBlockSheetProps {
   partnerId: string;
   onSaved: () => void;
   prefillFromMap?: PrefillFromMap | null;
+  /** MAP-omgeving van de partner; met slug kan de partner een MAP-activiteit aan deze bouwsteen koppelen. */
+  mapTenantSlug?: string | null;
 }
 
 // Validate image file
@@ -173,6 +176,8 @@ interface FormData {
   external_url: string;
   price_display_override: string;
   sort_order: string;
+  /** MAP ActivityTypeId als tekst; "" = niet gekoppeld */
+  map_activity_type_id: string;
 }
 
 const getInitialFormData = (block: PartnerBuildingBlock | null): FormData => {
@@ -206,6 +211,7 @@ const getInitialFormData = (block: PartnerBuildingBlock | null): FormData => {
       external_url: block.external_url || "",
       price_display_override: block.price_display_override || "",
       sort_order: block.sort_order?.toString() || "0",
+      map_activity_type_id: block.map_activity_type_id != null ? String(block.map_activity_type_id) : "",
     };
   }
   return {
@@ -237,6 +243,7 @@ const getInitialFormData = (block: PartnerBuildingBlock | null): FormData => {
     external_url: "",
     price_display_override: "",
     sort_order: "0",
+    map_activity_type_id: "",
   };
 };
 
@@ -248,7 +255,9 @@ export const PartnerBlockSheet = ({
   partnerId,
   onSaved,
   prefillFromMap,
+  mapTenantSlug,
 }: PartnerBlockSheetProps) => {
+  const { data: mapTypes = [], isLoading: isLoadingMapTypes } = useMapActivityTypes(mapTenantSlug ?? null, !!mapTenantSlug && isOpen);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -430,6 +439,9 @@ export const PartnerBlockSheet = ({
         location_address: formData.location_address.trim() || null,
         external_url: formData.external_url.trim() || null,
         sort_order: formData.sort_order ? parseInt(formData.sort_order) : 0,
+        // Koppeling met MijnActiviteitenplanner: direct boekbaar en 's nachts
+        // gesynchroniseerd (foto, tekst, duur). De partner kiest dit zelf.
+        map_activity_type_id: formData.map_activity_type_id ? Number(formData.map_activity_type_id) : null,
         provider_id: partnerId,
         block_type: "partner" as const,
         is_published: false, // New blocks are always unpublished (need admin approval)
@@ -445,7 +457,7 @@ export const PartnerBlockSheet = ({
           .insert({
             id: blockId,
             ...blockData,
-            ...(prefillFromMap
+            ...(prefillFromMap && !blockData.map_activity_type_id
               ? { map_activity_type_id: prefillFromMap.map_activity_type_id }
               : {}),
           });
@@ -863,6 +875,32 @@ export const PartnerBlockSheet = ({
                   });
                 }}
               />
+
+              {/* MAP-koppeling */}
+              {mapTenantSlug && (
+                <div className="space-y-2">
+                  <Label>Gekoppelde MAP-activiteit</Label>
+                  <Select
+                    value={formData.map_activity_type_id || "__none__"}
+                    onValueChange={(v) => setFormData({ ...formData, map_activity_type_id: v === "__none__" ? "" : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingMapTypes ? "MAP-activiteiten laden…" : "Niet gekoppeld"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Niet gekoppeld</SelectItem>
+                      {mapTypes.map((t) => (
+                        <SelectItem key={t.Id} value={String(t.Id)}>{t.Name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.map_activity_type_id
+                      ? "Gekoppeld: klanten kunnen deze activiteit aanvragen én direct boeken in uw MAP-agenda. Foto, beschrijving en duur volgen elke nacht MAP; de prijs hier blijft van u."
+                      : "Kies de activiteit in MijnActiviteitenplanner die hierbij hoort. Dan wordt de bouwsteen direct boekbaar en blijft hij automatisch actueel."}
+                  </p>
+                </div>
+              )}
 
               {/* External URL */}
               <div className="space-y-2">
