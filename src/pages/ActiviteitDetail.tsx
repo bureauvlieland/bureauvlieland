@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Loader2, Clock, Users, MapPin, ArrowLeft, ChevronRight, Ticket, Zap } from "lucide-react";
+import { Loader2, Clock, Users, MapPin, ArrowLeft, ChevronRight, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -24,7 +24,8 @@ import { getActivityContent } from "@/content/activityContent";
 import { buildFallbackFaq } from "@/lib/activityFallbackFaq";
 import { BUILDING_BLOCK_PUBLIC_COLUMNS, BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
 import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
-import { findBundleForBlock, buildBookingLink } from "@/lib/directBookable";
+import { findBundleForBlock } from "@/lib/directBookable";
+import { DirectBookingPanel } from "@/components/map/DirectBookingPanel";
 
 // Hide internal/managed-service blocks from public catalog
 const HIDDEN_IDS = new Set([
@@ -298,22 +299,15 @@ const ActiviteitDetail = () => {
 
               {bundle ? (
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <Link to={buildBookingLink(bundle)} className="flex-1">
-                      <Button size="lg" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
-                        <Ticket className="h-4 w-4" />
-                        Direct reserveren
-                      </Button>
-                    </Link>
-                    <Link to={`/programma-samenstellen?block=${block.id}`} className="flex-1">
-                      <Button size="lg" variant="outline" className="w-full">
-                        Toevoegen aan programma
-                      </Button>
-                    </Link>
-                  </div>
+                  <DirectBookingPanel bundle={bundle} />
+                  <Link to={`/programma-samenstellen?block=${block.id}`}>
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                      Toevoegen aan programma
+                    </Button>
+                  </Link>
                   <Link
                     to={`/snel-aanvragen?block=${block.id}`}
-                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 text-center"
+                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
                   >
                     Liever aanvragen in plaats van direct boeken?
                   </Link>

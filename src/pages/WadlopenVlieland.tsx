@@ -37,7 +37,8 @@ import {
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { useDirectBookableActivities } from "@/hooks/useDirectBookableActivities";
-import { findBundleForBlock, buildBookingLink } from "@/lib/directBookable";
+import { findBundleForBlock } from "@/lib/directBookable";
+import { DirectBookingPanel } from "@/components/map/DirectBookingPanel";
 import heroImage from "@/assets/wadexcursie-vlieland-wad-schelpen.webp";
 import gidsImage from "@/assets/wadexcursie-vlieland-gids-wadworm.webp";
 import gezinImage from "@/assets/wadexcursie-vlieland-gezin-wadlopen.webp";
@@ -85,7 +86,6 @@ const WadlopenVlieland = () => {
   const { bundles } = useDirectBookableActivities();
   const wadloopBlock = blocks ? getBlockById(blocks, "wadloopexcursie") : undefined;
   const wadloopBundle = wadloopBlock ? findBundleForBlock(wadloopBlock, bundles) : null;
-  const bookingLink = wadloopBundle ? buildBookingLink(wadloopBundle) : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,9 +168,9 @@ const WadlopenVlieland = () => {
               Met een lokale gids het wad op — leerzaam, avontuurlijk en geschikt voor het hele gezin.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie"}>
+              <Link to={wadloopBundle ? "#boeken" : "/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie"}>
                 <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  {bookingLink ? "Boek je wadexcursie" : "Vraag je wadexcursie aan"}
+                  {wadloopBundle ? "Boek je wadexcursie" : "Vraag je wadexcursie aan"}
                 </Button>
               </Link>
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie-groep">
@@ -213,7 +213,7 @@ const WadlopenVlieland = () => {
             <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /> Lokale, ervaren gidsen</li>
               <li className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Geschikt voor alle leeftijden</li>
-              <li className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {bookingLink ? "Direct online te boeken" : "Eenvoudig online aan te vragen"}</li>
+              <li className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {wadloopBundle ? "Direct online te boeken" : "Eenvoudig online aan te vragen"}</li>
             </ul>
           </div>
         </section>
@@ -327,31 +327,44 @@ const WadlopenVlieland = () => {
         </section>
 
         {/* CTA / boeken */}
-        <section className="bg-muted/30 py-16">
+        <section id="boeken" className="bg-muted/30 py-16 scroll-mt-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl text-center">
             <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
               Boek je wadexcursie op Vlieland
             </h2>
             <p className="text-muted-foreground mb-2">
-              {bookingLink
+              {wadloopBundle
                 ? "Kies je datum en boek direct online, of voeg de excursie toe aan je programma op Vlieland."
                 : "Vraag je datum aan, of voeg de excursie toe aan je programma op Vlieland."}
             </p>
             <p className="text-foreground mb-6">
               <strong>Volwassenen €17,50</strong> <span className="text-muted-foreground">(kinderen 4 t/m 12 jaar €12,50)</span>
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to={bookingLink ?? "/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie"}>
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
-                  {bookingLink ? "Direct boeken" : "Aanvragen"}
-                </Button>
-              </Link>
-              <Link to="/programma-samenstellen">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Toevoegen aan mijn programma
-                </Button>
-              </Link>
-            </div>
+            {wadloopBundle ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-full max-w-md text-left">
+                  <DirectBookingPanel bundle={wadloopBundle} />
+                </div>
+                <Link to="/programma-samenstellen">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                    Toevoegen aan mijn programma
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
+                  <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                    Aanvragen
+                  </Button>
+                </Link>
+                <Link to="/programma-samenstellen">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                    Toevoegen aan mijn programma
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 

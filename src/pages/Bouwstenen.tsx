@@ -384,7 +384,7 @@ const Bouwstenen = () => {
                         </div>
                         {bundle ? (
                           <>
-                            <Link to={buildBookingLink(bundle)} className="contents">
+                            <Link to={`/activiteit/${block.slug ?? block.id}`} className="contents">
                               <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
                                 <Ticket className="h-4 w-4" />
                                 Direct reserveren
