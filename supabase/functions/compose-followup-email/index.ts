@@ -308,11 +308,14 @@ Deno.serve(async (req) => {
     // ---------------------------------------------------------------
     // Ondertekening met de naam van de ingelogde admin (profiel of e-mail), niet
     // anoniem "Bureau Vlieland": persoonlijker, en de klant weet wie hij spreekt.
-    let senderName: string | null = null;
-    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
-    senderName = (profile?.full_name as string | null)?.trim() || null;
-    if (!senderName && user.email) {
-      const local = user.email.split("@")[0];
+    const adminEmail = typeof claimsData.claims.email === "string" ? claimsData.claims.email : null;
+    // Er is geen profieltabel; de naam komt uit de auth-metadata of anders uit het e-mailadres.
+    const meta = (claimsData.claims.user_metadata ?? {}) as Record<string, unknown>;
+    let senderName: string | null =
+      (typeof meta.full_name === "string" && meta.full_name.trim()) ||
+      (typeof meta.name === "string" && meta.name.trim()) || null;
+    if (!senderName && adminEmail) {
+      const local = adminEmail.split("@")[0];
       senderName = local.charAt(0).toUpperCase() + local.slice(1);
     }
 

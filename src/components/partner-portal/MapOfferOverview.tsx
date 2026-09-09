@@ -1,5 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, Clock, Link2, Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +45,9 @@ const STATUS_LABEL: Record<string, string> = {
  */
 export const MapOfferOverview = ({ tenantSlug, partnerId, onOffer, blockLinkBase, refreshKey }: MapOfferOverviewProps) => {
   const { data: types = [], isLoading, isError } = useMapActivityTypes(tenantSlug, !!tenantSlug);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [linkingTypeId, setLinkingTypeId] = useState<number | null>(null);
   const { data: blocks = [] } = useQuery({
     queryKey: ["map-offer-blocks", partnerId, refreshKey ?? 0],
     queryFn: async (): Promise<LinkedBlock[]> => {
@@ -49,12 +55,32 @@ export const MapOfferOverview = ({ tenantSlug, partnerId, onOffer, blockLinkBase
         .from("building_blocks")
         .select("id, name, status, map_activity_type_id")
         .eq("provider_id", partnerId)
-        .not("map_activity_type_id", "is", null);
+        .neq("status", "archived")
+        .order("name");
       if (error) throw error;
       return (data ?? []) as LinkedBlock[];
     },
     enabled: !!partnerId,
   });
+  const unlinkedBlocks = blocks.filter((b) => b.map_activity_type_id == null);
+
+  // Bestaande bouwsteen aan een MAP-activiteit koppelen: daarna aanvraagbaar
+  // én direct boekbaar, en 's nachts gesynchroniseerd.
+  const linkExisting = async (type: MapActivityType, blockId: string) => {
+    setLinkingTypeId(type.Id);
+    try {
+      const { error } = await supabase.from("building_blocks").update({ map_activity_type_id: type.Id }).eq("id", blockId);
+      if (error) throw error;
+      const block = blocks.find((b) => b.id === blockId);
+      toast({ title: "Gekoppeld", description: `"${block?.name ?? "Activiteit"}" is nu gekoppeld aan ${type.Name} in MAP.` });
+      queryClient.invalidateQueries({ queryKey: ["map-offer-blocks", partnerId] });
+      queryClient.invalidateQueries({ queryKey: ["building-blocks"] });
+    } catch (err) {
+      toast({ title: "Koppelen mislukt", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setLinkingTypeId(null);
+    }
+  };
 
   const blockByType = new Map<number, LinkedBlock>();
   for (const b of blocks) if (typeof b.map_activity_type_id === "number") blockByType.set(b.map_activity_type_id, b);
@@ -78,7 +104,7 @@ export const MapOfferOverview = ({ tenantSlug, partnerId, onOffer, blockLinkBase
       </h2>
       <p className="text-xs text-muted-foreground mb-3">
         {onOffer
-          ? "Kies wat u via Bureau Vlieland aan groepen wilt aanbieden. Een aangeboden activiteit volgt daarna elke nacht de foto, tekst en duur uit MAP; de prijs voor groepen bepaalt u samen met het bureau."
+          ? "Kies wat u via Bureau Vlieland aan groepen wilt aanbieden: als nieuwe activiteit, of gekoppeld aan een activiteit die u hier al heeft. Een gekoppelde activiteit is direct boekbaar in uw MAP-agenda en volgt elke nacht de foto, tekst en duur uit MAP; de prijs voor groepen bepaalt u samen met het bureau."
           : "Per activiteitstype staat of het als bouwsteen bij Bureau Vlieland is aangeboden. Koppelen kan de partner zelf in zijn portaal, of via de bouwsteen (MAP-activiteit kiezen)."}
       </p>
       {isLoading ? (
@@ -93,9 +119,9 @@ export const MapOfferOverview = ({ tenantSlug, partnerId, onOffer, blockLinkBase
             const linked = blockByType.get(type.Id);
             const img = mapImageUrl(type.Image);
             return (
-              <Card key={type.Id} className={linked ? "" : "border-dashed border-accent/50 bg-accent/5"}>
+              <Card key={type.Id} className={`overflow-hidden ${linked ? "" : "border-dashed border-accent/50 bg-accent/5"}`}>
                 <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     {img ? (
                       <img src={img} alt={type.Name} className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted" loading="lazy" />
                     ) : (
@@ -112,21 +138,37 @@ export const MapOfferOverview = ({ tenantSlug, partnerId, onOffer, blockLinkBase
                           <Badge className="bg-accent text-accent-foreground gap-1 font-normal text-xs"><Sparkles className="h-3 w-3" />Nog niet aangeboden</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-x-3 text-xs text-muted-foreground mt-0.5">
-                        {type.Duration ? <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{type.Duration} uur</span> : null}
-                        {linked && linked.name !== type.Name && <span className="truncate">bouwsteen: {linked.name}</span>}
-                        {!linked && type.Description && <span className="truncate">{type.Description}</span>}
+                      <div className="flex items-center gap-x-3 text-xs text-muted-foreground mt-0.5 min-w-0">
+                        {type.Duration ? <span className="flex items-center gap-1 shrink-0"><Clock className="h-3 w-3" />{type.Duration} uur</span> : null}
+                        {linked && linked.name !== type.Name && <span className="truncate min-w-0">bouwsteen: {linked.name}</span>}
+                        {!linked && type.Description && <span className="truncate min-w-0">{type.Description}</span>}
                       </div>
                     </div>
                     {linked ? (
                       blockLinkBase ? (
                         <Button asChild size="sm" variant="outline"><Link to={`${blockLinkBase}${linked.id}`}>Bouwsteen</Link></Button>
                       ) : null
-                    ) : onOffer ? (
-                      <Button size="sm" onClick={() => onOffer(type)}>
-                        <Sparkles className="h-4 w-4 mr-2" />Aanbieden
-                      </Button>
-                    ) : null}
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+                        {unlinkedBlocks.length > 0 && (
+                          <Select onValueChange={(blockId) => linkExisting(type, blockId)} disabled={linkingTypeId === type.Id}>
+                            <SelectTrigger className="h-9 w-[200px] text-xs">
+                              <SelectValue placeholder={linkingTypeId === type.Id ? "Koppelen…" : "Koppel aan bestaande…"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {unlinkedBlocks.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {onOffer && (
+                          <Button size="sm" onClick={() => onOffer(type)}>
+                            <Sparkles className="h-4 w-4 mr-2" />Als nieuwe activiteit
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

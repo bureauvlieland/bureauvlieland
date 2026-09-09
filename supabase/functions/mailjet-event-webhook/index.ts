@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { noteUndeliverableEmail } from "../_shared/undeliverable.ts";
 import { extractWebhookToken } from "./token.ts";
 import { parseEventsPreservingIds } from "../_shared/mailjet-message-id.ts";
 
@@ -213,7 +214,7 @@ Deno.serve(async (req) => {
       // related_item_id kan tonen. Elk Mailjet-event moet ALLE rijen
       // bijwerken — anders krijgt maar één item zijn open/click/delivered.
       const selectCols =
-        "id, status, mailjet_message_id, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, unsub_at";
+        "id, status, mailjet_message_id, mailjet_events, open_count, click_count, delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, unsub_at, related_request_id, related_partner_id, subject";
 
       const { data: exactRows, error: fetchErr } = await supabase
         .from("email_log")
@@ -399,6 +400,16 @@ Deno.serve(async (req) => {
         matchReason === "exact_message_id" || matchReason === "rounded_message_id";
 
       if (suppressReason && ev.email && suppressionTrusted) {
+        // Werkbank-taak, zodat de admin ziet dat deze mail niet aankwam.
+        const first = (rows[0] ?? {}) as Record<string, unknown>;
+        await noteUndeliverableEmail(supabase, {
+          email: ev.email,
+          reason: suppressReason,
+          subject: (first.subject as string | null) ?? null,
+          detail: ev.error ?? null,
+          relatedRequestId: (first.related_request_id as string | null) ?? null,
+          relatedPartnerId: (first.related_partner_id as string | null) ?? null,
+        });
 
         const normalized = ev.email.trim().toLowerCase();
         // Skip if adres al geblokt — we werken niet bij, oudste reden blijft leidend.

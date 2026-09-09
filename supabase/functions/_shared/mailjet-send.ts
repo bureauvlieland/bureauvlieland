@@ -23,6 +23,7 @@
 import {
   extractMessageIdsFromRawText,
 } from "./mailjet-message-id.ts";
+import { noteUndeliverableEmail } from "./undeliverable.ts";
 
 const MAILJET_API_URL = "https://api.mailjet.com/v3.1/send";
 
@@ -274,6 +275,9 @@ export function installMailjetBodyCapture(): void {
         const detail = blocked
           .map((b) => `${b.email} (${b.reason})`)
           .join(", ");
+        for (const b of blocked) {
+          await noteUndeliverableEmail(serviceClient(), { email: b.email, reason: b.reason === "blocked" || b.reason === "bounce" || b.reason === "spam" || b.reason === "unsub" ? b.reason : "suppressed", detail: `suppressielijst (${b.reason})` });
+        }
         console.error(
           `[mailjet-capture] Verzending geweigerd — ontvanger op suppressielijst: ${detail}`,
         );
@@ -372,6 +376,7 @@ export async function sendMailjet(
           console.warn(
             `[mailjet-send:${source}] Skipping — recipient ${to.Email} is suppressed (${supp.reason})`,
           );
+          await noteUndeliverableEmail(serviceClient(), { email: to.Email, reason: supp.reason, detail: `suppressielijst (${supp.reason})` });
           return {
             ok: true,
             messageId: null,
