@@ -34,6 +34,8 @@ import {
   type EmailIntentId,
 } from "@/lib/emailComposerIntents";
 import { reportError } from "@/lib/errorReporting";
+import { useEmailSuppressions } from "@/hooks/useEmailSuppressions";
+import { SuppressedEmailNotice } from "@/components/admin/SuppressedEmailNotice";
 
 interface Recipient {
   label: string;
@@ -148,6 +150,11 @@ export function SendProjectEmailSheet({
       cancelled = true;
     };
   }, [open, hasProject, requestId, accommodationId]);
+
+  const { data: suppressions = {} } = useEmailSuppressions(recipients.map((r) => r.email));
+  const selectedSuppressed = Array.from(selectedEmails)
+    .map((e) => suppressions[e])
+    .filter((s): s is NonNullable<typeof s> => !!s);
 
   const firstRecipient = useMemo(
     () =>
@@ -342,6 +349,7 @@ export function SendProjectEmailSheet({
               )}
             </div>
 
+            {selectedSuppressed.length > 0 && <SuppressedEmailNotice suppressions={selectedSuppressed} />}
             <div className="border rounded-md divide-y bg-card">
               {recipients.length === 0 && !showCustom && (
                 <p className="text-sm text-muted-foreground p-3">
@@ -363,6 +371,7 @@ export function SendProjectEmailSheet({
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{r.label}</div>
                       <div className="text-xs text-muted-foreground truncate">{r.email}</div>
+                      {suppressions[key] && <SuppressedEmailNotice suppressions={[suppressions[key]]} compact />}
                     </div>
                     <Badge
                       variant="outline"

@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmailSuppressions } from "@/hooks/useEmailSuppressions";
+import { SuppressedEmailNotice } from "@/components/admin/SuppressedEmailNotice";
 import type { Tables } from "@/integrations/supabase/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -226,6 +228,9 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [chatOpen, setChatOpen] = useState(false);
+  // Staat het klantadres op de suppressielijst, dan komt geen enkele mail aan.
+  const { data: suppressionMap = {} } = useEmailSuppressions([project.customer.email]);
+  const customerSuppressions = Object.values(suppressionMap);
 
   const { data: detail, isLoading, error } = useQuery<DetailData>({
     queryKey: ["werkbank-detail", project?.id],
@@ -347,6 +352,8 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
           </Button>
         </div>
       </div>
+
+      {customerSuppressions.length > 0 && <SuppressedEmailNotice suppressions={customerSuppressions} />}
 
       {project.isSnoozed && project.snoozedUntil && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
