@@ -130,16 +130,16 @@ scroll-fix hieronder.
   op de bouwsteen-kaart te tonen (tijdstip kiezen zonder pagina-wissel) in
   plaats van door te linken. Nu zou dat overengineering zijn.
 
-### Nog een besluit: Zeehondentochten Vlieland
+### Zeehondentochten Vlieland — opgelost (9 september)
 
-Op `/zeehondentochten-vlieland` staat, net als bij wadlopen, een CTA "Boek je
-zeehondentocht" die naar het aanvraagformulier linkt terwijl Zeehondentocht
-zelf al gekoppeld is aan MAP-activiteit "Robbentocht" (online boekbaar). Ik
-heb deze pagina niet aangepast omdat de tekst op de pagina zelf een minimum
-van 10 personen noemt voor deze tocht — dat past bij een gecharterde tocht,
-niet bij losse plekken op een gedeelde boot. Als "Robbentocht" in MAP dezelfde
-tocht is die deze pagina aanbiedt (dus gewoon losse plekken, geen aparte
-chartervariant), kan ik hem hetzelfde patroon geven als wadlopen. Klopt dat?
+Erwin bevestigt: als groep kan de zeehondentocht alleen exclusief (dat is de
+apart bouwsteen "Zeehondentocht Exclusief", géén online-boekbare MAP-variant —
+blijft dus aanvragen), maar individueel kun je gewoon los boeken. Inhoudelijk
+dezelfde tocht als de al gekoppelde bouwsteen "Zeehondentocht" → MAP-activiteit
+"Robbentocht". `/zeehondentochten-vlieland` heeft nu hetzelfde patroon als
+wadlopen: de twee individueel-gerichte CTA's ("Boek je zeehondentocht",
+"Direct boeken") linken naar de echte MAP-boeking, de groeps-CTA ("Offerte
+voor een groep") blijft aanvragen.
 
 ## Deel 2 — usability en conversie: visie en fasenplan
 
