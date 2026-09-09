@@ -5,7 +5,7 @@ import {
   suggestIntent,
   truncate,
   type DossierEntry,
-} from "../_shared/emailComposerIntents.ts";
+ firstNameFrom } from "../_shared/emailComposerIntents.ts";
 import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE, lastAiError } from "../_shared/ai.ts";
 
 const corsHeaders = {
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         .eq("id", requestId)
         .maybeSingle();
       if (pr) {
-        contactFirstName = (pr.customer_name || "").trim().split(/\s+/)[0] || "heer/mevrouw";
+        contactFirstName = firstNameFrom(pr.customer_name);
         referenceNumber = pr.reference_number || "";
         portalUrl = `https://bureauvlieland.nl/mijn-programma/${pr.customer_token}`;
         quoteSentAt = pr.quote_sent_at ?? null;
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (ar) {
         if (!requestId) {
-          contactFirstName = (ar.customer_name || "").trim().split(/\s+/)[0] || "heer/mevrouw";
+          contactFirstName = firstNameFrom(ar.customer_name);
         }
         referenceNumber = referenceNumber || ar.reference_number || "";
         portalUrl = portalUrl || `https://bureauvlieland.nl/mijn-logies/${ar.customer_token}`;
