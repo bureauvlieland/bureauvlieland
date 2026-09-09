@@ -18,7 +18,7 @@
  * beginnen (zoals de oude Lovable-gateway ze noemde); die prefix gaat eraf.
  */
 
-import Anthropic from "npm:@anthropic-ai/sdk";
+import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.124.0";
 import { CLAUDE_MODEL, fromAnthropicResponse, toAnthropicRequest, type OpenAiLikeRequest } from "./ai-anthropic.ts";
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai";

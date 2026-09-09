@@ -229,7 +229,7 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
   const queryClient = useQueryClient();
   const [chatOpen, setChatOpen] = useState(false);
   // Staat het klantadres op de suppressielijst, dan komt geen enkele mail aan.
-  const { data: suppressionMap = {} } = useEmailSuppressions([project.customer.email]);
+  const { data: suppressionMap = {} } = useEmailSuppressions([project?.customer.email]);
   const customerSuppressions = Object.values(suppressionMap);
 
   const { data: detail, isLoading, error } = useQuery<DetailData>({
