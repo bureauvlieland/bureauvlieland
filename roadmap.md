@@ -5,7 +5,7 @@
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
 - [ ] Storage-bucket `social-media` handmatig verwijderen in het Supabase-dashboard (tabellen en functies zijn al weg)
-- [ ] AI: Gemini vervangen door Claude (programmasuggesties, factuurscan, verkoop-inbox en de e-mailhulp); op 8 september gaf Gemini 429 op het model gemini-3.6-flash, nu terugval naar gemini-2.5-flash met zichtbare foutmelding
+- [ ] AI: ANTHROPIC_API_KEY toevoegen bij de edge-function-secrets (Supabase → Edge Functions → Secrets); de code kiest dan automatisch Claude (claude-opus-5) voor e-mailhulp, factuurscans, programmasuggesties en verkoop-inbox, met Gemini als terugval. Zonder die sleutel blijft Gemini; op 9 september meldde Google dat gemini-2.5-flash niet meer beschikbaar is en gaf gemini-3.6-flash een limietfout
 - [ ] Uitschrijflink in e-mails: nu een dode link; laten hangen tot er een echte uitschrijfpagina is (besluit 8 september)
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 

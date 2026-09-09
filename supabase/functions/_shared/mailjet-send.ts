@@ -74,6 +74,11 @@ export interface SendMailjetOptions {
    * Testbare seam: standaard `checkEmailSuppressed`. Alleen tests geven hier
    * een eigen lookup mee; productiecode laat dit leeg.
    */
+  /**
+   * Wat er gebeurt als een ontvanger geblokkeerd blijkt: standaard een
+   * Werkbank-taak (noteUndeliverableEmail). Tests geven een no-op mee.
+   */
+  onSuppressed?: (info: { email: string; reason: string }) => Promise<void>;
   suppressionLookup?: (
     email: string,
   ) => Promise<{ reason: string; source?: string | null } | null>;
@@ -376,7 +381,11 @@ export async function sendMailjet(
           console.warn(
             `[mailjet-send:${source}] Skipping — recipient ${to.Email} is suppressed (${supp.reason})`,
           );
-          await noteUndeliverableEmail(serviceClient(), { email: to.Email, reason: supp.reason, detail: `suppressielijst (${supp.reason})` });
+          if (opts.onSuppressed) {
+            await opts.onSuppressed({ email: to.Email, reason: supp.reason });
+          } else {
+            await noteUndeliverableEmail(serviceClient(), { email: to.Email, reason: supp.reason, detail: `suppressielijst (${supp.reason})` });
+          }
           return {
             ok: true,
             messageId: null,

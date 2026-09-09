@@ -20,6 +20,7 @@ Deno.test("geblokkeerd adres wordt niet verstuurd", async () => {
 
   const originalFetch = globalThis.fetch;
   let fetchCalled = false;
+  let suppressedNoted: { email: string; reason: string } | null = null;
   globalThis.fetch = ((..._args: unknown[]) => {
     fetchCalled = true;
     return Promise.resolve(new Response("{}", { status: 200 }));
@@ -30,10 +31,15 @@ Deno.test("geblokkeerd adres wordt niet verstuurd", async () => {
       source: "suppression-test",
       messages: [baseMessage],
       suppressionLookup: () => Promise.resolve({ reason: "bounce", source: "test" }),
+      onSuppressed: (info) => {
+        suppressedNoted = info;
+        return Promise.resolve();
+      },
     });
 
     assertEquals(result.ok, true);
     assertEquals(fetchCalled, false, "er mag geen Mailjet-call gedaan worden");
+    assertEquals(suppressedNoted, { email: "geblokkeerd@example.com", reason: "bounce" }, "de admin moet een melding krijgen");
     assertEquals(result.ok === true ? result.skipped : null, "suppressed");
     assertEquals(
       result.ok === true ? result.suppressedRecipient?.reason : null,

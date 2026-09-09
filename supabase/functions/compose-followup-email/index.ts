@@ -338,8 +338,8 @@ Deno.serve(async (req) => {
     });
 
     const aiRes = await aiChatCompletions({
-      // gemini-3.6-flash was een alias van de Lovable-gateway en geeft bij Google 429; 2.5-flash is GA.
-      model: "google/gemini-2.5-flash",
+      // Met ANTHROPIC_API_KEY gaat dit naar Claude; anders Gemini (2.5-flash bestaat niet meer voor nieuwe gebruikers).
+      model: "google/gemini-3.6-flash",
       messages: [
         { role: "system", content: system },
         { role: "user", content: userPrompt },

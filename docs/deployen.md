@@ -67,6 +67,20 @@ houden het verbruik laag:
    controleert de productiebuild al op elke PR; de preview-URL is handig maar
    niet nodig.
 
+## AI-aanbieder (Claude of Gemini)
+
+Alle AI-aanroepen lopen via `supabase/functions/_shared/ai.ts`. Staat het
+secret `ANTHROPIC_API_KEY` bij de edge functions, dan gaat alles naar Claude
+(`claude-opus-5`); anders naar Gemini via `GEMINI_API_KEY`, met terugval op
+andere Gemini-modellen als een model verdwijnt of aan zijn limiet zit. Beide
+sleutels tegelijk kan: Claude eerst, Gemini bij een storing.
+
+Sleutel toevoegen: Supabase-dashboard → Edge Functions → Secrets →
+`ANTHROPIC_API_KEY`. Geen herdeploy nodig; functies lezen het secret bij de
+volgende aanroep. Een Anthropic-sleutel maak je op
+<https://console.anthropic.com/settings/keys>. Zet de sleutel nooit in de
+repo of in een chat.
+
 ## De GitHub-workflow "Deploy Supabase"
 
 `.github/workflows/deploy-supabase.yml` deployt edge functions en migraties bij
