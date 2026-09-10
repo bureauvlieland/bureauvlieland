@@ -84,9 +84,14 @@ const IncentiveReisVlieland = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Het eilandgevoel maakt de ervaring uniek. Alles draait om samenzijn, beleving 
-                en kwaliteit. Een incentive reis naar Vlieland is meer dan een beloning – 
+                Het eilandgevoel maakt de ervaring uniek. Alles draait om samenzijn, beleving
+                en kwaliteit. Een incentive reis naar Vlieland is meer dan een beloning –
                 het is een herinnering die blijft.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Wij zijn uitsluitend op Vlieland actief en kennen de meest bijzondere plekken en
+                aanbieders van het eiland persoonlijk — dat merkt u terug in de kwaliteit van het
+                programma.
               </p>
             </div>
           </div>

@@ -85,8 +85,13 @@ const MeerdaagsBedrijfsuitjeVlieland = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Meerdaagse programma's zorgen voor minder haast en meer aandacht. Teams hebben 
+                Meerdaagse programma's zorgen voor minder haast en meer aandacht. Teams hebben
                 de tijd om te landen, samen te werken en tot inzichten te komen.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Wij zijn uitsluitend op Vlieland actief — voor een meerdaags programma betekent
+                dat één vast aanspreekpunt dat zelf hier woont, in plaats van te schakelen tussen
+                aanbieders op verschillende eilanden.
               </p>
             </div>
           </div>
