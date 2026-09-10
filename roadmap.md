@@ -10,6 +10,7 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Voorbeeldprogramma's verwezen naar verkeerde bouwsteen (10 september): 6 van de 7 gepubliceerde voorbeeldprogramma's koppelden naar de individuele "Zeehondentocht" (nu los boekbaar via MAP) in plaats van de bedoelde "Zeehondentocht Exclusief" (privéafvaart voor de hele groep) — precies de verwarring die deze hele frontend-usability-ronde probeert te voorkomen. Alle 7 gecorrigeerd naar de exclusief-variant
 - [x] Voorbeeldprogramma's als vierde kaart in de homepage-`RoutePicker` (10 september): eerder alleen een klein tekstlinkje, nu een volwaardige kaart naast de andere hoofdroutes ("Voorbeeldprogramma's bekijken", ± 2 min)
 - [x] Staffelprijzen in het partnerportaal (10 september): `TierEditor` uit het adminscherm hergebruikt in `PartnerBlockSheet.tsx`, partners kunnen nu zelf staffels per groepsgrootte instellen op eigen bouwstenen; activiteitenlijst toont "vanaf €… (staffel)"
 - [x] Footer-overlap door zwevende knoppen (10 september): "Uw programma", de verstuur-balk op Programma-samenstellen en "Vraag stellen" verdwijnen nu zodra de footer in beeld komt (nieuwe hook `useFooterInView`), zodat ze niet meer over de footer-links heen staan
