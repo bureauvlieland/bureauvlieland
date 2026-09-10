@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Open
+- [ ] Concurrentiepositie scherper communiceren (`docs/concurrentie-positionering.md`, 10 september): analyse t.o.v. islandevents.nl en wadevents.nl — 1) zelfbedieningsvoordeel ("geen offerte nodig om te zien wat kan") expliciet benoemen op de site, 2) checken of SEO-landingspagina's het Vlieland-exclusieve voordeel al benutten t.o.v. concurrenten die over meerdere eilanden spelen, 3) reviews zichtbaarder/talrijker maken. Niet dringend, na de frontend-usability-reeks
 - [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, volgorde akkoord 10 september): 4) inline formuliervalidatie, 5) logies als stap in de wizard (fase 2, eigen planningsronde), 6) meten per landingspagina (fase 3, wacht op GA4-export)
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
