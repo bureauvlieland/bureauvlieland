@@ -93,3 +93,31 @@ scherper te communiceren:
 
 Geen van deze drie is dringend of groot — ik zou ze pas oppakken na de
 lopende frontend-usability-reeks, tenzij je ze liever naar voren haalt.
+
+## Uitgevoerd (10 september)
+
+**1. Zelfbedieningsvoordeel — gedaan.** Regel toegevoegd onder de intro van
+de `RoutePicker`-sectie op de homepage: "Geen offerte-aanvraag nodig om te
+zien wat mogelijk is: overal ziet u meteen prijzen, en bij een deel van het
+aanbod boekt u direct."
+
+**2. SEO-landingspagina's op Vlieland-exclusiviteit — uitgezocht en deels
+aangevuld.** Alle 12 bedrijfsuitje/event-landingspagina's gecontroleerd op
+titel, meta-omschrijving en inhoud. 5 van de 12 maakten het
+lokale-specialisme-argument al expliciet (`/bedrijfsuitje-vlieland`,
+`/teamuitje-vlieland`, `/jubileum-vlieland`, `/wadlopen-vlieland`,
+`/zeehondentochten-vlieland`) — vaak in een "Waarom met ons?"-sectie. De
+overige 7 leunden alleen op sfeerbeschrijvingen van het eiland zelf (rust,
+ruimte, autoluw), niet op Bureau Vlieland's eigen positie als eiland-
+exclusieve specialist. Bij de drie met naar verwachting de meeste
+verkeer/intentie een korte regel toegevoegd in dezelfde geest als de
+bestaande pagina's: `/bedrijfsuitje-ideeen-vlieland`,
+`/zakelijk-evenement-vlieland`, `/heisessie-vlieland`. De overige vier
+(`/meerdaags-bedrijfsuitje-vlieland`, `/incentive-reis-vlieland`,
+`/groepsweekend-vlieland`, `/familieweekend-vlieland`) zijn nog niet
+aangepast — kleiner volume, kan later als dit invulling goed bevalt.
+
+**3. Reviews zichtbaarder maken — nog niet opgepakt.** Dit is geen
+bouwtaak maar een kwestie van meer reviews verzamelen; geen actie vanuit
+mij nodig, tenzij je hier hulp bij wilt (bijvoorbeeld een follow-up-mail
+naar recente klanten met een reviewlink).
