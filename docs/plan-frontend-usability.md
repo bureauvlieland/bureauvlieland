@@ -307,18 +307,20 @@ smalle schermen dus weer dezelfde categorie fout als eerder. Zelfde
 oplossing: de rij stapelt nu op mobiel in plaats van breder te worden dan het
 scherm.
 
-**3. Staffelprijzen ook in het partnerportaal — uitgezocht, nog te bouwen.**
+**3. Staffelprijzen ook in het partnerportaal — gedaan (10 september).**
 Bij sommige bouwstenen (zoals Vliehors Expres) is een staffelprijs per
 groepsgrootte ingesteld via `TierEditor` in het adminscherm
 (`src/components/admin/BuildingBlockSheet.tsx`), opgeslagen in `price_extras`
 bij `price_type = "tiered_total"`. Het partnerportaal
-(`PartnerBlockSheet.tsx`) heeft deze editor helemaal niet — een partner kan
-geen staffel instellen of aanpassen aan eigen bouwstenen. Goed nieuws bij het
-uitzoeken: er is geen database-trigger die dit voor partners blokkeert (wel
-voor het wijzigen van eigenaarschap en zelf publiceren) — `TierEditor` is een
-kaal, herbruikbaar component zonder adminspecifieke afhankelijkheden. Dit is
-dus vooral een front-end-klus: dezelfde editor en opslaglogica overnemen in
-het partnerportaal, niet een nieuwe backend-bevoegdheid regelen.
+(`PartnerBlockSheet.tsx`) had deze editor niet — een partner kon geen staffel
+instellen of aanpassen aan eigen bouwstenen. Bevestigd bij het uitzoeken: geen
+database-trigger blokkeerde dit (wel voor eigenaarschap en zelf publiceren),
+dus puur een front-end-klus. `TierEditor` en de opslaglogica (valideren,
+mergen in `price_extras`) hergebruikt in `PartnerBlockSheet.tsx`; "Staffel op
+groepsgrootte" toegevoegd aan het prijstype-keuzemenu; de activiteitenlijst in
+het partnerportaal (`PartnerBlocks.tsx`) toont nu ook "vanaf €… (staffel)" in
+plaats van "Prijs op aanvraag" voor deze bouwstenen. Getest: typecheck, lint,
+volledige testsuite, build.
 
 **4. Voorbeeldprogramma's meer promoten — jouw hypothese klopt, en het is
 vooral een plaatsingsvraag, geen bouwvraag.** Er staan 12 gepubliceerde
@@ -381,11 +383,8 @@ gedaan zonder jouw akkoord — de twee bugs hierboven (footer, scroll) zijn al
 gefixt omdat het bugreports waren, de rest wacht op jouw akkoord op deze
 volgorde of een andere prioriteit.
 
-1. **Staffelprijzen in het partnerportaal** (nieuw, punt 3 hierboven). Klein
-   en scherp afgebakend — bestaande admin-editor hergebruiken, geen nieuwe
-   database-bevoegdheid nodig. Laag risico, snel gedaan, en het lost meteen
-   een echt bestaand probleem op (partners kunnen nu hun eigen staffelprijzen
-   niet beheren en moeten dat aan het bureau vragen).
+1. **Staffelprijzen in het partnerportaal — gedaan (10 september).** Zie
+   punt 3 hierboven.
 2. **Voorbeeldprogramma's op de homepage** (nieuw, punt 4 hierboven). Ook
    klein: één kaart toevoegen aan de bestaande `RoutePicker`. Ik zet dit vóór
    de knoppenkeuze en formuliervalidatie hieronder, omdat het potentieel de

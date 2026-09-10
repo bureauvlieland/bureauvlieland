@@ -162,6 +162,7 @@ export interface PartnerBuildingBlock {
   price_display_override: string | null;
   sort_order: number | null;
   map_activity_type_id?: number | null;
+  price_extras?: Record<string, unknown> | null;
 }
 
 export interface PartnerDashboardData {
