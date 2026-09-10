@@ -392,8 +392,21 @@ volgorde of een andere prioriteit.
    verwijderd (was dubbelop met de nieuwe kaart). Kop aangepast van "Vijf" naar
    "Zes manieren om bij ons aan te kloppen" (nu 4 hoofdroutes + 2 losse
    onderdelen). Getest: typecheck, lint, volledige testsuite, build.
-3. **Snel-aanvragen vs. Programma-samenstellen: CTA-hiërarchie** (rest van
-   fase 1). Klein, zelfde patroon als de al gedane bouwstenen-kaart-fix.
+3. **Snel-aanvragen vs. Programma-samenstellen: CTA-hiërarchie — gedaan
+   (10 september).** Drie plekken hadden nog twee gelijkwaardige knoppen
+   "Direct aanvragen" / "Aan programma toevoegen" naast elkaar: de
+   bouwstenen-hero, de bouwstenen-kaart (niet-boekbare bouwstenen) en de
+   activiteitpagina (niet-boekbare bouwstenen) — zelfde patroon als de
+   al gedane bouwstenen-kaart-fix voor direct boekbare items. Overal nu
+   "Aan programma toevoegen" als enige knop, "Direct aanvragen" als
+   onderschikte tekstlink eronder — programma samenstellen is ook op de
+   homepage al de gemarkeerde standaardroute, en `/snel-aanvragen` deelt
+   feitelijk dezelfde cart als `/programma-samenstellen` (alleen beperkt
+   tot één dag), dus dit maakt de knoppen consistent met wat er technisch
+   al hetzelfde systeem is. `/snel-aanvragen` had zelf al een nette,
+   ondergeschikte terugweg ("Toch meerdaags programma"), daar niets aan
+   veranderd. Getest: typecheck (app + strict), lint, volledige testsuite,
+   build.
 4. **Inline formuliervalidatie** op Offerte en Programma-samenstellen (rest
    van fase 1). Middelgroot — raakt de belangrijkste formulieren, dus zorgvuldig
    en met de volledige testsuite per formulier.

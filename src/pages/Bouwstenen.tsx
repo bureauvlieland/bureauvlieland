@@ -218,16 +218,17 @@ const Bouwstenen = () => {
             <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-6">
               Activiteiten, catering, vervoer en diensten — voeg toe aan een programma of vraag los aan.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col items-center gap-3">
               <Link to="/programma-samenstellen">
-                <Button size="lg" variant="secondary">
+                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
                   Stel een programma samen
                 </Button>
               </Link>
-              <Link to="/snel-aanvragen">
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                  Losse activiteit aanvragen
-                </Button>
+              <Link
+                to="/snel-aanvragen"
+                className="text-sm text-primary-foreground/80 hover:text-primary-foreground underline underline-offset-2"
+              >
+                Liever één losse activiteit aanvragen?
               </Link>
             </div>
           </div>
@@ -403,16 +404,17 @@ const Bouwstenen = () => {
                             </Link>
                           </>
                         ) : (
-                          <div className="grid grid-cols-2 gap-2">
-                            <Link to={`/snel-aanvragen?block=${block.id}`} className="contents">
+                          <div className="flex flex-col gap-2">
+                            <Link to={`/programma-samenstellen?block=${block.id}`} className="contents">
                               <Button size="sm" className="w-full">
-                                Direct aanvragen
+                                Aan programma toevoegen
                               </Button>
                             </Link>
-                            <Link to={`/programma-samenstellen?block=${block.id}`} className="contents">
-                              <Button size="sm" variant="outline" className="w-full">
-                                Aan programma
-                              </Button>
+                            <Link
+                              to={`/snel-aanvragen?block=${block.id}`}
+                              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 text-center"
+                            >
+                              Liever dit ene onderdeel snel aanvragen?
                             </Link>
                           </div>
                         )}
