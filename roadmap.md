@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Open
-- [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, voorstel volgorde 10 september, wacht op akkoord): 1) staffelprijzen in partnerportaal (`TierEditor` hergebruiken in `PartnerBlockSheet`), 2) voorbeeldprogramma's als vierde kaart in de homepage-`RoutePicker`, 3) CTA-hiërarchie Snel-aanvragen/Programma-samenstellen, 4) inline formuliervalidatie, 5) logies als stap in de wizard (fase 2, eigen planningsronde), 6) meten per landingspagina (fase 3, wacht op GA4-export)
+- [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, volgorde akkoord 10 september): 3) CTA-hiërarchie Snel-aanvragen/Programma-samenstellen, 4) inline formuliervalidatie, 5) logies als stap in de wizard (fase 2, eigen planningsronde), 6) meten per landingspagina (fase 3, wacht op GA4-export)
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
@@ -10,6 +10,8 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Voorbeeldprogramma's als vierde kaart in de homepage-`RoutePicker` (10 september): eerder alleen een klein tekstlinkje, nu een volwaardige kaart naast de andere hoofdroutes ("Voorbeeldprogramma's bekijken", ± 2 min)
+- [x] Staffelprijzen in het partnerportaal (10 september): `TierEditor` uit het adminscherm hergebruikt in `PartnerBlockSheet.tsx`, partners kunnen nu zelf staffels per groepsgrootte instellen op eigen bouwstenen; activiteitenlijst toont "vanaf €… (staffel)"
 - [x] Footer-overlap door zwevende knoppen (10 september): "Uw programma", de verstuur-balk op Programma-samenstellen en "Vraag stellen" verdwijnen nu zodra de footer in beeld komt (nieuwe hook `useFooterInView`), zodat ze niet meer over de footer-links heen staan
 - [x] Horizontale scroll op /partner/aanbod, nieuwe plek (10 september): `BlockRow` in `PartnerBlocks.tsx` had dezelfde niet-wrappende badges/knop-rij als de eerder gefixte MAP-koppelrij; stapelt nu op mobiel
 - [x] Frontend usability fase 1, duplicate-submits (9 september): race-conditie in `CheckoutContactForm` gefixt — de knop vergrendelde pas ná de dedup-checks in plaats van ervoor, waardoor een snelle tweede klik er soms toch doorheen kwam. Van de 4 vermeende dubbele aanvragen sinds juni waren er 2 echt een dubbelklik, de andere 2 waren gewoon twee verschillende aanvragen van dezelfde klant

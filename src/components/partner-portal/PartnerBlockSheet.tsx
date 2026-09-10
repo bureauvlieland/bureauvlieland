@@ -27,6 +27,9 @@ import { Loader2, Upload, ImageIcon, AlertCircle, CheckCircle, Info, Euro, Setti
 import type { PartnerBuildingBlock } from "@/types/partner";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { reportError } from "@/lib/errorReporting";
+import { TierEditor } from "@/components/admin/TierEditor";
+import { getTieredConfig, validateTiers, type PriceTier, type TiersAboveMax } from "@/lib/tieredPricing";
+import type { Json } from "@/integrations/supabase/types";
 
 // Slugify helper
 const slugify = (text: string): string =>
@@ -268,10 +271,15 @@ export const PartnerBlockSheet = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<FormData>(getInitialFormData(null));
+  const [tiers, setTiers] = useState<PriceTier[]>([]);
+  const [tiersAboveMax, setTiersAboveMax] = useState<TiersAboveMax>("highest");
 
   useEffect(() => {
     if (isOpen) {
       const initial = getInitialFormData(block);
+      const cfg = getTieredConfig(block ?? { price_extras: null });
+      setTiers(cfg.tiers);
+      setTiersAboveMax(cfg.tiers_above_max ?? "highest");
       if (isNew && prefillFromMap) {
         initial.name = prefillFromMap.name || "";
         initial.description = prefillFromMap.description || "";
@@ -402,6 +410,22 @@ export const PartnerBlockSheet = ({
       return;
     }
 
+    // Staffels valideren vóórdat we opslaan
+    let priceExtras: Record<string, unknown> | undefined;
+    if (formData.price_type === "tiered_total") {
+      const err = validateTiers(tiers);
+      if (err) {
+        toast({ title: "Staffels onjuist", description: err, variant: "destructive" });
+        return;
+      }
+      const base = (block?.price_extras ?? {}) as Record<string, unknown>;
+      priceExtras = { ...base, tiers, tiers_above_max: tiersAboveMax };
+    } else if (block?.price_extras) {
+      // Staffelgegevens weghalen bij het wisselen naar een ander prijstype
+      const { tiers: _t, tiers_above_max: _a, ...rest } = block.price_extras as Record<string, unknown>;
+      priceExtras = rest;
+    }
+
     setIsSubmitting(true);
 
     // Parse tags from comma-separated string
@@ -419,7 +443,8 @@ export const PartnerBlockSheet = ({
         duration: formData.duration.trim() || null,
         price_adult: formData.price_adult ? parseFloat(formData.price_adult) : null,
         price_adult_note: formData.price_adult_note.trim() || null,
-        price_type: formData.price_type as "per_person" | "per_person_per_day" | "total" | "on_request",
+        price_type: formData.price_type as "per_person" | "per_person_per_day" | "total" | "on_request" | "tiered_total",
+        ...(priceExtras !== undefined ? { price_extras: priceExtras as Json } : {}),
         price_child: formData.price_child ? parseFloat(formData.price_child) : null,
         price_child_note: formData.price_child_note.trim() || null,
         price_child_min_age: formData.price_child_min_age ? parseInt(formData.price_child_min_age) : 4,
@@ -482,6 +507,8 @@ export const PartnerBlockSheet = ({
 
         // Reset form for next entry
         setFormData(getInitialFormData(null));
+        setTiers([]);
+        setTiersAboveMax("highest");
         setImagePreview(null);
         setImageValidation(null);
         setActiveTab("algemeen");
@@ -698,6 +725,7 @@ export const PartnerBlockSheet = ({
                     <SelectItem value="per_person">Per persoon</SelectItem>
                     <SelectItem value="per_person_per_day">Per persoon per dag</SelectItem>
                     <SelectItem value="total">Totaalprijs</SelectItem>
+                    <SelectItem value="tiered_total">Staffel op groepsgrootte</SelectItem>
                     <SelectItem value="on_request">Op aanvraag</SelectItem>
                   </SelectContent>
                 </Select>
@@ -745,8 +773,24 @@ export const PartnerBlockSheet = ({
                 </Select>
               </div>
 
-              {/* Price section - hidden for on_request */}
-              {formData.price_type !== "on_request" && (
+              {/* Staffelprijzen op groepsgrootte */}
+              {formData.price_type === "tiered_total" && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Staffels op groepsgrootte</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Voor activiteiten waarbij de totaalprijs voor de hele groep verandert per personenrange (bijv. een boottocht met vaste tarieven per groepsgrootte).
+                  </p>
+                  <TierEditor
+                    tiers={tiers}
+                    onChange={setTiers}
+                    tiersAboveMax={tiersAboveMax}
+                    onTiersAboveMaxChange={setTiersAboveMax}
+                  />
+                </div>
+              )}
+
+              {/* Price section - hidden for on_request en tiered_total */}
+              {formData.price_type !== "on_request" && formData.price_type !== "tiered_total" && (
                 <div className="border rounded-lg p-4 space-y-3">
                   <h4 className="font-medium">{formData.price_type === "per_person" ? "Volwassenen" : "Prijs"}</h4>
                   <div className="grid grid-cols-2 gap-4">

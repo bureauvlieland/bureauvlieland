@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { LayoutGrid, Zap, MessageSquareHeart, UtensilsCrossed, BedDouble, ArrowRight, Clock, Sparkles } from "lucide-react";
+import { LayoutGrid, Zap, MessageSquareHeart, BookOpen, UtensilsCrossed, BedDouble, ArrowRight, Clock } from "lucide-react";
 import beachActivity from "@/assets/beach-activity.jpg";
 import vlielandGroup from "@/assets/vlieland-group.jpg";
 import sunsetDinner from "@/assets/sunset-dinner.jpg";
+import dunesGroup from "@/assets/dunes-group.jpg";
 
 
 interface Route {
@@ -49,6 +50,16 @@ const primaryRoutes: Route[] = [
     icon: MessageSquareHeart,
     image: sunsetDinner,
     imageAlt: "Sfeervol diner bij zonsondergang op Vlieland",
+  },
+  {
+    title: "Voorbeeldprogramma's bekijken",
+    href: "/voorbeeldprogrammas",
+    duration: "± 2 min",
+    description: "Geen idee waar te beginnen? Bekijk kant-en-klare programma's en gebruik er één als startpunt.",
+    bestFor: "Inspiratie, bestaand programma als startpunt",
+    icon: BookOpen,
+    image: dunesGroup,
+    imageAlt: "Groep op de duinen van Vlieland",
   },
 ];
 
@@ -156,28 +167,17 @@ export const RoutePicker = () => {
             Welke route past bij u?
           </p>
           <h2 className="font-display text-3xl lg:text-4xl font-light text-foreground leading-tight">
-            Vijf manieren om bij ons aan te kloppen.
+            Zes manieren om bij ons aan te kloppen.
           </h2>
 
           <p className="text-muted-foreground mt-3">
-            Eén klein onderdeel, een compleet programma dat u zelf samenstelt, of volledig maatwerk — kies wat het beste past.
+            Eén klein onderdeel, een compleet programma dat u zelf samenstelt of vanuit een voorbeeld start, of volledig maatwerk — kies wat het beste past.
           </p>
-          <div className="mt-5 inline-flex items-center gap-2 text-sm">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">Geen idee waar te beginnen?</span>
-            <Link
-              to="/voorbeeldprogrammas"
-              className="font-medium text-primary hover:underline underline-offset-4"
-            >
-              Bekijk onze voorbeeldprogramma's
-              <ArrowRight className="inline h-3.5 w-3.5 ml-1 -mt-0.5" />
-            </Link>
-          </div>
         </div>
 
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {primaryRoutes.map((route) => (
               <RouteCard key={route.href} route={route} />
             ))}

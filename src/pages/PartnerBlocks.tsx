@@ -48,7 +48,8 @@ const PartnerBlocksContent = () => {
     min_people, max_people, is_published, is_active, status,
     image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
     seasonal_notes, tags, location_lat, location_lng, location_address,
-    external_url, price_display_override, sort_order, map_activity_type_id
+    external_url, price_display_override, sort_order, map_activity_type_id,
+    price_extras
   `;
 
   useEffect(() => {
@@ -315,6 +316,14 @@ interface BlockRowProps {
 }
 
 const formatBlockPrice = (block: PartnerBuildingBlock) => {
+  if (block.price_type === "tiered_total") {
+    const extras = (block.price_extras ?? {}) as Record<string, unknown>;
+    const tiers = (Array.isArray(extras.tiers) ? extras.tiers : []) as Array<{ price?: number }>;
+    const prices = tiers.map((t) => Number(t?.price)).filter((p) => Number.isFinite(p));
+    if (prices.length === 0) return "Prijs op aanvraag";
+    const min = Math.min(...prices);
+    return `vanaf €${min.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} (staffel)`;
+  }
   if (!block.price_adult) return "Prijs op aanvraag";
   const price = block.price_adult.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
   switch (block.price_type) {

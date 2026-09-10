@@ -23,7 +23,7 @@ const isTier = (v: unknown): v is PriceTier =>
   typeof (v as PriceTier).max_people === "number" &&
   typeof (v as PriceTier).price === "number";
 
-export const getTieredConfig = (block: Pick<BuildingBlock, "price_extras">): TieredPriceConfig => {
+export const getTieredConfig = (block: { price_extras: Record<string, unknown> | null }): TieredPriceConfig => {
   const extras = (block.price_extras ?? {}) as Record<string, unknown>;
   const rawTiers = Array.isArray(extras.tiers) ? extras.tiers : [];
   const tiers = (rawTiers as unknown[])
