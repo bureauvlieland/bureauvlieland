@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCartSafe } from "@/contexts/CartContext";
 import { buildWhatsAppHref, openWhatsApp } from "@/lib/whatsappLink";
+import { useFooterInView } from "@/hooks/useFooterInView";
 
 const WA_NUMBER = "31562700208"; // +31 562 700208
 const STORAGE_KEY = "bv_presales_widget";
@@ -24,6 +25,7 @@ type Persisted = { name: string; email: string };
 export const PreSalesChatWidget = () => {
   const location = useLocation();
   const cart = useCartSafe();
+  const footerInView = useFooterInView();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
@@ -104,8 +106,14 @@ export const PreSalesChatWidget = () => {
 
   return (
     <>
-      {/* Floating action buttons — bottom right */}
-      <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3">
+      {/* Floating action buttons — bottom right. Verdwijnt zodra de footer
+          in beeld komt, anders staan ze over de footer-links heen. Al
+          geopend chat-paneel blijft gewoon staan. */}
+      <div
+        className={`fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 transition-opacity duration-200 ${
+          footerInView && !open ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
         {cartCount > 0 && (
           <Link to="/programma-samenstellen" aria-label="Uw programma">
             <Button

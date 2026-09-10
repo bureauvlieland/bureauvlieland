@@ -24,6 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { useFooterInView } from "@/hooks/useFooterInView";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
@@ -185,6 +186,7 @@ export const ProgramBuilderView = ({
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   const { data: templates = [] } = useTemplatesByDuration(selectedDates.length);
+  const footerInView = useFooterInView();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
@@ -566,8 +568,13 @@ export const ProgramBuilderView = ({
         </DayTabs>
       </DndContext>
 
-      {/* Floating submit bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4 z-30">
+      {/* Floating submit bar — verdwijnt zodra de footer in beeld komt,
+          anders staat hij over de footer-links heen. */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4 z-30 transition-opacity duration-200 ${
+          footerInView ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd

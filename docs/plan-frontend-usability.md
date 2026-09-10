@@ -288,6 +288,59 @@ overal pas ná een submit-poging. Code-splitting is verder prima op orde.
   aanwezig via `useProgramDraft`, verder uitbouwen).
 - Vereist GA4-toegang of periodieke export — zie besluit hieronder.
 
+### Vier nieuwe punten van Erwin (10 september)
+
+**1. Footer oogt rommelig — opgelost.** De zwevende "Uw programma"-knop, de
+zwevende verstuur-balk op Programma-samenstellen en de "Vraag stellen"-knop
+zijn `position: fixed`, dus ze blijven op hun plek staan ook als de bezoeker
+helemaal naar beneden scrolt tot in de footer — en overlappen die dan. Nieuwe
+hook `useFooterInView` (via een `IntersectionObserver` op de footer) laat
+beide widgets vervagen zodra de footer in beeld komt; een al geopend
+chat-paneel blijft gewoon staan.
+
+**2. Horizontale scroll op de partnerpagina — nieuwe plek, zelfde patroon,
+opgelost.** Niet hetzelfde component als de eerdere scroll-fix (dat was het
+MAP-koppelblok onderaan): dit keer `BlockRow` in `PartnerBlocks.tsx`, de
+gewone kaartjes onder "Gepubliceerd"/"Goedgekeurd". Rechts in die rij stonden
+tot drie badges plus een bewerk-knop allemaal `shrink-0` zonder terugval, op
+smalle schermen dus weer dezelfde categorie fout als eerder. Zelfde
+oplossing: de rij stapelt nu op mobiel in plaats van breder te worden dan het
+scherm.
+
+**3. Staffelprijzen ook in het partnerportaal — uitgezocht, nog te bouwen.**
+Bij sommige bouwstenen (zoals Vliehors Expres) is een staffelprijs per
+groepsgrootte ingesteld via `TierEditor` in het adminscherm
+(`src/components/admin/BuildingBlockSheet.tsx`), opgeslagen in `price_extras`
+bij `price_type = "tiered_total"`. Het partnerportaal
+(`PartnerBlockSheet.tsx`) heeft deze editor helemaal niet — een partner kan
+geen staffel instellen of aanpassen aan eigen bouwstenen. Goed nieuws bij het
+uitzoeken: er is geen database-trigger die dit voor partners blokkeert (wel
+voor het wijzigen van eigenaarschap en zelf publiceren) — `TierEditor` is een
+kaal, herbruikbaar component zonder adminspecifieke afhankelijkheden. Dit is
+dus vooral een front-end-klus: dezelfde editor en opslaglogica overnemen in
+het partnerportaal, niet een nieuwe backend-bevoegdheid regelen.
+
+**4. Voorbeeldprogramma's meer promoten — jouw hypothese klopt, en het is
+vooral een plaatsingsvraag, geen bouwvraag.** Er staan 12 gepubliceerde
+voorbeeldprogramma's. Ze zijn nu alleen te vinden via een klein tekstlinkje
+onder de RoutePicker-sectie op de homepage ("Geen idee waar te beginnen?") en
+een item in het secundaire "Inspiratie"-dropdownmenu — geen eigen kaart
+tussen de drie hoofdroutes. Binnen de wizard zelf bestaat het "kopieer een
+voorbeeld als vertrekpunt" al: zodra iemand met een (bijna) lege
+kaart in Programma-samenstellen zit, verschijnt al een opvallende banner
+("Snel starten met een voorbeeldprogramma?") die naar de templates linkt —
+dat stuk hoeft dus niet gebouwd te worden.
+
+Mijn inschatting van de kern van je vraag ("is samenstellen te
+ingewikkeld?"): niet de wizard zelf (die is stap voor stap opgebouwd), maar
+dat een bezoeker zonder voorbeeld eerst moet *verzinnen* wat er allemaal kan
+vóórdat hij aan de wizard begint — en die drempel zit vóór de wizard, niet
+erin. Concreet voorstel: een vierde kaart in de `RoutePicker` op de homepage
+("Voorbeeldprogramma's bekijken", ± 2 min, "bestaand programma als
+startpunt"), zodat mensen die drempel al bij de eerste keuze wegnemen in
+plaats van pas te ontdekken dat die er is nadat ze de wizard al hebben
+geopend.
+
 ### Besluiten (9 september)
 
 - **Fase 1 akkoord** — start met CTA-herziening Snel-aanvragen/
@@ -320,3 +373,40 @@ geïnstalleerd). Twee manieren die wel werken, van makkelijk naar completer:
 Voor fase 3 is vooral verkeer en conversie per landingspagina relevant
 (welke SEO-pagina's leveren aanvragen op), plus totaal bezoekersaantal per
 maand om de terugval hierboven te kunnen duiden.
+
+## Voorstel voor volgorde van ontwikkeling (10 september)
+
+Alles wat nu nog open staat, in de volgorde die ik zou aanhouden. Niet
+gedaan zonder jouw akkoord — de twee bugs hierboven (footer, scroll) zijn al
+gefixt omdat het bugreports waren, de rest wacht op jouw akkoord op deze
+volgorde of een andere prioriteit.
+
+1. **Staffelprijzen in het partnerportaal** (nieuw, punt 3 hierboven). Klein
+   en scherp afgebakend — bestaande admin-editor hergebruiken, geen nieuwe
+   database-bevoegdheid nodig. Laag risico, snel gedaan, en het lost meteen
+   een echt bestaand probleem op (partners kunnen nu hun eigen staffelprijzen
+   niet beheren en moeten dat aan het bureau vragen).
+2. **Voorbeeldprogramma's op de homepage** (nieuw, punt 4 hierboven). Ook
+   klein: één kaart toevoegen aan de bestaande `RoutePicker`. Ik zet dit vóór
+   de knoppenkeuze en formuliervalidatie hieronder, omdat het potentieel de
+   grootste impact heeft voor de kleinste inspanning — als jouw hypothese
+   klopt (mensen weten niet wat er kan), lost dit dat op vóór iemand ooit een
+   formulier ziet.
+3. **Snel-aanvragen vs. Programma-samenstellen: CTA-hiërarchie** (rest van
+   fase 1). Klein, zelfde patroon als de al gedane bouwstenen-kaart-fix.
+4. **Inline formuliervalidatie** op Offerte en Programma-samenstellen (rest
+   van fase 1). Middelgroot — raakt de belangrijkste formulieren, dus zorgvuldig
+   en met de volledige testsuite per formulier.
+5. **Logies als stap in de wizard** (fase 2). Grootste stuk werk, raakt de
+   kernflow; verdient een eigen planningsronde zodra 1–4 klaar zijn, net als
+   bij de logieskeuze- en activiteitenaanbieders-trajecten. Kan in
+   voorbereiding alvast starten (ontwerp/besluiten) terwijl 3–4 lopen.
+6. **Meten en bijsturen** (fase 3) — kan niet substantieel starten zonder
+   GA4-export (zie hierboven), maar hoeft nergens anders op te wachten. Deel
+   de export zodra je kunt, dan kan ik dit oppakken zonder dat het de rest
+   vertraagt.
+
+Reden voor deze volgorde: eerst de kleine, afgebakende dingen met duidelijke
+impact (1–3), dan de iets grotere formulierklus (4), dan de grote
+structurele wijziging die een eigen besluitvormingsronde verdient (5), met
+het meetwerk (6) parallel zodra de data er is in plaats van aan het einde.
