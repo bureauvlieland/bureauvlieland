@@ -2,7 +2,7 @@
 
 ## Open
 - [ ] Concurrentiepositie scherper communiceren (`docs/concurrentie-positionering.md`, 10 september): analyse t.o.v. islandevents.nl en wadevents.nl — 1) zelfbedieningsvoordeel ("geen offerte nodig om te zien wat kan") expliciet benoemen op de site, 2) checken of SEO-landingspagina's het Vlieland-exclusieve voordeel al benutten t.o.v. concurrenten die over meerdere eilanden spelen, 3) reviews zichtbaarder/talrijker maken. Niet dringend, na de frontend-usability-reeks
-- [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, volgorde akkoord 10 september): 4) inline formuliervalidatie, 5) logies als stap in de wizard (fase 2, eigen planningsronde), 6) meten per landingspagina (fase 3, wacht op GA4-export)
+- [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, volgorde akkoord 10 september): 5) logies als stap in de wizard (fase 2, eigen planningsronde), 6) meten per landingspagina (fase 3, wacht op GA4-export)
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
@@ -11,6 +11,7 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Inline formuliervalidatie op Offerte en Programma-samenstellen (10 september): `Offerte.tsx` (react-hook-form + zod) valideert nu bij het verlaten van een veld (`mode: "onBlur"`) i.p.v. pas bij versturen; `CheckoutContactForm.tsx` (geen formulierbibliotheek, gebruikt door Programma-samenstellen én Snel-aanvragen) had alleen een leeg-check, nu ook formaatcontrole op e-mail en telefoon met foutmeldingen die verschijnen na het verlaten van het veld en meteen verdwijnen bij correctie
 - [x] CTA-hiërarchie Snel-aanvragen/Programma-samenstellen (10 september): bouwstenen-hero, bouwstenen-kaart en activiteitpagina hadden nog "Direct aanvragen" en "Aan programma toevoegen" als twee gelijkwaardige knoppen; nu overal "Aan programma toevoegen" als primaire actie, "Direct aanvragen" als onderschikte link
 - [x] Voorbeeldprogramma's verwezen naar verkeerde bouwsteen (10 september): 6 van de 7 gepubliceerde voorbeeldprogramma's koppelden naar de individuele "Zeehondentocht" (nu los boekbaar via MAP) in plaats van de bedoelde "Zeehondentocht Exclusief" (privéafvaart voor de hele groep) — precies de verwarring die deze hele frontend-usability-ronde probeert te voorkomen. Alle 7 gecorrigeerd naar de exclusief-variant
 - [x] Voorbeeldprogramma's als vierde kaart in de homepage-`RoutePicker` (10 september): eerder alleen een klein tekstlinkje, nu een volwaardige kaart naast de andere hoofdroutes ("Voorbeeldprogramma's bekijken", ± 2 min)

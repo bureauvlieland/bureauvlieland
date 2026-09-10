@@ -66,8 +66,30 @@ export const CheckoutContactForm = ({
   const inferredEventType = entryPage ? inferEventTypeFromPath(entryPage.path) : null;
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
 
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+  };
+
+  // Live validatie: fouten verschijnen pas nadat een veld is verlaten
+  // (touched), en verdwijnen meteen zodra de gebruiker ze corrigeert.
+  const fieldErrors: { name?: string; email?: string; phone?: string } = {
+    name: formData.name.trim() ? undefined : "Naam is verplicht.",
+    email: !formData.email.trim()
+      ? "E-mailadres is verplicht."
+      : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+        ? "Voer een geldig e-mailadres in."
+        : undefined,
+    phone: !formData.phone.trim()
+      ? "Telefoonnummer is verplicht."
+      : !/^[0-9+\s().-]{5,20}$/.test(formData.phone.trim())
+        ? "Voer een geldig telefoonnummer in."
+        : undefined,
   };
 
   // Client-side dedup-hash op email + dates + cart. Voorkomt dat een dubbele
@@ -432,7 +454,7 @@ export const CheckoutContactForm = ({
     }
   };
 
-  const isFormValid = formData.name && formData.email && formData.phone;
+  const isFormValid = !fieldErrors.name && !fieldErrors.email && !fieldErrors.phone;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -463,12 +485,16 @@ export const CheckoutContactForm = ({
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     required
                     placeholder="Uw volledige naam"
                     className="pl-10"
                     maxLength={100}
                   />
                 </div>
+                {touched.name && fieldErrors.name && (
+                  <p className="text-sm font-medium text-destructive">{fieldErrors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company">Bedrijf / Organisatie</Label>
@@ -498,12 +524,16 @@ export const CheckoutContactForm = ({
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     required
                     placeholder="uw@email.nl"
                     className="pl-10"
                     maxLength={255}
                   />
                 </div>
+                {touched.email && fieldErrors.email && (
+                  <p className="text-sm font-medium text-destructive">{fieldErrors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefoonnummer *</Label>
@@ -515,12 +545,16 @@ export const CheckoutContactForm = ({
                     type="tel"
                     value={formData.phone}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     required
                     placeholder="+31 6 12345678"
                     className="pl-10"
                     maxLength={20}
                   />
                 </div>
+                {touched.phone && fieldErrors.phone && (
+                  <p className="text-sm font-medium text-destructive">{fieldErrors.phone}</p>
+                )}
               </div>
             </div>
 

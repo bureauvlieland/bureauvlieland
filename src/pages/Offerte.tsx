@@ -73,6 +73,7 @@ export default function Offerte() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onBlur",
     defaultValues: {
       name: "",
       company: "",
