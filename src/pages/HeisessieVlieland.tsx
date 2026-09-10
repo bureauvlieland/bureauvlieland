@@ -85,8 +85,12 @@ const HeisessieVlieland = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Het eiland dwingt tot vertraging. Weg van de dagelijkse omgeving ontstaat 
+                Het eiland dwingt tot vertraging. Weg van de dagelijkse omgeving ontstaat
                 ruimte voor focus, reflectie en de gesprekken die er echt toe doen.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Wij zijn uitsluitend op Vlieland actief en kennen de rustigste locaties, vaste
+                gastheren en de juiste plekken voor een groep die niet gestoord wil worden.
               </p>
             </div>
           </div>

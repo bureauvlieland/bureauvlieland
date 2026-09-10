@@ -173,6 +173,9 @@ export const RoutePicker = () => {
           <p className="text-muted-foreground mt-3">
             Eén klein onderdeel, een compleet programma dat u zelf samenstelt of vanuit een voorbeeld start, of volledig maatwerk — kies wat het beste past.
           </p>
+          <p className="text-sm text-muted-foreground/80 mt-2">
+            Geen offerte-aanvraag nodig om te zien wat mogelijk is: overal ziet u meteen prijzen, en bij een deel van het aanbod boekt u direct.
+          </p>
         </div>
 
 

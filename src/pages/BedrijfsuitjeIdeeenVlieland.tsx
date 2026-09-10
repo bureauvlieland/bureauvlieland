@@ -109,8 +109,13 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                 <Lightbulb className="w-8 h-8 text-primary" />
               </div>
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Een goed bedrijfsuitje is meer dan een leuk idee. Wij helpen bij het kiezen, 
+                Een goed bedrijfsuitje is meer dan een leuk idee. Wij helpen bij het kiezen,
                 combineren en organiseren van onderdelen tot één logisch geheel.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Wij zijn uitsluitend op Vlieland actief en werken al jaren met dezelfde vaste
+                gidsen, koks en hoteliers — geen wisselende onderaannemers, maar mensen die wij
+                persoonlijk kennen.
               </p>
             </div>
           </div>

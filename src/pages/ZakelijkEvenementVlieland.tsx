@@ -85,8 +85,13 @@ const ZakelijkEvenementVlieland = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Vlieland biedt rust, ruimte en focus – ideaal voor zakelijke bijeenkomsten 
+                Vlieland biedt rust, ruimte en focus – ideaal voor zakelijke bijeenkomsten
                 die impact moeten maken. Weg van de waan van de dag, volledig gericht op de inhoud.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Bureau Vlieland is uitsluitend op dit eiland actief — wij kennen elke locatie,
+                leverancier en aanbieder persoonlijk, in plaats van te schakelen tussen meerdere
+                Waddeneilanden.
               </p>
             </div>
           </div>

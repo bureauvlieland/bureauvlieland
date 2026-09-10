@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Open
-- [ ] Concurrentiepositie scherper communiceren (`docs/concurrentie-positionering.md`, 10 september): analyse t.o.v. islandevents.nl en wadevents.nl — 1) zelfbedieningsvoordeel ("geen offerte nodig om te zien wat kan") expliciet benoemen op de site, 2) checken of SEO-landingspagina's het Vlieland-exclusieve voordeel al benutten t.o.v. concurrenten die over meerdere eilanden spelen, 3) reviews zichtbaarder/talrijker maken. Niet dringend, na de frontend-usability-reeks
+- [ ] Concurrentiepositie scherper communiceren (`docs/concurrentie-positionering.md`, 10 september): punt 1 (zelfbedieningsvoordeel) en punt 2 (SEO-check, 3 van de 12 pagina's aangevuld) gedaan — nog open: dezelfde regel eventueel ook op de resterende 4 dunnere landingspagina's, en punt 3 (reviews zichtbaarder/talrijker maken, geen bouwtaak)
 - [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, volgorde akkoord 10 september): 6) meten per landingspagina (fase 3, GA4-export van Erwin binnen, nog te verwerken)
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
 - [ ] Logieskeuze fase 4: offertes vergelijken op de kaart
@@ -11,6 +11,7 @@
 - [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
 
 ## Gedaan
+- [x] Concurrentiepositie: zelfbedieningsvoordeel en SEO-check (10 september): korte regel toegevoegd onder de intro van de homepage-`RoutePicker` ("geen offerte-aanvraag nodig om te zien wat mogelijk is"); alle 12 bedrijfsuitje/event-landingspagina's gecontroleerd op Vlieland-exclusiviteitsframing — 5 hadden dit al, bij de 3 met naar verwachting het meeste verkeer (`bedrijfsuitje-ideeen`, `zakelijk-evenement`, `heisessie`) een korte regel toegevoegd, zie `docs/concurrentie-positionering.md`
 - [x] Logies als stap in de programma-wizard (10 september): nieuwe, overslaanbare stap "Logies" tussen Basisgegevens en Vervoer & fietsen — compact (type verblijf, locatie, budget), geen kamerverdeling. Loste een echt gat op: de bestaande logiesflow stond los van de wizard (een koppelbanner bleek nergens gerenderd), klanten zagen logies pas ná het versturen op hun klantpagina. Een ingevulde logieswens wordt nu direct bij het versturen gekoppeld aangemaakt
 - [x] Inline formuliervalidatie op Offerte en Programma-samenstellen (10 september): `Offerte.tsx` (react-hook-form + zod) valideert nu bij het verlaten van een veld (`mode: "onBlur"`) i.p.v. pas bij versturen; `CheckoutContactForm.tsx` (geen formulierbibliotheek, gebruikt door Programma-samenstellen én Snel-aanvragen) had alleen een leeg-check, nu ook formaatcontrole op e-mail en telefoon met foutmeldingen die verschijnen na het verlaten van het veld en meteen verdwijnen bij correctie
 - [x] CTA-hiërarchie Snel-aanvragen/Programma-samenstellen (10 september): bouwstenen-hero, bouwstenen-kaart en activiteitpagina hadden nog "Direct aanvragen" en "Aan programma toevoegen" als twee gelijkwaardige knoppen; nu overal "Aan programma toevoegen" als primaire actie, "Direct aanvragen" als onderschikte link
