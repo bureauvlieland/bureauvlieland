@@ -15,6 +15,7 @@ import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath, buildAttribution } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
+import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -30,6 +31,7 @@ interface CheckoutContactFormProps {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
   selectedDates: Date[];
+  accommodationWish?: AccommodationWish;
   onBack: () => void;
   onSuccess: (customerToken: string) => void;
 }
@@ -38,6 +40,7 @@ export const CheckoutContactForm = ({
   cartItems,
   numberOfPeople,
   selectedDates,
+  accommodationWish = DEFAULT_ACCOMMODATION_WISH,
   onBack,
   onSuccess,
 }: CheckoutContactFormProps) => {
@@ -373,6 +376,55 @@ export const CheckoutContactForm = ({
       );
 
       if (rpcError) throw rpcError;
+
+      // Logieswens uit de wizard: apart aangemaakt en gekoppeld aan het
+      // zojuist ingediende programma. Best-effort — een fout hier mag het
+      // versturen van het programma zelf niet blokkeren.
+      if (accommodationWish.wanted) {
+        try {
+          const { data: accInsert, error: accError } = await supabase
+            .from("accommodation_requests")
+            .insert({
+              customer_name: formData.name.trim(),
+              customer_email: formData.email.trim().toLowerCase(),
+              customer_phone: formData.phone.trim(),
+              customer_company: formData.company.trim() || null,
+              arrival_date: isoDates[0],
+              departure_date: isoDates[isoDates.length - 1],
+              number_of_guests: numberOfPeople,
+              accommodation_type: accommodationWish.type || "no_preference",
+              room_count: Math.max(1, Math.ceil(numberOfPeople / 2)),
+              room_occupancy: "2",
+              room_types: [],
+              location_preference: accommodationWish.locationPreference
+                ? [accommodationWish.locationPreference]
+                : [],
+              facilities_required: [],
+              budget_range: accommodationWish.budgetRange || null,
+              special_requests: null,
+              wants_activities: true,
+              linked_program_id: requestId,
+              status: "submitted",
+              attribution: buildAttribution(),
+            })
+            .select("id")
+            .single();
+
+          if (!accError && accInsert) {
+            await supabase
+              .from("program_requests")
+              .update({ linked_accommodation_id: accInsert.id })
+              .eq("id", requestId);
+            await supabase.functions
+              .invoke("send-accommodation-request", { body: { accommodationRequestId: accInsert.id } })
+              .catch(() => {});
+          } else if (accError) {
+            console.error("Logiesaanvraag koppelen mislukt:", accError);
+          }
+        } catch (accCatchError) {
+          console.error("Logiesaanvraag koppelen mislukt:", accCatchError);
+        }
+      }
 
       const { error } = await supabase.functions.invoke("send-program-request", {
         body: {

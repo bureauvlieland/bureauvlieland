@@ -12,6 +12,7 @@ import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
 import { ExitIntentDraftDialog } from "@/components/configurator/ExitIntentDraftDialog";
 import { TransportBikesStep } from "@/components/configurator/TransportBikesStep";
+import { AccommodationWishStep } from "@/components/configurator/AccommodationWishStep";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
@@ -40,6 +41,8 @@ const ProgrammaSamenstellen = () => {
     removeFromCart,
     updateItem,
     setNumberOfPeople,
+    accommodationWish,
+    setAccommodationWish,
     setSelectedDate,
     addDate,
     removeDate,
@@ -126,7 +129,7 @@ const ProgrammaSamenstellen = () => {
         if (i === 0) setSelectedDate(date);
         else addDate(date);
       });
-      setPhase("transport");
+      setPhase("accommodation");
     }
   }, [clearCart, setNumberOfPeople, setSelectedDate, addDate, templateData, loadFromTemplate, searchParams, setSearchParams]);
 
@@ -180,7 +183,7 @@ const ProgrammaSamenstellen = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showHero = phase === "basics" || phase === "transport" || phase === "program";
+  const showHero = phase === "basics" || phase === "accommodation" || phase === "transport" || phase === "program";
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,11 +236,21 @@ const ProgrammaSamenstellen = () => {
               />
             )}
 
+            {phase === "accommodation" && (
+              <AccommodationWishStep
+                numberOfPeople={numberOfPeople}
+                wish={accommodationWish}
+                onChange={setAccommodationWish}
+                onBack={() => setPhase("basics")}
+                onSubmit={() => setPhase("transport")}
+              />
+            )}
+
             {phase === "transport" && (
               <TransportBikesStep
                 initial={transportPrefs}
                 numberOfPeople={numberOfPeople}
-                onBack={() => setPhase("basics")}
+                onBack={() => setPhase("accommodation")}
                 onSubmit={handleTransportSubmit}
               />
             )}
@@ -269,6 +282,7 @@ const ProgrammaSamenstellen = () => {
                 cartItems={cartItems}
                 numberOfPeople={numberOfPeople}
                 selectedDates={selectedDates}
+                accommodationWish={accommodationWish}
                 onBack={() => setPhase("program")}
                 onSuccess={handleSubmitSuccess}
               />

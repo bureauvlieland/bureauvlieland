@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { type CartItemDetail } from "@/types/buildingBlock";
+import { type AccommodationWish } from "@/types/accommodation";
 
 const STORAGE_KEY = "bureauvlieland_program_draft";
 const DRAFT_EXPIRY_DAYS = 30;
@@ -10,6 +11,7 @@ export interface DraftProgram {
   selectedDates: string[]; // Array of ISO date strings
   savedAt: string;
   manualOrder: boolean;
+  accommodationWish?: AccommodationWish;
 }
 
 // Legacy draft format for migration
