@@ -313,16 +313,17 @@ const ActiviteitDetail = () => {
                   </Link>
                 </div>
               ) : (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link to={`/snel-aanvragen?block=${block.id}`} className="flex-1">
-                    <Button size="lg" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                      Direct aanvragen
-                    </Button>
-                  </Link>
-                  <Link to={`/programma-samenstellen?block=${block.id}`} className="flex-1">
-                    <Button size="lg" variant="outline" className="w-full">
+                <div className="flex flex-col gap-3">
+                  <Link to={`/programma-samenstellen?block=${block.id}`}>
+                    <Button size="lg" className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90">
                       Toevoegen aan programma
                     </Button>
+                  </Link>
+                  <Link
+                    to={`/snel-aanvragen?block=${block.id}`}
+                    className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  >
+                    Liever dit ene onderdeel snel aanvragen?
                   </Link>
                 </div>
               )}
