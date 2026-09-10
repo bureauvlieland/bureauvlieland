@@ -196,7 +196,7 @@ const PartnerBlocksContent = () => {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Mijn Aanbod</h1>
           <p className="text-muted-foreground">Beheer uw activiteiten en diensten</p>
@@ -339,46 +339,48 @@ const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
       onClick={() => onEdit(block)}
     >
       <CardContent className="p-3">
-        <div className="flex items-center gap-3">
-          <img
-            src={img}
-            alt={block.name}
-            className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium truncate">{block.name}</span>
-              {isFromMap && (
-                <Badge variant="outline" className="gap-1 text-xs font-normal border-accent/40 text-accent-foreground bg-accent/10">
-                  <Sparkles className="h-3 w-3" />
-                  MAP
-                </Badge>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-              <span className="flex items-center gap-1">
-                <Euro className="h-3 w-3" />
-                {formatBlockPrice(block)}
-              </span>
-              {block.duration && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src={img}
+              alt={block.name}
+              className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium truncate">{block.name}</span>
+                {isFromMap && (
+                  <Badge variant="outline" className="gap-1 text-xs font-normal border-accent/40 text-accent-foreground bg-accent/10">
+                    <Sparkles className="h-3 w-3" />
+                    MAP
+                  </Badge>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {block.duration}
+                  <Euro className="h-3 w-3" />
+                  {formatBlockPrice(block)}
                 </span>
-              )}
-              {(block.min_people || block.max_people) && (
-                <span className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {block.min_people && block.max_people
-                    ? `${block.min_people}-${block.max_people}`
-                    : block.min_people
-                    ? `min. ${block.min_people}`
-                    : `max. ${block.max_people}`}
-                </span>
-              )}
+                {block.duration && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {block.duration}
+                  </span>
+                )}
+                {(block.min_people || block.max_people) && (
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {block.min_people && block.max_people
+                      ? `${block.min_people}-${block.max_people}`
+                      : block.min_people
+                      ? `min. ${block.min_people}`
+                      : `max. ${block.max_people}`}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
             {needsImprovement && !isDraft && (
               <Badge
                 variant="outline"
