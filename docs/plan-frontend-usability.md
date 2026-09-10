@@ -385,12 +385,13 @@ volgorde of een andere prioriteit.
 
 1. **Staffelprijzen in het partnerportaal — gedaan (10 september).** Zie
    punt 3 hierboven.
-2. **Voorbeeldprogramma's op de homepage** (nieuw, punt 4 hierboven). Ook
-   klein: één kaart toevoegen aan de bestaande `RoutePicker`. Ik zet dit vóór
-   de knoppenkeuze en formuliervalidatie hieronder, omdat het potentieel de
-   grootste impact heeft voor de kleinste inspanning — als jouw hypothese
-   klopt (mensen weten niet wat er kan), lost dit dat op vóór iemand ooit een
-   formulier ziet.
+2. **Voorbeeldprogramma's op de homepage — gedaan (10 september).** Vierde
+   kaart toegevoegd aan de hoofdroutes in `RoutePicker` ("Voorbeeldprogramma's
+   bekijken", ± 2 min, linkt naar `/voorbeeldprogrammas`), grid van 3 naar 4
+   kolommen op groot scherm. De losse tekstlink die er eerder naar verwees is
+   verwijderd (was dubbelop met de nieuwe kaart). Kop aangepast van "Vijf" naar
+   "Zes manieren om bij ons aan te kloppen" (nu 4 hoofdroutes + 2 losse
+   onderdelen). Getest: typecheck, lint, volledige testsuite, build.
 3. **Snel-aanvragen vs. Programma-samenstellen: CTA-hiërarchie** (rest van
    fase 1). Klein, zelfde patroon als de al gedane bouwstenen-kaart-fix.
 4. **Inline formuliervalidatie** op Offerte en Programma-samenstellen (rest
