@@ -6,6 +6,17 @@ export type AccommodationRequestStatus = 'draft' | 'submitted' | 'processing' | 
 
 export type AccommodationQuoteStatus = 'pending' | 'submitted' | 'selected' | 'rejected' | 'expired' | 'declined';
 
+// Compacte logieswens die in de programma-wizard zelf wordt verzameld
+// (vóór het volledige AccommodationWizard-traject met kamerverdeling en wensen).
+export interface AccommodationWish {
+  wanted: boolean;
+  type?: AccommodationType;
+  locationPreference?: string;
+  budgetRange?: string;
+}
+
+export const DEFAULT_ACCOMMODATION_WISH: AccommodationWish = { wanted: false };
+
 export interface AccommodationRequest {
   id: string;
   customer_token: string;

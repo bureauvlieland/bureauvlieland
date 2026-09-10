@@ -423,10 +423,30 @@ volgorde of een andere prioriteit.
    text-destructive`) als de shadcn `FormMessage` elders. Getest: typecheck
    (app + strict, 26/26 op de baseline), lint, volledige testsuite (106
    bestanden / 1535 tests), build.
-5. **Logies als stap in de wizard** (fase 2). Grootste stuk werk, raakt de
-   kernflow; verdient een eigen planningsronde zodra 1–4 klaar zijn, net als
-   bij de logieskeuze- en activiteitenaanbieders-trajecten. Kan in
-   voorbereiding alvast starten (ontwerp/besluiten) terwijl 3–4 lopen.
+5. **Logies als stap in de wizard — gedaan (10 september).** Nieuwe stap
+   "Logies" toegevoegd aan `ProgrammaSamenstellen.tsx`, direct na
+   Basisgegevens en vóór Vervoer & fietsen (akkoord: datum/gasten zijn dan al
+   bekend, dus niet dubbel vragen). Twee ontwerpkeuzes vooraf afgestemd: de
+   stap staat na basics/vóór transport, en is bewust compact — alleen type
+   verblijf, locatievoorkeur en budget, geen kamerverdeling (dat blijft zoals
+   nu, via e-mail/telefoon na het versturen). Volledig overslaanbaar met een
+   duidelijke "Nee, wij regelen dit zelf"-keuze, standaard niet aangevinkt.
+   Vóór deze wijziging bestond er wel een volledige logiesflow
+   (`AccommodationWizard`), maar die stond los van de programma-wizard: een
+   banner die ze had moeten koppelen (`LogiesSuggestionBanner`) bleek nergens
+   daadwerkelijk gerenderd te worden — klanten zagen logies pas op hun
+   klantpagina, ná het versturen van hun aanvraag. Nu wordt de logieswens,
+   als een klant die invult, bij het versturen van het programma direct mee
+   aangemaakt als gekoppelde `accommodation_requests`-rij (zelfde
+   koppelmechanisme als de bestaande standalone wizard: `linked_program_id` +
+   `program_requests.linked_accommodation_id`), zodat die meteen op de
+   klantpagina zichtbaar is in plaats van pas na een aparte tweede aanvraag.
+   De keuze wordt ook meegenomen in het conceptherstel (`useProgramDraft`) als
+   iemand tussentijds afhaakt. Getest: typecheck (app + strict, 26/26 op de
+   baseline), lint, volledige testsuite (106 bestanden / 1535 tests), build.
+   Live doorklikken kon niet vanuit deze omgeving (de dev-server hier lukt
+   niet op dit systeem) — wel te testen via de Netlify-deploypreview op de
+   pull request.
 6. **Meten en bijsturen** (fase 3) — kan niet substantieel starten zonder
    GA4-export (zie hierboven), maar hoeft nergens anders op te wachten. Deel
    de export zodra je kunt, dan kan ik dit oppakken zonder dat het de rest

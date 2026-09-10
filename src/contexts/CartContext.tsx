@@ -6,6 +6,7 @@ import { trackAddToCart, trackRemoveFromCart } from "@/lib/analytics";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { DEFAULT_GROUP_SIZE } from "@/lib/appSettings";
 import type { ProgramTemplate } from "@/types/programTemplate";
+import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
 
 const MAX_DAYS = 7;
 
@@ -28,6 +29,8 @@ interface CartContextType {
   updateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   reorderItems: (items: CartItemDetail[]) => void;
   setNumberOfPeople: (count: number) => void;
+  accommodationWish: AccommodationWish;
+  setAccommodationWish: (wish: AccommodationWish) => void;
   addDate: (date: Date) => boolean;
   removeDate: (dateIndex: number) => void;
   updateItemDay: (blockId: string, newDayIndex: number) => void;
@@ -52,6 +55,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItemDetail[]>([]);
   const [numberOfPeople, setNumberOfPeople] = useState(DEFAULT_GROUP_SIZE);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [accommodationWish, setAccommodationWish] = useState<AccommodationWish>(DEFAULT_ACCOMMODATION_WISH);
   const [manualOrder, setManualOrder] = useState(false);
   const [hasPendingDraft, setHasPendingDraft] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -74,9 +78,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         numberOfPeople,
         selectedDates: selectedDates.map(d => d.toISOString()),
         manualOrder,
+        accommodationWish,
       });
     }
-  }, [cartItems, numberOfPeople, selectedDates, manualOrder, saveDraft, isInitialized]);
+  }, [cartItems, numberOfPeople, selectedDates, manualOrder, accommodationWish, saveDraft, isInitialized]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -94,6 +99,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setNumberOfPeople(draft.numberOfPeople);
       setSelectedDates(draft.selectedDates.map(d => new Date(d)));
       setManualOrder(draft.manualOrder);
+      setAccommodationWish(draft.accommodationWish ?? DEFAULT_ACCOMMODATION_WISH);
     }
     setHasPendingDraft(false);
   }, [draft]);
@@ -252,6 +258,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems([]);
     setSelectedDates([]);
     setManualOrder(false);
+    setAccommodationWish(DEFAULT_ACCOMMODATION_WISH);
     clearDraft();
   }, [clearDraft]);
 
@@ -334,6 +341,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         updateItem,
         reorderItems,
         setNumberOfPeople,
+        accommodationWish,
+        setAccommodationWish,
         addDate,
         removeDate,
         updateItemDay,
