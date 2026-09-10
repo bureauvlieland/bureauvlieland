@@ -38,6 +38,9 @@ import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
 import { HotelLocationMap } from "./HotelLocationMap";
 import { HotelGallery } from "./HotelGallery";
+import { AccommodationQuotesMap } from "./AccommodationQuotesMap";
+import { presentQuotePartner } from "@/lib/accommodationQuotePresentation";
+import { List, Map as MapIcon } from "lucide-react";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -65,6 +68,7 @@ export const AccommodationSection = ({
   invoicingMode,
 }: AccommodationSectionProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
+  const [quoteView, setQuoteView] = useState<"list" | "map">("list");
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -577,27 +581,58 @@ export const AccommodationSection = ({
             </div>
           )}
 
+          {submittedQuotes.length > 1 &&
+            submittedQuotes.some((q) => presentQuotePartner(q).coordinates) && (
+              <div className="flex items-center gap-1.5 bg-muted rounded-lg p-1 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setQuoteView("list")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    quoteView === "list" ? "bg-background shadow-sm" : "text-muted-foreground"
+                  }`}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  Lijst
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuoteView("map")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    quoteView === "map" ? "bg-background shadow-sm" : "text-muted-foreground"
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" />
+                  Kaart
+                </button>
+              </div>
+            )}
+
+          {quoteView === "map" ? (
+            <AccommodationQuotesMap quotes={submittedQuotes} formatPrice={formatPrice} />
+          ) : null}
+
           {submittedQuotes.map((quote) => {
             const validUntil = new Date(quote.valid_until);
             const isExpired = isPast(validUntil);
 
             return (
-              <AccommodationQuoteCard
-                key={quote.id}
-                quote={quote}
-                isExpired={isExpired}
-                validUntil={validUntil}
-                onSelect={() => setSelectedQuoteForConfirm(quote)}
-                onContact={customerToken ? () => {
-                  setContactQuote(quote);
-                  setContactDialogOpen(true);
-                } : undefined}
-                formatPrice={formatPrice}
-                extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
-                numberOfGuests={accommodation.number_of_guests}
-                numberOfNights={numberOfNights}
-                facilitiesRequired={accommodation?.facilities_required ?? null}
-              />
+              <div key={quote.id} id={`quote-${quote.id}`} className="scroll-mt-24">
+                <AccommodationQuoteCard
+                  quote={quote}
+                  isExpired={isExpired}
+                  validUntil={validUntil}
+                  onSelect={() => setSelectedQuoteForConfirm(quote)}
+                  onContact={customerToken ? () => {
+                    setContactQuote(quote);
+                    setContactDialogOpen(true);
+                  } : undefined}
+                  formatPrice={formatPrice}
+                  extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
+                  numberOfGuests={accommodation.number_of_guests}
+                  numberOfNights={numberOfNights}
+                  facilitiesRequired={accommodation?.facilities_required ?? null}
+                />
+              </div>
             );
           })}
         </div>
