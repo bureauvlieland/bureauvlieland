@@ -29,6 +29,7 @@ import { LocationPicker } from "@/components/admin/LocationPicker";
 import { reportError } from "@/lib/errorReporting";
 import { TierEditor } from "@/components/admin/TierEditor";
 import { getTieredConfig, validateTiers, type PriceTier, type TiersAboveMax } from "@/lib/tieredPricing";
+import type { Json } from "@/integrations/supabase/types";
 
 // Slugify helper
 const slugify = (text: string): string =>
@@ -443,7 +444,7 @@ export const PartnerBlockSheet = ({
         price_adult: formData.price_adult ? parseFloat(formData.price_adult) : null,
         price_adult_note: formData.price_adult_note.trim() || null,
         price_type: formData.price_type as "per_person" | "per_person_per_day" | "total" | "on_request" | "tiered_total",
-        ...(priceExtras !== undefined ? { price_extras: priceExtras } : {}),
+        ...(priceExtras !== undefined ? { price_extras: priceExtras as Json } : {}),
         price_child: formData.price_child ? parseFloat(formData.price_child) : null,
         price_child_note: formData.price_child_note.trim() || null,
         price_child_min_age: formData.price_child_min_age ? parseInt(formData.price_child_min_age) : 4,
