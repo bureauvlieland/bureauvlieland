@@ -447,10 +447,54 @@ volgorde of een andere prioriteit.
    Live doorklikken kon niet vanuit deze omgeving (de dev-server hier lukt
    niet op dit systeem) — wel te testen via de Netlify-deploypreview op de
    pull request.
-6. **Meten en bijsturen** (fase 3) — kan niet substantieel starten zonder
-   GA4-export (zie hierboven), maar hoeft nergens anders op te wachten. Deel
-   de export zodra je kunt, dan kan ik dit oppakken zonder dat het de rest
-   vertraagt.
+6. **Meten en bijsturen** (fase 3) — eerste export ontvangen en geanalyseerd
+   (10 september), zie bevindingen hieronder. Nog niet volledig af: de
+   "belangrijke gebeurtenissen" in GA4 meten nu niet wat we nodig hebben (zie
+   caveat).
+
+### Fase 3 — eerste bevindingen (10 september)
+
+Twee exports ontvangen: een dag/kanaal-overzicht ("Acquisitie-overzicht") en
+een paginapad-overzicht ("Pagina's en schermen"), beide 1 januari t/m 10
+september 2026.
+
+**Traffic-trend.** Actieve gebruikers per maand: jan 992, feb 1.119,
+mrt 2.698, apr 4.492, mei 5.188, jun 6.323, jul 5.645, aug 6.716,
+sep (tot de 10e) 861 — een gestage groei het hele seizoen door met een
+kleine dip in juli, geen terugval van juni naar nu. De eerdere hypothese in
+dit plan ("vermoedelijk seizoen plus het stopzetten van Google Ads")
+klopt dus niet, of ik heb de verkeerde periode te pakken — graag even
+aftoetsen wat "de terugval" precies was.
+
+**Kanalenmix.** Direct is veruit dominant (30.166 nieuwe gebruikers over de
+hele periode), dan Paid Search (1.112), Organic Search (851), Referral
+(830). De Google Ads-campagnes ("Bureau Vlieland - Landelijk/Lokaal",
+"Expeditie Vlieland") leveren dus nog steeds sessies op.
+
+**Traffic per SEO-landingspagina (bedrijfsuitje/event-thema's).** Samen goed
+voor 1.821 sessies van de 42.925 totaal (som van alle paginapaden, dus met
+overlap) — een klein deel van het totale verkeer, homepage alleen al 13.211
+sessies. Binnen die groep het meest bezocht: `/bedrijfsuitje-vlieland` (281
+sessies), `/heisessie-vlieland` (211), `/teamuitje-vlieland` (205),
+`/zeehondentochten-vlieland` (182); het minst: `/veelgestelde-vragen` (27),
+`/zakelijk-evenement-vlieland` (97), `/groepsweekend-vlieland` (94),
+`/jubileum-vlieland` (95). Puur volume dus — dunne pagina's zijn zichtbaar,
+maar zeggen nog niets over conversie.
+
+**Caveat — "belangrijke gebeurtenissen" meet nu niet wat we nodig hebben.**
+Ik had gehoopt hiermee conversie per landingspagina te kunnen bepalen, maar
+de GA4-key-events in deze export blijken grotendeels bezoeken aan
+`/contact` te zijn (132 op 418 sessies, 75 op 140 sessies voor de trailing-
+slash-variant) — een paginabezoek, geen ingediende aanvraag — plus een
+handvol losse hits op admin-URL's. Het dataLayer-event
+`program_request_submitted` dat er wél toe doet (zie eerder in dit
+document) is in GA4 kennelijk niet als key event gemarkeerd, dus deze
+export geeft geen betrouwbaar beeld van welke landingspagina daadwerkelijk
+tot een aanvraag leidt. Voorstel: markeer in GA4 (Beheer → Gebeurtenissen)
+`program_request_submitted` zelf als belangrijke gebeurtenis (naast of in
+plaats van wat er nu als zodanig staat), en exporteer daarna hetzelfde
+paginapad-rapport opnieuw — dan is de key-events-kolom wél bruikbaar voor
+attributie per landingspagina.
 
 Reden voor deze volgorde: eerst de kleine, afgebakende dingen met duidelijke
 impact (1–3), dan de iets grotere formulierklus (4), dan de grote
