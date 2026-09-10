@@ -407,9 +407,22 @@ volgorde of een andere prioriteit.
    ondergeschikte terugweg ("Toch meerdaags programma"), daar niets aan
    veranderd. Getest: typecheck (app + strict), lint, volledige testsuite,
    build.
-4. **Inline formuliervalidatie** op Offerte en Programma-samenstellen (rest
-   van fase 1). Middelgroot — raakt de belangrijkste formulieren, dus zorgvuldig
-   en met de volledige testsuite per formulier.
+4. **Inline formuliervalidatie — gedaan (10 september).** Twee verschillende
+   formuliertypes, dus twee aparte oplossingen. `Offerte.tsx` gebruikt al
+   react-hook-form + zod met `FormMessage`; die las de foutmeldingen al
+   reactief, alleen het moment van valideren stond nog op `onSubmit` — nu
+   `mode: "onBlur"`, zodat een fout meteen zichtbaar wordt zodra je een veld
+   verlaat, niet pas na een volledige (mislukte) verzendpoging.
+   `CheckoutContactForm.tsx` (gebruikt door zowel Programma-samenstellen als
+   Snel-aanvragen) heeft geen formulierbibliotheek en controleerde tot nu toe
+   alleen of naam/e-mail/telefoon niet leeg waren — geen formaatcontrole.
+   Toegevoegd: een `touched`-state per veld, een `handleBlur`, en echte
+   validatie (geldig e-mailadres, geldig telefoonnummer) die pas een
+   foutmelding toont nadat het veld is verlaten en meteen verdwijnt zodra de
+   gebruiker het corrigeert — zelfde gedrag en styling (`text-sm font-medium
+   text-destructive`) als de shadcn `FormMessage` elders. Getest: typecheck
+   (app + strict, 26/26 op de baseline), lint, volledige testsuite (106
+   bestanden / 1535 tests), build.
 5. **Logies als stap in de wizard** (fase 2). Grootste stuk werk, raakt de
    kernflow; verdient een eigen planningsronde zodra 1–4 klaar zijn, net als
    bij de logieskeuze- en activiteitenaanbieders-trajecten. Kan in
