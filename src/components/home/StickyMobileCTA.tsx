@@ -27,7 +27,7 @@ export const StickyMobileCTA = () => {
       }`}
       aria-hidden={!visible}
     >
-      <Link to="/#routes" className="block">
+      <Link to="/programma-samenstellen" className="block">
         <Button
           size="lg"
           className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-2xl h-14 text-base"

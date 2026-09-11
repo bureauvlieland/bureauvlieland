@@ -17,6 +17,18 @@ const SKIP_BLOCK_IDS = new Set([
   "fiets-huur",
 ]);
 
+// Bouwstenen die zelf al een overtocht zijn (privévaart, watertaxi). Als een
+// voorbeeldprogramma hier één van bevat, hoeft de standaard Doeksen-boot niet
+// ook nog verplicht toegevoegd te worden.
+const ALTERNATIVE_CROSSING_BLOCK_IDS = new Set([
+  "regina-andrea-prive-heen",
+  "regina-andrea-prive-terug",
+  "rescueboat",
+  "rescueboat-kopie",
+  "watertaxi-harlingen-vlieland",
+  "watertaxi-vlieland-harlingen",
+]);
+
 interface CartContextType {
   cartItems: CartItemDetail[];
   numberOfPeople: number;
@@ -277,13 +289,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       dates.push(addDays(startDate, i));
     }
 
-    // 2. Build cart items - start with mandatory blocks (no preferredTime)
+    // 2. Build cart items - start with mandatory blocks (no preferredTime).
+    // De standaard Doeksen-boot slaan we over als het programma al zijn
+    // eigen overtocht heeft (privévaart, watertaxi) — anders staat die dubbel.
     const lastDay = Math.max(0, template.duration_days - 1);
-    const newItems: CartItemDetail[] = [
-      { blockId: "boot-enkel-heen", preferredTime: null, notes: "", dayIndex: 0 },
-      { blockId: "boot-enkel-terug", preferredTime: null, notes: "", dayIndex: lastDay },
-      { blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 },
-    ];
+    const hasOwnCrossing = (template.items ?? []).some((item) =>
+      ALTERNATIVE_CROSSING_BLOCK_IDS.has(item.block_id)
+    );
+    const newItems: CartItemDetail[] = hasOwnCrossing
+      ? [{ blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 }]
+      : [
+          { blockId: "boot-enkel-heen", preferredTime: null, notes: "", dayIndex: 0 },
+          { blockId: "boot-enkel-terug", preferredTime: null, notes: "", dayIndex: lastDay },
+          { blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 },
+        ];
 
     // 3. Add template items (skip mandatory block IDs)
     if (template.items) {
