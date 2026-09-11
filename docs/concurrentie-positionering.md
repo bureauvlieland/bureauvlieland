@@ -112,10 +112,9 @@ ruimte, autoluw), niet op Bureau Vlieland's eigen positie als eiland-
 exclusieve specialist. Bij de drie met naar verwachting de meeste
 verkeer/intentie een korte regel toegevoegd in dezelfde geest als de
 bestaande pagina's: `/bedrijfsuitje-ideeen-vlieland`,
-`/zakelijk-evenement-vlieland`, `/heisessie-vlieland`. De overige vier
-(`/meerdaags-bedrijfsuitje-vlieland`, `/incentive-reis-vlieland`,
-`/groepsweekend-vlieland`, `/familieweekend-vlieland`) zijn nog niet
-aangepast — kleiner volume, kan later als dit invulling goed bevalt.
+`/zakelijk-evenement-vlieland`, `/heisessie-vlieland`. De overige vier (`/meerdaags-bedrijfsuitje-vlieland`,
+`/incentive-reis-vlieland`, `/groepsweekend-vlieland`,
+`/familieweekend-vlieland`) op 10 september ook aangevuld, zelfde patroon.
 
 **3. Reviews zichtbaarder maken — nog niet opgepakt.** Dit is geen
 bouwtaak maar een kwestie van meer reviews verzamelen; geen actie vanuit

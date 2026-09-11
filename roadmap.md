@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Open
-- [ ] Concurrentiepositie scherper communiceren (`docs/concurrentie-positionering.md`, 10 september): punt 1 (zelfbedieningsvoordeel) en punt 2 (SEO-check, 3 van de 12 pagina's aangevuld) gedaan — nog open: dezelfde regel eventueel ook op de resterende 4 dunnere landingspagina's, en punt 3 (reviews zichtbaarder/talrijker maken, geen bouwtaak)
+- [ ] Concurrentiepositie scherper communiceren (`docs/concurrentie-positionering.md`, 10 september): punt 1 en 2 gedaan (alle 12 SEO-landingspagina's benutten nu het Vlieland-exclusiviteitsvoordeel) — nog open: punt 3 (reviews zichtbaarder/talrijker maken, geen bouwtaak)
 - [ ] Frontend usability en conversie (`docs/plan-frontend-usability.md`, volgorde akkoord 10 september): 6) meten per landingspagina (fase 3, GA4-export van Erwin binnen, nog te verwerken)
 - [ ] Partnerprofielen vullen: herinnering sturen vanuit *Content → Partnerprofielen* (logies én activiteiten) en de basis van de belangrijkste partners zelf invullen via "Open als partner" (13 van de 14 zijn leeg)
 - [ ] Lovable Cloud opruimen (rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen

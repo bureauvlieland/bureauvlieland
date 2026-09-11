@@ -78,9 +78,14 @@ const GroepsweekendVlieland = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Een groepsweekend op Vlieland is de perfecte manier om samen te ontsnappen aan de drukte van alledag. 
-                Of jullie nu met een vriendengroep komen, een sportclub of een vereniging – wij zorgen voor een 
+                Een groepsweekend op Vlieland is de perfecte manier om samen te ontsnappen aan de drukte van alledag.
+                Of jullie nu met een vriendengroep komen, een sportclub of een vereniging – wij zorgen voor een
                 programma dat past bij jullie wensen en budget.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Wij zijn uitsluitend op Vlieland actief en werken al jaren met dezelfde vaste
+                gidsen, koks en hoteliers — geen wisselende onderaannemers, maar mensen die wij
+                persoonlijk kennen.
               </p>
             </div>
           </div>

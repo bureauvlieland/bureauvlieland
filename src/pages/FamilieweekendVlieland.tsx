@@ -78,9 +78,13 @@ const FamilieweekendVlieland = () => {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-lg md:text-xl text-foreground leading-relaxed">
-                Een familieweekend op Vlieland is dé manier om de hele familie bij elkaar te brengen. 
-                Geen drukte, geen auto's, wel eindeloze stranden, prachtige natuur en activiteiten 
+                Een familieweekend op Vlieland is dé manier om de hele familie bij elkaar te brengen.
+                Geen drukte, geen auto's, wel eindeloze stranden, prachtige natuur en activiteiten
                 voor alle leeftijden. Wij helpen je om het perfecte weekend samen te stellen.
+              </p>
+              <p className="text-muted-foreground mt-4">
+                Wij zijn uitsluitend op Vlieland actief en kennen elke strandplek, speeltuin en
+                kindvriendelijke aanbieder van het eiland — persoonlijk advies, geen algemene lijst.
               </p>
             </div>
           </div>
