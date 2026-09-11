@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { isDutchMobileNumber, DUTCH_MOBILE_PHONE_ERROR } from "@/lib/dutchMobilePhone";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -52,7 +53,7 @@ const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
   company: z.string().max(100, "Maximaal 100 karakters").optional(),
   email: z.string().email("Ongeldig email adres").max(255, "Maximaal 255 karakters"),
-  phone: z.string().trim().min(5, "Ongeldig telefoonnummer").max(20, "Maximaal 20 karakters").regex(/^[0-9+\s().-]+$/, "Ongeldig telefoonnummer"),
+  phone: z.string().trim().max(20, "Maximaal 20 karakters").refine(isDutchMobileNumber, DUTCH_MOBILE_PHONE_ERROR),
   numberOfPeople: z.string().min(1, "Aantal personen is verplicht"),
   startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
   numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
@@ -240,7 +241,7 @@ export default function Offerte() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefoon *</FormLabel>
+                          <FormLabel>Mobiel nummer (06) *</FormLabel>
                           <FormControl>
                             <Input type="tel" placeholder="06 12345678" {...field} />
                           </FormControl>
