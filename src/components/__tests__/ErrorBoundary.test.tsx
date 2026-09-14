@@ -88,4 +88,29 @@ describe("ErrorBoundary", () => {
     );
     expect(container.textContent).toBe("");
   });
+
+  it("herlaadt automatisch bij een verouderde chunk na een nieuwe deploy, i.p.v. het foutscherm te tonen", () => {
+    const events: ReportedEvent[] = [];
+    setErrorTransport((event) => events.push(event));
+    const reloadSpy = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload: reloadSpy });
+    sessionStorage.clear();
+
+    const StaleChunk = () => {
+      throw new Error("Failed to fetch dynamically imported module: https://bureauvlieland.nl/assets/Foo-abc123.js");
+    };
+
+    render(
+      <ErrorBoundary name="test">
+        <StaleChunk />
+      </ErrorBoundary>,
+    );
+
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+    expect(events).toHaveLength(1);
+    expect(events[0].severity).toBe("warning");
+    expect(events[0].context.autoReloaded).toBe(true);
+
+    vi.unstubAllGlobals();
+  });
 });

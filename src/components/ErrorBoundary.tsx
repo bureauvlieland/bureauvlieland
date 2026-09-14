@@ -8,6 +8,38 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { reportError } from "@/lib/errorReporting";
 
+// Na een nieuwe deploy verwijzen oude, nog open pagina's naar JS-bestanden
+// die niet meer bestaan (nieuwe build = nieuwe bestandsnamen). Dat geeft dit
+// soort foutmeldingen bij een lazy-geladen route, niet een echte bug in de
+// code. Eenmalig herladen haalt de actuele pagina op en lost het vanzelf op.
+const STALE_CHUNK_PATTERN =
+  /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed|is not a valid javascript mime type/i;
+
+function isStaleChunkError(error: Error): boolean {
+  return STALE_CHUNK_PATTERN.test(error.message || "");
+}
+
+// Tijdgebaseerde grendel i.p.v. eenmalig-per-sessie: zo herstelt een latere,
+// écht nieuwe stale-chunk-fout later in de sessie ook weer automatisch,
+// terwijl een reload-loop binnen dezelfde 10 seconden wordt voorkomen (als
+// herladen het probleem toch niet oplost, komt de bezoeker op het gewone
+// foutscherm terecht in plaats van eindeloos te blijven verversen).
+const RELOAD_GUARD_KEY = "bv:stale-chunk-reload-at";
+const RELOAD_GUARD_WINDOW_MS = 10_000;
+
+function reloadOnceForStaleChunk(): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY) || 0);
+    if (Date.now() - last < RELOAD_GUARD_WINDOW_MS) return false;
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+  } catch {
+    // sessionStorage kan geblokkeerd zijn; dan gewoon niet automatisch herladen.
+    return false;
+  }
+  window.location.reload();
+  return true;
+}
+
 interface Props {
   children: ReactNode;
   /** Waar deze grens staat; komt mee in de melding. */
@@ -46,9 +78,19 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
+    const staleChunk = isStaleChunkError(error);
+    if (staleChunk && reloadOnceForStaleChunk()) {
+      // Reload al onderweg: geen fatal-melding nodig, dit lost zichzelf op.
+      reportError(
+        error,
+        { where: `ErrorBoundary:${this.props.name}`, componentStack: info.componentStack, autoReloaded: true },
+        "warning",
+      );
+      return;
+    }
     reportError(
       error,
-      { where: `ErrorBoundary:${this.props.name}`, componentStack: info.componentStack },
+      { where: `ErrorBoundary:${this.props.name}`, componentStack: info.componentStack, staleChunk },
       "fatal",
     );
   }
