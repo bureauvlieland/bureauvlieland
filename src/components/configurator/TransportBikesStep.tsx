@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Ship, Bike, ArrowRight, ArrowLeft } from "lucide-react";
 import type { BikeChoice, TransportPreferences } from "@/lib/programWizardCart";
+import { InfoTooltip } from "./InfoTooltip";
 
 interface TransportBikesStepProps {
   initial?: Partial<TransportPreferences>;
@@ -83,6 +84,9 @@ export const TransportBikesStep = ({ initial, numberOfPeople, onBack, onSubmit }
           </Label>
           <Label className={`flex items-center gap-2 border rounded-md px-3 py-2 cursor-pointer ${bikeChoice === "geen" ? "border-primary bg-primary/5" : "border-border"}`}>
             <RadioGroupItem value="geen" /> Geen fietsen
+            <InfoTooltip>
+              Vlieland is grotendeels autovrij — zonder fietsen regelt u zelf vervoer voor uw groep.
+            </InfoTooltip>
           </Label>
         </RadioGroup>
       </Card>

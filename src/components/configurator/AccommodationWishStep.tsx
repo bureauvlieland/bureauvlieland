@@ -75,7 +75,7 @@ export const AccommodationWishStep = ({
             )}
           >
             <p className="font-medium text-sm">Nee, wij regelen dit zelf</p>
-            <p className="text-xs text-muted-foreground">Sla deze stap over</p>
+            <p className="text-xs text-muted-foreground">Sla deze stap over — u kunt logies later nog aanvragen, deze keuze legt niets vast</p>
           </button>
         </div>
 

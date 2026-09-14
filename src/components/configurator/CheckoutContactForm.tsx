@@ -17,6 +17,7 @@ import { getEntryPage, inferEventTypeFromPath, buildAttribution } from "@/lib/en
 import { HowItWorksBlock } from "./HowItWorksBlock";
 import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
 import { isDutchMobileNumber, DUTCH_MOBILE_PHONE_ERROR } from "@/lib/dutchMobilePhone";
+import { InfoTooltip } from "./InfoTooltip";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -589,7 +590,12 @@ export const CheckoutContactForm = ({
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Mobiel nummer (06) *</Label>
+                <Label htmlFor="phone" className="flex items-center gap-1.5">
+                  Mobiel nummer (06) *
+                  <InfoTooltip>
+                    We gebruiken dit nummer om u snel te bereiken via WhatsApp of sms, bijvoorbeeld bij vragen over de planning.
+                  </InfoTooltip>
+                </Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
