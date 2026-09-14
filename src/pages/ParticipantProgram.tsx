@@ -11,6 +11,7 @@ import { ArrowLeft, AlertCircle, Users, Share2 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ParticipantView } from "@/components/customer-portal/ParticipantView";
 import { ShareWithParticipantsDialog } from "@/components/customer-portal/ShareWithParticipantsDialog";
+import { ParticipantWhatsAppOptIn } from "@/components/customer-portal/ParticipantWhatsAppOptIn";
 
 const ParticipantProgram = () => {
   const { token } = useParams<{ token: string }>();
@@ -114,6 +115,10 @@ const ParticipantProgram = () => {
           </div>
         </div>
       </header>
+
+      <div className="container mx-auto px-4 max-w-3xl pt-4">
+        <ParticipantWhatsAppOptIn requestId={program.id} participantToken={token || ""} />
+      </div>
 
       <ParticipantView
         program={program}
