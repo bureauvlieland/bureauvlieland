@@ -3058,6 +3058,47 @@ export type Database = {
           },
         ]
       }
+      program_participants: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          participant_token: string
+          phone_number: string
+          request_id: string
+          updated_at: string
+          whatsapp_opt_in: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          participant_token: string
+          phone_number: string
+          request_id: string
+          updated_at?: string
+          whatsapp_opt_in?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          participant_token?: string
+          phone_number?: string
+          request_id?: string
+          updated_at?: string
+          whatsapp_opt_in?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_participants_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       program_request_items: {
         Row: {
           actual_invoiced_excl_vat: number | null

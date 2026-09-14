@@ -16,6 +16,7 @@ import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics
 import { getEntryPage, inferEventTypeFromPath, buildAttribution } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
+import { isDutchMobileNumber, DUTCH_MOBILE_PHONE_ERROR } from "@/lib/dutchMobilePhone";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -89,9 +90,9 @@ export const CheckoutContactForm = ({
         ? "Voer een geldig e-mailadres in."
         : undefined,
     phone: !formData.phone.trim()
-      ? "Telefoonnummer is verplicht."
-      : !/^[0-9+\s().-]{5,20}$/.test(formData.phone.trim())
-        ? "Voer een geldig telefoonnummer in."
+      ? "Mobiel nummer is verplicht."
+      : !isDutchMobileNumber(formData.phone)
+        ? DUTCH_MOBILE_PHONE_ERROR
         : undefined,
   };
 
@@ -588,7 +589,7 @@ export const CheckoutContactForm = ({
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefoonnummer *</Label>
+                <Label htmlFor="phone">Mobiel nummer (06) *</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input

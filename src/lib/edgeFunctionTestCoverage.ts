@@ -186,6 +186,7 @@ const REGISTRY: Row[] = [
   { name: "compose-followup-email", category: "utility", critical: false },
   { name: "scan-sales-lead", category: "utility", critical: false },
   { name: "whatsapp-send", category: "utility", critical: false },
+  { name: "send-participant-broadcast", category: "utility", critical: false },
 
   // ── Interne / operations ────────────────────────────────────────────────
   { name: "mint-ci-admin-jwt", category: "internal", critical: false },

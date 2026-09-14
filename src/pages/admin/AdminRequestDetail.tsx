@@ -172,6 +172,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw } from "lucide-react";
 import { ReopenRequestDialog } from "@/components/admin/ReopenRequestDialog";
 import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
+import { SendParticipantsBroadcastDialog } from "@/components/admin/SendParticipantsBroadcastDialog";
 import { ProjectChatSheet } from "@/components/admin/ProjectChatSheet";
 
 const LegendPill = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -348,6 +349,7 @@ const AdminRequestDetail = () => {
   const [linkedAccommodation, setLinkedAccommodation] = useState<LinkedAccommodation | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [whatsappOpen, setWhatsappOpen] = useState(false);
+  const [participantsBroadcastOpen, setParticipantsBroadcastOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelNotifyOpen, setCancelNotifyOpen] = useState(false);
@@ -1717,6 +1719,9 @@ const AdminRequestDetail = () => {
                             <MessageCircle className="h-4 w-4 mr-2 text-emerald-600" /> Stuur WhatsApp
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem onClick={() => setParticipantsBroadcastOpen(true)}>
+                          <Users className="h-4 w-4 mr-2 text-emerald-600" /> Bericht naar deelnemers
+                        </DropdownMenuItem>
                         {request.status !== "cancelled" && (
                           <DropdownMenuItem
                             onClick={() => handleSendAftersales(false)}
@@ -3426,6 +3431,13 @@ const AdminRequestDetail = () => {
         open={whatsappOpen}
         onOpenChange={setWhatsappOpen}
         defaultPhone={request.customer_phone}
+        requestId={request.id}
+        contextLabel={request.customer_name}
+      />
+
+      <SendParticipantsBroadcastDialog
+        open={participantsBroadcastOpen}
+        onOpenChange={setParticipantsBroadcastOpen}
         requestId={request.id}
         contextLabel={request.customer_name}
       />
