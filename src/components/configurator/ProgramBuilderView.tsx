@@ -41,6 +41,7 @@ import type { ProgramTemplate } from "@/types/programTemplate";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 import { toast } from "@/hooks/use-toast";
+import { InfoTooltip } from "./InfoTooltip";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
@@ -366,6 +367,9 @@ export const ProgramBuilderView = ({
             <Sparkles className="h-3.5 w-3.5" />
             Erwin's voorstel
           </Button>
+          <InfoTooltip>
+            Erwin stelt een compleet dagprogramma voor op basis van uw wensen. Dit vervangt uw huidige selectie.
+          </InfoTooltip>
         </div>
       </div>
 
@@ -443,8 +447,11 @@ export const ProgramBuilderView = ({
                                     </p>
                                   )}
                                   {!item.preferredTime && isBikeBlock && (
-                                    <p className="text-primary/70 text-xs mt-0.5 italic">
+                                    <p className="text-primary/70 text-xs mt-0.5 italic inline-flex items-center gap-1">
                                       Voor de duur van het verblijf
+                                      <InfoTooltip className="h-3 w-3 text-primary/70 cursor-help shrink-0">
+                                        Deze fietsen worden voor de hele verblijfsduur geregeld, niet per dag.
+                                      </InfoTooltip>
                                     </p>
                                   )}
                                   {!isRegularBlock && !isBikeBlock && !item.preferredTime && block.short_description && (
