@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buildPartnerOverviewRows, ARCHIVE_STATUSES } from "@/lib/getPartnerProjectsOverview";
 import type { PartnerItem, PartnerDashboardData } from "@/types/partner";
 
-function makeItem(overrides: Partial<PartnerItem> & { program_requests: Partial<PartnerItem["program_requests"]> }): PartnerItem {
+type ItemOverrides = Partial<Omit<PartnerItem, "program_requests">> & {
+  program_requests?: Partial<PartnerItem["program_requests"]>;
+};
+
+function makeItem(overrides: ItemOverrides): PartnerItem {
+  const { program_requests, ...itemOverrides } = overrides;
   return {
     id: "item-1",
     request_id: "req-1",
@@ -51,7 +56,7 @@ function makeItem(overrides: Partial<PartnerItem> & { program_requests: Partial<
     commission_amount: null,
     commission_status: null,
     is_concept: false,
-    ...overrides,
+    ...itemOverrides,
     program_requests: {
       id: "req-1",
       customer_name: "Jack Frieling",
@@ -63,7 +68,7 @@ function makeItem(overrides: Partial<PartnerItem> & { program_requests: Partial<
       status: "pending",
       reference_number: "BV-2602-0001",
       terms_accepted_at: null,
-      ...overrides.program_requests,
+      ...program_requests,
     },
   };
 }
