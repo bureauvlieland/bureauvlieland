@@ -102,8 +102,9 @@ export function buildPartnerOverviewRows(
     const sorted = [...dates].sort();
     const earliest = toDate(sorted[0] ?? null);
     const end = toDate(sorted[sorted.length - 1] ?? null);
+    const cancelled = !!req.cancelled_at || req.status === "cancelled";
     const isConcept = items.every(i => i.is_concept);
-    const derivedStatus: DerivedStatus = isConcept ? "concept" : deriveActivityStatus(items);
+    const derivedStatus: DerivedStatus = cancelled ? "geannuleerd" : isConcept ? "concept" : deriveActivityStatus(items);
     const actionCount = isConcept ? 0 : items.filter(isItemActionRequired).length;
 
     rows.push({

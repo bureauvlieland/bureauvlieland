@@ -84,6 +84,8 @@ export const PartnerPlanningCalendar = ({
 
     // BV items
     bvItems.forEach((item) => {
+      if (item.status === "cancelled" || item.status === "unavailable") return;
+      if (item.program_requests?.cancelled_at || item.program_requests?.status === "cancelled") return;
       if (!item.program_requests?.selected_dates?.length) return;
       const dates = item.program_requests.selected_dates;
       const dayDate = dates[item.day_index] || dates[0];

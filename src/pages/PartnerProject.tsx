@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive } from "lucide-react";
+import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, XCircle } from "lucide-react";
 import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -395,6 +395,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
     const arrival = sorted[0];
     const departure = sorted[sorted.length - 1];
     const isConceptProject = projectItems.every((i) => i.is_concept);
+    const isCancelledProject = !!req.cancelled_at || req.status === "cancelled";
     const customerLabel = isConceptProject
       ? "Aanvraag in voorbereiding"
       : req.customer_company || req.customer_name;
@@ -428,13 +429,25 @@ const PartnerProjectContent = ({ mode }: Props) => {
           </div>
 
           {isConceptProject && (
-            <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
-              <p className="font-medium">Concept — nog niet vrijgegeven door Bureau Vlieland</p>
-              <p className="mt-1">
-                Deze aanvraag is in voorbereiding. Je kunt 'm vast bekijken; klantgegevens en acties komen
-                pas vrij zodra Bureau Vlieland de aanvraag officieel naar je verstuurt.
-              </p>
-            </div>
+            isCancelledProject ? (
+              <div className="flex gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-destructive">Deze aanvraag is geannuleerd</p>
+                  <p className="text-sm text-muted-foreground">
+                    Geannuleerd voordat Bureau Vlieland 'm aan je had vrijgegeven. Er is geen actie nodig.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+                <p className="font-medium">Concept — nog niet vrijgegeven door Bureau Vlieland</p>
+                <p className="mt-1">
+                  Deze aanvraag is in voorbereiding. Je kunt 'm vast bekijken; klantgegevens en acties komen
+                  pas vrij zodra Bureau Vlieland de aanvraag officieel naar je verstuurt.
+                </p>
+              </div>
+            )
           )}
 
           {/* Project info card */}
@@ -527,8 +540,11 @@ const PartnerProjectContent = ({ mode }: Props) => {
                           {item.preferred_time && ` · voorkeur ${item.preferred_time}`}
                         </p>
                       </div>
-                      <Badge variant="outline" className="border-dashed shrink-0">
-                        Concept
+                      <Badge
+                        variant={isCancelledProject ? "destructive" : "outline"}
+                        className={cn("shrink-0", !isCancelledProject && "border-dashed")}
+                      >
+                        {isCancelledProject ? "Geannuleerd" : "Concept"}
                       </Badge>
                     </div>
                   ))}
