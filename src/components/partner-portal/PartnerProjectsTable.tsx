@@ -143,7 +143,7 @@ function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string })
         </Badge>
       </TableCell>
       <TableCell>
-        {row.isConcept ? (
+        {row.isConcept && row.derivedStatus !== "geannuleerd" ? (
           <Badge variant="outline" className="font-normal border-dashed">
             Concept — nog niet vrijgegeven
           </Badge>
