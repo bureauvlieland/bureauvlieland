@@ -108,6 +108,7 @@ import {
   type QuoteStatus,
   type ItemQuoteStatus,
 } from "@/types/programRequest";
+import { describeGroupSituation } from "@/types/programRequest";
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 
 import { FinancialOverviewCard, type InvoiceVatSuggestion } from "@/components/admin/FinancialOverviewCard";
@@ -199,6 +200,12 @@ interface ProgramRequest {
   number_of_people: number;
   selected_dates: string[];
   general_notes: string | null;
+  group_situation?: "vanaf_wal" | "op_vlieland" | null;
+  crossing_choice?: "doeksen" | "watertaxi" | "regina" | "eigen" | null;
+  bike_choice?: "standaard" | "ebike" | "eigen" | "geen" | null;
+  start_location?: string | null;
+  arrival_time?: string | null;
+  departure_time?: string | null;
   status: string;
   completion_status: CompletionStatus | null;
   terms_accepted_at: string | null;
@@ -1970,6 +1977,21 @@ const AdminRequestDetail = () => {
                         </div>
                       ))}
                     </div>
+                    {(() => {
+                      const sit = describeGroupSituation(request);
+                      if (!sit) return null;
+                      return (
+                        <div className="border-t pt-2">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">Situatie uit de wizard</p>
+                          <div className="text-sm text-slate-700 space-y-0.5">
+                            <p>{sit.situation}{sit.startLocation ? ` · start bij ${sit.startLocation}` : ""}</p>
+                            {sit.crossing && <p>Overtocht: {sit.crossing}</p>}
+                            {sit.bikes && <p>Fietsen: {sit.bikes}</p>}
+                            {sit.window && <p>Op het eiland: {sit.window}</p>}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {request.general_notes && (
                       <div className="border-t pt-2">
                         <p className="text-[10px] uppercase tracking-wide text-slate-500">Notities</p>

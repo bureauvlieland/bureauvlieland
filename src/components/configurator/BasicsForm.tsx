@@ -3,23 +3,50 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "./MultiDatePicker";
-import { ArrowRight, Users, Calendar, Eye } from "lucide-react";
+import { ArrowRight, Users, Calendar, Eye, Ship, MapPin } from "lucide-react";
 import { addDays } from "date-fns";
+import { cn } from "@/lib/utils";
+import type { GroupSituation } from "@/lib/programWizardCart";
 
 export interface BasicsFormData {
   numberOfPeople: number;
   selectedDates: Date[];
+  situation: GroupSituation;
 }
 
 interface BasicsFormProps {
   onSubmit: (data: BasicsFormData) => void;
   templateName?: string | null;
   templateDurationDays?: number | null;
+  initialSituation?: GroupSituation;
+  initialNumberOfPeople?: number;
 }
 
-export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: BasicsFormProps) => {
-  const [numberOfPeople, setNumberOfPeople] = useState(20);
+const SITUATION_OPTIONS: { value: GroupSituation; label: string; description: string; icon: typeof Ship }[] = [
+  {
+    value: "vanaf_wal",
+    label: "Wij komen vanaf de wal",
+    description: "Voor één of meer dagen. Wij regelen desgewenst de overtocht en fietsen.",
+    icon: Ship,
+  },
+  {
+    value: "op_vlieland",
+    label: "Wij zijn al op Vlieland",
+    description: "U verblijft al op het eiland en wilt een dag of dagdeel programma.",
+    icon: MapPin,
+  },
+];
+
+export const BasicsForm = ({
+  onSubmit,
+  templateName,
+  templateDurationDays,
+  initialSituation = "vanaf_wal",
+  initialNumberOfPeople = 20,
+}: BasicsFormProps) => {
+  const [numberOfPeople, setNumberOfPeople] = useState(initialNumberOfPeople);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [situation, setSituation] = useState<GroupSituation>(initialSituation);
 
   const handleAddDate = (date: Date): boolean => {
     if (selectedDates.length >= 7) return false;
@@ -39,13 +66,13 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
-    onSubmit({ numberOfPeople, selectedDates });
+    onSubmit({ numberOfPeople, selectedDates, situation });
   };
 
   const handleSkipDate = () => {
     // Placeholder date: 30 days from now. User can adjust later via "Programma details bewerken".
     const placeholder = addDays(new Date(), 30);
-    onSubmit({ numberOfPeople, selectedDates: [placeholder] });
+    onSubmit({ numberOfPeople, selectedDates: [placeholder], situation });
   };
 
   return (
@@ -82,6 +109,39 @@ export const BasicsForm = ({ onSubmit, templateName, templateDurationDays }: Bas
           required
           className="w-32"
         />
+      </div>
+
+      {/* Situation: bepaalt welke stappen volgen (vervoer of startpunt) */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <MapPin className="h-4 w-4" />
+          Wat is de situatie?
+        </Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Situatie van de groep">
+          {SITUATION_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            const active = situation === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setSituation(opt.value)}
+                className={cn(
+                  "w-full text-left p-3 rounded-md border-2 transition-all flex items-start gap-2.5",
+                  active ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                )}
+              >
+                <Icon className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  <span className="block font-medium text-sm">{opt.label}</span>
+                  <span className="block text-xs text-muted-foreground">{opt.description}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Dates */}

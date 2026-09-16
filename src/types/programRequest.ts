@@ -1,3 +1,4 @@
+import type { BikeChoice, CrossingChoice, GroupSituation } from "@/lib/programWizardCart";
 import { isBureauItem } from "@/lib/bureauItem";
 
 // Status types for program request items
@@ -244,7 +245,53 @@ export interface ProgramRequest {
   completion_override_outstanding?: number | null;
   // Per-project uitgesloten automatische kostenposten (tourist_tax, nature_contribution, central_surcharge, coordination_fee)
   excluded_fees?: string[] | null;
+  // Wizard: situatie van de groep, vervoerskeuze en tijdvak (zie docs/plan-wizard-situatie-en-beschikbaarheid.md)
+  group_situation?: GroupSituation | null;
+  crossing_choice?: CrossingChoice | null;
+  bike_choice?: BikeChoice | null;
+  start_location?: string | null;
+  /** HH:MM(:SS) — begin van het tijdvak op het eiland */
+  arrival_time?: string | null;
+  /** HH:MM(:SS) — einde van het tijdvak op het eiland */
+  departure_time?: string | null;
 }
+
+export const GROUP_SITUATION_LABELS: Record<GroupSituation, string> = {
+  vanaf_wal: "Komt vanaf de wal",
+  op_vlieland: "Is al op Vlieland",
+};
+
+export const CROSSING_CHOICE_LABELS: Record<CrossingChoice, string> = {
+  doeksen: "Veerboot Rederij Doeksen",
+  watertaxi: "Watertaxi",
+  regina: "Privévaart Regina Andrea",
+  eigen: "Regelt de overtocht zelf",
+};
+
+export const BIKE_CHOICE_LABELS: Record<BikeChoice, string> = {
+  standaard: "Versnellingsfietsen via het bureau",
+  ebike: "E-bikes via het bureau",
+  eigen: "Heeft al fietsen",
+  geen: "Geen fietsen",
+};
+
+/** Korte samenvatting van situatie, vervoer, fietsen en tijdvak, of null als de aanvraag er geen heeft. */
+export const describeGroupSituation = (
+  r: Pick<ProgramRequest, "group_situation" | "crossing_choice" | "bike_choice" | "start_location" | "arrival_time" | "departure_time">,
+): { situation: string; crossing: string | null; bikes: string | null; startLocation: string | null; window: string | null } | null => {
+  if (!r.group_situation) return null;
+  const hhmm = (t: string | null | undefined) => (t ? t.slice(0, 5) : null);
+  const from = hhmm(r.arrival_time);
+  const to = hhmm(r.departure_time);
+  const window = from && to ? `${from} – ${to}` : from ? `vanaf ${from}` : to ? `tot ${to}` : null;
+  return {
+    situation: GROUP_SITUATION_LABELS[r.group_situation],
+    crossing: r.crossing_choice ? CROSSING_CHOICE_LABELS[r.crossing_choice] : null,
+    bikes: r.bike_choice ? BIKE_CHOICE_LABELS[r.bike_choice] : null,
+    startLocation: r.start_location ?? null,
+    window,
+  };
+};
 
 
 /** Openbaar profiel van de aanbieder, meegegeven door get-customer-program. */

@@ -6,7 +6,14 @@ import { Helmet } from "react-helmet";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { BasicsForm, type BasicsFormData } from "@/components/configurator/BasicsForm";
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
-import { CheckoutStepIndicator, type ConfigPhase } from "@/components/configurator/CheckoutStepIndicator";
+import {
+  CheckoutStepIndicator,
+  wizardStepsFor,
+  nextWizardPhase,
+  previousWizardPhase,
+  type ConfigPhase,
+} from "@/components/configurator/CheckoutStepIndicator";
+import { TemplateSelector } from "@/components/configurator/TemplateSelector";
 import { CheckoutContactForm } from "@/components/configurator/CheckoutContactForm";
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
 import { DraftRecoveryDialog } from "@/components/configurator/DraftRecoveryDialog";
@@ -16,18 +23,21 @@ import { AccommodationWishStep } from "@/components/configurator/AccommodationWi
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
+import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import type { CartItemDetail } from "@/types/buildingBlock";
+import type { ProgramTemplate } from "@/types/programTemplate";
 import {
   planTransportCartOps,
+  inferCrossingFromCart,
+  WIZARD_TRANSPORT_BLOCK_IDS,
+  WATERTAXI_HEEN_ID,
   type TransportPreferences,
-  FERRY_HEEN_ID,
-  FERRY_TERUG_ID,
-  FIETS_STANDAARD_ID,
-  FIETS_EBIKE_ID,
+  type WizardSituation,
 } from "@/lib/programWizardCart";
 import heroImage from "@/assets/beach-signs.jpg";
 
-const KEEP_BLOCK_IDS = new Set([FERRY_HEEN_ID, FERRY_TERUG_ID, FIETS_STANDAARD_ID, FIETS_EBIKE_ID]);
+/** Vervoer en fietsen blijven staan als Erwin's voorstel de rest vervangt. */
+const KEEP_BLOCK_IDS = WIZARD_TRANSPORT_BLOCK_IDS;
 
 const ProgrammaSamenstellen = () => {
   const kenBurns = useKenBurns();
@@ -43,6 +53,10 @@ const ProgrammaSamenstellen = () => {
     setNumberOfPeople,
     accommodationWish,
     setAccommodationWish,
+    wizardSituation,
+    setWizardSituation,
+    transportPrefs,
+    setTransportPrefs,
     setSelectedDate,
     addDate,
     removeDate,
@@ -64,13 +78,30 @@ const ProgrammaSamenstellen = () => {
   const [customerToken, setCustomerToken] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const handledBlockRef = useRef<string | null>(null);
-  const [transportPrefs, setTransportPrefs] = useState<TransportPreferences>({
-    ferryIncluded: true,
-    bikeChoice: "standaard",
-  });
+  const { data: allBlocks = [] } = usePublishedBuildingBlocks();
 
   const templateSlug = searchParams.get("template");
   const { data: templateData } = useTemplateWithItems(templateSlug);
+
+  // Welke stappen deze wizard heeft, hangt af van de situatie en het aantal dagen.
+  const steps = wizardStepsFor({
+    situation: wizardSituation.situation,
+    numberOfDays: Math.max(1, selectedDates.length),
+  });
+  const goNext = useCallback(
+    (from: ConfigPhase) => {
+      const next = nextWizardPhase(steps, from);
+      if (next) setPhase(next);
+    },
+    [steps],
+  );
+  const goBack = useCallback(
+    (from: ConfigPhase) => {
+      const prev = previousWizardPhase(steps, from);
+      if (prev) setPhase(prev);
+    },
+    [steps],
+  );
 
   // Check for existing draft on mount — skip when arriving with a template (explicit intent overrides draft)
   useEffect(() => {
@@ -115,33 +146,71 @@ const ProgrammaSamenstellen = () => {
     setPhase("basics");
   };
 
+  // Voorbeeldprogramma inladen zonder vervoer: dat regelt de vervoerstap.
+  // Bevat het programma zelf een watertaxi of privévaart, dan nemen we die
+  // over als vervoerskeuze.
+  const applyTemplate = useCallback(
+    (template: ProgramTemplate, startDate: Date, people: number) => {
+      const items = loadFromTemplate(template, startDate, people, { includeDefaultTransport: false });
+      setTransportPrefs({
+        ...transportPrefs,
+        crossing: inferCrossingFromCart(items, transportPrefs.crossing),
+      });
+    },
+    [loadFromTemplate, setTransportPrefs, transportPrefs],
+  );
+
   const handleBasicsSubmit = useCallback((data: BasicsFormData) => {
     clearCart();
+    const situation: WizardSituation = { ...wizardSituation, situation: data.situation };
+    setWizardSituation(situation);
+    setNumberOfPeople(data.numberOfPeople);
+    const nextSteps = wizardStepsFor({ situation: data.situation, numberOfDays: Math.max(1, data.selectedDates.length) });
     if (templateData && data.selectedDates.length > 0) {
-      // Load full template starting from the chosen first date — skip transport step
-      loadFromTemplate(templateData, data.selectedDates[0], data.numberOfPeople);
+      // Gekozen op /voorbeeldprogrammas: meteen inladen, daarna gewoon de
+      // resterende stappen (logies, vervoer) doorlopen.
+      applyTemplate(templateData, data.selectedDates[0], data.numberOfPeople);
       searchParams.delete("template");
       setSearchParams(searchParams, { replace: true });
-      setPhase("program");
+      setPhase(nextWizardPhase(nextSteps, "template") ?? "program");
     } else {
-      setNumberOfPeople(data.numberOfPeople);
       data.selectedDates.forEach((date, i) => {
         if (i === 0) setSelectedDate(date);
         else addDate(date);
       });
-      setPhase("accommodation");
+      setPhase("template");
     }
-  }, [clearCart, setNumberOfPeople, setSelectedDate, addDate, templateData, loadFromTemplate, searchParams, setSearchParams]);
+  }, [clearCart, wizardSituation, setWizardSituation, setNumberOfPeople, setSelectedDate, addDate, templateData, applyTemplate, searchParams, setSearchParams]);
 
-  const handleTransportSubmit = useCallback((prefs: TransportPreferences) => {
+  const handleTemplateSelected = useCallback((template: ProgramTemplate) => {
+    if (selectedDates.length > 0) {
+      applyTemplate(template, selectedDates[0], numberOfPeople);
+    }
+    goNext("template");
+  }, [applyTemplate, selectedDates, numberOfPeople, goNext]);
+
+  const handleTransportSubmit = useCallback((prefs: TransportPreferences, situation: WizardSituation) => {
     setTransportPrefs(prefs);
-    const ops = planTransportCartOps(cartItems, prefs, Math.max(1, selectedDates.length));
+    setWizardSituation(situation);
+    const watertaxiCapacity = getBlockById(allBlocks, WATERTAXI_HEEN_ID)?.max_people || undefined;
+    const ops = planTransportCartOps(
+      cartItems,
+      situation.situation,
+      prefs,
+      Math.max(1, selectedDates.length),
+      numberOfPeople,
+      { watertaxiCapacity },
+    );
     ops.forEach((op) => {
-      if (op.action === "add") addToCart(op.blockId, op.dayIndex);
-      else removeFromCart(op.blockId);
+      if (op.action === "add") {
+        addToCart(op.blockId, op.dayIndex);
+        if (op.notes) updateItem(op.blockId, { notes: op.notes });
+      } else {
+        removeFromCart(op.blockId);
+      }
     });
     setPhase("program");
-  }, [cartItems, selectedDates.length, addToCart, removeFromCart]);
+  }, [cartItems, selectedDates.length, numberOfPeople, allBlocks, addToCart, removeFromCart, updateItem, setTransportPrefs, setWizardSituation]);
 
 
   const handleAddItem = useCallback((blockId: string, dayIndex: number) => {
@@ -183,7 +252,7 @@ const ProgrammaSamenstellen = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showHero = phase === "basics" || phase === "accommodation" || phase === "transport" || phase === "program";
+  const showHero = phase === "basics" || phase === "template" || phase === "accommodation" || phase === "transport" || phase === "program";
 
   return (
     <div className="min-h-screen bg-background">
@@ -223,7 +292,7 @@ const ProgrammaSamenstellen = () => {
         )}
 
         {/* Step indicator — visible on all phases */}
-        <CheckoutStepIndicator currentStep={phase} />
+        <CheckoutStepIndicator currentStep={phase} steps={steps} />
 
         {/* Content */}
         <section className={`py-10 md:py-14 ${phase === "program" ? "pb-28" : ""}`}>
@@ -233,6 +302,20 @@ const ProgrammaSamenstellen = () => {
                 onSubmit={handleBasicsSubmit}
                 templateName={templateData?.name ?? null}
                 templateDurationDays={templateData?.duration_days ?? null}
+                initialSituation={wizardSituation.situation}
+                initialNumberOfPeople={numberOfPeople}
+              />
+            )}
+
+            {phase === "template" && (
+              <TemplateSelector
+                durationDays={Math.max(1, selectedDates.length)}
+                numberOfPeople={numberOfPeople}
+                selectedDates={selectedDates}
+                situation={wizardSituation.situation}
+                onSelectTemplate={handleTemplateSelected}
+                onStartEmpty={() => goNext("template")}
+                onBack={() => setPhase("basics")}
               />
             )}
 
@@ -241,16 +324,18 @@ const ProgrammaSamenstellen = () => {
                 numberOfPeople={numberOfPeople}
                 wish={accommodationWish}
                 onChange={setAccommodationWish}
-                onBack={() => setPhase("basics")}
-                onSubmit={() => setPhase("transport")}
+                onBack={() => goBack("accommodation")}
+                onSubmit={() => goNext("accommodation")}
               />
             )}
 
             {phase === "transport" && (
               <TransportBikesStep
+                situation={wizardSituation}
                 initial={transportPrefs}
                 numberOfPeople={numberOfPeople}
-                onBack={() => setPhase("accommodation")}
+                numberOfDays={Math.max(1, selectedDates.length)}
+                onBack={() => goBack("transport")}
                 onSubmit={handleTransportSubmit}
               />
             )}
@@ -271,7 +356,12 @@ const ProgrammaSamenstellen = () => {
                 onReplaceWithSuggestion={handleErwinSuggestion}
                 onLoadTemplate={(template) => {
                   if (selectedDates.length > 0) {
-                    loadFromTemplate(template, selectedDates[0], numberOfPeople);
+                    // Vanuit de programmastap: vervoer en fietsen staan al, die blijven.
+                    const keep = cartItems.filter((i) => KEEP_BLOCK_IDS.has(i.blockId));
+                    loadFromTemplate(template, selectedDates[0], numberOfPeople, {
+                      includeDefaultTransport: false,
+                      keepItems: keep,
+                    });
                   }
                 }}
               />
@@ -283,6 +373,8 @@ const ProgrammaSamenstellen = () => {
                 numberOfPeople={numberOfPeople}
                 selectedDates={selectedDates}
                 accommodationWish={accommodationWish}
+                wizardSituation={wizardSituation}
+                transportPrefs={transportPrefs}
                 onBack={() => setPhase("program")}
                 onSuccess={handleSubmitSuccess}
               />

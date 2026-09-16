@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { type CartItemDetail } from "@/types/buildingBlock";
 import { type AccommodationWish } from "@/types/accommodation";
+import type { TransportPreferences, WizardSituation } from "@/lib/programWizardCart";
 
 const STORAGE_KEY = "bureauvlieland_program_draft";
 const DRAFT_EXPIRY_DAYS = 30;
@@ -12,6 +13,8 @@ export interface DraftProgram {
   savedAt: string;
   manualOrder: boolean;
   accommodationWish?: AccommodationWish;
+  wizardSituation?: WizardSituation;
+  transportPrefs?: TransportPreferences;
 }
 
 // Legacy draft format for migration

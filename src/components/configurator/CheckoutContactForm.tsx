@@ -16,6 +16,7 @@ import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics
 import { getEntryPage, inferEventTypeFromPath, buildAttribution } from "@/lib/entryPageTracker";
 import { HowItWorksBlock } from "./HowItWorksBlock";
 import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
+import { availabilityWindow, type TransportPreferences, type WizardSituation } from "@/lib/programWizardCart";
 import { isDutchMobileNumber, DUTCH_MOBILE_PHONE_ERROR } from "@/lib/dutchMobilePhone";
 import { InfoTooltip } from "./InfoTooltip";
 import {
@@ -34,6 +35,9 @@ interface CheckoutContactFormProps {
   numberOfPeople: number;
   selectedDates: Date[];
   accommodationWish?: AccommodationWish;
+  /** Situatie en vervoerskeuze uit de wizard; ontbreekt bij Snel-aanvragen. */
+  wizardSituation?: WizardSituation;
+  transportPrefs?: TransportPreferences;
   onBack: () => void;
   onSuccess: (customerToken: string) => void;
 }
@@ -43,6 +47,8 @@ export const CheckoutContactForm = ({
   numberOfPeople,
   selectedDates,
   accommodationWish = DEFAULT_ACCOMMODATION_WISH,
+  wizardSituation,
+  transportPrefs,
   onBack,
   onSuccess,
 }: CheckoutContactFormProps) => {
@@ -321,6 +327,21 @@ export const CheckoutContactForm = ({
 
       const requestId = crypto.randomUUID();
 
+      // Situatie van de groep en vervoerskeuze uit de wizard. Het tijdvak is
+      // "van aankomst tot vertrek" bij een eigen overtocht, en "van–tot" bij
+      // een groep die al op Vlieland is.
+      const islandWindow = wizardSituation && transportPrefs ? availabilityWindow(wizardSituation, transportPrefs) : null;
+      const situationFields = wizardSituation && transportPrefs
+        ? {
+            group_situation: wizardSituation.situation,
+            crossing_choice: wizardSituation.situation === "op_vlieland" ? null : transportPrefs.crossing,
+            bike_choice: transportPrefs.bikeChoice,
+            start_location: wizardSituation.situation === "op_vlieland" ? wizardSituation.startLocation : null,
+            arrival_time: islandWindow?.from ?? null,
+            departure_time: islandWindow?.to ?? null,
+          }
+        : {};
+
       // Bouw items-payload op vóór de program_request insert, zodat we niet
       // halverwege blijven hangen met een lege aanvraag in de admin.
       const itemsToInsert = blocksWithDetails.map((block) => {
@@ -372,6 +393,7 @@ export const CheckoutContactForm = ({
             general_notes: formData.notes || null,
             program_description: finalEventType,
             attribution: buildAttribution(),
+            ...situationFields,
           },
           p_items: itemsToInsert,
         },

@@ -1,32 +1,76 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { GroupSituation } from "@/lib/programWizardCart";
 
-export type ConfigPhase = "basics" | "accommodation" | "transport" | "program" | "contact" | "success";
+export type ConfigPhase =
+  | "basics"
+  | "template"
+  | "accommodation"
+  | "transport"
+  | "program"
+  | "contact"
+  | "success";
 
-const STEPS: { key: ConfigPhase; label: string }[] = [
-  { key: "basics", label: "Basisgegevens" },
-  { key: "accommodation", label: "Logies" },
-  { key: "transport", label: "Vervoer & fietsen" },
-  { key: "program", label: "Programma" },
-  { key: "contact", label: "Gegevens" },
-  { key: "success", label: "Versturen" },
-];
+export interface WizardStep {
+  key: ConfigPhase;
+  label: string;
+}
 
-const phaseIndex = (phase: ConfigPhase) =>
-  STEPS.findIndex((s) => s.key === phase);
+/**
+ * Welke stappen de wizard toont hangt af van de situatie van de groep.
+ * "Al op Vlieland": geen logies, geen overtocht — wel een startpunt en fietsen.
+ * "Vanaf de wal": logies alleen bij meer dan één dag.
+ */
+export const wizardStepsFor = ({
+  situation,
+  numberOfDays,
+}: {
+  situation: GroupSituation;
+  numberOfDays: number;
+}): WizardStep[] => {
+  const steps: WizardStep[] = [
+    { key: "basics", label: "Basisgegevens" },
+    { key: "template", label: "Voorbeeld" },
+  ];
+  if (situation === "vanaf_wal") {
+    if (numberOfDays > 1) steps.push({ key: "accommodation", label: "Logies" });
+    steps.push({ key: "transport", label: "Vervoer & fietsen" });
+  } else {
+    steps.push({ key: "transport", label: "Startpunt & fietsen" });
+  }
+  steps.push(
+    { key: "program", label: "Programma" },
+    { key: "contact", label: "Gegevens" },
+    { key: "success", label: "Versturen" },
+  );
+  return steps;
+};
+
+/** De stap ná `current` in deze volgorde, of null aan het einde. */
+export const nextWizardPhase = (steps: WizardStep[], current: ConfigPhase): ConfigPhase | null => {
+  const i = steps.findIndex((s) => s.key === current);
+  return i >= 0 && i < steps.length - 1 ? steps[i + 1].key : null;
+};
+
+/** De stap vóór `current`, of null aan het begin. */
+export const previousWizardPhase = (steps: WizardStep[], current: ConfigPhase): ConfigPhase | null => {
+  const i = steps.findIndex((s) => s.key === current);
+  return i > 0 ? steps[i - 1].key : null;
+};
 
 interface CheckoutStepIndicatorProps {
   currentStep: ConfigPhase;
+  steps: WizardStep[];
 }
 
-export const CheckoutStepIndicator = ({ currentStep }: CheckoutStepIndicatorProps) => {
-  const current = phaseIndex(currentStep);
+export const CheckoutStepIndicator = ({ currentStep, steps }: CheckoutStepIndicatorProps) => {
+  const current = steps.findIndex((s) => s.key === currentStep);
 
   return (
     <div className="w-full bg-background border-b border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-4">
         <div className="flex items-center justify-between">
-          {STEPS.map((step, i) => {
+          {steps.map((step, i) => {
             const isDone = i < current;
             const isActive = i === current;
 
@@ -55,7 +99,7 @@ export const CheckoutStepIndicator = ({ currentStep }: CheckoutStepIndicatorProp
                 </div>
 
                 {/* Connector line */}
-                {i < STEPS.length - 1 && (
+                {i < steps.length - 1 && (
                   <div className="flex-1 mx-2 sm:mx-4">
                     <div
                       className={cn(

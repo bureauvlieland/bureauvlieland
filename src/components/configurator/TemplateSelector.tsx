@@ -4,7 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sparkles, ChevronLeft, Clock, Users, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
+import { useTemplatesByDuration, fetchTemplateWithItems } from "@/hooks/useProgramTemplates";
+import { useToast } from "@/hooks/use-toast";
+import type { GroupSituation } from "@/lib/programWizardCart";
 import fallbackImage from "@/assets/vlieland-beach.jpg";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 import { Calendar } from "@/components/ui/calendar";
@@ -16,6 +18,9 @@ import type { ProgramTemplate } from "@/types/programTemplate";
 interface TemplateSelectorProps {
   durationDays: number;
   numberOfPeople: number;
+  /** Gekozen dagen; gebruikt voor de beschikbaarheid per programma. */
+  selectedDates?: Date[];
+  situation?: GroupSituation;
   onSelectTemplate: (template: ProgramTemplate) => void;
   onStartEmpty: () => void;
   onBack: () => void;
@@ -27,6 +32,8 @@ interface TemplateSelectorProps {
 export const TemplateSelector = ({
   durationDays,
   numberOfPeople,
+  selectedDates: _selectedDates,
+  situation: _situation,
   onSelectTemplate,
   onStartEmpty,
   onBack,
@@ -37,6 +44,27 @@ export const TemplateSelector = ({
   const [localPeople, setLocalPeople] = useState(numberOfPeople || 20);
   const [localDates, setLocalDates] = useState<Date[]>([]);
   const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
+  const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // De lijst bevat geen onderdelen; die halen we op zodra iemand kiest.
+  const handleUseTemplate = async (template: ProgramTemplate) => {
+    if (template.items) {
+      onSelectTemplate(template);
+      return;
+    }
+    setLoadingTemplateId(template.id);
+    try {
+      const full = await fetchTemplateWithItems(template.id);
+      if (!full) throw new Error("Programma niet gevonden");
+      onSelectTemplate(full);
+    } catch (err) {
+      console.error("Template laden mislukt", err);
+      toast({ title: "Programma kon niet geladen worden", description: "Probeer het opnieuw of start leeg.", variant: "destructive" });
+    } finally {
+      setLoadingTemplateId(null);
+    }
+  };
 
   const effectiveDuration = localDates.length > 1 ? localDates.length : durationDays;
   const { data: templates = [], isLoading } = useTemplatesByDuration(effectiveDuration);
@@ -190,12 +218,13 @@ export const TemplateSelector = ({
                 <Button
                   size="sm"
                   className="flex-1"
+                  disabled={loadingTemplateId === template.id}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelectTemplate(template);
+                    void handleUseTemplate(template);
                   }}
                 >
-                  {inspirationMode ? "Dit spreekt mij aan" : "Gebruik"}
+                  {loadingTemplateId === template.id ? "Laden…" : inspirationMode ? "Dit spreekt mij aan" : "Gebruik"}
                 </Button>
               </div>
             </CardContent>
@@ -243,7 +272,7 @@ export const TemplateSelector = ({
         onOpenChange={(open) => !open && setPreviewTemplate(null)}
         onUseTemplate={(template) => {
           setPreviewTemplate(null);
-          onSelectTemplate(template);
+          void handleUseTemplate(template);
         }}
       />
     </div>

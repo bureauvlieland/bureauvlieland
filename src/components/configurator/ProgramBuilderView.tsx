@@ -40,6 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
+import { WIZARD_TRANSPORT_BLOCK_IDS } from "@/lib/programWizardCart";
 import { toast } from "@/hooks/use-toast";
 import { InfoTooltip } from "./InfoTooltip";
 
@@ -202,14 +203,7 @@ export const ProgramBuilderView = ({
     return window.sessionStorage.getItem("bv:templateBannerDismissed") === "1";
   });
 
-  const TRANSPORT_BLOCK_IDS = new Set([
-    "boot-enkel-heen",
-    "boot-enkel-terug",
-    "boot-retour",
-    "fiets-huur",
-    "fiets-huur-kopie-2",
-  ]);
-  const nonTransportCount = cartItems.filter((i) => !TRANSPORT_BLOCK_IDS.has(i.blockId)).length;
+  const nonTransportCount = cartItems.filter((i) => !WIZARD_TRANSPORT_BLOCK_IDS.has(i.blockId)).length;
   const showTemplateBanner =
     templates.length > 0 && nonTransportCount < 2 && !templateBannerDismissed;
 

@@ -1,10 +1,7 @@
 import type { CartItemDetail } from "@/types/buildingBlock";
+import { isHeenCrossingBlock, isTerugCrossingBlock, ALL_BIKE_BLOCK_IDS } from "@/lib/programWizardCart";
 
-const FERRY_HEEN_ID = "boot-enkel-heen";
-const FERRY_TERUG_ID = "boot-enkel-terug";
-const FIETS_ID = "fiets-huur";
-
-/** Pin ferry heen + fiets to top on first day, ferry terug to bottom on last day */
+/** Pin crossing heen + fiets to top on first day, crossing terug to bottom on last day */
 export const sortCartItemsForDay = (
   items: CartItemDetail[],
   dayIndex: number,
@@ -28,11 +25,11 @@ export const sortCartItemsForDay = (
 
 /** Returns sort rank: lower = higher in list. 50 = normal. */
 function getPinRank(blockId: string, dayIndex: number, lastDay: number): number {
-  // Ferry heen: pin to top on day 0
-  if (blockId === FERRY_HEEN_ID && dayIndex === 0) return 0;
-  // Fiets: pin just below ferry heen on day 0
-  if (blockId === FIETS_ID && dayIndex === 0) return 1;
-  // Ferry terug: pin to bottom on last day
-  if (blockId === FERRY_TERUG_ID && dayIndex === lastDay) return 100;
+  // Overtocht heen (Doeksen, watertaxi, privévaart): pin to top on day 0
+  if (isHeenCrossingBlock(blockId) && dayIndex === 0) return 0;
+  // Fiets: pin just below the crossing on day 0
+  if (ALL_BIKE_BLOCK_IDS.includes(blockId) && dayIndex === 0) return 1;
+  // Overtocht terug: pin to bottom on last day
+  if (isTerugCrossingBlock(blockId) && dayIndex === lastDay) return 100;
   return 50;
 }
