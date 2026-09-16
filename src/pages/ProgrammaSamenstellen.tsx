@@ -6,13 +6,8 @@ import { Helmet } from "react-helmet";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { BasicsForm, type BasicsFormData } from "@/components/configurator/BasicsForm";
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
-import {
-  CheckoutStepIndicator,
-  wizardStepsFor,
-  nextWizardPhase,
-  previousWizardPhase,
-  type ConfigPhase,
-} from "@/components/configurator/CheckoutStepIndicator";
+import { CheckoutStepIndicator } from "@/components/configurator/CheckoutStepIndicator";
+import { wizardStepsFor, nextWizardPhase, previousWizardPhase, type ConfigPhase } from "@/lib/wizardSteps";
 import { TemplateSelector } from "@/components/configurator/TemplateSelector";
 import { CheckoutContactForm } from "@/components/configurator/CheckoutContactForm";
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";

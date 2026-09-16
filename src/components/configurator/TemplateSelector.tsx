@@ -4,9 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sparkles, ChevronLeft, Clock, Users, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTemplatesByDuration, fetchTemplateWithItems } from "@/hooks/useProgramTemplates";
+import { useTemplatesWithItemsByDuration, fetchTemplateWithItems } from "@/hooks/useProgramTemplates";
 import { useToast } from "@/hooks/use-toast";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { assessProgramAvailability, type ProgramAvailability } from "@/lib/programAvailability";
+import { CalendarOff, CheckCircle2, AlertCircle } from "lucide-react";
 import type { GroupSituation } from "@/lib/programWizardCart";
+import { WIZARD_TRANSPORT_BLOCK_IDS } from "@/lib/programWizardCart";
 import fallbackImage from "@/assets/vlieland-beach.jpg";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,8 +36,8 @@ interface TemplateSelectorProps {
 export const TemplateSelector = ({
   durationDays,
   numberOfPeople,
-  selectedDates: _selectedDates,
-  situation: _situation,
+  selectedDates = [],
+  situation = "vanaf_wal",
   onSelectTemplate,
   onStartEmpty,
   onBack,
@@ -67,7 +71,25 @@ export const TemplateSelector = ({
   };
 
   const effectiveDuration = localDates.length > 1 ? localDates.length : durationDays;
-  const { data: templates = [], isLoading } = useTemplatesByDuration(effectiveDuration);
+  const { data: rawTemplates = [], isLoading } = useTemplatesWithItemsByDuration(effectiveDuration);
+  const { periods } = usePublicPartnerUnavailability();
+
+  // Beschikbaarheid per programma op de gekozen datums; programma's met een
+  // probleem blijven zichtbaar (met label) maar gaan onderaan.
+  const datesIso = (localDates.length > 0 ? localDates : selectedDates).map((d) => format(d, "yyyy-MM-dd"));
+  const people = localPeople || numberOfPeople;
+  const templates = rawTemplates
+    .map((t) => {
+      const items = (t.items ?? [])
+        // Vervoer regelt de wizard zelf; een groep die al op Vlieland is krijgt geen overtocht.
+        .filter((i) => !WIZARD_TRANSPORT_BLOCK_IDS.has(i.block_id))
+        .map((i) => ({ blockId: i.block_id, dayIndex: i.day_index }));
+      const blocks = (t.items ?? []).map((i) => i.block).filter((b): b is NonNullable<typeof b> => !!b);
+      const availability: ProgramAvailability = assessProgramAvailability(items, datesIso, people, periods, blocks);
+      return { template: t, availability };
+    })
+    .sort((a, b) => a.availability.problems.length - b.availability.problems.length);
+  void situation;
 
   const showInlineBasics = !inspirationMode && !!onPeopleChange;
 
@@ -172,7 +194,7 @@ export const TemplateSelector = ({
       )}
 
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
-        {templates.map((template) => (
+        {templates.map(({ template, availability }) => (
           <Card
             key={template.id}
             className="overflow-hidden hover:border-primary/50 transition-all duration-200 group cursor-pointer"
@@ -199,9 +221,31 @@ export const TemplateSelector = ({
                 </span>
               </div>
 
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+              <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                 {template.short_description}
               </p>
+
+              {availability.summary && (
+                <p
+                  className={cn(
+                    "text-xs flex items-start gap-1.5 mb-4",
+                    availability.problems.length === 0
+                      ? "text-muted-foreground"
+                      : availability.closedCount > 0
+                        ? "text-amber-800 dark:text-amber-300"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {availability.problems.length === 0 ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+                  ) : availability.closedCount > 0 ? (
+                    <CalendarOff className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  )}
+                  <span>{availability.summary}</span>
+                </p>
+              )}
 
               <div className="flex gap-2">
                 <Button
@@ -268,6 +312,7 @@ export const TemplateSelector = ({
       <TemplatePreviewSheet
         templateId={previewTemplate}
         numberOfPeople={localPeople || numberOfPeople}
+        selectedDates={localDates.length > 0 ? localDates : selectedDates}
         open={!!previewTemplate}
         onOpenChange={(open) => !open && setPreviewTemplate(null)}
         onUseTemplate={(template) => {

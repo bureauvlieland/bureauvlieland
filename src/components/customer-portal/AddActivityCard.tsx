@@ -6,6 +6,8 @@ import { formatBlockPrice, formatPriceNote, categoryLabels } from "@/types/build
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
 import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import type { PartnerAvailabilityNote as AvailabilityNoteData } from "@/hooks/usePublicPartnerUnavailability";
+import { ItemAvailabilityBadge } from "@/components/shared/ItemAvailabilityBadge";
+import type { ItemAvailability } from "@/lib/programAvailability";
 
 interface AddActivityCardProps {
   block: BuildingBlock;
@@ -13,9 +15,11 @@ interface AddActivityCardProps {
   isLoading?: boolean;
   /** Sluitingsperiode van de aanbieder, zoals ook op /bouwstenen getoond. */
   availabilityNote?: AvailabilityNoteData;
+  /** Beschikbaarheid op de gekozen dag en voor deze groep (gesloten, te groot, te klein). */
+  availability?: ItemAvailability;
 }
 
-export const AddActivityCard = ({ block, onAdd, isLoading, availabilityNote }: AddActivityCardProps) => {
+export const AddActivityCard = ({ block, onAdd, isLoading, availabilityNote, availability }: AddActivityCardProps) => {
   const imageUrl = getBlockImage(block);
   const providerName = getProviderName(block);
   const priceDisplay = formatBlockPrice(block);
@@ -62,6 +66,7 @@ export const AddActivityCard = ({ block, onAdd, isLoading, availabilityNote }: A
           </p>
         )}
 
+        <ItemAvailabilityBadge availability={availability} className="mt-1" />
         <PartnerAvailabilityNote note={availabilityNote} className="mt-1" />
       </div>
 

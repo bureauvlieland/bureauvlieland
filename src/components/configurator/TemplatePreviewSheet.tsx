@@ -5,10 +5,16 @@ import { Separator } from "@/components/ui/separator";
 import { Clock, Users } from "lucide-react";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import type { ProgramTemplate } from "@/types/programTemplate";
+import { format } from "date-fns";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { assessProgramAvailability } from "@/lib/programAvailability";
+import { ItemAvailabilityBadge } from "@/components/shared/ItemAvailabilityBadge";
 
 interface TemplatePreviewSheetProps {
   templateId: string | null;
   numberOfPeople: number;
+  /** Gekozen dagen; dag 1 = eerste datum. Zonder datums geen sluitingscheck. */
+  selectedDates?: Date[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUseTemplate: (template: ProgramTemplate) => void;
@@ -17,11 +23,25 @@ interface TemplatePreviewSheetProps {
 export const TemplatePreviewSheet = ({
   templateId,
   numberOfPeople,
+  selectedDates = [],
   open,
   onOpenChange,
   onUseTemplate,
 }: TemplatePreviewSheetProps) => {
   const { data: template, isLoading } = useTemplateWithItems(templateId);
+  const { periods } = usePublicPartnerUnavailability(open);
+
+  const availability = template
+    ? assessProgramAvailability(
+        (template.items ?? []).map((i) => ({ blockId: i.block_id, dayIndex: i.day_index })),
+        selectedDates.map((d) => format(d, "yyyy-MM-dd")),
+        numberOfPeople,
+        periods,
+        (template.items ?? []).map((i) => i.block).filter((b): b is NonNullable<typeof b> => !!b),
+      )
+    : null;
+  const availabilityFor = (blockId: string, dayIndex: number) =>
+    availability?.items.find((a) => a.blockId === blockId && a.dayIndex === dayIndex);
 
   const getDayLabel = (dayIndex: number) => {
     return `Dag ${dayIndex + 1}`;
@@ -109,6 +129,7 @@ export const TemplatePreviewSheet = ({
                               {item.block.duration}
                             </Badge>
                           )}
+                          <ItemAvailabilityBadge availability={availabilityFor(item.block_id, item.day_index)} className="mt-1.5" />
                         </div>
                       </div>
                     ))}
@@ -119,6 +140,11 @@ export const TemplatePreviewSheet = ({
 
             <Separator className="my-6" />
 
+            {availability && availability.problems.length > 0 && (
+              <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
+                {availability.summary}. U kunt het programma gewoon gebruiken; in de volgende stap stellen wij een alternatief voor.
+              </p>
+            )}
             <p className="text-sm text-muted-foreground mb-4">
               Na uw aanvraag ontvangt u een voorstel met definitieve tijden en prijzen.
             </p>

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen, MessageSquare, CalendarDays } from "lucide-react";
+import { Plus, ArrowRight, Trash2, Users, Calendar, Clock, Pencil, Sparkles, GripVertical, BookOpen, MessageSquare, CalendarDays, Replace } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -41,6 +41,11 @@ import type { ProgramTemplate } from "@/types/programTemplate";
 import { useTemplatesByDuration } from "@/hooks/useProgramTemplates";
 import { TemplatePreviewSheet } from "./TemplatePreviewSheet";
 import { WIZARD_TRANSPORT_BLOCK_IDS } from "@/lib/programWizardCart";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { usePublicPartnerMapSlugs } from "@/hooks/usePublicPartnerMapSlugs";
+import { assessProgramAvailability, suggestReplacement } from "@/lib/programAvailability";
+import { ItemAvailabilityBadge } from "@/components/shared/ItemAvailabilityBadge";
+import { MapAvailabilityLine } from "@/components/customer-portal/MapAvailabilityLine";
 import { toast } from "@/hooks/use-toast";
 import { InfoTooltip } from "./InfoTooltip";
 
@@ -188,6 +193,25 @@ export const ProgramBuilderView = ({
 }: ProgramBuilderViewProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   const { data: templates = [] } = useTemplatesByDuration(selectedDates.length);
+  const { periods: unavailabilityPeriods } = usePublicPartnerUnavailability();
+  const mapSlugByPartner = usePublicPartnerMapSlugs();
+
+  // Beschikbaarheid per onderdeel op de dag waarop het staat: gesloten
+  // aanbieder, te grote of te kleine groep. Met één voorgestelde vervanger.
+  const datesIso = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
+  const availability = assessProgramAvailability(
+    cartItems.map((i) => ({ blockId: i.blockId, dayIndex: i.dayIndex ?? 0 })),
+    datesIso,
+    numberOfPeople,
+    unavailabilityPeriods,
+    allBlocks,
+  );
+  const availabilityFor = (blockId: string) => availability.items.find((a) => a.blockId === blockId);
+  const replacementFor = (blockId: string) => {
+    const problem = availabilityFor(blockId);
+    if (!problem || problem.status !== "partner_gesloten") return null;
+    return suggestReplacement(problem, allBlocks, numberOfPeople, unavailabilityPeriods, cartItems.map((i) => i.blockId));
+  };
   const footerInView = useFooterInView();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
@@ -470,6 +494,41 @@ export const ProgramBuilderView = ({
                                     </Badge>
                                   </div>
 
+                                  {/* Beschikbaarheid op deze dag: sluiting, capaciteit, live MAP-agenda */}
+                                  {(() => {
+                                    const itemAvailability = availabilityFor(item.blockId);
+                                    const replacement = replacementFor(item.blockId);
+                                    const mapSlug = block.provider_id ? mapSlugByPartner.get(block.provider_id) : undefined;
+                                    return (
+                                      <>
+                                        <ItemAvailabilityBadge availability={itemAvailability} className="mt-1.5" />
+                                        {replacement && (
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-1.5 h-7 text-xs gap-1.5"
+                                            onClick={() => {
+                                              onRemoveItem(item.blockId);
+                                              onAddItem(replacement.id, item.dayIndex ?? 0);
+                                            }}
+                                          >
+                                            <Replace className="h-3 w-3" />
+                                            Vervang door {replacement.name}
+                                          </Button>
+                                        )}
+                                        {mapSlug && block.map_activity_type_id && selectedDates[dayIndex] && (
+                                          <MapAvailabilityLine
+                                            tenantSlug={mapSlug}
+                                            activityTypeId={block.map_activity_type_id}
+                                            date={selectedDates[dayIndex]}
+                                            groupSize={numberOfPeople}
+                                          />
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+
                                   {/* Inline time & notes for regular blocks */}
                                   {isRegularBlock && (
                                     <InlineItemControls
@@ -593,6 +652,8 @@ export const ProgramBuilderView = ({
         onOpenChange={setIsAddSheetOpen}
         existingBlockIds={existingBlockIds}
         onAddActivity={handleAddActivity}
+        dateIso={datesIso[activeDay] ?? null}
+        numberOfPeople={numberOfPeople}
       />
 
       {/* AI Erwin Dialog */}
@@ -642,6 +703,7 @@ export const ProgramBuilderView = ({
       <TemplatePreviewSheet
         templateId={previewTemplateId}
         numberOfPeople={numberOfPeople}
+        selectedDates={selectedDates}
         open={!!previewTemplateId}
         onOpenChange={(open) => !open && setPreviewTemplateId(null)}
         onUseTemplate={(template) => {
