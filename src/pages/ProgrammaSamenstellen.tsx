@@ -160,7 +160,10 @@ const ProgrammaSamenstellen = () => {
     const situation: WizardSituation = { ...wizardSituation, situation: data.situation };
     setWizardSituation(situation);
     setNumberOfPeople(data.numberOfPeople);
-    const nextSteps = wizardStepsFor({ situation: data.situation, numberOfDays: Math.max(1, data.selectedDates.length) });
+    const nextSteps = wizardStepsFor({
+      situation: data.situation,
+      numberOfDays: Math.max(1, data.selectedDates.length, templateData?.duration_days ?? 0),
+    });
     if (templateData && data.selectedDates.length > 0) {
       // Gekozen op /voorbeeldprogrammas: meteen inladen, daarna gewoon de
       // resterende stappen (logies, vervoer) doorlopen.

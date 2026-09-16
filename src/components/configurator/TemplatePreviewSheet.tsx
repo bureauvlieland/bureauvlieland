@@ -142,7 +142,7 @@ export const TemplatePreviewSheet = ({
 
             {availability && availability.problems.length > 0 && (
               <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
-                {availability.summary}. U kunt het programma gewoon gebruiken; in de volgende stap stellen wij een alternatief voor.
+                {availability.summary}. U kunt het programma gewoon gebruiken; in de programmastap stellen wij een alternatief voor.
               </p>
             )}
             <p className="text-sm text-muted-foreground mb-4">
