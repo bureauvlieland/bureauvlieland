@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search } from "lucide-react";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { AddActivityCard } from "./AddActivityCard";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
 import type { BuildingBlockCategory } from "@/types/buildingBlock";
 
 interface AddActivitySheetProps {
@@ -30,6 +31,7 @@ export const AddActivitySheet = ({
   onAddActivity,
 }: AddActivitySheetProps) => {
   const { data: blocks = [], isLoading } = usePublishedBuildingBlocks();
+  const { byPartner: unavailableByPartner } = usePublicPartnerUnavailability(open);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
@@ -120,6 +122,7 @@ export const AddActivitySheet = ({
                   key={block.id}
                   block={block}
                   onAdd={handleSelectBlock}
+                  availabilityNote={block.provider_id ? unavailableByPartner.get(block.provider_id) : undefined}
                 />
               ))
             )}

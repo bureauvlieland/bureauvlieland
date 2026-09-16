@@ -28,6 +28,7 @@ import {
   LayoutTemplate,
   Filter,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { useAdminTemplates, useToggleTemplatePublish } from "@/hooks/useProgramTemplates";
 import { AdminTemplateSheet } from "@/components/admin/AdminTemplateSheet";
@@ -179,6 +180,9 @@ const AdminTemplates = () => {
               </TableHeader>
               <TableBody>
                 {filteredTemplates.map((template) => {
+                  const unpublishedItems = (template.items ?? []).filter(
+                    (item) => !item.block || item.block.status !== "published"
+                  );
                   // Get first 4 block images for preview
                   const blockImages = template.items
                     ?.slice(0, 4)
@@ -228,6 +232,15 @@ const AdminTemplates = () => {
                         <span className="text-muted-foreground">
                           {template.items?.length || 0} bouwstenen
                         </span>
+                        {unpublishedItems.length > 0 && (
+                          <p
+                            className="text-xs text-amber-700 flex items-center gap-1 mt-0.5"
+                            title={unpublishedItems.map((i) => i.block?.name || i.block_id).join(", ")}
+                          >
+                            <AlertTriangle className="h-3 w-3 shrink-0" />
+                            {unpublishedItems.length} niet gepubliceerd
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {template.indicative_price_pp 

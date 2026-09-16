@@ -56,7 +56,7 @@ import {
   useUpdateTemplateItem,
   useTemplateWithItems,
 } from "@/hooks/useProgramTemplates";
-import { Loader2, Trash2, Plus, Clock, GripVertical, ImageIcon, X } from "lucide-react";
+import { Loader2, Trash2, Plus, Clock, GripVertical, ImageIcon, X, AlertTriangle } from "lucide-react";
 import type { ProgramTemplate, ProgramTemplateItem } from "@/types/programTemplate";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import {
@@ -123,6 +123,12 @@ const SortableTemplateItem = ({
         <p className="font-medium text-sm truncate">
           {item.block?.name || item.block_id}
         </p>
+        {(!item.block || item.block.status !== "published") && (
+          <p className="text-xs text-amber-700 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            Niet gepubliceerd: klanten zien dit onderdeel niet en het wordt overgeslagen
+          </p>
+        )}
         {item.preferred_time && (
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />

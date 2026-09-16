@@ -7,27 +7,9 @@ import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlo
 import { DEFAULT_GROUP_SIZE } from "@/lib/appSettings";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
+import { buildCartItemsFromTemplate } from "@/lib/programTemplateCart";
 
 const MAX_DAYS = 7;
-
-const SKIP_BLOCK_IDS = new Set([
-  "boot-enkel-heen",
-  "boot-enkel-terug",
-  "boot-retour",
-  "fiets-huur",
-]);
-
-// Bouwstenen die zelf al een overtocht zijn (privévaart, watertaxi). Als een
-// voorbeeldprogramma hier één van bevat, hoeft de standaard Doeksen-boot niet
-// ook nog verplicht toegevoegd te worden.
-const ALTERNATIVE_CROSSING_BLOCK_IDS = new Set([
-  "regina-andrea-prive-heen",
-  "regina-andrea-prive-terug",
-  "rescueboat",
-  "rescueboat-kopie",
-  "watertaxi-harlingen-vlieland",
-  "watertaxi-vlieland-harlingen",
-]);
 
 interface CartContextType {
   cartItems: CartItemDetail[];
@@ -289,46 +271,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       dates.push(addDays(startDate, i));
     }
 
-    // 2. Build cart items - start with mandatory blocks (no preferredTime).
-    // De standaard Doeksen-boot slaan we over als het programma al zijn
-    // eigen overtocht heeft (privévaart, watertaxi) — anders staat die dubbel.
-    const lastDay = Math.max(0, template.duration_days - 1);
-    const hasOwnCrossing = (template.items ?? []).some((item) =>
-      ALTERNATIVE_CROSSING_BLOCK_IDS.has(item.block_id)
-    );
-    const newItems: CartItemDetail[] = hasOwnCrossing
-      ? [{ blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 }]
-      : [
-          { blockId: "boot-enkel-heen", preferredTime: null, notes: "", dayIndex: 0 },
-          { blockId: "boot-enkel-terug", preferredTime: null, notes: "", dayIndex: lastDay },
-          { blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 },
-        ];
+    // 2. Cart-items uit het programma. Onderdelen die de klant niet kan zien
+    // (niet gepubliceerd) worden overgeslagen, zie programTemplateCart.ts.
+    const newItems = buildCartItemsFromTemplate(template, {
+      isBlockAvailable: (blockId) =>
+        !!getBlockById(allBlocks, blockId) || !!template.items?.find((i) => i.block_id === blockId)?.block,
+    });
 
-    // 3. Add template items (skip mandatory block IDs)
-    if (template.items) {
-      const sorted = [...template.items].sort((a, b) => {
-        if (a.day_index !== b.day_index) return a.day_index - b.day_index;
-        return a.sort_order - b.sort_order;
-      });
-
-      for (const item of sorted) {
-        if (SKIP_BLOCK_IDS.has(item.block_id)) continue;
-        if (newItems.some(i => i.blockId === item.block_id)) continue;
-        newItems.push({
-          blockId: item.block_id,
-          preferredTime: item.preferred_time || null,
-          notes: item.notes || "",
-          dayIndex: item.day_index,
-        });
-      }
-    }
-
-    // 4. Set all state at once — no stale closures
+    // 3. Set all state at once — no stale closures
     setCartItems(newItems);
     setSelectedDates(dates);
     setNumberOfPeople(numberOfPeopleParam);
     setManualOrder(false);
-  }, [setNumberOfPeople]);
+  }, [setNumberOfPeople, allBlocks]);
 
   // Legacy compatibility: first date as selectedDate
   const selectedDate = selectedDates.length > 0 ? selectedDates[0] : undefined;
