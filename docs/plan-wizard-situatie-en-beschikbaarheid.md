@@ -1,7 +1,9 @@
 # Plan: situatie van de groep, vervoerskeuze en beschikbaarheid in de programma-wizard
 
-Status: advies en bouwplan, 16 september 2026. Nog niets gebouwd; wacht op
-akkoord op de besluiten onderaan.
+Status: besluiten genomen en fase 0 t/m 4 gebouwd op 16 september 2026 (één
+pull request). Te testen via de Netlify-preview; de dev-server is in deze
+omgeving niet gedraaid. Zie "Gebouwd" onderaan voor wat er precies staat en
+wat bewust niet.
 
 ## Waarom
 
@@ -274,3 +276,105 @@ het bureau.
 4. **Volgorde**: fase 0 nu, dan 1 → 2 → 3 → 4. Of liever eerst fase 3 omdat
    de VOC-sluiting nu speelt? Fase 0 vangt het ergste al op.
 5. **`vrije-tijd`**: bewust ongepubliceerd, of publiceren als echt onderdeel?
+
+## Besluiten (16 september 2026)
+
+1. Twee situaties: "vanaf de wal" en "al op Vlieland". Akkoord.
+2. Watertaxi boven de 12: meer boten voorstellen. De RIB en Regina Andrea
+   blijven als losse keuze (privévaart als kaart, RIB via "Activiteit
+   toevoegen").
+3. Programma's die niet kunnen: tonen met label, onderaan.
+4. Volgorde: fase 0, 1, 2, 3, 4.
+5. `vrije-tijd`: publiceren.
+6. Geen fietsen bezorgen bij de accommodatie, dus geen afleverplek in de
+   wizard.
+
+## Gebouwd (16 september 2026)
+
+### Fase 0
+
+- `lib/programTemplateCart.ts` (met tests) zet een voorbeeldprogramma om in
+  cart-items en slaat onderdelen over die de klant niet kan zien. Daarmee
+  kan een programma nooit meer een onzichtbaar, onverwijderbaar onderdeel
+  bevatten.
+- Admin: waarschuwing per onderdeel in de templatesheet en een teller in de
+  lijst ("2 niet gepubliceerd").
+- Migratie `20260916100000` publiceert `vrije-tijd`. De bouwsteen
+  `zaalhuur-brouwerij-fortuna` in "Vergaderdag+" is nog steeds
+  ongepubliceerd en wordt dus overgeslagen; publiceren of vervangen is aan
+  Erwin.
+- "Activiteit toevoegen" in de wizard toont de sluitingsnotitie van de
+  aanbieder; Erwin's AI-voorstel krijgt gesloten aanbieders niet meer.
+
+### Fase 1
+
+- Stap 1 vraagt de situatie (twee kaarten). Stappen zijn dynamisch
+  (`lib/wizardSteps.ts`, met tests): logies alleen meerdaags en vanaf de wal,
+  "Startpunt & fietsen" in plaats van "Vervoer & fietsen" bij al op Vlieland.
+- Vervoerstap met vier kaarten. Watertaxi rekent met `max_people` van de
+  bouwsteen (terugval 12) en zet "2 watertaxi's voor 20 personen" als
+  notitie op het onderdeel; het aantal boten in de offerte zet het bureau
+  zelf. Regina Andrea alleen kiesbaar vanaf `min_people` (terugval 30).
+  "Zelf geregeld" vraagt aankomst- en vertrektijd, mag leeg.
+- Fietsen: versnellingsfietsen, e-bikes, "wij hebben al fietsen", geen.
+- `lib/programWizardCart.ts` herschreven (19 tests): precies de gekozen
+  overtocht in het programma, alle andere overtochten eruit, fietsen
+  wederzijds uitsluitend.
+- Situatie en vervoerskeuze zitten in de cart-context en in het concept
+  (`useProgramDraft`). Bij versturen gaan zes kolommen mee
+  (`group_situation`, `crossing_choice`, `bike_choice`, `start_location`,
+  `arrival_time`, `departure_time`; migratie `20260916110000`, RPC
+  bijgewerkt, lokaal getest in Postgres). Zichtbaar in admin
+  (aanvraagdetail) en op de klantpagina (Praktisch, kaart "Uw situatie").
+  Snel-aanvragen stuurt deze velden niet mee en blijft werken.
+
+### Fase 2
+
+- Nieuwe fase "template" direct na stap 1 met de bestaande
+  `TemplateSelector` (die werd nergens gebruikt en haalde bij "Gebruik" geen
+  onderdelen op; dat is gefixt).
+- `loadFromTemplate` voegt geen vervoer meer toe; de vervoerstap doet dat en
+  neemt een watertaxi of privévaart uit het programma over als keuze. Vanuit
+  de programmastap blijft het al gekozen vervoer staan bij het wisselen van
+  programma.
+- `/voorbeeldprogrammas/:slug` → wizard doorloopt nu ook logies en vervoer.
+
+### Fase 3
+
+- `lib/programAvailability.ts` (13 tests): per onderdeel op de dag waarop
+  het staat: beschikbaar, aanbieder gesloten, te groot (met aantal rondes),
+  te klein, onbekend. Plus `suggestReplacement`: één vervanger uit dezelfde
+  categorie, open op die dag, passend bij de groep, nog niet in het
+  programma, laagste `sort_order`.
+- Programmakaarten: samenvatting per programma ("Volledig beschikbaar op uw
+  datum" of "1 onderdeel vraagt aandacht: Strandspektakel (aanbieder
+  gesloten t/m 31 maart)"), programma's met een probleem onderaan. Vervoer
+  telt niet mee (dat regelt de wizard). Voorbeeldvenster: label per
+  onderdeel.
+- Programmastap: label per onderdeel, knop "Vervang door …" bij een gesloten
+  aanbieder (klant kiest, niets wordt stil vervangen), en de live
+  MAP-agenda per MAP-onderdeel (nieuwe hook `usePublicPartnerMapSlugs`, leest
+  `partners_public`).
+- "Activiteit toevoegen": label per bouwsteen op de actieve dag, gesloten
+  aanbieders onderaan.
+- Bewust niet: MAP-beschikbaarheid op de programmakaarten (dat zou per
+  aanbieder een aparte MAP-call per kaart zijn). Automatisch vervangen.
+
+### Fase 4
+
+- Migratie `20260916120000`: trigger op `partner_unavailability` (insert en
+  wijziging van de periode). Voor elk lopend onderdeel van die partner op
+  een dag in de sluiting komt een werkbanktaak "Beschikbaarheidsconflict"
+  (prioriteit hoog), dezelfde taaksoort als de bestaande admin-controle,
+  dus nooit dubbel. Geannuleerde onderdelen en aanvragen, verleden datums en
+  vrije-tekst-datums worden overgeslagen. Lokaal getest in Postgres 16 met
+  vijf gevallen.
+- Bewust niet: taken automatisch sluiten als de partner de sluiting weer
+  verwijdert of inkort. Zo'n taak kan al opgepakt zijn; dat blijft handwerk.
+
+### Kwaliteitspoorten
+
+Typecheck 0 fouten, strict 26/26 op de baseline, lint van 1204 naar 1193
+(plafond mee verlaagd), 108 testbestanden / 1578 tests groen, productiebuild
+groen. Backend-wijzigingen (drie migraties) gaan via de deploy-workflow mee
+bij de merge naar `main`.
