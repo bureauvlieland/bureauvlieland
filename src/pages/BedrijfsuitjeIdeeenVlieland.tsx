@@ -11,7 +11,7 @@ import { ArrowRight, Lightbulb, Puzzle, Compass, Bike, Ship, Utensils, Camera } 
 import heroImage from "@/assets/beach-activity.jpg";
 import cyclingImage from "@/assets/cycling-group.jpg";
 import speedboatImage from "@/assets/speedboat.jpg";
-import cateringImage from "@/assets/catering.jpg";
+import cateringImage from "@/assets/food-platters.jpg";
 
 const BedrijfsuitjeIdeeenVlieland = () => {
   const ideaCategories = [
@@ -205,7 +205,7 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                 <div className="relative overflow-hidden rounded-2xl aspect-[4/3]">
                   <img 
                     src={cateringImage} 
-                    alt="Catering op Vlieland"
+                    alt="Rijkgevulde borrelplanken, catering op Vlieland"
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
@@ -215,7 +215,7 @@ const BedrijfsuitjeIdeeenVlieland = () => {
                         Culinaire ervaringen
                       </h3>
                       <p className="text-primary-foreground/90 text-sm">
-                        BBQ op het strand, walking dinner of luxe meergangen menu.
+                        BBQ op locatie, walking dinner of luxe meergangenmenu.
                       </p>
                     </div>
                   </div>

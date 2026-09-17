@@ -119,7 +119,7 @@ const themas: Thema[] = [
     icon: UtensilsCrossed,
     title: "Eten & drinken",
     intro:
-      "Lunches met uitzicht, BBQ op het strand of een diner in het dorp — we regelen het.",
+      "Lunches met uitzicht, BBQ op locatie of een diner in het dorp — we regelen het.",
     items: [
       {
         label: "Catering & lunches",
@@ -132,7 +132,7 @@ const themas: Thema[] = [
         description: "Eilandadressen die we zelf graag aanbevelen.",
       },
       {
-        label: "BBQ op het strand",
+        label: "BBQ op locatie",
         to: "/catering-aanvragen",
         description: "Vergunning, koks en setup — wij regelen het volledige programma.",
       },

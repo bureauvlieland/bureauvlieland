@@ -153,7 +153,7 @@ export const AiErwinDialog = ({
               id="wishes"
               value={wishes}
               onChange={(e) => setWishes(e.target.value)}
-              placeholder="Bijv. 'We willen graag een BBQ op het strand' of 'Liever geen fietsen'"
+              placeholder="Bijv. 'We willen graag een BBQ op locatie' of 'Liever geen fietsen'"
               rows={3}
             />
           </div>

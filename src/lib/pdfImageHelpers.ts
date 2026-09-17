@@ -1,7 +1,7 @@
 /**
  * Helper utilities for loading images into jsPDF-compatible base64 strings.
  */
-import { transformImageUrl } from "@/lib/supabaseImage";
+import { transformImageUrl, originalImageUrl } from "@/lib/supabaseImage";
 
 const LOAD_TIMEOUT_MS = 5_000;
 
@@ -61,6 +61,7 @@ export const preloadItemImages = async (item: {
   let activityUrl: string | null = null;
   if (item.image_url) {
     // Verkleind ophalen: een origineel van 12 MB hoort niet in een PDF.
+    // Weigert Supabase de verkleining (te grote bron), dan het origineel.
     activityUrl = transformImageUrl(item.image_url, { width: 1000, quality: 75 });
   } else if (item.image_asset && resolveAsset) {
     activityUrl = resolveAsset(item.image_asset);
@@ -72,8 +73,15 @@ export const preloadItemImages = async (item: {
     mapUrl = getStaticMapUrl(item.location_lat, item.location_lng);
   }
 
+  const loadWithFallback = async (url: string): Promise<string | null> => {
+    const first = await loadImageAsBase64(url);
+    if (first) return first;
+    const original = originalImageUrl(url);
+    return original ? loadImageAsBase64(original) : null;
+  };
+
   const [activityImage, mapImage] = await Promise.all([
-    activityUrl ? loadImageAsBase64(activityUrl) : Promise.resolve(null),
+    activityUrl ? loadWithFallback(activityUrl) : Promise.resolve(null),
     mapUrl ? loadImageAsBase64(mapUrl) : Promise.resolve(null),
   ]);
 
