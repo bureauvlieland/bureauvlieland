@@ -203,7 +203,7 @@ const GroepsweekendVlieland = () => {
                         Catering & Horeca
                       </h3>
                       <p className="text-primary-foreground/90 text-sm">
-                        BBQ op het strand, diner in een restaurant of borrel bij zonsondergang.
+                        BBQ op locatie, diner in een restaurant of borrel bij zonsondergang.
                       </p>
                     </div>
                   </div>

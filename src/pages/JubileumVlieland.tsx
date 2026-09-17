@@ -168,7 +168,7 @@ const JubileumVlieland = () => {
                       <div>
                         <h3 className="font-display font-bold text-foreground mb-1">Catering & Diner</h3>
                         <p className="text-muted-foreground">
-                          Van walking dinner tot meergangen menu, BBQ op het strand of borrel met hapjes.
+                          Van walking dinner tot meergangenmenu, BBQ op locatie of borrel met hapjes.
                         </p>
                       </div>
                     </div>

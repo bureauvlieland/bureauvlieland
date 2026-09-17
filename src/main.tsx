@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initErrorReporting } from "@/lib/errorReporting.init";
+import { installImageFallback } from "@/lib/supabaseImage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Vóór het renderen aanzetten, zodat ook fouten in de eerste render gemeld worden.
@@ -14,6 +15,9 @@ window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
   window.location.reload();
 });
+
+// Verkleinde foto die Supabase weigert (te grote bron): toon het origineel.
+installImageFallback();
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary name="root">
