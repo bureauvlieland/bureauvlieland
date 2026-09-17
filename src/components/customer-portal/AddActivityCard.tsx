@@ -4,14 +4,22 @@ import { Plus, Clock } from "lucide-react";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { formatBlockPrice, formatPriceNote, categoryLabels } from "@/types/buildingBlock";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
+import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
+import type { PartnerAvailabilityNote as AvailabilityNoteData } from "@/hooks/usePublicPartnerUnavailability";
+import { ItemAvailabilityBadge } from "@/components/shared/ItemAvailabilityBadge";
+import type { ItemAvailability } from "@/lib/programAvailability";
 
 interface AddActivityCardProps {
   block: BuildingBlock;
   onAdd: (block: BuildingBlock) => void;
   isLoading?: boolean;
+  /** Sluitingsperiode van de aanbieder, zoals ook op /bouwstenen getoond. */
+  availabilityNote?: AvailabilityNoteData;
+  /** Beschikbaarheid op de gekozen dag en voor deze groep (gesloten, te groot, te klein). */
+  availability?: ItemAvailability;
 }
 
-export const AddActivityCard = ({ block, onAdd, isLoading }: AddActivityCardProps) => {
+export const AddActivityCard = ({ block, onAdd, isLoading, availabilityNote, availability }: AddActivityCardProps) => {
   const imageUrl = getBlockImage(block);
   const providerName = getProviderName(block);
   const priceDisplay = formatBlockPrice(block);
@@ -57,6 +65,9 @@ export const AddActivityCard = ({ block, onAdd, isLoading }: AddActivityCardProp
             {block.short_description}
           </p>
         )}
+
+        <ItemAvailabilityBadge availability={availability} className="mt-1" />
+        <PartnerAvailabilityNote note={availabilityNote} className="mt-1" />
       </div>
 
       {/* Add button */}

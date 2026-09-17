@@ -15,8 +15,10 @@ import {
   Download,
   Info,
   Building2,
+  MapPin,
 } from "lucide-react";
 import type { ProgramRequestItem } from "@/types/programRequest";
+import { describeGroupSituation } from "@/types/programRequest";
 
 interface PracticalViewProps {
   program: {
@@ -27,6 +29,12 @@ interface PracticalViewProps {
     number_of_people: number;
     items: ProgramRequestItem[];
     reference_number?: string | null;
+    group_situation?: "vanaf_wal" | "op_vlieland" | null;
+    crossing_choice?: "doeksen" | "watertaxi" | "regina" | "eigen" | null;
+    bike_choice?: "standaard" | "ebike" | "eigen" | "geen" | null;
+    start_location?: string | null;
+    arrival_time?: string | null;
+    departure_time?: string | null;
   };
   selectedDates: Date[];
   guestDetails?: {
@@ -73,6 +81,29 @@ export const PracticalView = ({
           </p>
         </div>
       </div>
+
+      {/* Situatie en vervoer, zoals in de wizard ingevuld */}
+      {(() => {
+        const sit = describeGroupSituation(program);
+        if (!sit) return null;
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Uw situatie
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-1">
+              <p className="text-foreground">{sit.situation}{sit.startLocation ? `, start bij ${sit.startLocation}` : ""}</p>
+              {sit.crossing && <p>Overtocht: {sit.crossing}</p>}
+              {sit.bikes && <p>Fietsen: {sit.bikes}</p>}
+              {sit.window && <p>Op het eiland: {sit.window}</p>}
+              <p className="text-xs pt-1">Klopt dit niet meer? Laat het ons weten via de chat of telefonisch.</p>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Groep & wensen */}
       {guestDetails && onOpenGuestDetails && (

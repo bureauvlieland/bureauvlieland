@@ -12,6 +12,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search } from "lucide-react";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { AddActivityCard } from "./AddActivityCard";
+import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
+import { assessItemAvailability, type ItemAvailability } from "@/lib/programAvailability";
 import type { BuildingBlockCategory } from "@/types/buildingBlock";
 
 interface AddActivitySheetProps {
@@ -19,6 +21,9 @@ interface AddActivitySheetProps {
   onOpenChange: (open: boolean) => void;
   existingBlockIds: string[];
   onAddActivity: (blockId: string) => void;
+  /** Dag waarvoor wordt toegevoegd (yyyy-MM-dd); gesloten aanbieders gaan dan onderaan met label. */
+  dateIso?: string | null;
+  numberOfPeople?: number;
 }
 
 type CategoryFilter = "all" | BuildingBlockCategory;
@@ -28,8 +33,11 @@ export const AddActivitySheet = ({
   onOpenChange,
   existingBlockIds,
   onAddActivity,
+  dateIso = null,
+  numberOfPeople,
 }: AddActivitySheetProps) => {
   const { data: blocks = [], isLoading } = usePublishedBuildingBlocks();
+  const { byPartner: unavailableByPartner, periods } = usePublicPartnerUnavailability(open);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
@@ -51,6 +59,21 @@ export const AddActivitySheet = ({
       return true;
     });
   }, [blocks, existingBlockIds, searchQuery, categoryFilter]);
+
+  // Beschikbaarheid op de gekozen dag: gesloten aanbieders onderaan, met label.
+  const availabilityById = useMemo(() => {
+    const map = new Map<string, ItemAvailability>();
+    if (!dateIso && !numberOfPeople) return map;
+    for (const block of availableBlocks) {
+      map.set(block.id, assessItemAvailability({ blockId: block.id, dayIndex: 0 }, block, dateIso, numberOfPeople ?? 0, periods));
+    }
+    return map;
+  }, [availableBlocks, dateIso, numberOfPeople, periods]);
+
+  const sortedBlocks = useMemo(() => {
+    const rank = (id: string) => (availabilityById.get(id)?.status === "partner_gesloten" ? 1 : 0);
+    return [...availableBlocks].sort((a, b) => rank(a.id) - rank(b.id));
+  }, [availableBlocks, availabilityById]);
 
   const handleSelectBlock = (block: { id: string }) => {
     onAddActivity(block.id);
@@ -115,11 +138,19 @@ export const AddActivitySheet = ({
                   : "Alle beschikbare activiteiten zitten al in uw programma"}
               </div>
             ) : (
-              availableBlocks.map((block) => (
+              sortedBlocks.map((block) => (
                 <AddActivityCard
                   key={block.id}
                   block={block}
                   onAdd={handleSelectBlock}
+                  availability={availabilityById.get(block.id)}
+                  availabilityNote={
+                    availabilityById.get(block.id)?.status === "partner_gesloten"
+                      ? undefined
+                      : block.provider_id
+                        ? unavailableByPartner.get(block.provider_id)
+                        : undefined
+                  }
                 />
               ))
             )}

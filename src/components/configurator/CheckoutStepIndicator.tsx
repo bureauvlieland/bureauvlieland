@@ -1,32 +1,20 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type ConfigPhase = "basics" | "accommodation" | "transport" | "program" | "contact" | "success";
-
-const STEPS: { key: ConfigPhase; label: string }[] = [
-  { key: "basics", label: "Basisgegevens" },
-  { key: "accommodation", label: "Logies" },
-  { key: "transport", label: "Vervoer & fietsen" },
-  { key: "program", label: "Programma" },
-  { key: "contact", label: "Gegevens" },
-  { key: "success", label: "Versturen" },
-];
-
-const phaseIndex = (phase: ConfigPhase) =>
-  STEPS.findIndex((s) => s.key === phase);
+import type { ConfigPhase, WizardStep } from "@/lib/wizardSteps";
 
 interface CheckoutStepIndicatorProps {
   currentStep: ConfigPhase;
+  steps: WizardStep[];
 }
 
-export const CheckoutStepIndicator = ({ currentStep }: CheckoutStepIndicatorProps) => {
-  const current = phaseIndex(currentStep);
+export const CheckoutStepIndicator = ({ currentStep, steps }: CheckoutStepIndicatorProps) => {
+  const current = steps.findIndex((s) => s.key === currentStep);
 
   return (
     <div className="w-full bg-background border-b border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-4">
         <div className="flex items-center justify-between">
-          {STEPS.map((step, i) => {
+          {steps.map((step, i) => {
             const isDone = i < current;
             const isActive = i === current;
 
@@ -55,7 +43,7 @@ export const CheckoutStepIndicator = ({ currentStep }: CheckoutStepIndicatorProp
                 </div>
 
                 {/* Connector line */}
-                {i < STEPS.length - 1 && (
+                {i < steps.length - 1 && (
                   <div className="flex-1 mx-2 sm:mx-4">
                     <div
                       className={cn(

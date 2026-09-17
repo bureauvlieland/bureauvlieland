@@ -122,58 +122,110 @@ export const useTemplatesByDuration = (durationDays: number) => {
 };
 
 /**
- * Fetch a single template with all its items and joined building block data
+ * Gepubliceerde programma's van deze duur, mét onderdelen en bouwstenen, in
+ * drie queries. Nodig om per programmakaart de beschikbaarheid op de gekozen
+ * datum te tonen (docs/plan-wizard-situatie-en-beschikbaarheid.md, fase 3).
  */
-export const useTemplateWithItems = (templateId: string | null) => {
+export const useTemplatesWithItemsByDuration = (durationDays: number) => {
   return useQuery({
-    queryKey: ["program-template", templateId, "with-items"],
-    queryFn: async (): Promise<ProgramTemplate | null> => {
-      if (!templateId) return null;
-
-      // Fetch template
-      const { data: template, error: templateError } = await supabase
+    queryKey: ["program-templates", "duration-with-items", durationDays],
+    queryFn: async (): Promise<ProgramTemplate[]> => {
+      const { data: templates, error } = await supabase
         .from("program_templates")
         .select("*")
-        .eq("id", templateId)
-        .single();
+        .eq("is_published", true)
+        .eq("duration_days", durationDays)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      if (!templates || templates.length === 0) return [];
 
-      if (templateError) throw templateError;
-      if (!template) return null;
-
-      // Fetch template items
       const { data: items, error: itemsError } = await supabase
         .from("program_template_items")
         .select("*")
-        .eq("template_id", templateId)
+        .in("template_id", templates.map((t) => t.id))
         .order("day_index", { ascending: true })
         .order("sort_order", { ascending: true });
-
       if (itemsError) throw itemsError;
 
-      // Fetch building blocks for all items
-      const blockIds = items?.map((item) => item.block_id) || [];
+      const blockIds = [...new Set((items ?? []).map((i) => i.block_id))];
       let blocks: BuildingBlock[] = [];
-
       if (blockIds.length > 0) {
         const { data: blocksData, error: blocksError } = await supabase
           .from("building_blocks")
           .select(BUILDING_BLOCK_PUBLIC_COLUMNS)
           .in("id", blockIds);
-
         if (blocksError) throw blocksError;
         blocks = (blocksData || []) as BuildingBlock[];
       }
+      const blockById = new Map(blocks.map((b) => [b.id, b]));
 
-      // Join blocks to items
-      const itemsWithBlocks: ProgramTemplateItem[] = (items || []).map((item) => ({
-        ...item,
-        block: blocks.find((b) => b.id === item.block_id),
-      }));
+      return templates.map((t) => {
+        const own = (items ?? []).filter((i) => i.template_id === t.id).map((i) => ({ ...i, block: blockById.get(i.block_id) }));
+        const firstImage = own.map((i) => i.block?.image_url).find(Boolean) ?? null;
+        return { ...t, image_url: t.image_url || firstImage, items: own } as ProgramTemplate;
+      });
+    },
+    enabled: durationDays > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+};
 
-      return {
-        ...template,
-        items: itemsWithBlocks,
-      } as ProgramTemplate;
+/**
+ * Fetch a single template with all its items and joined building block data
+ */
+export const fetchTemplateWithItems = async (templateId: string): Promise<ProgramTemplate | null> => {
+  // Fetch template
+  const { data: template, error: templateError } = await supabase
+    .from("program_templates")
+    .select("*")
+    .eq("id", templateId)
+    .single();
+
+  if (templateError) throw templateError;
+  if (!template) return null;
+
+  // Fetch template items
+  const { data: items, error: itemsError } = await supabase
+    .from("program_template_items")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("day_index", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (itemsError) throw itemsError;
+
+  // Fetch building blocks for all items
+  const blockIds = items?.map((item) => item.block_id) || [];
+  let blocks: BuildingBlock[] = [];
+
+  if (blockIds.length > 0) {
+    const { data: blocksData, error: blocksError } = await supabase
+      .from("building_blocks")
+      .select(BUILDING_BLOCK_PUBLIC_COLUMNS)
+      .in("id", blockIds);
+
+    if (blocksError) throw blocksError;
+    blocks = (blocksData || []) as BuildingBlock[];
+  }
+
+  // Join blocks to items
+  const itemsWithBlocks: ProgramTemplateItem[] = (items || []).map((item) => ({
+    ...item,
+    block: blocks.find((b) => b.id === item.block_id),
+  }));
+
+  return {
+    ...template,
+    items: itemsWithBlocks,
+  } as ProgramTemplate;
+};
+
+export const useTemplateWithItems = (templateId: string | null) => {
+  return useQuery({
+    queryKey: ["program-template", templateId, "with-items"],
+    queryFn: async (): Promise<ProgramTemplate | null> => {
+      if (!templateId) return null;
+      return fetchTemplateWithItems(templateId);
     },
     enabled: !!templateId,
   });

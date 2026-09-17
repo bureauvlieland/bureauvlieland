@@ -3516,6 +3516,12 @@ export type Database = {
           fee_snapshot: Json | null
           general_notes: string | null
           guest_details_updated_at: string | null
+          group_situation: string | null
+          crossing_choice: string | null
+          bike_choice: string | null
+          start_location: string | null
+          arrival_time: string | null
+          departure_time: string | null
           guest_names: string | null
           has_horeca_on_site: boolean | null
           id: string
@@ -3585,6 +3591,12 @@ export type Database = {
           fee_snapshot?: Json | null
           general_notes?: string | null
           guest_details_updated_at?: string | null
+          group_situation?: string | null
+          crossing_choice?: string | null
+          bike_choice?: string | null
+          start_location?: string | null
+          arrival_time?: string | null
+          departure_time?: string | null
           guest_names?: string | null
           has_horeca_on_site?: boolean | null
           id?: string
@@ -3654,6 +3666,12 @@ export type Database = {
           fee_snapshot?: Json | null
           general_notes?: string | null
           guest_details_updated_at?: string | null
+          group_situation?: string | null
+          crossing_choice?: string | null
+          bike_choice?: string | null
+          start_location?: string | null
+          arrival_time?: string | null
+          departure_time?: string | null
           guest_names?: string | null
           has_horeca_on_site?: boolean | null
           id?: string

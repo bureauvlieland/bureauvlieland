@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { usePublicPartnerUnavailability, isPartnerUnavailableOn } from "@/hooks/usePublicPartnerUnavailability";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { CartItemDetail } from "@/types/buildingBlock";
@@ -38,6 +39,7 @@ export const AiErwinDialog = ({
   const [wishes, setWishes] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+  const { periods: unavailabilityPeriods } = usePublicPartnerUnavailability(open);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -49,8 +51,12 @@ export const AiErwinDialog = ({
     setIsLoading(true);
 
     try {
-      const availableBlockIds = allBlocks.map((b) => b.id);
       const dates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
+      // Aanbieders die op (een van) de gekozen dagen gesloten zijn, krijgt
+      // Erwin niet te zien — anders stelt hij iets voor dat niet kan.
+      const availableBlockIds = allBlocks
+        .filter((b) => !dates.some((d) => isPartnerUnavailableOn(unavailabilityPeriods, b.provider_id, d)))
+        .map((b) => b.id);
 
       const { data, error } = await supabase.functions.invoke("generate-program-suggestion", {
         body: {

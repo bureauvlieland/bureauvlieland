@@ -7,27 +7,22 @@ import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlo
 import { DEFAULT_GROUP_SIZE } from "@/lib/appSettings";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { DEFAULT_ACCOMMODATION_WISH, type AccommodationWish } from "@/types/accommodation";
+import { buildCartItemsFromTemplate } from "@/lib/programTemplateCart";
+import {
+  DEFAULT_TRANSPORT_PREFERENCES,
+  DEFAULT_WIZARD_SITUATION,
+  type TransportPreferences,
+  type WizardSituation,
+} from "@/lib/programWizardCart";
 
 const MAX_DAYS = 7;
 
-const SKIP_BLOCK_IDS = new Set([
-  "boot-enkel-heen",
-  "boot-enkel-terug",
-  "boot-retour",
-  "fiets-huur",
-]);
-
-// Bouwstenen die zelf al een overtocht zijn (privévaart, watertaxi). Als een
-// voorbeeldprogramma hier één van bevat, hoeft de standaard Doeksen-boot niet
-// ook nog verplicht toegevoegd te worden.
-const ALTERNATIVE_CROSSING_BLOCK_IDS = new Set([
-  "regina-andrea-prive-heen",
-  "regina-andrea-prive-terug",
-  "rescueboat",
-  "rescueboat-kopie",
-  "watertaxi-harlingen-vlieland",
-  "watertaxi-vlieland-harlingen",
-]);
+export interface LoadFromTemplateOptions {
+  /** Standaard Doeksen + fietsen toevoegen (oud gedrag). De wizard zet dit uit: de vervoerstap regelt het. */
+  includeDefaultTransport?: boolean;
+  /** Onderdelen die blijven staan (bv. het al gekozen vervoer) bovenop het programma. */
+  keepItems?: CartItemDetail[];
+}
 
 interface CartContextType {
   cartItems: CartItemDetail[];
@@ -43,6 +38,10 @@ interface CartContextType {
   setNumberOfPeople: (count: number) => void;
   accommodationWish: AccommodationWish;
   setAccommodationWish: (wish: AccommodationWish) => void;
+  wizardSituation: WizardSituation;
+  setWizardSituation: (situation: WizardSituation) => void;
+  transportPrefs: TransportPreferences;
+  setTransportPrefs: (prefs: TransportPreferences) => void;
   addDate: (date: Date) => boolean;
   removeDate: (dateIndex: number) => void;
   updateItemDay: (blockId: string, newDayIndex: number) => void;
@@ -52,7 +51,12 @@ interface CartContextType {
   hasPendingDraft: boolean;
   pendingDraft: DraftProgram | null;
   dismissDraft: () => void;
-  loadFromTemplate: (template: ProgramTemplate, startDate: Date, numberOfPeople: number) => void;
+  loadFromTemplate: (
+    template: ProgramTemplate,
+    startDate: Date,
+    numberOfPeople: number,
+    options?: LoadFromTemplateOptions,
+  ) => CartItemDetail[];
   // Legacy compatibility
   selectedDate: Date | undefined;
   setSelectedDate: (date: Date | undefined) => void;
@@ -68,6 +72,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [numberOfPeople, setNumberOfPeople] = useState(DEFAULT_GROUP_SIZE);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [accommodationWish, setAccommodationWish] = useState<AccommodationWish>(DEFAULT_ACCOMMODATION_WISH);
+  const [wizardSituation, setWizardSituation] = useState<WizardSituation>(DEFAULT_WIZARD_SITUATION);
+  const [transportPrefs, setTransportPrefs] = useState<TransportPreferences>(DEFAULT_TRANSPORT_PREFERENCES);
   const [manualOrder, setManualOrder] = useState(false);
   const [hasPendingDraft, setHasPendingDraft] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -91,9 +97,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         selectedDates: selectedDates.map(d => d.toISOString()),
         manualOrder,
         accommodationWish,
+        wizardSituation,
+        transportPrefs,
       });
     }
-  }, [cartItems, numberOfPeople, selectedDates, manualOrder, accommodationWish, saveDraft, isInitialized]);
+  }, [cartItems, numberOfPeople, selectedDates, manualOrder, accommodationWish, wizardSituation, transportPrefs, saveDraft, isInitialized]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -112,6 +120,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setSelectedDates(draft.selectedDates.map(d => new Date(d)));
       setManualOrder(draft.manualOrder);
       setAccommodationWish(draft.accommodationWish ?? DEFAULT_ACCOMMODATION_WISH);
+      setWizardSituation(draft.wizardSituation ?? DEFAULT_WIZARD_SITUATION);
+      setTransportPrefs(draft.transportPrefs ?? DEFAULT_TRANSPORT_PREFERENCES);
     }
     setHasPendingDraft(false);
   }, [draft]);
@@ -271,6 +281,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setSelectedDates([]);
     setManualOrder(false);
     setAccommodationWish(DEFAULT_ACCOMMODATION_WISH);
+    setWizardSituation(DEFAULT_WIZARD_SITUATION);
+    setTransportPrefs(DEFAULT_TRANSPORT_PREFERENCES);
     clearDraft();
   }, [clearDraft]);
 
@@ -281,54 +293,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const loadFromTemplate = useCallback((
     template: ProgramTemplate,
     startDate: Date,
-    numberOfPeopleParam: number
-  ) => {
+    numberOfPeopleParam: number,
+    options: LoadFromTemplateOptions = {},
+  ): CartItemDetail[] => {
     // 1. Build dates array
     const dates: Date[] = [];
     for (let i = 0; i < template.duration_days; i++) {
       dates.push(addDays(startDate, i));
     }
 
-    // 2. Build cart items - start with mandatory blocks (no preferredTime).
-    // De standaard Doeksen-boot slaan we over als het programma al zijn
-    // eigen overtocht heeft (privévaart, watertaxi) — anders staat die dubbel.
-    const lastDay = Math.max(0, template.duration_days - 1);
-    const hasOwnCrossing = (template.items ?? []).some((item) =>
-      ALTERNATIVE_CROSSING_BLOCK_IDS.has(item.block_id)
-    );
-    const newItems: CartItemDetail[] = hasOwnCrossing
-      ? [{ blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 }]
-      : [
-          { blockId: "boot-enkel-heen", preferredTime: null, notes: "", dayIndex: 0 },
-          { blockId: "boot-enkel-terug", preferredTime: null, notes: "", dayIndex: lastDay },
-          { blockId: "fiets-huur", preferredTime: null, notes: "", dayIndex: 0 },
-        ];
+    // 2. Cart-items uit het programma. Onderdelen die de klant niet kan zien
+    // (niet gepubliceerd) worden overgeslagen, zie programTemplateCart.ts.
+    const fromTemplate = buildCartItemsFromTemplate(template, {
+      isBlockAvailable: (blockId) =>
+        !!getBlockById(allBlocks, blockId) || !!template.items?.find((i) => i.block_id === blockId)?.block,
+      includeDefaultTransport: options.includeDefaultTransport ?? true,
+    });
+    const keep = (options.keepItems ?? []).filter((k) => !fromTemplate.some((i) => i.blockId === k.blockId));
+    const newItems = [...keep, ...fromTemplate];
 
-    // 3. Add template items (skip mandatory block IDs)
-    if (template.items) {
-      const sorted = [...template.items].sort((a, b) => {
-        if (a.day_index !== b.day_index) return a.day_index - b.day_index;
-        return a.sort_order - b.sort_order;
-      });
-
-      for (const item of sorted) {
-        if (SKIP_BLOCK_IDS.has(item.block_id)) continue;
-        if (newItems.some(i => i.blockId === item.block_id)) continue;
-        newItems.push({
-          blockId: item.block_id,
-          preferredTime: item.preferred_time || null,
-          notes: item.notes || "",
-          dayIndex: item.day_index,
-        });
-      }
-    }
-
-    // 4. Set all state at once — no stale closures
+    // 3. Set all state at once — no stale closures
     setCartItems(newItems);
     setSelectedDates(dates);
     setNumberOfPeople(numberOfPeopleParam);
     setManualOrder(false);
-  }, [setNumberOfPeople]);
+    return newItems;
+  }, [setNumberOfPeople, allBlocks]);
 
   // Legacy compatibility: first date as selectedDate
   const selectedDate = selectedDates.length > 0 ? selectedDates[0] : undefined;
@@ -362,6 +352,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setNumberOfPeople,
         accommodationWish,
         setAccommodationWish,
+        wizardSituation,
+        setWizardSituation,
+        transportPrefs,
+        setTransportPrefs,
         addDate,
         removeDate,
         updateItemDay,
