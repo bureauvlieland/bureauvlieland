@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramTemplate } from "@/types/programTemplate";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface TemplateSelectorProps {
   durationDays: number;
@@ -202,7 +203,7 @@ export const TemplateSelector = ({
           >
             <div className="aspect-[16/9] overflow-hidden bg-muted">
               <img
-                src={template.image_url || fallbackImage}
+                src={template.image_url ? transformImageUrl(template.image_url, { width: 900, quality: 78 }) : fallbackImage}
                 alt={template.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />

@@ -48,6 +48,7 @@ import { ItemAvailabilityBadge } from "@/components/shared/ItemAvailabilityBadge
 import { MapAvailabilityLine } from "@/components/customer-portal/MapAvailabilityLine";
 import { toast } from "@/hooks/use-toast";
 import { InfoTooltip } from "./InfoTooltip";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 const FERRY_BLOCK_IDS = ["boot-enkel-heen", "boot-enkel-terug"];
 
@@ -681,7 +682,7 @@ export const ProgramBuilderView = ({
               >
                 {template.image_url && (
                   <div className="aspect-[16/7] overflow-hidden bg-muted">
-                    <img src={template.image_url} alt={template.name} className="w-full h-full object-cover" loading="lazy" />
+                    <img src={transformImageUrl(template.image_url, { width: 600, quality: 75 })} alt={template.name} className="w-full h-full object-cover" loading="lazy" />
                   </div>
                 )}
                 <div className="p-3">

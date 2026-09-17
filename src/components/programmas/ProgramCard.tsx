@@ -3,6 +3,7 @@ import { Calendar, Users, Euro, ArrowRight } from "lucide-react";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { inferTheme, THEME_META } from "@/lib/programTemplateTheme";
 import { getTemplateCopy } from "@/lib/programTemplateCopy";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 export const ProgramCard = ({ template }: { template: ProgramTemplate }) => {
   const theme = THEME_META[inferTheme(template.name, template.description)];
@@ -14,7 +15,7 @@ export const ProgramCard = ({ template }: { template: ProgramTemplate }) => {
       className="relative rounded-xl overflow-hidden block transition-all duration-300 group h-[260px] sm:h-[300px] hover:shadow-xl hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
       <img
-        src={template.image_url || "/placeholder.svg"}
+        src={template.image_url ? transformImageUrl(template.image_url, { width: 900, quality: 78 }) : "/placeholder.svg"}
         alt={template.name}
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         loading="lazy"

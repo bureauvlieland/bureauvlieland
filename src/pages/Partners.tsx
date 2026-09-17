@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/lighthouse-vlieland.jpg";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface PublicPartner {
   id: string;
@@ -184,7 +185,7 @@ const Partners = () => {
                       <div className="relative h-44 overflow-hidden bg-muted">
                         {p.image_url ? (
                           <img
-                            src={p.image_url}
+                            src={transformImageUrl(p.image_url, { width: 800, quality: 78 })}
                             alt={p.name}
                             loading="lazy"
                             className="w-full h-full object-cover"

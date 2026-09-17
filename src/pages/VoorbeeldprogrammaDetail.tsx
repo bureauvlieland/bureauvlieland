@@ -15,6 +15,7 @@ import { ArrowLeft, ArrowRight, Calendar, Users, Euro, Quote } from "lucide-reac
 import { useKenBurns } from "@/hooks/use-ken-burns";
 import { getTemplateCopy } from "@/lib/programTemplateCopy";
 import heroVlieland from "@/assets/hero-vlieland.jpg";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 const VoorbeeldprogrammaDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,7 +30,7 @@ const VoorbeeldprogrammaDetail = () => {
     }
   }, [isLoading, isError, template, slug, navigate]);
 
-  const heroImage = template?.image_url || heroVlieland;
+  const heroImage = template?.image_url ? transformImageUrl(template.image_url, { width: 1800, quality: 80 }) : heroVlieland;
   const copy = getTemplateCopy(slug);
   const related = (allTemplates || [])
     .filter((t) => t.id !== slug)
