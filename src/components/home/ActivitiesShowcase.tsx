@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface Activity {
   id: string;
@@ -89,7 +90,7 @@ export const ActivitiesShowcase = () => {
                 >
                   {activity.image_url ? (
                     <img
-                      src={activity.image_url}
+                      src={transformImageUrl(activity.image_url, { width: 900, quality: 78 })}
                       alt={activity.name}
                       loading="lazy"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"

@@ -1,6 +1,7 @@
 /**
  * Helper utilities for loading images into jsPDF-compatible base64 strings.
  */
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 const LOAD_TIMEOUT_MS = 5_000;
 
@@ -59,7 +60,8 @@ export const preloadItemImages = async (item: {
   // Determine activity image URL
   let activityUrl: string | null = null;
   if (item.image_url) {
-    activityUrl = item.image_url;
+    // Verkleind ophalen: een origineel van 12 MB hoort niet in een PDF.
+    activityUrl = transformImageUrl(item.image_url, { width: 1000, quality: 75 });
   } else if (item.image_asset && resolveAsset) {
     activityUrl = resolveAsset(item.image_asset);
   }

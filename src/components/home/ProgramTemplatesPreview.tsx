@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface Template {
   id: string;
@@ -88,7 +89,7 @@ export const ProgramTemplatesPreview = () => {
                 <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-muted shadow-medium hover:shadow-dramatic transition-shadow duration-500">
                   {tpl.image_url && (
                     <img
-                      src={tpl.image_url}
+                      src={transformImageUrl(tpl.image_url, { width: 900, quality: 78 })}
                       alt={tpl.name}
                       loading="lazy"
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-105"

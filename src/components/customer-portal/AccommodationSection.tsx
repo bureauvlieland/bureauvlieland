@@ -41,6 +41,7 @@ import { HotelGallery } from "./HotelGallery";
 import { AccommodationQuotesMap } from "./AccommodationQuotesMap";
 import { presentQuotePartner } from "@/lib/accommodationQuotePresentation";
 import { List, Map as MapIcon } from "lucide-react";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -247,7 +248,7 @@ export const AccommodationSection = ({
             {/* Partner gallery thumbnail */}
             {selectedQuote.partner?.gallery_images && (selectedQuote.partner.gallery_images as any[]).length > 0 && (
               <img
-                src={(selectedQuote.partner.gallery_images as any[])[0].url}
+                src={transformImageUrl((selectedQuote.partner.gallery_images as any[])[0].url, { width: 800, quality: 78 })}
                 alt={selectedQuote.accommodation_name}
                 className="w-full md:w-32 h-24 md:h-24 rounded-lg object-cover shrink-0"
               />

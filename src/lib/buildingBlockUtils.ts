@@ -1,4 +1,5 @@
 // Utility functions for building blocks
+import { transformImageUrl, type TransformOptions } from "@/lib/supabaseImage";
 
 import sealTour from "@/assets/seal-tour.jpg";
 import speedboat from "@/assets/speedboat.jpg";
@@ -37,11 +38,19 @@ const assetMap: Record<string, string> = {
  * Get the image URL for a building block
  * Priority: image_url (storage) > image_asset (local) > placeholder
  */
-export const getBlockImage = (block: BuildingBlock): string => {
+/** Standaardbreedte voor bouwsteenfoto's op de site; groot genoeg voor een hero, klein genoeg voor mobiel. */
+export const BLOCK_IMAGE_DEFAULT: TransformOptions = { width: 1200, quality: 78 };
+
+/**
+ * Foto van een bouwsteen. Storage-foto's gaan via de image-transformatie van
+ * Supabase (verkleind en gecomprimeerd), zodat een upload van 6 MB niet als
+ * 6 MB bij de bezoeker aankomt. Andere URL's en lokale assets blijven zoals ze zijn.
+ */
+export const getBlockImage = (block: BuildingBlock, transform: TransformOptions = BLOCK_IMAGE_DEFAULT): string => {
   // 1. Try storage URL — but ignore stale Vite build-hash paths like "/assets/foo-XYZ.jpg"
   //    (these are leftover from older deploys and no longer resolve).
   if (block.image_url && !/^\/assets\/.+-[A-Za-z0-9_]{6,}\.[a-z]+$/i.test(block.image_url)) {
-    return block.image_url;
+    return transformImageUrl(block.image_url, transform);
   }
 
   // 2. Fallback to local asset
