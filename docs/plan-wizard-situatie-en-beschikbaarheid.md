@@ -299,7 +299,10 @@ het bureau.
   bevatten.
 - Admin: waarschuwing per onderdeel in de templatesheet en een teller in de
   lijst ("2 niet gepubliceerd").
-- Migratie `20260916100000` publiceert `vrije-tijd`. De bouwsteen
+- Migratie `20260916100000` publiceert `vrije-tijd`. Bij de eerste deploy
+  (17 september) weigerde de trigger die partners verbiedt publicatievelden
+  te wijzigen deze update, omdat een migratie zonder auth-context draait; de
+  migratie zet die trigger nu tijdelijk uit (zie `docs/deployen.md`). De bouwsteen
   `zaalhuur-brouwerij-fortuna` in "Vergaderdag+" is nog steeds
   ongepubliceerd en wordt dus overgeslagen; publiceren of vervangen is aan
   Erwin.
