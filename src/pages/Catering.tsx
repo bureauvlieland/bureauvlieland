@@ -6,6 +6,8 @@ import { ArrowRight, Sandwich, GlassWater, Flame, UtensilsCrossed, Sparkles, Map
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { useKenBurns } from "@/hooks/use-ken-burns";
+import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
+import { getBlockImage } from "@/lib/buildingBlockUtils";
 
 import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
 import strandBbqImage from "@/assets/strand-bbq.jpg";
@@ -38,8 +40,8 @@ const moments = [
   },
   {
     key: "bbq",
-    label: "Beach Grill experience",
-    desc: "Onze chefs grillen op het strand — voeten in het zand.",
+    label: "BBQ op locatie",
+    desc: "Compleet verzorgde barbecue op uw verblijf of een buitenlocatie.",
     image: strandBbqImage,
   },
   {
@@ -68,8 +70,13 @@ const locations = [
   },
 ];
 
+/** Bouwsteen van Pizza & Borrel bij Café Boven; getoond zolang hij gepubliceerd is. */
+const PIZZA_BORREL_BLOCK_ID = "italian-shared-dining-kopie";
+
 const Catering = () => {
   const kenBurns = useKenBurns();
+  const { data: blocks = [] } = usePublishedBuildingBlocks();
+  const pizzaBorrel = blocks.find((b) => b.id === PIZZA_BORREL_BLOCK_ID);
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -81,15 +88,15 @@ const Catering = () => {
         <title>Catering Vlieland – koken op locatie door eigen chefs | Bureau Vlieland</title>
         <meta
           name="description"
-          content="Catering op Vlieland door eigen chefs Robert Buurma en Roland Bakker. Lunch, borrel, Beach Grill en high-end diner — één aanvraag, één factuur. Offerte binnen 2 werkdagen."
+          content="Catering op Vlieland door eigen chefs Robert Buurma en Roland Bakker. Lunch, borrel, BBQ op locatie en high-end diner — één aanvraag, één factuur. Offerte binnen 2 werkdagen."
         />
         <meta
           name="keywords"
-          content="catering Vlieland, koken op locatie Vlieland, high-end diner Vlieland, lunch Vlieland, BBQ Vlieland, Beach Grill Vlieland, strand BBQ Vlieland, borrel Vlieland, walking dinner Vlieland, zakelijke catering Vlieland, Zuiver Traiteur"
+          content="catering Vlieland, koken op locatie Vlieland, high-end diner Vlieland, lunch Vlieland, BBQ Vlieland, BBQ op locatie Vlieland, pizza en borrel Vlieland, borrel Vlieland, walking dinner Vlieland, zakelijke catering Vlieland, Zuiver Traiteur"
         />
         <link rel="canonical" href="https://bureauvlieland.nl/catering" />
         <meta property="og:title" content="Catering op Vlieland – koken op locatie door eigen chefs" />
-        <meta property="og:description" content="Lunch, borrel, Beach Grill of high-end diner. Door eigen chefs op uw locatie. Eén aanspreekpunt, één factuur." />
+        <meta property="og:description" content="Lunch, borrel, BBQ op locatie of high-end diner. Door eigen chefs op uw locatie. Eén aanspreekpunt, één factuur." />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content="https://bureauvlieland.nl/catering" />
         <meta property="og:type" content="website" />
@@ -109,14 +116,14 @@ const Catering = () => {
           areaServed: { "@type": "Place", name: "Vlieland" },
           url: "https://bureauvlieland.nl/catering",
           description:
-            "Koken op locatie door eigen chefs op Vlieland: lunch, borrel, Beach Grill experience en high-end diner. Eén aanspreekpunt, één factuur.",
+            "Koken op locatie door eigen chefs op Vlieland: lunch, borrel, BBQ op locatie en high-end diner. Eén aanspreekpunt, één factuur.",
           hasOfferCatalog: {
             "@type": "OfferCatalog",
             name: "Catering-arrangementen",
             itemListElement: [
               { "@type": "Offer", itemOffered: { "@type": "Service", name: "Lunch op locatie" } },
               { "@type": "Offer", itemOffered: { "@type": "Service", name: "Borrel & receptie" } },
-              { "@type": "Offer", itemOffered: { "@type": "Service", name: "Beach Grill experience" } },
+              { "@type": "Offer", itemOffered: { "@type": "Service", name: "BBQ op locatie" } },
               { "@type": "Offer", itemOffered: { "@type": "Service", name: "High-end diner" } },
             ],
           },
@@ -146,7 +153,7 @@ const Catering = () => {
               name: "Verzorgen jullie ook catering op het strand?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Ja. Onze Beach Grill experience is een complete grill op het strand, verzorgd door onze eigen chefs met verse lokale producten.",
+                text: "Ja, in overleg. Een borrel of BBQ op locatie verzorgen wij op uw accommodatie, een buitenlocatie of het strand. Voor een avond in het dorp is Pizza & Borrel bij Café Boven een populaire keuze.",
               },
             },
             {
@@ -357,30 +364,30 @@ const Catering = () => {
             </div>
           </section>
 
-          {/* Beach Grill highlight */}
+          {/* BBQ op locatie */}
           <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
               <div className="grid md:grid-cols-2 gap-12 items-center">
                 <div className="relative h-[420px] rounded-lg overflow-hidden shadow-lg order-2 md:order-1">
-                  <img src={strandBbqImage} alt="Beach Grill experience op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                  <img src={strandBbqImage} alt="BBQ op locatie op Vlieland" className="w-full h-full object-cover" loading="lazy" />
                 </div>
                 <div className="order-1 md:order-2">
                   <div className="text-sm uppercase tracking-[0.15em] text-primary mb-3 flex items-center gap-2">
-                    <Flame className="h-4 w-4" /> Signature
+                    <Flame className="h-4 w-4" /> Populair
                   </div>
                   <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground leading-tight">
-                    Beach Grill experience
+                    BBQ op locatie
                   </h2>
                   <p className="text-lg text-muted-foreground mb-6">
-                    Onze chefs grillen op het strand — verse lokale producten, vuur, het geluid van de zee. Geen
-                    standaard BBQ, maar koken op locatie in zijn meest pure vorm.
+                    Een compleet verzorgde barbecue op uw verblijf of een buitenlocatie op Vlieland. Wij brengen alles,
+                    u steekt het vuur aan en geniet met uw groep.
                   </p>
                   <ul className="space-y-3 mb-8">
                     {[
-                      "Chefs grillen ter plaatse",
-                      "Verse, lokale producten",
-                      "Inclusief strandlocatie en setup",
-                      "Volledig verzorgd — u hoeft alleen te genieten",
+                      "Ruim assortiment vlees, vegetarisch mogelijk",
+                      "Salades, sauzen, brood en kruidenboter inbegrepen",
+                      "Servies, afwas en schoonmaak van de barbecue geregeld",
+                      "Vanaf 8 personen, op de plek die u kiest",
                     ].map((t) => (
                       <li key={t} className="flex items-start gap-3">
                         <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -389,12 +396,59 @@ const Catering = () => {
                     ))}
                   </ul>
                   <Button asChild size="lg">
-                    <Link to="/catering-aanvragen?type=bbq">Vraag Beach Grill aan</Link>
+                    <Link to="/catering-aanvragen?type=bbq">Vraag BBQ op locatie aan</Link>
                   </Button>
                 </div>
               </div>
             </div>
           </section>
+
+          {/* Pizza & Borrel bij Café Boven: partneraanbod, live uit de bouwstenen */}
+          {pizzaBorrel && (
+            <section className="py-16 md:py-24 bg-muted/30">
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+                <div className="grid md:grid-cols-2 gap-12 items-center">
+                  <div>
+                    <div className="text-sm uppercase tracking-[0.15em] text-primary mb-3 flex items-center gap-2">
+                      <GlassWater className="h-4 w-4" /> Avond in het dorp
+                    </div>
+                    <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-foreground leading-tight">
+                      Pizza &amp; Borrel bij Café Boven
+                    </h2>
+                    <p className="text-lg text-muted-foreground mb-6">
+                      Rijkgevulde Italiaanse borrelplanken om te delen, daarna pizzaslices vers uit de oven die blijven
+                      komen. Ongedwongen, in het hart van Oost-Vlieland, en met stip het meest gekozen avondprogramma in
+                      onze voorbeeldprogramma's.
+                    </p>
+                    <ul className="space-y-3 mb-8">
+                      {[
+                        "Borrelplanken en pizza's om te delen",
+                        `Vanaf ${pizzaBorrel.min_people ?? 10} personen`,
+                        pizzaBorrel.price_adult ? `€ ${pizzaBorrel.price_adult.toFixed(2).replace(".", ",")} per persoon` : "Prijs op aanvraag",
+                        "Optioneel Italiaans dessert",
+                      ].map((t) => (
+                        <li key={t} className="flex items-start gap-3">
+                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="text-muted-foreground">{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap gap-3">
+                      <Button asChild size="lg">
+                        <Link to={`/programma-samenstellen?block=${pizzaBorrel.id}`}>Aan programma toevoegen</Link>
+                      </Button>
+                      <Button asChild size="lg" variant="outline">
+                        <Link to={`/activiteit/${pizzaBorrel.slug ?? pizzaBorrel.id}`}>Bekijk Pizza &amp; Borrel</Link>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="relative h-[420px] rounded-lg overflow-hidden shadow-lg">
+                    <img src={getBlockImage(pizzaBorrel)} alt="Pizza & Borrel bij Café Boven op Vlieland" className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Aanvraagblok (secundair) */}
           <section id="aanvraag" className="py-16 md:py-20 bg-muted/30">
@@ -412,7 +466,7 @@ const Catering = () => {
                 {[
                   { key: "lunch", label: "Lunch", icon: Sandwich, desc: "Broodjes, soep, salade — vanaf 8 personen" },
                   { key: "borrel", label: "Borrel & receptie", icon: GlassWater, desc: "Hapjes + drankpakket" },
-                  { key: "bbq", label: "Beach Grill", icon: Flame, desc: "Op het strand of op locatie" },
+                  { key: "bbq", label: "BBQ op locatie", icon: Flame, desc: "Compleet verzorgd, op uw verblijf of buitenlocatie" },
                   { key: "diner", label: "Diner", icon: UtensilsCrossed, desc: "3-gangen, buffet of walking dinner" },
                 ].map((t) => {
                   const Icon = t.icon;

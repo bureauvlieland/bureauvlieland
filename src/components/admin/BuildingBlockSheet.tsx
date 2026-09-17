@@ -68,6 +68,7 @@ import { getTieredConfig, validateTiers, type PriceTier, type TiersAboveMax } fr
 
 const formSchema = z.object({
   id: z.string().min(1, "ID is verplicht").regex(/^[a-z0-9-]+$/, "Alleen kleine letters, cijfers en koppeltekens"),
+  slug: z.string().regex(/^[a-z0-9-]*$/, "Alleen kleine letters, cijfers en koppeltekens").optional(),
   name: z.string().min(1, "Naam is verplicht"),
   description: z.string().optional(),
   short_description: z.string().max(100, "Maximaal 100 tekens").optional(),
@@ -159,6 +160,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     resolver: zodResolver(formSchema),
     defaultValues: {
       id: "",
+      slug: "",
       name: "",
       description: "",
       short_description: "",
@@ -239,6 +241,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     if (block) {
       form.reset({
         id: block.id,
+        slug: block.slug || "",
         name: block.name,
         description: block.description || "",
         short_description: block.short_description || "",
@@ -282,6 +285,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
     } else {
       form.reset({
         id: "",
+        slug: "",
         name: "",
         description: "",
         short_description: "",
@@ -348,6 +352,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
 
       const submitData = {
         ...data,
+        slug: data.slug?.trim() || null,
         map_activity_type_id: data.map_activity_type_id ? Number(data.map_activity_type_id) : null,
         map_sync_price: !!data.map_activity_type_id && !!data.map_sync_price,
         tags: tagsArray,
@@ -478,7 +483,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                     name="id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ID (slug)</FormLabel>
+                        <FormLabel>ID (intern)</FormLabel>
                         <FormControl>
                           <Input 
                             {...field} 
@@ -487,7 +492,7 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                           />
                         </FormControl>
                         <FormDescription>
-                          Unieke identifier, alleen kleine letters en koppeltekens
+                          Interne sleutel, staat vast na aanmaken en komt niet in de URL. Het webadres regelt u hieronder bij URL.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -523,6 +528,24 @@ export const BuildingBlockSheet = ({ open, onOpenChange, block }: BuildingBlockS
                     )}
                   />
                   
+                  <FormField
+                    control={form.control}
+                    name="slug"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL (slug)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="automatisch uit de naam" />
+                        </FormControl>
+                        <FormDescription>
+                          Webadres van de pagina: bureauvlieland.nl/activiteit/{field.value || "…"}. Leeg laten = automatisch uit de naam.
+                          Let op: een bestaand adres wijzigen breekt links die Google en klanten al kennen.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="short_description"

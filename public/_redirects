@@ -35,3 +35,8 @@
 
 # Catch-all: redirect any other old URL to homepage
 /*                                           /                        200
+
+# Beach Grill Experience en Grillmaster uit het aanbod (17 september 2026)
+/activiteit/outdoor-cooking                  /catering                301
+/activiteit/strand-bbq                       /catering                301
+/activiteit/grillmaster-zuiver-traiteur      /catering                301

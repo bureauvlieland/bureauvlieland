@@ -417,7 +417,7 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     goodToKnow: [
       "Wij verdelen de subgroepen vooraf in overleg met u — dat scheelt tijd op het strand.",
-      "Combineer met een beach grill of borrel op dezelfde locatie aansluitend.",
+      "Combineer met een borrel of BBQ op locatie aansluitend.",
       "Kleding die tegen zand en water kan is verstandig; neem een extra set mee.",
     ],
     faq: [

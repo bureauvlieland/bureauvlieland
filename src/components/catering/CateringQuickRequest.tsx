@@ -33,7 +33,7 @@ interface CateringQuickRequestProps {
 const TYPES = [
   { key: "lunch", label: "Lunch", icon: Sandwich, desc: "Broodjes, soep of salade" },
   { key: "borrel", label: "Borrel & receptie", icon: GlassWater, desc: "Hapjes met drankpakket" },
-  { key: "bbq", label: "Beach Grill / BBQ", icon: Flame, desc: "Op het strand of op locatie" },
+  { key: "bbq", label: "BBQ op locatie", icon: Flame, desc: "Compleet verzorgd, op uw verblijf of buitenlocatie" },
   { key: "diner", label: "Diner", icon: UtensilsCrossed, desc: "3-gangen, buffet of walking dinner" },
   { key: "maatwerk", label: "Iets anders", icon: Sparkles, desc: "Vertel ons wat u in gedachten heeft" },
 ];

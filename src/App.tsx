@@ -27,7 +27,6 @@ import Contact from "./pages/Contact";
 // Lazy-loaded public pages
 const Catering = lazy(() => import("./pages/Catering"));
 const CateringAanvragen = lazy(() => import("./pages/CateringAanvragen"));
-const Voorbeeldprogrammas = lazy(() => import("./pages/Voorbeeldprogrammas"));
 const VoorbeeldprogrammaOverzicht = lazy(() => import("./pages/VoorbeeldprogrammaOverzicht"));
 const VoorbeeldprogrammaDetail = lazy(() => import("./pages/VoorbeeldprogrammaDetail"));
 const VeelgesteldeVragen = lazy(() => import("./pages/VeelgesteldeVragen"));

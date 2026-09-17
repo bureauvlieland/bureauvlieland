@@ -47,14 +47,14 @@ export const CateringHighlight = () => {
             {/* Floating Signature card */}
             <div className="absolute -bottom-2 left-6 right-6 sm:left-10 sm:right-auto sm:max-w-xs lg:-bottom-6 lg:-right-4 lg:left-auto bg-primary text-primary-foreground p-7 md:p-9 shadow-2xl z-20">
               <span className="block text-[10px] tracking-[0.4em] uppercase mb-3 text-sunset font-semibold italic">
-                Signature
+                Populair
               </span>
               <h4 className="font-display text-2xl md:text-3xl italic font-light leading-tight mb-3">
-                Beach Grill experience
+                BBQ op locatie
               </h4>
               <div className="w-8 h-px bg-sunset mb-3" />
               <p className="text-sm text-primary-foreground/75 font-light leading-relaxed">
-                Een exclusieve culinaire ervaring op het strand van Vlieland, bereid op open vuur door onze eigen chefs.
+                Compleet verzorgde barbecue op uw verblijf of een buitenlocatie op Vlieland: vlees, salades, sauzen en brood, alles geregeld.
               </p>
             </div>
           </div>
