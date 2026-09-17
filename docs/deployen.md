@@ -139,3 +139,21 @@ merge ze samen en deploy de backend direct daarna via Lovable. Netlify is
 meestal eerder klaar; de minuten waarin de frontend een kolom leest die er nog
 niet is, vang je op door de frontend tegen een ontbrekende kolom bestand te
 maken — niet door de volgorde te proberen te sturen.
+
+## Valkuil: datamigraties op `building_blocks`
+
+De trigger `trg_prevent_partner_publish_building_blocks` laat alleen admins en
+de service-rol de velden `status`, `is_published` en `is_active` wijzigen. Een
+migratie draait via de CLI zonder auth-context, dus ook een `UPDATE` uit een
+migratie wordt geweigerd ("Partners cannot change publish/status fields").
+Gebeurd op 17 september 2026 bij de merge van de wizard-PR: de eerste van drie
+migraties faalde, de CLI stopte, en de twee erna zijn ook niet toegepast.
+
+Zet in zo'n migratie de trigger tijdelijk uit en meteen weer aan:
+
+```sql
+ALTER TABLE public.building_blocks DISABLE TRIGGER trg_prevent_partner_publish_building_blocks;
+UPDATE public.building_blocks SET status = 'published', is_published = true WHERE id = '...';
+ALTER TABLE public.building_blocks ENABLE TRIGGER trg_prevent_partner_publish_building_blocks;
+```
+
