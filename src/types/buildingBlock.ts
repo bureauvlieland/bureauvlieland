@@ -98,6 +98,8 @@ export interface BuildingBlock {
 
 export interface BuildingBlockFormData {
   id: string;
+  /** Webadres /activiteit/<slug>; null = de database vult hem uit de naam. */
+  slug?: string | null;
   name: string;
   description: string;
   short_description: string;

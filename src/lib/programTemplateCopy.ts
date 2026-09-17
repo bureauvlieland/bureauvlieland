@@ -82,16 +82,16 @@ export const PROGRAM_TEMPLATE_COPY: Record<string, ProgramTemplateCopy> = {
   },
 
   "avontuur-ontspanning": {
-    hook: "Twee dagen die balans brengen: actie aan zee en rust onder de sterren.",
+    hook: "Twee dagen die balans brengen: ruimte op de zandvlakte en gezelligheid in het dorp.",
     story: [
-      "Dag één staat in het teken van avontuur. U raft door de branding, geniet van een verzorgde borrel en sluit af met een uitgebreid grillmaster-diner — de geur van houtskool en zee in uw neus.",
-      "Dag twee draait om beleving en bezinning. Met een gids fietst u over het eiland, ontmoet u de zeehonden en herstelt u tijdens een ontspannende strandyoga voordat u tevreden de boot terug pakt.",
+      "Dag één staat in het teken van avontuur. Met de Vliehors Expres rijdt u over de grootste zandvlakte van Europa en sluit u af met pizza's vers uit de oven en rijkgevulde borrelplanken bij Café Boven.",
+      "Dag twee draait om beleving. Met een gids fietst u over het eiland en ontmoet u de zeehonden op de zandbanken voordat u tevreden de boot terug pakt.",
     ],
     highlights: [
-      "Branding raften onder professionele begeleiding",
-      "Grillmaster-diner met streekproducten",
+      "Vliehors Expres over de Vliehors, exclusief voor uw groep",
+      "Pizza & Borrel bij Café Boven",
       "Begeleide fietstocht en zeehondentocht",
-      "Strandyoga als rustpunt op dag twee",
+      "Verzorgde lunch op beide dagen",
       "Inclusief overnachting tussen de twee dagen",
     ],
     forWhom:
@@ -99,8 +99,8 @@ export const PROGRAM_TEMPLATE_COPY: Record<string, ProgramTemplateCopy> = {
     vibe: ["Avontuur", "Verbinding", "Buitenleven"],
     practical: [
       "Tweedaags programma met overnachting op het eiland.",
-      "Branding raften is weersafhankelijk; we bieden altijd een passend alternatief.",
-      "Neem passende sport- en zwemkleding mee, plus een warme laag voor de avond.",
+      "De Vliehors Expres en de zeehondentocht zijn afhankelijk van weer en getij; we bieden altijd een passend alternatief.",
+      "Neem kleding mee die tegen wind kan, plus een warme laag voor de avond.",
     ],
   },
 
@@ -157,7 +157,7 @@ export const PROGRAM_TEMPLATE_COPY: Record<string, ProgramTemplateCopy> = {
       "Van het strandspektakel op dag één, via de zeehondentocht en brouwerijproeverij op dag twee, tot een ontspannen ochtend op dag drie. Het complete eilandprogramma voor groepen die echt iets willen meemaken.",
     ],
     highlights: [
-      "Strandspektakel met grillmaster-diner",
+      "Strandspektakel en Pizza & Borrel bij Café Boven",
       "Begeleide fietstocht en zeehondentocht",
       "Rondleiding Brouwerij Fortuna",
       "Italiaanse shared dining bij Oliva",
