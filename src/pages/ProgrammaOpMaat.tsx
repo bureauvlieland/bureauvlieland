@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Navigation } from "@/components/Navigation";
@@ -215,7 +216,7 @@ const ProgrammaOpMaat = () => {
               Programma op maat
             </h1>
             <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
-              Liever niet zelf puzzelen? Laat uw wensen achter — wij sturen binnen één werkdag een persoonlijk voorstel.
+              Liever niet zelf puzzelen? Laat uw wensen achter — wij sturen {RESPONSE_TIME.within} een persoonlijk voorstel.
             </p>
           </div>
         </section>

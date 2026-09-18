@@ -13,7 +13,6 @@ import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import {
   DndContext,
   closestCenter,
@@ -113,11 +112,7 @@ export const ProgramEditor = ({
         description: targetDate 
           ? `Nu op Dag ${newDayIndex + 1}` 
           : `Verplaatst naar dag ${newDayIndex + 1}`,
-        action: (
-          <ToastAction altText="Bekijk" onClick={() => setActiveDay(newDayIndex)}>
-            Bekijk
-          </ToastAction>
-        ),
+        action: { label: "Bekijk", onClick: () => setActiveDay(newDayIndex) },
       });
 
       setHighlightedDay(newDayIndex);
@@ -286,7 +281,7 @@ export const ProgramEditor = ({
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium">Wanneer willen jullie komen?</Label>
+                  <Label className="text-sm font-medium">Wanneer wilt u komen?</Label>
                   <p className="text-xs text-muted-foreground mb-1.5">
                     {effectiveDates.length === 0 
                       ? "Selecteer één of meerdere dagen (max 7)"
@@ -439,7 +434,7 @@ export const ProgramEditor = ({
             />
           </div>
           <div>
-            <Label className="text-sm font-medium">Wanneer willen jullie komen?</Label>
+            <Label className="text-sm font-medium">Wanneer wilt u komen?</Label>
             <div className="mt-1">
               <MultiDatePicker
                 selectedDates={effectiveDates}
@@ -499,7 +494,7 @@ export const ProgramEditor = ({
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
         <p className="text-xs text-center text-muted-foreground mt-1.5">
-          Je kunt alles nog controleren en je gegevens invullen
+          U kunt alles nog controleren en uw gegevens invullen
         </p>
       </div>
 

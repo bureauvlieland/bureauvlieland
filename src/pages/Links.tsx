@@ -109,7 +109,7 @@ const Links = () => {
         <meta name="robots" content="noindex, follow" />
       </Helmet>
 
-      <main className="mx-auto flex w-full max-w-md flex-col items-center px-5 py-12">
+      <main id="main-content" className="mx-auto flex w-full max-w-md flex-col items-center px-5 py-12">
         <img
           src="/email-logo.png"
           alt="Bureau Vlieland"

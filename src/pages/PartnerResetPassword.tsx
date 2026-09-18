@@ -138,7 +138,7 @@ const PartnerResetPassword = () => {
           <meta name="robots" content="noindex, nofollow" />
         </Helmet>
         <Navigation />
-        <main className="container mx-auto px-4 py-16 max-w-md text-center">
+        <main id="main-content" className="container mx-auto px-4 py-16 max-w-md text-center">
           <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Wachtwoord gewijzigd!</h1>
           <p className="text-muted-foreground">
@@ -159,7 +159,7 @@ const PartnerResetPassword = () => {
           <meta name="robots" content="noindex, nofollow" />
         </Helmet>
         <Navigation />
-        <main className="container mx-auto px-4 py-16 max-w-md text-center">
+        <main id="main-content" className="container mx-auto px-4 py-16 max-w-md text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <h1 className="text-xl font-semibold mb-2">Sessie wordt opgebouwd...</h1>
           <p className="text-muted-foreground">Even geduld, uw activeringslink wordt geverifieerd.</p>
@@ -222,7 +222,7 @@ const PartnerResetPassword = () => {
           <meta name="robots" content="noindex, nofollow" />
         </Helmet>
         <Navigation />
-        <main className="container mx-auto px-4 py-16 max-w-md">
+        <main id="main-content" className="container mx-auto px-4 py-16 max-w-md">
           <Card>
             <CardHeader className="text-center">
               <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-2" />
@@ -290,7 +290,7 @@ const PartnerResetPassword = () => {
       </Helmet>
       <Navigation />
 
-      <main className="container mx-auto px-4 py-16 max-w-md">
+      <main id="main-content" className="container mx-auto px-4 py-16 max-w-md">
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Nieuw wachtwoord instellen</CardTitle>

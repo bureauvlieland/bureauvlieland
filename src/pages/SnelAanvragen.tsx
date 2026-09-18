@@ -115,7 +115,7 @@ const SnelAanvragen = () => {
       </Helmet>
       <Navigation />
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-10 md:py-14">
+      <main id="main-content" className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-10 md:py-14">
         {phase === "select" && (
           <>
             <header className="mb-8 text-center">

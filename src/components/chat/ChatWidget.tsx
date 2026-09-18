@@ -144,7 +144,7 @@ export const ChatWidget = ({
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-8">
                 <p className="font-medium mb-1">Welkom! 👋</p>
-                <p>Hoe kunnen we je helpen? Stel gerust je vraag.</p>
+                <p>Hoe kunnen we u helpen? Stel gerust uw vraag.</p>
               </div>
             )}
 
@@ -181,7 +181,7 @@ export const ChatWidget = ({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Typ je bericht..."
+                placeholder="Typ uw bericht…"
                 className="min-h-[40px] max-h-[100px] resize-none text-sm"
                 rows={1}
               />

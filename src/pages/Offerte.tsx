@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { useState, useRef, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import { useForm } from "react-hook-form";
@@ -148,7 +149,7 @@ export default function Offerte() {
 
       toast({
         title: "Offerte aanvraag verstuurd!",
-        description: "We nemen binnen 5 werkdagen contact met u op.",
+        description: `We nemen ${RESPONSE_TIME.within} contact met u op.`,
       });
 
       form.reset();
@@ -170,13 +171,13 @@ export default function Offerte() {
         <title>Offerte Aanvragen - Bureau Vlieland</title>
         <meta
           name="description"
-          content="Vraag een vrijblijvende offerte aan voor uw teamuitje, training, evenement of catering op Vlieland. Binnen 5 werkdagen persoonlijk contact."
+          content={`Vraag een vrijblijvende offerte aan voor uw teamuitje, training, evenement of catering op Vlieland. ${RESPONSE_TIME.short}.`}
         />
       </Helmet>
 
       <Navigation />
 
-      <main className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
+      <main id="main-content" className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
         <div className="container mx-auto px-4 py-16 md:py-24">
           <div className="max-w-3xl mx-auto" ref={formRef}>
             <div className="text-center mb-12">
@@ -184,7 +185,7 @@ export default function Offerte() {
                 Offerte Aanvragen
               </h1>
               <p className="text-lg text-muted-foreground">
-                Vul onderstaand formulier in en ontvang binnen 5 werkdagen een op maat gemaakte offerte
+                Vul onderstaand formulier in en ontvang {RESPONSE_TIME.within} een op maat gemaakte offerte
               </p>
             </div>
 
@@ -360,7 +361,7 @@ export default function Offerte() {
                           <FormLabel>Omschrijving / Bijzondere wensen</FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Vertel ons meer over jullie evenement, doelstellingen, of bijzondere wensen..." 
+                              placeholder="Vertel ons meer over uw evenement, doelstellingen of bijzondere wensen…" 
                               className="min-h-[120px]"
                               {...field} 
                             />
@@ -384,7 +385,7 @@ export default function Offerte() {
 
               <div className="mt-8 p-4 bg-secondary/20 rounded-lg">
                 <p className="text-sm text-muted-foreground text-center">
-                  <strong>Let op:</strong> We nemen binnen 5 werkdagen contact met u op. 
+                  <strong>Let op:</strong> We nemen {RESPONSE_TIME.within} contact met u op. 
                   Voor spoedvragen kunt u ons bellen op{" "}
                   <a href="tel:+31562700208" className="text-primary hover:underline">
                     0562 700 208
@@ -401,7 +402,7 @@ export default function Offerte() {
         items={[
             {
               question: "Hoe snel ontvang ik een offerte?",
-              answer: "Na je aanvraag nemen we contact op om de wensen door te nemen. Doorgaans ontvang je binnen twee tot vijf werkdagen een compleet voorstel, afhankelijk van hoeveel partners we moeten benaderen.",
+              answer: `Na uw aanvraag nemen we contact op om de wensen door te nemen. ${RESPONSE_TIME.sentence}`,
             },
             {
               question: "Zitten er kosten aan een offerte?",
@@ -413,7 +414,7 @@ export default function Offerte() {
             },
             {
               question: "Kan ik de offerte nog aanpassen?",
-              answer: "Ja. Via je persoonlijke klantpagina kun je onderdelen laten toevoegen, wijzigen of verwijderen voordat je akkoord geeft.",
+              answer: "Ja. Via uw persoonlijke klantpagina kunt u onderdelen laten toevoegen, wijzigen of verwijderen voordat u akkoord geeft.",
             },
         ]}
       />

@@ -8,6 +8,7 @@ import { BasicsForm, type BasicsFormData } from "@/components/configurator/Basic
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
 import { CheckoutStepIndicator } from "@/components/configurator/CheckoutStepIndicator";
 import { wizardStepsFor, nextWizardPhase, previousWizardPhase, type ConfigPhase } from "@/lib/wizardSteps";
+import { trackWizardStep } from "@/lib/analytics";
 import { TemplateSelector } from "@/components/configurator/TemplateSelector";
 import { CheckoutContactForm } from "@/components/configurator/CheckoutContactForm";
 import { CheckoutSuccess } from "@/components/configurator/CheckoutSuccess";
@@ -97,6 +98,23 @@ const ProgrammaSamenstellen = () => {
     },
     [steps],
   );
+
+  // Eén event per getoonde stap, zodat we in GA4 zien waar mensen afhaken.
+  // `steps` krijgt elke render een nieuwe identiteit; de sleutels als string
+  // veranderen alleen als de stappen echt wijzigen.
+  const stepKeys = steps.map((s) => s.key).join(",");
+  const lastTrackedPhase = useRef<ConfigPhase | null>(null);
+  useEffect(() => {
+    if (lastTrackedPhase.current === phase) return;
+    lastTrackedPhase.current = phase;
+    const keys = stepKeys.split(",");
+    trackWizardStep({
+      wizard: "programma-samenstellen",
+      step: phase,
+      stepIndex: keys.indexOf(phase) + 1,
+      stepsTotal: keys.length,
+    });
+  }, [phase, stepKeys]);
 
   // Check for existing draft on mount — skip when arriving with a template (explicit intent overrides draft)
   useEffect(() => {
@@ -266,7 +284,7 @@ const ProgrammaSamenstellen = () => {
       </Helmet>
       <Navigation />
 
-      <main>
+      <main id="main-content">
         {/* Hero — only on basics + program phases */}
         {showHero && (
           <section className="relative h-[40vh] min-h-[320px] flex items-center justify-center overflow-hidden">

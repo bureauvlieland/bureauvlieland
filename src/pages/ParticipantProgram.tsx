@@ -61,7 +61,7 @@ const ParticipantProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-8" />
           </div>
         </header>
-        <main className="container mx-auto px-4 py-12 max-w-3xl">
+        <main id="main-content" className="container mx-auto px-4 py-12 max-w-3xl">
           <Skeleton className="h-8 w-48 mb-4" />
           <Skeleton className="h-4 w-64 mb-8" />
           <Skeleton className="h-32 w-full mb-6" />
@@ -74,7 +74,7 @@ const ParticipantProgram = () => {
   if (error || !program) {
     return (
       <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-12 max-w-2xl text-center">
+        <main id="main-content" className="container mx-auto px-4 py-12 max-w-2xl text-center">
           <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Programma niet gevonden</h1>
           <p className="text-muted-foreground mb-6">

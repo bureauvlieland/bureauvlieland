@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,7 +148,7 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
 
       toast({
         title: "Aanvraag verzonden",
-        description: "U ontvangt direct een bevestiging per e-mail. Wij nemen binnen 2 werkdagen contact met u op.",
+        description: `U ontvangt direct een bevestiging per e-mail. Wij nemen ${RESPONSE_TIME.within} contact met u op met een voorstel.`,
       });
       navigate(`/?catering_submitted=1`);
     } catch (e: any) {
@@ -305,7 +306,7 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
             className="mt-0.5"
           />
           <span className="text-sm text-muted-foreground">
-            Ik begrijp dat dit een vrijblijvende aanvraag is. Bureau Vlieland neemt binnen 2 werkdagen
+            Ik begrijp dat dit een vrijblijvende aanvraag is. Bureau Vlieland neemt {RESPONSE_TIME.within}
             contact met mij op met een voorstel op maat.
           </span>
         </Label>

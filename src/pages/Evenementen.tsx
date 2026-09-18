@@ -28,6 +28,7 @@ const Evenementen = () => {
 
       <Navigation />
 
+      <main id="main-content">
       {/* Hero Section */}
       <section className="relative min-h-[40vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-accent-soft/30 to-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-20 text-center">
@@ -214,6 +215,7 @@ const Evenementen = () => {
         ]}
       />
       <RelatedLinks />
+      </main>
       <Footer />
     </>
   );

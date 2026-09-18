@@ -489,7 +489,7 @@ export const CheckoutContactForm = ({
 
       toast({
         title: "Aanvraag verzonden!",
-        description: "Check je inbox voor de bevestigingsmail.",
+        description: "Controleer uw inbox voor de bevestigingsmail.",
       });
 
       markSubmit("success");

@@ -181,7 +181,7 @@ const ActiviteitenBoeken = () => {
       </Helmet>
       <Navigation />
 
-      <main className="min-h-screen bg-background">
+      <main id="main-content" className="min-h-screen bg-background">
         {/* Hero */}
         <section className="bg-primary/5 border-b">
           <div className="container mx-auto px-4 py-12 md:py-16">

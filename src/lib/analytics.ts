@@ -258,3 +258,22 @@ export const trackSectionView = (section: string, page?: string) => {
     page: page || (typeof window !== 'undefined' ? window.location.pathname : null),
   });
 };
+
+/**
+ * Track which step of a wizard is shown, once per step per visit, so we can
+ * see where people drop out (roadmap: wizard-afhaakdata).
+ */
+export const trackWizardStep = (data: {
+  wizard: string;
+  step: string;
+  stepIndex: number;
+  stepsTotal: number;
+}) => {
+  trackEvent('wizard_step_view', {
+    wizard: data.wizard,
+    step: data.step,
+    step_index: data.stepIndex,
+    steps_total: data.stepsTotal,
+    page: typeof window !== 'undefined' ? window.location.pathname : null,
+  });
+};

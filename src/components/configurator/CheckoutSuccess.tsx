@@ -33,7 +33,7 @@ export const CheckoutSuccess = ({ customerToken, cartItems }: CheckoutSuccessPro
       <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
       <h2 className="text-2xl font-display font-semibold mb-2">Aanvraag verzonden!</h2>
       <p className="text-muted-foreground mb-6">
-        Check je inbox voor de bevestigingsmail met alle details.
+        Controleer uw inbox voor de bevestigingsmail met alle details.
       </p>
 
       <p className="text-sm text-muted-foreground mb-4">

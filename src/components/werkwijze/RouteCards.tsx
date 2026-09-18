@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ const routes = [
     points: [
       "Direct inzicht in beschikbaarheid en prijzen",
       "Bouwstenen-catalogus met alle eilandpartners",
-      "Bevestiging binnen één werkdag",
+      RESPONSE_TIME.short,
       "Aanpassen kan altijd in overleg",
     ],
     cta: { label: "Stel uw programma samen", to: "/programma-samenstellen" },
@@ -25,7 +26,7 @@ const routes = [
     icon: Compass,
     title: "Programma op maat",
     description:
-      "Complexere wens, groot gezelschap of liever sparren? Wij denken met u mee en stellen binnen 1-3 werkdagen een voorstel op maat samen.",
+      `Complexere wens, groot gezelschap of liever sparren? Wij denken met u mee en stellen ${RESPONSE_TIME.within} een voorstel op maat samen.`,
     points: [
       "Persoonlijk gesprek met een eilandkenner",
       "Voorstel op basis van uw doel en sfeer",
@@ -56,7 +57,7 @@ export const RouteCards = () => {
             return (
               <Card
                 key={idx}
-                className="relative overflow-hidden border-border hover:shadow-elegant hover:border-primary/30 transition-all duration-300"
+                className="relative overflow-hidden border-border hover:shadow-medium hover:border-primary/30 transition-all duration-300"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${route.accent} pointer-events-none`} />
                 <div className="relative">

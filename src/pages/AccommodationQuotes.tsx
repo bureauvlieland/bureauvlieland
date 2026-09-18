@@ -91,7 +91,7 @@ export default function AccommodationQuotes() {
     if (success) {
       toast({
         title: 'Offerte gekozen!',
-        description: 'De accommodatie neemt contact met je op.',
+        description: 'De accommodatie neemt contact met u op.',
       });
       setSelectedQuoteForConfirm(null);
     } else {
@@ -163,7 +163,7 @@ export default function AccommodationQuotes() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main id="main-content" className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Page title */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Uw Logies Aanvraag</h1>
@@ -228,9 +228,9 @@ export default function AccommodationQuotes() {
         {/* CTA for activities */}
         {request.wants_activities && (
           <section className="bg-primary/5 border border-primary/20 rounded-lg p-6">
-            <h3 className="font-semibold mb-2">Wil je ook activiteiten toevoegen?</h3>
+            <h3 className="font-semibold mb-2">Wilt u ook activiteiten toevoegen?</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Maak je verblijf compleet met leuke activiteiten, excursies en catering.
+              Maak uw verblijf compleet met leuke activiteiten, excursies en catering.
             </p>
             <Button asChild>
               <Link to="/programma-samenstellen">
@@ -245,7 +245,7 @@ export default function AccommodationQuotes() {
         {!request.wants_activities && quotes.length === 0 && (
           <section className="text-center py-8">
             <p className="text-muted-foreground mb-4">
-              Wil je in de tussentijd alvast activiteiten bekijken?
+              Wilt u in de tussentijd alvast activiteiten bekijken?
             </p>
             <Button variant="outline" asChild>
               <Link to="/programma-samenstellen">

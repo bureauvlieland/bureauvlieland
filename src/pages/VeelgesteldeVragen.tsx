@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
@@ -39,12 +40,10 @@ const groups: { id: string; title: string; items: FaqItem[] }[] = [
         id: "offerte",
         q: "Hoe snel krijg ik een offerte?",
         plain:
-          "Standaard binnen 2 werkdagen. Voor complexere maatwerkaanvragen kan het 3–5 werkdagen duren omdat we dan meerdere partners op het eiland afstemmen.",
+          `${RESPONSE_TIME.sentence} Bij een eenvoudige aanvraag vaak sneller; bij maatwerk stemmen we meerdere partners op het eiland af.`,
         a: (
           <>
-            Standaard binnen <strong>2 werkdagen</strong>. Voor complexere
-            maatwerkaanvragen 3–5 werkdagen omdat we dan meerdere partners op het
-            eiland afstemmen. U kunt uw programma alvast zelf samenstellen via{" "}
+            <strong>{RESPONSE_TIME.short}.</strong> Bij een eenvoudige aanvraag vaak sneller; bij maatwerk stemmen we meerdere partners op het eiland af. U kunt uw programma alvast zelf samenstellen via{" "}
             <Link to="/programma-samenstellen" className="text-primary underline">
               programma samenstellen
             </Link>{" "}

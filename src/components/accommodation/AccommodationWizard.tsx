@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -422,7 +423,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
           </div>
           
           <p className="text-sm text-muted-foreground mb-4">
-            U ontvangt binnen 2 werkdagen bericht op <strong>{formData.customer_email}</strong>
+            U ontvangt {RESPONSE_TIME.within} bericht op <strong>{formData.customer_email}</strong>
           </p>
           
           {/* Fallback link */}

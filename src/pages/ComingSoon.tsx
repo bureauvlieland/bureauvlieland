@@ -23,7 +23,7 @@ const ComingSoon = () => {
       </header>
 
       {/* Content */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <main id="main-content" className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="text-center max-w-lg w-full">
           <div className="mb-8 flex justify-center">
             <div className="rounded-full bg-primary/10 p-8">
