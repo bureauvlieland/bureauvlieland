@@ -125,7 +125,6 @@ export const Navigation = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                   Start uw aanvraag
                 </Button>

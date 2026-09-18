@@ -144,9 +144,8 @@ const LogiesVlieland = () => {
             </p>
             <Button 
               asChild 
-              size="lg" 
-              variant="heroPrimary"
-              className="text-lg px-8"
+              size="xl" 
+              variant="default"
             >
               <Link to="/logies-aanvragen">Vraag logies aan</Link>
             </Button>
@@ -271,17 +270,15 @@ const LogiesVlieland = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 asChild 
-                size="lg" 
-                variant="heroPrimary"
-                className="text-lg px-8"
+                size="xl" 
+                variant="default"
               >
                 <Link to="/logies-aanvragen">Vraag logies aan</Link>
               </Button>
               <Button 
                 asChild 
-                size="lg" 
-                variant="heroOutline"
-                className="text-lg px-8"
+                size="xl" 
+                variant="inverseOutline"
               >
                 <Link to="/programma-op-maat">Liever maatwerk?</Link>
               </Button>

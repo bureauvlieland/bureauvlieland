@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { RESPONSE_TIME } from "@/content/promises";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
@@ -85,22 +86,15 @@ export const CateringHighlight = () => {
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              <Link
-                to="/catering"
-                className="group relative inline-flex items-center justify-center px-8 py-4 bg-primary text-primary-foreground text-xs font-semibold uppercase tracking-[0.2em] overflow-hidden"
-              >
-                <span className="relative z-10 inline-flex items-center">
+              <Button asChild size="lg" className="group">
+                <Link to="/catering">
                   Bekijk catering
-                  <ArrowRight className="relative z-10 ml-3 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </span>
-                <span className="absolute inset-0 bg-sunset translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-              </Link>
-              <Link
-                to="/catering-aanvragen"
-                className="inline-flex items-center justify-center px-8 py-4 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-[0.2em] hover:border-primary transition-colors duration-300"
-              >
-                Catering aanvragen
-              </Link>
+                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to="/catering-aanvragen">Catering aanvragen</Link>
+              </Button>
             </div>
           </div>
         </div>

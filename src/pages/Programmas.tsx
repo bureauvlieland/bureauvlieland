@@ -311,12 +311,12 @@ const Programmas = () => {
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <Link to="/contact">
-                  <Button size="lg" className="bg-white text-primary hover:bg-white/90">
+                  <Button size="lg">
                     Neem contact op
                   </Button>
                 </Link>
                 <Link to="/bouwstenen">
-                  <Button size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white hover:text-primary">
+                  <Button size="lg" variant="inverseOutline">
                     Bekijk onze bouwstenen
                   </Button>
                 </Link>

@@ -29,8 +29,8 @@ export const StickyMobileCTA = () => {
     >
       <Link to="/programma-samenstellen" className="block">
         <Button
-          size="lg"
-          className="w-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-2xl h-14 text-base"
+          size="xl"
+          className="w-full shadow-dramatic"
         >
           Start uw aanvraag
           <ArrowRight className="ml-2 h-4 w-4" />

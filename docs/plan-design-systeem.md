@@ -2,8 +2,10 @@
 
 Status: onderzoek afgerond 17 september 2026. Zes besluiten genomen op
 18 september (zie "Besluiten"), volgorde afgesproken (zie "Afgesproken
-volgorde"). Fase 0 gebouwd op 18 september in dezelfde pull request als dit
-plan. Volgende stap: fase 1 (fundament) op een eigen branch.
+volgorde"). Fase 0 gebouwd op 18 september (pull request 51), het
+wizard-vervolg op 18 september (pull request 52), fase 1 (fundament) op 18
+september. De levende referentie is voortaan `docs/design-systeem.md`.
+Volgende stap: fase 2 (funnel).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -504,6 +506,28 @@ een niet-geïndexeerde pagina `/ontwerp` (alleen buiten productie) waarop
 alle componenten naast elkaar staan, zodat jij ze in de preview kunt
 beoordelen zonder door de site te klikken.
 
+Fase 1 is op 18 september gebouwd. Wat er staat: tokens voor de actiekleur
+(`--action`, publiek oranje, admin en partnerportaal blauw via
+`data-surface`), inkt- en zachte statuskleuren, radius 8px/4px met de
+Tailwind-namen `xl`/`2xl`/`3xl` op dezelfde 8px, drie schaduwen waar de
+Tailwind-namen naar wijzen, drie duren, typeschaal `display-xl/lg/md` en
+`eyebrow`; `Button` met `default` in de actiekleur, `secondary` licht,
+`inverse`/`inverseOutline` op donker, `brand` voor zwevende hulpknoppen,
+sizes t/m `xl`; `Container`, `Section`, `SectionHeader`, `Pill` (met
+`MicroPill` en `ItemDisplayStatusBadge` erop), `Notice`; `SurfaceTheme`;
+`MotionConfig reducedMotion="user"` plus de css-regel voor
+`prefers-reduced-motion`; de referentiepagina `/ontwerp` (alleen buiten
+productie); `scripts/check-design-debt.ts` met plafond `DESIGN_DEBT_MAX`
+in CI; `docs/design-systeem.md`. Meegenomen omdat het één beweging was:
+alle publieke knop-overrides (`bg-accent`, `bg-primary`, `heroPrimary`,
+witte knoppen op blauwe banden) zijn omgezet naar de varianten, waardoor
+ook een echte fout is verdwenen: op negen landingspagina's was de
+primaire knop "Stel uw programma samen" blauw op een blauwe band en dus
+onzichtbaar. Niet gedaan: de fontlaad terugbrengen (Fraunces 600/700
+worden nog op 190 plekken gebruikt tot fase 3 en 4 de koppen omzetten;
+alleen 900 is weg) en de lintregel als ESLint-regel (het plafondscript
+doet hetzelfde en past bij de bestaande CI-poorten).
+
 **Fase 2: funnel (5–6 dagen).** Programma-samenstellen, Snel-aanvragen,
 Programma op maat, Logies-aanvragen, Catering-aanvragen, Offerte en
 Direct boeken over op `Stepper`, `WizardFooter`, `FormField` en de
@@ -589,8 +613,9 @@ volgende begint.
    door Erwin gepubliceerd. Parallel, door Erwin in GA4:
    `program_request_submitted` en `wizard_step_view` als gebeurtenissen
    registreren, zodat de nulmeting loopt vóór fase 2 live gaat.
-3. **Fase 1: fundament.** Tokens, `Button` met oranje actiekleur,
-   `Pill`, `Notice`, `Container`, `Section`, lintregel, referentiepagina
+3. **Fase 1: fundament.** Gedaan op 18 september: tokens, `Button` met
+   oranje actiekleur, `Pill`, `Notice`, `Container`, `Section`,
+   `SectionHeader`, plafond op ontwerpschuld in CI, referentiepagina
    `/ontwerp`, `docs/design-systeem.md`.
 4. **Fase 2: funnel.** Hierin gaan ook de roadmap-punten "prijzen
    zichtbaar in de programma-bouwer" (ontwerpkeuze: per stuk, per dag of

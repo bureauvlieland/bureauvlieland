@@ -81,12 +81,12 @@ const OnzeWerkwijze = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/#routes">
-                <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+                <Button size="lg">
                   Start uw aanvraag
                 </Button>
               </Link>
               <Link to="/programma-op-maat">
-                <Button size="lg" variant="heroOutline">
+                <Button size="lg" variant="inverseOutline">
                   Liever maatwerk?
                 </Button>
               </Link>

@@ -37,6 +37,12 @@ All colors MUST be HSL.
     --sunset: 22 85% 42%;
     --sunset-foreground: 0 0% 100%;
 
+    /* Actiekleur: de enige knopkleur voor de primaire actie (besluit 1, 18 september 2026).
+       Publiek zonsondergang-oranje; admin en partnerportaal houden oceaanblauw via [data-surface]. */
+    --action: 22 85% 42%;
+    --action-foreground: 0 0% 100%;
+    --action-hover: 22 85% 36%;
+
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
@@ -57,11 +63,19 @@ All colors MUST be HSL.
     --invoice-foreground: 0 0% 100%;
     --invoice-soft: 270 65% 95%;
 
+    --destructive-soft: 0 85% 95%;
+
+    /* Tekstkleur op de zachte statusachtergronden (pills, meldingen). */
+    --info-ink: 210 80% 30%;
+    --success-ink: 142 60% 24%;
+    --warning-ink: 30 80% 30%;
+    --destructive-ink: 0 70% 35%;
+
     --border: 0 0% 87%;
     --input: 0 0% 87%;
     --ring: 198 71% 22%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 0 0% 20%;
@@ -82,6 +96,12 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 60px hsl(22 85% 42% / 0.35);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Motion: drie duren, één easing. */
+    --duration-fast: 150ms;
+    --duration-base: 300ms;
+    --duration-slow: 700ms;
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
@@ -108,6 +128,16 @@ All colors MUST be HSL.
     --accent-foreground: 0 0% 100%;
 
     --accent-soft: 198 40% 15%;
+
+    --action: 22 85% 52%;
+    --action-foreground: 0 0% 100%;
+    --action-hover: 22 85% 46%;
+
+    --destructive-soft: 0 50% 18%;
+    --info-ink: 210 80% 75%;
+    --success-ink: 142 55% 70%;
+    --warning-ink: 38 90% 70%;
+    --destructive-ink: 0 80% 75%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
@@ -144,6 +174,13 @@ All colors MUST be HSL.
     --gradient-hero: linear-gradient(135deg, hsl(198, 60%, 25%) 0%, hsl(198, 50%, 35%) 100%);
     --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.3);
     --shadow-medium: 0 10px 40px -8px hsl(0 0% 0% / 0.4);
+  }
+
+  /* Admin en partnerportaal houden oceaanblauw als actiekleur (zie SurfaceTheme). */
+  [data-surface="portal"] {
+    --action: 198 71% 22%;
+    --action-foreground: 0 0% 100%;
+    --action-hover: 198 75% 16%;
   }
 }
 
@@ -212,4 +249,17 @@ All colors MUST be HSL.
 
 .animate-flash-new {
   animation: flash-new 3s ease-in-out;
+}
+
+/* Wie minder beweging wil, krijgt geen animaties: geen ken burns, pulse of marquee.
+   framer-motion volgt dezelfde voorkeur via <MotionConfig reducedMotion="user"> in App.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

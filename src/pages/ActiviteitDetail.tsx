@@ -315,7 +315,7 @@ const ActiviteitDetail = () => {
               ) : (
                 <div className="flex flex-col gap-3">
                   <Link to={`/programma-samenstellen?block=${block.id}`}>
-                    <Button size="lg" className="w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90">
+                    <Button size="lg" className="w-full sm:w-auto">
                       Toevoegen aan programma
                     </Button>
                   </Link>

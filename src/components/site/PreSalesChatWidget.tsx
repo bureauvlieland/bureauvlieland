@@ -118,12 +118,12 @@ export const PreSalesChatWidget = () => {
           <Link to="/programma-samenstellen" aria-label="Uw programma">
             <Button
               size="lg"
-              variant="secondary"
-              className={`shadow-lg gap-2 ${itemJustAdded ? "animate-cart-pulse" : ""}`}
+              variant="brand"
+              className={`gap-2 ${itemJustAdded ? "animate-cart-pulse" : ""}`}
             >
               <ShoppingCart className="h-5 w-5" />
               <span className="hidden sm:inline">Uw programma</span>
-              <span className={`bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full ${itemJustAdded ? "animate-badge-pop" : ""}`}>
+              <span className={`bg-action text-action-foreground text-xs font-bold px-2 py-0.5 rounded-full ${itemJustAdded ? "animate-badge-pop" : ""}`}>
                 {cartCount}
               </span>
             </Button>
@@ -132,9 +132,10 @@ export const PreSalesChatWidget = () => {
 
         <Button
           size="lg"
+          variant="brand"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Sluit chat" : "Open chat"}
-          className="shadow-lg gap-2 rounded-full h-14 w-14 p-0 sm:h-auto sm:w-auto sm:px-5 sm:py-3 sm:rounded-md"
+          className="gap-2 rounded-full h-14 w-14 p-0 sm:h-auto sm:w-auto sm:px-5 sm:py-3 sm:rounded-sm"
         >
           {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
           <span className="hidden sm:inline">{open ? "Sluiten" : "Vraag stellen"}</span>
