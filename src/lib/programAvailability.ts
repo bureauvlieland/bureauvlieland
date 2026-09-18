@@ -10,6 +10,8 @@
  * altijd bellen. Wel eerlijk: wat niet kan, krijgt een label en een uitleg.
  */
 import { checkCapacity } from "./capacityCheck";
+import { summarizeDayAvailability } from "./mapAvailability";
+import type { MapActivity } from "@/hooks/useMapActivities";
 import type { PublicUnavailability } from "@/hooks/usePublicPartnerUnavailability";
 
 export type ItemAvailabilityStatus =
@@ -28,6 +30,8 @@ export interface AvailabilityBlock {
   min_people?: number | null;
   max_people?: number | null;
   sort_order?: number | null;
+  /** Gekoppeld activiteitstype in Mijnactiviteitenplanner, voor de live agenda. */
+  map_activity_type_id?: number | null;
 }
 
 export interface AvailabilityItem {
@@ -195,4 +199,63 @@ export function suggestReplacement(
     )
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   return candidates[0] ?? null;
+}
+
+/** Wat er nodig is om de live MAP-agenda per onderdeel te lezen. */
+export interface MapAvailabilityContext {
+  /** MAP-omgeving per aanbieder (partner-id → tenant slug). */
+  slugByPartner: Map<string, string>;
+  /** Geladen MAP-momenten per tenant slug, over de gekozen periode. */
+  activitiesBySlug: Map<string, MapActivity[]>;
+}
+
+export interface MapAvailabilityLine {
+  blockId: string;
+  blockName: string;
+  dateIso: string;
+  /** Alle geplande momenten op die dag zijn vol. */
+  full: boolean;
+  /** Eén regel voor op een kaart. */
+  text: string;
+}
+
+/**
+ * Live agenda uit Mijnactiviteitenplanner per MAP-onderdeel, op de dag waarop
+ * het onderdeel staat. Dezelfde informatie als de regel in de programmastap,
+ * samengevat voor een programmakaart. Nooit een blokkade; een onderdeel
+ * zonder gepland moment op die dag zegt niets en krijgt geen regel.
+ */
+export function summarizeMapAvailability(
+  items: AvailabilityItem[],
+  datesIso: (string | null)[],
+  numberOfPeople: number,
+  blocks: AvailabilityBlock[],
+  context: MapAvailabilityContext | undefined,
+): MapAvailabilityLine[] {
+  if (!context) return [];
+  const byId = new Map(blocks.map((b) => [b.id, b]));
+  const seen = new Set<string>();
+  const lines: MapAvailabilityLine[] = [];
+  for (const item of items) {
+    const block = byId.get(item.blockId);
+    const dateIso = datesIso[item.dayIndex] ?? null;
+    if (!block || !dateIso || !block.map_activity_type_id || !block.provider_id) continue;
+    const key = `${block.id}@${dateIso}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const slug = context.slugByPartner.get(block.provider_id);
+    const activities = slug ? context.activitiesBySlug.get(slug) : undefined;
+    if (!activities) continue;
+    const day = summarizeDayAvailability(activities, block.map_activity_type_id, dateIso, numberOfPeople);
+    if (!day.hasMoments) continue;
+    const when = formatIsoDayNL(dateIso);
+    const full = day.totalRemaining === 0;
+    const text = full
+      ? `${block.name} is op ${when} vol; wij vragen de aanbieder om een extra moment.`
+      : day.fitsGroup
+        ? `${block.name} op ${when}: ${day.slotList}`
+        : `${block.name} op ${when}: nog ${day.totalRemaining} losse plaatsen (${day.slotList}); voor uw groep vragen wij een eigen moment aan.`;
+    lines.push({ blockId: block.id, blockName: block.name, dateIso, full, text });
+  }
+  return lines;
 }

@@ -381,3 +381,70 @@ Typecheck 0 fouten, strict 26/26 op de baseline, lint van 1204 naar 1193
 (plafond mee verlaagd), 108 testbestanden / 1578 tests groen, productiebuild
 groen. Backend-wijzigingen (drie migraties) gaan via de deploy-workflow mee
 bij de merge naar `main`.
+
+## Vervolg (18 september 2026)
+
+Twee van de drie open punten van 16 september zijn gebouwd; het derde is
+een keuze van Erwin.
+
+### MAP-beschikbaarheid op de programmakaarten
+
+Op 16 september bewust overgeslagen omdat het per aanbieder een aparte
+MAP-aanroep per kaart zou zijn. Dat is opgelost door de agenda per
+MAP-omgeving één keer over de hele gekozen periode op te halen (`useQueries`
+in `TemplateSelector`, zelfde sleutel als de bestaande `useMapActivities`,
+gedeeld via de query-cache): twaalf programma's met drie MAP-aanbieders zijn
+drie aanroepen, niet twaalf. De zuivere functie `summarizeMapAvailability`
+in `lib/programAvailability.ts` (3 tests) geeft per MAP-onderdeel op de dag
+waarop het staat één regel, met dezelfde informatie als de regel in de
+programmastap:
+
+- "Zeehondentocht op 12 oktober: 14.00 (30 plaatsen)" als er een moment is
+  waar de groep in past;
+- "… nog 4 losse plaatsen (10.00 (4 plaatsen)); voor uw groep vragen wij
+  een eigen moment aan" als er wel plek is maar niet voor de hele groep;
+- "Zeehondentocht is op 12 oktober vol; wij vragen de aanbieder om een
+  extra moment" (amber) als alle geplande momenten vol zijn.
+
+Geen regel als er op die dag niets gepland staat (dat zegt niets over een
+groepsboeking), zonder datum, of zolang de agenda nog laadt. Het is
+informatie, geen blokkade, en telt niet mee in de sortering van de
+kaarten. `summarizeDayAvailability` in `lib/mapAvailability.ts` geeft
+daarvoor nu ook `slotList` en `fitsGroup` terug; de bestaande `summary`
+is ongewijzigd.
+
+### Taak sluit vanzelf als de sluiting wordt ingetrokken
+
+Migratie `20260918100000`: een tweede trigger op `partner_unavailability`
+(bij verwijderen en bij wijzigen van de periode) sluit de werkbanktaken
+"Beschikbaarheidsconflict" die door die sluiting zijn ontstaan. Regels:
+
+- alleen taken die nog niemand heeft opgepakt: status `todo` en niet
+  toegewezen; een taak in behandeling of met een eigenaar blijft staan
+  (het bezwaar van 16 september);
+- alleen als de dag van het onderdeel in de ingetrokken of ingekorte
+  periode lag én niet meer in een andere sluiting van dezelfde aanbieder
+  valt;
+- de taak krijgt status `done` met een `completion_reason` die zegt wat er
+  gebeurde ("… heeft de sluiting van 10-10-2026 t/m 15-10-2026 ingetrokken;
+  het onderdeel op 12-10-2026 valt niet meer in een gesloten periode.
+  Automatisch gesloten.");
+- een periode die gelijk blijft of groeit, sluit niets; bij een verschoven
+  periode maakt de bestaande trigger eerst taken voor de nieuwe dagen en
+  sluit deze trigger daarna de dagen die niet meer gesloten zijn.
+
+De datumlogica van een onderdeel (voorgestelde datum, anders de dag uit de
+aanvraag, `NULL` bij vrije tekst) staat nu in de functie
+`program_request_item_date(uuid)`; de bestaande trigger van 16 september is
+niet aangeraakt. Lokaal getest in Postgres 16 met zes scenario's:
+intrekken, inkorten, tweede sluiting die de dag nog dekt, opgepakte en
+toegewezen taak, verlengen, verschuiven.
+
+### Nog open: zaalhuur in "Vergaderdag+"
+
+`zaalhuur-brouwerij-fortuna` is niet gepubliceerd en wordt bij het laden
+van het voorbeeldprogramma overgeslagen, zodat de klant een Vergaderdag+
+zonder zaal ziet. Twee opties: de bouwsteen publiceren (kan zonder prijs,
+"op aanvraag"), of het onderdeel in het voorbeeldprogramma vervangen door
+een gepubliceerde zaal. Keuze van Erwin; daarna is het een handeling in
+admin, geen bouwwerk.

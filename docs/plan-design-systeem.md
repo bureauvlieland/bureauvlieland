@@ -582,11 +582,11 @@ volgende begint.
 1. **Gedaan: fase 0** (deze pull request, met het plan zelf): directe
    fouten, "u" in de funnel, één toastsysteem, responstijd uit één bron,
    en meetpunt `wizard_step_view` zodat fase 2 meetbaar wordt.
-2. **Wizard-vervolg van 16 september** (roadmap): niet-gepubliceerde
-   zaalhuur in "Vergaderdag+", MAP-beschikbaarheid op de
-   programmakaarten, en de werkbanktaak "Beschikbaarheidsconflict" die niet
-   vanzelf sluit. Ongeveer een dag, maakt de funnel gezond voordat hij
-   opnieuw wordt vormgegeven. Parallel, door Erwin in GA4:
+2. **Wizard-vervolg van 16 september** (roadmap). Gedaan op 18
+   september: MAP-beschikbaarheid op de programmakaarten en de
+   werkbanktaak "Beschikbaarheidsconflict" die nu vanzelf sluit als de
+   aanbieder de sluiting intrekt. Nog open: de niet-gepubliceerde
+   zaalhuur in "Vergaderdag+" (keuze van Erwin: publiceren of vervangen). Parallel, door Erwin in GA4:
    `program_request_submitted` en `wizard_step_view` als gebeurtenissen
    registreren, zodat de nulmeting loopt vóór fase 2 live gaat.
 3. **Fase 1: fundament.** Tokens, `Button` met oranje actiekleur,
