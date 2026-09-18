@@ -255,13 +255,13 @@ const IncentiveReisVlieland = () => {
                 Stel zelf uw programma samen of vraag een maatwerk offerte aan voor persoonlijk advies.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" variant="secondary" className="gap-2">
+                <Button asChild size="lg" className="gap-2">
                   <Link to="/programma-samenstellen">
                     Stel uw programma samen
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="gap-2 bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
+                <Button asChild size="lg" variant="inverseOutline" className="gap-2">
                   <Link to="/programma-op-maat">
                     Liever maatwerk?
                   </Link>

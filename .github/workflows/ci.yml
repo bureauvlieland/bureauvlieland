@@ -196,6 +196,11 @@ jobs:
             echo "Onder het plafond ($n < $LINT_MAX). Verlaag LINT_MAX in .github/quality-baselines.env." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      # Ontwerpschuld (losse paletkleuren, knop-overrides, afwijkende radius en
+      # schaduw buiten het ontwerpsysteem) mag alleen omlaag. Zie docs/design-systeem.md.
+      - name: Ontwerpschuld onder het plafond
+        run: bunx tsx scripts/check-design-debt.ts
+
       - name: Strict-mode onder het plafond
         run: |
           bunx tsc -p tsconfig.strict.json --noEmit > strict.log 2>&1 || true

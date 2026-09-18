@@ -100,8 +100,7 @@ const Contact = () => {
 
             <div className="text-center mt-12">
               <Button
-                size="lg"
-                className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-medium text-base px-8"
+                size="xl"
                 onClick={() => window.location.href = 'mailto:hallo@bureauvlieland.nl'}
               >
                 Stuur ons een bericht

@@ -120,7 +120,7 @@ const BookableOnlyCard = ({ bundle }: { bundle: BookableBundle }) => {
             </span>
           </div>
           <Link to={buildBookingLink(bundle)} className="contents">
-            <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button size="sm" className="w-full gap-1.5">
               <Ticket className="h-4 w-4" />
               Direct reserveren
             </Button>
@@ -221,7 +221,7 @@ const Bouwstenen = () => {
             </p>
             <div className="flex flex-col items-center gap-3">
               <Link to="/programma-samenstellen">
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                <Button size="lg">
                   Stel een programma samen
                 </Button>
               </Link>
@@ -387,7 +387,7 @@ const Bouwstenen = () => {
                         {bundle ? (
                           <>
                             <Link to={`/activiteit/${block.slug ?? block.id}`} className="contents">
-                              <Button size="sm" className="w-full gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
+                              <Button size="sm" className="w-full gap-1.5">
                                 <Ticket className="h-4 w-4" />
                                 Direct reserveren
                               </Button>
@@ -444,7 +444,7 @@ const Bouwstenen = () => {
               Combineer bouwstenen tot een compleet programma en vraag een vrijblijvende offerte aan.
             </p>
             <Link to="/programma-samenstellen">
-              <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Button size="lg">
                 Stel zelf uw programma samen
               </Button>
             </Link>

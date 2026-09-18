@@ -95,8 +95,8 @@ export const HeroEditorial = () => {
           >
             <a href="#routes" className="group">
               <Button
-                size="lg"
-                className="bg-sunset hover:bg-sunset/90 text-sunset-foreground shadow-glow text-base px-8 h-14 rounded-sm group-hover:translate-x-1 transition-transform"
+                size="xl"
+                className="shadow-glow group-hover:translate-x-1 transition-transform"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Start uw aanvraag

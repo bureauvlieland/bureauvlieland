@@ -87,7 +87,7 @@ const VoorWie = () => {
               Neem contact op om te ontdekken wat Bureau Vlieland voor uw groep kan betekenen
             </p>
             <Link to="/contact">
-              <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+              <Button size="lg">
                 Neem contact op
               </Button>
             </Link>

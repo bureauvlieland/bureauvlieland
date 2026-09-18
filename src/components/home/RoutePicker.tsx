@@ -95,7 +95,7 @@ const RouteCard = ({ route }: { route: Route }) => {
       }`}
     >
       {route.highlight && (
-        <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-[10px] uppercase tracking-wider font-semibold shadow-sm">
+        <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-full bg-action text-action-foreground text-[10px] uppercase tracking-wider font-semibold shadow-sm">
           Meest gekozen
         </span>
       )}

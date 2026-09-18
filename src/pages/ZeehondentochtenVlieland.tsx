@@ -172,15 +172,15 @@ const ZeehondentochtenVlieland = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link to={seaTripBundle ? "#boeken" : "/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht"}>
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto">
                   {seaTripBundle ? "Boek je zeehondentocht" : "Vraag je zeehondentocht aan"}
                 </Button>
               </Link>
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht-groep">
                 <Button
                   size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto bg-transparent text-primary-foreground border-primary-foreground/40 hover:bg-primary-foreground/10"
+                  variant="inverseOutline"
+                  className="w-full sm:w-auto"
                 >
                   Offerte voor een groep
                 </Button>
@@ -326,7 +326,7 @@ const ZeehondentochtenVlieland = () => {
             ) : (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link to="/snel-aanvragen?categorie=excursies&onderwerp=zeehondentocht">
-                  <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto">
                     Aanvragen
                   </Button>
                 </Link>

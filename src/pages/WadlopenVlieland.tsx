@@ -169,15 +169,15 @@ const WadlopenVlieland = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link to={wadloopBundle ? "#boeken" : "/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie"}>
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto">
                   {wadloopBundle ? "Boek je wadexcursie" : "Vraag je wadexcursie aan"}
                 </Button>
               </Link>
               <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie-groep">
                 <Button
                   size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto bg-transparent text-primary-foreground border-primary-foreground/40 hover:bg-primary-foreground/10"
+                  variant="inverseOutline"
+                  className="w-full sm:w-auto"
                 >
                   Offerte voor een groep
                 </Button>
@@ -354,7 +354,7 @@ const WadlopenVlieland = () => {
             ) : (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link to="/snel-aanvragen?categorie=excursies&onderwerp=wadexcursie">
-                  <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto">
                     Aanvragen
                   </Button>
                 </Link>

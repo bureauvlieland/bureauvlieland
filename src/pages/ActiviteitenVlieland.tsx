@@ -268,12 +268,12 @@ const ActiviteitenVlieland = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link to="/bouwstenen">
-                <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto">
                   Bekijk alle bouwstenen
                 </Button>
               </Link>
               <Link to="/programma-samenstellen">
-                <Button size="lg" variant="outline" className="bg-transparent text-primary-foreground border-primary-foreground/40 hover:bg-primary-foreground/10 w-full sm:w-auto">
+                <Button size="lg" variant="inverseOutline" className="w-full sm:w-auto">
                   Stel een programma samen
                 </Button>
               </Link>
@@ -445,7 +445,7 @@ const ActiviteitenVlieland = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/programma-samenstellen">
-              <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto">
                 Stel een programma samen
               </Button>
             </Link>

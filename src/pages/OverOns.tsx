@@ -76,7 +76,7 @@ const OverOns = () => {
               Neem contact op met Erwin voor een vrijblijvend gesprek over uw evenement op Vlieland
             </p>
             <Link to="/contact">
-              <Button size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90">
+              <Button size="lg">
                 Neem contact op
               </Button>
             </Link>

@@ -91,11 +91,11 @@ const VoorbeeldprogrammaOverzicht = () => {
               Laat u inspireren en pas het naar wens aan
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="heroPrimary" size="lg" className="text-lg px-8" onClick={scrollToGrid}>
+              <Button size="xl" onClick={scrollToGrid}>
                 Bekijk programma's
               </Button>
               <Link to="/programma-samenstellen">
-                <Button variant="outline" size="lg" className="text-lg px-8 bg-transparent border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 w-full sm:w-auto">
+                <Button variant="inverseOutline" size="xl" className="w-full sm:w-auto">
                   Of stel zelf samen
                 </Button>
               </Link>
@@ -204,15 +204,15 @@ const VoorbeeldprogrammaOverzicht = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/programma-samenstellen">
-                <Button variant="heroPrimary" size="lg" className="text-lg px-8 w-full sm:w-auto">
+                <Button size="xl" className="w-full sm:w-auto">
                   Stel zelf uw programma samen
                 </Button>
               </Link>
               <Link to="/contact">
                 <Button
-                  variant="outline"
-                  size="lg"
-                  className="text-lg px-8 bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 w-full sm:w-auto"
+                  variant="inverseOutline"
+                  size="xl"
+                  className="w-full sm:w-auto"
                 >
                   Neem contact op
                 </Button>

@@ -40,7 +40,7 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
           <Link to="/#routes" onClick={onClose}>
             <Button
               variant="default"
-              className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
+              className="w-full"
             >
               Start uw aanvraag
             </Button>

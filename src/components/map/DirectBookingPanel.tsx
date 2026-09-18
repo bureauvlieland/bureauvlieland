@@ -110,7 +110,7 @@ export const DirectBookingPanel = ({ bundle }: { bundle: BookableBundle }) => {
       {firstBookable && (
         <Button
           size="lg"
-          className="w-full sm:w-auto gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
+          className="w-full sm:w-auto gap-1.5"
           onClick={() =>
             openBooking(
               firstBookable,

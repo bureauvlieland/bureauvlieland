@@ -511,10 +511,10 @@ const Catering = () => {
                 één werkdag antwoord van een vast aanspreekpunt.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button asChild size="lg" variant="heroPrimary" className="text-lg px-8">
+                <Button asChild size="xl">
                   <Link to="/contact">Neem contact op</Link>
                 </Button>
-                <Button asChild size="lg" variant="heroOutline" className="text-lg px-8">
+                <Button asChild size="xl" variant="inverseOutline">
                   <Link to="/programma-samenstellen">Stel uw programma samen</Link>
                 </Button>
               </div>

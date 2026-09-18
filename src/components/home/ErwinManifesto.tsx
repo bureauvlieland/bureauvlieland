@@ -85,8 +85,8 @@ export const ErwinManifesto = () => {
 
             <Link to="/contact">
               <Button
-                size="lg"
-                className="bg-sand text-ocean-deep hover:bg-primary-foreground rounded-sm h-14 px-8 group"
+                size="xl"
+                className="group"
               >
                 Plan een kennismaking
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />

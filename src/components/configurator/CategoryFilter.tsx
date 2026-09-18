@@ -33,7 +33,7 @@ export const CategoryFilter = ({
         return (
           <Button
             key={category.id}
-            variant={isSelected ? "default" : "outline"}
+            variant={isSelected ? "secondary" : "outline"}
             size="sm"
             onClick={() => onCategoryChange(category.id)}
             className="gap-2"

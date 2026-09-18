@@ -36,8 +36,8 @@ export const FinalCTA = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link to="/programma-samenstellen" className="group">
                 <Button
-                  size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-ocean-deep rounded-sm h-16 px-10 text-base shadow-medium"
+                  size="xl"
+                  className="px-10 shadow-medium"
                 >
                   Start uw aanvraag
                   <ArrowUpRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -45,9 +45,9 @@ export const FinalCTA = () => {
               </Link>
               <Button
                 asChild
-                size="lg"
+                size="xl"
                 variant="ghost"
-                className="rounded-sm h-16 px-8 text-base text-foreground hover:bg-muted"
+                className="text-foreground"
               >
                 <a href="tel:0562700208">Liever bellen? 0562 700 208</a>
               </Button>

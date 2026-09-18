@@ -223,17 +223,15 @@ const BedrijfsuitjeVlieland = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 asChild 
-                size="lg" 
-                variant="heroPrimary"
-                className="text-lg px-8"
+                size="xl" 
+                variant="default"
               >
                 <Link to="/programma-samenstellen">Stel uw programma samen</Link>
               </Button>
               <Button 
                 asChild 
-                size="lg" 
-                variant="heroOutline"
-                className="text-lg px-8"
+                size="xl" 
+                variant="inverseOutline"
               >
                 <Link to="/programma-op-maat">Liever maatwerk?</Link>
               </Button>

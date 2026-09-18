@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { SurfaceTheme } from "@/components/system/SurfaceTheme";
+import { MotionConfig } from "framer-motion";
 import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -67,6 +69,7 @@ const ActiviteitenBoeken = lazy(() => import("./pages/ActiviteitenBoeken"));
 const BookingStatus = lazy(() => import("./pages/BookingStatus"));
 
 const Sitemap = lazy(() => import("./pages/Sitemap"));
+const Ontwerp = lazy(() => import("./pages/Ontwerp"));
 const ConceptRecover = lazy(() => import("./pages/ConceptRecover"));
 
 // Lazy-loaded partner pages
@@ -147,12 +150,14 @@ const App = () => {
   }, []);
 
   return (
+    <MotionConfig reducedMotion="user">
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Sonner />
         <BrowserRouter>
         <CartProvider>
           <ScrollToTop />
+          <SurfaceTheme />
           <SiteStructuredData />
 
           <ErrorBoundary name="presales-chat" fallback={() => null}>
@@ -312,6 +317,8 @@ const App = () => {
             <Route path="/admin/financieel" element={<AdminFinancialDashboard />} />
             <Route path="/admin/email-health" element={<AdminEmailHealth />} />
             <Route path="/admin/planning" element={<Navigate to="/admin/projecten?tab=kalender" replace />} />
+            {/* Referentiepagina van het ontwerpsysteem, alleen buiten productie (previews en lokaal). */}
+            {import.meta.env.MODE !== "production" && <Route path="/ontwerp" element={<Ontwerp />} />}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -321,6 +328,7 @@ const App = () => {
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+    </MotionConfig>
   );
 };
 

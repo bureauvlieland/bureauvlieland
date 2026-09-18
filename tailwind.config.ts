@@ -34,21 +34,26 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          soft: "hsl(var(--destructive-soft))",
+          ink: "hsl(var(--destructive-ink))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
           soft: "hsl(var(--info-soft))",
+          ink: "hsl(var(--info-ink))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
           soft: "hsl(var(--success-soft))",
+          ink: "hsl(var(--success-ink))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
           soft: "hsl(var(--warning-soft))",
+          ink: "hsl(var(--warning-ink))",
         },
         invoice: {
           DEFAULT: "hsl(var(--invoice))",
@@ -71,6 +76,12 @@ export default {
         sunset: {
           DEFAULT: "hsl(var(--sunset))",
           foreground: "hsl(var(--sunset-foreground))",
+        },
+        // De enige knopkleur voor de primaire actie; per oppervlak ingesteld in index.css.
+        action: {
+          DEFAULT: "hsl(var(--action))",
+          foreground: "hsl(var(--action-foreground))",
+          hover: "hsl(var(--action-hover))",
         },
         "ocean-deep": "hsl(var(--ocean-deep))",
         popover: {
@@ -98,19 +109,47 @@ export default {
         "gradient-sunset": "var(--gradient-sunset)",
         "gradient-sand": "var(--gradient-sand)",
       },
+      // Drie schaduwen; de Tailwind-namen wijzen naar dezelfde drie, zodat
+      // bestaande shadow-lg/xl/2xl niet uit de toon vallen.
       boxShadow: {
-        "soft": "var(--shadow-soft)",
-        "medium": "var(--shadow-medium)",
-        "dramatic": "var(--shadow-dramatic)",
-        "glow": "var(--shadow-glow)",
+        soft: "var(--shadow-soft)",
+        medium: "var(--shadow-medium)",
+        dramatic: "var(--shadow-dramatic)",
+        glow: "var(--shadow-glow)",
+        sm: "var(--shadow-soft)",
+        DEFAULT: "var(--shadow-soft)",
+        md: "var(--shadow-soft)",
+        lg: "var(--shadow-medium)",
+        xl: "var(--shadow-medium)",
+        "2xl": "var(--shadow-dramatic)",
       },
       transitionTimingFunction: {
-        "smooth": "var(--transition-smooth)",
+        smooth: "var(--transition-smooth)",
+        standard: "var(--ease-standard)",
       },
+      transitionDuration: {
+        fast: "var(--duration-fast)",
+        base: "var(--duration-base)",
+        slow: "var(--duration-slow)",
+      },
+      // Typeschaal van het ontwerpsysteem: display-xl (hero), display-lg
+      // (sectiekop), display-md (kaarttitel), eyebrow (kleine kop erboven).
+      fontSize: {
+        "display-xl": ["clamp(2.75rem, 6vw, 5.5rem)", { lineHeight: "0.95", letterSpacing: "-0.01em" }],
+        "display-lg": ["clamp(2rem, 4vw, 3.25rem)", { lineHeight: "1.05", letterSpacing: "-0.01em" }],
+        "display-md": ["clamp(1.5rem, 2.5vw, 1.75rem)", { lineHeight: "1.15" }],
+        eyebrow: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.2em" }],
+      },
+      // Eén radiusschaal (ontwerpsysteem fase 1): sm 4px voor knoppen, velden en
+      // chips, lg 8px voor kaarten en overlays. Alles boven lg is dezelfde 8px,
+      // zodat bestaande rounded-xl/2xl meteen meelopen; opruimen gebeurt per fase.
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "var(--radius)",
+        "2xl": "var(--radius)",
+        "3xl": "var(--radius)",
       },
       keyframes: {
         "accordion-down": {
