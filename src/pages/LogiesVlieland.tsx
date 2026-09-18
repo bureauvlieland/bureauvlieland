@@ -119,7 +119,7 @@ const LogiesVlieland = () => {
       <Navigation />
       <LandingBreadcrumb items={[{ label: "Logies Vlieland" }]} />
 
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0">

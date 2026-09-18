@@ -92,7 +92,7 @@ const BookingStatus = () => {
       </Helmet>
       <Navigation />
 
-      <main className="min-h-screen bg-background">
+      <main id="main-content" className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12 max-w-2xl space-y-6">
           <Card>
             <CardContent className="py-10 text-center space-y-4">

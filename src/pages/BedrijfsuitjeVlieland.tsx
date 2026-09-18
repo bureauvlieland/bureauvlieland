@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -66,7 +67,7 @@ const BedrijfsuitjeVlieland = () => {
       <Navigation />
       <LandingBreadcrumb items={[{ label: "Bedrijfsuitje Vlieland" }]} />
 
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0">
@@ -217,7 +218,7 @@ const BedrijfsuitjeVlieland = () => {
             </h2>
             <p className="text-lg opacity-90 max-w-2xl mx-auto mb-10">
               Stel in 5 minuten uw eigen programma samen. Kies uw onderdelen en ontvang 
-              binnen 5 werkdagen bevestiging. Vrijblijvend en zonder verplichtingen.
+              {RESPONSE_TIME.within} een voorstel. Vrijblijvend en zonder verplichtingen.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 

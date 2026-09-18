@@ -54,7 +54,7 @@ const HeisessieVlieland = () => {
         ]} 
       />
 
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0">

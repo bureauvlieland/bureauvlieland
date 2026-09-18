@@ -316,10 +316,10 @@ const FamilieweekendVlieland = () => {
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 
-                  to="/jubileum-vlieland" 
+                  to="/activiteiten-vlieland" 
                   className="group flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/30 transition-colors"
                 >
-                  <span className="font-medium text-foreground">Jubileum vieren</span>
+                  <span className="font-medium text-foreground">Activiteiten op Vlieland</span>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </Link>
                 <Link 

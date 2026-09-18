@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
@@ -531,7 +532,7 @@ const Bouwstenen = () => {
             },
             {
               question: "Kan ik een losse activiteit boeken zonder programma?",
-              answer: "Ja. Elke bouwsteen is los aan te vragen. Wij checken de beschikbaarheid bij de aanbieder en bevestigen binnen één werkdag.",
+              answer: `Ja. Elke bouwsteen is los aan te vragen. Wij checken de beschikbaarheid bij de aanbieder en u ontvangt ${RESPONSE_TIME.within} een voorstel.`,
             },
             {
               question: "Staan de prijzen inclusief btw?",

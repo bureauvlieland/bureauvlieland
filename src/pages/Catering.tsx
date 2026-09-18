@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -88,7 +89,7 @@ const Catering = () => {
         <title>Catering Vlieland – koken op locatie door eigen chefs | Bureau Vlieland</title>
         <meta
           name="description"
-          content="Catering op Vlieland door eigen chefs Robert Buurma en Roland Bakker. Lunch, borrel, BBQ op locatie en high-end diner — één aanvraag, één factuur. Offerte binnen 2 werkdagen."
+          content={`Catering op Vlieland door eigen chefs Robert Buurma en Roland Bakker. Lunch, borrel, BBQ op locatie en high-end diner — één aanvraag, één factuur. Voorstel ${RESPONSE_TIME.within}.`}
         />
         <meta
           name="keywords"
@@ -137,7 +138,7 @@ const Catering = () => {
               name: "Hoe snel ontvang ik een offerte voor catering op Vlieland?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Na uw aanvraag ontvangt u binnen 2 werkdagen een definitieve offerte. Een indicatieve totaalprijs incl. BTW is direct zichtbaar in de wizard.",
+                text: `Na uw aanvraag ontvangt u ${RESPONSE_TIME.within} een definitieve offerte. Een indicatieve totaalprijs incl. BTW is direct zichtbaar in de wizard.`,
               },
             },
             {
@@ -170,7 +171,7 @@ const Catering = () => {
 
       <div className="min-h-screen">
         <Navigation />
-        <main>
+        <main id="main-content">
           {/* Hero — full image with overlay */}
           <section className="relative min-h-[88vh] lg:min-h-[92vh] flex items-end overflow-hidden bg-foreground text-background">
             <img
@@ -282,7 +283,7 @@ const Catering = () => {
                   </h2>
                 </div>
                 <p className="text-muted-foreground max-w-md">
-                  Kies een format om direct aan te vragen. Vrijblijvend voorstel op maat binnen 2 werkdagen.
+                  Kies een format om direct aan te vragen. Vrijblijvend voorstel op maat {RESPONSE_TIME.within}.
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -459,7 +460,7 @@ const Catering = () => {
                   Start uw aanvraag
                 </h2>
                 <p className="text-muted-foreground">
-                  Kies een type om uw aanvraag te starten. Wij komen binnen 2 werkdagen met een voorstel op maat. <span className="font-medium text-foreground">Aanvragen graag minimaal 7 dagen vóór de gewenste datum.</span>
+                  Kies een type om uw aanvraag te starten. Wij komen {RESPONSE_TIME.within} met een voorstel op maat. <span className="font-medium text-foreground">Aanvragen graag minimaal 7 dagen vóór de gewenste datum.</span>
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

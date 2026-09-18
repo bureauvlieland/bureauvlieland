@@ -190,7 +190,7 @@ const ActiviteitDetail = () => {
           <meta name="robots" content="noindex" />
         </Helmet>
         <Navigation />
-        <main className="container mx-auto px-4 py-32 text-center">
+        <main id="main-content" className="container mx-auto px-4 py-32 text-center">
           <h1 className="font-display text-3xl mb-4">Deze bouwsteen bestaat niet (meer)</h1>
           <p className="text-muted-foreground mb-6">Mogelijk is hij hernoemd of niet meer beschikbaar.</p>
           <Link to="/bouwstenen">

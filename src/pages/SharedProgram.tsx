@@ -130,7 +130,7 @@ const SharedProgram = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <main className="container mx-auto px-4 py-16 flex items-center justify-center">
+        <main id="main-content" className="container mx-auto px-4 py-16 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
             <p className="text-muted-foreground">Programma laden...</p>
@@ -145,7 +145,7 @@ const SharedProgram = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <main className="container mx-auto px-4 py-16">
+        <main id="main-content" className="container mx-auto px-4 py-16">
           <div className="max-w-md mx-auto text-center">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
             <h1 className="text-2xl font-bold mb-2">Programma niet gevonden</h1>
@@ -173,7 +173,7 @@ const SharedProgram = () => {
       </Helmet>
       <Navigation />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main id="main-content" className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="mb-8 print:mb-4">
           <h1 className="text-3xl font-display font-bold mb-2">
@@ -273,7 +273,7 @@ const SharedProgram = () => {
 
         {/* Info text */}
         <p className="text-sm text-muted-foreground text-center mt-6 print:hidden">
-          Wil je dit programma aanpassen of aanvragen? Laad het in je eigen programma.
+          Wilt u dit programma aanpassen of aanvragen? Laad het in uw eigen programma.
         </p>
       </main>
 

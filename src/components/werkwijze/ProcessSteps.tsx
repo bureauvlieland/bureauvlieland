@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { MessageSquare, FileText, RefreshCw, CheckCircle2, MapPin, Receipt } from "lucide-react";
 
 const steps = [
@@ -9,7 +10,7 @@ const steps = [
   {
     icon: FileText,
     title: "Voorstel",
-    description: "Direct online (configurator) of binnen 1-3 werkdagen een voorstel op maat.",
+    description: `Direct online (configurator) of ${RESPONSE_TIME.within} een voorstel op maat.`,
   },
   {
     icon: RefreshCw,

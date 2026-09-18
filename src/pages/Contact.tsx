@@ -25,13 +25,13 @@ const Contact = () => {
       </Helmet>
       
       <Navigation />
-      <main>
+      <main id="main-content">
         {/* Hero Section */}
         <section className="relative py-16 sm:py-20 lg:py-24 bg-gradient-hero text-primary-foreground">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             <div className="text-center mb-12 lg:mb-16">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold mb-6">
-                Neem Contact Op
+                Neem contact op
               </h1>
               <p className="text-lg sm:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
                 Benieuwd naar de mogelijkheden? Neem vrijblijvend contact met ons op voor een passend programma

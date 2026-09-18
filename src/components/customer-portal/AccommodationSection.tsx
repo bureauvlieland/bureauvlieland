@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { differenceInDays, format, isPast } from "date-fns";
@@ -210,7 +211,7 @@ export const AccommodationSection = ({
                   Wij vragen vrijblijvend offertes aan bij geschikte locaties en voegen deze toe aan uw programma.
                 </p>
                 <p className="text-xs text-muted-foreground/80 italic">
-                  Vrijblijvend. U ontvangt binnen 2 werkdagen passende voorstellen.
+                  Vrijblijvend. U ontvangt {RESPONSE_TIME.within} passende voorstellen.
                 </p>
               </div>
             </div>

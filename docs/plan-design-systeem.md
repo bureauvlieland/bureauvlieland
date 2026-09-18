@@ -1,8 +1,9 @@
 # Plan: één consistent ontwerpsysteem (interactieontwerp en design)
 
-Status: onderzoek afgerond 17 september 2026, wacht op akkoord op de
-richting (zes besluiten onderaan) en op de volgorde van de fases. Nog niets
-gebouwd.
+Status: onderzoek afgerond 17 september 2026. Zes besluiten genomen op
+18 september (zie "Besluiten"), volgorde afgesproken (zie "Afgesproken
+volgorde"). Fase 0 gebouwd op 18 september in dezelfde pull request als dit
+plan. Volgende stap: fase 1 (fundament) op een eigen branch.
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -438,20 +439,63 @@ verkeer binnen), dan de rest, en tot slot borging. Elke fase levert op
 zichzelf een zichtbare verbetering en kan apart via een preview worden
 beoordeeld. Inschattingen zijn bouwdagen, exclusief jouw beoordeling.
 
-**Fase 0: besluiten en directe fouten (1 dag).**
-De zes besluiten hieronder, plus wat nu al fout is en geen ontwerpkeuze
-vraagt: "+31 6 ..." in `FinalCTA` vervangen door het echte nummer, dubbele
-Jubileum-link op Groepsweekend en Familieweekend, `id="main-content"` op
-de 7 landingspagina's waar het ontbreekt, dode klasse `shadow-elegant`,
-"Check je inbox" in de wizard naar "u", één toastsysteem (sonner) en de
-radix `Toaster` uit `App.tsx`, `EmptyCartTips` gebruiken of verwijderen,
-sluitknop-label vertalen, `DraftRecoveryDialog` sluitbaar maken. Deze
-staan los van de rest en kunnen meteen.
+**Fase 0: besluiten en directe fouten (1 dag). Gedaan, 18 september.**
+Wat er is gedaan, allemaal zonder ontwerpkeuze en los van de rest:
+- "+31 6 ..." in `FinalCTA` vervangen door 0562 700 208 als belknop.
+- Dubbele Jubileum-link op Groepsweekend en Familieweekend vervangen door
+  "Activiteiten op Vlieland".
+- `id="main-content"` (het doel van de skip-link) op alle 30 pagina's
+  waar `<main>` het miste; Evenementen had geen `<main>` en heeft er nu
+  een.
+- Dode klasse `shadow-elegant` in `RouteCards` vervangen door
+  `shadow-medium`.
+- Eén toastsysteem: `src/hooks/use-toast.ts` is nu een dunne laag op
+  sonner met dezelfde API (`toast({ title, description, variant, action })`),
+  zodat de 74 bestaande aanroepen ongewijzigd blijven; de radix `Toaster`,
+  `ui/toast.tsx` en `ui/toaster.tsx` zijn weg, de twee
+  `ToastAction`-knoppen (bulk-snooze in admin, "Bekijk" in de
+  programma-editor) zijn sonner-acties geworden, en `variant:
+  "destructive"` toont een rode rand en tekst via de `error`-klasse in
+  `ui/sonner.tsx`. Het pakket `@radix-ui/react-toast` staat nog in
+  `package.json` maar wordt niet meer gebruikt (lockfiles bewust niet
+  aangeraakt).
+- "u" in de funnel: "Check je inbox" (toast en successcherm), "Wanneer
+  willen jullie komen?", "Je kunt alles nog controleren", de Offerte-FAQ en
+  het tekstveld-voorbeeld, de logies-offertepagina, het gedeelde programma
+  en de chatwidget. De "je"-teksten op Wadlopen, Zeehondentochten,
+  Activiteiten Vlieland, Programma's en de privé-landingspagina's blijven
+  staan tot fase 3, omdat die pagina's daar toch opnieuw worden opgebouwd.
+- Responstijd uit één bron: `src/content/promises.ts` (`RESPONSE_TIME`,
+  "binnen 5 werkdagen een voorstel") vervangt de 1-, 2- en 1-3-daagse
+  beloftes op 14 plekken (catering, logies, maatwerk, werkwijze, FAQ,
+  bouwstenen, offerte, bedrijfsuitje, logies-wizard, klantpagina).
+  Bewust gelaten: "we reageren doorgaans binnen één werkdag" (Contact-FAQ)
+  en "binnen één werkdag antwoord van een vast aanspreekpunt" (Catering),
+  omdat dat over een reactie gaat en niet over een voorstel. Als Erwin die
+  ook op vijf dagen wil, is dat één regel per plek. E-mailteksten in de
+  database vallen buiten deze wijziging.
+- Sluitknop-label "Close" in dialogen en sheets is "Sluiten".
+- Meten vóór fase 2: `trackWizardStep` in `src/lib/analytics.ts` stuurt
+  per getoonde wizardstap één `wizard_step_view`-event (wizard, stap,
+  volgnummer, totaal) naar de dataLayer; `ProgrammaSamenstellen` roept het
+  aan bij elke stapwissel. In GA4 moet dit event nog als gebeurtenis
+  worden geregistreerd (Beheer → Gebeurtenissen) om er een afhaaktrechter
+  van te maken.
+
+Bewust niet gedaan: `EmptyCartTips` is wél in gebruik (programma-editor en
+klantpagina), dus blijft; `DraftRecoveryDialog` dwingt bewust een keuze af
+en is daarom niet met Esc te sluiten, dat is geen fout.
 
 **Fase 1: fundament (3–4 dagen).**
 Tokens uitbreiden in `src/index.css` en `tailwind.config.ts` (radius,
 typeschaal, motion, containerbreedtes), `Button`/`Pill`/`Notice`/
-`Container`/`Section`/`SectionHeader` bouwen, de fontlaad terugbrengen,
+`Container`/`Section`/`SectionHeader` bouwen, de fontlaad terugbrengen.
+Let op bij de actiekleur (besluit 1): `Button` wordt ook door het admin-
+en partnerportaal gebruikt. Voorstel: een token `--action` dat in het
+publieke deel zonsondergang-oranje is en in de portalen oceaanblauw
+blijft, zodat de portalen niet ongevraagd van kleur veranderen; of ook
+daar oranje, dat is een aparte, kleine keuze tijdens fase 1.
+Verder in fase 1: `useReducedMotion` toevoegen,
 `useReducedMotion` toevoegen, en een lintregel (ESLint `no-restricted-
 syntax` op klassenamen, of een klein script in CI) die losse paletklassen,
 `rounded-2xl/xl`, Tailwind-`shadow-*` en `text-white` buiten `ui/`
@@ -506,31 +550,65 @@ Totaal ongeveer 18 tot 23 bouwdagen, verspreid over meerdere pull
 requests zodat elke fase apart op een preview te beoordelen is en de
 CI-plafonds (`.github/quality-baselines.env`) per stap omlaag kunnen.
 
-## Besluiten die ik van Erwin nodig heb
+## Besluiten (genomen door Erwin, 18 september 2026)
 
-1. **Actiekleur.** (a) Zonsondergang-oranje als enige knopkleur voor de
-   primaire actie, sitebreed, en nergens anders gebruikt (conversiepatroon:
-   de actiekleur is uniek), met oceaanblauw voor alles wat "merk" is; of
-   (b) oceaanblauw als knopkleur, oranje alleen als typografisch accent.
-   Mijn aanbeveling: (a), met als enige uitzondering de cursieve regel in
-   de hero-kop. Nu is de hero-knop oranje en de navigatieknop blauw, en
-   zien mensen dus twee "start"-knoppen in twee kleuren op één scherm.
-2. **Hoe redactioneel.** Fraunces licht en groot op álle marketingpagina's
-   (aanbevolen), of de subpagina's zakelijker houden met alleen de kleuren
-   en componenten van de homepage. Het eerste maakt de site herkenbaar en
-   eigen; het tweede is minder werk maar houdt het contrast homepage/rest.
-3. **Landingspagina's als data.** Eén sjabloon met inhoudsbestanden
-   (aanbevolen) of per pagina blijven bouwen. Met het sjabloon kost een
-   nieuwe doelgroep-pagina een uur in plaats van een dag, en blijft
-   consistentie vanzelf in stand.
-4. **Aanspreekvorm.** "u" overal publiek (aanbevolen, past bij de
-   zakelijke kern en bij de rest van de funnel); "je" alleen op de
-   deelnemerspagina en in WhatsApp. Of andersom, maar dan ook consequent.
-5. **Responstijd.** Eén belofte, één plek in de code. Voorstel: "binnen
-   2 werkdagen een voorstel" tenzij je 1 of 5 kunt waarmaken.
-6. **Volgorde.** Funnel vóór landingspagina's (aanbevolen: daar zit de
-   grootste conversiewinst en de meeste inconsistentie), of andersom
-   omdat de landingspagina's het eerste zijn wat een nieuwe bezoeker ziet.
+1. **Actiekleur: zonsondergang-oranje.** Eén knopkleur voor de primaire
+   actie, sitebreed, en nergens anders gebruikt; oceaanblauw voor alles wat
+   "merk" is. Enige uitzondering: de cursieve regel in de hero-kop.
+   Gevolg: de navigatieknop, de sticky mobiele knop, de RoutePicker-
+   markering en alle CTA-banden worden oranje; `secondary`/`accent`
+   verdwijnen als knopkleur. Voor de portalen zie de opmerking bij fase 1.
+2. **Redactioneel op alle marketingpagina's.** Fraunces licht en groot
+   op elke publieke pagina, niet alleen op de homepage; de funnel in
+   dezelfde familie maar rustiger (middelzwaar, kleiner).
+3. **Landingspagina's als één sjabloon** met inhoudsbestanden
+   (`src/content/landings/*.ts`). Een nieuwe doelgroep-pagina is dan een
+   inhoudsbestand, geen nieuwe component.
+4. **Aanspreekvorm "u"** op alle publieke pagina's en in de funnel; "je"
+   alleen op de deelnemerspagina en in WhatsApp. Fase 0 heeft de funnel
+   gedaan, fase 3 doet de landingspagina's.
+5. **Responstijd: binnen één werkweek (5 werkdagen) een voorstel.**
+   Vastgelegd in `src/content/promises.ts`; zie fase 0 voor de twee
+   reactietijd-zinnen die bewust zijn blijven staan.
+6. **Volgorde: funnel vóór landingspagina's.** Fase 2 komt vóór fase 3,
+   zoals hierboven.
+
+## Afgesproken volgorde (18 september 2026)
+
+De roadmap en dit plan zijn samengevoegd tot één volgorde. Elke stap is
+een eigen pull request met Netlify-preview, die Erwin goedkeurt voordat de
+volgende begint.
+
+1. **Gedaan: fase 0** (deze pull request, met het plan zelf): directe
+   fouten, "u" in de funnel, één toastsysteem, responstijd uit één bron,
+   en meetpunt `wizard_step_view` zodat fase 2 meetbaar wordt.
+2. **Wizard-vervolg van 16 september** (roadmap): niet-gepubliceerde
+   zaalhuur in "Vergaderdag+", MAP-beschikbaarheid op de
+   programmakaarten, en de werkbanktaak "Beschikbaarheidsconflict" die niet
+   vanzelf sluit. Ongeveer een dag, maakt de funnel gezond voordat hij
+   opnieuw wordt vormgegeven. Parallel, door Erwin in GA4:
+   `program_request_submitted` en `wizard_step_view` als gebeurtenissen
+   registreren, zodat de nulmeting loopt vóór fase 2 live gaat.
+3. **Fase 1: fundament.** Tokens, `Button` met oranje actiekleur,
+   `Pill`, `Notice`, `Container`, `Section`, lintregel, referentiepagina
+   `/ontwerp`, `docs/design-systeem.md`.
+4. **Fase 2: funnel.** Hierin gaan ook de roadmap-punten "prijzen
+   zichtbaar in de programma-bouwer" (ontwerpkeuze: per stuk, per dag of
+   totaal) en de logiesstap-afronding mee, omdat het dezelfde schermen
+   zijn.
+5. **Fase 3: landingspagina's als sjabloon.** Hierin gaan mee: "reviews
+   zichtbaarder maken" (concurrentiepositie punt 3, vaste plek voor
+   reviews in het sjabloon), de "je"-teksten van de resterende pagina's,
+   en de attributie per landingspagina uit `plan-frontend-usability.md`
+   fase 3.
+6. **Fase 4: overige pagina's en homepage.** Hierin gaan de open
+   homepage-bevindingen van 11 september mee (sectienummers, Testimonials
+   naar voren, overlappende secties beoordelen met de GA4-sectiedata).
+7. **Fase 5: borging.**
+
+Los hiervan, zonder bouwwerk of door Erwin zelf: Lovable Cloud opruimen,
+storage-bucket, zelftest controleren, partnerprofielen, MAP-aanbieders,
+uitschrijflink. Sentry "Script error" blijft liggen.
 
 ## Meetpunten
 

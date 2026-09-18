@@ -43,15 +43,14 @@ export const FinalCTA = () => {
                   <ArrowUpRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
                 </Button>
               </Link>
-              <Link to="/contact">
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  className="rounded-sm h-16 px-8 text-base text-foreground hover:bg-muted"
-                >
-                  Liever bellen? +31 6 ...
-                </Button>
-              </Link>
+              <Button
+                asChild
+                size="lg"
+                variant="ghost"
+                className="rounded-sm h-16 px-8 text-base text-foreground hover:bg-muted"
+              >
+                <a href="tel:0562700208">Liever bellen? 0562 700 208</a>
+              </Button>
             </div>
 
             <div className="mt-16 pt-10 border-t border-border flex flex-wrap justify-center gap-x-10 gap-y-4 text-xs uppercase tracking-[0.25em] text-muted-foreground">

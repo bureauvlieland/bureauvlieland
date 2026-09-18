@@ -66,7 +66,7 @@ const ConceptRecover = () => {
         <title>Programma herstellen — Bureau Vlieland</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
-      <main className="min-h-screen flex items-center justify-center bg-background px-4">
+      <main id="main-content" className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="max-w-md w-full text-center space-y-4">
           {status === "loading" && (
             <>

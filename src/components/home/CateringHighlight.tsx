@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import lexenceTablesetting from "@/assets/lexence/lexence-tablesetting.jpg";
@@ -79,7 +80,7 @@ export const CateringHighlight = () => {
                 brengen de haute cuisine naar uw verblijf.
               </p>
               <p className="text-sm md:text-base text-primary/70 tracking-wide">
-                Voor zakelijke groepen vanaf 8 personen. Eén keuken, één aanspreekpunt, één factuur. Vrijblijvend voorstel op maat binnen 2 werkdagen.
+                Voor zakelijke groepen vanaf 8 personen. Eén keuken, één aanspreekpunt, één factuur. Vrijblijvend voorstel op maat {RESPONSE_TIME.within}.
               </p>
             </div>
 
