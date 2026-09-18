@@ -440,11 +440,10 @@ niet aangeraakt. Lokaal getest in Postgres 16 met zes scenario's:
 intrekken, inkorten, tweede sluiting die de dag nog dekt, opgepakte en
 toegewezen taak, verlengen, verschuiven.
 
-### Nog open: zaalhuur in "Vergaderdag+"
+### Zaalhuur in "Vergaderdag+": gepubliceerd
 
-`zaalhuur-brouwerij-fortuna` is niet gepubliceerd en wordt bij het laden
+`zaalhuur-brouwerij-fortuna` was niet gepubliceerd en werd bij het laden
 van het voorbeeldprogramma overgeslagen, zodat de klant een Vergaderdag+
-zonder zaal ziet. Twee opties: de bouwsteen publiceren (kan zonder prijs,
-"op aanvraag"), of het onderdeel in het voorbeeldprogramma vervangen door
-een gepubliceerde zaal. Keuze van Erwin; daarna is het een handeling in
-admin, geen bouwwerk.
+zonder zaal zag. Erwin heeft de bouwsteen op 18 september gepubliceerd;
+daarmee laadt het voorbeeldprogramma weer compleet en zijn alle drie de
+punten van 16 september afgerond.

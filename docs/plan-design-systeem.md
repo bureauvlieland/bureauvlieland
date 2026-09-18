@@ -583,10 +583,10 @@ volgende begint.
    fouten, "u" in de funnel, één toastsysteem, responstijd uit één bron,
    en meetpunt `wizard_step_view` zodat fase 2 meetbaar wordt.
 2. **Wizard-vervolg van 16 september** (roadmap). Gedaan op 18
-   september: MAP-beschikbaarheid op de programmakaarten en de
+   september: MAP-beschikbaarheid op de programmakaarten, de
    werkbanktaak "Beschikbaarheidsconflict" die nu vanzelf sluit als de
-   aanbieder de sluiting intrekt. Nog open: de niet-gepubliceerde
-   zaalhuur in "Vergaderdag+" (keuze van Erwin: publiceren of vervangen). Parallel, door Erwin in GA4:
+   aanbieder de sluiting intrekt, en de zaalhuur in "Vergaderdag+" is
+   door Erwin gepubliceerd. Parallel, door Erwin in GA4:
    `program_request_submitted` en `wizard_step_view` als gebeurtenissen
    registreren, zodat de nulmeting loopt vóór fase 2 live gaat.
 3. **Fase 1: fundament.** Tokens, `Button` met oranje actiekleur,
