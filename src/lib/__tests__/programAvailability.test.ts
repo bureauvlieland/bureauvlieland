@@ -3,9 +3,11 @@ import {
   assessItemAvailability,
   assessProgramAvailability,
   suggestReplacement,
+  summarizeMapAvailability,
   formatIsoDayNL,
   type AvailabilityBlock,
 } from "@/lib/programAvailability";
+import type { MapActivity } from "@/hooks/useMapActivities";
 
 const blocks: AvailabilityBlock[] = [
   { id: "strandspektakel", name: "Strandspektakel", category: "outdoor", provider_id: "voc", sort_order: 5 },
@@ -111,5 +113,48 @@ describe("formatIsoDayNL", () => {
   it("formats a day in Dutch", () => {
     expect(formatIsoDayNL("2027-03-31")).toBe("31 maart");
     expect(formatIsoDayNL("nonsense")).toBe("nonsense");
+  });
+});
+
+describe("summarizeMapAvailability", () => {
+  const mapBlocks: AvailabilityBlock[] = [
+    { id: "zeehonden", name: "Zeehondentocht", provider_id: "zeehonden-bv", map_activity_type_id: 7 },
+    { id: "wadloop", name: "Wadloopexcursie", provider_id: "sne" },
+  ];
+  const act = (over: Partial<MapActivity>): MapActivity => ({
+    Id: 1, ActivityTypeName: "Zeehondentocht", ActivityTypeId: 7, Departure: "2026-10-12T10:00:00", PricePerPerson: 20,
+    PricePerChild: null, MaxPersons: 20, MaxBookings: 20, NumberOfPersonsBooked: 6, BookingCount: 3, RemainingSlots: 14,
+    IsActive: true, IsCancelled: false, Duration: 2, Notes: null, Description: null, ...over,
+  });
+  const context = {
+    slugByPartner: new Map([["zeehonden-bv", "zeehonden"]]),
+    activitiesBySlug: new Map([["zeehonden", [act({}), act({ Departure: "2026-10-12T14:00:00", RemainingSlots: 30 })]]]),
+  };
+
+  it("geeft per MAP-onderdeel de momenten op de dag van het onderdeel", () => {
+    const lines = summarizeMapAvailability(
+      [{ blockId: "zeehonden", dayIndex: 0 }, { blockId: "wadloop", dayIndex: 0 }],
+      ["2026-10-12"], 20, mapBlocks, context,
+    );
+    expect(lines).toHaveLength(1);
+    expect(lines[0].full).toBe(false);
+    expect(lines[0].text).toBe("Zeehondentocht op 12 oktober: 14.00 (30 plaatsen)");
+  });
+
+  it("meldt vol als alle momenten vol zijn, en losse plaatsen als de groep nergens in past", () => {
+    const full = { ...context, activitiesBySlug: new Map([["zeehonden", [act({ RemainingSlots: 0 })]]]) };
+    const fullLines = summarizeMapAvailability([{ blockId: "zeehonden", dayIndex: 0 }], ["2026-10-12"], 20, mapBlocks, full);
+    expect(fullLines[0].full).toBe(true);
+    expect(fullLines[0].text).toMatch(/vol/);
+    const small = { ...context, activitiesBySlug: new Map([["zeehonden", [act({ RemainingSlots: 4 })]]]) };
+    const smallLines = summarizeMapAvailability([{ blockId: "zeehonden", dayIndex: 0 }], ["2026-10-12"], 20, mapBlocks, small);
+    expect(smallLines[0].full).toBe(false);
+    expect(smallLines[0].text).toMatch(/nog 4 losse plaatsen/);
+  });
+
+  it("zegt niets zonder momenten op die dag, zonder datum of zonder geladen agenda", () => {
+    expect(summarizeMapAvailability([{ blockId: "zeehonden", dayIndex: 0 }], ["2026-10-13"], 20, mapBlocks, context)).toHaveLength(0);
+    expect(summarizeMapAvailability([{ blockId: "zeehonden", dayIndex: 0 }], [null], 20, mapBlocks, context)).toHaveLength(0);
+    expect(summarizeMapAvailability([{ blockId: "zeehonden", dayIndex: 0 }], ["2026-10-12"], 20, mapBlocks, undefined)).toHaveLength(0);
   });
 });

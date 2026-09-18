@@ -35,6 +35,24 @@ export interface MapActivityType {
   BookingTimeBuffer: number | null;
 }
 
+/** Momenten van één MAP-omgeving via de proxy; los bruikbaar in `useQueries`. */
+export const fetchMapActivities = async (
+  slug: string | null,
+  dateStart?: string,
+  dateEnd?: string,
+  partnerId?: string,
+): Promise<MapActivity[]> => {
+  if (!slug) return [];
+  const params: Record<string, string> = {};
+  if (dateStart) params.dateStart = dateStart;
+  if (dateEnd) params.dateEnd = dateEnd;
+  const { data, error } = await supabase.functions.invoke("map-proxy", {
+    body: { endpoint: "activities", slug, partnerId, params },
+  });
+  if (error) throw error;
+  return (data || []) as MapActivity[];
+};
+
 // Fetch activities from MAP via proxy
 export const useMapActivities = (
   slug: string | null,
@@ -45,19 +63,7 @@ export const useMapActivities = (
 ) => {
   return useQuery({
     queryKey: ["map-activities", slug, dateStart, dateEnd],
-    queryFn: async () => {
-      if (!slug) return [];
-      const params: Record<string, string> = {};
-      if (dateStart) params.dateStart = dateStart;
-      if (dateEnd) params.dateEnd = dateEnd;
-
-      const { data, error } = await supabase.functions.invoke("map-proxy", {
-        body: { endpoint: "activities", slug, partnerId, params },
-      });
-
-      if (error) throw error;
-      return (data || []) as MapActivity[];
-    },
+    queryFn: () => fetchMapActivities(slug, dateStart, dateEnd, partnerId),
     enabled: enabled && !!slug,
     staleTime: 2 * 60 * 1000,
   });

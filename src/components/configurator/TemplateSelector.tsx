@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,8 +8,10 @@ import { cn } from "@/lib/utils";
 import { useTemplatesWithItemsByDuration, fetchTemplateWithItems } from "@/hooks/useProgramTemplates";
 import { useToast } from "@/hooks/use-toast";
 import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
-import { assessProgramAvailability, type ProgramAvailability } from "@/lib/programAvailability";
-import { CalendarOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { assessProgramAvailability, summarizeMapAvailability, type ProgramAvailability } from "@/lib/programAvailability";
+import { usePublicPartnerMapSlugs } from "@/hooks/usePublicPartnerMapSlugs";
+import { fetchMapActivities, type MapActivity } from "@/hooks/useMapActivities";
+import { CalendarOff, CalendarCheck, CheckCircle2, AlertCircle } from "lucide-react";
 import type { GroupSituation } from "@/lib/programWizardCart";
 import { WIZARD_TRANSPORT_BLOCK_IDS } from "@/lib/programWizardCart";
 import fallbackImage from "@/assets/vlieland-beach.jpg";
@@ -79,6 +82,39 @@ export const TemplateSelector = ({
   // probleem blijven zichtbaar (met label) maar gaan onderaan.
   const datesIso = (localDates.length > 0 ? localDates : selectedDates).map((d) => format(d, "yyyy-MM-dd"));
   const people = localPeople || numberOfPeople;
+
+  // Live agenda uit Mijnactiviteitenplanner voor de MAP-onderdelen in de
+  // programma's: één aanroep per MAP-omgeving over de gekozen periode (niet
+  // per kaart), gedeeld via de query-cache.
+  const mapSlugByPartner = usePublicPartnerMapSlugs();
+  const sortedDatesIso = [...datesIso].sort();
+  const mapFrom = sortedDatesIso[0];
+  const mapTo = sortedDatesIso[sortedDatesIso.length - 1];
+  const mapSlugSet = new Set<string>();
+  for (const t of rawTemplates) {
+    for (const i of t.items ?? []) {
+      const b = i.block;
+      if (!b?.map_activity_type_id || !b.provider_id) continue;
+      const slug = mapSlugByPartner.get(b.provider_id);
+      if (slug) mapSlugSet.add(slug);
+    }
+  }
+  const mapSlugs = [...mapSlugSet].sort();
+  const mapQueries = useQueries({
+    queries: mapSlugs.map((slug) => ({
+      queryKey: ["map-activities", slug, mapFrom, mapTo],
+      queryFn: () => fetchMapActivities(slug, mapFrom, mapTo),
+      enabled: !!mapFrom,
+      staleTime: 2 * 60 * 1000,
+    })),
+  });
+  const activitiesBySlug = new Map<string, MapActivity[]>();
+  mapSlugs.forEach((slug, i) => {
+    const data = mapQueries[i]?.data;
+    if (data) activitiesBySlug.set(slug, data);
+  });
+  const mapContext = { slugByPartner: mapSlugByPartner, activitiesBySlug };
+
   const templates = rawTemplates
     .map((t) => {
       const items = (t.items ?? [])
@@ -87,7 +123,8 @@ export const TemplateSelector = ({
         .map((i) => ({ blockId: i.block_id, dayIndex: i.day_index }));
       const blocks = (t.items ?? []).map((i) => i.block).filter((b): b is NonNullable<typeof b> => !!b);
       const availability: ProgramAvailability = assessProgramAvailability(items, datesIso, people, periods, blocks);
-      return { template: t, availability };
+      const mapLines = summarizeMapAvailability(items, datesIso, people, blocks, mapContext);
+      return { template: t, availability, mapLines };
     })
     .sort((a, b) => a.availability.problems.length - b.availability.problems.length);
   void situation;
@@ -195,7 +232,7 @@ export const TemplateSelector = ({
       )}
 
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
-        {templates.map(({ template, availability }) => (
+        {templates.map(({ template, availability, mapLines }) => (
           <Card
             key={template.id}
             className="overflow-hidden hover:border-primary/50 transition-all duration-200 group cursor-pointer"
@@ -246,6 +283,24 @@ export const TemplateSelector = ({
                   )}
                   <span>{availability.summary}</span>
                 </p>
+              )}
+
+              {mapLines.length > 0 && (
+                <div className="mb-4 space-y-1">
+                  {mapLines.map((line) => (
+                    <p
+                      key={`${line.blockId}-${line.dateIso}`}
+                      className={cn(
+                        "text-xs flex items-start gap-1.5",
+                        line.full ? "text-amber-800 dark:text-amber-300" : "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>{line.text}</span>
+                    </p>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground/70 pl-5">Live uit de agenda van de aanbieder.</p>
+                </div>
               )}
 
               <div className="flex gap-2">

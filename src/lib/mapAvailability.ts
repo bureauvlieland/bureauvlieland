@@ -11,6 +11,10 @@ export interface DayAvailability {
   /** Momenten met plek, gesorteerd op tijd: "10.00 (14 plaatsen)". */
   slots: { time: string; remaining: number }[];
   totalRemaining: number;
+  /** De momenten uit `summary` als losse lijst ("10.00 (14 plaatsen) · 14.00 (6 plaatsen)"), leeg zonder momenten met plek. */
+  slotList: string;
+  /** Er is minstens één moment waar de hele groep in past (zonder groepsgrootte: er is plek). */
+  fitsGroup: boolean;
   /** Korte regel voor de kaart, of null als er niets te zeggen is. */
   summary: string | null;
 }
@@ -36,20 +40,21 @@ export function summarizeDayAvailability(
     .sort((a, b) => a.time.localeCompare(b.time));
   const withRoom = slots.filter((s) => s.remaining > 0);
   const totalRemaining = withRoom.reduce((sum, s) => sum + s.remaining, 0);
+  const fits = typeof groupSize === "number" && groupSize > 0 ? withRoom.filter((s) => s.remaining >= groupSize) : withRoom;
+  const slotList = (fits.length > 0 ? fits : withRoom)
+    .slice(0, 4)
+    .map((s) => `${s.time} (${s.remaining} ${s.remaining === 1 ? "plaats" : "plaatsen"})`)
+    .join(" · ");
+  const fitsGroup = fits.length > 0;
   let summary: string | null = null;
   if (slots.length === 0) {
     summary = null; // geen momenten gepland; zegt niets over de mogelijkheid van een groepsboeking
   } else if (withRoom.length === 0) {
     summary = "Alle geplande momenten op deze dag zijn vol; wij vragen de aanbieder om een extra moment.";
   } else {
-    const fits = typeof groupSize === "number" && groupSize > 0 ? withRoom.filter((s) => s.remaining >= groupSize) : withRoom;
-    const list = (fits.length > 0 ? fits : withRoom)
-      .slice(0, 4)
-      .map((s) => `${s.time} (${s.remaining} ${s.remaining === 1 ? "plaats" : "plaatsen"})`)
-      .join(" · ");
-    summary = fits.length > 0
-      ? `Beschikbaar op deze dag: ${list}`
-      : `Op deze dag nog ${totalRemaining} losse plaatsen (${list}); voor uw groep vragen wij een eigen moment aan.`;
+    summary = fitsGroup
+      ? `Beschikbaar op deze dag: ${slotList}`
+      : `Op deze dag nog ${totalRemaining} losse plaatsen (${slotList}); voor uw groep vragen wij een eigen moment aan.`;
   }
-  return { hasMoments: slots.length > 0, slots, totalRemaining, summary };
+  return { hasMoments: slots.length > 0, slots, totalRemaining, summary, slotList, fitsGroup };
 }
