@@ -1,10 +1,28 @@
+import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CalendarOff, Mail, MapPin, Ship, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Container, Section, SectionHeader, Pill, Notice, type PillTone, type NoticeTone } from "@/components/system";
+import {
+  Container,
+  Section,
+  SectionHeader,
+  Pill,
+  Notice,
+  Stepper,
+  WizardFooter,
+  FormField,
+  OptionCard,
+  OptionGroup,
+  SuccessScreen,
+  SubmitNote,
+  EmptyState,
+  LoadingState,
+  type PillTone,
+  type NoticeTone,
+} from "@/components/system";
 
 /**
  * Referentiepagina van het ontwerpsysteem: alle tokens en componenten naast
@@ -40,6 +58,88 @@ const Swatch = ({ name, className, note }: { name: string; className: string; no
     <p className="text-xs text-muted-foreground">{note}</p>
   </div>
 );
+
+const DEMO_STEPS = [
+  { key: "basics", label: "Basisgegevens" },
+  { key: "template", label: "Voorbeeld" },
+  { key: "transport", label: "Vervoer en fietsen" },
+  { key: "program", label: "Programma" },
+  { key: "contact", label: "Gegevens" },
+];
+
+/** De funnelcomponenten van fase 2 naast elkaar, met één keuze die werkt. */
+const FunnelDemo = () => {
+  const [situation, setSituation] = useState<"wal" | "eiland">("wal");
+  return (
+    <div className="mt-10 space-y-8">
+      <div className="rounded-lg border border-border bg-card p-4">
+        <Stepper steps={DEMO_STEPS} current="transport" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardContent className="space-y-5 p-6">
+            <SectionHeader as="h3" size="md" weight="medium" title="Een wizardstap" intro="FormField, OptionCard en WizardFooter zoals in de programma-wizard." />
+            <FormField label="Aantal personen" htmlFor="demo-people" required leading={<Users />} help="Een schatting is genoeg.">
+              <Input type="number" defaultValue={20} className="w-40" />
+            </FormField>
+            <FormField label="E-mailadres" htmlFor="demo-email" required leading={<Mail />} error="Vul een geldig e-mailadres in.">
+              <Input type="email" defaultValue="erwin@" />
+            </FormField>
+            <FormField label="Bedrijf of organisatie" htmlFor="demo-company">
+              <Input placeholder="Optioneel" />
+            </FormField>
+            <OptionGroup label="Wat is de situatie?" columns={2}>
+              <OptionCard
+                selected={situation === "wal"}
+                onSelect={() => setSituation("wal")}
+                title="Wij komen vanaf de wal"
+                description="Wij regelen desgewenst de overtocht en fietsen."
+                icon={<Ship />}
+              />
+              <OptionCard
+                selected={situation === "eiland"}
+                onSelect={() => setSituation("eiland")}
+                title="Wij zijn al op Vlieland"
+                description="Een dag of dagdeel programma."
+                icon={<MapPin />}
+              />
+            </OptionGroup>
+            <WizardFooter onBack={() => undefined} onNext={() => undefined} nextLabel="Volgende: uw programma" />
+            <WizardFooter
+              onBack={() => undefined}
+              backLabel="Terug naar programma"
+              onNext={() => undefined}
+              nextLabel="Aanvraag versturen"
+              note={<SubmitNote />}
+              className="border-t border-border"
+            />
+          </CardContent>
+        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="p-6">
+              <SuccessScreen
+                title="Uw aanvraag is verstuurd"
+                intro="Controleer uw inbox voor de bevestigingsmail. Binnen 5 werkdagen ontvangt u een voorstel op maat."
+                reference="BV-2026-0418"
+                primary={{ label: "Bekijk uw programmapagina", to: "/ontwerp" }}
+                secondary={{ label: "Terug naar de homepage", to: "/" }}
+                className="py-2"
+              />
+            </CardContent>
+          </Card>
+          <EmptyState
+            icon={<CalendarOff />}
+            title="Nog geen onderdelen op deze dag"
+            description="Voeg een activiteit toe om te beginnen."
+            action={<Button variant="outline" size="sm">Activiteit toevoegen</Button>}
+          />
+          <LoadingState label="Beschikbaarheid ophalen…" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Ontwerp = () => (
   <div className="min-h-screen bg-background">
@@ -204,9 +304,16 @@ const Ontwerp = () => (
       </Container>
     </Section>
 
+    <Section tone="muted">
+      <Container size="wide">
+        <SectionHeader eyebrow="Componenten" number="06" title="Funnel" intro="Stepper, FormField, OptionCard, WizardFooter, SuccessScreen, EmptyState en LoadingState: één set voor alle aanvraagformulieren. Terug links, de volgende stap rechts, één primaire knop per scherm." />
+        <FunnelDemo />
+      </Container>
+    </Section>
+
     <Section tone="sand">
       <Container size="wide">
-        <SectionHeader eyebrow="Tokens" number="06" title="Vorm, schaduw en beweging" intro="Twee radii (4px en 8px) plus rond voor avatars en puntjes. Drie schaduwen. Beweging: 150ms hover, 300ms staat, 700ms entree, en niets bij prefers-reduced-motion." />
+        <SectionHeader eyebrow="Tokens" number="07" title="Vorm, schaduw en beweging" intro="Twee radii (4px en 8px) plus rond voor avatars en puntjes. Drie schaduwen. Beweging: 150ms hover, 300ms staat, 700ms entree, en niets bij prefers-reduced-motion." />
         <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="h-20 rounded-sm bg-card border flex items-center justify-center text-xs">rounded-sm · 4px</div>
           <div className="h-20 rounded-lg bg-card border flex items-center justify-center text-xs">rounded-lg · 8px</div>

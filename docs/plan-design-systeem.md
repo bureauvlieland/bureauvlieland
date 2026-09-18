@@ -4,8 +4,10 @@ Status: onderzoek afgerond 17 september 2026. Zes besluiten genomen op
 18 september (zie "Besluiten"), volgorde afgesproken (zie "Afgesproken
 volgorde"). Fase 0 gebouwd op 18 september (pull request 51), het
 wizard-vervolg op 18 september (pull request 52), fase 1 (fundament) op 18
+september (pull request 53), fase 2 deel 1 (de programma-wizard) op 18
 september. De levende referentie is voortaan `docs/design-systeem.md`.
-Volgende stap: fase 2 (funnel).
+Volgende stap: fase 2 deel 2 (de overige aanvraagformulieren, de zwevende
+laag, prijzen in de bouwer).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -538,6 +540,34 @@ fase). Meetbaar: wizard-stap-events naar GA4 (open roadmap-punt, zelfde
 mechanisme als `data-analytics-section`) vóór de wijziging aanzetten,
 zodat we voor/na per stap kunnen vergelijken.
 
+Fase 2 deel 1 is op 18 september gebouwd: de programma-wizard. Nieuwe
+componenten in `src/components/system`: `Stepper` (op een telefoon één
+regel met voortgangsbalk, daarboven genummerde cirkels), `WizardFooter`
+(Terug links, "Volgende: …" rechts, op de laatste stap "Aanvraag
+versturen" met `SubmitNote` eronder), `FormField` (label, icoon vooraan,
+hulptekst, foutmelding via `aria-describedby`), `OptionCard` en
+`OptionGroup` (keuzekaartjes als radiogroep), `SuccessScreen`,
+`SubmitNote`, `EmptyState` en `LoadingState`; `SectionHeader` kreeg
+`size` en `weight` zodat de funnel dezelfde kop gebruikt, iets kleiner
+en middelzwaar. Alle stappen van `/programma-samenstellen` staan erop:
+basisgegevens, voorbeeldprogramma, logies, vervoer en fietsen (of
+startpunt en fietsen), programma, gegevens en bevestiging. De foto-hero
+met Ken Burns is een rustige donkere kop geworden met de stappen eronder;
+`CheckoutStepIndicator` is weg, de knipperende "ping" bij het
+voorbeeldprogramma-banner ook; de bouwerknop "Overzicht en versturen"
+heet "Volgende: uw gegevens", de contactvelden hebben `autocomplete`, en
+de privacyregel is de ene `SubmitNote`. Bij een stapwissel scrolt de
+pagina naar de stappenbalk (de volgende-knop staat onderaan de vorige
+stap). Een echte fout op de telefoon is weg: de chatknop en de zwevende
+programma-knop stonden op de programmastap over "Volgende" heen; de vaste
+balk meldt nu zijn hoogte (`--floating-offset`) en de programma-knop is
+in de wizard zelf verborgen. Ontwerpschuld van 815 naar 806.
+Deel 2 van fase 2: de overige aanvraagformulieren (Snel aanvragen,
+Programma op maat, Logies, Catering, Offerte, Direct boeken) op dezelfde
+componenten, de zwevende laag (chat, programma-knop, vaste balk), sheets
+als bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer
+(ontwerpkeuze per stuk, per dag of totaal door Erwin).
+
 **Fase 3: landingspagina's als sjabloon (4–5 dagen).** Eén
 `LandingPage`-component gevoed door een inhoudsbestand per pagina
 (`src/content/landings/*.ts`: titel, intro, foto's, eilandfeiten, FAQ,
@@ -620,7 +650,9 @@ volgende begint.
 4. **Fase 2: funnel.** Hierin gaan ook de roadmap-punten "prijzen
    zichtbaar in de programma-bouwer" (ontwerpkeuze: per stuk, per dag of
    totaal) en de logiesstap-afronding mee, omdat het dezelfde schermen
-   zijn.
+   zijn. Deel 1 (de programma-wizard met de nieuwe componenten) is op 18
+   september gebouwd; deel 2 (overige formulieren, zwevende laag,
+   prijzen) volgt.
 5. **Fase 3: landingspagina's als sjabloon.** Hierin gaan mee: "reviews
    zichtbaarder maken" (concurrentiepositie punt 3, vaste plek voor
    reviews in het sjabloon), de "je"-teksten van de resterende pagina's,

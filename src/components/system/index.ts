@@ -1,7 +1,7 @@
 /**
- * Gedeelde bouwstenen van het ontwerpsysteem (fase 1). Zie
- * docs/design-systeem.md voor de regels en /ontwerp (buiten productie) voor
- * een overzicht naast elkaar.
+ * Gedeelde bouwstenen van het ontwerpsysteem. Zie docs/design-systeem.md
+ * voor de regels en /ontwerp (buiten productie) voor een overzicht naast
+ * elkaar.
  */
 export { Container, type ContainerSize } from "./Container";
 export { Section, type SectionTone, type SectionSpacing } from "./Section";
@@ -10,3 +10,10 @@ export { Pill, type PillProps } from "./Pill";
 export { pillVariants, type PillTone } from "./pillVariants";
 export { Notice, type NoticeTone } from "./Notice";
 export { SurfaceTheme } from "./SurfaceTheme";
+export { Stepper, type StepperStep } from "./Stepper";
+export { WizardFooter } from "./WizardFooter";
+export { FormField } from "./FormField";
+export { OptionCard, OptionGroup } from "./OptionCard";
+export { SuccessScreen } from "./SuccessScreen";
+export { SubmitNote } from "./SubmitNote";
+export { EmptyState, LoadingState } from "./States";

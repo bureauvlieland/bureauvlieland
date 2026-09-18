@@ -1,7 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { ArrowRight, ArrowLeft, BedDouble } from "lucide-react";
+import { BedDouble } from "lucide-react";
 import {
   ACCOMMODATION_TYPES,
   LOCATION_PREFERENCES,
@@ -9,6 +7,7 @@ import {
   type AccommodationWish,
   type AccommodationType,
 } from "@/types/accommodation";
+import { OptionCard, OptionGroup, SectionHeader, WizardFooter } from "@/components/system";
 
 interface AccommodationWishStepProps {
   numberOfPeople: number;
@@ -16,6 +15,7 @@ interface AccommodationWishStepProps {
   onChange: (wish: AccommodationWish) => void;
   onBack: () => void;
   onSubmit: () => void;
+  nextLabel?: string;
 }
 
 export const AccommodationWishStep = ({
@@ -24,6 +24,7 @@ export const AccommodationWishStep = ({
   onChange,
   onBack,
   onSubmit,
+  nextLabel = "Volgende: vervoer en fietsen",
 }: AccommodationWishStepProps) => {
   const handleWantedChange = (wanted: boolean) => {
     onChange(wanted ? { ...wish, wanted: true } : { wanted: false });
@@ -31,20 +32,19 @@ export const AccommodationWishStep = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-2">
-          Logies
-        </h2>
-        <p className="text-muted-foreground">
-          Wilt u dat wij ook een verblijf regelen voor uw groep van {numberOfPeople}? Wij zetten dit
-          apart voor u uit bij onze logiespartners — u kunt deze stap ook overslaan.
-        </p>
-      </div>
+      <SectionHeader
+        as="h2"
+        size="md"
+        weight="medium"
+        align="center"
+        title="Logies"
+        intro={`Wilt u dat wij ook een verblijf regelen voor uw groep van ${numberOfPeople}? Wij zetten dit apart voor u uit bij onze logiespartners. U kunt deze stap ook overslaan.`}
+      />
 
       <Card className="p-5">
         <div className="flex items-start gap-3 mb-4">
-          <div className="rounded-md bg-primary/10 text-primary p-2">
-            <BedDouble className="h-5 w-5" />
+          <div className="rounded-md bg-accent-soft text-primary p-2">
+            <BedDouble className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Verblijf op Vlieland</h3>
@@ -54,114 +54,69 @@ export const AccommodationWishStep = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-          <button
-            type="button"
-            onClick={() => handleWantedChange(true)}
-            className={cn(
-              "w-full text-left p-3 rounded-md border-2 transition-all",
-              wish.wanted ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-            )}
-          >
-            <p className="font-medium text-sm">Ja, graag</p>
-            <p className="text-xs text-muted-foreground">Wij regelen ook uw verblijf</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleWantedChange(false)}
-            className={cn(
-              "w-full text-left p-3 rounded-md border-2 transition-all",
-              !wish.wanted ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-            )}
-          >
-            <p className="font-medium text-sm">Nee, wij regelen dit zelf</p>
-            <p className="text-xs text-muted-foreground">Sla deze stap over — u kunt logies later nog aanvragen, deze keuze legt niets vast</p>
-          </button>
-        </div>
+        <OptionGroup label="Wilt u dat wij logies regelen?" columns={2}>
+          <OptionCard
+            selected={wish.wanted}
+            onSelect={() => handleWantedChange(true)}
+            title="Ja, graag"
+            description="Wij regelen ook uw verblijf."
+          />
+          <OptionCard
+            selected={!wish.wanted}
+            onSelect={() => handleWantedChange(false)}
+            title="Nee, wij regelen dit zelf"
+            description="Sla deze stap over. U kunt logies later nog aanvragen; deze keuze legt niets vast."
+          />
+        </OptionGroup>
 
         {wish.wanted && (
           <div className="mt-5 space-y-5 pt-5 border-t border-border">
-            <div>
-              <p className="text-sm font-medium text-foreground mb-2">Type verblijf</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {ACCOMMODATION_TYPES.map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => onChange({ ...wish, type: type.value as AccommodationType })}
-                    className={cn(
-                      "flex items-center gap-2.5 p-2.5 rounded-md border-2 text-left transition-all",
-                      wish.type === type.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <span className="text-xl">{type.icon}</span>
-                    <span className="text-sm font-medium">{type.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <OptionGroup label="Type verblijf" columns={2}>
+              {ACCOMMODATION_TYPES.map((type) => (
+                <OptionCard
+                  key={type.value}
+                  selected={wish.type === type.value}
+                  onSelect={() => onChange({ ...wish, type: type.value as AccommodationType })}
+                  title={type.label}
+                  icon={<span className="text-xl leading-none">{type.icon}</span>}
+                />
+              ))}
+            </OptionGroup>
 
-            <div>
-              <p className="text-sm font-medium text-foreground mb-2">Locatievoorkeur</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {LOCATION_PREFERENCES.map((loc) => (
-                  <button
-                    key={loc.value}
-                    type="button"
-                    onClick={() => onChange({ ...wish, locationPreference: loc.value })}
-                    className={cn(
-                      "flex flex-col items-center gap-1 p-2.5 rounded-md border-2 text-center transition-all",
-                      wish.locationPreference === loc.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <span className="text-lg">{loc.icon}</span>
-                    <span className="text-xs font-medium">{loc.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <OptionGroup label="Locatievoorkeur" columns={4}>
+              {LOCATION_PREFERENCES.map((loc) => (
+                <OptionCard
+                  key={loc.value}
+                  selected={wish.locationPreference === loc.value}
+                  onSelect={() => onChange({ ...wish, locationPreference: loc.value })}
+                  title={loc.label}
+                  icon={<span className="text-lg leading-none">{loc.icon}</span>}
+                  align="center"
+                />
+              ))}
+            </OptionGroup>
 
-            <div>
-              <p className="text-sm font-medium text-foreground mb-2">Budget per persoon per nacht</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {BUDGET_RANGES.map((budget) => (
-                  <button
-                    key={budget.value}
-                    type="button"
-                    onClick={() => onChange({ ...wish, budgetRange: budget.value })}
-                    className={cn(
-                      "p-2.5 rounded-md border-2 text-center text-xs font-medium transition-all",
-                      wish.budgetRange === budget.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    {budget.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <OptionGroup label="Budget per persoon per nacht" columns={3}>
+              {BUDGET_RANGES.map((budget) => (
+                <OptionCard
+                  key={budget.value}
+                  selected={wish.budgetRange === budget.value}
+                  onSelect={() => onChange({ ...wish, budgetRange: budget.value })}
+                  title={budget.label}
+                  align="center"
+                />
+              ))}
+            </OptionGroup>
 
             <p className="text-xs text-muted-foreground">
-              Na het versturen van uw programma nemen wij dit verder met u door — kamerverdeling en
+              Na het versturen van uw programma nemen wij dit verder met u door. Kamerverdeling en
               overige wensen bespreken we dan.
             </p>
           </div>
         )}
       </Card>
 
-      <div className="flex items-center justify-between pt-2">
-        <Button type="button" variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-1.5" /> Terug
-        </Button>
-        <Button type="button" size="lg" onClick={onSubmit}>
-          Verder naar vervoer <ArrowRight className="h-4 w-4 ml-1.5" />
-        </Button>
-      </div>
+      <WizardFooter onBack={onBack} onNext={onSubmit} nextLabel={nextLabel} />
     </div>
   );
 };

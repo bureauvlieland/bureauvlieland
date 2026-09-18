@@ -14,10 +14,10 @@ describe("wizardStepsFor", () => {
     ]);
   });
 
-  it("al op Vlieland: geen logies, stap heet Startpunt & fietsen", () => {
+  it("al op Vlieland: geen logies, stap heet Startpunt en fietsen", () => {
     const steps = wizardStepsFor({ situation: "op_vlieland", numberOfDays: 3 });
     expect(steps.map((s) => s.key)).toEqual(["basics", "template", "transport", "program", "contact", "success"]);
-    expect(steps.find((s) => s.key === "transport")?.label).toBe("Startpunt & fietsen");
+    expect(steps.find((s) => s.key === "transport")?.label).toBe("Startpunt en fietsen");
   });
 
   it("navigeert vooruit en terug langs de lijst", () => {

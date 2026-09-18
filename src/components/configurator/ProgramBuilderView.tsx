@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +129,8 @@ interface ProgramBuilderViewProps {
   onUpdateItem: (blockId: string, updates: Partial<CartItemDetail>) => void;
   onReorderItems: (items: CartItemDetail[]) => void;
   onSubmit: () => void;
+  /** Label van de knop in de vaste balk onderaan, bijvoorbeeld "Volgende: uw gegevens". */
+  submitLabel?: string;
   onUpdatePeople: (count: number) => void;
   onAddDate: (date: Date) => boolean;
   onRemoveDate: (dateIndex: number) => void;
@@ -184,6 +186,7 @@ export const ProgramBuilderView = ({
   onUpdateItem,
   onReorderItems,
   onSubmit,
+  submitLabel = "Volgende: uw gegevens",
   onUpdatePeople,
   onAddDate,
   onRemoveDate,
@@ -214,6 +217,16 @@ export const ProgramBuilderView = ({
     return suggestReplacement(problem, allBlocks, numberOfPeople, unavailabilityPeriods, cartItems.map((i) => i.blockId));
   };
   const footerInView = useFooterInView();
+
+  // De vaste balk onderaan meldt zijn hoogte, zodat de zwevende knoppen
+  // (chat, programma) erboven blijven en niet over "Volgende" heen staan.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--floating-offset", "5rem");
+    return () => {
+      root.style.removeProperty("--floating-offset");
+    };
+  }, []);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
@@ -316,7 +329,7 @@ export const ProgramBuilderView = ({
       {/* Header summary */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl font-display font-bold text-foreground">
+          <h2 className="font-display text-display-md font-medium text-foreground">
             {contactName ? `Programma van ${contactName}` : "Uw programma"}
           </h2>
           <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
@@ -396,12 +409,9 @@ export const ProgramBuilderView = ({
       {showTemplateBanner && (
         <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
           <div className="flex items-start gap-3 sm:gap-4">
-            <div className="relative shrink-0">
-              <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping" aria-hidden />
-              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <BookOpen className="h-4 w-4" />
-              </span>
-            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <BookOpen className="h-4 w-4" aria-hidden="true" />
+            </span>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-foreground text-sm sm:text-base">
                 Snel starten met een voorbeeldprogramma?
@@ -410,8 +420,8 @@ export const ProgramBuilderView = ({
                 Kies een kant-en-klaar programma van Bureau Vlieland en pas het aan naar uw wensen — u bespaart tijd en mist niets essentieels.
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <Button size="sm" className="gap-1.5" onClick={() => setIsTemplatesOpen(true)}>
-                  <BookOpen className="h-3.5 w-3.5" />
+                <Button size="sm" variant="secondary" onClick={() => setIsTemplatesOpen(true)}>
+                  <BookOpen aria-hidden="true" />
                   Bekijk voorbeeldprogramma's
                 </Button>
                 <Button size="sm" variant="ghost" onClick={dismissTemplateBanner}>
@@ -613,13 +623,14 @@ export const ProgramBuilderView = ({
                   {/* Add activity button */}
                   <Button
                     variant="outline"
-                    className="w-full gap-2 border-dashed h-12"
+                    size="lg"
+                    className="w-full border-dashed"
                     onClick={() => {
                       setActiveDay(dayIndex);
                       setIsAddSheetOpen(true);
                     }}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus aria-hidden="true" />
                     Activiteit toevoegen
                   </Button>
                 </div>
@@ -640,9 +651,9 @@ export const ProgramBuilderView = ({
           <p className="text-sm text-muted-foreground">
             {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
           </p>
-          <Button size="lg" className="gap-2" onClick={handleSubmitWithValidation} disabled={cartItems.length === 0}>
-            <ArrowRight className="h-4 w-4" />
-            Overzicht en versturen
+          <Button size="lg" onClick={handleSubmitWithValidation} disabled={cartItems.length === 0}>
+            {submitLabel}
+            <ArrowRight aria-hidden="true" />
           </Button>
         </div>
       </div>

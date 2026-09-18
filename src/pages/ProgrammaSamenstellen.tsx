@@ -3,10 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
-import { useKenBurns } from "@/hooks/use-ken-burns";
 import { BasicsForm, type BasicsFormData } from "@/components/configurator/BasicsForm";
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
-import { CheckoutStepIndicator } from "@/components/configurator/CheckoutStepIndicator";
+import { Container, Section, SectionHeader, Stepper } from "@/components/system";
 import { wizardStepsFor, nextWizardPhase, previousWizardPhase, type ConfigPhase } from "@/lib/wizardSteps";
 import { trackWizardStep } from "@/lib/analytics";
 import { TemplateSelector } from "@/components/configurator/TemplateSelector";
@@ -30,13 +29,22 @@ import {
   type TransportPreferences,
   type WizardSituation,
 } from "@/lib/programWizardCart";
-import heroImage from "@/assets/beach-signs.jpg";
 
 /** Vervoer en fietsen blijven staan als Erwin's voorstel de rest vervangt. */
 const KEEP_BLOCK_IDS = WIZARD_TRANSPORT_BLOCK_IDS;
 
+/**
+ * Label van de volgende-knop per stap die volgt; de Stepper-labels zijn
+ * kort ("Voorbeeld"), de knop noemt de stap voluit.
+ */
+const NEXT_LABELS: Partial<Record<ConfigPhase, string>> = {
+  template: "Volgende: voorbeeldprogramma's",
+  accommodation: "Volgende: logies",
+  program: "Volgende: uw programma",
+  contact: "Volgende: uw gegevens",
+};
+
 const ProgrammaSamenstellen = () => {
-  const kenBurns = useKenBurns();
   const { toast } = useToast();
 
   const {
@@ -98,6 +106,27 @@ const ProgrammaSamenstellen = () => {
     },
     [steps],
   );
+  // Bij elke stapwissel naar de stappenbalk scrollen: de volgende-knop staat
+  // onderaan de vorige stap, en de nieuwe stap moet bovenaan beginnen.
+  const stepperRef = useRef<HTMLDivElement>(null);
+  const scrolledPhase = useRef<ConfigPhase | null>(null);
+  useEffect(() => {
+    if (scrolledPhase.current === null) {
+      scrolledPhase.current = phase;
+      return;
+    }
+    if (scrolledPhase.current === phase) return;
+    scrolledPhase.current = phase;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    stepperRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [phase]);
+
+  const nextLabelFrom = (from: ConfigPhase): string => {
+    const next = nextWizardPhase(steps, from);
+    if (!next) return "Volgende";
+    const label = NEXT_LABELS[next] ?? `Volgende: ${steps.find((s) => s.key === next)?.label.toLowerCase() ?? ""}`;
+    return label.trim();
+  };
 
   // Eén event per getoonde stap, zodat we in GA4 zien waar mensen afhaken.
   // `steps` krijgt elke render een nieuwe identiteit; de sleutels als string
@@ -259,13 +288,11 @@ const ProgrammaSamenstellen = () => {
       return;
     }
     setPhase("contact");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmitSuccess = (token: string) => {
     setCustomerToken(token);
     setPhase("success");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const showHero = phase === "basics" || phase === "template" || phase === "accommodation" || phase === "transport" || phase === "program";
@@ -285,34 +312,36 @@ const ProgrammaSamenstellen = () => {
       <Navigation />
 
       <main id="main-content">
-        {/* Hero — only on basics + program phases */}
+        {/* Kop: alleen tijdens het samenstellen, niet bij gegevens en bevestiging */}
         {showHero && (
-          <section className="relative h-[40vh] min-h-[320px] flex items-center justify-center overflow-hidden">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${heroImage})`, ...kenBurns }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
-            </div>
-            <div className="relative z-10 text-center text-primary-foreground px-4 max-w-4xl">
-              <h1 className="text-4xl md:text-5xl font-display font-bold mb-3">
-                {phase === "basics" ? "Welkom bij Bureau Vlieland" : "Stel zelf uw programma samen"}
-              </h1>
-              <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
-                {phase === "basics"
-                  ? "Vertel ons in een paar stappen wat u wenst — wij stellen vrijblijvend een offerte op maat samen."
-                  : "Voeg activiteiten, catering en vervoer toe. Wij verwerken uw wensen tot een offerte."}
-              </p>
-            </div>
-          </section>
+          <Section tone="dark" spacing="compact">
+            <Container size="content">
+              <SectionHeader
+                as="h1"
+                size="lg"
+                onDark
+                eyebrow="Programma samenstellen"
+                title="Stel zelf uw programma samen"
+                intro={
+                  phase === "basics"
+                    ? "Vertel ons in een paar stappen wat u wenst. Wij maken er vrijblijvend een voorstel op maat van."
+                    : "Voeg activiteiten, catering en vervoer toe. Wij werken uw wensen uit tot een voorstel."
+                }
+              />
+            </Container>
+          </Section>
         )}
 
-        {/* Step indicator — visible on all phases */}
-        <CheckoutStepIndicator currentStep={phase} steps={steps} />
+        {/* Stappen, op elke fase zichtbaar */}
+        <div ref={stepperRef} className="scroll-mt-20 border-b border-border bg-background">
+          <Container size="content" className="py-4">
+            <Stepper steps={steps} current={phase} />
+          </Container>
+        </div>
 
-        {/* Content */}
-        <section className={`py-10 md:py-14 ${phase === "program" ? "pb-28" : ""}`}>
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+        {/* Inhoud van de stap */}
+        <Section spacing="compact" className={phase === "program" ? "pb-28" : undefined}>
+          <Container size="wide">
             {phase === "basics" && (
               <BasicsForm
                 onSubmit={handleBasicsSubmit}
@@ -320,6 +349,7 @@ const ProgrammaSamenstellen = () => {
                 templateDurationDays={templateData?.duration_days ?? null}
                 initialSituation={wizardSituation.situation}
                 initialNumberOfPeople={numberOfPeople}
+                nextLabel={nextLabelFrom(templateData ? "template" : "basics")}
               />
             )}
 
@@ -342,6 +372,7 @@ const ProgrammaSamenstellen = () => {
                 onChange={setAccommodationWish}
                 onBack={() => goBack("accommodation")}
                 onSubmit={() => goNext("accommodation")}
+                nextLabel={nextLabelFrom("accommodation")}
               />
             )}
 
@@ -353,6 +384,7 @@ const ProgrammaSamenstellen = () => {
                 numberOfDays={Math.max(1, selectedDates.length)}
                 onBack={() => goBack("transport")}
                 onSubmit={handleTransportSubmit}
+                nextLabel={nextLabelFrom("transport")}
               />
             )}
 
@@ -366,6 +398,7 @@ const ProgrammaSamenstellen = () => {
                 onUpdateItem={updateItem}
                 onReorderItems={reorderItems}
                 onSubmit={handleGoToContact}
+                submitLabel={nextLabelFrom("program")}
                 onUpdatePeople={setNumberOfPeople}
                 onAddDate={addDate}
                 onRemoveDate={removeDate}
@@ -402,8 +435,8 @@ const ProgrammaSamenstellen = () => {
                 cartItems={cartItems}
               />
             )}
-          </div>
-        </section>
+          </Container>
+        </Section>
       </main>
 
       <Footer />
