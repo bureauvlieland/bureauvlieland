@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Ship, Bike, ArrowRight, ArrowLeft, MapPin, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Ship, Bike, MapPin, Clock } from "lucide-react";
 import {
   type BikeChoice,
   type CrossingChoice,
@@ -20,6 +17,7 @@ import {
 } from "@/lib/programWizardCart";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { InfoTooltip } from "./InfoTooltip";
+import { FormField, OptionCard, OptionGroup, SectionHeader, WizardFooter } from "@/components/system";
 
 interface TransportBikesStepProps {
   situation: WizardSituation;
@@ -28,17 +26,11 @@ interface TransportBikesStepProps {
   numberOfDays: number;
   onBack: () => void;
   onSubmit: (prefs: TransportPreferences, situation: WizardSituation) => void;
+  nextLabel?: string;
 }
 
-const optionClass = (active: boolean, disabled = false) =>
-  cn(
-    "w-full text-left p-3 rounded-md border-2 transition-all",
-    active ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
-    disabled && "opacity-60 cursor-not-allowed hover:border-border",
-  );
-
 /**
- * Stap "Vervoer & fietsen" (vanaf de wal) of "Startpunt & fietsen" (al op
+ * Stap "Vervoer en fietsen" (vanaf de wal) of "Startpunt en fietsen" (al op
  * Vlieland). Eén component, omdat de fietsvraag in beide gevallen gelijk is.
  */
 export const TransportBikesStep = ({
@@ -48,6 +40,7 @@ export const TransportBikesStep = ({
   numberOfDays,
   onBack,
   onSubmit,
+  nextLabel = "Volgende: uw programma",
 }: TransportBikesStepProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
   const onIsland: boolean = initialSituation.situation === "op_vlieland";
@@ -128,22 +121,24 @@ export const TransportBikesStep = ({
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-2">
-          {onIsland ? "Startpunt & fietsen" : "Vervoer & fietsen"}
-        </h2>
-        <p className="text-muted-foreground">
-          {onIsland
+      <SectionHeader
+        as="h2"
+        size="md"
+        weight="medium"
+        align="center"
+        title={onIsland ? "Startpunt en fietsen" : "Vervoer en fietsen"}
+        intro={
+          onIsland
             ? `U bent al op Vlieland. Vertel ons waar uw groep van ${numberOfPeople} start en hoe laat, dan vullen wij ${numberOfDays > 1 ? "de dagen" : "de dag"} daarop in.`
-            : `Wij regelen de overtocht en fietsen op maat voor uw groep van ${numberOfPeople}. Uw keuzes hier zetten we alvast klaar in het programma.`}
-        </p>
-      </div>
+            : `Wij regelen de overtocht en fietsen op maat voor uw groep van ${numberOfPeople}. Uw keuzes hier zetten we alvast klaar in het programma.`
+        }
+      />
 
       {onIsland ? (
         <Card className="p-5">
           <div className="flex items-start gap-3 mb-4">
-            <div className="rounded-md bg-primary/10 text-primary p-2">
-              <MapPin className="h-5 w-5" />
+            <div className="rounded-md bg-accent-soft text-primary p-2">
+              <MapPin className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Startpunt en tijdvak</h3>
@@ -153,37 +148,29 @@ export const TransportBikesStep = ({
             </div>
           </div>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="start-location">Accommodatie of adres op Vlieland</Label>
+            <FormField label="Accommodatie of adres op Vlieland" htmlFor="start-location">
               <Input
-                id="start-location"
                 value={startLocation}
                 onChange={(e) => setStartLocation(e.target.value)}
                 placeholder="Bijv. Hotel Zeezicht, of Dorpsstraat 12"
                 maxLength={120}
               />
-            </div>
+            </FormField>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="start-time" className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Programma vanaf
-                </Label>
-                <Input id="start-time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="end-time" className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> tot
-                </Label>
-                <Input id="end-time" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
-              </div>
+              <FormField label="Programma vanaf" htmlFor="start-time" required leading={<Clock />}>
+                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+              </FormField>
+              <FormField label="tot" htmlFor="end-time" required leading={<Clock />}>
+                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+              </FormField>
             </div>
           </div>
         </Card>
       ) : (
         <Card className="p-5">
           <div className="flex items-start gap-3 mb-4">
-            <div className="rounded-md bg-primary/10 text-primary p-2">
-              <Ship className="h-5 w-5" />
+            <div className="rounded-md bg-accent-soft text-primary p-2">
+              <Ship className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Overtocht</h3>
@@ -192,38 +179,27 @@ export const TransportBikesStep = ({
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Overtocht">
+          <OptionGroup label="Overtocht" columns={2}>
             {crossingOptions.map((opt) => (
-              <button
+              <OptionCard
                 key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={crossing === opt.value}
-                aria-disabled={opt.disabled}
+                selected={crossing === opt.value}
+                onSelect={() => setCrossing(opt.value)}
                 disabled={opt.disabled}
-                onClick={() => !opt.disabled && setCrossing(opt.value)}
-                className={optionClass(crossing === opt.value, opt.disabled)}
-              >
-                <p className="font-medium text-sm">{opt.label}</p>
-                <p className="text-xs text-muted-foreground">{opt.description}</p>
-              </button>
+                title={opt.label}
+                description={opt.description}
+              />
             ))}
-          </div>
+          </OptionGroup>
 
           {crossing === "eigen" && (
             <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="arrival-time" className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Aankomst op Vlieland
-                </Label>
-                <Input id="arrival-time" type="time" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="departure-time" className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Vertrek {numberOfDays > 1 ? "op de laatste dag" : ""}
-                </Label>
-                <Input id="departure-time" type="time" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
-              </div>
+              <FormField label="Aankomst op Vlieland" htmlFor="arrival-time" leading={<Clock />}>
+                <Input type="time" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} />
+              </FormField>
+              <FormField label={numberOfDays > 1 ? "Vertrek op de laatste dag" : "Vertrek"} htmlFor="departure-time" leading={<Clock />}>
+                <Input type="time" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
+              </FormField>
               <p className="col-span-2 text-xs text-muted-foreground">Weet u het nog niet? Laat de velden dan leeg.</p>
             </div>
           )}
@@ -233,46 +209,39 @@ export const TransportBikesStep = ({
       {/* Bikes */}
       <Card className="p-5">
         <div className="flex items-start gap-3 mb-4">
-          <div className="rounded-md bg-primary/10 text-primary p-2">
-            <Bike className="h-5 w-5" />
+          <div className="rounded-md bg-accent-soft text-primary p-2">
+            <Bike className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Fietsen op Vlieland</h3>
-            <p className="text-sm text-muted-foreground">Vlieland is autoluw — vrijwel alles doet u op de fiets. Kies één type voor de hele groep.</p>
+            <p className="text-sm text-muted-foreground">Vlieland is autoluw, vrijwel alles doet u op de fiets. Kies één type voor de hele groep.</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Fietsen">
+        <OptionGroup label="Fietsen" columns={2}>
           {bikeOptions.map((opt) => (
-            <button
+            <OptionCard
               key={opt.value}
-              type="button"
-              role="radio"
-              aria-checked={bikeChoice === opt.value}
-              onClick={() => setBikeChoice(opt.value)}
-              className={optionClass(bikeChoice === opt.value)}
-            >
-              <p className="font-medium text-sm flex items-center gap-1.5">
-                {opt.label}
-                {opt.value === "geen" && (
-                  <InfoTooltip>
-                    Vlieland is grotendeels autovrij — zonder fietsen regelt u zelf vervoer voor uw groep.
-                  </InfoTooltip>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">{opt.description}</p>
-            </button>
+              selected={bikeChoice === opt.value}
+              onSelect={() => setBikeChoice(opt.value)}
+              title={
+                opt.value === "geen" ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    {opt.label}
+                    <InfoTooltip>
+                      Vlieland is grotendeels autovrij. Zonder fietsen regelt u zelf vervoer voor uw groep.
+                    </InfoTooltip>
+                  </span>
+                ) : (
+                  opt.label
+                )
+              }
+              description={opt.description}
+            />
           ))}
-        </div>
+        </OptionGroup>
       </Card>
 
-      <div className="flex items-center justify-between pt-2">
-        <Button type="button" variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-1.5" /> Terug
-        </Button>
-        <Button type="submit" size="lg">
-          Verder naar programma <ArrowRight className="h-4 w-4 ml-1.5" />
-        </Button>
-      </div>
+      <WizardFooter onBack={onBack} nextType="submit" nextLabel={nextLabel} />
     </form>
   );
 };

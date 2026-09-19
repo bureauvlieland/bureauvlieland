@@ -19,6 +19,10 @@ interface SectionHeaderProps {
   as?: "h1" | "h2" | "h3";
   /** Op een donkere sectie: lichte tekst en zand als eyebrow. */
   onDark?: boolean;
+  /** Grootte los van het kopniveau; standaard xl voor h1, lg voor h2, md voor h3. */
+  size?: "xl" | "lg" | "md";
+  /** `medium` voor de funnel (rustiger), `light` voor marketingpagina's. */
+  weight?: "light" | "medium";
   className?: string;
 }
 
@@ -30,9 +34,12 @@ export const SectionHeader = ({
   align = "left",
   as: Tag = "h2",
   onDark = false,
+  size,
+  weight = "light",
   className,
 }: SectionHeaderProps) => {
   const label = number ? `· ${number} — ${eyebrow ?? ""}`.trim() : eyebrow;
+  const effectiveSize = size ?? (Tag === "h1" ? "xl" : Tag === "h2" ? "lg" : "md");
   return (
     <div className={cn("max-w-3xl", align === "center" && "mx-auto text-center", className)}>
       {label && (
@@ -40,15 +47,24 @@ export const SectionHeader = ({
       )}
       <Tag
         className={cn(
-          "font-display font-light",
-          Tag === "h1" ? "text-display-xl" : Tag === "h2" ? "text-display-lg" : "text-display-md",
+          "font-display",
+          weight === "medium" ? "font-medium" : "font-light",
+          effectiveSize === "xl" ? "text-display-xl" : effectiveSize === "lg" ? "text-display-lg" : "text-display-md",
           onDark ? "text-primary-foreground" : "text-foreground",
         )}
       >
         {title}
       </Tag>
       {intro && (
-        <p className={cn("mt-5 text-lg leading-relaxed", onDark ? "text-sand/90" : "text-muted-foreground")}>{intro}</p>
+        <p
+          className={cn(
+            effectiveSize === "md" ? "mt-2 text-base" : "mt-5 text-lg",
+            "leading-relaxed",
+            onDark ? "text-sand/90" : "text-muted-foreground",
+          )}
+        >
+          {intro}
+        </p>
       )}
     </div>
   );

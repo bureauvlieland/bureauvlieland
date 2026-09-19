@@ -36,9 +36,9 @@ export const wizardStepsFor = ({
   ];
   if (situation === "vanaf_wal") {
     if (numberOfDays > 1) steps.push({ key: "accommodation", label: "Logies" });
-    steps.push({ key: "transport", label: "Vervoer & fietsen" });
+    steps.push({ key: "transport", label: "Vervoer en fietsen" });
   } else {
-    steps.push({ key: "transport", label: "Startpunt & fietsen" });
+    steps.push({ key: "transport", label: "Startpunt en fietsen" });
   }
   steps.push(
     { key: "program", label: "Programma" },

@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "./MultiDatePicker";
-import { ArrowRight, Users, Calendar, Eye, Ship, MapPin } from "lucide-react";
+import { Users, Calendar, Eye, Ship, MapPin } from "lucide-react";
 import { addDays } from "date-fns";
-import { cn } from "@/lib/utils";
 import type { GroupSituation } from "@/lib/programWizardCart";
+import { FormField, OptionCard, OptionGroup, SectionHeader, WizardFooter } from "@/components/system";
 
 export interface BasicsFormData {
   numberOfPeople: number;
@@ -20,6 +19,8 @@ interface BasicsFormProps {
   templateDurationDays?: number | null;
   initialSituation?: GroupSituation;
   initialNumberOfPeople?: number;
+  /** Label van de volgende-knop, bijvoorbeeld "Volgende: voorbeeldprogramma's". */
+  nextLabel?: string;
 }
 
 const SITUATION_OPTIONS: { value: GroupSituation; label: string; description: string; icon: typeof Ship }[] = [
@@ -43,6 +44,7 @@ export const BasicsForm = ({
   templateDurationDays,
   initialSituation = "vanaf_wal",
   initialNumberOfPeople = 20,
+  nextLabel = "Volgende",
 }: BasicsFormProps) => {
   const [numberOfPeople, setNumberOfPeople] = useState(initialNumberOfPeople);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -77,81 +79,58 @@ export const BasicsForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6">
-      <div className="text-center mb-8">
-        {templateName && (
-          <p className="text-xs uppercase tracking-[0.2em] text-primary mb-3 font-semibold">
-            Voorbeeldprogramma · {templateName}
-          </p>
-        )}
-        <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-          {templateName ? "Wanneer en met hoeveel personen?" : "Hoeveel personen en welke datum(s)?"}
-        </h2>
-        <p className="text-muted-foreground">
-          {templateName
+      <SectionHeader
+        as="h2"
+        size="md"
+        weight="medium"
+        align="center"
+        eyebrow={templateName ? `Voorbeeldprogramma · ${templateName}` : undefined}
+        title={templateName ? "Wanneer en met hoeveel personen?" : "Hoeveel personen en welke datum(s)?"}
+        intro={
+          templateName
             ? `Kies uw startdatum${templateDurationDays && templateDurationDays > 1 ? ` (${templateDurationDays} dagen worden automatisch ingevuld)` : ""} en aantal personen. Daarna laden wij dit programma voor u in.`
-            : "Daarna kunt u direct activiteiten toevoegen aan uw programma."}
-        </p>
-      </div>
+            : "Daarna kunt u direct activiteiten toevoegen aan uw programma."
+        }
+        className="mb-8"
+      />
 
-      {/* Group size */}
-      <div className="space-y-2">
-        <Label htmlFor="basics-people" className="flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Aantal personen
-        </Label>
+      <FormField label="Aantal personen" htmlFor="basics-people" required leading={<Users />}>
         <Input
-          id="basics-people"
           type="number"
           min={1}
           max={500}
           value={numberOfPeople}
           onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
           required
-          className="w-32"
+          className="w-40"
         />
-      </div>
+      </FormField>
 
-      {/* Situation: bepaalt welke stappen volgen (vervoer of startpunt) */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <MapPin className="h-4 w-4" />
-          Wat is de situatie?
-        </Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Situatie van de groep">
-          {SITUATION_OPTIONS.map((opt) => {
-            const Icon = opt.icon;
-            const active = situation === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => setSituation(opt.value)}
-                className={cn(
-                  "w-full text-left p-3 rounded-md border-2 transition-all flex items-start gap-2.5",
-                  active ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                )}
-              >
-                <Icon className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                <span>
-                  <span className="block font-medium text-sm">{opt.label}</span>
-                  <span className="block text-xs text-muted-foreground">{opt.description}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Situatie: bepaalt welke stappen volgen (vervoer of startpunt) */}
+      <OptionGroup label="Wat is de situatie?" name="Situatie van de groep" columns={2}>
+        {SITUATION_OPTIONS.map((opt) => {
+          const Icon = opt.icon;
+          return (
+            <OptionCard
+              key={opt.value}
+              selected={situation === opt.value}
+              onSelect={() => setSituation(opt.value)}
+              title={opt.label}
+              description={opt.description}
+              icon={<Icon />}
+            />
+          );
+        })}
+      </OptionGroup>
 
       {/* Dates */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
+      <div className="space-y-1.5">
+        <Label className="flex items-center gap-1.5">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
           Datum(s)
         </Label>
         <p className="text-xs text-muted-foreground">
-          Selecteer één of meerdere aaneensluitende dagen — of sla over en kijk eerst rond.
+          Selecteer één of meer aaneensluitende dagen, of sla over en kijk eerst rond.
         </p>
         <MultiDatePicker
           selectedDates={selectedDates}
@@ -160,16 +139,7 @@ export const BasicsForm = ({
         />
       </div>
 
-      {/* Submit */}
-      <Button
-        type="submit"
-        size="lg"
-        className="w-full gap-2 text-base"
-        disabled={!isValid}
-      >
-        Stel uw programma samen
-        <ArrowRight className="h-5 w-5" />
-      </Button>
+      <WizardFooter nextType="submit" nextLabel={nextLabel} nextDisabled={!isValid} />
 
       {/* Skip-date escape hatch */}
       {canSkipDate && !templateName && (
@@ -178,8 +148,8 @@ export const BasicsForm = ({
           onClick={handleSkipDate}
           className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
         >
-          <Eye className="h-4 w-4" />
-          Ik weet de datum nog niet — laat me eerst rondkijken
+          <Eye className="h-4 w-4" aria-hidden="true" />
+          Ik weet de datum nog niet, laat me eerst rondkijken
         </button>
       )}
     </form>

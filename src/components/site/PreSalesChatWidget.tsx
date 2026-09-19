@@ -93,6 +93,8 @@ export const PreSalesChatWidget = () => {
 
   if (hideOnPortal) return null;
 
+  // In de wizard zelf is de programma-knop dubbelop: de bezoeker is er al.
+  const onWizard = location.pathname === "/programma-samenstellen";
   const cartCount = cart?.cartItems.length ?? 0;
   const itemJustAdded = cart?.itemJustAdded;
   const waHref = buildWhatsAppHref({
@@ -110,11 +112,12 @@ export const PreSalesChatWidget = () => {
           in beeld komt, anders staan ze over de footer-links heen. Al
           geopend chat-paneel blijft gewoon staan. */}
       <div
-        className={`fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 transition-opacity duration-200 ${
+        className={`fixed right-4 z-40 flex flex-col items-end gap-3 transition-opacity duration-200 ${
           footerInView && !open ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
+        style={{ bottom: "calc(1rem + var(--floating-offset, 0px))" }}
       >
-        {cartCount > 0 && (
+        {cartCount > 0 && !onWizard && (
           <Link to="/programma-samenstellen" aria-label="Uw programma">
             <Button
               size="lg"
@@ -145,7 +148,11 @@ export const PreSalesChatWidget = () => {
       {/* Panel */}
       {open && (
         <div
-          className="fixed bottom-24 right-4 z-40 w-[min(380px,calc(100vw-2rem))] max-h-[calc(100vh-8rem)] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="fixed right-4 z-40 w-[min(380px,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200"
+          style={{
+            bottom: "calc(6rem + var(--floating-offset, 0px))",
+            maxHeight: "calc(100vh - 8rem - var(--floating-offset, 0px))",
+          }}
           role="dialog"
           aria-label="Pre-sales chat"
         >

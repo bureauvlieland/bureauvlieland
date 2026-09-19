@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { format, subHours } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { CartItemDetail } from "@/types/buildingBlock";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
-import { Loader2, ArrowLeft, User, Mail, Phone, Building2, AlertCircle, RotateCcw } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, User, Mail, Phone, Building2, RotateCcw } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { FormField, Notice, SectionHeader, SubmitNote, WizardFooter } from "@/components/system";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
@@ -533,182 +533,138 @@ export const CheckoutContactForm = ({
   const isFormValid = !fieldErrors.name && !fieldErrors.email && !fieldErrors.phone;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Button variant="ghost" onClick={onBack} className="mb-6 -ml-2 gap-2">
-        <ArrowLeft className="h-4 w-4" />
-        Terug naar programma
-      </Button>
+    <div className="max-w-2xl mx-auto space-y-8">
+      {/* Zo werkt het */}
+      <HowItWorksBlock />
 
-      <div className="space-y-8">
-        {/* How it works */}
-        <HowItWorksBlock />
+      {/* Contactgegevens */}
+      <Card className="p-6 md:p-8">
+        <SectionHeader
+          as="h2"
+          size="md"
+          weight="medium"
+          title="Uw gegevens"
+          intro="Vul uw contactgegevens in, dan sturen wij u een voorstel."
+          className="mb-6"
+        />
 
-        {/* Contact form */}
-        <div className="bg-card border border-border rounded-xl p-6 md:p-8">
-          <h2 className="text-xl font-display font-semibold mb-1">Uw gegevens</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Vul uw contactgegevens in zodat wij u een voorstel kunnen sturen.
-          </p>
-
-          <form onSubmit={checkForDuplicateAndSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Naam *</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    required
-                    placeholder="Uw volledige naam"
-                    className="pl-10"
-                    maxLength={100}
-                  />
-                </div>
-                {touched.name && fieldErrors.name && (
-                  <p className="text-sm font-medium text-destructive">{fieldErrors.name}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="company">Bedrijf / Organisatie</Label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="company"
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    placeholder="Optioneel"
-                    className="pl-10"
-                    maxLength={100}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mailadres *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    required
-                    placeholder="uw@email.nl"
-                    className="pl-10"
-                    maxLength={255}
-                  />
-                </div>
-                {touched.email && fieldErrors.email && (
-                  <p className="text-sm font-medium text-destructive">{fieldErrors.email}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-1.5">
-                  Mobiel nummer (06) *
-                  <InfoTooltip>
-                    We gebruiken dit nummer om u snel te bereiken via WhatsApp of sms, bijvoorbeeld bij vragen over de planning.
-                  </InfoTooltip>
-                </Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    required
-                    placeholder="+31 6 12345678"
-                    className="pl-10"
-                    maxLength={20}
-                  />
-                </div>
-                {touched.phone && fieldErrors.phone && (
-                  <p className="text-sm font-medium text-destructive">{fieldErrors.phone}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Opmerkingen</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                value={formData.notes}
+        <form onSubmit={checkForDuplicateAndSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Naam" htmlFor="name" required leading={<User />} error={touched.name && fieldErrors.name}>
+              <Input
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
-                placeholder="Bijzonderheden, wensen of vragen..."
-                rows={3}
+                onBlur={handleBlur}
+                required
+                placeholder="Uw volledige naam"
+                autoComplete="name"
+                maxLength={100}
               />
-            </div>
+            </FormField>
+            <FormField label="Bedrijf of organisatie" htmlFor="company" leading={<Building2 />}>
+              <Input
+                name="company"
+                value={formData.company}
+                onChange={handleChange}
+                placeholder="Optioneel"
+                autoComplete="organization"
+                maxLength={100}
+              />
+            </FormField>
+          </div>
 
-            {/* Privacy notice */}
-            <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-              <p>
-                Door deze aanvraag te versturen gaat u akkoord met onze{" "}
-                <a href="/algemene-voorwaarden" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-                  algemene voorwaarden
-                </a>
-                . Uw gegevens worden alleen gebruikt voor het verwerken van deze aanvraag.
-              </p>
-            </div>
-
-            {submitError && (
-              <Alert variant="destructive" className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <AlertTitle>
-                    {submitError.toLowerCase().includes("geen onderdelen") || submitError.toLowerCase().includes("geen activiteiten")
-                      ? "Geen onderdelen geselecteerd"
-                      : "Aanvraag niet verzonden"}
-                  </AlertTitle>
-                  <AlertDescription>{submitError}</AlertDescription>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => executeSubmit()}
-                  disabled={isSubmitting}
-                  className="gap-2 shrink-0"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RotateCcw className="h-3.5 w-3.5" />
-                  )}
-                  Opnieuw proberen
-                </Button>
-              </Alert>
-            )}
-
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={isSubmitting || !isFormValid}
-            >
-              {isSubmitting ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="E-mailadres" htmlFor="email" required leading={<Mail />} error={touched.email && fieldErrors.email}>
+              <Input
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                required
+                placeholder="uw@email.nl"
+                autoComplete="email"
+                maxLength={255}
+              />
+            </FormField>
+            <FormField
+              label={
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Versturen...
+                  Mobiel nummer (06)
+                  <InfoTooltip>
+                    Wij gebruiken dit nummer om u snel te bereiken via WhatsApp of sms, bijvoorbeeld bij vragen over de planning.
+                  </InfoTooltip>
                 </>
-              ) : (
-                "Aanvraag versturen"
-              )}
-            </Button>
-          </form>
-        </div>
-      </div>
+              }
+              htmlFor="phone"
+              required
+              leading={<Phone />}
+              error={touched.phone && fieldErrors.phone}
+            >
+              <Input
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                required
+                placeholder="+31 6 12345678"
+                autoComplete="tel"
+                maxLength={20}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Opmerkingen" htmlFor="notes">
+            <Textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              placeholder="Bijzonderheden, wensen of vragen"
+              rows={3}
+            />
+          </FormField>
+
+          {submitError && (
+            <Notice
+              tone="danger"
+              title={
+                submitError.toLowerCase().includes("geen onderdelen") || submitError.toLowerCase().includes("geen activiteiten")
+                  ? "Geen onderdelen geselecteerd"
+                  : "Aanvraag niet verzonden"
+              }
+            >
+              <p>{submitError}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => executeSubmit()}
+                disabled={isSubmitting}
+                className="mt-3"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                )}
+                Opnieuw proberen
+              </Button>
+            </Notice>
+          )}
+
+          <WizardFooter
+            onBack={onBack}
+            backLabel="Terug naar programma"
+            nextType="submit"
+            nextLabel="Aanvraag versturen"
+            nextDisabled={!isFormValid}
+            nextLoading={isSubmitting}
+            note={<SubmitNote />}
+          />
+        </form>
+      </Card>
 
       <AlertDialog open={duplicateWarningOpen} onOpenChange={setDuplicateWarningOpen}>
         <AlertDialogContent>
@@ -739,7 +695,7 @@ export const CheckoutContactForm = ({
               {isResendingLink ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Versturen...
+                  Versturen…
                 </>
               ) : (
                 "Stuur mij de link naar mijn lopende aanvraag"

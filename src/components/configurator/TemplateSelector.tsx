@@ -3,7 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Sparkles, ChevronLeft, Clock, Users, CalendarIcon } from "lucide-react";
+import { Sparkles, ArrowLeft, Clock, Users, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTemplatesWithItemsByDuration, fetchTemplateWithItems } from "@/hooks/useProgramTemplates";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { ProgramTemplate } from "@/types/programTemplate";
 import { transformImageUrl } from "@/lib/supabaseImage";
+import { SectionHeader } from "@/components/system";
 
 interface TemplateSelectorProps {
   durationDays: number;
@@ -165,18 +166,19 @@ export const TemplateSelector = ({
 
   return (
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
-          {inspirationMode
-            ? "Ter inspiratie: bekijk een voorbeeldprogramma"
-            : "Kies een voorbeeldprogramma"}
-        </h2>
-        <p className="text-muted-foreground">
-          {inspirationMode
-            ? "Kies een programma dat u aanspreekt, of ga direct verder"
-            : "Pas het naar wens aan, of start leeg"}
-        </p>
-      </div>
+      <SectionHeader
+        as="h2"
+        size="md"
+        weight="medium"
+        align="center"
+        title={inspirationMode ? "Ter inspiratie: bekijk een voorbeeldprogramma" : "Kies een voorbeeldprogramma"}
+        intro={
+          inspirationMode
+            ? "Kies een programma dat u aanspreekt, of ga direct verder."
+            : "Pas het daarna naar wens aan, of start leeg."
+        }
+        className="mb-6"
+      />
 
       {/* Inline basics picker */}
       {showInlineBasics && (
@@ -357,9 +359,9 @@ export const TemplateSelector = ({
         </Card>
       </div>
 
-      <div className="flex justify-between pt-4">
-        <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ChevronLeft className="h-4 w-4" />
+      <div className="pt-4">
+        <Button type="button" variant="ghost" onClick={onBack} className="w-full sm:w-auto">
+          <ArrowLeft aria-hidden="true" />
           Terug
         </Button>
       </div>
