@@ -314,35 +314,48 @@ Deno.serve(async (req) => {
       ),
     );
 
-    // 10) Terugkoppeling uit Mailjet komt binnen én matcht op onze verzendingen
+    // 10) Terugkoppeling uit Mailjet komt binnen voor ónze verzendingen.
+    //     Gemeten vanuit de verzendingen, niet vanuit de events: van de mails
+    //     die wij tussen 24 en 1 uur geleden met een MessageID hebben
+    //     verstuurd, hoeveel hebben minstens één event (afgeleverd, geopend,
+    //     geklikt, gebounced, geblokkeerd)? Vroeger telden we de events en
+    //     keken we of die op een verzending matchten; op een rustige dag
+    //     waren de enige events dan opens van maanden oude mails (of van een
+    //     ander project op hetzelfde Mailjet-account) en ging er onterecht
+    //     een alarm uit terwijl de keten gewoon werkte.
     results.push(
       await timed(
         "webhook_match_ratio",
-        "Terugkoppeling e-mail (webhook-matchratio, 24 uur)",
+        "Terugkoppeling e-mail (verzendingen met terugkoppeling, 24 uur)",
         "warning",
-        "Bekijk /admin/email-health → Webhook: komen er events binnen en matchen ze op email_log? 0% match = MessageID's kloppen niet.",
+        "Bekijk /admin/email-health → Webhook: komen er events binnen? Geen enkele recente verzending met terugkoppeling = webhook-URL en token in Mailjet controleren.",
         async () => {
           const since = new Date(Date.now() - 86_400_000).toISOString();
+          // Mailjet meldt "sent" meestal binnen een minuut; een uur speling
+          // voorkomt dat een zojuist verstuurde mail als "zonder
+          // terugkoppeling" telt.
+          const until = new Date(Date.now() - 3_600_000).toISOString();
           const { data, error } = await admin
-            .from("email_webhook_events")
-            .select("matched, match_reason")
-            .gte("received_at", since);
+            .from("email_log")
+            .select("delivered_at, opened_at, clicked_at, bounced_at, blocked_at, spam_at, mailjet_events")
+            .not("mailjet_message_id", "is", null)
+            .not("sent_at", "is", null)
+            .gte("sent_at", since)
+            .lte("sent_at", until)
+            .limit(1000);
           if (error) throw new Error(error.message);
-          const rows = (data ?? []) as Array<{ matched: boolean; match_reason: string | null }>;
-          // Events voor adressen die wij nooit hebben aangeschreven horen bij
-          // een ander project op hetzelfde Mailjet-account; die tellen niet mee.
-          const foreign = rows.filter((r) => r.match_reason === "foreign_account").length;
-          const own = rows.filter((r) => r.match_reason !== "foreign_account");
-          const total = own.length;
-          const suffix = foreign > 0 ? ` (+${foreign} van ander account genegeerd)` : "";
-          if (total === 0) return `geen eigen events ontvangen in 24 uur (geen meting)${suffix}`;
-          const matched = own.filter((r) => r.matched === true).length;
-          if (matched === 0) {
-            throw new Error(`${total} eigen events ontvangen, 0 gekoppeld aan een verzending${suffix}`);
-          }
-          return `${matched}/${total} events gekoppeld${suffix}`;
+          const rows = (data ?? []) as Array<Record<string, unknown>>;
+          if (rows.length === 0) return "geen verzendingen met MessageID in het venster (geen meting)";
+          const hasFeedback = (r: Record<string, unknown>) =>
+            !!(r.delivered_at || r.opened_at || r.clicked_at || r.bounced_at || r.blocked_at || r.spam_at) ||
+            (Array.isArray(r.mailjet_events) && r.mailjet_events.length > 0);
+          const withFeedback = rows.filter(hasFeedback).length;
+          const detail = `${withFeedback}/${rows.length} verzendingen met terugkoppeling`;
+          // Eén of twee mails zonder event zegt nog niets (kan een trage
+          // ontvanger zijn); vanaf drie is stilte verdacht.
+          if (withFeedback === 0 && rows.length >= 3) throw new Error(detail);
+          return rows.length < 3 && withFeedback === 0 ? `${detail} (te weinig voor een oordeel)` : detail;
         },
-
       ),
     );
 

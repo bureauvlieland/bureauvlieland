@@ -327,22 +327,23 @@ const Programmas = () => {
       </main>
       <FaqSection
         schemaId="samenwerken"
+        title="Veelgestelde vragen van samenwerkingspartners"
         items={[
             {
-              question: "Hoe word ik partner van Bureau Vlieland?",
-              answer: "Neem contact met ons op via hallo@bureauvlieland.nl. Na een kennismaking krijg je toegang tot het partnerportaal waarin je je aanbod en beschikbaarheid beheert.",
+              question: "Voor wie is deze samenwerking bedoeld?",
+              answer: "Voor trainers, coaches en evenementenbureaus van de vaste wal die hun klanten of deelnemers naar Vlieland brengen. U verzorgt de inhoud, wij de uitvoering op het eiland. Aanbieders op Vlieland zelf (logies, activiteiten, horeca) zijn eilandpartners; daarvoor gelden andere afspraken.",
             },
             {
-              question: "Wat kost een samenwerking?",
-              answer: "Bureau Vlieland rekent een commissie over de geboekte omzet exclusief btw. Er zijn geen abonnements- of aanmeldkosten.",
+              question: "Hoe zijn commissie en facturatie geregeld?",
+              answer: "Dat spreken we per samenwerking af, passend bij uw rol en die van ons. Wie de klant factureert en welke vergoeding of commissie daar tegenover staat, leggen we vooraf vast, zodat iedereen weet waar hij aan toe is.",
             },
             {
-              question: "Hoe verloopt de facturatie?",
-              answer: "Bureau Vlieland factureert de klant centraal. Jij stuurt je factuur naar ons en wij betalen uit volgens de afgesproken termijn.",
+              question: "Wat verzorgt Bureau Vlieland precies?",
+              answer: "De lokale organisatie: accommodatie, vergader- en buitenlocaties, catering, vervoer op het eiland en de coördinatie tijdens het programma. Wij kennen de eilandpartners persoonlijk en boeken alles voor u.",
             },
             {
-              question: "Bepaal ik zelf mijn tarieven en beschikbaarheid?",
-              answer: "Ja. Je beheert je eigen bouwstenen, prijzen en beschikbaarheid in het partnerportaal en accepteert of weigert elke aanvraag zelf.",
+              question: "Hoe start een samenwerking?",
+              answer: "Neem contact op via hallo@bureauvlieland.nl of het contactformulier. Na een kennismaking maken we afspraken over de rolverdeling, commissie en facturatie en werken we uw eerste programma samen uit.",
             },
         ]}
       />

@@ -1,10 +1,10 @@
 // Save a program draft and email the visitor a cross-device recovery link.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3.22.4";
-import { SENDER_EMAIL, SENDER_NAME, isTestMode, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
-const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
-const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -76,31 +76,6 @@ const buildEmailHtml = (recoveryUrl: string, itemCount: number) => `
   </table>
 </body>
 </html>`;
-
-const sendMailjet = async (to: string, subject: string, html: string) => {
-  if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
-    console.warn("MAILJET_NOT_CONFIGURED — draft saved but email not sent");
-    return false;
-  }
-  const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
-  const r = await fetch("https://api.mailjet.com/v3.1/send", {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      Messages: [{
-        From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-        To: [{ Email: to }],
-        Subject: subject,
-        HTMLPart: html,
-      }],
-    }),
-  });
-  if (!r.ok) {
-    console.error("Mailjet error", await r.text());
-    return false;
-  }
-  return true;
-};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -181,12 +156,39 @@ Deno.serve(async (req: Request) => {
       const origin = getOrigin(req);
       const recoveryUrl = `${origin}/concept/${token}`;
       const itemCount = Array.isArray(payload.cartItems) ? payload.cartItems.length : 0;
-      const prefix = isTestMode() ? getSubjectPrefix() : "";
-      await sendMailjet(
-        email,
-        `${prefix}Uw programma staat klaar — Bureau Vlieland`,
-        buildEmailHtml(recoveryUrl, itemCount),
-      );
+      const subject = `${getSubjectPrefix(origin)}Uw programma staat klaar — Bureau Vlieland`;
+      const html = buildEmailHtml(recoveryUrl, itemCount);
+      // Via de gedeelde verzender (blokkadelijst, exacte MessageID) en gelogd
+      // volgens het e-mail-logging-contract; zonder logregel kon de
+      // terugkoppeling van Mailjet op deze mail nergens op matchen.
+      const recipient = getRecipientEmail(email, origin);
+      const result = await sendMailjet({
+        source: "save-program-draft",
+        messages: [{
+          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+          To: [{ Email: recipient }],
+          Subject: subject,
+          HTMLPart: html,
+        }],
+      });
+      await logEmail({
+        email_type: "program_draft_link",
+        subject,
+        recipient_email: recipient,
+        status: result.ok ? "sent" : "failed",
+        error_message: result.ok ? undefined : result.error,
+        mailjet_message_id: result.ok ? (result.messageId ?? undefined) : undefined,
+        sent_by: "system",
+        html_body: html,
+        metadata: {
+          template_name: "program_draft_link",
+          actor: "system → klant (concept bewaard)",
+          draft_id: draftId,
+          item_count: itemCount,
+          skipped: result.ok ? (result.skipped ?? null) : null,
+        },
+      });
+      if (!result.ok) console.error("save-program-draft: mail niet verstuurd:", result.error);
     }
 
     return new Response(JSON.stringify({ token, emailSent: shouldSendEmail }), {

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, ExternalLink, Globe, MapPin, Calendar } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -281,6 +282,29 @@ const Partners = () => {
           </div>
         </section>
       </main>
+
+      <FaqSection
+        schemaId="eilandpartners"
+        title="Zelf eilandpartner worden?"
+        items={[
+          {
+            question: "Hoe word ik eilandpartner van Bureau Vlieland?",
+            answer: "Neem contact met ons op via hallo@bureauvlieland.nl. Na een kennismaking krijgt u toegang tot het partnerportaal waarin u uw aanbod en beschikbaarheid beheert.",
+          },
+          {
+            question: "Wat kost een samenwerking?",
+            answer: "Bureau Vlieland rekent een commissie over de geboekte omzet exclusief btw. Er zijn geen abonnements- of aanmeldkosten.",
+          },
+          {
+            question: "Hoe verloopt de facturatie?",
+            answer: "Bureau Vlieland factureert de klant centraal. U stuurt uw factuur naar ons en wij betalen uit volgens de afgesproken termijn.",
+          },
+          {
+            question: "Bepaal ik zelf mijn tarieven en beschikbaarheid?",
+            answer: "Ja. U beheert uw eigen bouwstenen, prijzen en beschikbaarheid in het partnerportaal en accepteert of weigert elke aanvraag zelf.",
+          },
+        ]}
+      />
 
       <Footer />
     </div>
