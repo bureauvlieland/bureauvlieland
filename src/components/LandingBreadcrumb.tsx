@@ -19,8 +19,8 @@ interface LandingBreadcrumbProps {
 
 export const LandingBreadcrumb = ({ items }: LandingBreadcrumbProps) => {
   return (
-    <nav aria-label="Breadcrumb" className="bg-muted/30 py-3 border-b border-border">
-      <div className="container mx-auto px-4">
+    <nav aria-label="Kruimelpad" className="border-b border-border bg-background">
+      <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>

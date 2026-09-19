@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, resolve } from "path";
+import { LANDING_PATHS } from "../../content/landings/paths";
 
 const SRC = resolve(process.cwd(), "src");
 const APP_TSX = join(SRC, "App.tsx");
@@ -35,6 +36,8 @@ function extractRoutes() {
       exact.add(path);
     }
   }
+  // Landingspagina's staan niet letterlijk in App.tsx maar komen uit de registry.
+  if (src.includes("LANDING_PATHS.map(")) for (const p of LANDING_PATHS) exact.add(p);
   return { exact, prefixes };
 }
 

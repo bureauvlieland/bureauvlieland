@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
-import { getEntryPage } from "@/lib/entryPageTracker";
+import { buildAttribution, getEntryPage } from "@/lib/entryPageTracker";
 import { MultiDatePicker } from "@/components/configurator/MultiDatePicker";
 import {
   Container,
@@ -130,6 +130,7 @@ const ProgrammaOpMaat = () => {
           origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
           program_description: `Maatwerk ${programType}${wantsAccommodation ? " — logies gewenst" : ""}`,
           invoicing_mode: "bureau_central",
+          attribution: buildAttribution(),
         });
 
       if (insertError) throw insertError;

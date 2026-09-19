@@ -10,6 +10,7 @@ import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { CartProvider } from "@/contexts/CartContext";
+import { LANDING_PATHS } from "@/content/landings/paths";
 import { PreSalesChatWidget } from "@/components/site/PreSalesChatWidget";
 import { FeatureGate } from "@/components/FeatureGate";
 import { recordEntryPage } from "@/lib/entryPageTracker";
@@ -42,20 +43,11 @@ const Partners = lazy(() => import("./pages/Partners"));
 const Programmas = lazy(() => import("./pages/Programmas"));
 const Evenementen = lazy(() => import("./pages/Evenementen"));
 const Offerte = lazy(() => import("./pages/Offerte"));
-const BedrijfsuitjeVlieland = lazy(() => import("./pages/BedrijfsuitjeVlieland"));
-const TeamuitjeVlieland = lazy(() => import("./pages/TeamuitjeVlieland"));
-const MeerdaagsBedrijfsuitjeVlieland = lazy(() => import("./pages/MeerdaagsBedrijfsuitjeVlieland"));
-const HeisessieVlieland = lazy(() => import("./pages/HeisessieVlieland"));
-const BedrijfsuitjeIdeeenVlieland = lazy(() => import("./pages/BedrijfsuitjeIdeeenVlieland"));
-const IncentiveReisVlieland = lazy(() => import("./pages/IncentiveReisVlieland"));
-const ZakelijkEvenementVlieland = lazy(() => import("./pages/ZakelijkEvenementVlieland"));
+const LandingRoute = lazy(() => import("./components/landing/LandingRoute"));
 const ExternalRedirect = ({ to }: { to: string }) => {
   if (typeof window !== "undefined") window.location.replace(to);
   return null;
 };
-const GroepsweekendVlieland = lazy(() => import("./pages/GroepsweekendVlieland"));
-const JubileumVlieland = lazy(() => import("./pages/JubileumVlieland"));
-const FamilieweekendVlieland = lazy(() => import("./pages/FamilieweekendVlieland"));
 const ProgrammaSamenstellen = lazy(() => import("./pages/ProgrammaSamenstellen"));
 const SnelAanvragen = lazy(() => import("./pages/SnelAanvragen"));
 const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
@@ -193,17 +185,10 @@ const App = () => {
             <Route path="/offerte" element={<Offerte />} />
             <Route path="/algemene-voorwaarden" element={<Terms />} />
             <Route path="/partner-voorwaarden" element={<PartnerTerms />} />
-            <Route path="/bedrijfsuitje-vlieland" element={<BedrijfsuitjeVlieland />} />
-            <Route path="/teamuitje-vlieland" element={<TeamuitjeVlieland />} />
-            <Route path="/meerdaags-bedrijfsuitje-vlieland" element={<MeerdaagsBedrijfsuitjeVlieland />} />
-            <Route path="/heisessie-vlieland" element={<HeisessieVlieland />} />
-            <Route path="/bedrijfsuitje-ideeen-vlieland" element={<BedrijfsuitjeIdeeenVlieland />} />
-            <Route path="/incentive-reis-vlieland" element={<IncentiveReisVlieland />} />
-            <Route path="/zakelijk-evenement-vlieland" element={<ZakelijkEvenementVlieland />} />
+            {LANDING_PATHS.map((path) => (
+              <Route key={path} path={path} element={<LandingRoute path={path} />} />
+            ))}
             <Route path="/trouwen-op-vlieland" element={<ExternalRedirect to="https://www.vlieland.nl/trouwen-op-vlieland" />} />
-            <Route path="/groepsweekend-vlieland" element={<GroepsweekendVlieland />} />
-            <Route path="/jubileum-vlieland" element={<JubileumVlieland />} />
-            <Route path="/familieweekend-vlieland" element={<FamilieweekendVlieland />} />
             <Route path="/programma-samenstellen" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <ProgrammaSamenstellen />
