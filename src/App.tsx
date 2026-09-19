@@ -10,7 +10,7 @@ import { SiteStructuredData } from "@/components/seo/SiteStructuredData";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { CartProvider } from "@/contexts/CartContext";
-import { LANDING_PATHS } from "@/content/landings/paths";
+import { ALL_LANDING_PATHS } from "@/content/landings/paths";
 import { PreSalesChatWidget } from "@/components/site/PreSalesChatWidget";
 import { FeatureGate } from "@/components/FeatureGate";
 import { recordEntryPage } from "@/lib/entryPageTracker";
@@ -36,8 +36,6 @@ const LinksPage = lazy(() => import("./pages/Links"));
 
 const Bouwstenen = lazy(() => import("./pages/Bouwstenen"));
 const ActiviteitDetail = lazy(() => import("./pages/ActiviteitDetail"));
-const WadlopenVlieland = lazy(() => import("./pages/WadlopenVlieland"));
-const ZeehondentochtenVlieland = lazy(() => import("./pages/ZeehondentochtenVlieland"));
 const ActiviteitenVlieland = lazy(() => import("./pages/ActiviteitenVlieland"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Programmas = lazy(() => import("./pages/Programmas"));
@@ -165,8 +163,6 @@ const App = () => {
             <Route path="/samenwerken" element={<Programmas />} />
             <Route path="/bouwstenen" element={<Bouwstenen />} />
             <Route path="/activiteit/:slug" element={<ActiviteitDetail />} />
-            <Route path="/wadlopen-vlieland" element={<WadlopenVlieland />} />
-            <Route path="/zeehondentochten-vlieland" element={<ZeehondentochtenVlieland />} />
             <Route path="/activiteiten-vlieland" element={<ActiviteitenVlieland />} />
             <Route path="/programmamodules" element={<Navigate to="/voorbeeldprogrammas" replace />} />
             <Route path="/sitemap" element={<Sitemap />} />
@@ -185,7 +181,7 @@ const App = () => {
             <Route path="/offerte" element={<Offerte />} />
             <Route path="/algemene-voorwaarden" element={<Terms />} />
             <Route path="/partner-voorwaarden" element={<PartnerTerms />} />
-            {LANDING_PATHS.map((path) => (
+            {ALL_LANDING_PATHS.map((path) => (
               <Route key={path} path={path} element={<LandingRoute path={path} />} />
             ))}
             <Route path="/trouwen-op-vlieland" element={<ExternalRedirect to="https://www.vlieland.nl/trouwen-op-vlieland" />} />

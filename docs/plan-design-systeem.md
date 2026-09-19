@@ -10,9 +10,10 @@ aanvraagformulieren) op 19 september (pull request 55), fase 2 deel 3
 (zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september. De
 levende referentie is voortaan `docs/design-systeem.md`. De prijzen in de
 bouwer staan er sinds 19 september per stuk (besluit Erwin); daarmee is
-fase 2 af. Fase 3 deel 1 (de tien landingspagina's op één sjabloon) is op
-19 september gebouwd. Volgende stap: fase 3 deel 2 (Wadlopen en
-Zeehondentochten als tweede variant), daarna fase 4.
+fase 2 af. Fase 3 is op 19 september gebouwd: deel 1 (de tien
+landingspagina's op één sjabloon, pull request 57) en deel 2 (Wadexcursie
+en Zeehondentocht als activiteitvariant van hetzelfde sjabloon). Volgende
+stap: fase 4 (overige pagina's en homepage).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -642,8 +643,18 @@ voorbeeldprogramma's op de pagina's komen uit de database (gefilterd op
 dagen waar dat past), de reviews hebben een vaste plek, "je/jullie" is
 "u" geworden (een test bewaakt het), en de attributie (instappagina) gaat
 nu ook bij Programma op maat met de aanvraag mee. Ontwerpschuld 800 → 716.
-Wat nog volgt in fase 3 (deel 2): Wadlopen en Zeehondentochten als
-tweede variant met boekpaneel.
+Fase 3 deel 2 is op 19 september gebouwd: Wadexcursie en Zeehondentocht
+zijn de activiteitvariant `ActivityPage` van hetzelfde sjabloon, met een
+inhoudsbestand per pagina (`kind: "activity"`). Zelfde opbouw als de
+landingspagina's, plus de kaart "In het kort" (`FactList` met samenvatting
+en iconen, in plaats van `KeyFacts`), een boekblok dat direct boekt zodra
+de bouwsteen aan de boekmodule hangt en anders naar het aanvraagformulier
+stuurt, TouristTrip-structured data en een mobiele knop naar het boekblok.
+Geen keuzeblok: de actie is hier boeken. De feitenbewaking
+(`scripts/validate-activity-facts.ts`) leest nu de inhoudsbestanden en
+controleert die in hun geheel; in de oude pagina's las hij door een fout
+in de extractie alleen het `KeyFacts`-blok, niet de FAQ. "Je" is "u"
+geworden. Daarmee is fase 3 af.
 
 **Fase 3: landingspagina's als sjabloon (4–5 dagen).** Eén
 `LandingPage`-component gevoed door een inhoudsbestand per pagina
@@ -736,8 +747,8 @@ volgende begint.
    reviews in het sjabloon), de "je"-teksten van de resterende pagina's,
    en de attributie per landingspagina uit `plan-frontend-usability.md`
    fase 3. Deel 1 (de tien landingspagina's op één sjabloon, met reviews,
-   "u" en attributie) is op 19 september gebouwd; deel 2 (Wadlopen en
-   Zeehondentochten) volgt.
+   "u" en attributie) en deel 2 (Wadexcursie en Zeehondentocht als
+   activiteitvariant) zijn op 19 september gebouwd. Fase 3 is af.
 6. **Fase 4: overige pagina's en homepage.** Hierin gaan de open
    homepage-bevindingen van 11 september mee (sectienummers, Testimonials
    naar voren, overlappende secties beoordelen met de GA4-sectiedata).

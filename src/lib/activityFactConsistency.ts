@@ -11,10 +11,10 @@
  * (`scripts/validate-activity-facts.ts`) als de vitest-suite hem gebruikt.
  */
 
-/** Landingspagina → slug in `activityContent`. */
+/** Inhoudsbestand van de activiteitpagina → slug in `activityContent`. */
 export const ACTIVITY_PAGE_MAP: { file: string; slug: string }[] = [
-  { file: "src/pages/ZeehondentochtenVlieland.tsx", slug: "zeehondentocht" },
-  { file: "src/pages/WadlopenVlieland.tsx", slug: "wadloopexcursie" },
+  { file: "src/content/landings/zeehondentochten-vlieland.ts", slug: "zeehondentocht" },
+  { file: "src/content/landings/wadlopen-vlieland.ts", slug: "wadloopexcursie" },
 ];
 
 export type FactKind = "duur" | "prijs" | "groepsgrootte";
@@ -87,10 +87,13 @@ const LABELS: Record<FactKind, (n: number) => string> = {
 };
 
 /**
- * Haalt de te controleren tekst uit een pagina-bronbestand:
- * de `const FAQ = [...]`-array en het `<KeyFacts ... />`-blok.
+ * Haalt de te controleren tekst uit een bronbestand. Een inhoudsbestand
+ * (`src/content/landings/*.ts`) is in zijn geheel inhoud en wordt dus
+ * helemaal gecontroleerd; in een oude pagina-component telden alleen de
+ * `const FAQ = [...]`-array en het `<KeyFacts ... />`-blok.
  */
 export const extractPageFactText = (source: string): string => {
+  if (!source.includes("const FAQ") && !source.includes("<KeyFacts")) return source;
   const parts: string[] = [];
 
   const faqStart = source.indexOf("const FAQ");
