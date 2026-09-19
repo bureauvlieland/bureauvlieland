@@ -56,15 +56,16 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `Pill` | Status- en infolabel met toon `neutral`/`info`/`success`/`warning`/`danger`/`purple`/`brand` | `MicroPill` (oude naam, werkt nog), losse `Badge`-kleuren, gekleurde `<p>` |
 | `Notice` | Melding in de pagina met toon `info`/`success`/`warning`/`danger` | Gekleurde `div`s met eigen rand en achtergrond |
 | `SurfaceTheme` | Zet `data-surface` op `public` of `portal` per route | – |
-| `Stepper` | Stappen van een wizard: op een telefoon één regel met voortgangsbalk, vanaf `sm` genummerde cirkels met labels. Merkblauw, niet de actiekleur | Eigen stappenrijen per formulier (`CheckoutStepIndicator` is weg) |
+| `FunnelHead` | De kop van elke funnelpagina: donkere band met eyebrow, h1 en intro, zonder foto of beweging | Foto-hero's met Ken Burns, gekleurde koppen met badge en USP-iconen |
+| `Stepper` in een `StepperBar` | Stappen van een wizard: op een telefoon één regel met voortgangsbalk, vanaf `sm` genummerde cirkels met labels. Merkblauw, niet de actiekleur. `StepperBar` is de balk op volle breedte onder de `FunnelHead`; geef een `ref` mee voor `useScrollOnStepChange` | Eigen stappenrijen en voortgangsbalken per formulier (`CheckoutStepIndicator` is weg) |
 | `WizardFooter` | Onder elke stap: Terug links (ghost), de volgende stap rechts (primair, `size="lg"`), op een telefoon gestapeld met de primaire knop bovenaan. `nextType="submit"` in een formulier, anders `onNext`; `nextLoading` toont "Versturen…"; `note` voor de regel eronder | Losse `flex justify-between`-rijen met eigen knoppen |
 | `FormField` | Label (met `*` bij verplicht, optioneel wordt nooit gemarkeerd), icoon vooraan via `leading`, hulptekst, foutmelding die de hulptekst vervangt; zet `id`, `aria-invalid` en `aria-describedby` op het veld | `Label` + `Input` + losse rode `<p>` |
-| `OptionCard` in een `OptionGroup` | "Kies één"-vragen als kaartjes: `role="radio"` in een `radiogroup`, titel, omschrijving, icoon, `align="center"` voor korte opties, 1–4 kolommen | Eigen `<button>`-kaarten met `border-primary bg-primary/5` |
+| `OptionCard` in een `OptionGroup` | "Kies één"-vragen als kaartjes (`role="radio"` in een `radiogroup`) en met `selection="multiple"` "kies meerdere" (`role="checkbox"`): titel, omschrijving, icoon, `align="center"` voor korte opties, 1–4 kolommen. Laat het `label` weg als een kop erboven de vraag al stelt en geef dan `name` | Eigen `<button>`-kaarten met `border-primary bg-primary/5`, `RadioGroup` met gestylede `Label`s |
 | `SuccessScreen` | Na versturen: wat er is gebeurd, wat er nu gebeurt (`intro`), referentie, één primaire en één secundaire vervolgstap | Eigen bevestigingsschermen, aftellingen en automatische doorverwijzingen |
 | `SubmitNote` | De regel onder een verstuurknop: vrijblijvend, de responstijd uit `src/content/promises.ts`, de voorwaarden | Eigen privacy- en voorwaardenregels per formulier |
 | `EmptyState` / `LoadingState` | Lege lijst met icoon, tekst en actie; laadstatus met spinner en `aria-live` | Losse "Geen …"-teksten, eigen spinners |
 
-Nog te bouwen (fase 2 deel 2 en fase 3): `FloatingLayer`, `PageHero`,
+Nog te bouwen (fase 2 deel 3 en fase 3): `FloatingLayer`, `PageHero`,
 `RouteChooser`, `MediaCard`, `FactList`, `PersonQuote`, `Faq`,
 `Breadcrumb`.
 
@@ -86,9 +87,13 @@ Nog te bouwen (fase 2 deel 2 en fase 3): `FloatingLayer`, `PageHero`,
   uit voor wie dat wil.
 - Eén toastsysteem (sonner via `useToast`). Eén meldingscomponent in de
   pagina (`Notice`).
-- Wizards: `Stepper` bovenaan, `WizardFooter` onder elke stap (Terug links,
-  "Volgende: …" rechts, op een telefoon gestapeld met de primaire knop
-  bovenaan), bij een stapwissel scrollt de pagina naar de stappenbalk.
+- Elke funnelpagina begint met een `FunnelHead`; een wizard heeft daaronder
+  een `StepperBar`. Elk aanvraagformulier eindigt met een `WizardFooter`
+  (Terug links, "Volgende: …" rechts, op de laatste stap "Aanvraag
+  versturen" met de `SubmitNote` eronder; op een telefoon gestapeld met de
+  primaire knop bovenaan) en na versturen een `SuccessScreen` in de pagina,
+  zonder aftelling of automatische doorverwijzing. Bij een stapwissel
+  scrollt de pagina naar de stappenbalk (`useScrollOnStepChange`).
   Koppen in de funnel: `SectionHeader` met `size="md"` en
   `weight="medium"`, en "en" in plaats van "&" (de Fraunces-ampersand oogt
   als een vreemd teken).

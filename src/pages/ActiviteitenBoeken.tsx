@@ -7,14 +7,14 @@ import { nl } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Container, EmptyState, FunnelHead, LoadingState, Section } from "@/components/system";
 import { MapActivityCard, type BundledTime } from "@/components/map/MapActivityCard";
 import { MapActivityDetailSheet } from "@/components/map/MapActivityDetailSheet";
 import { MapBookingDialog } from "@/components/map/MapBookingDialog";
 
 import { useAllMapActivities, type MapActivity } from "@/hooks/useMapActivities";
-import { Search, CalendarDays, Ticket, Loader2 } from "lucide-react";
+import { Search, CalendarDays } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -182,27 +182,14 @@ const ActiviteitenBoeken = () => {
       <Navigation />
 
       <main id="main-content" className="min-h-screen bg-background">
-        {/* Hero */}
-        <section className="bg-primary/5 border-b">
-          <div className="container mx-auto px-4 py-12 md:py-16">
-            <div className="max-w-2xl">
-              <Badge variant="secondary" className="mb-4">
-                <Ticket className="h-3.5 w-3.5 mr-1.5" />
-                Direct boekbaar
-              </Badge>
-              <h1 className="text-3xl md:text-4xl font-bold mb-3">
-                Activiteiten op Vlieland
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Ontdek en boek direct beschikbare activiteiten bij onze partners.
-                U boekt rechtstreeks bij de aanbieder.
-              </p>
-            </div>
-          </div>
-        </section>
+        <FunnelHead
+          eyebrow="Direct boekbaar"
+          title="Activiteiten op Vlieland"
+          intro="Ontdek en boek direct beschikbare activiteiten bij onze partners. U boekt rechtstreeks bij de aanbieder."
+        />
 
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
+        <Section spacing="compact">
+          <Container size="wide" className="flex flex-col lg:flex-row gap-8">
             {/* Sidebar filters */}
             <aside className="lg:w-72 flex-shrink-0 space-y-4">
               <Card>
@@ -252,15 +239,12 @@ const ActiviteitenBoeken = () => {
                   ))}
                 </div>
               ) : filtered.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    <CalendarDays className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                    <p className="font-medium">Geen activiteiten gevonden</p>
-                    <p className="text-sm mt-1">
-                      Probeer een andere datum of zoekterm.
-                    </p>
-                  </CardContent>
-                </Card>
+                <EmptyState
+                  icon={<CalendarDays />}
+                  title="Geen activiteiten gevonden"
+                  description="Probeer een andere datum of zoekterm."
+                  className="py-12"
+                />
               ) : (
                 <>
                   {grouped.map(([dateKey, bundles]) => (
@@ -300,10 +284,7 @@ const ActiviteitenBoeken = () => {
                   {!selectedDate && (
                     <div ref={sentinelRef} className="py-6 text-center text-sm text-muted-foreground">
                       {isFetching ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Meer activiteiten laden…
-                        </span>
+                        <LoadingState label="Meer activiteiten laden…" className="py-0" />
                       ) : daysWindow >= MAX_DAYS ? (
                         <span>Alles geladen (komende {MAX_DAYS} dagen)</span>
                       ) : (
@@ -314,8 +295,8 @@ const ActiviteitenBoeken = () => {
                 </>
               )}
             </div>
-          </div>
-        </div>
+          </Container>
+        </Section>
       </main>
 
       <MapActivityDetailSheet

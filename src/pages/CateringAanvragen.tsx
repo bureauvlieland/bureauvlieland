@@ -5,6 +5,7 @@ import { RelatedLinks } from "@/components/RelatedLinks";
 import { Helmet } from "react-helmet";
 import { useSearchParams } from "react-router-dom";
 import { CateringQuickRequest } from "@/components/catering/CateringQuickRequest";
+import { Container, FunnelHead, Section } from "@/components/system";
 
 const CateringAanvragen = () => {
   const [params] = useSearchParams();
@@ -23,20 +24,16 @@ const CateringAanvragen = () => {
       <div className="min-h-screen flex flex-col">
         <Navigation />
         <main id="main-content" className="flex-1 bg-background">
-          <section className="border-b bg-muted/30">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-10">
-              <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
-                Catering aanvragen
-              </h1>
-              <p className="text-muted-foreground mt-2">
-                Vertel ons kort wat u zoekt. Wij komen {RESPONSE_TIME.within} met een voorstel op maat —
-                vrijblijvend en zonder verplichtingen. <span className="font-medium text-foreground">Aanvragen graag minimaal 7 dagen vóór de gewenste datum.</span>
-              </p>
-            </div>
-          </section>
-          <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-10">
-            <CateringQuickRequest initialType={type} />
-          </section>
+          <FunnelHead
+            eyebrow="Catering"
+            title="Catering aanvragen"
+            intro={`Vertel ons kort wat u zoekt, dan komen wij ${RESPONSE_TIME.within} met een voorstel op maat. Aanvragen graag minimaal 7 dagen vóór de gewenste datum.`}
+          />
+          <Section spacing="compact">
+            <Container size="prose">
+              <CateringQuickRequest initialType={type} />
+            </Container>
+          </Section>
         </main>
         <RelatedLinks />
         <Footer />
@@ -46,4 +43,3 @@ const CateringAanvragen = () => {
 };
 
 export default CateringAanvragen;
-

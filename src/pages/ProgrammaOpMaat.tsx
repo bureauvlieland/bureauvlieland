@@ -1,17 +1,15 @@
 import { RESPONSE_TIME } from "@/content/promises";
 import { useState } from "react";
 import { Helmet } from "react-helmet";
+import { Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { useKenBurns } from "@/hooks/use-ken-burns";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, CheckCircle, ArrowRight, Users, Calendar as CalIcon, Building2, Heart, Sparkles, MessageSquareHeart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Building2, Calendar as CalendarIcon, Heart, Mail, Phone, User, Users } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { z } from "zod";
@@ -21,7 +19,18 @@ import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { getEntryPage } from "@/lib/entryPageTracker";
 import { MultiDatePicker } from "@/components/configurator/MultiDatePicker";
-import heroImage from "@/assets/beach-signs.jpg";
+import {
+  Container,
+  FormField,
+  FunnelHead,
+  OptionCard,
+  OptionGroup,
+  Section,
+  SectionHeader,
+  SubmitNote,
+  SuccessScreen,
+  WizardFooter,
+} from "@/components/system";
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Vul uw naam in (min. 2 tekens)").max(100),
@@ -34,7 +43,6 @@ const formSchema = z.object({
 type ProgramType = "zakelijk" | "prive";
 
 const ProgrammaOpMaat = () => {
-  const kenBurns = useKenBurns();
   const { toast } = useToast();
 
   const [programType, setProgramType] = useState<ProgramType>("zakelijk");
@@ -199,246 +207,147 @@ const ProgrammaOpMaat = () => {
       <Navigation />
 
       <main id="main-content">
-        {/* Hero */}
-        <section className="relative h-[40vh] min-h-[320px] flex items-center justify-center overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${heroImage})`, ...kenBurns }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
-          </div>
-          <div className="relative z-10 text-center text-primary-foreground px-4 max-w-4xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-sm mb-3">
-              <MessageSquareHeart className="h-4 w-4" />
-              Wij stellen het voor u samen
-            </div>
-            <h1 className="text-4xl md:text-5xl font-display font-bold mb-3">
-              Programma op maat
-            </h1>
-            <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
-              Liever niet zelf puzzelen? Laat uw wensen achter — wij sturen {RESPONSE_TIME.within} een persoonlijk voorstel.
-            </p>
-          </div>
-        </section>
+        {!isSuccess && (
+          <FunnelHead
+            eyebrow="Programma op maat"
+            title="Laat ons uw programma samenstellen"
+            intro={`Liever niet zelf puzzelen? Vertel ons uw wensen, dan sturen wij ${RESPONSE_TIME.within} een persoonlijk voorstel.`}
+          />
+        )}
 
-        <section className="py-10 md:py-14">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+        <Section spacing="compact">
+          <Container size="prose">
             {isSuccess ? (
-              <div className="text-center py-12 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-display font-bold mb-2">Aanvraag verzonden</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Bedankt! Wij nemen zo snel mogelijk contact met u op om uw programma te bespreken. Een bevestiging staat ook in uw inbox.
-                </p>
-                {customerToken && (
-                  <Link to={`/mijn-programma/${customerToken}`}>
-                    <Button size="lg">
-                      Volg uw aanvraag
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                )}
-              </div>
+              <SuccessScreen
+                title="Uw aanvraag is verstuurd"
+                intro={`Controleer uw inbox voor de bevestigingsmail. ${RESPONSE_TIME.sentence} Op uw programmapagina volgt u de stand van zaken.`}
+                primary={customerToken ? { label: "Bekijk uw programmapagina", to: `/mijn-programma/${customerToken}` } : undefined}
+                secondary={{ label: "Terug naar de homepage", to: "/" }}
+              />
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Type */}
-                <Card>
-                  <CardContent className="p-6 space-y-4">
-                    <div>
-                      <h2 className="font-display text-lg font-semibold">Type aanvraag</h2>
-                      <p className="text-sm text-muted-foreground">Kies wat het beste past.</p>
-                    </div>
-                    <RadioGroup
-                      value={programType}
-                      onValueChange={(v) => setProgramType(v as ProgramType)}
-                      className="grid sm:grid-cols-2 gap-3"
-                    >
-                      <Label
-                        htmlFor="t-zakelijk"
-                        className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
-                          programType === "zakelijk" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
-                        }`}
-                      >
-                        <RadioGroupItem id="t-zakelijk" value="zakelijk" className="mt-1" />
-                        <div>
-                          <div className="flex items-center gap-2 font-semibold">
-                            <Building2 className="h-4 w-4" /> Zakelijk
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Bedrijfsuitje, teambuilding, heisessie, incentive
-                          </p>
-                        </div>
-                      </Label>
-                      <Label
-                        htmlFor="t-prive"
-                        className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
-                          programType === "prive" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
-                        }`}
-                      >
-                        <RadioGroupItem id="t-prive" value="prive" className="mt-1" />
-                        <div>
-                          <div className="flex items-center gap-2 font-semibold">
-                            <Heart className="h-4 w-4" /> Privé
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Trouwen, jubileum, familie- of vriendenweekend
-                          </p>
-                        </div>
-                      </Label>
-                    </RadioGroup>
-                  </CardContent>
+                <Card className="p-5 sm:p-6">
+                  <SectionHeader as="h2" size="md" weight="medium" title="Type aanvraag" intro="Kies wat het beste past." className="mb-4" />
+                  <OptionGroup name="Type aanvraag" columns={2}>
+                    <OptionCard
+                      selected={programType === "zakelijk"}
+                      onSelect={() => setProgramType("zakelijk")}
+                      title="Zakelijk"
+                      description="Bedrijfsuitje, teambuilding, heisessie, incentive"
+                      icon={<Building2 />}
+                    />
+                    <OptionCard
+                      selected={programType === "prive"}
+                      onSelect={() => setProgramType("prive")}
+                      title="Privé"
+                      description="Trouwen, jubileum, familie- of vriendenweekend"
+                      icon={<Heart />}
+                    />
+                  </OptionGroup>
                 </Card>
 
-                {/* Group + dates */}
-                <Card>
-                  <CardContent className="p-6 space-y-5">
-                    <div>
-                      <h2 className="font-display text-lg font-semibold">Wanneer en met hoeveel</h2>
-                      <p className="text-sm text-muted-foreground">Datums zijn nog vrijblijvend en aanpasbaar.</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="people" className="flex items-center gap-2">
-                        <Users className="h-4 w-4" /> Aantal personen
-                      </Label>
+                {/* Groep en datums */}
+                <Card className="p-5 sm:p-6">
+                  <SectionHeader
+                    as="h2"
+                    size="md"
+                    weight="medium"
+                    title="Wanneer en met hoeveel personen?"
+                    intro="Datums zijn nog vrijblijvend en aanpasbaar."
+                    className="mb-4"
+                  />
+                  <div className="space-y-5">
+                    <FormField label="Aantal personen" htmlFor="maat-personen" required leading={<Users />}>
                       <Input
-                        id="people"
                         type="number"
                         min={1}
                         max={500}
                         value={numberOfPeople}
                         onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-32"
+                        className="w-40"
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <CalIcon className="h-4 w-4" /> Datum(s)
+                    </FormField>
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        Datum(s)
+                        <span className="text-destructive" aria-hidden="true">
+                          *
+                        </span>
                       </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Selecteer één of meerdere aaneensluitende dagen.
-                      </p>
-                      <MultiDatePicker
-                        selectedDates={selectedDates}
-                        onAddDate={handleAddDate}
-                        onRemoveDate={handleRemoveDate}
-                      />
+                      <p className="text-xs text-muted-foreground">Selecteer één of meer aaneensluitende dagen.</p>
+                      <MultiDatePicker selectedDates={selectedDates} onAddDate={handleAddDate} onRemoveDate={handleRemoveDate} />
                     </div>
                     {isMultiDay && (
-                      <div className="flex items-start gap-3 p-4 bg-muted/40 rounded-lg">
-                        <input
-                          id="lodging"
-                          type="checkbox"
+                      <label htmlFor="maat-logies" className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4">
+                        <Checkbox
+                          id="maat-logies"
                           checked={wantsAccommodation}
-                          onChange={(e) => setWantsAccommodation(e.target.checked)}
-                          className="mt-1 h-4 w-4"
+                          onCheckedChange={(v) => setWantsAccommodation(v === true)}
+                          className="mt-0.5"
                         />
-                        <Label htmlFor="lodging" className="cursor-pointer">
-                          <span className="font-medium block">Logies meenemen</span>
-                          <span className="text-xs text-muted-foreground">Wij zoeken passende accommodatie voor uw groep.</span>
-                        </Label>
-                      </div>
+                        <span>
+                          <span className="block text-sm font-medium text-foreground">Logies meenemen</span>
+                          <span className="block text-xs text-muted-foreground">Wij zoeken passende accommodatie voor uw groep.</span>
+                        </span>
+                      </label>
                     )}
-                  </CardContent>
+                  </div>
                 </Card>
 
                 {/* Contact */}
-                <Card>
-                  <CardContent className="p-6 space-y-5">
-                    <div>
-                      <h2 className="font-display text-lg font-semibold">Uw gegevens</h2>
-                      <p className="text-sm text-muted-foreground">Zodat wij contact met u kunnen opnemen.</p>
+                <Card className="p-5 sm:p-6">
+                  <SectionHeader
+                    as="h2"
+                    size="md"
+                    weight="medium"
+                    title="Uw gegevens"
+                    intro="Zodat wij contact met u kunnen opnemen."
+                    className="mb-4"
+                  />
+                  <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField label="Naam" htmlFor="name" required leading={<User />} error={errors.name}>
+                        <Input name="name" value={formData.name} onChange={handleChange} placeholder="Uw volledige naam" autoComplete="name" maxLength={100} />
+                      </FormField>
+                      <FormField label="Bedrijf of organisatie" htmlFor="company" leading={<Building2 />}>
+                        <Input name="company" value={formData.company} onChange={handleChange} placeholder="Optioneel" autoComplete="organization" maxLength={100} />
+                      </FormField>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Naam *</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          placeholder="Uw volledige naam"
-                          className={errors.name ? "border-destructive" : ""}
-                        />
-                        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="company">Bedrijf / Organisatie</Label>
-                        <Input
-                          id="company"
-                          name="company"
-                          value={formData.company}
-                          onChange={handleChange}
-                          placeholder="Optioneel"
-                        />
-                      </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField label="E-mailadres" htmlFor="email" required leading={<Mail />} error={errors.email}>
+                        <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="uw@email.nl" autoComplete="email" maxLength={255} />
+                      </FormField>
+                      <FormField label="Telefoonnummer" htmlFor="phone" required leading={<Phone />} error={errors.phone}>
+                        <Input name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="06 12345678" autoComplete="tel" maxLength={20} />
+                      </FormField>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">E-mailadres *</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          placeholder="uw@email.nl"
-                          className={errors.email ? "border-destructive" : ""}
-                        />
-                        {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Telefoonnummer *</Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          placeholder="06 12345678"
-                          className={errors.phone ? "border-destructive" : ""}
-                        />
-                        {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="wishes">Wensen en opmerkingen</Label>
+                    <FormField label="Wensen en opmerkingen" htmlFor="wishes">
                       <Textarea
-                        id="wishes"
                         name="wishes"
                         value={formData.wishes}
                         onChange={handleChange}
-                        placeholder="Vertel ons wat u voor ogen heeft. Denk aan: soort activiteiten, sfeer, bijzondere wensen, dieetwensen bij catering, etc."
+                        placeholder="Vertel ons wat u voor ogen heeft: soort activiteiten, sfeer, bijzondere wensen, dieetwensen bij catering."
                         rows={5}
                       />
-                    </div>
-                  </CardContent>
+                    </FormField>
+                  </div>
                 </Card>
 
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Liever zelf samenstellen?{" "}
-                    <Link to="/programma-samenstellen" className="text-primary underline inline-flex items-center gap-1">
-                      <Sparkles className="h-3.5 w-3.5" /> Stel zelf uw programma samen
-                    </Link>
-                  </p>
-                  <Button type="submit" size="lg" disabled={isSubmitting} className="gap-2">
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Verzenden...
-                      </>
-                    ) : (
-                      <>
-                        Vrijblijvend aanvragen
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <WizardFooter nextType="submit" nextLabel="Aanvraag versturen" nextLoading={isSubmitting} note={<SubmitNote />} />
+
+                <p className="text-center text-sm text-muted-foreground">
+                  Liever zelf samenstellen?{" "}
+                  <Link to="/programma-samenstellen" className="text-primary underline underline-offset-2">
+                    Stel zelf uw programma samen
+                  </Link>
+                  .
+                </p>
               </form>
             )}
-          </div>
-        </section>
+          </Container>
+        </Section>
       </main>
 
       <Footer />

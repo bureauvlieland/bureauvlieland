@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { CalendarIcon, Plus, Trash2, Users, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
+import { CalendarIcon, CalendarOff, Plus, Trash2, Users } from "lucide-react";
 
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -12,10 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  Container,
+  EmptyState,
+  FormField,
+  FunnelHead,
+  Section,
+  SectionHeader,
+  StepperBar,
+  WizardFooter,
+  type StepperStep,
+} from "@/components/system";
+import { useScrollOnStepChange } from "@/hooks/useScrollOnStepChange";
 
 import { useCart } from "@/contexts/CartContext";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
@@ -27,10 +38,17 @@ import { categoryLabels } from "@/types/buildingBlock";
 
 type Phase = "select" | "contact" | "success";
 
+const STEPS: StepperStep[] = [
+  { key: "select", label: "Activiteiten" },
+  { key: "contact", label: "Gegevens" },
+  { key: "success", label: "Versturen" },
+];
+
 const SKIP_DEFAULTS = new Set(["boot-enkel-heen", "boot-enkel-terug", "boot-retour", "fiets-huur"]);
 
 const SnelAanvragen = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
 
@@ -43,7 +61,6 @@ const SnelAanvragen = () => {
     updateItem,
     setNumberOfPeople,
     setSelectedDate,
-    clearCart,
     isInCart,
   } = useCart();
 
@@ -51,6 +68,8 @@ const SnelAanvragen = () => {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
   const handledRef = useRef<string | null>(null);
+  const stepperRef = useRef<HTMLDivElement>(null);
+  useScrollOnStepChange(stepperRef, phase);
 
   // Handle ?block=<id> deep link
   useEffect(() => {
@@ -94,13 +113,11 @@ const SnelAanvragen = () => {
       return;
     }
     setPhase("contact");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSuccess = (token: string) => {
     setCustomerToken(token);
     setPhase("success");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -115,121 +132,114 @@ const SnelAanvragen = () => {
       </Helmet>
       <Navigation />
 
-      <main id="main-content" className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-10 md:py-14">
-        {phase === "select" && (
-          <>
-            <header className="mb-8 text-center">
-              <Badge variant="secondary" className="mb-3">
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                Losse aanvraag
-              </Badge>
-              <h1 className="text-3xl md:text-4xl font-display font-bold mb-3">
-                Vraag uw activiteit aan
-              </h1>
-              <p className="text-muted-foreground">
-                Kies een datum, vul uw gegevens in en wij komen met een passend voorstel terug.
-                Geen heel programma nodig.
-              </p>
-            </header>
+      <main id="main-content">
+        {phase !== "success" && (
+          <FunnelHead
+            eyebrow="Losse aanvraag"
+            title="Vraag uw activiteit aan"
+            intro="Kies een datum, vul uw gegevens in en wij komen met een passend voorstel. Geen heel programma nodig."
+          />
+        )}
+        <StepperBar ref={stepperRef} steps={STEPS} current={phase} />
 
-            <Card className="mb-6">
-              <CardContent className="p-5 space-y-5">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Wanneer & met hoeveel personen
-                </h2>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Gewenste datum</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? format(date, "EEEE d MMMM yyyy", { locale: nl }) : "Kies datum"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={(d) => setSelectedDate(d ?? undefined)}
-                          locale={nl}
-                          disabled={{ before: new Date() }}
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
+        <Section spacing="compact">
+          <Container size="prose">
+            {phase === "select" && (
+              <div className="space-y-6">
+                <Card className="p-5 sm:p-6">
+                  <SectionHeader as="h2" size="md" weight="medium" title="Wanneer en met hoeveel personen?" className="mb-5" />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="snel-datum" className="flex items-center gap-1">
+                        Gewenste datum
+                        <span className="text-destructive" aria-hidden="true">
+                          *
+                        </span>
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="snel-datum"
+                            type="button"
+                            variant="outline"
+                            className={cn("w-full justify-start font-normal", !date && "text-muted-foreground")}
+                          >
+                            <CalendarIcon aria-hidden="true" />
+                            {date ? format(date, "EEEE d MMMM yyyy", { locale: nl }) : "Kies een datum"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={date}
+                            onSelect={(d) => setSelectedDate(d ?? undefined)}
+                            locale={nl}
+                            disabled={{ before: new Date() }}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <FormField label="Aantal personen" htmlFor="snel-personen" required leading={<Users />}>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={numberOfPeople}
+                        onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
+                      />
+                    </FormField>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="people" className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" /> Aantal personen
-                    </Label>
-                    <Input
-                      id="people"
-                      type="number"
-                      min={1}
-                      max={500}
-                      value={numberOfPeople}
-                      onChange={(e) =>
-                        setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))
+                </Card>
+
+                <Card className="p-5 sm:p-6">
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <SectionHeader as="h2" size="md" weight="medium" title={`Activiteiten (${visibleItems.length})`} />
+                    {visibleItems.length > 0 && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => setAddSheetOpen(true)}>
+                        <Plus aria-hidden="true" />
+                        Activiteit toevoegen
+                      </Button>
+                    )}
+                  </div>
+
+                  {visibleItems.length === 0 ? (
+                    <EmptyState
+                      icon={<CalendarOff />}
+                      title="Nog geen activiteit gekozen"
+                      description="Voeg een of meer activiteiten toe die u wilt aanvragen."
+                      action={
+                        <Button type="button" variant="outline" size="sm" onClick={() => setAddSheetOpen(true)}>
+                          <Plus aria-hidden="true" />
+                          Activiteit toevoegen
+                        </Button>
                       }
                     />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="mb-6">
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Activiteiten ({visibleItems.length})
-                  </h2>
-                  <Button size="sm" variant="outline" onClick={() => setAddSheetOpen(true)}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Activiteit toevoegen
-                  </Button>
-                </div>
-
-                {visibleItems.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic py-4 text-center">
-                    Nog geen activiteit gekozen. Klik op "Activiteit toevoegen".
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {visibleItems.map((item) => {
-                      const block = getBlockById(allBlocks, item.blockId);
-                      if (!block) return null;
-                      return (
-                        <div
-                          key={item.blockId}
-                          className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg border bg-card"
-                        >
-                          <div className="flex-1 min-w-0">
+                  ) : (
+                    <ul className="space-y-3">
+                      {visibleItems.map((item) => {
+                        const block = getBlockById(allBlocks, item.blockId);
+                        if (!block) return null;
+                        return (
+                          <li key={item.blockId} className="rounded-lg border border-border bg-card p-3">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <p className="font-medium text-sm leading-tight truncate">
-                                  {block.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
+                                <p className="truncate text-sm font-medium leading-tight">{block.name}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
                                   {categoryLabels[block.category] ?? block.category}
                                   {block.provider?.name && ` · ${block.provider.name}`}
                                 </p>
                               </div>
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                className="shrink-0 text-muted-foreground hover:text-destructive"
                                 onClick={() => removeFromCart(item.blockId)}
-                                aria-label="Verwijderen"
+                                aria-label={`${block.name} verwijderen`}
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <Trash2 aria-hidden="true" />
                               </Button>
                             </div>
                             <div className="mt-2 flex items-center gap-2">
@@ -240,64 +250,57 @@ const SnelAanvragen = () => {
                                 id={`time-${item.blockId}`}
                                 type="time"
                                 value={item.preferredTime ?? ""}
-                                onChange={(e) =>
-                                  updateItem(item.blockId, {
-                                    preferredTime: e.target.value || null,
-                                  })
-                                }
+                                onChange={(e) => updateItem(item.blockId, { preferredTime: e.target.value || null })}
                                 className="h-8 w-32"
                               />
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </Card>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/bouwstenen">
-                  <ArrowLeft className="h-4 w-4 mr-1" /> Terug naar alle bouwstenen
-                </Link>
-              </Button>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button asChild variant="outline">
-                  <Link to="/programma-samenstellen">
-                    Toch meerdaags programma
-                  </Link>
-                </Button>
-                <Button onClick={handleSubmitToContact} size="lg">
-                  Door naar contactgegevens
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
+                <WizardFooter
+                  onBack={() => navigate("/bouwstenen")}
+                  backLabel="Terug naar alle bouwstenen"
+                  onNext={handleSubmitToContact}
+                  nextLabel="Volgende: uw gegevens"
+                  note={
+                    <>
+                      Liever een compleet programma?{" "}
+                      <Link to="/programma-samenstellen" className="underline underline-offset-2 hover:text-foreground">
+                        Stel zelf uw programma samen
+                      </Link>
+                      .
+                    </>
+                  }
+                />
+
+                <AddActivitySheet
+                  open={addSheetOpen}
+                  onOpenChange={setAddSheetOpen}
+                  existingBlockIds={cartItems.map((i) => i.blockId)}
+                  onAddActivity={handleAdd}
+                />
               </div>
-            </div>
+            )}
 
-            <AddActivitySheet
-              open={addSheetOpen}
-              onOpenChange={setAddSheetOpen}
-              existingBlockIds={cartItems.map((i) => i.blockId)}
-              onAddActivity={handleAdd}
-            />
-          </>
-        )}
+            {phase === "contact" && (
+              <CheckoutContactForm
+                cartItems={visibleItems}
+                numberOfPeople={numberOfPeople}
+                selectedDates={date ? [date] : []}
+                onBack={() => setPhase("select")}
+                onSuccess={handleSuccess}
+              />
+            )}
 
-        {phase === "contact" && (
-          <CheckoutContactForm
-            cartItems={visibleItems}
-            numberOfPeople={numberOfPeople}
-            selectedDates={date ? [date] : []}
-            onBack={() => setPhase("select")}
-            onSuccess={handleSuccess}
-          />
-        )}
-
-        {phase === "success" && customerToken && (
-          <CheckoutSuccess customerToken={customerToken} cartItems={visibleItems} />
-        )}
+            {phase === "success" && customerToken && (
+              <CheckoutSuccess customerToken={customerToken} cartItems={visibleItems} />
+            )}
+          </Container>
+        </Section>
       </main>
 
       <Footer />

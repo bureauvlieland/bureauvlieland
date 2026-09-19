@@ -1,6 +1,5 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -8,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BedDouble, Users } from "lucide-react";
+import { BedDouble } from "lucide-react";
+import { FormField, Notice, OptionCard, OptionGroup } from "@/components/system";
 import type { AccommodationWizardData } from "@/types/accommodation";
 import { ROOM_TYPES, ROOM_OCCUPANCY_OPTIONS } from "@/types/accommodation";
 
@@ -18,8 +18,8 @@ interface StepRoomsProps {
 }
 
 export const StepRooms = ({ formData, updateFormData }: StepRoomsProps) => {
-  // Skip detailed room config for camping/group accommodation
-  const showDetailedConfig = !['camping', 'group_accommodation'].includes(formData.accommodation_type);
+  // Camping en groepsaccommodatie: geen kamerindeling, dat regelt de locatie
+  const showDetailedConfig = !["camping", "group_accommodation"].includes(formData.accommodation_type);
 
   const toggleRoomType = (value: string) => {
     const current = formData.room_types;
@@ -29,119 +29,82 @@ export const StepRooms = ({ formData, updateFormData }: StepRoomsProps) => {
     updateFormData({ room_types: updated });
   };
 
-  // Calculate suggested room count
   const suggestedRooms = Math.ceil(formData.number_of_guests / (parseInt(formData.room_occupancy) || 2));
 
   return (
     <div className="space-y-6">
       {showDetailedConfig ? (
         <>
-          {/* Room Count */}
-          <div className="space-y-2">
-            <Label htmlFor="roomCount">Geschat aantal kamers *</Label>
-            <div className="flex items-center gap-3">
-              <BedDouble className="h-5 w-5 text-muted-foreground" />
-              <Input
-                id="roomCount"
-                type="number"
-                min={1}
-                max={100}
-                value={formData.room_count}
-                onChange={(e) => updateFormData({ room_count: parseInt(e.target.value) || 1 })}
-                className="w-24"
+          <FormField
+            label="Geschat aantal kamers"
+            htmlFor="logies-kamers"
+            required
+            leading={<BedDouble />}
+            help={`Suggestie: ${suggestedRooms} kamers voor ${formData.number_of_guests} personen.`}
+          >
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={formData.room_count}
+              onChange={(e) => updateFormData({ room_count: parseInt(e.target.value) || 1 })}
+              className="w-40"
+            />
+          </FormField>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="logies-bezetting">Bezetting per kamer</Label>
+            <Select value={formData.room_occupancy} onValueChange={(value) => updateFormData({ room_occupancy: value })}>
+              <SelectTrigger id="logies-bezetting" className="w-full sm:w-64">
+                <SelectValue placeholder="Kies" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROOM_OCCUPANCY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <OptionGroup label="Voorkeur kamertype" help="Optioneel, meerdere keuzes mogelijk." selection="multiple" columns={2}>
+            {ROOM_TYPES.map((type) => (
+              <OptionCard
+                key={type.value}
+                selection="multiple"
+                selected={formData.room_types.includes(type.value)}
+                onSelect={() => toggleRoomType(type.value)}
+                title={type.label}
               />
-              <span className="text-sm text-muted-foreground">kamers</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Suggestie: {suggestedRooms} kamers voor {formData.number_of_guests} personen
-            </p>
-          </div>
-
-          {/* Room Occupancy */}
-          <div className="space-y-2">
-            <Label>Bezetting per kamer</Label>
-            <div className="flex items-center gap-3">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <Select
-                value={formData.room_occupancy}
-                onValueChange={(value) => updateFormData({ room_occupancy: value })}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Selecteer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROOM_OCCUPANCY_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Room Types */}
-          <div className="space-y-3">
-            <Label>Voorkeur kamertype (optioneel)</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {ROOM_TYPES.map((type) => (
-                <label
-                  key={type.value}
-                  className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={formData.room_types.includes(type.value)}
-                    onCheckedChange={() => toggleRoomType(type.value)}
-                  />
-                  <span className="text-sm">{type.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+            ))}
+          </OptionGroup>
         </>
       ) : (
         <>
-          {/* Simplified view for camping/group */}
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm">
-              {formData.accommodation_type === 'camping' ? (
-                <>
-                  ⛺ Voor campingverblijf bepalen wij samen met de camping de beste indeling 
-                  voor uw groep van {formData.number_of_guests} personen.
-                </>
-              ) : (
-                <>
-                  🏕️ Voor groepsaccommodaties bekijken wij welke locaties geschikt zijn 
-                  voor uw groep van {formData.number_of_guests} personen.
-                </>
-              )}
-            </p>
-          </div>
+          <Notice tone="info">
+            {formData.accommodation_type === "camping"
+              ? `Voor een campingverblijf bepalen wij samen met de camping de beste indeling voor uw groep van ${formData.number_of_guests} personen.`
+              : `Voor groepsaccommodaties bekijken wij welke locaties geschikt zijn voor uw groep van ${formData.number_of_guests} personen.`}
+          </Notice>
 
-          {/* Still allow noting preferences */}
-          <div className="space-y-2">
-            <Label htmlFor="roomCount">Aantal slaapruimtes (indien bekend)</Label>
+          <FormField label="Aantal slaapruimtes" htmlFor="logies-slaapruimtes" help="Als u het al weet.">
             <Input
-              id="roomCount"
               type="number"
               min={1}
               max={50}
               value={formData.room_count}
               onChange={(e) => updateFormData({ room_count: parseInt(e.target.value) || 1 })}
-              className="w-24"
+              className="w-40"
               placeholder="Optioneel"
             />
-          </div>
+          </FormField>
         </>
       )}
 
-      {/* Accessibility note */}
-      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-        <p className="text-sm">
-          ♿ <strong>Toegankelijkheid:</strong> Heeft uw groep specifieke wensen rond 
-          toegankelijkheid? Vermeld dit in de volgende stap bij "Extra wensen".
-        </p>
-      </div>
+      <Notice tone="info" title="Toegankelijkheid">
+        Heeft uw groep specifieke wensen rond toegankelijkheid? Vermeld dit in de volgende stap bij "Extra wensen".
+      </Notice>
     </div>
   );
 };

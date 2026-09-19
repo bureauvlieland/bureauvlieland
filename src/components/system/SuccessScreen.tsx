@@ -22,6 +22,8 @@ interface SuccessScreenProps {
   reference?: string | null;
   primary?: SuccessAction;
   secondary?: SuccessAction;
+  /** `h1` op een pagina zonder eigen kop, anders `h2`. */
+  as?: "h1" | "h2";
   className?: string;
   children?: ReactNode;
 }
@@ -45,12 +47,12 @@ const ActionButton = ({ action, variant }: { action: SuccessAction; variant: "de
   );
 };
 
-export const SuccessScreen = ({ title, intro, reference, primary, secondary, className, children }: SuccessScreenProps) => (
+export const SuccessScreen = ({ title, intro, reference, primary, secondary, as: Tag = "h2", className, children }: SuccessScreenProps) => (
   <div className={cn("mx-auto max-w-lg py-8 text-center", className)} role="status" aria-live="polite">
     <span className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-success-soft text-success">
       <CheckCircle2 className="h-8 w-8" aria-hidden="true" />
     </span>
-    <h2 className="font-display text-display-md font-medium text-foreground">{title}</h2>
+    <Tag className="font-display text-display-md font-medium text-foreground">{title}</Tag>
     {intro && <p className="mt-2 text-muted-foreground leading-relaxed">{intro}</p>}
     {reference && (
       <p className="mt-3 text-sm text-muted-foreground">

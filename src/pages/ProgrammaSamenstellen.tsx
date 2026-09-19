@@ -5,7 +5,8 @@ import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
 import { BasicsForm, type BasicsFormData } from "@/components/configurator/BasicsForm";
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
-import { Container, Section, SectionHeader, Stepper } from "@/components/system";
+import { Container, Section, SectionHeader, StepperBar } from "@/components/system";
+import { useScrollOnStepChange } from "@/hooks/useScrollOnStepChange";
 import { wizardStepsFor, nextWizardPhase, previousWizardPhase, type ConfigPhase } from "@/lib/wizardSteps";
 import { trackWizardStep } from "@/lib/analytics";
 import { TemplateSelector } from "@/components/configurator/TemplateSelector";
@@ -109,17 +110,7 @@ const ProgrammaSamenstellen = () => {
   // Bij elke stapwissel naar de stappenbalk scrollen: de volgende-knop staat
   // onderaan de vorige stap, en de nieuwe stap moet bovenaan beginnen.
   const stepperRef = useRef<HTMLDivElement>(null);
-  const scrolledPhase = useRef<ConfigPhase | null>(null);
-  useEffect(() => {
-    if (scrolledPhase.current === null) {
-      scrolledPhase.current = phase;
-      return;
-    }
-    if (scrolledPhase.current === phase) return;
-    scrolledPhase.current = phase;
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    stepperRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-  }, [phase]);
+  useScrollOnStepChange(stepperRef, phase);
 
   const nextLabelFrom = (from: ConfigPhase): string => {
     const next = nextWizardPhase(steps, from);
@@ -333,11 +324,7 @@ const ProgrammaSamenstellen = () => {
         )}
 
         {/* Stappen, op elke fase zichtbaar */}
-        <div ref={stepperRef} className="scroll-mt-20 border-b border-border bg-background">
-          <Container size="content" className="py-4">
-            <Stepper steps={steps} current={phase} />
-          </Container>
-        </div>
+        <StepperBar ref={stepperRef} steps={steps} current={phase} />
 
         {/* Inhoud van de stap */}
         <Section spacing="compact" className={phase === "program" ? "pb-28" : undefined}>

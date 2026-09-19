@@ -1,10 +1,17 @@
 import { RESPONSE_TIME } from "@/content/promises";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
+import { Card } from "@/components/ui/card";
+import {
+  Container,
+  Notice,
+  Section,
+  SectionHeader,
+  StepperBar,
+  SubmitNote,
+  SuccessScreen,
+  WizardFooter,
+} from "@/components/system";
+import { useScrollOnStepChange } from "@/hooks/useScrollOnStepChange";
 import { StepBasics } from "./steps/StepBasics";
 import { StepType } from "./steps/StepType";
 import { StepRooms } from "./steps/StepRooms";
@@ -19,13 +26,15 @@ import { format } from "date-fns";
 import { CART_HANDOFF_KEY, type CartHandoffData } from "@/components/configurator/LogiesSuggestionBanner";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 
+/** `label` staat in de stappenbalk, `next` op de knop die naar deze stap leidt. */
 const STEPS = [
-  { id: 1, title: "Datum & Gasten", description: "Wanneer en met hoeveel personen?" },
-  { id: 2, title: "Accommodatietype", description: "Wat voor verblijf zoekt u?" },
-  { id: 3, title: "Kamerverdeling", description: "Hoeveel en welke kamers?" },
-  { id: 4, title: "Wensen", description: "Locatie, faciliteiten en budget" },
-  { id: 5, title: "Contactgegevens", description: "Hoe kunnen we u bereiken?" },
+  { id: 1, key: "basics", label: "Datum en gasten", title: "Wanneer en met hoeveel personen?", description: "Aankomst, vertrek en de grootte van uw groep.", next: "" },
+  { id: 2, key: "type", label: "Type verblijf", title: "Wat voor verblijf zoekt u?", description: "Hotel, vakantiewoning, groepsaccommodatie of camping.", next: "Volgende: type verblijf" },
+  { id: 3, key: "rooms", label: "Kamers", title: "Hoeveel en welke kamers?", description: "Een schatting is genoeg; de accommodatie denkt mee.", next: "Volgende: kamers" },
+  { id: 4, key: "wishes", label: "Wensen", title: "Locatie, verzorging en budget", description: "Alles hier is optioneel, maar helpt ons gericht zoeken.", next: "Volgende: wensen" },
+  { id: 5, key: "contact", label: "Gegevens", title: "Hoe kunnen wij u bereiken?", description: "Op dit adres ontvangt u de offertes.", next: "Volgende: uw gegevens" },
 ];
+const STEPPER_STEPS = STEPS.map((s) => ({ key: s.key, label: s.label }));
 
 const defaultFormData: AccommodationWizardData = {
   arrival_date: undefined,
@@ -63,11 +72,13 @@ interface AccommodationWizardProps {
   initialData?: InitialData;
   fromConfigurator?: boolean;
   linkedProgramToken?: string;
+  /** Melding boven de eerste stap, bijvoorbeeld "gegevens overgenomen uit uw programma". */
+  notice?: ReactNode;
 }
 
-export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, linkedProgramToken }: AccommodationWizardProps) => {
-  const navigate = useNavigate();
+export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, linkedProgramToken, notice }: AccommodationWizardProps) => {
   const { data: allBlocks = [] } = usePublishedBuildingBlocks();
+  const stepperRef = useRef<HTMLDivElement>(null);
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<AccommodationWizardData>(() => {
@@ -138,7 +149,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
     }
   }, [fromConfigurator]);
 
-  const progress = (currentStep / STEPS.length) * 100;
+  useScrollOnStepChange(stepperRef, String(currentStep));
 
   const updateFormData = (updates: Partial<AccommodationWizardData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -230,15 +241,10 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
           console.error("Failed to send confirmation emails:", emailError);
         }
 
-        // Use the existing program token for redirect
+        // De bestaande programmapagina is de plek om verder te gaan
         setPortalToken(linkedProgramToken);
         setIsComplete(true);
-        toast.success("Logiesaanvraag gekoppeld aan uw programma!");
-
-        // Redirect to customer portal
-        setTimeout(() => {
-          navigate(`/mijn-programma/${linkedProgramToken}`);
-        }, 2500);
+        window.scrollTo({ top: 0, behavior: "smooth" });
 
         return;
       }
@@ -354,17 +360,10 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
       const customerPortalToken = linkedProgram?.customer_token || data.customer_token;
       setPortalToken(customerPortalToken);
       setIsComplete(true);
-      toast.success("Uw aanvraag is succesvol verzonden!");
-      
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
       if (onSuccess && customerPortalToken) {
         onSuccess(customerPortalToken);
-      }
-
-      // Always redirect to customer portal after 2.5 seconds
-      if (customerPortalToken) {
-        setTimeout(() => {
-          navigate(`/mijn-programma/${customerPortalToken}`);
-        }, 2500);
       }
     } catch (error) {
       console.error("Error submitting accommodation request:", error);
@@ -375,183 +374,86 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
   };
 
   if (isComplete) {
-    const hasLinkedActivities = cartHandoff && cartHandoff.cartItems.length > 0;
-    
+    const linkedCount = cartHandoff?.cartItems.length ?? 0;
+
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="pt-8 pb-8 text-center">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold mb-4">Aanvraag ontvangen!</h2>
-          <p className="text-muted-foreground mb-6">
-            Bedankt voor uw aanvraag, {formData.customer_name}. Wij gaan voor u op zoek 
-            naar de beste verblijfsmogelijkheden op Vlieland.
-          </p>
-          
-          {hasLinkedActivities && (
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6 text-left">
-              <h3 className="font-medium mb-2 flex items-center gap-2">
-                <Check className="w-4 h-4 text-primary" />
-                Uw programma is ook aangevraagd
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                De {cartHandoff.cartItems.length} activiteit{cartHandoff.cartItems.length !== 1 ? "en" : ""} uit uw programma 
-                {cartHandoff.cartItems.length !== 1 ? " zijn" : " is"} gekoppeld aan deze logies-aanvraag.
-              </p>
+      <Section spacing="compact">
+        <Container size="prose">
+          <SuccessScreen
+            title="Uw logiesaanvraag is verstuurd"
+            intro={`Bedankt, ${formData.customer_name}. Wij vragen offertes aan bij passende accommodaties op Vlieland. ${RESPONSE_TIME.sentence} U ontvangt bericht op ${formData.customer_email}.`}
+            primary={portalToken ? { label: "Bekijk uw programmapagina", to: `/mijn-programma/${portalToken}` } : undefined}
+            secondary={{ label: "Terug naar de homepage", to: "/" }}
+          >
+            <div className="space-y-4">
+              {linkedCount > 0 && (
+                <Notice tone="success" title="Uw programma is ook aangevraagd">
+                  {linkedCount === 1
+                    ? "De activiteit uit uw programma is gekoppeld aan deze logiesaanvraag."
+                    : `De ${linkedCount} activiteiten uit uw programma zijn gekoppeld aan deze logiesaanvraag.`}
+                </Notice>
+              )}
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <p className="text-sm font-medium text-foreground">Wat gebeurt er nu?</p>
+                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+                  <li>Wij beoordelen uw aanvraag.</li>
+                  <li>Wij vragen offertes aan bij geschikte accommodaties.</li>
+                  <li>U ontvangt de verzamelde offertes per e-mail.</li>
+                  <li>U kiest de optie die het beste past.</li>
+                </ol>
+              </div>
             </div>
-          )}
-          
-          {/* Redirect indicator */}
-          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-center gap-3">
-              <Loader2 className="w-5 h-5 text-primary animate-spin" />
-              <p className="text-sm font-medium">
-                U wordt doorgestuurd naar uw persoonlijke programma-overzicht...
-              </p>
-            </div>
-          </div>
-          
-          <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-medium mb-2">Wat gebeurt er nu?</h3>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-              <li>Wij beoordelen uw aanvraag</li>
-              <li>Wij vragen offertes aan bij geschikte accommodaties</li>
-              <li>U ontvangt de verzamelde offertes per e-mail</li>
-              <li>U kiest de optie die het beste past</li>
-            </ol>
-          </div>
-          
-          <p className="text-sm text-muted-foreground mb-4">
-            U ontvangt {RESPONSE_TIME.within} bericht op <strong>{formData.customer_email}</strong>
-          </p>
-          
-          {/* Fallback link */}
-          {portalToken && (
-            <Button variant="outline" size="sm" asChild>
-              <a href={`/mijn-programma/${portalToken}`}>
-                Direct naar uw programma →
-              </a>
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+          </SuccessScreen>
+        </Container>
+      </Section>
     );
   }
 
+  const step = STEPS[currentStep - 1];
+  const isLast = currentStep === STEPS.length;
+
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Progress Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-muted-foreground">
-            Stap {currentStep} van {STEPS.length}
-          </span>
-          <span className="text-sm font-medium">{STEPS[currentStep - 1].title}</span>
-        </div>
-        <Progress value={progress} className="h-2" />
-        
-        {/* Step indicators */}
-        <div className="hidden md:flex justify-between mt-4">
-          {STEPS.map((step) => (
-            <div
-              key={step.id}
-              className={`flex flex-col items-center ${
-                step.id === currentStep
-                  ? "text-primary"
-                  : step.id < currentStep
-                  ? "text-primary/60"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium mb-1 ${
-                  step.id === currentStep
-                    ? "bg-primary text-primary-foreground"
-                    : step.id < currentStep
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {step.id < currentStep ? <Check className="w-4 h-4" /> : step.id}
-              </div>
-              <span className="text-xs hidden lg:block">{step.title}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <>
+      <StepperBar ref={stepperRef} steps={STEPPER_STEPS} current={step.key} />
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Main Form */}
-        <div className="md:col-span-2">
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="text-xl font-semibold mb-1">{STEPS[currentStep - 1].title}</h2>
-              <p className="text-muted-foreground text-sm mb-6">
-                {STEPS[currentStep - 1].description}
-              </p>
+      <Section spacing="compact">
+        <Container size="wide">
+          {notice && <div className="mb-6">{notice}</div>}
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <Card className="p-5 sm:p-6">
+                <SectionHeader as="h2" size="md" weight="medium" title={step.title} intro={step.description} className="mb-6" />
 
-              {currentStep === 1 && (
-                <StepBasics formData={formData} updateFormData={updateFormData} />
-              )}
-              {currentStep === 2 && (
-                <StepType formData={formData} updateFormData={updateFormData} />
-              )}
-              {currentStep === 3 && (
-                <StepRooms formData={formData} updateFormData={updateFormData} />
-              )}
-              {currentStep === 4 && (
-                <StepWishes formData={formData} updateFormData={updateFormData} />
-              )}
-              {currentStep === 5 && (
-                <StepContact 
-                  formData={formData} 
-                  updateFormData={updateFormData} 
-                  hideActivitiesOption={!!linkedProgramToken}
-                />
-              )}
-
-              {/* Navigation */}
-              <div className="flex justify-between mt-8 pt-6 border-t">
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={currentStep === 1}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Vorige
-                </Button>
-
-                {currentStep < STEPS.length ? (
-                  <Button onClick={handleNext} disabled={!canProceed()}>
-                    Volgende
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleSubmit} disabled={!canProceed() || isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verzenden...
-                      </>
-                    ) : (
-                      <>
-                        Aanvraag verzenden
-                        <Check className="w-4 h-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
+                {currentStep === 1 && <StepBasics formData={formData} updateFormData={updateFormData} />}
+                {currentStep === 2 && <StepType formData={formData} updateFormData={updateFormData} />}
+                {currentStep === 3 && <StepRooms formData={formData} updateFormData={updateFormData} />}
+                {currentStep === 4 && <StepWishes formData={formData} updateFormData={updateFormData} />}
+                {currentStep === 5 && (
+                  <StepContact
+                    formData={formData}
+                    updateFormData={updateFormData}
+                    hideActivitiesOption={!!linkedProgramToken}
+                  />
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Summary Sidebar */}
-        <div className="hidden md:block">
-          <WizardSummary formData={formData} currentStep={currentStep} />
-        </div>
-      </div>
-    </div>
+                <WizardFooter
+                  className="mt-8 border-t border-border"
+                  onBack={currentStep > 1 ? handleBack : undefined}
+                  onNext={isLast ? handleSubmit : handleNext}
+                  nextLabel={isLast ? "Aanvraag versturen" : STEPS[currentStep].next}
+                  nextDisabled={!canProceed()}
+                  nextLoading={isSubmitting}
+                  note={isLast ? <SubmitNote /> : undefined}
+                />
+              </Card>
+            </div>
+
+            <aside className="hidden md:block">
+              <WizardSummary formData={formData} currentStep={currentStep} />
+            </aside>
+          </div>
+        </Container>
+      </Section>
+    </>
   );
 };
