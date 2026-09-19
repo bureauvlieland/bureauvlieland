@@ -30,8 +30,8 @@ const L = {
   },
   wadlopen: {
     href: "/wadlopen-vlieland",
-    label: "Wadlopen",
-    description: "Wadlopen op en rond Vlieland met gids",
+    label: "Wadexcursie",
+    description: "Met een gids het wad op rond Vlieland",
   },
   logies: {
     href: "/logies-vlieland",

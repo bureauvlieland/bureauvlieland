@@ -53,7 +53,7 @@ const themas: Thema[] = [
       "Vlieland ligt midden in het UNESCO-Werelderfgoed Waddenzee. Het wad, de zandbanken en de duinen zijn dé reden om te komen.",
     items: [
       {
-        label: "Wadexcursie / wadlopen",
+        label: "Wadexcursie",
         to: "/wadlopen-vlieland",
         description: "Met een lokale gids het wad op — voor alle leeftijden.",
       },
@@ -211,7 +211,7 @@ const ActiviteitenVlieland = () => {
         <meta property="og:title" content="Activiteiten Vlieland: wat te doen op het eiland" />
         <meta
           property="og:description"
-          content="Het complete overzicht van activiteiten op Vlieland — wadlopen, zeehonden, fietsen, cultuur en meer."
+          content="Het complete overzicht van activiteiten op Vlieland — wadexcursie, zeehonden, fietsen, cultuur en meer."
         />
         <meta property="og:url" content={url} />
         <script type="application/ld+json">{JSON.stringify({

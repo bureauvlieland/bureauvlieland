@@ -160,7 +160,7 @@ export const zeehondentochtenVlieland: ActivityLandingContent = {
   ],
   reviews: { title: "Reviews over Bureau Vlieland", subtitle: "Wat klanten zeggen over hun dag op het wad" },
   also: [
-    { label: "Wadexcursie op Vlieland", to: "/wadlopen-vlieland", description: "Wadlopen op en rond Vlieland met gids" },
+    { label: "Wadexcursie op Vlieland", to: "/wadlopen-vlieland", description: "Met een gids het wad op rond Vlieland" },
     { label: "Alle activiteiten op Vlieland", to: "/activiteiten-vlieland", description: "Wat kunt u doen op het eiland, per seizoen" },
     { label: "Familieweekend op Vlieland", to: "/familieweekend-vlieland" },
     { label: "Bedrijfsuitje op Vlieland", to: "/bedrijfsuitje-vlieland" },

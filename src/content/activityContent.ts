@@ -71,36 +71,36 @@ export const activityContent: Record<string, ActivityContent> = {
 
   wadloopexcursie: {
     summary:
-      "Een begeleide wadloopexcursie op Vlieland gaat onder leiding van een ervaren gids het drooggevallen wad rond het eiland op en start op een tijdstip dat door het getij wordt bepaald. De prijs is €17,50 per volwassene en €12,50 per kind.",
+      "Een begeleide wadexcursie op Vlieland gaat onder leiding van een ervaren, lokale gids het drooggevallen wad rond het eiland op en start op een tijdstip dat door het getij wordt bepaald. Laarzen zijn inbegrepen. De prijs is €17,50 per volwassene en €12,50 per kind.",
     paragraphs: [
-      "Wadlopen is de enige manier om het werelderfgoed Waddenzee letterlijk onder je voeten te voelen. Bij laagwater valt een landschap droog dat er twee keer per dag anders uitziet: geulen, slikvlaktes, mosselbanken en priel na priel. Een gids laat zien wat er leeft — wadpieren, kokkels, garnalen, krabben — en legt uit waarom dit gebied zo bijzonder is dat het op de UNESCO-lijst staat.",
-      "Zonder gids is het wad levensgevaarlijk: het tij komt sneller op dan mensen inschatten en mist kan binnen minuten het zicht wegnemen. Daarom werken wij uitsluitend met gecertificeerde wadgidsen die het gebied rond Vlieland dagelijks kennen. Zij bepalen route en starttijd op basis van de getijdentabel en de actuele weersverwachting.",
-      "Voor groepen is wadlopen een verrassend sterke teamactiviteit. Je loopt in een tempo waarin iedereen mee kan, je helpt elkaar door de geulen en je praat onderweg anders dan in een vergaderzaal. Veel bedrijven combineren de excursie daarom met een lunch of borrel erna — modder eerst, verhalen daarna.",
+      "Een wadexcursie is de enige manier om het Werelderfgoed Waddenzee letterlijk onder uw voeten te voelen. Bij laagwater valt een landschap droog dat er twee keer per dag anders uitziet: geulen, slikvlaktes, mosselbanken en priel na priel. Een gids laat zien wat er leeft (wadpieren, kokkels, garnalen, krabben) en legt uit waarom dit gebied zo bijzonder is dat het op de UNESCO-lijst staat.",
+      "Zonder gids is het wad levensgevaarlijk: het tij komt sneller op dan mensen inschatten en mist kan binnen minuten het zicht wegnemen. Daarom gaat u uitsluitend met een ervaren, lokale gids het wad op. Die bepaalt route en starttijd op basis van de getijdentabel en de actuele weersverwachting.",
+      "Voor groepen is een wadexcursie een verrassend sterke teamactiviteit. U loopt in een tempo waarin iedereen mee kan, u helpt elkaar door de geulen en u praat onderweg anders dan in een vergaderzaal. Veel bedrijven combineren de excursie daarom met een lunch of borrel erna: modder eerst, verhalen daarna.",
     ],
     practical: [
       { label: "Duur", value: "In overleg met de gids; het getij bepaalt route en tijdsduur" },
       { label: "Prijs", value: "€17,50 per volwassene, €12,50 per kind (4 t/m 12 jaar)" },
-      { label: "Inbegrepen", value: "Begeleiding door een gecertificeerde wadgids" },
+      { label: "Inbegrepen", value: "Laarzen en begeleiding door een ervaren, lokale gids" },
       { label: "Starttijd", value: "Bepaald door het getij, niet vrij te kiezen" },
-      { label: "Seizoen", value: "Circa april t/m oktober" },
-      { label: "Conditie", value: "Redelijke basisconditie vereist; het lopen kost energie" },
-      { label: "Begeleiding", value: "Altijd met gecertificeerde wadgids" },
+      { label: "Seizoen", value: "Het hele jaar, altijd rond laagwater" },
+      { label: "Conditie", value: "Geen zware tocht; een goede gezondheid en wat doorzettingsvermogen (het kan modderig zijn) zijn handig" },
+      { label: "Begeleiding", value: "Altijd met een ervaren, erkende gids" },
     ],
     goodToKnow: [
-      "Draag oude sportschoenen die vast om de voet zitten — laarzen zuigen vast in de modder.",
-      "Neem droge kleding en een handdoek mee voor na afloop.",
+      "Laarzen zijn inbegrepen; trek kleding aan die nat en vies mag worden.",
+      "Neem reservekleding en -sokken, drinken en bij zon een pet en zonnebrand mee.",
       "Bij dichte mist of onweer gaat de excursie niet door; dat is een veiligheidsbeslissing van de gids.",
     ],
     faq: [
       {
-        question: "Wat kost een wadloopexcursie op Vlieland?",
+        question: "Wat kost een wadexcursie op Vlieland?",
         answer:
-          "€17,50 per volwassene en €12,50 per kind van 4 t/m 12 jaar, inclusief begeleiding door een gecertificeerde wadgids. Doorlopen naar het vasteland is vanaf Vlieland niet mogelijk; het gaat om excursies op en rond de platen.",
+          "€17,50 per volwassene en €12,50 per kind van 4 t/m 12 jaar, inclusief laarzen en begeleiding door een ervaren, lokale gids. Doorlopen naar het vasteland is vanaf Vlieland niet mogelijk; het gaat om een excursie op en rond de platen.",
       },
       {
-        question: "Hoe zwaar is een wadloopexcursie?",
+        question: "Hoe zwaar is een wadexcursie?",
         answer:
-          "Lopen door slik kost meer energie dan lopen over een pad. Een redelijke basisconditie volstaat; de gids houdt het tempo van de langzaamste deelnemer aan.",
+          "Het is geen zware tocht maar een leerzame wandeling; lopen door slik kost wel meer energie dan lopen over een pad. De gids houdt het tempo van de langzaamste deelnemer aan, dus ook gezinnen met kinderen kunnen mee.",
       },
       {
         question: "Waarom staan starttijd en duur niet vast?",
@@ -110,7 +110,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Wat moet ik aantrekken?",
         answer:
-          "Oude sportschoenen die goed vastzitten, een korte broek of opstroopbare broek, en een winddichte jas. Neem droge kleding mee voor na afloop.",
+          "Laarzen krijgt u van ons. Trek kleding aan die nat en vies mag worden en neem reservekleding en -sokken mee voor na afloop. Bij zon een pet en zonnebrand.",
       },
     ],
   },

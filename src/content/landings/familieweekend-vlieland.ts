@@ -49,7 +49,7 @@ export const familieweekendVlieland: LandingContent = {
       intro: "Van actief tot ontspannen: voor ieder familielid is er iets leuks.",
       images: [
         { src: beachActivityImage, alt: "Strandactiviteit voor families op Vlieland", title: "Strandspelen", text: "Beachvolleybal, vliegeren, schelpen zoeken of zandkastelen bouwen." },
-        { src: sealTourImage, alt: "Zeehondentocht op Vlieland", title: "Natuur ontdekken", text: "Zeehondentochten, vogels spotten en wadlopen voor jong en oud." },
+        { src: sealTourImage, alt: "Zeehondentocht op Vlieland", title: "Natuur ontdekken", text: "Zeehondentochten, vogels spotten en een wadexcursie voor jong en oud." },
         { src: kiteImage, alt: "Vliegeren op het strand van Vlieland", title: "Samen actief", text: "Fietsen, powerkiten of een eilandspel met de hele familie." },
       ],
       aside: {

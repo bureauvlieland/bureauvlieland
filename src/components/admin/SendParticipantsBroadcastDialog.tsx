@@ -73,7 +73,7 @@ export function SendParticipantsBroadcastDialog({ open, onOpenChange, requestId,
             onChange={(e) => setBody(e.target.value)}
             rows={6}
             maxLength={4000}
-            placeholder="Bijvoorbeeld: het programma van morgen is gewijzigd, de wadloopexcursie start nu om 10:00 in plaats van 9:00."
+            placeholder="Bijvoorbeeld: het programma van morgen is gewijzigd, de wadexcursie start nu om 10:00 in plaats van 9:00."
           />
           {lastResults && lastResults.length > 0 && (
             <div className="space-y-1 text-xs">
