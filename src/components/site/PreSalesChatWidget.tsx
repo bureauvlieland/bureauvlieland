@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCartSafe } from "@/contexts/CartContext";
 import { buildWhatsAppHref, openWhatsApp } from "@/lib/whatsappLink";
-import { useFooterInView } from "@/hooks/useFooterInView";
+import { FloatingStack } from "@/components/system";
 
 const WA_NUMBER = "31562700208"; // +31 562 700208
 const STORAGE_KEY = "bv_presales_widget";
@@ -25,7 +25,6 @@ type Persisted = { name: string; email: string };
 export const PreSalesChatWidget = () => {
   const location = useLocation();
   const cart = useCartSafe();
-  const footerInView = useFooterInView();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
@@ -108,15 +107,9 @@ export const PreSalesChatWidget = () => {
 
   return (
     <>
-      {/* Floating action buttons — bottom right. Verdwijnt zodra de footer
-          in beeld komt, anders staan ze over de footer-links heen. Al
-          geopend chat-paneel blijft gewoon staan. */}
-      <div
-        className={`fixed right-4 z-40 flex flex-col items-end gap-3 transition-opacity duration-200 ${
-          footerInView && !open ? "opacity-0 pointer-events-none" : "opacity-100"
-        }`}
-        style={{ bottom: "calc(1rem + var(--floating-offset, 0px))" }}
-      >
+      {/* Zwevende knoppen rechtsonder. FloatingStack wijkt voor de footer en
+          voor de knoppenrij van een wizardstap; een open chatpaneel blijft. */}
+      <FloatingStack forceVisible={open}>
         {cartCount > 0 && !onWizard && (
           <Link to="/programma-samenstellen" aria-label="Uw programma">
             <Button
@@ -143,7 +136,7 @@ export const PreSalesChatWidget = () => {
           {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
           <span className="hidden sm:inline">{open ? "Sluiten" : "Vraag stellen"}</span>
         </Button>
-      </div>
+      </FloatingStack>
 
       {/* Panel */}
       {open && (

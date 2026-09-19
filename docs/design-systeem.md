@@ -64,10 +64,11 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `SuccessScreen` | Na versturen: wat er is gebeurd, wat er nu gebeurt (`intro`), referentie, één primaire en één secundaire vervolgstap | Eigen bevestigingsschermen, aftellingen en automatische doorverwijzingen |
 | `SubmitNote` | De regel onder een verstuurknop: vrijblijvend, de responstijd uit `src/content/promises.ts`, de voorwaarden | Eigen privacy- en voorwaardenregels per formulier |
 | `EmptyState` / `LoadingState` | Lege lijst met icoon, tekst en actie; laadstatus met spinner en `aria-live` | Losse "Geen …"-teksten, eigen spinners |
+| `FloatingStack` | De zwevende knoppen rechtsonder (chat, programma): staat boven een vaste balk (`useFloatingBar`) en wijkt voor de footer en voor een `WizardFooter` in beeld (`useFloatingClearance`); `z-40` | Eigen `fixed bottom-4 right-4`-blokken |
+| `ResponsiveSheetContent` | Sheet die op een telefoon van onderen komt (ronde bovenhoeken, max. 85% hoog) en op een groter scherm van rechts | `SheetContent side="right"` in de funnel; het navigatiemenu blijft van rechts komen |
 
-Nog te bouwen (fase 2 deel 3 en fase 3): `FloatingLayer`, `PageHero`,
-`RouteChooser`, `MediaCard`, `FactList`, `PersonQuote`, `Faq`,
-`Breadcrumb`.
+Nog te bouwen (fase 3): `PageHero`, `RouteChooser`, `MediaCard`,
+`FactList`, `PersonQuote`, `Faq`, `Breadcrumb`.
 
 ## Regels voor interactie
 
@@ -97,10 +98,17 @@ Nog te bouwen (fase 2 deel 3 en fase 3): `FloatingLayer`, `PageHero`,
   Koppen in de funnel: `SectionHeader` met `size="md"` en
   `weight="medium"`, en "en" in plaats van "&" (de Fraunces-ampersand oogt
   als een vreemd teken).
-- Een vaste balk onderaan (zoals in de programma-bouwer) zet
-  `--floating-offset` op `<html>` zolang hij bestaat; de zwevende knoppen
-  (chat, programma) schuiven daarmee omhoog en staan nooit over de primaire
-  knop heen. Fase 2 deel 2 maakt hier één `FloatingLayer` van.
+- De zwevende laag: alles wat zweeft staat in `FloatingStack` (`z-40`).
+  Een vaste balk onderaan meldt zijn hoogte met `useFloatingBar`
+  (`--floating-offset` op `<html>`, `z-30`), zodat de knoppen erboven
+  staan; een `WizardFooter` in beeld laat ze wijken
+  (`useFloatingClearance`); de footer ook. Funnelinhoud eindigt met
+  `pb-floating`, zodat de laatste knop er nooit onder komt. Sheets en
+  dialogen zitten op `z-50`, daarboven alleen de cookiebalk.
+- Aanraakdoelen: op een aanraakscherm (`coarse:`, `pointer: coarse`) is
+  elke knop minimaal 44px hoog en een icoonknop 44×44; kalenderdagen ook.
+  Op desktop blijft de dichtheid zoals hij is. Sheets in de funnel komen
+  op een telefoon van onderen (`ResponsiveSheetContent`).
 
 ## Zo controleer je een wijziging
 

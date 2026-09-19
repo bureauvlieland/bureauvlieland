@@ -1,5 +1,6 @@
 import { formatMapDuration } from "@/lib/mapBooking";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -75,7 +76,7 @@ export const MapActivityDetailSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl lg:max-w-2xl overflow-y-auto p-0">
+      <ResponsiveSheetContent className="w-full sm:max-w-xl lg:max-w-2xl overflow-y-auto p-0">
         {/* Hero image */}
         {activity._image && (
           <div className="w-full h-56 sm:h-64 overflow-hidden bg-muted">
@@ -254,7 +255,7 @@ export const MapActivityDetailSheet = ({
             </div>
           </div>
         </div>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 };

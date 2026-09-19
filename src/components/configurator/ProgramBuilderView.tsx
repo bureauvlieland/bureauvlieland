@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,16 +25,18 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useFooterInView } from "@/hooks/useFooterInView";
+import { useFloatingBar } from "@/hooks/useFloatingLayer";
+import { ResponsiveSheetContent } from "@/components/system";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { DayTabs } from "./DayTabs";
 import { FerryDeparturePicker } from "./FerryDeparturePicker";
 import { AddActivitySheet } from "@/components/customer-portal/AddActivitySheet";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { sortCartItemsForDay } from "@/lib/cartSorting";
-import { categoryLabels, timeSlots, type CartItemDetail } from "@/types/buildingBlock";
+import { categoryLabels, formatBlockPrice, formatPriceNote, timeSlots, type CartItemDetail } from "@/types/buildingBlock";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProgramTemplate } from "@/types/programTemplate";
@@ -166,7 +168,8 @@ const SortableItemCard = ({
   return (
     <div ref={setNodeRef} style={style} className="flex items-start gap-1.5">
       <button
-        className="mt-3 p-1 rounded-md cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+        className="mt-3 p-1 coarse:p-3 rounded-md cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+        aria-label="Versleep om te verplaatsen"
         {...attributes}
         {...listeners}
       >
@@ -218,15 +221,10 @@ export const ProgramBuilderView = ({
   };
   const footerInView = useFooterInView();
 
-  // De vaste balk onderaan meldt zijn hoogte, zodat de zwevende knoppen
-  // (chat, programma) erboven blijven en niet over "Volgende" heen staan.
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--floating-offset", "5rem");
-    return () => {
-      root.style.removeProperty("--floating-offset");
-    };
-  }, []);
+  // De vaste balk onderaan meldt zijn hoogte (--floating-offset), zodat de
+  // zwevende knoppen (chat) erboven blijven en niet over "Volgende" staan.
+  const barRef = useRef<HTMLDivElement>(null);
+  useFloatingBar(barRef, !footerInView);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [isErwinOpen, setIsErwinOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
@@ -387,8 +385,9 @@ export const ProgramBuilderView = ({
               </Badge>
             )}
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">Prijzen zijn een indicatie per onderdeel; het totaal staat in ons voorstel.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {templates.length > 0 && (
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsTemplatesOpen(true)}>
               <BookOpen className="h-3.5 w-3.5" />
@@ -493,10 +492,17 @@ export const ProgramBuilderView = ({
                                       {block.short_description}
                                     </p>
                                   )}
-                                  <div className="flex flex-wrap gap-2 mt-1.5">
+                                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                    {/* Prijs per stuk (besluit Erwin, 19 september 2026): dezelfde notatie als op de bouwstenenpagina */}
+                                    <span className="text-xs font-medium text-foreground">
+                                      {formatBlockPrice(block)}
+                                      {formatPriceNote(block) && (
+                                        <span className="font-normal text-muted-foreground"> {formatPriceNote(block)}</span>
+                                      )}
+                                    </span>
                                     {block.duration && (
                                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Clock className="h-3 w-3" />
+                                        <Clock className="h-3 w-3" aria-hidden="true" />
                                         {block.duration}
                                       </span>
                                     )}
@@ -643,13 +649,15 @@ export const ProgramBuilderView = ({
       {/* Floating submit bar — verdwijnt zodra de footer in beeld komt,
           anders staat hij over de footer-links heen. */}
       <div
+        ref={barRef}
         className={`fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4 z-30 transition-opacity duration-200 ${
           footerInView ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       >
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"} geselecteerd
+            {cartItems.length} {cartItems.length === 1 ? "onderdeel" : "onderdelen"}
+            <span className="hidden sm:inline"> geselecteerd</span>
           </p>
           <Button size="lg" onClick={handleSubmitWithValidation} disabled={cartItems.length === 0}>
             {submitLabel}
@@ -680,7 +688,7 @@ export const ProgramBuilderView = ({
 
       {/* Template Picker Sheet */}
       <Sheet open={isTemplatesOpen} onOpenChange={setIsTemplatesOpen}>
-        <SheetContent side="right" className="sm:max-w-md flex flex-col overflow-hidden">
+        <ResponsiveSheetContent className="sm:max-w-md flex flex-col overflow-hidden">
           <SheetHeader>
             <SheetTitle>Voorbeeldprogramma's</SheetTitle>
           </SheetHeader>
@@ -708,7 +716,7 @@ export const ProgramBuilderView = ({
               </Card>
             ))}
           </div>
-        </SheetContent>
+        </ResponsiveSheetContent>
       </Sheet>
 
       {/* Template Preview */}

@@ -6,9 +6,11 @@ volgorde"). Fase 0 gebouwd op 18 september (pull request 51), het
 wizard-vervolg op 18 september (pull request 52), fase 1 (fundament) op 18
 september (pull request 53), fase 2 deel 1 (de programma-wizard) op 18
 september (pull request 54), fase 2 deel 2 (de overige
-aanvraagformulieren) op 19 september. De levende referentie is voortaan
-`docs/design-systeem.md`. Volgende stap: fase 2 deel 3 (de zwevende laag,
-sheets als bottom-sheet op mobiel, prijzen in de bouwer).
+aanvraagformulieren) op 19 september (pull request 55), fase 2 deel 3
+(zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september. De
+levende referentie is voortaan `docs/design-systeem.md`. De prijzen in de
+bouwer staan er sinds 19 september per stuk (besluit Erwin); daarmee is
+fase 2 af. Volgende stap: fase 3 (landingspagina's als sjabloon).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -597,7 +599,29 @@ de edge function `send-quote-request` accepteert een leeg budget en zet
 verblijf, locatie, verzorging) zijn lijniconen uit de vaste set geworden
 (`src/lib/accommodationIcons.ts`): emoji's tekent elk besturingssysteem
 anders en in kleur, en dat paste niet bij de rest. Het veld `icon` in
-`src/types/accommodation.ts` blijft bestaan voor de portalen. Deel 3 van fase 2: de zwevende laag (chat,
+`src/types/accommodation.ts` blijft bestaan voor de portalen.
+
+Fase 2 deel 3 is op 19 september gebouwd: de zwevende laag, sheets op
+mobiel en aanraakdoelen. `FloatingStack` is de ene plek voor de zwevende
+knoppen rechtsonder (chat, programma-knop); `useFloatingBar` laat een
+vaste balk (de programma-bouwer) zijn hoogte melden, `useFloatingClearance`
+laat de knoppen wijken zodra de knoppenrij van een wizardstap in beeld is
+(elke `WizardFooter` doet dat), en `.pb-floating` houdt onder funnelinhoud
+ruimte vrij. Daarmee staat de chatknop nergens meer over "Volgende" of
+"Aanvraag versturen". Alle sheets in de funnel (activiteit toevoegen,
+voorbeeldprogramma's, voorbeeld bekijken, Erwins voorstel, programma
+bewerken, activiteitdetail, logiesofferte) komen op een telefoon van
+onderen (`ResponsiveSheetContent`). Nieuwe Tailwind-variant `coarse:`
+(`pointer: coarse`): op een aanraakscherm is elke knop minimaal 44px hoog,
+een icoonknop 44×44, kalenderdagen 44×44, de versleepgreep en het
+verwijderkruisje bij een datum groter; op desktop verandert niets.
+
+De prijzen in de bouwer zijn op 19 september toegevoegd, per stuk
+(besluit Erwin: geen dagsom of totaal, dat is het voorstel). Elke
+programmakaart toont de prijs in dezelfde notatie als de bouwstenenpagina
+(`formatBlockPrice` en `formatPriceNote`), met onder de kop "Prijzen zijn
+een indicatie per onderdeel; het totaal staat in ons voorstel". Daarmee
+is fase 2 af. Deel 3 van fase 2: de zwevende laag (chat,
 programma-knop, vaste balk als één `FloatingLayer`), sheets als
 bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer.
 
@@ -684,8 +708,9 @@ volgende begint.
    zichtbaar in de programma-bouwer" (ontwerpkeuze: per stuk, per dag of
    totaal) en de logiesstap-afronding mee, omdat het dezelfde schermen
    zijn. Deel 1 (de programma-wizard met de nieuwe componenten) is op 18
-   september gebouwd, deel 2 (de overige aanvraagformulieren) op 19
-   september; deel 3 (zwevende laag, sheets op mobiel, prijzen) volgt.
+   september gebouwd, deel 2 (de overige aanvraagformulieren) en deel 3
+   (zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september, de
+   prijzen in de bouwer (per stuk) ook op 19 september. Fase 2 is af.
 5. **Fase 3: landingspagina's als sjabloon.** Hierin gaan mee: "reviews
    zichtbaarder maken" (concurrentiepositie punt 3, vaste plek voor
    reviews in het sjabloon), de "je"-teksten van de resterende pagina's,

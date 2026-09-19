@@ -416,7 +416,7 @@ export const AccommodationWizard = ({ onSuccess, initialData, fromConfigurator, 
     <>
       <StepperBar ref={stepperRef} steps={STEPPER_STEPS} current={step.key} />
 
-      <Section spacing="compact">
+      <Section spacing="compact" className="pb-floating">
         <Container size="wide">
           {notice && <div className="mb-6">{notice}</div>}
           <div className="grid gap-6 md:grid-cols-3">

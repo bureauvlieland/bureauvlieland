@@ -142,7 +142,7 @@ const SnelAanvragen = () => {
         )}
         <StepperBar ref={stepperRef} steps={STEPS} current={phase} />
 
-        <Section spacing="compact">
+        <Section spacing="compact" className="pb-floating">
           <Container size="prose">
             {phase === "select" && (
               <div className="space-y-6">

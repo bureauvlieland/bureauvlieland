@@ -29,7 +29,7 @@ const CateringAanvragen = () => {
             title="Catering aanvragen"
             intro={`Vertel ons kort wat u zoekt, dan komen wij ${RESPONSE_TIME.within} met een voorstel op maat. Aanvragen graag minimaal 7 dagen vóór de gewenste datum.`}
           />
-          <Section spacing="compact">
+          <Section spacing="compact" className="pb-floating">
             <Container size="prose">
               <CateringQuickRequest initialType={type} />
             </Container>

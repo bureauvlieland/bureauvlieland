@@ -19,3 +19,5 @@ export { OptionCard, OptionGroup } from "./OptionCard";
 export { SuccessScreen } from "./SuccessScreen";
 export { SubmitNote } from "./SubmitNote";
 export { EmptyState, LoadingState } from "./States";
+export { FloatingStack } from "./FloatingStack";
+export { ResponsiveSheetContent } from "./ResponsiveSheetContent";

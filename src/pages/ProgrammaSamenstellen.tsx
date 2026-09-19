@@ -327,7 +327,7 @@ const ProgrammaSamenstellen = () => {
         <StepperBar ref={stepperRef} steps={steps} current={phase} />
 
         {/* Inhoud van de stap */}
-        <Section spacing="compact" className={phase === "program" ? "pb-28" : undefined}>
+        <Section spacing="compact" className="pb-floating">
           <Container size="wide">
             {phase === "basics" && (
               <BasicsForm

@@ -1,7 +1,8 @@
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Clock, ExternalLink, FileText, Globe, Mail, MapPin, Check, Navigation, X, LogIn, LogOut } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { HotelGallery } from "./HotelGallery";
@@ -52,7 +53,7 @@ export const AccommodationQuoteDetailSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+      <ResponsiveSheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-3 border-b text-left">
           <SheetDescription className="text-xs uppercase tracking-wider">Logiesofferte</SheetDescription>
           <SheetTitle className="font-display text-2xl font-medium">{quote.accommodation_name}</SheetTitle>
@@ -269,7 +270,7 @@ export const AccommodationQuoteDetailSheet = ({
             )}
           </div>
         </div>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 };

@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useFloatingClearance } from "@/hooks/useFloatingLayer";
 
 /**
  * Vorige/volgende onder elke wizardstap (ontwerpsysteem fase 2): Terug
@@ -35,8 +36,12 @@ export const WizardFooter = ({
   nextLoadingLabel = "Versturen…",
   note,
   className,
-}: WizardFooterProps) => (
-  <div className={cn("pt-4", className)}>
+}: WizardFooterProps) => {
+  // Zolang deze knoppenrij in beeld is, wijken de zwevende knoppen (chat).
+  const ref = useRef<HTMLDivElement>(null);
+  useFloatingClearance(ref);
+  return (
+  <div ref={ref} className={cn("pt-4", className)}>
     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
       {onBack ? (
         <Button type="button" variant="ghost" onClick={onBack} className="w-full sm:w-auto">
@@ -68,4 +73,5 @@ export const WizardFooter = ({
     </div>
     {note && <div className="mt-3 text-xs leading-relaxed text-muted-foreground sm:ml-auto sm:max-w-md sm:text-right">{note}</div>}
   </div>
-);
+  );
+};
