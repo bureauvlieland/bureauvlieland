@@ -11,6 +11,8 @@ export { pillVariants, type PillTone } from "./pillVariants";
 export { Notice, type NoticeTone } from "./Notice";
 export { SurfaceTheme } from "./SurfaceTheme";
 export { Stepper, type StepperStep } from "./Stepper";
+export { StepperBar } from "./StepperBar";
+export { FunnelHead } from "./FunnelHead";
 export { WizardFooter } from "./WizardFooter";
 export { FormField } from "./FormField";
 export { OptionCard, OptionGroup } from "./OptionCard";

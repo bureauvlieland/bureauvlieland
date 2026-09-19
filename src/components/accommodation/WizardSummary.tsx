@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Home, MapPin, Euro } from "lucide-react";
+import { Pill } from "@/components/system";
+import { Calendar, Users, MapPin, Euro } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { AccommodationWizardData } from "@/types/accommodation";
 import { ACCOMMODATION_TYPES, LOCATION_PREFERENCES, BUDGET_RANGES } from "@/types/accommodation";
+import { accommodationTypeIcon } from "@/lib/accommodationIcons";
 
 interface WizardSummaryProps {
   formData: AccommodationWizardData;
@@ -17,17 +18,16 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
     : 0;
 
   const accommodationType = ACCOMMODATION_TYPES.find(t => t.value === formData.accommodation_type);
+  const TypeIcon = accommodationTypeIcon(formData.accommodation_type);
   const budgetLabel = BUDGET_RANGES.find(b => b.value === formData.budget_range)?.label;
   const locationLabels = formData.location_preference
     .map(loc => LOCATION_PREFERENCES.find(l => l.value === loc)?.label)
     .filter(Boolean);
 
   return (
-    <Card className="sticky top-4">
+    <Card className="sticky top-24">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          📋 Uw aanvraag
-        </CardTitle>
+        <CardTitle className="font-display text-display-md font-medium">Uw aanvraag</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Dates */}
@@ -63,11 +63,9 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
         {/* Accommodation Type */}
         {currentStep >= 2 && accommodationType && (
           <div className="flex items-start gap-3">
-            <Home className="w-4 h-4 mt-1 text-muted-foreground" />
+            <TypeIcon className="w-4 h-4 mt-1 text-muted-foreground" aria-hidden="true" />
             <div>
-              <p className="text-sm font-medium">
-                {accommodationType.icon} {accommodationType.label}
-              </p>
+              <p className="text-sm font-medium">{accommodationType.label}</p>
             </div>
           </div>
         )}
@@ -80,9 +78,9 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
               <p className="text-sm font-medium">Locatie</p>
               <div className="flex flex-wrap gap-1 mt-1">
                 {locationLabels.map((label, i) => (
-                  <Badge key={i} variant="secondary" className="text-xs">
+                  <Pill key={i} tone="neutral" size="sm">
                     {label}
-                  </Badge>
+                  </Pill>
                 ))}
               </div>
             </div>
@@ -113,9 +111,7 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
 
         {/* Price hint */}
         <div className="pt-3 mt-3 border-t bg-muted/30 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
-          <p className="text-xs text-muted-foreground">
-            💡 Gemiddelde prijs op Vlieland: €75 - €120 p.p.p.n.
-          </p>
+          <p className="text-xs text-muted-foreground">Gemiddelde prijs op Vlieland: €75 tot €120 per persoon per nacht.</p>
         </div>
       </CardContent>
     </Card>

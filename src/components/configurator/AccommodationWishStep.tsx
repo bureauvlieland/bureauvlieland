@@ -8,6 +8,7 @@ import {
   type AccommodationType,
 } from "@/types/accommodation";
 import { OptionCard, OptionGroup, SectionHeader, WizardFooter } from "@/components/system";
+import { accommodationTypeIcon, locationIcon } from "@/lib/accommodationIcons";
 
 interface AccommodationWishStepProps {
   numberOfPeople: number;
@@ -72,28 +73,34 @@ export const AccommodationWishStep = ({
         {wish.wanted && (
           <div className="mt-5 space-y-5 pt-5 border-t border-border">
             <OptionGroup label="Type verblijf" columns={2}>
-              {ACCOMMODATION_TYPES.map((type) => (
-                <OptionCard
-                  key={type.value}
-                  selected={wish.type === type.value}
-                  onSelect={() => onChange({ ...wish, type: type.value as AccommodationType })}
-                  title={type.label}
-                  icon={<span className="text-xl leading-none">{type.icon}</span>}
-                />
-              ))}
+              {ACCOMMODATION_TYPES.map((type) => {
+                const Icon = accommodationTypeIcon(type.value);
+                return (
+                  <OptionCard
+                    key={type.value}
+                    selected={wish.type === type.value}
+                    onSelect={() => onChange({ ...wish, type: type.value as AccommodationType })}
+                    title={type.label}
+                    icon={<Icon />}
+                  />
+                );
+              })}
             </OptionGroup>
 
             <OptionGroup label="Locatievoorkeur" columns={4}>
-              {LOCATION_PREFERENCES.map((loc) => (
-                <OptionCard
-                  key={loc.value}
-                  selected={wish.locationPreference === loc.value}
-                  onSelect={() => onChange({ ...wish, locationPreference: loc.value })}
-                  title={loc.label}
-                  icon={<span className="text-lg leading-none">{loc.icon}</span>}
-                  align="center"
-                />
-              ))}
+              {LOCATION_PREFERENCES.map((loc) => {
+                const Icon = locationIcon(loc.value);
+                return (
+                  <OptionCard
+                    key={loc.value}
+                    selected={wish.locationPreference === loc.value}
+                    onSelect={() => onChange({ ...wish, locationPreference: loc.value })}
+                    title={loc.label}
+                    icon={<Icon />}
+                    align="center"
+                  />
+                );
+              })}
             </OptionGroup>
 
             <OptionGroup label="Budget per persoon per nacht" columns={3}>

@@ -6,26 +6,37 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format, differenceInCalendarDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
+  Building2,
   CalendarIcon,
-  Sandwich,
-  GlassWater,
+  Clock,
   Flame,
-  UtensilsCrossed,
+  GlassWater,
+  Mail,
+  MapPin,
+  Phone,
+  Sandwich,
   Sparkles,
-  AlertTriangle,
-  Loader2,
+  User,
+  Users,
+  UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buildAttribution } from "@/lib/entryPageTracker";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import {
+  FormField,
+  Notice,
+  OptionCard,
+  OptionGroup,
+  SectionHeader,
+  SubmitNote,
+  SuccessScreen,
+  WizardFooter,
+} from "@/components/system";
 
 interface CateringQuickRequestProps {
   initialType?: string | null;
@@ -33,7 +44,7 @@ interface CateringQuickRequestProps {
 
 const TYPES = [
   { key: "lunch", label: "Lunch", icon: Sandwich, desc: "Broodjes, soep of salade" },
-  { key: "borrel", label: "Borrel & receptie", icon: GlassWater, desc: "Hapjes met drankpakket" },
+  { key: "borrel", label: "Borrel en receptie", icon: GlassWater, desc: "Hapjes met drankpakket" },
   { key: "bbq", label: "BBQ op locatie", icon: Flame, desc: "Compleet verzorgd, op uw verblijf of buitenlocatie" },
   { key: "diner", label: "Diner", icon: UtensilsCrossed, desc: "3-gangen, buffet of walking dinner" },
   { key: "maatwerk", label: "Iets anders", icon: Sparkles, desc: "Vertel ons wat u in gedachten heeft" },
@@ -42,8 +53,8 @@ const TYPES = [
 const LEAD_TIME_DAYS = 7;
 
 export const CateringQuickRequest = ({ initialType = null }: CateringQuickRequestProps) => {
-  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState<{ reference: string | null } | null>(null);
 
   const [type, setType] = useState<string>(initialType || "");
   const [date, setDate] = useState<Date | null>(null);
@@ -57,20 +68,17 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [dietary, setDietary] = useState("");
-  const [acceptTerms, setAcceptTerms] = useState(false);
 
   const leadTimeWarning = date && differenceInCalendarDays(date, new Date()) < LEAD_TIME_DAYS;
 
   const canSubmit =
-    type &&
-    date &&
+    !!type &&
+    !!date &&
     guests > 0 &&
     locationText.trim().length > 0 &&
     name.trim().length > 0 &&
     email.trim().length > 0 &&
-    phone.trim().length > 0 &&
-    acceptTerms &&
-    !isSubmitting;
+    phone.trim().length > 0;
 
   const handleSubmit = async () => {
     if (!date || !type) return;
@@ -146,11 +154,8 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
         console.error("send-catering-request exception", mailEx);
       }
 
-      toast({
-        title: "Aanvraag verzonden",
-        description: `U ontvangt direct een bevestiging per e-mail. Wij nemen ${RESPONSE_TIME.within} contact met u op met een voorstel.`,
-      });
-      navigate(`/?catering_submitted=1`);
+      setSubmitted({ reference: refRow?.reference_number || null });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e: any) {
       console.error("Catering submit error", e);
       toast({
@@ -163,48 +168,53 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
     }
   };
 
-  return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      {/* Type of catering */}
-      <div>
-        <Label className="text-base font-semibold mb-3 block">Wat heeft u in gedachten?</Label>
-        <RadioGroup value={type} onValueChange={setType} className="grid sm:grid-cols-2 gap-3">
-          {TYPES.map((t) => {
-            const Icon = t.icon;
-            const active = type === t.key;
-            return (
-              <Label
-                key={t.key}
-                htmlFor={`type-${t.key}`}
-                className={cn(
-                  "flex items-start gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all",
-                  active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                )}
-              >
-                <RadioGroupItem value={t.key} id={`type-${t.key}`} className="mt-1" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 font-medium text-foreground">
-                    <Icon className="h-4 w-4 text-primary" /> {t.label}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-0.5">{t.desc}</p>
-                </div>
-              </Label>
-            );
-          })}
-        </RadioGroup>
-      </div>
+  if (submitted) {
+    return (
+      <SuccessScreen
+        title="Uw cateringaanvraag is verstuurd"
+        intro={`U ontvangt direct een bevestiging per e-mail. ${RESPONSE_TIME.sentence}`}
+        reference={submitted.reference}
+        primary={{ label: "Terug naar de homepage", to: "/" }}
+        secondary={{ label: "Stel ook een programma samen", to: "/programma-samenstellen" }}
+      />
+    );
+  }
 
-      {/* Date + group size + start time */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <Label className="mb-2 block">Datum</Label>
+  return (
+    <div className="space-y-8">
+      <OptionGroup label="Wat heeft u in gedachten?" columns={2}>
+        {TYPES.map((t) => {
+          const Icon = t.icon;
+          return (
+            <OptionCard
+              key={t.key}
+              selected={type === t.key}
+              onSelect={() => setType(t.key)}
+              title={t.label}
+              description={t.desc}
+              icon={<Icon />}
+            />
+          );
+        })}
+      </OptionGroup>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="catering-datum" className="flex items-center gap-1">
+            Datum
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
+          </Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
+                id="catering-datum"
+                type="button"
                 variant="outline"
-                className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+                className={cn("w-full justify-start font-normal", !date && "text-muted-foreground")}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
+                <CalendarIcon aria-hidden="true" />
                 {date ? format(date, "EEEE d MMMM yyyy", { locale: nl }) : "Kies een datum"}
               </Button>
             </PopoverTrigger>
@@ -214,118 +224,73 @@ export const CateringQuickRequest = ({ initialType = null }: CateringQuickReques
                 selected={date || undefined}
                 onSelect={(d) => setDate(d || null)}
                 disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                locale={nl}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
         </div>
-        <div>
-          <Label htmlFor="startTime" className="mb-2 block">Starttijd (optioneel)</Label>
+        <FormField label="Starttijd" htmlFor="catering-starttijd" leading={<Clock />}>
+          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        </FormField>
+        <FormField label="Aantal personen" htmlFor="catering-personen" required leading={<Users />}>
+          <Input type="number" min={1} value={guests} onChange={(e) => setGuests(Math.max(1, Number(e.target.value) || 0))} />
+        </FormField>
+        <FormField label="Locatie op Vlieland" htmlFor="catering-locatie" required leading={<MapPin />}>
           <Input
-            id="startTime"
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="guests" className="mb-2 block">Aantal personen</Label>
-          <Input
-            id="guests"
-            type="number"
-            min={1}
-            value={guests}
-            onChange={(e) => setGuests(Math.max(1, Number(e.target.value) || 0))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="location" className="mb-2 block">Locatie op Vlieland</Label>
-          <Input
-            id="location"
-            placeholder="Bijv. Brouwerij Fortuna, eigen vakantiehuis, strand…"
+            placeholder="Bijvoorbeeld Brouwerij Fortuna, eigen vakantiehuis, strand"
             value={locationText}
             onChange={(e) => setLocationText(e.target.value)}
           />
-        </div>
+        </FormField>
       </div>
 
       {leadTimeWarning && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Korte aanlooptijd</AlertTitle>
-          <AlertDescription>
-            Wij vragen normaal minimaal {LEAD_TIME_DAYS} dagen vooraf aan te vragen. Bel ons even op
-            0562 700 208 om de haalbaarheid te bespreken.
-          </AlertDescription>
-        </Alert>
+        <Notice tone="warning" title="Korte aanlooptijd">
+          Wij vragen normaal minimaal {LEAD_TIME_DAYS} dagen vooraf aan te vragen. Bel ons even op{" "}
+          <a href="tel:+31562700208" className="underline underline-offset-2">
+            0562 700 208
+          </a>{" "}
+          om de haalbaarheid te bespreken.
+        </Notice>
       )}
 
-      {/* Contact */}
       <div className="space-y-4">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name" className="mb-2 block">Naam</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="company" className="mb-2 block">Bedrijf (optioneel)</Label>
-            <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="email" className="mb-2 block">E-mail</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="phone" className="mb-2 block">Telefoon</Label>
-            <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
+        <SectionHeader as="h2" size="md" weight="medium" title="Uw gegevens" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Naam" htmlFor="catering-naam" required leading={<User />}>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Uw volledige naam" autoComplete="name" />
+          </FormField>
+          <FormField label="Bedrijf of organisatie" htmlFor="catering-bedrijf" leading={<Building2 />}>
+            <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Optioneel" autoComplete="organization" />
+          </FormField>
+          <FormField label="E-mailadres" htmlFor="catering-email" required leading={<Mail />}>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="uw@email.nl" autoComplete="email" />
+          </FormField>
+          <FormField label="Telefoonnummer" htmlFor="catering-telefoon" required leading={<Phone />}>
+            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="06 12345678" autoComplete="tel" />
+          </FormField>
         </div>
-        <div>
-          <Label htmlFor="notes" className="mb-2 block">Wensen, sfeer of details (optioneel)</Label>
+        <FormField label="Wensen, sfeer of details" htmlFor="catering-wensen">
           <Textarea
-            id="notes"
             rows={4}
-            placeholder="Vertel ons over uw groep, de gelegenheid en wensen. Wij denken graag mee."
+            placeholder="Vertel ons over uw groep, de gelegenheid en uw wensen. Wij denken graag mee."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-        </div>
-        <div>
-          <Label htmlFor="dietary" className="mb-2 block">Allergieën / dieetwensen (optioneel)</Label>
-          <Input
-            id="dietary"
-            placeholder="Bijv. 2x vegetarisch, 1x glutenvrij"
-            value={dietary}
-            onChange={(e) => setDietary(e.target.value)}
-          />
-        </div>
-        <Label className="flex items-start gap-3 cursor-pointer">
-          <Checkbox
-            checked={acceptTerms}
-            onCheckedChange={(v) => setAcceptTerms(v === true)}
-            className="mt-0.5"
-          />
-          <span className="text-sm text-muted-foreground">
-            Ik begrijp dat dit een vrijblijvende aanvraag is. Bureau Vlieland neemt {RESPONSE_TIME.within}
-            contact met mij op met een voorstel op maat.
-          </span>
-        </Label>
+        </FormField>
+        <FormField label="Allergieën of dieetwensen" htmlFor="catering-dieet" help="Bijvoorbeeld 2x vegetarisch, 1x glutenvrij.">
+          <Input value={dietary} onChange={(e) => setDietary(e.target.value)} />
+        </FormField>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-2 border-t">
-        <p className="text-sm text-muted-foreground">
-          Geen verplichting. Wij komen met een voorstel op maat.
-        </p>
-        <Button size="lg" onClick={handleSubmit} disabled={!canSubmit}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Versturen…
-            </>
-          ) : (
-            "Verstuur aanvraag"
-          )}
-        </Button>
-      </div>
+      <WizardFooter
+        onNext={handleSubmit}
+        nextLabel="Aanvraag versturen"
+        nextDisabled={!canSubmit}
+        nextLoading={isSubmitting}
+        note={<SubmitNote />}
+      />
     </div>
   );
 };

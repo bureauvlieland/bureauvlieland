@@ -1,23 +1,19 @@
 import { RESPONSE_TIME } from "@/content/promises";
 import { useState, useRef, useEffect } from "react";
 import { Helmet } from "react-helmet";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, isValid, parseISO } from "date-fns";
+import { nl } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -35,6 +31,17 @@ import { FaqSection } from "@/components/FaqSection";
 import { trackQuoteRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 import { reportError } from "@/lib/errorReporting";
+import { Building2, CalendarIcon, Mail, Phone, User, Users } from "lucide-react";
+import {
+  Container,
+  FormField,
+  FunnelHead,
+  Section,
+  SectionHeader,
+  SubmitNote,
+  SuccessScreen,
+  WizardFooter,
+} from "@/components/system";
 
 // Event type options for the dropdown
 const EVENT_TYPE_OPTIONS = [
@@ -53,22 +60,29 @@ const EVENT_TYPE_OPTIONS = [
 const formSchema = z.object({
   name: z.string().min(2, "Naam is verplicht").max(100, "Maximaal 100 karakters"),
   company: z.string().max(100, "Maximaal 100 karakters").optional(),
-  email: z.string().email("Ongeldig email adres").max(255, "Maximaal 255 karakters"),
+  email: z.string().email("Vul een geldig e-mailadres in").max(255, "Maximaal 255 karakters"),
   phone: z.string().trim().max(20, "Maximaal 20 karakters").refine(isDutchMobileNumber, DUTCH_MOBILE_PHONE_ERROR),
   numberOfPeople: z.string().min(1, "Aantal personen is verplicht"),
   startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
   numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
-  budgetPerPerson: z.string().min(1, "Budget indicatie is verplicht"),
+  budgetPerPerson: z.string().max(50, "Maximaal 50 karakters").optional(),
   eventType: z.string().optional(),
   description: z.string().max(2000, "Maximaal 2000 karakters").optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+const requiredMark = (
+  <span className="text-destructive" aria-hidden="true">
+    *
+  </span>
+);
+
 export default function Offerte() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
-  
+
   // Get entry page data for attribution
   const entryPage = getEntryPage();
   const inferredEventType = entryPage ? inferEventTypeFromPath(entryPage.path) : null;
@@ -89,75 +103,60 @@ export default function Offerte() {
       description: "",
     },
   });
-
-  const handleChatToQuote = (chatSummary: string) => {
-    // Scroll to form
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-    
-    toast({
-      title: "Chat info beschikbaar",
-      description: "Vul het formulier in met uw contactgegevens en evenement details.",
-    });
-  };
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = form;
 
   // Check for chat summary from other pages
   useEffect(() => {
-    const chatSummary = sessionStorage.getItem('chatSummary');
+    const chatSummary = sessionStorage.getItem("chatSummary");
     if (chatSummary) {
-      // Clear the session storage
-      sessionStorage.removeItem('chatSummary');
-      
-      // Scroll to form
+      sessionStorage.removeItem("chatSummary");
       setTimeout(() => {
         formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
-      
       toast({
-        title: "Chat info beschikbaar",
-        description: "Vul het formulier in met uw contactgegevens en evenement details.",
+        title: "Chatinformatie beschikbaar",
+        description: "Vul het formulier in met uw contactgegevens en de details van uw evenement.",
       });
     }
   }, []);
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-    
+
     try {
-      const { data: result, error } = await supabase.functions.invoke(
-        "send-quote-request",
-        {
-          body: data,
-        }
-      );
+      const { error } = await supabase.functions.invoke("send-quote-request", {
+        body: data,
+      });
 
       if (error) throw error;
 
       // Track conversion event with event type and entry page
-      const finalEventType = data.eventType || inferredEventType || 'niet_gespecificeerd';
+      const finalEventType = data.eventType || inferredEventType || "niet_gespecificeerd";
       trackQuoteRequestSubmitted({
         numberOfPeople: parseInt(data.numberOfPeople, 10) || 0,
         numberOfDays: data.numberOfDays,
-        budgetPerPerson: data.budgetPerPerson,
+        budgetPerPerson: data.budgetPerPerson || "onbekend",
         eventType: finalEventType,
-        entryPage: entryPage?.path || 'direct',
+        entryPage: entryPage?.path || "direct",
         utmSource: entryPage?.utm_source,
         utmMedium: entryPage?.utm_medium,
         utmCampaign: entryPage?.utm_campaign,
       });
 
-      toast({
-        title: "Offerte aanvraag verstuurd!",
-        description: `We nemen ${RESPONSE_TIME.within} contact met u op.`,
-      });
-
-      form.reset();
+      reset();
+      setIsSuccess(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
       reportError(error, { where: "Offerte: Error submitting quote request" });
       toast({
         title: "Er ging iets mis",
-        description: "Probeer het later opnieuw of neem direct contact op.",
+        description: "Probeer het later opnieuw of bel ons op 0562 700 208.",
         variant: "destructive",
       });
     } finally {
@@ -168,7 +167,7 @@ export default function Offerte() {
   return (
     <>
       <Helmet>
-        <title>Offerte Aanvragen - Bureau Vlieland</title>
+        <title>Offerte aanvragen | Bureau Vlieland</title>
         <meta
           name="description"
           content={`Vraag een vrijblijvende offerte aan voor uw teamuitje, training, evenement of catering op Vlieland. ${RESPONSE_TIME.short}.`}
@@ -177,165 +176,140 @@ export default function Offerte() {
 
       <Navigation />
 
-      <main id="main-content" className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="max-w-3xl mx-auto" ref={formRef}>
-            <div className="text-center mb-12">
-              <h1 className="text-4xl md:text-5xl font-display font-bold mb-4 text-foreground">
-                Offerte Aanvragen
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Vul onderstaand formulier in en ontvang {RESPONSE_TIME.within} een op maat gemaakte offerte
-              </p>
-            </div>
+      <main id="main-content">
+        {!isSuccess && (
+          <FunnelHead
+            eyebrow="Offerte"
+            title="Offerte aanvragen"
+            intro={`Vertel ons kort over uw evenement. ${RESPONSE_TIME.sentence}`}
+          />
+        )}
 
-            <div className="bg-card rounded-lg shadow-lg p-6 md:p-8">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Naam *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Voor- en achternaam" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Bedrijfsnaam</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Optioneel" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email *</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="naam@voorbeeld.nl" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mobiel nummer (06) *</FormLabel>
-                          <FormControl>
-                            <Input type="tel" placeholder="06 12345678" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold mb-4">Evenement Details</h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="numberOfPeople"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Aantal personen *</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="Bijv. 25" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="startDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Gewenste startdatum *</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+        <Section spacing="compact">
+          <Container size="prose">
+            <div ref={formRef} className="scroll-mt-20">
+              {isSuccess ? (
+                <SuccessScreen
+                  title="Uw offerteaanvraag is verstuurd"
+                  intro={`Controleer uw inbox voor de bevestiging. ${RESPONSE_TIME.sentence} Heeft u tussendoor een vraag? Bel ons op 0562 700 208.`}
+                  primary={{ label: "Terug naar de homepage", to: "/" }}
+                  secondary={{ label: "Bekijk voorbeeldprogramma's", to: "/voorbeeldprogrammas" }}
+                />
+              ) : (
+                <Card className="p-5 sm:p-8">
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-8" noValidate>
+                    <div className="space-y-4">
+                      <SectionHeader as="h2" size="md" weight="medium" title="Uw gegevens" />
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FormField label="Naam" htmlFor="offerte-naam" required leading={<User />} error={errors.name?.message}>
+                          <Input placeholder="Voor- en achternaam" autoComplete="name" {...register("name")} />
+                        </FormField>
+                        <FormField label="Bedrijf of organisatie" htmlFor="offerte-bedrijf" leading={<Building2 />} error={errors.company?.message}>
+                          <Input placeholder="Optioneel" autoComplete="organization" {...register("company")} />
+                        </FormField>
+                        <FormField label="E-mailadres" htmlFor="offerte-email" required leading={<Mail />} error={errors.email?.message}>
+                          <Input type="email" placeholder="naam@voorbeeld.nl" autoComplete="email" {...register("email")} />
+                        </FormField>
+                        <FormField label="Mobiel nummer (06)" htmlFor="offerte-telefoon" required leading={<Phone />} error={errors.phone?.message}>
+                          <Input type="tel" placeholder="06 12345678" autoComplete="tel" {...register("phone")} />
+                        </FormField>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                      <FormField
-                        control={form.control}
-                        name="numberOfDays"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Aantal dagen *</FormLabel>
-                            <FormControl>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecteer aantal dagen" />
+                    <div className="space-y-4 border-t border-border pt-6">
+                      <SectionHeader as="h2" size="md" weight="medium" title="Uw evenement" />
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FormField label="Aantal personen" htmlFor="offerte-personen" required leading={<Users />} error={errors.numberOfPeople?.message}>
+                          <Input type="number" min={1} placeholder="Bijvoorbeeld 25" {...register("numberOfPeople")} />
+                        </FormField>
+                        <Controller
+                          control={control}
+                          name="startDate"
+                          render={({ field }) => {
+                            const parsed = field.value ? parseISO(field.value) : undefined;
+                            const selected = parsed && isValid(parsed) ? parsed : undefined;
+                            return (
+                              <div className="space-y-1.5">
+                                <Label htmlFor="offerte-datum" className="flex items-center gap-1">
+                                  Gewenste startdatum
+                                  {requiredMark}
+                                </Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      id="offerte-datum"
+                                      type="button"
+                                      variant="outline"
+                                      aria-invalid={errors.startDate ? true : undefined}
+                                      className={cn("w-full justify-start font-normal", !selected && "text-muted-foreground")}
+                                    >
+                                      <CalendarIcon aria-hidden="true" />
+                                      {selected ? format(selected, "EEEE d MMMM yyyy", { locale: nl }) : "Kies een datum"}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={selected}
+                                      onSelect={(d) => field.onChange(d ? format(d, "yyyy-MM-dd") : "")}
+                                      locale={nl}
+                                      disabled={{ before: new Date() }}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                {errors.startDate && (
+                                  <p className="text-sm font-medium text-destructive">{errors.startDate.message}</p>
+                                )}
+                              </div>
+                            );
+                          }}
+                        />
+                        <Controller
+                          control={control}
+                          name="numberOfDays"
+                          render={({ field }) => (
+                            <div className="space-y-1.5">
+                              <Label htmlFor="offerte-dagen" className="flex items-center gap-1">
+                                Aantal dagen
+                                {requiredMark}
+                              </Label>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger id="offerte-dagen" aria-invalid={errors.numberOfDays ? true : undefined}>
+                                  <SelectValue placeholder="Kies het aantal dagen" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="1">1 dag</SelectItem>
                                   <SelectItem value="2">2 dagen</SelectItem>
                                   <SelectItem value="3">3 dagen</SelectItem>
                                   <SelectItem value="4">4 dagen</SelectItem>
-                                  <SelectItem value="5+">5+ dagen</SelectItem>
+                                  <SelectItem value="5+">5 dagen of meer</SelectItem>
                                 </SelectContent>
                               </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="budgetPerPerson"
+                              {errors.numberOfDays && (
+                                <p className="text-sm font-medium text-destructive">{errors.numberOfDays.message}</p>
+                              )}
+                            </div>
+                          )}
+                        />
+                        <FormField
+                          label="Budgetindicatie per persoon"
+                          htmlFor="offerte-budget"
+                          help="Een schatting is genoeg. Weet u het nog niet, laat het dan leeg."
+                          error={errors.budgetPerPerson?.message}
+                        >
+                          <Input placeholder="Bijvoorbeeld €150 per persoon" {...register("budgetPerPerson")} />
+                        </FormField>
+                      </div>
+                      <Controller
+                        control={control}
+                        name="eventType"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Budget indicatie p.p. *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Bijv. €150 per persoon" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="eventType"
-                      render={({ field }) => (
-                        <FormItem className="mt-6">
-                          <FormLabel>Type uitje (optioneel)</FormLabel>
-                          <FormControl>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="offerte-type">Type uitje</Label>
                             <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecteer type uitje..." />
+                              <SelectTrigger id="offerte-type">
+                                <SelectValue placeholder="Kies een type uitje" />
                               </SelectTrigger>
                               <SelectContent>
                                 {EVENT_TYPE_OPTIONS.map((option) => (
@@ -345,77 +319,50 @@ export default function Offerte() {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          </div>
+                        )}
+                      />
+                    </div>
 
-                  <div className="border-t pt-6">
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Omschrijving / Bijzondere wensen</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Vertel ons meer over uw evenement, doelstellingen of bijzondere wensen…" 
-                              className="min-h-[120px]"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                    <div className="space-y-4 border-t border-border pt-6">
+                      <SectionHeader as="h2" size="md" weight="medium" title="Wensen" />
+                      <FormField label="Omschrijving of bijzondere wensen" htmlFor="offerte-omschrijving" error={errors.description?.message}>
+                        <Textarea
+                          placeholder="Vertel ons meer over uw evenement, doelstellingen of bijzondere wensen"
+                          className="min-h-[120px]"
+                          {...register("description")}
+                        />
+                      </FormField>
+                    </div>
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    size="lg"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Versturen..." : "Offerte Aanvragen"}
-                  </Button>
-                </form>
-              </Form>
-
-              <div className="mt-8 p-4 bg-secondary/20 rounded-lg">
-                <p className="text-sm text-muted-foreground text-center">
-                  <strong>Let op:</strong> We nemen {RESPONSE_TIME.within} contact met u op. 
-                  Voor spoedvragen kunt u ons bellen op{" "}
-                  <a href="tel:+31562700208" className="text-primary hover:underline">
-                    0562 700 208
-                  </a>
-                </p>
-              </div>
+                    <WizardFooter nextType="submit" nextLabel="Aanvraag versturen" nextLoading={isSubmitting} note={<SubmitNote />} />
+                  </form>
+                </Card>
+              )}
             </div>
-          </div>
-        </div>
+          </Container>
+        </Section>
       </main>
 
       <FaqSection
         schemaId="offerte"
         items={[
-            {
-              question: "Hoe snel ontvang ik een offerte?",
-              answer: `Na uw aanvraag nemen we contact op om de wensen door te nemen. ${RESPONSE_TIME.sentence}`,
-            },
-            {
-              question: "Zitten er kosten aan een offerte?",
-              answer: "Nee, het opstellen van een programmavoorstel is kosteloos en vrijblijvend.",
-            },
-            {
-              question: "Hoe lang is een offerte geldig?",
-              answer: "Op elke offerte staat een geldigheidsdatum. Daarna kunnen beschikbaarheid en tarieven van aanbieders wijzigen.",
-            },
-            {
-              question: "Kan ik de offerte nog aanpassen?",
-              answer: "Ja. Via uw persoonlijke klantpagina kunt u onderdelen laten toevoegen, wijzigen of verwijderen voordat u akkoord geeft.",
-            },
+          {
+            question: "Hoe snel ontvang ik een offerte?",
+            answer: `Na uw aanvraag nemen we contact op om de wensen door te nemen. ${RESPONSE_TIME.sentence}`,
+          },
+          {
+            question: "Zitten er kosten aan een offerte?",
+            answer: "Nee, het opstellen van een programmavoorstel is kosteloos en vrijblijvend.",
+          },
+          {
+            question: "Hoe lang is een offerte geldig?",
+            answer: "Op elke offerte staat een geldigheidsdatum. Daarna kunnen beschikbaarheid en tarieven van aanbieders wijzigen.",
+          },
+          {
+            question: "Kan ik de offerte nog aanpassen?",
+            answer: "Ja. Via uw persoonlijke klantpagina kunt u onderdelen laten toevoegen, wijzigen of verwijderen voordat u akkoord geeft.",
+          },
         ]}
       />
       <RelatedLinks />

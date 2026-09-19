@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Keuzekaart met radiogedrag (ontwerpsysteem fase 2): één stijl voor alle
- * "kies één"-vragen in de wizards. Toegankelijk (`role="radio"`,
- * `aria-checked`), 8px hoeken zoals een kaart, geselecteerd in merkblauw.
+ * Keuzekaart (ontwerpsysteem fase 2): één stijl voor alle "kies één"- en
+ * "kies meerdere"-vragen in de wizards. Toegankelijk (`role="radio"` of
+ * `role="checkbox"` met `aria-checked`), 8px hoeken zoals een kaart,
+ * geselecteerd in merkblauw.
  */
 interface OptionCardProps {
   selected: boolean;
@@ -15,6 +16,8 @@ interface OptionCardProps {
   icon?: ReactNode;
   disabled?: boolean;
   align?: "left" | "center";
+  /** `multiple` als er meer kaarten tegelijk gekozen kunnen worden. */
+  selection?: "single" | "multiple";
   className?: string;
 }
 
@@ -26,11 +29,12 @@ export const OptionCard = ({
   icon,
   disabled = false,
   align = "left",
+  selection = "single",
   className,
 }: OptionCardProps) => (
   <button
     type="button"
-    role="radio"
+    role={selection === "multiple" ? "checkbox" : "radio"}
     aria-checked={selected}
     aria-disabled={disabled || undefined}
     disabled={disabled}
@@ -63,19 +67,25 @@ const COLUMN_CLASSES: Record<1 | 2 | 3 | 4, string> = {
 };
 
 interface OptionGroupProps {
-  label: ReactNode;
-  /** Voor `aria-label` als het label geen platte tekst is. */
+  /** Label erboven; laat weg als een kop erboven de vraag al stelt en geef dan `name`. */
+  label?: ReactNode;
+  /** Voor `aria-label` als het label ontbreekt of geen platte tekst is. */
   name?: string;
   help?: ReactNode;
   columns?: 1 | 2 | 3 | 4;
+  selection?: "single" | "multiple";
   className?: string;
   children: ReactNode;
 }
 
 /** Groep keuzekaarten met een label erboven. */
-export const OptionGroup = ({ label, name, help, columns = 2, className, children }: OptionGroupProps) => (
-  <div role="radiogroup" aria-label={name ?? (typeof label === "string" ? label : undefined)} className={cn("space-y-2", className)}>
-    <p className="flex items-center gap-2 text-sm font-medium text-foreground">{label}</p>
+export const OptionGroup = ({ label, name, help, columns = 2, selection = "single", className, children }: OptionGroupProps) => (
+  <div
+    role={selection === "multiple" ? "group" : "radiogroup"}
+    aria-label={name ?? (typeof label === "string" ? label : undefined)}
+    className={cn("space-y-2", className)}
+  >
+    {label && <p className="flex items-center gap-2 text-sm font-medium text-foreground">{label}</p>}
     {help && <p className="text-xs text-muted-foreground">{help}</p>}
     <div className={cn("grid gap-2", COLUMN_CLASSES[columns])}>{children}</div>
   </div>

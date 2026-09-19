@@ -34,6 +34,7 @@ import {
   getBoardDisplay,
 } from "@/types/accommodation";
 import { summarizeBoard, summarizeRooms } from "@/lib/accommodationSetup";
+import { accommodationTypeIcon, locationIcon } from "@/lib/accommodationIcons";
 import { AccommodationQuoteCard } from "./AccommodationQuoteCard";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
@@ -698,6 +699,7 @@ export const AccommodationSection = ({
 
   // State 4: Waiting for quotes
   const accommodationType = ACCOMMODATION_TYPES.find((t) => t.value === accommodation.accommodation_type);
+  const TypeIcon = accommodationTypeIcon(accommodation.accommodation_type);
   const requested = accommodation.quotes_requested_count || 0;
   const declined = accommodation.quotes_declined_count || 0;
   const allDeclined = requested > 0 && declined >= requested;
@@ -741,7 +743,7 @@ export const AccommodationSection = ({
           </div>
           {accommodationType && (
             <div className="flex items-center gap-2">
-              <span>{accommodationType.icon}</span>
+              <TypeIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <span>{accommodationType.label}</span>
             </div>
           )}
@@ -808,11 +810,15 @@ export const AccommodationSection = ({
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Locatievoorkeur</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {locationLabels.map((loc, i) => (
-                        <Badge key={i} variant="secondary" className="font-normal">
-                          <span className="mr-1">{loc.icon}</span>{loc.label}
-                        </Badge>
-                      ))}
+                      {locationLabels.map((loc, i) => {
+                        const Icon = locationIcon(loc.value);
+                        return (
+                          <Badge key={i} variant="secondary" className="font-normal">
+                            <Icon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                            {loc.label}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

@@ -5,9 +5,10 @@ Status: onderzoek afgerond 17 september 2026. Zes besluiten genomen op
 volgorde"). Fase 0 gebouwd op 18 september (pull request 51), het
 wizard-vervolg op 18 september (pull request 52), fase 1 (fundament) op 18
 september (pull request 53), fase 2 deel 1 (de programma-wizard) op 18
-september. De levende referentie is voortaan `docs/design-systeem.md`.
-Volgende stap: fase 2 deel 2 (de overige aanvraagformulieren, de zwevende
-laag, prijzen in de bouwer).
+september (pull request 54), fase 2 deel 2 (de overige
+aanvraagformulieren) op 19 september. De levende referentie is voortaan
+`docs/design-systeem.md`. Volgende stap: fase 2 deel 3 (de zwevende laag,
+sheets als bottom-sheet op mobiel, prijzen in de bouwer).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -568,6 +569,38 @@ componenten, de zwevende laag (chat, programma-knop, vaste balk), sheets
 als bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer
 (ontwerpkeuze per stuk, per dag of totaal door Erwin).
 
+Fase 2 deel 2 is op 19 september gebouwd: de overige aanvraagformulieren.
+Nieuw: `FunnelHead` (de donkere kop van elke funnelpagina), `StepperBar`
+(de stappenbalk op volle breedte, met `useScrollOnStepChange`),
+`OptionCard` met `selection="multiple"`, `SuccessScreen` met `as="h1"`.
+Omgezet: Snel aanvragen (drie stappen in de stappenbalk, lege staat als
+`EmptyState`), Programma op maat (keuzekaartjes, velden met foutmelding,
+bevestiging met link naar de programmapagina), Offerte (zelfde velden en
+voet als de wizard, bevestiging in de pagina in plaats van een toast en
+een leeg formulier), Catering (keuzekaartjes, waarschuwing bij korte
+aanlooptijd als `Notice`, bevestiging in de pagina in plaats van een
+doorverwijzing naar de homepage; het vinkje "ik begrijp dat dit
+vrijblijvend is" is weg, de `SubmitNote` zegt hetzelfde), Logies (vijf
+stappen in de stappenbalk, keuzekaartjes voor type, kamertype, locatie,
+verzorging en budget, bevestiging in de pagina zonder de automatische
+doorverwijzing na 2,5 seconde), Activiteiten boeken en de boekingsstatus
+(kop, lege en ladende staat). Overal dezelfde knop "Aanvraag versturen"
+met "Versturen…" als laadtekst; "Verzenden…", "Vrijblijvend aanvragen",
+"Verstuur aanvraag" en "Offerte Aanvragen" zijn weg. Het ongebruikte
+`MaatwerkIntakeForm` is verwijderd. Ontwerpschuld van 806 naar 800, lint
+van 1193 naar 1192. Na Erwins eerste blik (19 september): de datumkiezer
+op Offerte is de kalender met Nederlandse notatie in plaats van het
+browserveld (dat toonde mm/dd/yyyy in Engelstalige browsers), de
+budgetindicatie is niet meer verplicht (veel gasten hebben nog geen idee;
+de edge function `send-quote-request` accepteert een leeg budget en zet
+"Niet opgegeven" in de mail), en de emoji's bij de logieskeuzes (type
+verblijf, locatie, verzorging) zijn lijniconen uit de vaste set geworden
+(`src/lib/accommodationIcons.ts`): emoji's tekent elk besturingssysteem
+anders en in kleur, en dat paste niet bij de rest. Het veld `icon` in
+`src/types/accommodation.ts` blijft bestaan voor de portalen. Deel 3 van fase 2: de zwevende laag (chat,
+programma-knop, vaste balk als één `FloatingLayer`), sheets als
+bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer.
+
 **Fase 3: landingspagina's als sjabloon (4–5 dagen).** Eén
 `LandingPage`-component gevoed door een inhoudsbestand per pagina
 (`src/content/landings/*.ts`: titel, intro, foto's, eilandfeiten, FAQ,
@@ -651,8 +684,8 @@ volgende begint.
    zichtbaar in de programma-bouwer" (ontwerpkeuze: per stuk, per dag of
    totaal) en de logiesstap-afronding mee, omdat het dezelfde schermen
    zijn. Deel 1 (de programma-wizard met de nieuwe componenten) is op 18
-   september gebouwd; deel 2 (overige formulieren, zwevende laag,
-   prijzen) volgt.
+   september gebouwd, deel 2 (de overige aanvraagformulieren) op 19
+   september; deel 3 (zwevende laag, sheets op mobiel, prijzen) volgt.
 5. **Fase 3: landingspagina's als sjabloon.** Hierin gaan mee: "reviews
    zichtbaarder maken" (concurrentiepositie punt 3, vaste plek voor
    reviews in het sjabloon), de "je"-teksten van de resterende pagina's,

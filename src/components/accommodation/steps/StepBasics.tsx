@@ -7,12 +7,19 @@ import { Calendar as CalendarIcon, Users, Moon } from "lucide-react";
 import { format, differenceInDays, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { FormField, Notice } from "@/components/system";
 import type { AccommodationWizardData } from "@/types/accommodation";
 
 interface StepBasicsProps {
   formData: AccommodationWizardData;
   updateFormData: (updates: Partial<AccommodationWizardData>) => void;
 }
+
+const requiredMark = (
+  <span className="text-destructive" aria-hidden="true">
+    *
+  </span>
+);
 
 export const StepBasics = ({ formData, updateFormData }: StepBasicsProps) => {
   const minDate = addDays(new Date(), 7);
@@ -22,25 +29,22 @@ export const StepBasics = ({ formData, updateFormData }: StepBasicsProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Date Selection */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Aankomstdatum *</Label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="logies-aankomst" className="flex items-center gap-1">
+            Aankomstdatum
+            {requiredMark}
+          </Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
+                id="logies-aankomst"
+                type="button"
                 variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !formData.arrival_date && "text-muted-foreground"
-                )}
+                className={cn("w-full justify-start font-normal", !formData.arrival_date && "text-muted-foreground")}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.arrival_date ? (
-                  format(formData.arrival_date, "d MMMM yyyy", { locale: nl })
-                ) : (
-                  "Selecteer datum"
-                )}
+                <CalendarIcon aria-hidden="true" />
+                {formData.arrival_date ? format(formData.arrival_date, "d MMMM yyyy", { locale: nl }) : "Kies een datum"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -49,7 +53,7 @@ export const StepBasics = ({ formData, updateFormData }: StepBasicsProps) => {
                 selected={formData.arrival_date}
                 onSelect={(date) => {
                   updateFormData({ arrival_date: date });
-                  // Auto-set departure if not set or before new arrival
+                  // Vertrek automatisch zetten als die ontbreekt of vóór de nieuwe aankomst ligt
                   if (date && (!formData.departure_date || formData.departure_date <= date)) {
                     updateFormData({ departure_date: addDays(date, 2) });
                   }
@@ -62,23 +66,21 @@ export const StepBasics = ({ formData, updateFormData }: StepBasicsProps) => {
           </Popover>
         </div>
 
-        <div className="space-y-2">
-          <Label>Vertrekdatum *</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="logies-vertrek" className="flex items-center gap-1">
+            Vertrekdatum
+            {requiredMark}
+          </Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
+                id="logies-vertrek"
+                type="button"
                 variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !formData.departure_date && "text-muted-foreground"
-                )}
+                className={cn("w-full justify-start font-normal", !formData.departure_date && "text-muted-foreground")}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.departure_date ? (
-                  format(formData.departure_date, "d MMMM yyyy", { locale: nl })
-                ) : (
-                  "Selecteer datum"
-                )}
+                <CalendarIcon aria-hidden="true" />
+                {formData.departure_date ? format(formData.departure_date, "d MMMM yyyy", { locale: nl }) : "Kies een datum"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -86,8 +88,8 @@ export const StepBasics = ({ formData, updateFormData }: StepBasicsProps) => {
                 mode="single"
                 selected={formData.departure_date}
                 onSelect={(date) => updateFormData({ departure_date: date })}
-                disabled={(date) => 
-                  date < minDate || 
+                disabled={(date) =>
+                  date < minDate ||
                   (formData.arrival_date ? date <= formData.arrival_date : false)
                 }
                 initialFocus
@@ -98,58 +100,44 @@ export const StepBasics = ({ formData, updateFormData }: StepBasicsProps) => {
         </div>
       </div>
 
-      {/* Nights indicator */}
       {nights > 0 && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
-          <Moon className="h-4 w-4" />
-          <span>
-            {nights} {nights === 1 ? "nacht" : "nachten"} verblijf
-          </span>
-        </div>
-      )}
-
-      {/* Number of Guests */}
-      <div className="space-y-2">
-        <Label htmlFor="guests">Aantal personen *</Label>
-        <div className="flex items-center gap-3">
-          <Users className="h-5 w-5 text-muted-foreground" />
-          <Input
-            id="guests"
-            type="number"
-            min={1}
-            max={200}
-            value={formData.number_of_guests}
-            onChange={(e) => updateFormData({ number_of_guests: parseInt(e.target.value) || 1 })}
-            className="w-24"
-          />
-          <span className="text-sm text-muted-foreground">personen</span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Voor groepen groter dan 50 personen nemen wij persoonlijk contact met u op.
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Moon className="h-4 w-4" aria-hidden="true" />
+          {nights} {nights === 1 ? "nacht" : "nachten"} verblijf
         </p>
-      </div>
-
-      {/* Season hint */}
-      {formData.arrival_date && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm">
-            💡 <strong>Tip:</strong> {getSeasonHint(formData.arrival_date)}
-          </p>
-        </div>
       )}
+
+      <FormField
+        label="Aantal personen"
+        htmlFor="logies-personen"
+        required
+        leading={<Users />}
+        help="Voor groepen groter dan 50 personen nemen wij persoonlijk contact met u op."
+      >
+        <Input
+          type="number"
+          min={1}
+          max={200}
+          value={formData.number_of_guests}
+          onChange={(e) => updateFormData({ number_of_guests: parseInt(e.target.value) || 1 })}
+          className="w-40"
+        />
+      </FormField>
+
+      {formData.arrival_date && <Notice tone="info">{getSeasonHint(formData.arrival_date)}</Notice>}
     </div>
   );
 };
 
 function getSeasonHint(date: Date): string {
   const month = date.getMonth();
-  
+
   if (month >= 5 && month <= 7) {
-    return "In de zomermaanden is Vlieland populair. Vroeg boeken is aan te raden!";
+    return "In de zomermaanden is Vlieland populair. Vroeg aanvragen is aan te raden.";
   } else if (month >= 3 && month <= 4) {
-    return "Het voorjaar is ideaal voor teambuilding. Goede beschikbaarheid en aangename temperaturen.";
+    return "Het voorjaar is ideaal voor teambuilding: goede beschikbaarheid en aangename temperaturen.";
   } else if (month >= 8 && month <= 10) {
-    return "Het najaar biedt rust en ruimte. Perfecte periode voor heisessies en bezinning.";
+    return "Het najaar biedt rust en ruimte. Een goede periode voor heisessies en bezinning.";
   } else {
     return "De winter op Vlieland is rustig en authentiek. Ideaal voor kleinere groepen.";
   }

@@ -45,7 +45,8 @@ const QuoteRequestSchema = z.object({
   numberOfPeople: z.string().trim().min(1, "Aantal personen is verplicht").max(10),
   startDate: z.string().trim().min(1, "Startdatum is verplicht").max(20),
   numberOfDays: z.string().trim().min(1, "Aantal dagen is verplicht").max(10),
-  budgetPerPerson: z.string().trim().min(1, "Budget is verplicht").max(50),
+  // Optioneel sinds 19 september 2026: veel gasten hebben nog geen idee van een budget.
+  budgetPerPerson: z.string().trim().max(50, "Budget mag maximaal 50 karakters zijn").optional().or(z.literal("")),
   description: z.string().trim().max(2000, "Omschrijving mag maximaal 2000 karakters zijn").optional().or(z.literal("")),
 });
 
@@ -97,7 +98,7 @@ function getFallbackBureauHtml(data: QuoteRequest): string {
     <p><strong>Aantal personen:</strong> ${safeNumberOfPeople}</p>
     <p><strong>Gewenste startdatum:</strong> ${safeStartDate}</p>
     <p><strong>Aantal dagen:</strong> ${safeNumberOfDays}</p>
-    <p><strong>Budget indicatie p.p.:</strong> ${safeBudgetPerPerson}</p>
+    <p><strong>Budget indicatie p.p.:</strong> ${safeBudgetPerPerson || "Niet opgegeven"}</p>
     
     ${safeDescription ? `
     <h3>Omschrijving / Bijzondere wensen</h3>
@@ -182,7 +183,7 @@ const handler = async (req: Request): Promise<Response> => {
       number_of_people: sanitizeHtml(requestData.numberOfPeople),
       start_date: sanitizeHtml(requestData.startDate),
       number_of_days: sanitizeHtml(requestData.numberOfDays),
-      budget_per_person: sanitizeHtml(requestData.budgetPerPerson),
+      budget_per_person: sanitizeHtml(requestData.budgetPerPerson) || "Niet opgegeven",
       description: sanitizeHtml(requestData.description)?.replace(/\n/g, '<br>') || "",
       admin_link: "https://bureauvlieland.nl/admin",
     };

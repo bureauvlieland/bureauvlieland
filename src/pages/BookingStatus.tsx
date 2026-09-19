@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useSearchParams } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Loader2, Bed, Sparkles, UtensilsCrossed } from "lucide-react";
+import { Bed, Sparkles, UtensilsCrossed } from "lucide-react";
+import { Container, EmptyState, LoadingState, Notice, Section, SectionHeader, SuccessScreen } from "@/components/system";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,67 +94,64 @@ const BookingStatus = () => {
       <Navigation />
 
       <main id="main-content" className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-12 max-w-2xl space-y-6">
-          <Card>
-            <CardContent className="py-10 text-center space-y-4">
-              {state === "loading" && (
-                <>
-                  <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary" />
-                  <h1 className="text-xl font-semibold">Betaling controleren…</h1>
-                </>
-              )}
+        <Section spacing="compact">
+          <Container size="prose" className="space-y-6">
+          <Card className="p-6 sm:p-8">
+            {state === "loading" && (
+              <div className="text-center">
+                <SectionHeader as="h1" size="md" weight="medium" align="center" title="Betaling controleren" />
+                <LoadingState label="Een moment…" />
+              </div>
+            )}
 
-              {state === "paid" && (
-                <>
-                  <CheckCircle2 className="h-12 w-12 mx-auto text-primary" />
-                  <h1 className="text-2xl font-bold">Uw boeking is bevestigd</h1>
-                  <p className="text-muted-foreground">
-                    {pending?.activityName ? `${pending.activityName}. ` : ""}
-                    Boekingsnummer {bookingId ?? "-"}
-                    {amount !== null ? ` · ${formatEuro(amount)}` : ""}.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    U ontvangt de bevestiging per e-mail van de aanbieder.
-                  </p>
-                </>
-              )}
+            {state === "paid" && (
+              <SuccessScreen
+                as="h1"
+                title="Uw boeking is bevestigd"
+                intro={`${pending?.activityName ? `${pending.activityName}. ` : ""}Boekingsnummer ${bookingId ?? "-"}${amount !== null ? ` · ${formatEuro(amount)}` : ""}. U ontvangt de bevestiging per e-mail van de aanbieder.`}
+                primary={{ label: "Meer activiteiten boeken", to: "/activiteiten-boeken" }}
+                secondary={{ label: "Terug naar de homepage", to: "/" }}
+                className="py-2"
+              />
+            )}
 
-              {state === "failed" && (
-                <>
-                  <XCircle className="h-12 w-12 mx-auto text-destructive" />
-                  <h1 className="text-2xl font-bold">De betaling is niet gelukt</h1>
-                  <p className="text-muted-foreground">
-                    Uw plek is weer vrijgegeven. U kunt het opnieuw proberen.
-                  </p>
-                  <Button asChild>
-                    <Link to="/activiteiten-boeken">Opnieuw proberen</Link>
-                  </Button>
-                </>
-              )}
+            {state === "failed" && (
+              <div className="space-y-4">
+                <SectionHeader as="h1" size="md" weight="medium" title="De betaling is niet gelukt" />
+                <Notice tone="danger">Uw plek is weer vrijgegeven. U kunt het opnieuw proberen.</Notice>
+                <Button asChild>
+                  <Link to="/activiteiten-boeken">Opnieuw proberen</Link>
+                </Button>
+              </div>
+            )}
 
-              {state === "pending" && (
-                <>
-                  <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary" />
-                  <h1 className="text-xl font-semibold">Betaling wordt verwerkt</h1>
-                  <p className="text-muted-foreground text-sm">
-                    Dit kan een moment duren. Zodra de betaling is verwerkt ontvangt u de
-                    bevestiging per e-mail van de aanbieder.
-                  </p>
-                </>
-              )}
+            {state === "pending" && (
+              <div className="space-y-2">
+                <SectionHeader
+                  as="h1"
+                  size="md"
+                  weight="medium"
+                  title="Betaling wordt verwerkt"
+                  intro="Dit kan een moment duren. Zodra de betaling is verwerkt ontvangt u de bevestiging per e-mail van de aanbieder."
+                />
+                <LoadingState label="Status ophalen…" />
+              </div>
+            )}
 
-              {state === "unknown" && (
-                <>
-                  <h1 className="text-xl font-semibold">Geen boeking gevonden</h1>
-                  <p className="text-muted-foreground text-sm">
-                    We konden deze boeking niet terugvinden in deze browser.
-                  </p>
-                  <Button asChild variant="outline">
-                    <Link to="/activiteiten-boeken">Terug naar activiteiten</Link>
-                  </Button>
-                </>
-              )}
-            </CardContent>
+            {state === "unknown" && (
+              <>
+                <SectionHeader as="h1" size="md" weight="medium" title="Geen boeking gevonden" className="mb-4" />
+                <EmptyState
+                  title="Niet gevonden in deze browser"
+                  description="We konden deze boeking niet terugvinden in deze browser."
+                  action={
+                    <Button asChild variant="outline">
+                      <Link to="/activiteiten-boeken">Terug naar activiteiten</Link>
+                    </Button>
+                  }
+                />
+              </>
+            )}
           </Card>
 
           <div>
@@ -182,7 +180,8 @@ const BookingStatus = () => {
               </Link>
             </div>
           </div>
-        </div>
+          </Container>
+        </Section>
       </main>
 
       <Footer />

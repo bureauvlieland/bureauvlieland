@@ -1,8 +1,8 @@
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { FormField, OptionCard, OptionGroup } from "@/components/system";
 import type { AccommodationWizardData } from "@/types/accommodation";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, BOARD_PREFERENCE_OPTIONS } from "@/types/accommodation";
+import { boardIcon, locationIcon } from "@/lib/accommodationIcons";
 
 interface StepWishesProps {
   formData: AccommodationWizardData;
@@ -18,100 +18,65 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
     updateFormData({ location_preference: updated });
   };
 
-
   return (
     <div className="space-y-6">
-      {/* Location Preference */}
-      <div className="space-y-3">
-        <Label>Locatievoorkeur</Label>
-        <div className="grid grid-cols-2 gap-3">
-          {LOCATION_PREFERENCES.map((loc) => (
-            <button
+      <OptionGroup label="Locatievoorkeur" help="Meerdere keuzes mogelijk." selection="multiple" columns={4}>
+        {LOCATION_PREFERENCES.map((loc) => {
+          const Icon = locationIcon(loc.value);
+          return (
+            <OptionCard
               key={loc.value}
-              type="button"
-              onClick={() => toggleLocation(loc.value)}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all",
-                formData.location_preference.includes(loc.value)
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50"
-              )}
-            >
-              <span className="text-xl">{loc.icon}</span>
-              <span className="text-sm font-medium">{loc.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+              selection="multiple"
+              selected={formData.location_preference.includes(loc.value)}
+              onSelect={() => toggleLocation(loc.value)}
+              title={loc.label}
+              icon={<Icon />}
+              align="center"
+            />
+          );
+        })}
+      </OptionGroup>
 
-
-      {/* Verzorging */}
-      <div className="space-y-3">
-        <Label>Welke verzorging wenst u?</Label>
-        <p className="text-xs text-muted-foreground">
-          Zo weten de accommodaties direct of u alleen wilt overnachten of ook maaltijden wenst.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {BOARD_PREFERENCE_OPTIONS.map((board) => (
-            <button
+      <OptionGroup
+        label="Welke verzorging wenst u?"
+        help="Zo weten de accommodaties direct of u alleen wilt overnachten of ook maaltijden wenst."
+        columns={2}
+      >
+        {BOARD_PREFERENCE_OPTIONS.map((board) => {
+          const Icon = boardIcon(board.value);
+          return (
+            <OptionCard
               key={board.value}
-              type="button"
-              onClick={() => updateFormData({ board_preference: board.value })}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-lg border-2 text-left text-sm transition-all",
-                formData.board_preference === board.value
-                  ? "border-primary bg-primary/5 font-medium"
-                  : "border-border hover:border-primary/50"
-              )}
-            >
-              <span className="text-xl">{board.icon}</span>
-              <span>{board.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+              selected={formData.board_preference === board.value}
+              onSelect={() => updateFormData({ board_preference: board.value })}
+              title={board.label}
+              icon={<Icon />}
+            />
+          );
+        })}
+      </OptionGroup>
 
-      {/* Budget */}
-      <div className="space-y-3">
-        <Label>Budget indicatie</Label>
+      <OptionGroup label="Budget per persoon per nacht" columns={3}>
+        {BUDGET_RANGES.map((budget) => (
+          <OptionCard
+            key={budget.value}
+            selected={formData.budget_range === budget.value}
+            onSelect={() => updateFormData({ budget_range: budget.value })}
+            title={budget.label}
+            align="center"
+          />
+        ))}
+      </OptionGroup>
 
-        <p className="text-xs text-muted-foreground mb-2">
-          Prijs per persoon per nacht (p.p.p.n.)
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {BUDGET_RANGES.map((budget) => (
-            <button
-              key={budget.value}
-              type="button"
-              onClick={() => updateFormData({ budget_range: budget.value })}
-              className={cn(
-                "p-3 rounded-lg border-2 text-sm transition-all",
-                formData.budget_range === budget.value
-                  ? "border-primary bg-primary/5 font-medium"
-                  : "border-border hover:border-primary/50"
-              )}
-            >
-              {budget.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Special Requests */}
-      <div className="space-y-2">
-        <Label htmlFor="special">Extra wensen (optioneel)</Label>
+      <FormField label="Extra wensen" htmlFor="logies-wensen" help={`${formData.special_requests.length}/1000 tekens`}>
         <Textarea
-          id="special"
-          placeholder="Bijvoorbeeld: rolstoeltoegankelijke kamers, specifieke dieetwensen, huisdieren meenemen, vergaderruimte nodig..."
+          placeholder="Bijvoorbeeld rolstoeltoegankelijke kamers, dieetwensen, huisdieren, een vergaderruimte"
           value={formData.special_requests}
           onChange={(e) => updateFormData({ special_requests: e.target.value })}
           rows={4}
           maxLength={1000}
         />
-        <p className="text-xs text-muted-foreground text-right">
-          {formData.special_requests.length}/1000
-        </p>
-      </div>
+      </FormField>
     </div>
   );
 };
