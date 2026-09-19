@@ -588,7 +588,15 @@ doorverwijzing na 2,5 seconde), Activiteiten boeken en de boekingsstatus
 met "Versturen…" als laadtekst; "Verzenden…", "Vrijblijvend aanvragen",
 "Verstuur aanvraag" en "Offerte Aanvragen" zijn weg. Het ongebruikte
 `MaatwerkIntakeForm` is verwijderd. Ontwerpschuld van 806 naar 800, lint
-van 1193 naar 1192. Deel 3 van fase 2: de zwevende laag (chat,
+van 1193 naar 1192. Na Erwins eerste blik (19 september): de datumkiezer
+op Offerte is de kalender met Nederlandse notatie in plaats van het
+browserveld (dat toonde mm/dd/yyyy in Engelstalige browsers), de
+budgetindicatie is niet meer verplicht (veel gasten hebben nog geen idee;
+de edge function `send-quote-request` accepteert een leeg budget en zet
+"Niet opgegeven" in de mail), en op `/ontwerp` staat een vergelijking
+van iconensets (sectie 08) omdat hij de kleine iconen niet mooi vindt:
+Lucide zoals nu, Lucide dunner, Phosphor, Tabler en zonder iconen in
+velden. De keuze is aan Erwin; Lucide staat in 384 bestanden. Deel 3 van fase 2: de zwevende laag (chat,
 programma-knop, vaste balk als één `FloatingLayer`), sheets als
 bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer.
 

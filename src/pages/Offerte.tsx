@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, isValid, parseISO } from "date-fns";
+import { nl } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -25,7 +31,7 @@ import { FaqSection } from "@/components/FaqSection";
 import { trackQuoteRequestSubmitted } from "@/lib/analytics";
 import { getEntryPage, inferEventTypeFromPath } from "@/lib/entryPageTracker";
 import { reportError } from "@/lib/errorReporting";
-import { Building2, Mail, Phone, User, Users } from "lucide-react";
+import { Building2, CalendarIcon, Mail, Phone, User, Users } from "lucide-react";
 import {
   Container,
   FormField,
@@ -59,7 +65,7 @@ const formSchema = z.object({
   numberOfPeople: z.string().min(1, "Aantal personen is verplicht"),
   startDate: z.string().min(1, "Gewenste startdatum is verplicht"),
   numberOfDays: z.string().min(1, "Aantal dagen is verplicht"),
-  budgetPerPerson: z.string().min(1, "Budgetindicatie is verplicht"),
+  budgetPerPerson: z.string().max(50, "Maximaal 50 karakters").optional(),
   eventType: z.string().optional(),
   description: z.string().max(2000, "Maximaal 2000 karakters").optional(),
 });
@@ -135,7 +141,7 @@ export default function Offerte() {
       trackQuoteRequestSubmitted({
         numberOfPeople: parseInt(data.numberOfPeople, 10) || 0,
         numberOfDays: data.numberOfDays,
-        budgetPerPerson: data.budgetPerPerson,
+        budgetPerPerson: data.budgetPerPerson || "onbekend",
         eventType: finalEventType,
         entryPage: entryPage?.path || "direct",
         utmSource: entryPage?.utm_source,
@@ -216,9 +222,49 @@ export default function Offerte() {
                         <FormField label="Aantal personen" htmlFor="offerte-personen" required leading={<Users />} error={errors.numberOfPeople?.message}>
                           <Input type="number" min={1} placeholder="Bijvoorbeeld 25" {...register("numberOfPeople")} />
                         </FormField>
-                        <FormField label="Gewenste startdatum" htmlFor="offerte-datum" required error={errors.startDate?.message}>
-                          <Input type="date" {...register("startDate")} />
-                        </FormField>
+                        <Controller
+                          control={control}
+                          name="startDate"
+                          render={({ field }) => {
+                            const parsed = field.value ? parseISO(field.value) : undefined;
+                            const selected = parsed && isValid(parsed) ? parsed : undefined;
+                            return (
+                              <div className="space-y-1.5">
+                                <Label htmlFor="offerte-datum" className="flex items-center gap-1">
+                                  Gewenste startdatum
+                                  {requiredMark}
+                                </Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      id="offerte-datum"
+                                      type="button"
+                                      variant="outline"
+                                      aria-invalid={errors.startDate ? true : undefined}
+                                      className={cn("w-full justify-start font-normal", !selected && "text-muted-foreground")}
+                                    >
+                                      <CalendarIcon aria-hidden="true" />
+                                      {selected ? format(selected, "EEEE d MMMM yyyy", { locale: nl }) : "Kies een datum"}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={selected}
+                                      onSelect={(d) => field.onChange(d ? format(d, "yyyy-MM-dd") : "")}
+                                      locale={nl}
+                                      disabled={{ before: new Date() }}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                {errors.startDate && (
+                                  <p className="text-sm font-medium text-destructive">{errors.startDate.message}</p>
+                                )}
+                              </div>
+                            );
+                          }}
+                        />
                         <Controller
                           control={control}
                           name="numberOfDays"
@@ -246,7 +292,12 @@ export default function Offerte() {
                             </div>
                           )}
                         />
-                        <FormField label="Budgetindicatie per persoon" htmlFor="offerte-budget" required error={errors.budgetPerPerson?.message}>
+                        <FormField
+                          label="Budgetindicatie per persoon"
+                          htmlFor="offerte-budget"
+                          help="Een schatting is genoeg. Weet u het nog niet, laat het dan leeg."
+                          error={errors.budgetPerPerson?.message}
+                        >
                           <Input placeholder="Bijvoorbeeld €150 per persoon" {...register("budgetPerPerson")} />
                         </FormField>
                       </div>

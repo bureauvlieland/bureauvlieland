@@ -5,6 +5,7 @@ import { ArrowRight, CalendarOff, Mail, MapPin, Ship, Users } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { IconSetComparison } from "@/components/ontwerp/IconSetComparison";
 import {
   Container,
   Section,
@@ -308,6 +309,18 @@ const Ontwerp = () => (
       <Container size="wide">
         <SectionHeader eyebrow="Componenten" number="06" title="Funnel" intro="Stepper, FormField, OptionCard, WizardFooter, SuccessScreen, EmptyState en LoadingState: één set voor alle aanvraagformulieren. Terug links, de volgende stap rechts, één primaire knop per scherm." />
         <FunnelDemo />
+      </Container>
+    </Section>
+
+    <Section>
+      <Container size="wide">
+        <SectionHeader
+          eyebrow="Ter beoordeling"
+          number="08"
+          title="Iconen"
+          intro="Lucide is de huidige set. Hieronder dezelfde negen iconen op 16, 20 en 24px, in een veld en op een keuzekaart, naast Phosphor en Tabler en naast een variant zonder iconen in velden. Een keuze hier geldt daarna voor de hele site."
+        />
+        <IconSetComparison />
       </Container>
     </Section>
 
