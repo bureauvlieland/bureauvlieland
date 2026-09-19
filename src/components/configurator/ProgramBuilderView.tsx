@@ -36,7 +36,7 @@ import { AiErwinDialog } from "./AiErwinDialog";
 import { usePublishedBuildingBlocks, getBlockById } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { sortCartItemsForDay } from "@/lib/cartSorting";
-import { categoryLabels, timeSlots, type CartItemDetail } from "@/types/buildingBlock";
+import { categoryLabels, formatBlockPrice, formatPriceNote, timeSlots, type CartItemDetail } from "@/types/buildingBlock";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProgramTemplate } from "@/types/programTemplate";
@@ -385,6 +385,7 @@ export const ProgramBuilderView = ({
               </Badge>
             )}
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">Prijzen zijn een indicatie per onderdeel; het totaal staat in ons voorstel.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {templates.length > 0 && (
@@ -491,10 +492,17 @@ export const ProgramBuilderView = ({
                                       {block.short_description}
                                     </p>
                                   )}
-                                  <div className="flex flex-wrap gap-2 mt-1.5">
+                                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                    {/* Prijs per stuk (besluit Erwin, 19 september 2026): dezelfde notatie als op de bouwstenenpagina */}
+                                    <span className="text-xs font-medium text-foreground">
+                                      {formatBlockPrice(block)}
+                                      {formatPriceNote(block) && (
+                                        <span className="font-normal text-muted-foreground"> {formatPriceNote(block)}</span>
+                                      )}
+                                    </span>
                                     {block.duration && (
                                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                        <Clock className="h-3 w-3" />
+                                        <Clock className="h-3 w-3" aria-hidden="true" />
                                         {block.duration}
                                       </span>
                                     )}

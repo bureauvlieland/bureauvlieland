@@ -8,9 +8,9 @@ september (pull request 53), fase 2 deel 1 (de programma-wizard) op 18
 september (pull request 54), fase 2 deel 2 (de overige
 aanvraagformulieren) op 19 september (pull request 55), fase 2 deel 3
 (zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september. De
-levende referentie is voortaan `docs/design-systeem.md`. Volgende stap:
-fase 3 (landingspagina's als sjabloon); de prijzen in de bouwer volgen
-zodra Erwin kiest (per stuk, per dag of totaal).
+levende referentie is voortaan `docs/design-systeem.md`. De prijzen in de
+bouwer staan er sinds 19 september per stuk (besluit Erwin); daarmee is
+fase 2 af. Volgende stap: fase 3 (landingspagina's als sjabloon).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -614,9 +614,14 @@ bewerken, activiteitdetail, logiesofferte) komen op een telefoon van
 onderen (`ResponsiveSheetContent`). Nieuwe Tailwind-variant `coarse:`
 (`pointer: coarse`): op een aanraakscherm is elke knop minimaal 44px hoog,
 een icoonknop 44×44, kalenderdagen 44×44, de versleepgreep en het
-verwijderkruisje bij een datum groter; op desktop verandert niets. Nog
-open in fase 2: de prijzen in de bouwer (ontwerpkeuze per stuk, per dag of
-totaal door Erwin). Deel 3 van fase 2: de zwevende laag (chat,
+verwijderkruisje bij een datum groter; op desktop verandert niets.
+
+De prijzen in de bouwer zijn op 19 september toegevoegd, per stuk
+(besluit Erwin: geen dagsom of totaal, dat is het voorstel). Elke
+programmakaart toont de prijs in dezelfde notatie als de bouwstenenpagina
+(`formatBlockPrice` en `formatPriceNote`), met onder de kop "Prijzen zijn
+een indicatie per onderdeel; het totaal staat in ons voorstel". Daarmee
+is fase 2 af. Deel 3 van fase 2: de zwevende laag (chat,
 programma-knop, vaste balk als één `FloatingLayer`), sheets als
 bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer.
 
@@ -704,8 +709,8 @@ volgende begint.
    totaal) en de logiesstap-afronding mee, omdat het dezelfde schermen
    zijn. Deel 1 (de programma-wizard met de nieuwe componenten) is op 18
    september gebouwd, deel 2 (de overige aanvraagformulieren) en deel 3
-   (zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september; de
-   prijzen in de bouwer volgen zodra Erwin kiest.
+   (zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september, de
+   prijzen in de bouwer (per stuk) ook op 19 september. Fase 2 is af.
 5. **Fase 3: landingspagina's als sjabloon.** Hierin gaan mee: "reviews
    zichtbaarder maken" (concurrentiepositie punt 3, vaste plek voor
    reviews in het sjabloon), de "je"-teksten van de resterende pagina's,
