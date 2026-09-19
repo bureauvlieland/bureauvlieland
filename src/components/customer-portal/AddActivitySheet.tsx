@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import {
   Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/system";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -90,7 +90,7 @@ export const AddActivitySheet = ({
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+      <ResponsiveSheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
           <SheetTitle>Activiteit toevoegen</SheetTitle>
           <SheetDescription>
@@ -156,7 +156,7 @@ export const AddActivitySheet = ({
             )}
           </div>
         </ScrollArea>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 };

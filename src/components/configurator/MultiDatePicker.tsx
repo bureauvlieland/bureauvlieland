@@ -57,6 +57,7 @@ export const MultiDatePicker = ({
         <PopoverContent className="w-auto p-0 bg-background z-50" align="start" side="bottom" sideOffset={8}>
           <Calendar
             mode="single"
+            locale={nl}
             selected={undefined}
             onSelect={(date) => date && onAddDate(date)}
             disabled={disabledDates}
@@ -77,8 +78,9 @@ export const MultiDatePicker = ({
               <span className="text-xs text-primary/70">Dag {index + 1}:</span>
               <span>{format(date, "EEE d MMM", { locale: nl })}</span>
               <button
+                type="button"
                 onClick={() => onRemoveDate(index)}
-                className="ml-1 p-0.5 hover:bg-primary/20 rounded-full transition-colors"
+                className="ml-1 rounded-full p-0.5 transition-colors hover:bg-primary/20 coarse:-my-2 coarse:p-2.5"
                 aria-label={`Verwijder ${format(date, "d MMMM", { locale: nl })}`}
               >
                 <X className="h-3 w-3" />

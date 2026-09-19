@@ -1,4 +1,5 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -58,7 +59,7 @@ export const TemplatePreviewSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto">
+      <ResponsiveSheetContent className="sm:max-w-lg overflow-y-auto">
         {isLoading ? (
           <div className="animate-pulse space-y-4 py-6">
             <div className="h-6 bg-muted rounded w-2/3" />
@@ -162,7 +163,7 @@ export const TemplatePreviewSheet = ({
             Template niet gevonden
           </div>
         )}
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 };

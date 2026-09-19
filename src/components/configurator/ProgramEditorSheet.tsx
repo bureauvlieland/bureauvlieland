@@ -2,10 +2,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/system";
 import { ProgramEditor, type ProgramEditorProps } from "./ProgramEditor";
 
 interface ProgramEditorSheetProps extends Omit<ProgramEditorProps, "mode"> {
@@ -36,10 +36,7 @@ export const ProgramEditorSheet = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent 
-        side="right" 
-        className="w-full sm:max-w-[70vw] p-0 flex flex-col"
-      >
+      <ResponsiveSheetContent className="w-full sm:max-w-[70vw] p-0 flex flex-col">
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center gap-3">
             <Button
@@ -71,7 +68,7 @@ export const ProgramEditorSheet = ({
             readOnlyFields={readOnlyFields}
           />
         </div>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 };

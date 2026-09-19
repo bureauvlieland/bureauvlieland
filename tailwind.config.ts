@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 export default {
   darkMode: ["class"],
@@ -205,5 +206,12 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    // `coarse:` voor aanraakschermen (pointer: coarse): grotere aanraakdoelen
+    // zonder de muisdichtheid op desktop te verliezen (ontwerpsysteem fase 2).
+    plugin(({ addVariant }) => {
+      addVariant("coarse", "@media (pointer: coarse)");
+    }),
+  ],
 } satisfies Config;

@@ -215,7 +215,7 @@ const ProgrammaOpMaat = () => {
           />
         )}
 
-        <Section spacing="compact">
+        <Section spacing="compact" className="pb-floating">
           <Container size="prose">
             {isSuccess ? (
               <SuccessScreen

@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
  * plekken zijn omgezet (`heroPrimary` is nu ook de actiekleur).
  */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium ring-offset-background transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium ring-offset-background transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 coarse:min-h-11",
   {
     variants: {
       variant: {
@@ -41,7 +41,7 @@ const buttonVariants = cva(
         sm: "h-9 px-3",
         lg: "h-12 px-6 text-base",
         xl: "h-14 px-8 text-base",
-        icon: "h-10 w-10",
+        icon: "h-10 w-10 coarse:h-11 coarse:w-11",
       },
     },
     defaultVariants: {

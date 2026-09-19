@@ -185,7 +185,7 @@ export default function Offerte() {
           />
         )}
 
-        <Section spacing="compact">
+        <Section spacing="compact" className="pb-floating">
           <Container size="prose">
             <div ref={formRef} className="scroll-mt-20">
               {isSuccess ? (

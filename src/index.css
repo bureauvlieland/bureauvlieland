@@ -191,6 +191,10 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    /* Geen horizontale paginascroll op een telefoon: een te brede rij zou
+       anders de layout-viewport verbreden en vaste elementen (sheets,
+       zwevende knoppen) breder dan het scherm maken. */
+    overflow-x: hidden;
   }
 
   /* Enhanced focus states for accessibility */
@@ -253,6 +257,14 @@ All colors MUST be HSL.
 
 /* Wie minder beweging wil, krijgt geen animaties: geen ken burns, pulse of marquee.
    framer-motion volgt dezelfde voorkeur via <MotionConfig reducedMotion="user"> in App.tsx. */
+@layer utilities {
+  /* Ruimte onder funnelinhoud voor de zwevende laag: de chatknop en, als
+     die er is, de vaste balk (--floating-offset, gezet door useFloatingBar). */
+  .pb-floating {
+    padding-bottom: calc(6rem + var(--floating-offset, 0px));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
