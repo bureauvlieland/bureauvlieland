@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill } from "@/components/system";
-import { Calendar, Users, Home, MapPin, Euro } from "lucide-react";
+import { Calendar, Users, MapPin, Euro } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { AccommodationWizardData } from "@/types/accommodation";
 import { ACCOMMODATION_TYPES, LOCATION_PREFERENCES, BUDGET_RANGES } from "@/types/accommodation";
+import { accommodationTypeIcon } from "@/lib/accommodationIcons";
 
 interface WizardSummaryProps {
   formData: AccommodationWizardData;
@@ -17,6 +18,7 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
     : 0;
 
   const accommodationType = ACCOMMODATION_TYPES.find(t => t.value === formData.accommodation_type);
+  const TypeIcon = accommodationTypeIcon(formData.accommodation_type);
   const budgetLabel = BUDGET_RANGES.find(b => b.value === formData.budget_range)?.label;
   const locationLabels = formData.location_preference
     .map(loc => LOCATION_PREFERENCES.find(l => l.value === loc)?.label)
@@ -61,11 +63,9 @@ export const WizardSummary = ({ formData, currentStep }: WizardSummaryProps) => 
         {/* Accommodation Type */}
         {currentStep >= 2 && accommodationType && (
           <div className="flex items-start gap-3">
-            <Home className="w-4 h-4 mt-1 text-muted-foreground" />
+            <TypeIcon className="w-4 h-4 mt-1 text-muted-foreground" aria-hidden="true" />
             <div>
-              <p className="text-sm font-medium">
-                {accommodationType.icon} {accommodationType.label}
-              </p>
+              <p className="text-sm font-medium">{accommodationType.label}</p>
             </div>
           </div>
         )}

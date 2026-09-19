@@ -2,6 +2,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField, OptionCard, OptionGroup } from "@/components/system";
 import type { AccommodationWizardData } from "@/types/accommodation";
 import { LOCATION_PREFERENCES, BUDGET_RANGES, BOARD_PREFERENCE_OPTIONS } from "@/types/accommodation";
+import { boardIcon, locationIcon } from "@/lib/accommodationIcons";
 
 interface StepWishesProps {
   formData: AccommodationWizardData;
@@ -20,17 +21,20 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
   return (
     <div className="space-y-6">
       <OptionGroup label="Locatievoorkeur" help="Meerdere keuzes mogelijk." selection="multiple" columns={4}>
-        {LOCATION_PREFERENCES.map((loc) => (
-          <OptionCard
-            key={loc.value}
-            selection="multiple"
-            selected={formData.location_preference.includes(loc.value)}
-            onSelect={() => toggleLocation(loc.value)}
-            title={loc.label}
-            icon={<span className="text-lg leading-none">{loc.icon}</span>}
-            align="center"
-          />
-        ))}
+        {LOCATION_PREFERENCES.map((loc) => {
+          const Icon = locationIcon(loc.value);
+          return (
+            <OptionCard
+              key={loc.value}
+              selection="multiple"
+              selected={formData.location_preference.includes(loc.value)}
+              onSelect={() => toggleLocation(loc.value)}
+              title={loc.label}
+              icon={<Icon />}
+              align="center"
+            />
+          );
+        })}
       </OptionGroup>
 
       <OptionGroup
@@ -38,15 +42,18 @@ export const StepWishes = ({ formData, updateFormData }: StepWishesProps) => {
         help="Zo weten de accommodaties direct of u alleen wilt overnachten of ook maaltijden wenst."
         columns={2}
       >
-        {BOARD_PREFERENCE_OPTIONS.map((board) => (
-          <OptionCard
-            key={board.value}
-            selected={formData.board_preference === board.value}
-            onSelect={() => updateFormData({ board_preference: board.value })}
-            title={board.label}
-            icon={<span className="text-lg leading-none">{board.icon}</span>}
-          />
-        ))}
+        {BOARD_PREFERENCE_OPTIONS.map((board) => {
+          const Icon = boardIcon(board.value);
+          return (
+            <OptionCard
+              key={board.value}
+              selected={formData.board_preference === board.value}
+              onSelect={() => updateFormData({ board_preference: board.value })}
+              title={board.label}
+              icon={<Icon />}
+            />
+          );
+        })}
       </OptionGroup>
 
       <OptionGroup label="Budget per persoon per nacht" columns={3}>

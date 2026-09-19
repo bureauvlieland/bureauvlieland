@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { boardIcon } from "@/lib/accommodationIcons";
 import {
   BOARD_PREFERENCE_OPTIONS,
   ROOM_OCCUPANCY_OPTIONS,
@@ -122,11 +123,17 @@ export const AccommodationSetupFields = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE}>Niet ingevuld</SelectItem>
-            {BOARD_PREFERENCE_OPTIONS.map((b) => (
-              <SelectItem key={b.value} value={b.value}>
-                {b.icon} {b.label}
-              </SelectItem>
-            ))}
+            {BOARD_PREFERENCE_OPTIONS.map((b) => {
+              const Icon = boardIcon(b.value);
+              return (
+                <SelectItem key={b.value} value={b.value}>
+                  <span className="inline-flex items-center gap-2">
+                    <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    {b.label}
+                  </span>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">

@@ -1,6 +1,7 @@
 import { Notice, OptionCard, OptionGroup } from "@/components/system";
 import type { AccommodationWizardData, AccommodationType } from "@/types/accommodation";
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
+import { accommodationTypeIcon } from "@/lib/accommodationIcons";
 
 interface StepTypeProps {
   formData: AccommodationWizardData;
@@ -15,16 +16,19 @@ export const StepType = ({ formData, updateFormData }: StepTypeProps) => {
   return (
     <div className="space-y-6">
       <OptionGroup name="Type verblijf" columns={1}>
-        {ACCOMMODATION_TYPES.map((type) => (
-          <OptionCard
-            key={type.value}
-            selected={formData.accommodation_type === type.value}
-            onSelect={() => updateFormData({ accommodation_type: type.value as AccommodationType })}
-            title={type.label}
-            description={type.description}
-            icon={<span className="text-xl leading-none">{type.icon}</span>}
-          />
-        ))}
+        {ACCOMMODATION_TYPES.map((type) => {
+          const Icon = accommodationTypeIcon(type.value);
+          return (
+            <OptionCard
+              key={type.value}
+              selected={formData.accommodation_type === type.value}
+              onSelect={() => updateFormData({ accommodation_type: type.value as AccommodationType })}
+              title={type.label}
+              description={type.description}
+              icon={<Icon />}
+            />
+          );
+        })}
       </OptionGroup>
 
       {hint && <Notice tone="info">{hint}</Notice>}

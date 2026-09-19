@@ -593,10 +593,11 @@ op Offerte is de kalender met Nederlandse notatie in plaats van het
 browserveld (dat toonde mm/dd/yyyy in Engelstalige browsers), de
 budgetindicatie is niet meer verplicht (veel gasten hebben nog geen idee;
 de edge function `send-quote-request` accepteert een leeg budget en zet
-"Niet opgegeven" in de mail), en op `/ontwerp` staat een vergelijking
-van iconensets (sectie 08) omdat hij de kleine iconen niet mooi vindt:
-Lucide zoals nu, Lucide dunner, Phosphor, Tabler en zonder iconen in
-velden. De keuze is aan Erwin; Lucide staat in 384 bestanden. Deel 3 van fase 2: de zwevende laag (chat,
+"Niet opgegeven" in de mail), en de emoji's bij de logieskeuzes (type
+verblijf, locatie, verzorging) zijn lijniconen uit de vaste set geworden
+(`src/lib/accommodationIcons.ts`): emoji's tekent elk besturingssysteem
+anders en in kleur, en dat paste niet bij de rest. Het veld `icon` in
+`src/types/accommodation.ts` blijft bestaan voor de portalen. Deel 3 van fase 2: de zwevende laag (chat,
 programma-knop, vaste balk als één `FloatingLayer`), sheets als
 bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer.
 
