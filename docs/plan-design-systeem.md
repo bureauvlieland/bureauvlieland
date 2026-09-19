@@ -10,7 +10,9 @@ aanvraagformulieren) op 19 september (pull request 55), fase 2 deel 3
 (zwevende laag, sheets op mobiel, aanraakdoelen) op 19 september. De
 levende referentie is voortaan `docs/design-systeem.md`. De prijzen in de
 bouwer staan er sinds 19 september per stuk (besluit Erwin); daarmee is
-fase 2 af. Volgende stap: fase 3 (landingspagina's als sjabloon).
+fase 2 af. Fase 3 deel 1 (de tien landingspagina's op één sjabloon) is op
+19 september gebouwd. Volgende stap: fase 3 deel 2 (Wadlopen en
+Zeehondentochten als tweede variant), daarna fase 4.
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -625,6 +627,24 @@ is fase 2 af. Deel 3 van fase 2: de zwevende laag (chat,
 programma-knop, vaste balk als één `FloatingLayer`), sheets als
 bottom-sheet op mobiel, aanraakdoelen, en de prijzen in de bouwer.
 
+Fase 3 deel 1 is op 19 september gebouwd: de tien landingspagina's
+(Bedrijfsuitje, Teamuitje, Meerdaags, Heisessie, Ideeën, Incentive,
+Zakelijk evenement, Groepsweekend, Jubileum, Familieweekend) zijn één
+sjabloon `LandingPage` (`src/components/landing`) met per pagina een
+inhoudsbestand in `src/content/landings/` (teksten, foto's, feiten, FAQ,
+links; `index.ts` registreert ze, `paths.ts` geeft `App.tsx` de routes
+zonder de teksten in de hoofdbundel te trekken). De tien
+pagina-componenten zijn weg. Nieuwe componenten: `PageHero`, `FactList`,
+`MediaCard`, `PersonQuote`, `RouteChooser`; `FaqSection`,
+`LandingBreadcrumb`, `GoogleReviewsBlock` en `RelatedLinks` zijn op de
+systeemcomponenten gezet in plaats van opnieuw gebouwd. De
+voorbeeldprogramma's op de pagina's komen uit de database (gefilterd op
+dagen waar dat past), de reviews hebben een vaste plek, "je/jullie" is
+"u" geworden (een test bewaakt het), en de attributie (instappagina) gaat
+nu ook bij Programma op maat met de aanvraag mee. Ontwerpschuld 800 → 716.
+Wat nog volgt in fase 3 (deel 2): Wadlopen en Zeehondentochten als
+tweede variant met boekpaneel.
+
 **Fase 3: landingspagina's als sjabloon (4–5 dagen).** Eén
 `LandingPage`-component gevoed door een inhoudsbestand per pagina
 (`src/content/landings/*.ts`: titel, intro, foto's, eilandfeiten, FAQ,
@@ -715,7 +735,9 @@ volgende begint.
    zichtbaarder maken" (concurrentiepositie punt 3, vaste plek voor
    reviews in het sjabloon), de "je"-teksten van de resterende pagina's,
    en de attributie per landingspagina uit `plan-frontend-usability.md`
-   fase 3.
+   fase 3. Deel 1 (de tien landingspagina's op één sjabloon, met reviews,
+   "u" en attributie) is op 19 september gebouwd; deel 2 (Wadlopen en
+   Zeehondentochten) volgt.
 6. **Fase 4: overige pagina's en homepage.** Hierin gaan de open
    homepage-bevindingen van 11 september mee (sectienummers, Testimonials
    naar voren, overlappende secties beoordelen met de GA4-sectiedata).

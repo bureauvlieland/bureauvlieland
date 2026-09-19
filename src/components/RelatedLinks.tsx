@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { getRelatedLinks, type InternalLink } from "@/lib/internalLinks";
+import { Container, Section, SectionHeader } from "@/components/system";
 
 interface RelatedLinksProps {
   /** Override het pad waarvoor de cluster wordt bepaald. */
@@ -31,12 +32,10 @@ export const RelatedLinks = ({
   if (items.length === 0) return null;
 
   return (
-    <section className={`py-12 bg-muted/30 border-t border-border ${className}`}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-        <h2 className="text-xl font-semibold text-foreground mb-6">
-          {title ?? cluster.title ?? "Verder op deze site"}
-        </h2>
-        <nav aria-label="Gerelateerde pagina's">
+    <Section tone="muted" spacing="compact" className={`border-t border-border ${className}`}>
+      <Container size="wide">
+        <SectionHeader as="h2" size="md" weight="medium" title={title ?? cluster.title ?? "Verder op deze site"} />
+        <nav aria-label="Gerelateerde pagina's" className="mt-6">
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {items.map((item) => (
               <li key={item.href}>
@@ -58,8 +57,8 @@ export const RelatedLinks = ({
             ))}
           </ul>
         </nav>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Container, Section, SectionHeader } from "@/components/system";
 
 interface GoogleReview {
   author_name: string;
@@ -75,29 +76,26 @@ export const GoogleReviewsBlock = ({
   const writeUrl = data.place_url ? `${data.place_url}` : REVIEW_LINK_FALLBACK;
 
   return (
-    <section className={`py-16 md:py-24 bg-card ${className}`}>
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-2 mb-3">
+    <Section className={className}>
+      <Container size="wide">
+        <div className="mb-12 text-center">
+          <div className="mb-4 flex items-center justify-center gap-2">
             <RatingStars value={data.rating} />
-            <span className="text-lg font-semibold text-foreground">
+            <span className="text-lg font-medium text-foreground">
               {data.rating.toFixed(1)}
             </span>
             <span className="text-sm text-muted-foreground">
               · {data.review_count} Google-reviews
             </span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground">{title}</h2>
-          {subtitle && (
-            <p className="mt-2 text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
-          )}
+          <SectionHeader as="h2" title={title} intro={subtitle} align="center" />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {visible.map((r, i) => (
             <article
               key={i}
-              className="rounded-lg border border-border bg-background p-6 shadow-sm flex flex-col"
+              className="flex flex-col rounded-lg border border-border bg-card p-6"
             >
               <RatingStars value={r.rating} small />
               <p className="mt-3 text-foreground leading-relaxed flex-1">
@@ -130,13 +128,13 @@ export const GoogleReviewsBlock = ({
             href={writeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+            className="inline-flex items-center gap-2 font-medium text-primary underline underline-offset-4 hover:text-ocean-deep"
           >
-            Bekijk alle reviews op Google →
+            Bekijk alle reviews op Google
           </a>
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };
 

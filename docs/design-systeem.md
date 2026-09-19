@@ -66,9 +66,18 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `EmptyState` / `LoadingState` | Lege lijst met icoon, tekst en actie; laadstatus met spinner en `aria-live` | Losse "Geen …"-teksten, eigen spinners |
 | `FloatingStack` | De zwevende knoppen rechtsonder (chat, programma): staat boven een vaste balk (`useFloatingBar`) en wijkt voor de footer en voor een `WizardFooter` in beeld (`useFloatingClearance`); `z-40` | Eigen `fixed bottom-4 right-4`-blokken |
 | `ResponsiveSheetContent` | Sheet die op een telefoon van onderen komt (ronde bovenhoeken, max. 85% hoog) en op een groter scherm van rechts | `SheetContent side="right"` in de funnel; het navigatiemenu blijft van rechts komen |
+| `PageHero` | Foto-hero van een landingspagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop | Eigen hero's met Ken Burns, gradient-overlays en twee gelijkwaardige knoppen |
+| `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel) | USP-iconen in een rij, losse feitengrids |
+| `MediaCard` | Kaart met foto, eyebrow ("3 dagen"), Fraunces-kop en tekst, als link; voor echte programma's en activiteiten uit de database; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover |
+| `PersonQuote` | Eén klantcitaat in Fraunces met naam en organisatie, op een `sand`-sectie | Citatencarrousels, `Quote`-iconen, sterren bij een handmatig citaat |
+| `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden | De vijf CTA-banden en `FinalCTA`-varianten |
+| `LandingPage` (`components/landing`) | Het ene sjabloon voor de landingspagina's, gevoed door `src/content/landings/<slug>.ts` (geregistreerd in `index.ts` en `paths.ts`): kruimelpad, `PageHero`, intro met `FactList`, genummerde secties (`prose`, `features`, `gallery`, `split`), voorbeeldprogramma's uit de database, `PersonQuote`, Google-reviews, `RouteChooser`, `FaqSection`, één `RelatedLinks` | Een pagina-component per landingspagina; een nieuwe landingspagina is een nieuw inhoudsbestand |
 
-Nog te bouwen (fase 3): `PageHero`, `RouteChooser`, `MediaCard`,
-`FactList`, `PersonQuote`, `Faq`, `Breadcrumb`.
+Nog te bouwen (fase 3 deel 2): de tweede sjabloonvariant voor Wadlopen en
+Zeehondentochten, met boekpaneel. `FaqSection`, `LandingBreadcrumb`,
+`GoogleReviewsBlock` en `RelatedLinks` staan sinds fase 3 op `Section`,
+`Container` en `SectionHeader`; een aparte `Faq` en `Breadcrumb` zijn niet
+meer nodig.
 
 ## Regels voor interactie
 
@@ -109,6 +118,14 @@ Nog te bouwen (fase 3): `PageHero`, `RouteChooser`, `MediaCard`,
   elke knop minimaal 44px hoog en een icoonknop 44×44; kalenderdagen ook.
   Op desktop blijft de dichtheid zoals hij is. Sheets in de funnel komen
   op een telefoon van onderen (`ResponsiveSheetContent`).
+- Landingspagina's: de inhoud staat in `src/content/landings/<slug>.ts`,
+  nooit in een pagina-component. Links in lopende tekst schrijf je als
+  `[tekst](/pad)` (`renderRichText`). Aanspreekvorm "u"; de test
+  `src/content/landings/__tests__/registry.test.ts` bewaakt dat, en dat elk
+  pad in `paths.ts` staat en elke link naar een bestaande route gaat. De
+  secties krijgen automatisch een nummer en wisselen van toon (`muted`,
+  `default`); wat erna komt ligt vast: voorbeeldprogramma's, citaat,
+  reviews, `RouteChooser`, FAQ, één linkblok.
 
 ## Zo controleer je een wijziging
 

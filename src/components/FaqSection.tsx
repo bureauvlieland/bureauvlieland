@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Container, Section, SectionHeader } from "@/components/system";
 import {
   Accordion,
   AccordionContent,
@@ -77,16 +78,10 @@ export const FaqSection = ({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="py-16 md:py-24 bg-background">
-      <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-            {title}
-          </h2>
-          {intro && (
-            <p className="text-lg text-muted-foreground mb-8">{intro}</p>
-          )}
-          <Accordion type="single" collapsible className="w-full">
+    <Section>
+      <Container size="prose">
+        <SectionHeader title={title} intro={intro} className="mb-8" />
+        <Accordion type="single" collapsible className="w-full">
             {items.map((item, index) => (
               <AccordionItem key={index} value={`faq-${index}`}>
                 <AccordionTrigger className="text-left text-base md:text-lg font-medium">
@@ -97,9 +92,8 @@ export const FaqSection = ({
                 </AccordionContent>
               </AccordionItem>
             ))}
-          </Accordion>
-        </div>
-      </div>
-    </section>
+        </Accordion>
+      </Container>
+    </Section>
   );
 };

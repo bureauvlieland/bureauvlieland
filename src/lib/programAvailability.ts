@@ -50,7 +50,7 @@ export interface ItemAvailability {
   message: string;
   /** Bij "partner_gesloten": einde van de sluiting (yyyy-MM-dd). */
   closedUntil?: string;
-  /** Bij "te_groot": aantal rondes waarin de groep kan. */
+  /** Bij "te_groot": in hoeveel groepen het maximum past (voor de planning; de klant ziet dit niet als "rondes"). */
   rounds?: number;
   /** Bij "te_klein"/"te_groot": de grens. */
   limit?: number;
@@ -120,7 +120,9 @@ export function assessItemAvailability(
       status: "te_groot",
       rounds,
       limit: cap.max,
-      message: `Maximaal ${cap.max} personen per keer; wij splitsen uw groep in ${rounds} rondes.`,
+      // Geen "rondes" beloven: vaak volstaat een extra gids of begeleider,
+      // soms een tweede groep. Dat regelt Bureau Vlieland (Erwin, 19 september 2026).
+      message: `Maximaal ${cap.max} personen per groep; wij regelen extra begeleiding of een tweede groep.`,
     };
   }
   if (cap.status === "under" && cap.min != null) {
@@ -162,7 +164,7 @@ export function assessProgramAvailability(
       first.status === "partner_gesloten"
         ? `${first.blockName} (aanbieder gesloten t/m ${formatIsoDayNL(first.closedUntil ?? "")})`
         : first.status === "te_groot"
-          ? `${first.blockName} (max ${first.limit} personen, ${first.rounds} rondes)`
+          ? `${first.blockName} (max ${first.limit} personen per groep, wij regelen extra begeleiding)`
           : `${first.blockName} (min ${first.limit} personen)`;
     summary =
       problems.length === 1

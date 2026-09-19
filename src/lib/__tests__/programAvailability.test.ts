@@ -40,7 +40,7 @@ describe("assessItemAvailability", () => {
     const r = assessItemAvailability({ blockId: "watertaxi", dayIndex: 0 }, blocks[3], "2026-10-12", 20, periods);
     expect(r.status).toBe("te_groot");
     expect(r.rounds).toBe(2);
-    expect(r.message).toContain("2 rondes");
+    expect(r.message).toContain("extra begeleiding");
   });
 
   it("flags a too-small group", () => {
