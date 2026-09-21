@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarOff, Mail, MapPin, Ship, Users } from "lucide-react";
+import { ArrowRight, CalendarOff, Mail, MapPin, Ship, Ticket, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,10 @@ import {
   SubmitNote,
   EmptyState,
   LoadingState,
+  MediaCard,
+  CatalogCard,
+  LinkCard,
+  FactList,
   type PillTone,
   type NoticeTone,
 } from "@/components/system";
@@ -311,9 +315,68 @@ const Ontwerp = () => (
       </Container>
     </Section>
 
+    <Section>
+      <Container size="wide">
+        <SectionHeader
+          eyebrow="Componenten"
+          number="07"
+          title="Kaarten en lijsten"
+          intro="MediaCard is één link met foto (programma's, activiteiten). CatalogCard heeft een prijs en knoppen (bouwstenen). LinkCard is een kleine link zonder foto (linkblokken, filterresultaten). FactList zet de feiten naast een intro."
+        />
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <MediaCard
+            title="Eilanddag compleet"
+            meta="1 dag · Compleet"
+            text="Zeehondentocht, lunch op locatie en strandspektakel als afsluiter."
+            footer="Vanaf € 89 p.p. · Teams van 15 tot 80"
+            to="/voorbeeldprogrammas"
+            badge={<Pill tone="brand">Nieuw</Pill>}
+            linkLabel="Bekijk programma"
+          />
+          <CatalogCard
+            title="Zeehondentocht"
+            byline="door Zeehondentochten Vlieland"
+            text="Circa 45 minuten varen langs de zandbanken rond laagwater, met uitleg van de schipper."
+            to="/bouwstenen"
+            badge={
+              <>
+                <Pill tone="neutral" className="bg-card">Activiteit</Pill>
+                <Pill tone="brand">Direct boekbaar</Pill>
+              </>
+            }
+            price={{ value: "€ 32,50", note: "p.p." }}
+            primary={{ label: "Direct reserveren", to: "/bouwstenen", icon: Ticket }}
+            secondary={{ label: "Aan programma toevoegen", to: "/programma-samenstellen" }}
+            tertiary={{ label: "Liever aanvragen in plaats van direct boeken?", to: "/snel-aanvragen" }}
+          />
+          <div className="space-y-4">
+            <LinkCard
+              title="Wadexcursie"
+              text="Met een lokale gids het wad op, voor vrijwel alle leeftijden."
+              to="/wadlopen-vlieland"
+              pills={
+                <>
+                  <Pill tone="brand">Halve dag</Pill>
+                  <Pill tone="neutral">Gezinnen</Pill>
+                </>
+              }
+            />
+            <FactList
+              title="In het kort"
+              summary="Eén samenvattende alinea die een zoekmachine letterlijk kan overnemen."
+              items={[
+                { icon: Ship, label: "Overtocht", value: "Harlingen, 45 tot 90 minuten" },
+                { icon: Users, label: "Groepsgrootte", value: "10 tot 40 personen" },
+              ]}
+            />
+          </div>
+        </div>
+      </Container>
+    </Section>
+
     <Section tone="sand">
       <Container size="wide">
-        <SectionHeader eyebrow="Tokens" number="07" title="Vorm, schaduw en beweging" intro="Twee radii (4px en 8px) plus rond voor avatars en puntjes. Drie schaduwen. Beweging: 150ms hover, 300ms staat, 700ms entree, en niets bij prefers-reduced-motion." />
+        <SectionHeader eyebrow="Tokens" number="08" title="Vorm, schaduw en beweging" intro="Twee radii (4px en 8px) plus rond voor avatars en puntjes. Drie schaduwen. Beweging: 150ms hover, 300ms staat, 700ms entree, en niets bij prefers-reduced-motion." />
         <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="h-20 rounded-sm bg-card border flex items-center justify-center text-xs">rounded-sm · 4px</div>
           <div className="h-20 rounded-lg bg-card border flex items-center justify-center text-xs">rounded-lg · 8px</div>

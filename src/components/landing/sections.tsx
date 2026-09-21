@@ -1,8 +1,10 @@
-import { CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Container, Section, SectionHeader, type SectionTone } from "@/components/system";
-import type { LandingSection } from "@/content/landings/types";
+import type { LandingFeature, LandingSection } from "@/content/landings/types";
 
 /**
  * De sectiesoorten uit een inhoudsbestand (`prose`, `features`, `gallery`,
@@ -30,6 +32,26 @@ export const Checklist = ({ items }: { items: string[] }) => (
 export const Closing = ({ text }: { text?: string }) =>
   text ? <p className="mt-8 text-lg font-medium leading-relaxed text-foreground">{renderRichText(text)}</p> : null;
 
+/** Raster van korte punten met icoon (de `features`-sectie). */
+export const FeatureGrid = ({ items, columns, className }: { items: LandingFeature[]; columns?: 2 | 3; className?: string }) => (
+  <div className={cn("grid gap-4 sm:grid-cols-2", columns === 3 && "lg:grid-cols-3", className)}>
+    {items.map((item) => {
+      const Icon = item.icon;
+      return (
+        <div key={item.title} className="flex gap-4 rounded-lg border border-border bg-card p-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h3 className="font-medium text-foreground">{item.title}</h3>
+            {item.text && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.text}</p>}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
 export const BodySection = ({ section, tone, eyebrow, number }: { section: LandingSection; tone: SectionTone; eyebrow: string; number: string }) => {
   switch (section.kind) {
     case "prose":
@@ -54,22 +76,7 @@ export const BodySection = ({ section, tone, eyebrow, number }: { section: Landi
         <Section tone={tone}>
           <Container size="wide">
             <SectionHeader eyebrow={eyebrow} number={number} title={section.title} intro={section.intro} align="center" />
-            <div className={cn("mt-12 grid gap-4 sm:grid-cols-2", section.columns === 3 ? "lg:grid-cols-3" : "")}>
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.title} className="flex gap-4 rounded-lg border border-border bg-card p-5">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <h3 className="font-medium text-foreground">{item.title}</h3>
-                      {item.text && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.text}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <FeatureGrid items={section.items} columns={section.columns} className="mt-12" />
             {section.closing && (
               <p className="mx-auto mt-10 max-w-2xl text-center text-lg font-medium text-foreground">{renderRichText(section.closing)}</p>
             )}
@@ -131,8 +138,25 @@ export const BodySection = ({ section, tone, eyebrow, number }: { section: Landi
                     <Checklist items={section.checklist} />
                   </div>
                 )}
+                {(section.cta || section.secondary) && (
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                    {section.cta && (
+                      <Button asChild size="lg">
+                        <Link to={section.cta.to}>
+                          {section.cta.label}
+                          <ArrowRight aria-hidden="true" />
+                        </Link>
+                      </Button>
+                    )}
+                    {section.secondary && (
+                      <Button asChild size="lg" variant="outline">
+                        <Link to={section.secondary.to}>{section.secondary.label}</Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
-              <figure className="aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+              <figure className={cn("aspect-[4/3] overflow-hidden rounded-lg bg-muted", section.imagePosition === "left" && "lg:order-first")}>
                 <img src={section.image.src} alt={section.image.alt} className="h-full w-full object-cover" loading="lazy" />
               </figure>
             </div>

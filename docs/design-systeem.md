@@ -66,18 +66,28 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `EmptyState` / `LoadingState` | Lege lijst met icoon, tekst en actie; laadstatus met spinner en `aria-live` | Losse "Geen …"-teksten, eigen spinners |
 | `FloatingStack` | De zwevende knoppen rechtsonder (chat, programma): staat boven een vaste balk (`useFloatingBar`) en wijkt voor de footer en voor een `WizardFooter` in beeld (`useFloatingClearance`); `z-40` | Eigen `fixed bottom-4 right-4`-blokken |
 | `ResponsiveSheetContent` | Sheet die op een telefoon van onderen komt (ronde bovenhoeken, max. 85% hoog) en op een groter scherm van rechts | `SheetContent side="right"` in de funnel; het navigatiemenu blijft van rechts komen |
-| `PageHero` | Foto-hero van een landingspagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop | Eigen hero's met Ken Burns, gradient-overlays en twee gelijkwaardige knoppen |
+| `PageHero` | Hero van elke marketingpagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop; zonder foto een rustige donkere band (Contact, Veelgestelde vragen, 404). `cta.to` mag ook een anker (`#boeken`) of `mailto:` zijn | Eigen hero's met Ken Burns, golven en gradient-overlays, gecentreerde vette koppen, twee gelijkwaardige knoppen |
 | `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel); met `title`, `summary` en een icoon per feit is het de kaart "In het kort" van een activiteitpagina | USP-iconen in een rij, losse feitengrids, `KeyFacts` op landingspagina's |
-| `MediaCard` | Kaart met foto, eyebrow ("3 dagen"), Fraunces-kop en tekst, als link; voor echte programma's en activiteiten uit de database; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover |
+| `MediaCard` | Kaart met foto, eyebrow ("3 dagen · Avontuur"), Fraunces-kop en tekst, als link; optioneel een pill op de foto (`badge`, "Nieuw"), een regel voor prijs of doelgroep (`footer`) en een eigen linktekst (`linkLabel`). Voor programma's en activiteiten uit de database en de cateringformats; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover, `ProgramCard` (weg) |
+| `CatalogCard` | Kaart uit een catalogus met prijs en knoppen: foto en titel linken naar de detailpagina, pills op de foto (categorie, "Direct boekbaar"), onderin de prijs, één primaire knop, optioneel een tweede (`outline`) en een kleine tekstlink. Voor de bouwstenen en direct boekbare activiteiten uit de boekmodule | De eigen bouwsteenkaart en `BookableOnlyCard` met `Badge`, `Card` en drie knopstijlen |
+| `LinkCard` | Kleine linkkaart zonder foto: titel, één regel tekst, pijl en optioneel pills (duur, geschiktheid). Voor `RelatedLinks`, `SeeAlsoActivities`, de thema's op Activiteiten op Vlieland en de resultaten van `ActivityFilter` | Eigen linktegels, `Card` in een `Link` |
 | `PersonQuote` | Eén klantcitaat in Fraunces met naam en organisatie, op een `sand`-sectie | Citatencarrousels, `Quote`-iconen, sterren bij een handmatig citaat |
-| `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden | De vijf CTA-banden en `FinalCTA`-varianten |
+| `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden. `title` en `intro` per pagina; een pagina met een ander publiek geeft eigen `routes` mee (Samenwerken: contact, bouwstenen, voorbeelden; Catering: cateringaanvraag, maatwerk, contact; Logies: logies aanvragen, programma, op maat). Met `id` is het ook het anker voor een knop hogerop de pagina (Catering: `#aanvraag`) | De vijf CTA-banden en `FinalCTA`-varianten, "Neem contact op"-banden, het aanvraagblok met vier icoonkaarten |
 | `ActivityPage` (`components/landing`) | De tweede sjabloonvariant, voor één boekbare activiteit (Wadexcursie, Zeehondentocht): zelfde opbouw als `LandingPage` maar met de kaart "In het kort", een boekblok (`DirectBookingPanel` zodra de bouwsteen aan de boekmodule hangt, anders het aanvraagformulier) en TouristTrip-structured data; geen `RouteChooser`, de actie is boeken. Inhoud in `src/content/landings/<slug>.ts` met `kind: "activity"`; de feiten (duur, prijs, groepsgrootte) worden bewaakt tegen `src/content/activityContent.ts` | Eigen activiteitpagina's met `KeyFacts`, losse accordions en drie linkblokken |
+| `BodySection`, `FeatureGrid`, `Checklist`, `Paragraphs` (`components/landing/sections`) en `sectionCounter` | De sectiesoorten van de inhoudsbestanden, ook los te gebruiken op een verhaal- of cataloguspagina (Samenwerken en Catering bouwen hun secties als `LandingSection`-objecten; Voor wie gebruikt `FeatureGrid` en `Checklist`). Een `split` heeft optioneel een knop (`cta`, `secondary`) en de foto links (`imagePosition`). `sectionCounter()` geeft elke sectie een nummer en wisselt de toon (`muted`, `default`); roep hem aan in de volgorde van de pagina, vóór de JSX | Eigen kaartrasters, vinkjeslijsten en handmatige sectienummers |
+| `ProcessSteps` (`components/werkwijze`) | Genummerde stappen als kaarten met icoon; standaard de zes van de werkwijze, met eigen `steps`, `title` en `intro` ook elders (Logies: vier stappen van wens naar boeking) | Eigen stappenrijen met genummerde cirkels |
 | `LandingPage` (`components/landing`) | Het ene sjabloon voor de landingspagina's, gevoed door `src/content/landings/<slug>.ts` (geregistreerd in `index.ts` en `paths.ts`): kruimelpad, `PageHero`, intro met `FactList`, genummerde secties (`prose`, `features`, `gallery`, `split`), voorbeeldprogramma's uit de database, `PersonQuote`, Google-reviews, `RouteChooser`, `FaqSection`, één `RelatedLinks` | Een pagina-component per landingspagina; een nieuwe landingspagina is een nieuw inhoudsbestand |
 
 `FaqSection`, `LandingBreadcrumb`, `GoogleReviewsBlock` en `RelatedLinks`
 staan sinds fase 3 op `Section`, `Container` en `SectionHeader`; een aparte
-`Faq` en `Breadcrumb` zijn niet meer nodig. Fase 4 zet de overige pagina's
-en de homepage op dezelfde componenten.
+`Faq` en `Breadcrumb` zijn niet meer nodig. Antwoorden in `FaqSection` mogen
+links bevatten als `[tekst](/pad)`; de structured data krijgt de platte tekst.
+Sinds fase 4 deel 1 staan ook de verhaalpagina's (Werkwijze, Over ons, Voor
+wie, Samenwerken, Contact, Evenementen, Veelgestelde vragen, Eilandpartners,
+404) op deze componenten, en sinds deel 2 de cataloguspagina's: Catering,
+Logies, Bouwstenen, Voorbeeldprogramma's (overzicht en detail), Activiteiten
+op Vlieland en de activiteitdetailpagina's uit de database. Nog te doen: de
+homepage.
 
 ## Regels voor interactie
 
@@ -126,8 +136,25 @@ en de homepage op dezelfde componenten.
   secties krijgen automatisch een nummer en wisselen van toon (`muted`,
   `default`); wat erna komt ligt vast: voorbeeldprogramma's, citaat,
   reviews, `RouteChooser`, FAQ, één linkblok.
+  Een verhaalpagina zonder inhoudsbestand (Over ons, Contact) bouwt met
+  dezelfde onderdelen: `PageHero`, secties met `sectionCounter`, dan
+  `RouteChooser`, `FaqSection`, `RelatedLinks`. Geen eigen CTA-banden,
+  golven, blur-bollen of Ken Burns meer.
   Een activiteitpagina (`kind: "activity"`) volgt dezelfde regels; haar
-  vaste staart is boekblok, FAQ, reviews, één linkblok. Elke duur, prijs
+  vaste staart is boekblok, FAQ, reviews, één linkblok.
+- Cataloguspagina's (Bouwstenen, Voorbeeldprogramma's): `PageHero` zonder
+  foto (de kaarten brengen de foto's), direct daaronder één genummerde
+  sectie met het zoekveld en de filterknoppen (`Button` `sm`: `default`
+  voor de actieve, `outline` voor de rest, met `aria-pressed`), dan het
+  raster van kaarten (`CatalogCard` met knoppen, `MediaCard` als de kaart
+  één link is); `LoadingState` tijdens het laden en `EmptyState` met
+  "Filters wissen" als niets past; daarna `RouteChooser`, FAQ en één
+  linkblok. Een detailpagina uit de database (voorbeeldprogramma,
+  bouwsteen) heeft een kruimelpad, `PageHero` met de eigen foto (zonder
+  foto de donkere band), een intro met `FactList` "In het kort" ernaast,
+  genummerde secties, het boekblok (`#boeken`) of de tijdlijn, verwante
+  kaarten, en sluit af met `RouteChooser` (programma) of `SeeAlsoActivities`
+  (bouwsteen) en één linkblok. Prijzen altijd via `formatBlockPrice`. Elke duur, prijs
   en groepsgrootte in zo'n bestand moet letterlijk in
   `src/content/activityContent.ts` staan (`scripts/validate-activity-facts.ts`
   draait voor elke build); schrijf een getijvenster dus als "een uur vóór

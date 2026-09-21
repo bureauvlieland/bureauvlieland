@@ -1,110 +1,75 @@
+import { Helmet } from "react-helmet";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { AboutErwin } from "@/components/AboutErwin";
 import { Verbinder } from "@/components/Verbinder";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet";
-import vlielandLandscape from "@/assets/lighthouse-vlieland.jpg";
-import { useKenBurns } from "@/hooks/use-ken-burns";
+import { PageHero, RouteChooser } from "@/components/system";
+import { sectionCounter } from "@/components/landing/sectionCounter";
+import heroImage from "@/assets/lighthouse-vlieland.jpg";
+
+const URL = "https://bureauvlieland.nl/over-ons";
+
+const FAQ = [
+  {
+    question: "Wie zit er achter Bureau Vlieland?",
+    answer:
+      "Bureau Vlieland is opgericht door Erwin Soolsma en is gevestigd op Vlieland. Wij zijn een lokaal boekingskantoor en programmabureau met korte lijnen naar alle aanbieders op het eiland.",
+  },
+  {
+    question: "Wat kost het om via Bureau Vlieland te boeken?",
+    answer: "U betaalt geen aparte bemiddelingskosten. Onze vergoeding zit verwerkt in de tarieven van de aanbieders.",
+  },
+  {
+    question: "Werkt Bureau Vlieland samen met lokale ondernemers?",
+    answer:
+      "Ja. Wij werken uitsluitend met ondernemers op en rond Vlieland: schippers, gidsen, horeca, cateraars, fietsverhuur en accommodaties. Bekijk [onze eilandpartners](/partners).",
+  },
+  {
+    question: "Krijg ik één factuur voor alles?",
+    answer:
+      "Ja. Bureau Vlieland factureert het volledige programma centraal, zodat u niet met tien losse aanbieders hoeft af te rekenen.",
+  },
+];
 
 const OverOns = () => {
-  const kenBurns = useKenBurns();
-  
+  const next = sectionCounter();
+  const about = next();
+  const verbinder = next();
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>Over Ons – Bureau Vlieland | Erwin Soolsma & Team</title>
-        <meta 
-          name="description" 
-          content="Leer Erwin Soolsma en Bureau Vlieland kennen. Lokale expertise en passie voor het organiseren van onvergetelijke evenementen op Vlieland." 
+        <title>Over ons – Bureau Vlieland | Erwin Soolsma en team</title>
+        <meta
+          name="description"
+          content="Leer Erwin Soolsma en Bureau Vlieland kennen. Lokale expertise en passie voor het organiseren van onvergetelijke programma's op Vlieland."
         />
-        <link rel="canonical" href="https://bureauvlieland.nl/over-ons" />
-        <meta property="og:title" content="Over Ons – Bureau Vlieland" />
+        <link rel="canonical" href={URL} />
+        <meta property="og:title" content="Over ons – Bureau Vlieland" />
         <meta property="og:description" content="Leer Erwin Soolsma en Bureau Vlieland kennen. Lokale expertise op Vlieland." />
-        <meta property="og:url" content="https://bureauvlieland.nl/over-ons" />
+        <meta property="og:url" content={URL} />
       </Helmet>
       <Navigation />
       <main id="main-content">
-        {/* Hero Section */}
-        <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
-          <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ 
-              backgroundImage: `url(${vlielandLandscape})`,
-              ...kenBurns
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
-          </div>
-
-          {/* Decorative wave patterns */}
-          <div className="absolute top-0 left-0 w-full h-32 opacity-10 pointer-events-none">
-            <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
-              <path d="M0,50 Q300,20 600,50 T1200,50 L1200,0 L0,0 Z" fill="currentColor" className="text-background"/>
-            </svg>
-          </div>
-          <div className="absolute bottom-0 left-0 w-full h-32 opacity-10 pointer-events-none">
-            <svg viewBox="0 0 1200 120" className="w-full h-full" preserveAspectRatio="none">
-              <path d="M0,70 Q300,100 600,70 T1200,70 L1200,120 L0,120 Z" fill="currentColor" className="text-background"/>
-            </svg>
-          </div>
-
-          <div className="relative z-10 text-center text-primary-foreground px-4">
-            <h1 className="text-5xl md:text-6xl font-display font-bold mb-6">
-              Over ons
-            </h1>
-            <p className="text-xl md:text-2xl max-w-3xl mx-auto">
-              Lokale expertise en verbinding op Vlieland
-            </p>
-          </div>
-        </section>
-
-        {/* Content */}
-        <AboutErwin />
-        <Verbinder />
-
-        {/* CTA naar Contact */}
-        <section className="py-16 bg-gradient-hero text-primary-foreground">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-center">
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-6">
-              Laten we kennismaken
-            </h2>
-            <p className="text-lg mb-8 max-w-2xl mx-auto text-primary-foreground/90">
-              Neem contact op met Erwin voor een vrijblijvend gesprek over uw evenement op Vlieland
-            </p>
-            <Link to="/contact">
-              <Button size="lg">
-                Neem contact op
-              </Button>
-            </Link>
-          </div>
-        </section>
+        <PageHero
+          image={heroImage}
+          alt="De vuurtoren van Vlieland"
+          eyebrow="Over ons"
+          title="Over ons"
+          intro="Lokale expertise en verbinding op Vlieland. Bureau Vlieland is opgericht door Erwin Soolsma, geboren op het eiland, met korte lijnen naar iedereen die hier werkt."
+          cta={{ label: "Neem contact op", to: "/contact" }}
+          secondary={{ label: "Onze werkwijze", to: "/onze-werkwijze" }}
+        />
+        <AboutErwin number={about.number} tone={about.tone} />
+        <Verbinder number={verbinder.number} tone={verbinder.tone} />
+        <RouteChooser
+          title="Laten we kennismaken"
+          intro="Neem contact op voor een vrijblijvend gesprek over uw programma op Vlieland, of begin meteen met een aanvraag."
+        />
+        <FaqSection schemaId="over-ons" pageUrl={URL} items={FAQ} />
+        <RelatedLinks />
       </main>
-      <FaqSection
-        schemaId="over-ons"
-        items={[
-            {
-              question: "Wie zit er achter Bureau Vlieland?",
-              answer: "Bureau Vlieland is opgericht door Erwin Soolsma en is gevestigd op Vlieland. Wij zijn een lokaal boekingskantoor en programmabureau met korte lijnen naar alle aanbieders op het eiland.",
-            },
-            {
-              question: "Wat kost het om via Bureau Vlieland te boeken?",
-              answer: "Je betaalt geen aparte bemiddelingskosten. Onze vergoeding zit verwerkt in de tarieven van de aanbieders.",
-            },
-            {
-              question: "Werken jullie samen met lokale ondernemers?",
-              answer: "Ja. We werken uitsluitend met ondernemers op en rond Vlieland: schippers, gidsen, horeca, cateraars, fietsverhuur en accommodaties.",
-            },
-            {
-              question: "Krijg ik één factuur voor alles?",
-              answer: "Ja. Bureau Vlieland factureert het volledige programma centraal, zodat je niet met tien losse aanbieders hoeft af te rekenen.",
-            },
-        ]}
-      />
-      <RelatedLinks />
       <Footer />
     </div>
   );

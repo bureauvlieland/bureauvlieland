@@ -34,3 +34,6 @@ export const renderRichText = (text: string, linkClassName = "text-primary under
   LINK.lastIndex = 0;
   return parts;
 };
+
+/** Dezelfde tekst zonder linkopmaak, voor structured data en meta-tekst. */
+export const stripRichText = (text: string): string => text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, "$1");

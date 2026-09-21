@@ -1,177 +1,141 @@
+import { Helmet } from "react-helmet";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Phone, MapPin } from "lucide-react";
-import erwinImage from "@/assets/erwin-profile.jpg";
-import { Helmet } from "react-helmet";
 import { VacationNotice } from "@/components/VacationNotice";
+import { Container, PageHero, RouteChooser, Section, SectionHeader } from "@/components/system";
+import { Paragraphs } from "@/components/landing/sections";
+import { sectionCounter } from "@/components/landing/sectionCounter";
+import erwinImage from "@/assets/erwin-profile.jpg";
 
+const URL = "https://bureauvlieland.nl/contact";
+
+const CHANNELS = [
+  { icon: Phone, label: "Telefonisch", value: "0562 700 208", href: "tel:+31562700208" },
+  { icon: Mail, label: "E-mail", value: "hallo@bureauvlieland.nl", href: "mailto:hallo@bureauvlieland.nl" },
+  { icon: MapPin, label: "Adres", value: "Sikkelduin 11, 8899 CG Vlieland" },
+];
+
+const FAQ = [
+  {
+    question: "Hoe kan ik contact opnemen met Bureau Vlieland?",
+    answer:
+      "Bel 0562 700 208, mail naar hallo@bureauvlieland.nl of start vrijblijvend een [aanvraag](/programma-samenstellen). Op een bericht reageren wij doorgaans binnen één werkdag.",
+  },
+  {
+    question: "Wat zijn de openingstijden?",
+    answer: "Wij zijn op werkdagen bereikbaar. Aanvragen die in het weekend binnenkomen, pakken wij de eerstvolgende werkdag op.",
+  },
+  {
+    question: "Waar is Bureau Vlieland gevestigd?",
+    answer: "Ons adres is Sikkelduin 11, 8899 CG Vlieland.",
+  },
+  {
+    question: "Kan ik ook via WhatsApp een vraag stellen?",
+    answer: "Ja. Via de chatknop rechtsonder op de website kunt u direct een vraag stellen of doorschakelen naar WhatsApp.",
+  },
+];
 
 const Contact = () => {
+  const next = sectionCounter();
+  const channels = next();
+  const erwin = next();
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>Contact - Bureau Vlieland</title>
-        <meta name="description" content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw bedrijfsevenement op Vlieland. Telefonisch, per e-mail of kom langs op het eiland." />
-        <link rel="canonical" href="https://bureauvlieland.nl/contact" />
-        <meta property="og:title" content="Contact - Bureau Vlieland" />
-        <meta property="og:description" content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw bedrijfsevenement op Vlieland. Telefonisch, per e-mail of kom langs op het eiland." />
+        <title>Contact – Bureau Vlieland</title>
+        <meta
+          name="description"
+          content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw programma op Vlieland. Telefonisch, per e-mail of kom langs op het eiland."
+        />
+        <link rel="canonical" href={URL} />
+        <meta property="og:title" content="Contact – Bureau Vlieland" />
+        <meta
+          property="og:description"
+          content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw programma op Vlieland. Telefonisch, per e-mail of kom langs op het eiland."
+        />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
-        <meta property="og:url" content="https://bureauvlieland.nl/contact" />
+        <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>
-      
+
       <Navigation />
       <main id="main-content">
-        {/* Hero Section */}
-        <section className="relative py-16 sm:py-20 lg:py-24 bg-gradient-hero text-primary-foreground">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <div className="text-center mb-12 lg:mb-16">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold mb-6">
-                Neem contact op
-              </h1>
-              <p className="text-lg sm:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
-                Benieuwd naar de mogelijkheden? Neem vrijblijvend contact met ons op voor een passend programma
-              </p>
-            </div>
+        <PageHero
+          eyebrow="Contact"
+          title="Neem contact op"
+          intro="Benieuwd naar de mogelijkheden? Bel of mail ons, of start vrijblijvend een aanvraag: u ontvangt binnen 5 werkdagen een voorstel."
+          cta={{ label: "Stuur ons een bericht", to: "mailto:hallo@bureauvlieland.nl" }}
+          secondary={{ label: "Start uw aanvraag", to: "/programma-samenstellen" }}
+        />
 
+        <Section tone={channels.tone}>
+          <Container size="wide">
+            <SectionHeader eyebrow="Contact" number={channels.number} title="Zo bereikt u ons" align="center" />
             <VacationNotice
               endDate="2026-07-20"
+              className="mx-auto mt-8 max-w-2xl"
               message={
                 <p>
-                  E-mailen via{" "}
-                  <a href="mailto:hallo@bureauvlieland.nl" className="underline">
-                    hallo@bureauvlieland.nl
-                  </a>{" "}
-                  werkt gewoon door. U kunt ook vrijblijvend een aanvraag starten.
+                  E-mailen via <a href="mailto:hallo@bureauvlieland.nl" className="underline underline-offset-4">hallo@bureauvlieland.nl</a> werkt gewoon door. U kunt ook vrijblijvend een aanvraag starten.
                 </p>
               }
-              className="max-w-2xl mx-auto mb-8 lg:mb-10"
             />
+            <ul className="mt-12 grid gap-4 md:grid-cols-3">
+              {CHANNELS.map((channel) => {
+                const Icon = channel.icon;
+                return (
+                  <li key={channel.label} className="rounded-lg border border-border bg-card p-6">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-primary">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <p className="mt-4 text-eyebrow font-medium uppercase text-primary">{channel.label}</p>
+                    {channel.href ? (
+                      <a href={channel.href} className="mt-1 block break-words font-medium text-foreground underline-offset-4 hover:underline">
+                        {channel.value}
+                      </a>
+                    ) : (
+                      <p className="mt-1 font-medium text-foreground">{channel.value}</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Container>
+        </Section>
 
-            {/* Contact Cards */}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
-              <Card className="border-primary-foreground/20 bg-card/10 backdrop-blur-sm text-primary-foreground">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-primary-foreground/20 flex items-center justify-center mb-4">
-                    <Phone className="w-6 h-6" />
-                  </div>
-                  <CardTitle className="text-primary-foreground">Telefonisch</CardTitle>
-                  <CardDescription className="text-primary-foreground/80">
-                    <a href="tel:0562700208" className="hover:underline">
-                      0562 700 208
-                    </a>
-                  </CardDescription>
-
-                </CardHeader>
-              </Card>
-
-              <Card className="border-primary-foreground/20 bg-card/10 backdrop-blur-sm text-primary-foreground">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-primary-foreground/20 flex items-center justify-center mb-4">
-                    <Mail className="w-6 h-6" />
-                  </div>
-                  <CardTitle className="text-primary-foreground">E-mail</CardTitle>
-                  <CardDescription className="text-primary-foreground/80">
-                    <a href="mailto:hallo@bureauvlieland.nl" className="hover:underline break-all">
-                      hallo@bureauvlieland.nl
-                    </a>
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="border-primary-foreground/20 bg-card/10 backdrop-blur-sm text-primary-foreground">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-primary-foreground/20 flex items-center justify-center mb-4">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <CardTitle className="text-primary-foreground">Adres</CardTitle>
-                  <CardDescription className="text-primary-foreground/80">
-                    Sikkelduin 11<br />
-                    8899 CG Vlieland
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-
-            <div className="text-center mt-12">
-              <Button
-                size="xl"
-                onClick={() => window.location.href = 'mailto:hallo@bureauvlieland.nl'}
-              >
-                Stuur ons een bericht
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Personal Touch Section */}
-        <section className="py-16 sm:py-20 lg:py-24 bg-background">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-foreground mb-8 text-center">
-                U hebt te maken met Erwin
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-1">
-                  <img
-                    src={erwinImage}
-                    alt="Erwin Soolsma, oprichter van Bureau Vlieland"
-                    className="w-full h-auto rounded-xl shadow-medium object-cover aspect-[3/4]"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="md:col-span-2 bg-accent-soft rounded-xl border border-border p-8">
-                  <h3 className="text-2xl font-semibold text-foreground mb-4">
-                    Erwin Soolsma
-                  </h3>
-                  <p className="text-base text-foreground leading-relaxed mb-4">
-                    Ik ben geboren op Vlieland en werk al jaren op het snijvlak van ondernemen, evenementen, 
-                    leefbaarheid en samenwerking op het eiland. Bureau Vlieland is mijn manier om groepen en 
-                    projecten te verbinden met wat Vlieland echt te bieden heeft.
-                  </p>
-                  <p className="text-base text-foreground leading-relaxed mb-4">
-                    Door mijn werk voor ondernemers, de lokale krant, vrijwilligersinitiatieven en projecten rond 
-                    leefbaarheid heb ik een breed netwerk op Vlieland. Dat gebruik ik om programma's te maken die 
-                    passen bij het dorp, de natuur en de mensen die hier wonen.
-                  </p>
-                  <p className="text-base text-foreground leading-relaxed">
-                    Bij Bureau Vlieland bent u verzekerd van persoonlijk contact en maatwerk. Ik denk graag met 
-                    u mee over het perfecte programma voor uw groep.
-                  </p>
-                </div>
+        <Section tone={erwin.tone}>
+          <Container size="wide">
+            <div className="grid items-start gap-10 lg:grid-cols-3">
+              <figure className="mx-auto w-full max-w-xs overflow-hidden rounded-lg bg-muted lg:mx-0">
+                <img
+                  src={erwinImage}
+                  alt="Erwin Soolsma, oprichter van Bureau Vlieland"
+                  className="aspect-[3/4] w-full object-cover"
+                  loading="lazy"
+                />
+              </figure>
+              <div className="lg:col-span-2">
+                <SectionHeader eyebrow="Contact" number={erwin.number} title="U hebt te maken met Erwin" />
+                <Paragraphs
+                  className="mt-6 max-w-3xl"
+                  items={[
+                    "Ik ben geboren op Vlieland en werk al jaren op het snijvlak van ondernemen, evenementen, leefbaarheid en samenwerking op het eiland. Bureau Vlieland is mijn manier om groepen en projecten te verbinden met wat Vlieland echt te bieden heeft.",
+                    "Door mijn werk voor ondernemers, de lokale krant, vrijwilligersinitiatieven en projecten rond leefbaarheid heb ik een breed netwerk op Vlieland. Dat gebruik ik om programma's te maken die passen bij het dorp, de natuur en de mensen die hier wonen.",
+                    "Bij Bureau Vlieland bent u verzekerd van persoonlijk contact en maatwerk. Ik denk graag met u mee over het perfecte programma voor uw groep.",
+                  ]}
+                />
               </div>
             </div>
-          </div>
-        </section>
+          </Container>
+        </Section>
+
+        <RouteChooser />
+        <FaqSection schemaId="contact" pageUrl={URL} items={FAQ} />
+        <RelatedLinks />
       </main>
-      <FaqSection
-        schemaId="contact"
-        items={[
-            {
-              question: "Hoe kan ik contact opnemen met Bureau Vlieland?",
-              answer: "Bel +31 562 700208, mail naar hallo@bureauvlieland.nl of gebruik het contactformulier op deze pagina. We reageren doorgaans binnen één werkdag.",
-            },
-            {
-              question: "Wat zijn jullie openingstijden?",
-              answer: "Wij zijn op werkdagen bereikbaar. Aanvragen die in het weekend binnenkomen, pakken we de eerstvolgende werkdag op.",
-            },
-            {
-              question: "Waar is Bureau Vlieland gevestigd?",
-              answer: "Ons adres is Sikkelduin 11, 8899 CG Vlieland.",
-            },
-            {
-              question: "Kan ik ook via WhatsApp een vraag stellen?",
-              answer: "Ja, via de chatknop rechtsonder op de website kun je direct een vraag stellen of doorschakelen naar WhatsApp.",
-            },
-        ]}
-      />
-      <RelatedLinks />
       <Footer />
     </div>
   );

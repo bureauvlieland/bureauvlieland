@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, MessageSquareHeart, PenLine, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isPlainHref } from "@/lib/href";
 import { Container } from "./Container";
 import { Section } from "./Section";
 import { SectionHeader } from "./SectionHeader";
@@ -8,14 +9,29 @@ import { SectionHeader } from "./SectionHeader";
 /**
  * Het keuzeblok onderaan een marketingpagina (ontwerpsysteem fase 3):
  * drie routes naar een aanvraag, met "zelf samenstellen" als de primaire.
- * Vervangt de CTA-band en het losse routeblok.
+ * Vervangt de CTA-band en het losse routeblok. Een pagina met een ander
+ * publiek (Samenwerken) geeft eigen `routes` mee; de vorm blijft gelijk.
  */
-interface RouteChooserProps {
-  title?: string;
-  intro?: string;
+export interface RouteChooserRoute {
+  icon: LucideIcon;
+  title: string;
+  text: string;
+  /** Pad, of een extern adres (`https://…`, `mailto:`). */
+  to: string;
+  label: string;
+  primary?: boolean;
 }
 
-const ROUTES: { icon: LucideIcon; title: string; text: string; to: string; label: string; primary?: boolean }[] = [
+interface RouteChooserProps {
+  /** Anker voor een knop hogerop de pagina (`#aanvraag`). */
+  id?: string;
+  eyebrow?: string;
+  title?: string;
+  intro?: string;
+  routes?: RouteChooserRoute[];
+}
+
+const DEFAULT_ROUTES: RouteChooserRoute[] = [
   {
     icon: PenLine,
     title: "Stel zelf uw programma samen",
@@ -41,15 +57,24 @@ const ROUTES: { icon: LucideIcon; title: string; text: string; to: string; label
 ];
 
 export const RouteChooser = ({
+  id,
+  eyebrow = "Uw volgende stap",
   title = "Klaar om te beginnen?",
   intro = "Vrijblijvend, en binnen 5 werkdagen een voorstel. Kies de route die bij u past.",
+  routes = DEFAULT_ROUTES,
 }: RouteChooserProps) => (
-  <Section tone="dark">
+  <Section id={id} tone="dark" className={id ? "scroll-mt-24" : undefined}>
     <Container size="wide">
-      <SectionHeader onDark eyebrow="Uw volgende stap" title={title} intro={intro} align="center" />
+      <SectionHeader onDark eyebrow={eyebrow} title={title} intro={intro} align="center" />
       <div className="mt-12 grid gap-4 md:grid-cols-3">
-        {ROUTES.map((route) => {
+        {routes.map((route) => {
           const Icon = route.icon;
+          const inner = (
+            <>
+              {route.label}
+              {route.primary && <ArrowRight aria-hidden="true" />}
+            </>
+          );
           return (
             <div
               key={route.to}
@@ -61,10 +86,13 @@ export const RouteChooser = ({
               <h3 className="mt-4 font-display text-display-md font-medium text-primary-foreground">{route.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-sand/90">{route.text}</p>
               <Button asChild size="lg" variant={route.primary ? "default" : "inverseOutline"} className="mt-6 w-full sm:w-auto">
-                <Link to={route.to}>
-                  {route.label}
-                  {route.primary && <ArrowRight aria-hidden="true" />}
-                </Link>
+                {isPlainHref(route.to) ? (
+                  <a href={route.to} {...(route.to.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                    {inner}
+                  </a>
+                ) : (
+                  <Link to={route.to}>{inner}</Link>
+                )}
               </Button>
             </div>
           );

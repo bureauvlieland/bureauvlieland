@@ -1,9 +1,10 @@
 // Nachtelijke synchronisatie: bouwstenen met een gekoppeld MAP-activiteitstype
 // nemen foto, beschrijving en duur over uit MijnActiviteitenPlanner; prijs
-// alleen als map_sync_price aan staat. Aanroep: cron (apikey-header) of een
+// alleen als map_sync_price aan staat. Aanroep: cron (anon key als Bearer) of een
 // ingelogde admin, optioneel met { blockId } voor één bouwsteen.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { MAP_BASE_URL, mapFetch } from "../_shared/map.ts";
+import { isAnonBearer } from "../_shared/jwt-role.ts";
 import {
   buildBlockUpdate,
   pickPricePerPerson,
@@ -51,10 +52,12 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Toegang: cron (apikey = anon key, geen gebruikers-JWT) of een admin.
+    // Toegang: de cron-job (anon key als Bearer-token; de gateway heeft de
+    // handtekening gecontroleerd, want verify_jwt staat aan) of een admin.
+    // Vergelijken met SUPABASE_ANON_KEY uit de omgeving werkte niet: sinds de
+    // verhuizing wijkt die waarde af van de anon key die de cron meestuurt.
     const authHeader = req.headers.get("authorization");
-    const apikey = req.headers.get("apikey");
-    let allowed = apikey === anonKey && (!authHeader || authHeader === `Bearer ${anonKey}`);
+    let allowed = isAnonBearer(authHeader);
     if (!allowed && authHeader?.startsWith("Bearer ")) {
       const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
       const { data: { user } } = await userClient.auth.getUser();

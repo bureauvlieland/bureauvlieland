@@ -11,7 +11,7 @@
  */
 
 import { getCommissionRate } from "./commissionRates.ts";
-import { calculateLodgingCommission, type LodgingExtraInput } from "./lodgingCommission.ts";
+import { amountExclVat, type LodgingExtraInput } from "./lodgingCommission.ts";
 import {
   DEFAULT_RECON_SETTINGS,
   invoiceKey,
@@ -225,6 +225,16 @@ export async function loadReconciliationInputs(
       extrasByQuote.set(extra.quote_id, list);
     }
   }
+  // Per offerte: het totaal van de extra's ex btw (elk tegen zijn eigen
+  // tarief) en welke offertes überhaupt extra's hebben. Ontbrak sinds
+  // 6 september, waardoor de werklijst en de dagelijkse factuurcontrole
+  // met een ReferenceError omvielen.
+  const extrasExclByQuote = new Map<string, number>();
+  const quotesWithExtras = new Set<string>();
+  for (const [quoteId, extras] of extrasByQuote) {
+    quotesWithExtras.add(quoteId);
+    extrasExclByQuote.set(quoteId, extras.reduce((sum, e) => sum + amountExclVat(e), 0));
+  }
 
   // ── Projecten & partners ─────────────────────────────────────────────────
   const requestIds = [
@@ -320,11 +330,10 @@ export async function loadReconciliationInputs(
     // expliciete `false` betekent dat de prijs al ex btw is. Kamer en extra's
     // hanteren nu dezelfde regel — eerder gold een leeg veld bij de kamer als
     // "ex btw", wat de commissiegrondslag op oude offertes te hoog maakte.
-    const roomExcl = lodgingAmountExclVat({
-      unit_price: q.price_total,
-      pricing_type: "fixed",
-      vat_rate: q.vat_rate,
-      price_includes_vat: q.price_includes_vat,
+    const roomExcl = amountExclVat({
+      amount: q.price_total,
+      vatRate: q.vat_rate,
+      priceIncludesVat: q.price_includes_vat,
     });
     const totalExcl = roomExcl + (extrasExclByQuote.get(q.id) ?? 0);
     const partner = partnerById.get(q.partner_id);

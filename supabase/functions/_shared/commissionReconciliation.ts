@@ -68,6 +68,12 @@ export interface ReconItemInput {
   commission_exempt_reason?: string | null;
   commission_exempt_at?: string | null;
   /**
+   * Logies: de offerte heeft extra's en het extra's-percentage van de partner
+   * wijkt af van het logiespercentage. De werklijst laat de admin de regel
+   * dan nalopen.
+   */
+  extras_rate_mismatch?: boolean;
+  /**
    * Per component uitgesplitste commissie (logies: kamer + extra's), elk met het
    * btw-tarief en percentage dat bij dat component hoort. Is dit gezet, dan is het
    * leidend boven `quoted_price × commission_percentage`.
