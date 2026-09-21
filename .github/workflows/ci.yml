@@ -92,14 +92,19 @@ jobs:
           mkdir -p reports
           printf '%s\n' "${files[@]}" > reports/edge-test-files.txt
 
-      - name: Run Deno tests in parallel
+      # Bewust zonder --parallel: parallelle testmodules draaien in één proces
+      # en delen de omgevingsvariabelen. Verschillende modules zetten
+      # MAILJET_API_KEY en dergelijke bij het laden, terwijl
+      # _shared/mailjet-send.test.ts juist test wat er zonder sleutels gebeurt;
+      # die race maakte main af en toe rood (21 september). Sequentieel is de
+      # volgorde vast en kost het ongeveer een minuut extra.
+      - name: Run Deno tests
         run: |
           mkdir -p reports
           set -o pipefail
           deno test \
             --allow-net --allow-env --allow-read \
             --no-check \
-            --parallel \
             --reporter=junit \
             --junit-path=reports/deno-junit.xml \
             supabase/functions/ 2>&1 | tee reports/deno-output.log
