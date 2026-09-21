@@ -157,3 +157,48 @@ UPDATE public.building_blocks SET status = 'published', is_published = true WHER
 ALTER TABLE public.building_blocks ENABLE TRIGGER trg_prevent_partner_publish_building_blocks;
 ```
 
+## Valkuil: cron-jobs, `verify_jwt` en de wachttijd van pg_net
+
+Elke cron-job die een edge function aanroept (`net.http_post` in
+`cron.job.command`) moet de anon key **twee keer** meesturen: als `apikey`
+én als `Authorization: Bearer …`. Onder Lovable Cloud stond `verify_jwt` bij
+elke functie uit en volstond `apikey`; in het eigen project bepaalt
+`supabase/config.toml` dat per functie, en de CLI-standaard voor functies
+die er niet in staan is `true`. De gateway weigert een aanroep zonder
+Authorization-header dan met 401 "Missing authorization header". Zo
+draaiden cron-watchdog, critical-selftest, flag-missing-partner-invoices,
+auto-close-past-execution, auto-close-monitor, send-arrival-reminder en
+map-sync-blocks van 8 tot 21 september 2026 geen enkele keer, en de watchdog
+kon dat niet melden omdat hij zelf ook geweigerd werd. Migratie
+`20260921113000_cron-bearer-en-timeout.sql` heeft alle jobs hersteld; een
+nieuwe job schrijf je zo:
+
+```sql
+select cron.schedule('mijn-taak-daily', '0 6 * * *', $cron$
+  insert into public.cron_dispatch_log (jobname, request_id)
+  select 'mijn-taak-daily', net.http_post(
+    timeout_milliseconds := 120000,
+    url := 'https://utshmnyrjzwtrpttxdlw.supabase.co/functions/v1/mijn-taak',
+    headers := '{"Content-Type":"application/json","apikey":"<anon key>","Authorization":"Bearer <anon key>"}'::jsonb,
+    body := '{"triggeredBy":"cron"}'::jsonb
+  );
+$cron$);
+```
+
+De anon key is de publieke sleutel uit `.env` (`VITE_SUPABASE_PUBLISHABLE_KEY`),
+geen geheim. Zet `timeout_milliseconds` altijd op 120000: de standaard van
+pg_net is 5 seconden, en een functie die langer doet (check-pending-items,
+send-guest-details-reminder) werd daardoor elke dag als "fout" gemeld terwijl
+hij gewoon doorliep.
+
+Een functie die de Authorization-header zelf bekijkt, moet de anon key als
+Bearer-token herkennen als systeemverkeer: `isAnonBearer()` uit
+`_shared/jwt-role.ts` (zie `auto-close-past-execution` en `map-sync-blocks`).
+Vergelijk niet met `SUPABASE_ANON_KEY` uit de omgeving van de functie: die
+waarde wijkt sinds de verhuizing af van de anon key die de cron meestuurt.
+
+Let op: CI draait de Deno-tests met `--no-check`. Een verkeerde functienaam
+in een edge function valt dus pas op bij het draaien (de commissiecontrole
+stond van 6 tot 21 september op een `ReferenceError`). Laat een test de code
+echt uitvoeren, zoals `_shared/commissionReconciliationData.test.ts` met een
+nep-client doet, of draai `deno check` op de functie voordat je pusht.

@@ -173,4 +173,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.map-sync-blocks]
-verify_jwt = false
+# Cron stuurt de anon key als Bearer-token; de gateway controleert die, de
+# functie leest alleen de rol (zie _shared/jwt-role.ts).
+verify_jwt = true

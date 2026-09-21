@@ -16,6 +16,7 @@
 // NIET geraakt — zie PRE_EXECUTION_TODO_TYPES in src/lib/projectExecutionState.ts.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { bearerToken, isAnonBearer } from "../_shared/jwt-role.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -294,19 +295,23 @@ Deno.serve(async (req) => {
       const t = url.searchParams.get("triggeredBy");
       if (t) triggeredBy = t;
     }
+    // De cron-job stuurt sinds de verhuizing de anon key als Bearer-token mee
+    // (de gateway eist een Authorization-header); dat is geen adminverzoek en
+    // heeft geen gebruikersclaims om te controleren.
+    const token = bearerToken(authHeader);
+    const userToken = token && !isAnonBearer(authHeader) ? token : null;
     if (triggeredBy === "unknown") {
-      triggeredBy = authHeader?.startsWith("Bearer ") ? "admin" : "cron";
+      triggeredBy = userToken ? "admin" : "cron";
     }
 
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
+    if (userToken) {
       const anonClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } },
+        { global: { headers: { Authorization: `Bearer ${userToken}` } } },
       );
       // deno-lint-ignore no-explicit-any
-      const { data: claims, error: claimsErr } = await (anonClient.auth as any).getClaims(token);
+      const { data: claims, error: claimsErr } = await (anonClient.auth as any).getClaims(userToken);
       if (claimsErr || !claims?.claims) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
