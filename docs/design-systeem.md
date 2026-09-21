@@ -70,7 +70,7 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel); met `title`, `summary` en een icoon per feit is het de kaart "In het kort" van een activiteitpagina | USP-iconen in een rij, losse feitengrids, `KeyFacts` op landingspagina's |
 | `MediaCard` | Kaart met foto, eyebrow ("3 dagen · Avontuur"), Fraunces-kop en tekst, als link; optioneel een pill op de foto (`badge`, "Nieuw"), een regel voor prijs of doelgroep (`footer`) en een eigen linktekst (`linkLabel`). Voor programma's en activiteiten uit de database en de cateringformats; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover, `ProgramCard` (weg) |
 | `CatalogCard` | Kaart uit een catalogus met prijs en knoppen: foto en titel linken naar de detailpagina, pills op de foto (categorie, "Direct boekbaar"), onderin de prijs, één primaire knop, optioneel een tweede (`outline`) en een kleine tekstlink. Voor de bouwstenen en direct boekbare activiteiten uit de boekmodule | De eigen bouwsteenkaart en `BookableOnlyCard` met `Badge`, `Card` en drie knopstijlen |
-| `LinkCard` | Kleine linkkaart zonder foto: titel, één regel tekst, pijl en optioneel pills (duur, geschiktheid). Voor `RelatedLinks`, `SeeAlsoActivities`, de thema's op Activiteiten op Vlieland en de resultaten van `ActivityFilter` | Eigen linktegels, `Card` in een `Link` |
+| `LinkCard` | Kleine linkkaart zonder foto: titel, één regel tekst, pijl en optioneel pills (duur, geschiktheid) en een icoon in een accentcirkel (`icon`). Voor `RelatedLinks`, `SeeAlsoActivities`, de thema's op Activiteiten op Vlieland, de resultaten van `ActivityFilter` en de routes op de homepage | Eigen linktegels, `Card` in een `Link`, de routekaarten met foto |
 | `PersonQuote` | Eén klantcitaat in Fraunces met naam en organisatie, op een `sand`-sectie | Citatencarrousels, `Quote`-iconen, sterren bij een handmatig citaat |
 | `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden. `title` en `intro` per pagina; een pagina met een ander publiek geeft eigen `routes` mee (Samenwerken: contact, bouwstenen, voorbeelden; Catering: cateringaanvraag, maatwerk, contact; Logies: logies aanvragen, programma, op maat). Met `id` is het ook het anker voor een knop hogerop de pagina (Catering: `#aanvraag`) | De vijf CTA-banden en `FinalCTA`-varianten, "Neem contact op"-banden, het aanvraagblok met vier icoonkaarten |
 | `ActivityPage` (`components/landing`) | De tweede sjabloonvariant, voor één boekbare activiteit (Wadexcursie, Zeehondentocht): zelfde opbouw als `LandingPage` maar met de kaart "In het kort", een boekblok (`DirectBookingPanel` zodra de bouwsteen aan de boekmodule hangt, anders het aanvraagformulier) en TouristTrip-structured data; geen `RouteChooser`, de actie is boeken. Inhoud in `src/content/landings/<slug>.ts` met `kind: "activity"`; de feiten (duur, prijs, groepsgrootte) worden bewaakt tegen `src/content/activityContent.ts` | Eigen activiteitpagina's met `KeyFacts`, losse accordions en drie linkblokken |
@@ -86,8 +86,15 @@ Sinds fase 4 deel 1 staan ook de verhaalpagina's (Werkwijze, Over ons, Voor
 wie, Samenwerken, Contact, Evenementen, Veelgestelde vragen, Eilandpartners,
 404) op deze componenten, en sinds deel 2 de cataloguspagina's: Catering,
 Logies, Bouwstenen, Voorbeeldprogramma's (overzicht en detail), Activiteiten
-op Vlieland en de activiteitdetailpagina's uit de database. Nog te doen: de
-homepage.
+op Vlieland en de activiteitdetailpagina's uit de database. Sinds deel 3 ook
+de homepage: de redactionele secties (hero, bouwstenen, catering,
+voorbeelden, het verhaal, begin hier) houden hun grote Fraunces-koppen en
+cursieve accenten, maar eyebrow en sectienummer komen uit `SectionHeader`
+(`size="xl"`), de routekeuze is één `MediaCard` plus `LinkCard`s, de live
+agenda en de klantquotes staan op `MediaCard`, `Pill` en de zandsectie. De
+live agenda heeft bewust geen nummer: die is soms leeg. De Google-score
+komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
+(zonsondergang, niet geel).
 
 ## Regels voor interactie
 

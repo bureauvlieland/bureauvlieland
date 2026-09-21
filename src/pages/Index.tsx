@@ -49,15 +49,16 @@ const Index = () => {
       <CookieConsent />
       <Navigation />
       <main id="main-content">
+        {/* Genummerde hoofdstukken; de live agenda telt niet mee, die is soms leeg. */}
         <div data-analytics-section="hero"><HeroEditorial /></div>
-        <div data-analytics-section="routes"><RoutePicker /></div>
+        <div data-analytics-section="routes"><RoutePicker number="01" /></div>
         <div data-analytics-section="upcoming"><UpcomingActivitiesFeed /></div>
-        <div data-analytics-section="catering"><CateringHighlight /></div>
-        <div data-analytics-section="activities"><ActivitiesShowcase /></div>
-        <div data-analytics-section="templates"><ProgramTemplatesPreview /></div>
-        <div data-analytics-section="manifesto"><ErwinManifesto /></div>
-        <div data-analytics-section="testimonials"><Testimonials /></div>
-        <div data-analytics-section="final-cta"><FinalCTA /></div>
+        <div data-analytics-section="testimonials"><Testimonials number="02" /></div>
+        <div data-analytics-section="activities"><ActivitiesShowcase number="03" /></div>
+        <div data-analytics-section="catering"><CateringHighlight number="04" /></div>
+        <div data-analytics-section="templates"><ProgramTemplatesPreview number="05" /></div>
+        <div data-analytics-section="manifesto"><ErwinManifesto number="06" /></div>
+        <div data-analytics-section="final-cta"><FinalCTA number="07" /></div>
       </main>
       <StickyMobileCTA />
       <Footer />

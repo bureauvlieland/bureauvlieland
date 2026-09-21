@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { transformImageUrl } from "@/lib/supabaseImage";
+import { Container, Section, SectionHeader } from "@/components/system";
 
 interface Template {
   id: string;
@@ -14,7 +15,7 @@ interface Template {
   indicative_price_pp: number | null;
 }
 
-export const ProgramTemplatesPreview = () => {
+export const ProgramTemplatesPreview = ({ number }: { number: string }) => {
   const [templates, setTemplates] = useState<Template[]>([]);
 
   useEffect(() => {
@@ -43,36 +44,22 @@ export const ProgramTemplatesPreview = () => {
   if (templates.length === 0) return null;
 
   return (
-    <section className="relative py-24 lg:py-32 bg-gradient-sand overflow-hidden">
-      {/* Decorative type accent */}
-      <div className="absolute -top-20 -right-20 lg:right-10 pointer-events-none select-none opacity-[0.04]">
-        <div className="font-display italic text-[20rem] leading-none text-foreground">
-          ‘27
-        </div>
-      </div>
+    <Section spacing="spacious" className="overflow-hidden">
+      <Container size="full">
+        <SectionHeader
+          eyebrow="Voorbeeldprogramma's"
+          number={number}
+          size="xl"
+          title={
+            <>
+              Klaar om <span className="italic text-primary">te boeken.</span>
+            </>
+          }
+          intro="Liever niet vanaf nul beginnen? Kies één van onze beproefde programma's en pas hem aan naar wens. Inclusief activiteiten, catering en logistiek."
+        />
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px] relative z-10">
-        <div className="grid grid-cols-12 gap-6 mb-16">
-          <div className="col-span-12 lg:col-span-4">
-            <div className="text-xs uppercase tracking-[0.3em] text-sunset font-medium mb-4">
-              · 03 — Voorbeeldprogramma's
-            </div>
-            <h2 className="font-display font-light text-foreground leading-[0.95] text-[clamp(2.5rem,5.5vw,4.5rem)]">
-              Klaar om{" "}
-              <span className="italic text-primary">te boeken.</span>
-            </h2>
-          </div>
-          <div className="col-span-12 lg:col-span-5 lg:col-start-7 lg:self-end">
-            <p className="text-lg text-muted-foreground font-light">
-              Liever niet vanaf nul beginnen? Kies één van onze beproefde
-              programma's en pas hem aan naar wens. Inclusief activiteiten,
-              catering en logistiek.
-            </p>
-          </div>
-        </div>
-
-        {/* Editorial card stack */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+        {/* Redactionele kaartstapel */}
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
           {templates.map((tpl, i) => (
             <motion.div
               key={tpl.id}
@@ -101,7 +88,7 @@ export const ProgramTemplatesPreview = () => {
                   <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
                     <div className="flex items-center gap-2 bg-primary-foreground/15 backdrop-blur-md px-3 py-1.5 rounded-sm">
                       <Clock className="h-3 w-3 text-primary-foreground" />
-                      <span className="text-xs uppercase tracking-widest text-primary-foreground font-medium">
+                      <span className="text-eyebrow font-medium uppercase text-primary-foreground">
                         {tpl.duration_days === 1
                           ? "1 dag"
                           : `${tpl.duration_days} dagen`}
@@ -122,7 +109,7 @@ export const ProgramTemplatesPreview = () => {
                         {tpl.short_description}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 text-sunset text-sm font-medium uppercase tracking-widest group-hover:gap-4 transition-all">
+                    <div className="flex items-center gap-2 text-sm font-medium text-sand transition-all group-hover:gap-4">
                       <span>Bekijk programma</span>
                       <ArrowRight className="h-4 w-4" />
                     </div>
@@ -132,7 +119,7 @@ export const ProgramTemplatesPreview = () => {
             </motion.div>
           ))}
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };

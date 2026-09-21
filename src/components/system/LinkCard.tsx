@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPlainHref } from "@/lib/href";
 
@@ -15,16 +15,23 @@ interface LinkCardProps {
   text?: ReactNode;
   to: string;
   pills?: ReactNode;
+  /** Icoon in een accentcirkel vóór de tekst (de routes op de homepage). */
+  icon?: LucideIcon;
   className?: string;
 }
 
-export const LinkCard = ({ title, text, to, pills, className }: LinkCardProps) => {
+export const LinkCard = ({ title, text, to, pills, icon: Icon, className }: LinkCardProps) => {
   const classes = cn(
     "group flex h-full items-start gap-3 rounded-lg border border-border bg-card p-4 transition-colors duration-fast hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
     className,
   );
   const inner = (
     <>
+      {Icon && (
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-foreground">{title}</span>
         {text && <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{text}</span>}
