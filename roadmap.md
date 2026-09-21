@@ -10,8 +10,8 @@
 - [x] Lovable Cloud opruimen (gedaan op 21 september: Erwin heeft het Lovable-project verwijderd, waarmee ook de valse alertmails van de oude cron-jobs stoppen; oorspronkelijk gepland rond 15 september, een week na de overstap, ná het omzetten van visitvlieland.nl): functies `storage-export` en `secrets-export` verwijderen in Lovable, daarna *Remove Lovable Cloud*; in het nieuwe project `storage-export`/`secrets-export` uit de repo halen en via de deploy-workflow verwijderen
 - [ ] Storage-bucket `social-media` handmatig verwijderen in het Supabase-dashboard (tabellen en functies zijn al weg)
 - [ ] Uitschrijflink in e-mails: nu een dode link; laten hangen tot er een echte uitschrijfpagina is (besluit 8 september)
-- [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren
-- [ ] Prijzen zichtbaar maken in de programma-bouwer (14 september, gevonden bij het uitzoeken van de tooltip-vraag): bouwstenen tonen nu geen bedrag in `ProgramBuilderView.tsx` — vraagt een ontwerpkeuze (per stuk, per dag, totaal?) voordat dit gebouwd kan worden
+- [ ] Dagelijkse zelftest (05:45 UTC): eerste automatische run controleren. Stand 21 september: de run van die ochtend gaf nog 401 (vóór de cron-fix van die middag, zie Gedaan); de eerste run na de fix is 22 september 05:45 UTC, controle staat gepland
+- [x] Prijzen zichtbaar maken in de programma-bouwer (14 september, gevonden bij het uitzoeken van de tooltip-vraag): gedaan op 19 september, per stuk (besluit Erwin, zie Gedaan)
 - [ ] GA4: `wizard_step_view` en `program_request_submitted` als gebeurtenissen registreren (Beheer → Gebeurtenissen), zodat de nulmeting van de wizard loopt vóór fase 2 van het ontwerpsysteem live gaat (door Erwin)
 
 ## Gedaan
