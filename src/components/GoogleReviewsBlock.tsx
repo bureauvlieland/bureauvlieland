@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Container, Section, SectionHeader } from "@/components/system";
+import { RatingStars } from "@/components/RatingStars";
 
 interface GoogleReview {
   author_name: string;
@@ -135,25 +135,6 @@ export const GoogleReviewsBlock = ({
         </div>
       </Container>
     </Section>
-  );
-};
-
-const RatingStars = ({ value, small = false }: { value: number; small?: boolean }) => {
-  const size = small ? "w-4 h-4" : "w-5 h-5";
-  const full = Math.floor(value);
-  const half = value - full >= 0.5;
-  return (
-    <div className="inline-flex items-center" aria-label={`${value} van 5 sterren`}>
-      {Array.from({ length: 5 }).map((_, i) => {
-        const filled = i < full || (i === full && half);
-        return (
-          <Star
-            key={i}
-            className={`${size} ${filled ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40"}`}
-          />
-        );
-      })}
-    </div>
   );
 };
 

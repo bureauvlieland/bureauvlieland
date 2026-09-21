@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
+import { Container, Section, SectionHeader } from "@/components/system";
 
-export const FinalCTA = () => {
+export const FinalCTA = ({ number }: { number: string }) => {
   return (
-    <section className="relative py-32 lg:py-48 bg-background overflow-hidden">
+    <Section spacing="spacious" className="overflow-hidden">
       {/* Massive editorial typography backdrop */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
         <div className="font-display italic text-[clamp(8rem,28vw,28rem)] leading-none text-primary/[0.04] whitespace-nowrap">
@@ -13,36 +14,34 @@ export const FinalCTA = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px] relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
+      <Container size="full" className="relative z-10">
+        <div className="mx-auto max-w-4xl text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <div className="text-xs uppercase tracking-[0.3em] text-sunset font-medium mb-8">
-              · 05 — Begin hier
-            </div>
-            <h2 className="font-display font-light text-foreground leading-[0.95] text-[clamp(2.5rem,7vw,6rem)] mb-10">
-              Uw volgende eilanddag{" "}
-              <span className="italic text-primary">begint nu.</span>
-            </h2>
-            <p className="text-lg lg:text-xl text-muted-foreground font-light max-w-2xl mx-auto mb-12 leading-relaxed">
-              Vijf minuten om uw programma samen te stellen. Vijf werkdagen tot
-              een gedetailleerde offerte. Volledig vrijblijvend.
-            </p>
+            <SectionHeader
+              eyebrow="Begin hier"
+              number={number}
+              size="xl"
+              align="center"
+              title={
+                <>
+                  Uw volgende eilanddag <span className="italic text-primary">begint nu.</span>
+                </>
+              }
+              intro="Vijf minuten om uw programma samen te stellen. Vijf werkdagen tot een gedetailleerde offerte. Volledig vrijblijvend."
+            />
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link to="/programma-samenstellen" className="group">
-                <Button
-                  size="xl"
-                  className="px-10 shadow-medium"
-                >
+            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button asChild size="xl">
+                <Link to="/programma-samenstellen">
                   Start uw aanvraag
-                  <ArrowUpRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-                </Button>
-              </Link>
+                  <ArrowUpRight aria-hidden="true" />
+                </Link>
+              </Button>
               <Button
                 asChild
                 size="xl"
@@ -53,7 +52,7 @@ export const FinalCTA = () => {
               </Button>
             </div>
 
-            <div className="mt-16 pt-10 border-t border-border flex flex-wrap justify-center gap-x-10 gap-y-4 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+            <div className="mt-16 flex flex-wrap justify-center gap-x-10 gap-y-4 border-t border-border pt-10 text-eyebrow font-medium uppercase text-muted-foreground">
               <span>· Maatwerk</span>
               <span>· Lokale specialist</span>
               <span>· Eén factuur</span>
@@ -61,7 +60,7 @@ export const FinalCTA = () => {
             </div>
           </motion.div>
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };

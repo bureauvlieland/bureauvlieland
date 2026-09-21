@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Container, Section, SectionHeader } from "@/components/system";
 import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface Activity {
@@ -24,7 +25,7 @@ const FALLBACK: Activity[] = [
   { id: "vuurtoren", slug: "vuurtoren", name: "Vuurtorenbezoek", short_description: "Adembenemend uitzicht", category: "excursies", image_url: null },
 ];
 
-export const ActivitiesShowcase = () => {
+export const ActivitiesShowcase = ({ number }: { number: string }) => {
   const [activities, setActivities] = useState<Activity[]>(FALLBACK);
 
   useEffect(() => {
@@ -41,36 +42,29 @@ export const ActivitiesShowcase = () => {
   }, []);
 
   return (
-    <section className="relative py-24 lg:py-32 bg-background overflow-hidden">
-      {/* Editorial header */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
-        <div className="grid grid-cols-12 gap-6 mb-16">
-          <div className="col-span-12 lg:col-span-3">
-            <div className="text-xs uppercase tracking-[0.3em] text-sunset font-medium mb-4">
-              · 02 — Bouwstenen
-            </div>
-          </div>
-          <div className="col-span-12 lg:col-span-9">
-            <h2 className="font-display font-light text-foreground leading-[0.95] text-[clamp(2.5rem,6vw,5.5rem)]">
-              Honderden mogelijkheden,{" "}
-              <span className="italic text-primary">één eiland.</span>
-            </h2>
-            <p className="text-lg text-muted-foreground mt-6 max-w-2xl font-light">
-              Van een wadexcursie bij zonsopgang tot powerkiten op het strand. Iedere
-              activiteit is zorgvuldig geselecteerd in samenwerking met onze lokale partners.
-            </p>
-          </div>
-        </div>
+    <Section spacing="spacious" className="overflow-hidden">
+      <Container size="full">
+        <SectionHeader
+          eyebrow="Bouwstenen"
+          number={number}
+          size="xl"
+          title={
+            <>
+              Honderden mogelijkheden, <span className="italic text-primary">één eiland.</span>
+            </>
+          }
+          intro="Van een wadexcursie bij zonsopgang tot powerkiten op het strand. Iedere activiteit is zorgvuldig geselecteerd in samenwerking met onze lokale partners."
+        />
 
-        {/* Asymmetric mosaic grid */}
-        <div className="grid grid-cols-12 gap-3 lg:gap-4">
+        {/* Asymmetrisch mozaïek */}
+        <div className="mt-16 grid grid-cols-12 gap-3 lg:gap-4">
           {activities.slice(0, 6).map((activity, i) => {
-            // Asymmetric layout — safer proportions to avoid title clipping
+            // Asymmetrisch mozaïek; op een telefoon elke tegel op volle breedte, anders knippen lange titels af
             const layouts = [
               "col-span-12 md:col-span-7 aspect-[16/10]",
               "col-span-12 md:col-span-5 aspect-[4/3]",
-              "col-span-6 md:col-span-4 aspect-square",
-              "col-span-6 md:col-span-4 aspect-square",
+              "col-span-12 aspect-[4/3] md:col-span-4 md:aspect-square",
+              "col-span-12 aspect-[4/3] md:col-span-4 md:aspect-square",
               "col-span-12 md:col-span-4 aspect-square",
               "col-span-12 aspect-[21/9]",
             ];
@@ -103,7 +97,7 @@ export const ActivitiesShowcase = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep via-ocean-deep/70 to-ocean-deep/10" />
 
                   <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end pr-12 lg:pr-14">
-                    <div className="text-[10px] uppercase tracking-[0.25em] text-sunset mb-2 font-medium">
+                    <div className="mb-2 text-eyebrow font-medium uppercase text-sand">
                       {activity.category === "outdoor" ? "Outdoor" : activity.category === "excursies" ? "Excursie" : "Beleving"}
                     </div>
                     <h3 className="font-display text-2xl lg:text-3xl text-primary-foreground font-light mb-2 break-words">
@@ -114,7 +108,7 @@ export const ActivitiesShowcase = () => {
                         {activity.short_description}
                       </p>
                     )}
-                    <div className="mt-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-sunset font-medium opacity-90 group-hover:gap-3 transition-all">
+                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-sand transition-all group-hover:gap-3">
                       <span>Bekijk bouwsteen</span>
                       <ArrowUpRight className="h-3.5 w-3.5" />
                     </div>
@@ -130,18 +124,14 @@ export const ActivitiesShowcase = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <Link to="/bouwstenen">
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-sm border-foreground/20 text-foreground hover:bg-foreground hover:text-background h-14 px-8"
-            >
+          <Button asChild size="lg" variant="outline">
+            <Link to="/bouwstenen">
               Bekijk alle bouwstenen
-              <ArrowUpRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+              <ArrowUpRight aria-hidden="true" />
+            </Link>
+          </Button>
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };

@@ -13,9 +13,9 @@ bouwer staan er sinds 19 september per stuk (besluit Erwin); daarmee is
 fase 2 af. Fase 3 is op 19 september gebouwd: deel 1 (de tien
 landingspagina's op één sjabloon, pull request 57) en deel 2 (Wadexcursie
 en Zeehondentocht als activiteitvariant van hetzelfde sjabloon, pull
-request 58). Fase 4 deel 1 (de negen verhaalpagina's) en deel 2 (de
-cataloguspagina's) zijn op 21 september gebouwd. Volgende stap: fase 4 deel 3
-(de homepage).
+request 58). Fase 4 is op 21 september afgerond: deel 1 (de negen
+verhaalpagina's), deel 2 (de cataloguspagina's) en deel 3 (de homepage).
+Volgende stap: fase 5 (borging).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -706,6 +706,25 @@ FAQ op Catering was alleen structured data en is nu ook zichtbaar. De
 activiteitteksten in `src/content/activityContent.ts` en de FAQ's van deze
 pagina's zijn "u". Ontwerpschuld 680 → 591.
 
+Fase 4 deel 3 is op 21 september gebouwd: de homepage. De routekeuze is
+één foto (`MediaCard` voor "Stel uw programma samen") plus vijf
+`LinkCard`s met icoon, duur en doelgroep als pills, zodat de keuze op een
+telefoon één scherm is in plaats van vier. De klantquotes staan als tweede
+hoofdstuk direct na de routekeuze (sociale bewijskracht naar voren), op een
+zandsectie met kaarten van het systeem, sterren alleen bij Google-reviews
+en de live score uit `useGoogleReviewsCache`; de hero toont diezelfde score
+in plaats van de vaste "4,9". De live agenda staat op `MediaCard` met een
+pill voor het aantal plekken (warning bij drie of minder) en linkt naar de
+boekpagina met activiteit, aanbieder en dag voorgeselecteerd. Alle
+hoofdstukken zijn genummerd (01 routes tot 07 begin hier) via
+`SectionHeader size="xl"`, zodat de grote redactionele koppen blijven;
+de live agenda telt bewust niet mee. Weg: Ken Burns en de korrel in de
+hero, de blur-bollen bij catering, de decoratieve "‘27", de zwarte
+verlopen en de knop-overrides. De quote van Erwin is "u". Het beoordelen
+van de overlappende secties (routes, bouwstenen, voorbeelden, catering)
+wacht nog op de GA4-sectiedata. Ontwerpschuld 591 → 562; op de homepage
+en de klantquotes staan geen vindplaatsen meer.
+
 **Fase 4: overige pagina's en homepage (4–5 dagen).** Werkwijze, Over
 ons, Voor wie, Contact, Catering, Logies, Bouwstenen, Voorbeeldprogramma's,
 Partners, Evenementen, FAQ en 404 over op `PageHero`, `Section`,
@@ -790,8 +809,9 @@ volgende begint.
 6. **Fase 4: overige pagina's en homepage.** Hierin gaan de open
    homepage-bevindingen van 11 september mee (sectienummers, Testimonials
    naar voren, overlappende secties beoordelen met de GA4-sectiedata).
-   Deel 1 (de negen verhaalpagina's) en deel 2 (de cataloguspagina's) zijn
-   op 21 september gebouwd; deel 3 (homepage) volgt.
+   Deel 1 (de negen verhaalpagina's), deel 2 (de cataloguspagina's) en
+   deel 3 (de homepage) zijn op 21 september gebouwd; alleen het beoordelen
+   van de overlappende secties wacht op GA4-sectiedata.
 7. **Fase 5: borging.**
 
 Los hiervan, zonder bouwwerk of door Erwin zelf: Lovable Cloud opruimen,

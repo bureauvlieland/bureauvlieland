@@ -1,12 +1,16 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MapPin, Sparkles, Star } from "lucide-react";
+import { ArrowRight, MapPin, Sparkles } from "lucide-react";
+import { RatingStars } from "@/components/RatingStars";
+import { useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
 
 const heroImage =
   `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1785853376111-Diner-online-106.jpg`;
 
 export const HeroEditorial = () => {
+  const { data: google } = useGoogleReviewsCache();
+  const rating = google?.rating && google.review_count > 0 ? google.rating : 4.9;
   return (
     <section className="relative min-h-screen bg-ocean-deep overflow-hidden">
       {/* Full-bleed background image */}
@@ -20,7 +24,6 @@ export const HeroEditorial = () => {
           fetchPriority="high"
           loading="eager"
           decoding="async"
-          style={{ animation: "kenBurns 40s ease-in-out infinite alternate" }}
         />
         {/* Top vignette for nav legibility */}
         <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-ocean-deep/60 to-transparent pointer-events-none" />
@@ -29,15 +32,6 @@ export const HeroEditorial = () => {
         {/* Subtle left wash for headline contrast */}
         <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep/40 via-transparent to-transparent pointer-events-none" />
       </div>
-
-      {/* Decorative grain overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.06] mix-blend-overlay pointer-events-none"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        }}
-      />
 
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px] pt-32 pb-20 lg:pt-40 min-h-screen flex flex-col">
         {/* Top meta line */}
@@ -49,8 +43,8 @@ export const HeroEditorial = () => {
         >
           <div className="h-px w-12 bg-sunset" />
           <MapPin className="h-4 w-4 text-sunset" />
-          <span className="text-xs uppercase tracking-[0.3em] font-medium">
-            est. 2017 — 53°17′N — Vlieland
+          <span className="text-eyebrow font-medium uppercase">
+            est. 2017 · 53°17′N · Vlieland
           </span>
         </motion.div>
 
@@ -60,7 +54,6 @@ export const HeroEditorial = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           className="font-display font-light text-primary-foreground leading-[0.92] tracking-tight max-w-5xl"
-          style={{ textShadow: "0 2px 30px hsl(var(--ocean-deep) / 0.6)" }}
         >
           <span className="block text-[clamp(3rem,8vw,8rem)]">Het eiland</span>
           <span className="block text-[clamp(3rem,8vw,8rem)] italic text-sunset font-normal">
@@ -77,10 +70,7 @@ export const HeroEditorial = () => {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="col-span-12 lg:col-span-6 lg:col-start-1"
           >
-            <p
-              className="text-lg lg:text-xl text-sand/95 leading-relaxed font-light"
-              style={{ textShadow: "0 1px 20px hsl(var(--ocean-deep) / 0.6)" }}
-            >
+            <p className="text-lg lg:text-xl text-sand/95 leading-relaxed font-light">
               Bureau Vlieland is uw <em className="text-primary-foreground not-italic font-normal">lokale specialist</em> voor groepsbezoek aan Vlieland.
               Wij ontwikkelen het programma, boeken alle eilandpartners en sturen u <em className="text-primary-foreground not-italic font-normal">één factuur</em>.
               Op het eiland bent u te gast bij gidsen, koks en schippers die hier wonen en werken.
@@ -93,23 +83,16 @@ export const HeroEditorial = () => {
             transition={{ duration: 0.8, delay: 0.7 }}
             className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col gap-4 lg:items-end"
           >
-            <a href="#routes" className="group">
-              <Button
-                size="xl"
-                className="shadow-glow group-hover:translate-x-1 transition-transform"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
+            <Button asChild size="xl">
+              <a href="#routes">
+                <Sparkles aria-hidden="true" />
                 Start uw aanvraag
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </a>
+                <ArrowRight aria-hidden="true" />
+              </a>
+            </Button>
             <div className="flex items-center gap-2 text-sm text-sand/90 lg:justify-end">
-              <span className="flex items-center gap-0.5 text-sunset" aria-label="Beoordeling 4,9 uit 5">
-                {[0,1,2,3,4].map((i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                ))}
-              </span>
-              <span className="font-medium text-primary-foreground">4,9</span>
+              <RatingStars value={rating} small />
+              <span className="font-medium text-primary-foreground">{rating.toFixed(1).replace(".", ",")}</span>
               <span className="text-sand/70">·</span>
               <span>200+ groepen sinds 2017</span>
             </div>
@@ -142,7 +125,7 @@ export const HeroEditorial = () => {
               <div className="font-display text-4xl lg:text-5xl text-primary-foreground font-light">
                 {s.num}
               </div>
-              <div className="text-xs uppercase tracking-widest mt-2 text-sand/80">
+              <div className="mt-2 text-eyebrow font-medium uppercase text-sand/80">
                 {s.label}
               </div>
             </div>
