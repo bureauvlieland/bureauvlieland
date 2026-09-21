@@ -171,5 +171,70 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
 
 1. Open `/ontwerp` op de preview: staan de knoppen, pills en koppen nog in
    één lijn?
-2. `bunx tsx scripts/check-design-debt.ts`: is het getal niet gestegen?
+2. `bunx tsx scripts/check-design-debt.ts`: geen bestand boven zijn
+   baseline, het totaal niet gestegen? Met `--list` zie je elke vindplaats.
 3. Klik de pagina's door die je hebt geraakt, op desktop en op een telefoon.
+4. Kijk naar de job "Visuele regressie" in CI: wijkt een pagina af, dan
+   staan verwacht, werkelijk en het verschil in het artefact
+   `visuele-regressie`. Bedoeld? Start de workflow "Visuele referenties
+   vernieuwen" op de branch; die maakt de referenties opnieuw en commit
+   ze (zie `tests/e2e/visual/README.md`).
+
+## Borging (fase 5)
+
+Vier poorten in CI houden het systeem heel; ze staan in
+`.github/workflows/ci.yml`.
+
+| Poort | Wat | Waar de lat staat |
+|---|---|---|
+| Typecheck | `tsc -p tsconfig.app.json`, nul fouten | hard |
+| Lint en strict-mode | aantal problemen mag niet stijgen | `LINT_MAX`, `STRICT_MAX` in `.github/quality-baselines.env` |
+| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | per bestand hard via `.github/design-debt-baseline.json` (een bestand mag nooit boven zijn stand komen; een nieuw of schoon bestand blijft op nul), plus het totaal `DESIGN_DEBT_MAX` |
+| Visuele regressie | `tests/e2e/visual`: dertien paginasoorten op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
+
+De visuele test is deterministisch: de klok staat vast op 21 september
+2026, Supabase-antwoorden komen uit `tests/e2e/visual/fixtures/*.har`,
+foto's zijn een effen vlak, `prefers-reduced-motion` staat aan en de
+lettertypes komen van de site zelf (`public/fonts`, sinds fase 5 niet
+meer van Google Fonts). Hij toetst dus opmaak, typografie en kleur, niet
+de inhoud van de database.
+
+Na een opruimronde leg je de nieuwe stand vast met
+`bunx tsx scripts/check-design-debt.ts --write-baseline` en verlaag je
+`DESIGN_DEBT_MAX`; na een bedoelde visuele wijziging laat je de
+referenties opnieuw maken door de workflow "Visuele referenties
+vernieuwen" (`tests/e2e/visual/README.md`). Het admin-, partner- en
+logiesportaal vallen buiten de ontwerpschuldtelling en de visuele test;
+ze erven de tokens en kunnen later per scherm worden bijgetrokken.
+
+## Checklist voor een nieuwe pagina
+
+1. **Landingspagina?** Dan geen component: een inhoudsbestand in
+   `src/content/landings/`, geregistreerd in `index.ts` en `paths.ts`.
+   Activiteit: `kind: "activity"`, met de feiten uit
+   `src/content/activityContent.ts`.
+2. **Andere pagina:** `Navigation`, eventueel `LandingBreadcrumb`, dan
+   `<main id="main-content">` met een `PageHero` (foto voor marketing, de
+   donkere band voor catalogus, contact en fouten), één primaire actie in
+   de actiekleur en hoogstens één `inverseOutline` ernaast.
+3. Intro met `SectionHeader` en `Paragraphs`, met `FactList` ernaast als
+   er feiten zijn. Daarna secties op `Section` en `Container`, genummerd
+   met `sectionCounter()` (aanroepen in paginavolgorde, vóór de JSX), met
+   `BodySection`, `FeatureGrid`, `Checklist`, `ProcessSteps` of de kaarten
+   (`MediaCard` als de hele kaart één link is, `CatalogCard` met prijs en
+   knoppen, `LinkCard` zonder foto).
+4. Vaste staart: `RouteChooser` (of het boekblok op een activiteitpagina),
+   `FaqSection` met `schemaId` en `pageUrl`, één `RelatedLinks`. Geen
+   eigen CTA-band, golven, bollen, korrel of Ken Burns.
+5. Alleen tokens: geen `bg-amber-50`, `text-white`, `rounded-2xl`,
+   `shadow-lg` of eigen eyebrow-klassen; prijzen via `formatBlockPrice`;
+   status via `Pill` en `Notice`; laden en leeg via `LoadingState` en
+   `EmptyState`. Knoppen zonder `className` voor kleur, hoogte of radius.
+6. Aanspreekvorm "u", "en" in plaats van "&" in koppen, links in lopende
+   tekst als `[tekst](/pad)`.
+7. Helmet met titel, beschrijving, canonical en og-tags; structured data
+   waar die past (Service, FAQ via `FaqSection`, BreadcrumbList).
+8. Voeg de pagina toe aan `tests/e2e/visual/paginas.spec.ts` als het een
+   nieuwe paginasoort is, en neem de fixtures op.
+9. Controleer: typecheck, `check-design-debt.ts`, `/ontwerp`, de pagina op
+   desktop en telefoon, en CI groen.

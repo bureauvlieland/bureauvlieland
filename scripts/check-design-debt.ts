@@ -7,12 +7,20 @@
  * Gebruik: `bunx tsx scripts/check-design-debt.ts` (met DESIGN_DEBT_MAX in
  * de omgeving faalt het script boven het plafond; zonder plafond alleen
  * tellen). `--list` toont elke vindplaats.
+ *
+ * Sinds fase 5 is de regel ook per bestand hard: `.github/design-debt-baseline.json`
+ * legt per bestand vast hoeveel vindplaatsen er nu zijn. Een bestand mag
+ * daar nooit boven komen, en een bestand dat er niet in staat (nieuw, of
+ * al schoon) moet op nul blijven. `--write-baseline` schrijft de stand van
+ * nu weg; doe dat na een opruimronde, zodat de lat meteen lager ligt.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname ?? ".", "..");
 const listAll = process.argv.includes("--list");
+const writeBaseline = process.argv.includes("--write-baseline");
+const BASELINE_PATH = resolve(root, ".github/design-debt-baseline.json");
 
 // Publieke site en klantportaal. Admin, partner- en logiesportaal volgen later.
 const INCLUDE = ["src/pages", "src/components"];
@@ -124,6 +132,26 @@ for (const [file, n] of worst) console.log(`  ${String(n).padStart(4)}  ${file}`
 if (listAll) {
   console.log("");
   for (const h of hits) console.log(h);
+}
+
+// Per bestand: de vastgelegde stand mag nooit worden overschreden.
+const current: Record<string, number> = Object.fromEntries([...perFile.entries()].sort(([a], [b]) => a.localeCompare(b)));
+if (writeBaseline) {
+  writeFileSync(BASELINE_PATH, JSON.stringify(current, null, 2) + "\n");
+  console.log(`\nBaseline geschreven naar ${relative(root, BASELINE_PATH)} (${perFile.size} bestanden).`);
+} else if (existsSync(BASELINE_PATH)) {
+  const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as Record<string, number>;
+  const worse = Object.entries(current).filter(([file, n]) => n > (baseline[file] ?? 0));
+  const better = Object.entries(baseline).filter(([file, n]) => (current[file] ?? 0) < n);
+  if (worse.length > 0) {
+    console.error("\nOntwerpschuld gestegen in:");
+    for (const [file, n] of worse) console.error(`  ${file}: ${baseline[file] ?? 0} → ${n}`);
+    console.error("Gebruik de tokens en componenten uit docs/design-systeem.md; `--list` toont elke vindplaats.");
+    process.exit(1);
+  }
+  if (better.length > 0) {
+    console.log(`\n${better.length} bestand(en) onder hun baseline. Leg de nieuwe stand vast met \`bunx tsx scripts/check-design-debt.ts --write-baseline\`.`);
+  }
 }
 
 const max = process.env.DESIGN_DEBT_MAX ? Number(process.env.DESIGN_DEBT_MAX) : null;
