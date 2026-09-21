@@ -1,17 +1,18 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ExternalLink, Globe, MapPin, Calendar } from "lucide-react";
+import { Calendar, ExternalLink, Globe, MapPin } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { useKenBurns } from "@/hooks/use-ken-burns";
 import { supabase } from "@/integrations/supabase/client";
-import heroImage from "@/assets/lighthouse-vlieland.jpg";
+import heroImage from "@/assets/vlieland-landscape.jpg";
 import { transformImageUrl } from "@/lib/supabaseImage";
+import { Container, EmptyState, LoadingState, PageHero, Pill, RouteChooser, Section, SectionHeader } from "@/components/system";
+
+const URL = "https://bureauvlieland.nl/partners";
 
 interface PublicPartner {
   id: string;
@@ -44,8 +45,8 @@ const usePublicPartners = () => {
         .not("provider_id", "is", null);
 
       const blockCountByProvider = new Map<string, number>();
-      for (const row of blocks ?? []) {
-        const pid = (row as any).provider_id as string | null;
+      for (const row of (blocks ?? []) as { provider_id: string | null }[]) {
+        const pid = row.provider_id;
         if (!pid) continue;
         blockCountByProvider.set(pid, (blockCountByProvider.get(pid) ?? 0) + 1);
       }
@@ -82,7 +83,6 @@ const normalizeWebsiteUrl = (raw: string | null | undefined): string | null => {
 };
 
 const Partners = () => {
-  const kenBurns = useKenBurns();
   const { data: partners, isLoading } = usePublicPartners();
   const [filter, setFilter] = useState<PartnerFilter>("all");
 
@@ -99,6 +99,12 @@ const Partners = () => {
     return partners.filter((p) => p.partner_type === filter);
   }, [partners, filter]);
 
+  const filters: { key: PartnerFilter; label: string; count: number }[] = [
+    { key: "all", label: "Alle partners", count: counts.all },
+    { key: "activity_provider", label: "Activiteiten", count: counts.activity },
+    { key: "accommodation", label: "Accommodaties", count: counts.accommodation },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -107,204 +113,141 @@ const Partners = () => {
           name="description"
           content="Maak kennis met onze partners op Vlieland: activiteitenaanbieders, accommodaties en lokale ondernemers achter onze programma's."
         />
-        <link rel="canonical" href="https://bureauvlieland.nl/partners" />
+        <link rel="canonical" href={URL} />
         <meta property="og:title" content="Onze eilandpartners | Bureau Vlieland" />
         <meta property="og:description" content="De lokale ondernemers en aanbieders achter onze programma's op Vlieland." />
-        <meta property="og:url" content="https://bureauvlieland.nl/partners" />
+        <meta property="og:url" content={URL} />
       </Helmet>
       <Navigation />
 
       <main id="main-content">
-        {/* Hero */}
-        <section className="relative h-[40vh] min-h-[320px] flex items-center justify-center overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${heroImage})`, ...kenBurns }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-transparent" />
-          </div>
-          <div className="relative z-10 text-center text-primary-foreground px-4 max-w-4xl">
-            <h1 className="text-4xl md:text-5xl font-display font-bold mb-3">
-              Onze eilandpartners
-            </h1>
-            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mx-auto">
-              Lokale ondernemers, restaurants, gidsen en accommodaties die uw programma op Vlieland mogelijk maken.
-            </p>
-          </div>
-        </section>
+        <PageHero
+          image={heroImage}
+          alt="Het landschap van Vlieland"
+          eyebrow="Eilandpartners"
+          title="Onze eilandpartners"
+          intro="Lokale ondernemers, restaurants, gidsen en accommodaties die uw programma op Vlieland mogelijk maken. Wij kennen ze persoonlijk en boeken ze voor u."
+          cta={{ label: "Stel uw programma samen", to: "/programma-samenstellen" }}
+          secondary={{ label: "Bekijk de bouwstenen", to: "/bouwstenen" }}
+        />
 
-        {/* Filter */}
-        <section className="py-8 border-b border-border bg-card">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={filter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("all")}
-              >
-                Alle partners ({counts.all})
-              </Button>
-              <Button
-                variant={filter === "activity_provider" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("activity_provider")}
-              >
-                Activiteiten ({counts.activity})
-              </Button>
-              <Button
-                variant={filter === "accommodation" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter("accommodation")}
-              >
-                Accommodaties ({counts.accommodation})
-              </Button>
+        <Section spacing="compact">
+          <Container size="wide">
+            <SectionHeader eyebrow="Eilandpartners" number="01" title="Alle partners" intro="Filter op soort partner. Een partner met een eigen boekmodule is direct te boeken." />
+            <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Filter op soort partner">
+              {filters.map((f) => (
+                <Button key={f.key} variant={filter === f.key ? "default" : "outline"} size="sm" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>
+                  {f.label} ({f.count})
+                </Button>
+              ))}
             </div>
-          </div>
-        </section>
 
-        {/* Grid */}
-        <section className="py-12">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
             {isLoading ? (
-              <div className="flex justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
+              <LoadingState label="Partners laden…" className="mt-10" />
             ) : filtered.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">
-                Geen partners gevonden voor deze selectie.
-              </p>
+              <EmptyState className="mt-10" title="Geen partners gevonden voor deze selectie." />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((p) => {
                   const isAccommodation = p.partner_type === "accommodation";
-                  const mapUrl = p.map_tenant_slug
-                    ? `https://boeking.mijnactiviteitenplanner.nl/${p.map_tenant_slug}`
-                    : null;
+                  const mapUrl = p.map_tenant_slug ? `https://boeking.mijnactiviteitenplanner.nl/${p.map_tenant_slug}` : null;
                   const websiteHref = normalizeWebsiteUrl(p.website_url);
                   return (
-                    <Card key={p.id} className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
-                      <div className="relative h-44 overflow-hidden bg-muted">
+                    <li key={p.id} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-accent-soft">
                         {p.image_url ? (
                           <img
                             src={transformImageUrl(p.image_url, { width: 800, quality: 78 })}
                             alt={p.name}
                             loading="lazy"
-                            className="w-full h-full object-cover"
+                            className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            <span className="text-4xl font-display">{p.name.charAt(0)}</span>
+                          <div className="flex h-full w-full items-center justify-center font-display text-display-lg font-light text-primary/40" aria-hidden="true">
+                            {p.name.charAt(0)}
                           </div>
                         )}
-                        <div className="absolute top-3 left-3 flex gap-2">
-                          <Badge className="bg-background/95 text-foreground border border-border shadow-sm backdrop-blur-sm hover:bg-background">
-                            {isAccommodation ? "Accommodatie" : "Activiteiten"}
-                          </Badge>
-                          {mapUrl && (
-                            <Badge className="bg-primary/10 text-primary border border-primary/30 backdrop-blur-sm hover:bg-primary/15">
-                              Direct boekbaar
-                            </Badge>
-                          )}
+                        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+                          <Pill tone="neutral" className="bg-card">{isAccommodation ? "Accommodatie" : "Activiteiten"}</Pill>
+                          {mapUrl && <Pill tone="brand">Direct boekbaar</Pill>}
                         </div>
                       </div>
-                      <CardContent className="flex-1 flex flex-col p-5 gap-3">
+                      <div className="flex flex-1 flex-col gap-3 p-5">
                         <div>
-                          <h3 className="font-display font-semibold text-lg text-foreground leading-tight mb-1">
-                            {p.name}
-                          </h3>
+                          <h3 className="font-display text-display-md font-medium text-foreground">{p.name}</h3>
                           {p.location_description && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
+                            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" aria-hidden="true" />
                               {p.location_description}
                             </p>
                           )}
                         </div>
-                        {p.about_text && (
-                          <p className="text-sm text-muted-foreground line-clamp-3">
-                            {p.about_text}
-                          </p>
-                        )}
+                        {p.about_text && <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{p.about_text}</p>}
                         {p.block_count > 0 && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" aria-hidden="true" />
                             {p.block_count} {p.block_count === 1 ? "bouwsteen" : "bouwstenen"} in ons aanbod
                           </p>
                         )}
-                        <div className="flex flex-wrap gap-2 mt-auto pt-3 border-t border-border">
-                          {websiteHref && (
-                            <a
-                              href={websiteHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex"
-                            >
-                              <Button size="sm" variant="outline" className="gap-1.5">
-                                <Globe className="h-3.5 w-3.5" />
-                                Website
+                        {(websiteHref || mapUrl) && (
+                          <div className="mt-auto flex flex-wrap gap-2 border-t border-border pt-4">
+                            {websiteHref && (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={websiteHref} target="_blank" rel="noopener noreferrer">
+                                  <Globe aria-hidden="true" />
+                                  Website
+                                </a>
                               </Button>
-                            </a>
-                          )}
-                          {mapUrl && (
-                            <a
-                              href={mapUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex"
-                            >
-                              <Button size="sm" className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90">
-                                Boek direct
-                                <ExternalLink className="h-3.5 w-3.5" />
+                            )}
+                            {mapUrl && (
+                              <Button asChild size="sm">
+                                <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                                  Boek direct
+                                  <ExternalLink aria-hidden="true" />
+                                </a>
                               </Button>
-                            </a>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
-          </div>
-        </section>
+          </Container>
+        </Section>
 
-        {/* Bottom CTA */}
-        <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl text-center">
-            <h2 className="text-2xl md:text-3xl font-display font-bold mb-4 text-foreground">
-              Samen maken wij uw eilandbeleving
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Wij combineren het beste van onze partners tot één samenhangend programma — u heeft slechts één aanspreekpunt.
-            </p>
-            <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <a href="/programma-samenstellen">Stel zelf uw programma samen</a>
-            </Button>
-          </div>
-        </section>
+        <RouteChooser
+          title="Samen maken wij uw eilandbeleving"
+          intro="Wij combineren het beste van onze partners tot één samenhangend programma. U heeft één aanspreekpunt en één factuur."
+        />
+
+        <FaqSection
+          schemaId="eilandpartners"
+          pageUrl={URL}
+          title="Zelf eilandpartner worden?"
+          items={[
+            {
+              question: "Hoe word ik eilandpartner van Bureau Vlieland?",
+              answer: "Neem contact met ons op via hallo@bureauvlieland.nl. Na een kennismaking krijgt u toegang tot het partnerportaal waarin u uw aanbod en beschikbaarheid beheert.",
+            },
+            {
+              question: "Wat kost een samenwerking?",
+              answer: "Bureau Vlieland rekent een commissie over de geboekte omzet exclusief btw. Er zijn geen abonnements- of aanmeldkosten.",
+            },
+            {
+              question: "Hoe verloopt de facturatie?",
+              answer: "Bureau Vlieland factureert de klant centraal. U stuurt uw factuur naar ons en wij betalen uit volgens de afgesproken termijn.",
+            },
+            {
+              question: "Bepaal ik zelf mijn tarieven en beschikbaarheid?",
+              answer: "Ja. U beheert uw eigen bouwstenen, prijzen en beschikbaarheid in het partnerportaal en accepteert of weigert elke aanvraag zelf.",
+            },
+          ]}
+        />
+        <RelatedLinks />
       </main>
-
-      <FaqSection
-        schemaId="eilandpartners"
-        title="Zelf eilandpartner worden?"
-        items={[
-          {
-            question: "Hoe word ik eilandpartner van Bureau Vlieland?",
-            answer: "Neem contact met ons op via hallo@bureauvlieland.nl. Na een kennismaking krijgt u toegang tot het partnerportaal waarin u uw aanbod en beschikbaarheid beheert.",
-          },
-          {
-            question: "Wat kost een samenwerking?",
-            answer: "Bureau Vlieland rekent een commissie over de geboekte omzet exclusief btw. Er zijn geen abonnements- of aanmeldkosten.",
-          },
-          {
-            question: "Hoe verloopt de facturatie?",
-            answer: "Bureau Vlieland factureert de klant centraal. U stuurt uw factuur naar ons en wij betalen uit volgens de afgesproken termijn.",
-          },
-          {
-            question: "Bepaal ik zelf mijn tarieven en beschikbaarheid?",
-            answer: "Ja. U beheert uw eigen bouwstenen, prijzen en beschikbaarheid in het partnerportaal en accepteert of weigert elke aanvraag zelf.",
-          },
-        ]}
-      />
 
       <Footer />
     </div>

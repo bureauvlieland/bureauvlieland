@@ -16,6 +16,7 @@ import { findBundleForBlock } from "@/lib/directBookable";
 import { Container, FactList, PageHero, Section, SectionHeader, type SectionTone } from "@/components/system";
 import type { ActivityLandingContent } from "@/content/landings/types";
 import { BodySection, Paragraphs } from "./sections";
+import { sectionCounter } from "./sectionCounter";
 
 /**
  * De tweede variant van het landingssjabloon (ontwerpsysteem fase 3 deel 2):
@@ -41,13 +42,8 @@ export const ActivityPage = ({ content }: { content: ActivityLandingContent }) =
     : { label: content.booking.requestLabel, to: content.booking.requestPath };
   const trust = [...content.intro.trust, { title: bundle ? content.booking.trustBookable : content.booking.trustRequest }];
 
-  const tones: SectionTone[] = ["muted", "default"];
-  let n = 0;
-  const next = () => {
-    n += 1;
-    return { number: String(n).padStart(2, "0"), tone: tones[(n - 1) % 2] };
-  };
-  const bookingTone = tones[content.sections.length % 2];
+  const next = sectionCounter();
+  const bookingTone: SectionTone = content.sections.length % 2 === 0 ? "muted" : "default";
 
   return (
     <>

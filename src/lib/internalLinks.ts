@@ -1,3 +1,4 @@
+import { RESPONSE_TIME } from "@/content/promises";
 /**
  * Centrale interne linkstructuur.
  *
@@ -91,7 +92,7 @@ const L = {
   offerte: {
     href: "/offerte",
     label: "Offerte aanvragen",
-    description: "Vrijblijvend voorstel binnen twee werkdagen",
+    description: RESPONSE_TIME.short,
   },
   contact: {
     href: "/contact",

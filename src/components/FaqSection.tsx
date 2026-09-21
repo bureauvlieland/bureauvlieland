@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Container, Section, SectionHeader } from "@/components/system";
+import { renderRichText, stripRichText } from "@/lib/richText";
 import {
   Accordion,
   AccordionContent,
@@ -9,6 +10,7 @@ import {
 
 export interface FaqItem {
   question: string;
+  /** Mag links bevatten als `[tekst](/pad)`. */
   answer: string;
 }
 
@@ -53,7 +55,7 @@ export const FaqSection = ({
         name: item.question,
         acceptedAnswer: {
           "@type": "Answer",
-          text: item.answer,
+          text: stripRichText(item.answer),
         },
       })),
     };
@@ -88,7 +90,7 @@ export const FaqSection = ({
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-base text-muted-foreground leading-relaxed">
-                  {item.answer}
+                  {renderRichText(item.answer)}
                 </AccordionContent>
               </AccordionItem>
             ))}

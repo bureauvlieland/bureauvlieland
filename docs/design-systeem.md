@@ -66,18 +66,23 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `EmptyState` / `LoadingState` | Lege lijst met icoon, tekst en actie; laadstatus met spinner en `aria-live` | Losse "Geen …"-teksten, eigen spinners |
 | `FloatingStack` | De zwevende knoppen rechtsonder (chat, programma): staat boven een vaste balk (`useFloatingBar`) en wijkt voor de footer en voor een `WizardFooter` in beeld (`useFloatingClearance`); `z-40` | Eigen `fixed bottom-4 right-4`-blokken |
 | `ResponsiveSheetContent` | Sheet die op een telefoon van onderen komt (ronde bovenhoeken, max. 85% hoog) en op een groter scherm van rechts | `SheetContent side="right"` in de funnel; het navigatiemenu blijft van rechts komen |
-| `PageHero` | Foto-hero van een landingspagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop | Eigen hero's met Ken Burns, gradient-overlays en twee gelijkwaardige knoppen |
+| `PageHero` | Hero van elke marketingpagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop; zonder foto een rustige donkere band (Contact, Veelgestelde vragen, 404). `cta.to` mag ook een anker (`#boeken`) of `mailto:` zijn | Eigen hero's met Ken Burns, golven en gradient-overlays, gecentreerde vette koppen, twee gelijkwaardige knoppen |
 | `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel); met `title`, `summary` en een icoon per feit is het de kaart "In het kort" van een activiteitpagina | USP-iconen in een rij, losse feitengrids, `KeyFacts` op landingspagina's |
 | `MediaCard` | Kaart met foto, eyebrow ("3 dagen"), Fraunces-kop en tekst, als link; voor echte programma's en activiteiten uit de database; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover |
 | `PersonQuote` | Eén klantcitaat in Fraunces met naam en organisatie, op een `sand`-sectie | Citatencarrousels, `Quote`-iconen, sterren bij een handmatig citaat |
-| `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden | De vijf CTA-banden en `FinalCTA`-varianten |
+| `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden. `title` en `intro` per pagina; een pagina met een ander publiek geeft eigen `routes` mee (Samenwerken: contact, bouwstenen, voorbeelden) | De vijf CTA-banden en `FinalCTA`-varianten, "Neem contact op"-banden |
 | `ActivityPage` (`components/landing`) | De tweede sjabloonvariant, voor één boekbare activiteit (Wadexcursie, Zeehondentocht): zelfde opbouw als `LandingPage` maar met de kaart "In het kort", een boekblok (`DirectBookingPanel` zodra de bouwsteen aan de boekmodule hangt, anders het aanvraagformulier) en TouristTrip-structured data; geen `RouteChooser`, de actie is boeken. Inhoud in `src/content/landings/<slug>.ts` met `kind: "activity"`; de feiten (duur, prijs, groepsgrootte) worden bewaakt tegen `src/content/activityContent.ts` | Eigen activiteitpagina's met `KeyFacts`, losse accordions en drie linkblokken |
+| `BodySection`, `FeatureGrid`, `Checklist`, `Paragraphs` (`components/landing/sections`) en `sectionCounter` | De sectiesoorten van de inhoudsbestanden, ook los te gebruiken op een verhaalpagina (Samenwerken bouwt zijn secties als `LandingSection`-objecten; Voor wie gebruikt `FeatureGrid` en `Checklist`). `sectionCounter()` geeft elke sectie een nummer en wisselt de toon (`muted`, `default`) | Eigen kaartrasters, vinkjeslijsten en handmatige sectienummers |
 | `LandingPage` (`components/landing`) | Het ene sjabloon voor de landingspagina's, gevoed door `src/content/landings/<slug>.ts` (geregistreerd in `index.ts` en `paths.ts`): kruimelpad, `PageHero`, intro met `FactList`, genummerde secties (`prose`, `features`, `gallery`, `split`), voorbeeldprogramma's uit de database, `PersonQuote`, Google-reviews, `RouteChooser`, `FaqSection`, één `RelatedLinks` | Een pagina-component per landingspagina; een nieuwe landingspagina is een nieuw inhoudsbestand |
 
 `FaqSection`, `LandingBreadcrumb`, `GoogleReviewsBlock` en `RelatedLinks`
 staan sinds fase 3 op `Section`, `Container` en `SectionHeader`; een aparte
-`Faq` en `Breadcrumb` zijn niet meer nodig. Fase 4 zet de overige pagina's
-en de homepage op dezelfde componenten.
+`Faq` en `Breadcrumb` zijn niet meer nodig. Antwoorden in `FaqSection` mogen
+links bevatten als `[tekst](/pad)`; de structured data krijgt de platte tekst.
+Sinds fase 4 deel 1 staan ook de verhaalpagina's (Werkwijze, Over ons, Voor
+wie, Samenwerken, Contact, Evenementen, Veelgestelde vragen, Eilandpartners,
+404) op deze componenten. Nog te doen: de cataloguspagina's (Catering, Logies,
+Bouwstenen, Voorbeeldprogramma's, Activiteiten) en de homepage.
 
 ## Regels voor interactie
 
@@ -126,6 +131,10 @@ en de homepage op dezelfde componenten.
   secties krijgen automatisch een nummer en wisselen van toon (`muted`,
   `default`); wat erna komt ligt vast: voorbeeldprogramma's, citaat,
   reviews, `RouteChooser`, FAQ, één linkblok.
+  Een verhaalpagina zonder inhoudsbestand (Over ons, Contact) bouwt met
+  dezelfde onderdelen: `PageHero`, secties met `sectionCounter`, dan
+  `RouteChooser`, `FaqSection`, `RelatedLinks`. Geen eigen CTA-banden,
+  golven, blur-bollen of Ken Burns meer.
   Een activiteitpagina (`kind: "activity"`) volgt dezelfde regels; haar
   vaste staart is boekblok, FAQ, reviews, één linkblok. Elke duur, prijs
   en groepsgrootte in zo'n bestand moet letterlijk in

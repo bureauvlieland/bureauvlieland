@@ -11,6 +11,7 @@ import { usePublishedTemplates } from "@/hooks/useProgramTemplates";
 import { transformImageUrl } from "@/lib/supabaseImage";
 import { renderRichText } from "@/lib/richText";
 import { BodySection, Paragraphs } from "./sections";
+import { sectionCounter } from "./sectionCounter";
 import {
   Container,
   FactList,
@@ -75,12 +76,7 @@ export const LandingPage = ({ content }: { content: LandingContent }) => {
     ...(content.parent ? [{ name: content.parent.label, url: `${SITE}${content.parent.to}` }] : []),
     { name: content.breadcrumb, url: canonical },
   ];
-  const tones: SectionTone[] = ["muted", "default"];
-  let n = 0;
-  const next = () => {
-    n += 1;
-    return { number: String(n).padStart(2, "0"), tone: tones[(n - 1) % 2] };
-  };
+  const next = sectionCounter();
 
   return (
     <>

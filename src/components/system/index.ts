@@ -24,5 +24,5 @@ export { PageHero } from "./PageHero";
 export { FactList } from "./FactList";
 export { MediaCard } from "./MediaCard";
 export { PersonQuote } from "./PersonQuote";
-export { RouteChooser } from "./RouteChooser";
+export { RouteChooser, type RouteChooserRoute } from "./RouteChooser";
 export { ResponsiveSheetContent } from "./ResponsiveSheetContent";

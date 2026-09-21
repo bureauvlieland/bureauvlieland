@@ -1,220 +1,155 @@
 import { Helmet } from "react-helmet";
+import { Link } from "react-router-dom";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { FaqSection } from "@/components/FaqSection";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Container, FactList, PageHero, Pill, RouteChooser, Section, SectionHeader, type SectionTone } from "@/components/system";
+import { Paragraphs } from "@/components/landing/sections";
+import { sectionCounter } from "@/components/landing/sectionCounter";
 import vuurtorenloopImage from "@/assets/vuurtorenloop.jpg";
 import amuseTourImage from "@/assets/amuse-tour.jpg";
-import { Link } from "react-router-dom";
+
+const URL = "https://bureauvlieland.nl/evenementen";
+
+interface Event {
+  pill: string;
+  title: string;
+  intro: string;
+  paragraphs: string[];
+  facts: { label: string; value: string }[];
+  image: { src: string; alt: string };
+  more: string;
+}
+
+const EVENTS: Event[] = [
+  {
+    pill: "26 september 2026",
+    title: "Amusetour Vlieland",
+    intro: "Vlieland moet u proeven. Een beetje vakantie aan het begin van de herfst, tijdens deze zaterdagse Amusetour op Vlieland.",
+    paragraphs: [
+      "De Amusetour op Vlieland is al jaren een groot succes. Een frisse zeebries, heerlijk eten, goede wijn en een supersfeertje. Het eiland heeft een grote hoeveelheid goede restaurants die deelnemen aan dit culinaire evenement. Een unieke manier om Vlieland te ontdekken.",
+    ],
+    facts: [
+      { label: "Datum", value: "Zaterdag 26 september 2026" },
+      { label: "Locatie", value: "Diverse restaurants op Vlieland" },
+    ],
+    image: { src: amuseTourImage, alt: "Amusetour Vlieland: culinair genieten" },
+    more: "https://www.amusetour.nl/destinations/vlieland/",
+  },
+  {
+    pill: "18 april 2027",
+    title: "Vuurtorenloop Vlieland",
+    intro: "Het hardloopfeest Vuurtorenloop Vlieland is mooi zwaar: een unieke hardloopervaring langs de stranden en door de natuur van Vlieland.",
+    paragraphs: [
+      "Hardlopen op zondag is een uitstekende bezigheid, zeker op een Waddeneiland als Vlieland. Elke deelnemer krijgt een medaille en na afloop worden er heerlijke broodjes geserveerd. Dit evenement is zeer verslavend.",
+    ],
+    facts: [
+      { label: "Datum", value: "Zondag 18 april 2027" },
+      { label: "Locatie", value: "Vlieland" },
+    ],
+    image: { src: vuurtorenloopImage, alt: "Vuurtorenloop: hardlopers op het strand van Vlieland" },
+    more: "https://vuurtorenloop.nl/",
+  },
+];
+
+const EventSection = ({ event, number, tone, flip }: { event: Event; number: string; tone: SectionTone; flip?: boolean }) => (
+  <Section tone={tone}>
+    <Container size="wide">
+      <div className="grid items-center gap-10 lg:grid-cols-2">
+        <div className={cn(flip && "lg:order-2")}>
+          <Pill tone="brand">{event.pill}</Pill>
+          <SectionHeader className="mt-4" eyebrow="Agenda" number={number} title={event.title} intro={event.intro} />
+          <FactList items={event.facts} className="mt-8 max-w-md" />
+          <Paragraphs items={event.paragraphs} className="mt-8" />
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <Link to="/programma-op-maat">
+                Organiseer met Bureau Vlieland
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <a href={event.more} target="_blank" rel="noopener noreferrer">
+                Meer informatie
+                <ExternalLink aria-hidden="true" />
+              </a>
+            </Button>
+          </div>
+        </div>
+        <figure className={cn("aspect-[4/3] overflow-hidden rounded-lg bg-muted", flip && "lg:order-1")}>
+          <img src={event.image.src} alt={event.image.alt} className="h-full w-full object-cover" loading="lazy" />
+        </figure>
+      </div>
+    </Container>
+  </Section>
+);
+
+const FAQ = [
+  {
+    question: "Welke evenementen zijn er op Vlieland?",
+    answer:
+      "Op Vlieland vinden het hele jaar door evenementen plaats, van Into The Great Wide Open en de Vlieland Marathon tot kleinere culturele en sportieve activiteiten in het dorp.",
+  },
+  {
+    question: "Kan ik mijn groepsprogramma combineren met een evenement?",
+    answer:
+      "Ja. Wij plannen programma's graag rondom een eilandevenement, maar houd rekening met beperkte beschikbaarheid van logies en boot op die dagen.",
+  },
+  {
+    question: "Waarom is logies rond evenementen lastig te krijgen?",
+    answer: "Tijdens grote evenementen is vrijwel alle accommodatie op het eiland bezet. Boek dan minimaal een half jaar vooraf.",
+  },
+  {
+    question: "Organiseert Bureau Vlieland ook eigen evenementen voor bedrijven?",
+    answer:
+      "Ja. Van bedrijfsfeest en jubileum tot netwerkevent: wij verzorgen locatie, catering, techniek en programma. Zie [zakelijk evenement op Vlieland](/zakelijk-evenement-vlieland).",
+  },
+];
 
 const Evenementen = () => {
+  const next = sectionCounter();
   return (
     <>
-       <Helmet>
-        <title>Agenda & evenementen Vlieland | Bureau Vlieland</title>
-        <meta 
-          name="description" 
-          content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement — één partij, één factuur."
+      <Helmet>
+        <title>Agenda en evenementen Vlieland | Bureau Vlieland</title>
+        <meta
+          name="description"
+          content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement: één partij, één factuur."
         />
-        <link rel="canonical" href="https://bureauvlieland.nl/evenementen" />
-        <meta property="og:title" content="Agenda & evenementen Vlieland | Bureau Vlieland" />
+        <link rel="canonical" href={URL} />
+        <meta property="og:title" content="Agenda en evenementen Vlieland | Bureau Vlieland" />
         <meta property="og:description" content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement." />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
-        <meta property="og:url" content="https://bureauvlieland.nl/evenementen" />
+        <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>
 
       <Navigation />
 
       <main id="main-content">
-      {/* Hero Section */}
-      <section className="relative min-h-[40vh] flex items-center justify-center bg-gradient-to-br from-primary/10 via-accent-soft/30 to-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-20 text-center">
-          <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground mb-6">
-            Agenda & evenementen op Vlieland
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Ontdek de mooiste evenementen die Vlieland te bieden heeft. Van sportief tot culinair — 
-            Bureau Vlieland regelt de boot, het verblijf en het programma eromheen.
-          </p>
-        </div>
-      </section>
-
-
-      {/* Amusetour Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <img
-                src={amuseTourImage}
-                alt="Amusetour Vlieland - culinair genieten"
-                className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
-                loading="lazy"
-              />
-            </div>
-            <div>
-              <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-                <span className="text-sm font-semibold text-primary">26 september 2026</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Amusetour Vlieland
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                <strong>Vlieland moet je proeven!</strong> Een beetje vakantie aan het begin van de herfst 
-                tijdens deze zaterdagse Amusetour op Vlieland.
-              </p>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Datum</p>
-                    <p className="text-muted-foreground">Zaterdag 26 september 2026</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Locatie</p>
-                    <p className="text-muted-foreground">Diverse restaurants op Vlieland</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-muted-foreground mb-8">
-                De Amusetour op Vlieland is al jaren een groot succes. Een frisse zeebries, heerlijk eten, 
-                goede wijn en een supersfeertje. Het eiland heeft een grote hoeveelheid goede restaurants 
-                die deelnemen aan dit culinaire evenement. Een unieke manier om Vlieland te ontdekken!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://www.amusetour.nl/destinations/vlieland/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-block"
-                >
-                  <Button variant="default" className="w-full sm:w-auto">
-                    Meer informatie <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
-                <Link to="/contact">
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    Organiseer met Bureau Vlieland
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Vuurtorenloop Section */}
-      <section className="py-20 bg-accent-soft/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1">
-              <div className="inline-block px-4 py-2 bg-primary/10 rounded-full mb-4">
-                <span className="text-sm font-semibold text-primary">18 april 2027</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Vuurtorenloop Vlieland
-              </h2>
-              <p className="text-lg text-muted-foreground mb-6">
-                Het hardloopfeest Vuurtorenloop Vlieland is <strong>MOOI ZWAAR!</strong> Een unieke 
-                hardloopervaring langs de prachtige stranden en door de natuur van Vlieland. 
-              </p>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Datum</p>
-                    <p className="text-muted-foreground">Zondag 18 april 2027</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-foreground">Locatie</p>
-                    <p className="text-muted-foreground">Vlieland</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-muted-foreground mb-8">
-                Hardlopen op zondag is een uitstekende bezigheid, zeker op een Waddeneiland als Vlieland. 
-                Elke deelnemer krijgt een medaille en na afloop worden er heerlijke broodjes geserveerd. 
-                Dit evenement is zeer verslavend!
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a 
-                  href="https://vuurtorenloop.nl/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-block"
-                >
-                  <Button variant="default" className="w-full sm:w-auto">
-                    Meer informatie <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </a>
-                <Link to="/contact">
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    Organiseer met Bureau Vlieland
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="order-1 md:order-2">
-              <img
-                src={vuurtorenloopImage}
-                alt="Vuurtorenloop - hardlopers op het strand van Vlieland"
-                className="w-full h-[400px] md:h-[500px] object-cover rounded-lg shadow-lg"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-            Wilt u deelnemen aan een evenement?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            Bureau Vlieland helpt u graag bij het organiseren van uw deelname aan deze evenementen. 
-            Van reisarrangementen tot catering - wij zorgen dat uw groep een onvergetelijke ervaring heeft.
-          </p>
-          <Link to="/contact">
-            <Button size="lg" className="text-lg">
-              Neem contact op
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      <FaqSection
-        schemaId="evenementen"
-        items={[
-            {
-              question: "Welke evenementen zijn er op Vlieland?",
-              answer: "Op Vlieland vinden het hele jaar door evenementen plaats, van Into The Great Wide Open en de Vlieland Marathon tot kleinere culturele en sportieve activiteiten in het dorp.",
-            },
-            {
-              question: "Kan ik mijn groepsprogramma combineren met een evenement?",
-              answer: "Ja. Wij plannen programma's graag rondom een eilandevenement, maar houd rekening met beperkte beschikbaarheid van logies en boot op die dagen.",
-            },
-            {
-              question: "Waarom is logies rond evenementen lastig te krijgen?",
-              answer: "Tijdens grote evenementen is vrijwel alle accommodatie op het eiland bezet. Boek dan minimaal een half jaar vooraf.",
-            },
-            {
-              question: "Organiseren jullie ook eigen evenementen voor bedrijven?",
-              answer: "Ja. Van bedrijfsfeest en jubileum tot netwerkevent: wij verzorgen locatie, catering, techniek en programma.",
-            },
-        ]}
-      />
-      <RelatedLinks />
+        <PageHero
+          image={amuseTourImage}
+          alt="Gasten aan tafel tijdens de Amusetour op Vlieland"
+          eyebrow="Agenda"
+          title="Agenda en evenementen op Vlieland"
+          intro="Van sportief tot culinair: Bureau Vlieland regelt de boot, het verblijf en het programma rond het evenement."
+          cta={{ label: "Vertel ons uw wensen", to: "/programma-op-maat" }}
+          secondary={{ label: "Zakelijk evenement organiseren", to: "/zakelijk-evenement-vlieland" }}
+        />
+        {EVENTS.map((event, i) => {
+          const { number, tone } = next();
+          return <EventSection key={event.title} event={event} number={number} tone={tone} flip={i % 2 === 1} />;
+        })}
+        <RouteChooser
+          title="Deelnemen met uw groep?"
+          intro="Wij regelen boot, verblijf en het programma rond het evenement. Kies hoe u wilt starten."
+        />
+        <FaqSection schemaId="evenementen" pageUrl={URL} items={FAQ} />
+        <RelatedLinks />
       </main>
       <Footer />
     </>

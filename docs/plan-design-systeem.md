@@ -12,8 +12,10 @@ levende referentie is voortaan `docs/design-systeem.md`. De prijzen in de
 bouwer staan er sinds 19 september per stuk (besluit Erwin); daarmee is
 fase 2 af. Fase 3 is op 19 september gebouwd: deel 1 (de tien
 landingspagina's op één sjabloon, pull request 57) en deel 2 (Wadexcursie
-en Zeehondentocht als activiteitvariant van hetzelfde sjabloon). Volgende
-stap: fase 4 (overige pagina's en homepage).
+en Zeehondentocht als activiteitvariant van hetzelfde sjabloon, pull
+request 58). Fase 4 deel 1 (de negen verhaalpagina's) is op 21 september
+gebouwd. Volgende stap: fase 4 deel 2 (de cataloguspagina's), daarna deel 3
+(de homepage).
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -668,6 +670,23 @@ statische tegels), `PersonQuote`, `RouteChooser`, `Faq`, `RelatedLinks`
 Wadlopen en Zeehondentochten (met boekpaneel en reviews) worden een
 tweede variant van hetzelfde sjabloon.
 
+Fase 4 deel 1 is op 21 september gebouwd: de negen verhaalpagina's
+(Onze werkwijze, Over ons, Voor wie, Samenwerken, Contact, Evenementen,
+Veelgestelde vragen, Onze eilandpartners en de 404-pagina) staan op
+`PageHero`, `Section`, `SectionHeader`, `RouteChooser`, `FaqSection` en
+`RelatedLinks`. `PageHero` kan nu zonder foto (een donkere band voor Contact,
+Veelgestelde vragen en 404) en `RouteChooser` neemt eigen routes aan
+(Samenwerken: contact, bouwstenen, voorbeelden). De sectiesoorten van de
+landingspagina's (`FeatureGrid`, `Checklist`, `Paragraphs`, `BodySection`)
+en de teller `sectionCounter` zijn losse bouwstenen geworden, zodat een
+verhaalpagina ze net zo gebruikt als een inhoudsbestand. Weg: Ken Burns,
+de golven en blur-bollen, vier CTA-banden, het eigen FAQ-blok van de
+werkwijze, de vette gecentreerde hero-koppen en de dode bestanden
+`Hero.tsx`, `Services.tsx`, `components/Contact.tsx` en `ui/drawer.tsx`. De
+404-pagina heeft nu navigatie en footer. "Je/jullie" is "u" geworden;
+antwoorden in `FaqSection` mogen links bevatten. Ontwerpschuld 716 → 680,
+lint 1191 → 1190.
+
 **Fase 4: overige pagina's en homepage (4–5 dagen).** Werkwijze, Over
 ons, Voor wie, Contact, Catering, Logies, Bouwstenen, Voorbeeldprogramma's,
 Partners, Evenementen, FAQ en 404 over op `PageHero`, `Section`,
@@ -752,6 +771,8 @@ volgende begint.
 6. **Fase 4: overige pagina's en homepage.** Hierin gaan de open
    homepage-bevindingen van 11 september mee (sectienummers, Testimonials
    naar voren, overlappende secties beoordelen met de GA4-sectiedata).
+   Deel 1 (de negen verhaalpagina's) is op 21 september gebouwd; deel 2
+   (cataloguspagina's) en deel 3 (homepage) volgen.
 7. **Fase 5: borging.**
 
 Los hiervan, zonder bouwwerk of door Erwin zelf: Lovable Cloud opruimen,
