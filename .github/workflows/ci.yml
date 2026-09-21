@@ -197,8 +197,9 @@ jobs:
           fi
 
       # Ontwerpschuld (losse paletkleuren, knop-overrides, afwijkende radius en
-      # schaduw buiten het ontwerpsysteem) mag alleen omlaag. Zie docs/design-systeem.md.
-      - name: Ontwerpschuld onder het plafond
+      # schaduw buiten het ontwerpsysteem) mag alleen omlaag: in totaal (plafond)
+      # én per bestand (.github/design-debt-baseline.json). Zie docs/design-systeem.md.
+      - name: Ontwerpschuld onder het plafond en per bestand
         run: bunx tsx scripts/check-design-debt.ts
 
       - name: Strict-mode onder het plafond
@@ -215,10 +216,64 @@ jobs:
             echo "Onder het plafond ($n < $STRICT_MAX). Verlaag STRICT_MAX in .github/quality-baselines.env." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  visual:
+    name: Visuele regressie (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Playwright-versie bepalen
+        id: pw
+        run: echo "version=$(node -e 'console.log(require("@playwright/test/package.json").version)')" >> "$GITHUB_OUTPUT"
+
+      - name: Chromium uit de cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ steps.pw.outputs.version }}
+
+      - name: Chromium installeren
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+
+      - name: Systeemafhankelijkheden van Chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      # Zelfde build als de Netlify-preview, zodat /ontwerp bestaat.
+      - name: Bouwen zoals de preview
+        run: bunx vite build --mode preview
+
+      # Elke paginasoort op desktop en telefoon tegen de referentie in
+      # tests/e2e/visual/__snapshots__; zie tests/e2e/visual/README.md.
+      - name: Schermafbeeldingen vergelijken
+        run: bunx playwright test -c playwright.visual.config.ts
+        env:
+          CI: "true"
+
+      - name: Verschillen bewaren
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visuele-regressie
+          path: |
+            playwright-report/
+            test-results/visual/
+          if-no-files-found: warn
+
   ci-status:
     name: CI status
     if: always()
-    needs: [frontend-tests, edge-function-tests, build, quality]
+    needs: [frontend-tests, edge-function-tests, build, quality, visual]
     runs-on: ubuntu-latest
     steps:
       - name: Fail on any test regression
@@ -227,6 +282,7 @@ jobs:
           ef='${{ needs.edge-function-tests.result }}'
           bd='${{ needs.build.result }}'
           ql='${{ needs.quality.result }}'
+          vi='${{ needs.visual.result }}'
           {
             echo "## CI overview"
             echo
@@ -236,8 +292,9 @@ jobs:
             echo "| Edge functions (Deno) | $ef |"
             echo "| Productiebuild | $bd |"
             echo "| Typecheck en lint | $ql |"
+            echo "| Visuele regressie | $vi |"
           } >> "$GITHUB_STEP_SUMMARY"
-          if [ "$fe" != "success" ] || [ "$ef" != "success" ] || [ "$bd" != "success" ] || [ "$ql" != "success" ]; then
+          if [ "$fe" != "success" ] || [ "$ef" != "success" ] || [ "$bd" != "success" ] || [ "$ql" != "success" ] || [ "$vi" != "success" ]; then
             echo "Een of meer poorten zijn niet geslaagd."
             exit 1
           fi

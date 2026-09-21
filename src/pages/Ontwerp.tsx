@@ -146,7 +146,7 @@ const FunnelDemo = () => {
 };
 
 const Ontwerp = () => (
-  <div className="min-h-screen bg-background">
+  <main id="main-content" className="min-h-screen bg-background">
     <Helmet>
       <title>Ontwerpsysteem – referentie</title>
       <meta name="robots" content="noindex, nofollow" />
@@ -392,7 +392,7 @@ const Ontwerp = () => (
         </p>
       </Container>
     </Section>
-  </div>
+  </main>
 );
 
 export default Ontwerp;

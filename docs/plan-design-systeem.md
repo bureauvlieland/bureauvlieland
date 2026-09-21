@@ -15,7 +15,8 @@ landingspagina's op één sjabloon, pull request 57) en deel 2 (Wadexcursie
 en Zeehondentocht als activiteitvariant van hetzelfde sjabloon, pull
 request 58). Fase 4 is op 21 september afgerond: deel 1 (de negen
 verhaalpagina's), deel 2 (de cataloguspagina's) en deel 3 (de homepage).
-Volgende stap: fase 5 (borging).
+Fase 5 (borging) is op 21 september gebouwd; daarmee is het plan
+uitgevoerd. Wat overblijft staat bij "Volgorde", punt 6 en 7.
 
 Aanleiding (Erwin, 17 september): de site oogt mooi maar "template-achtig",
 en pagina's verschillen onderling in opbouw, elementen en kleurgebruik. Wens:
@@ -736,6 +737,25 @@ volle schermen), ontbrekende sectienummers, `CateringHighlight`-knop naar
 `Button`. Dode bestanden (`Hero.tsx`, `Services.tsx`, `components/
 Contact.tsx`, `drawer.tsx`) verwijderen.
 
+Fase 5 is op 21 september gebouwd: de borging. De ontwerpschuldtelling
+(`scripts/check-design-debt.ts`) is hard in CI, per bestand via
+`.github/design-debt-baseline.json` (een bestand mag nooit boven zijn
+stand komen, een nieuw of schoon bestand blijft op nul) en in totaal via
+`DESIGN_DEBT_MAX`. De visuele regressietest staat in `tests/e2e/visual`:
+dertien paginasoorten op desktop (1440) en telefoon (390) tegen
+referenties in `__snapshots__` (maximaal 1% van de pixels anders), met
+vaste klok, Supabase-antwoorden uit HAR-opnames, foto's als effen vlak,
+animaties uit, en daarbij geen horizontale overloop en geen paginafouten.
+Om de test deterministisch te krijgen zijn Fraunces en Inter van Google
+Fonts naar `public/fonts` verhuisd (dezelfde variabele bestanden; de site
+doet daarmee ook geen verzoek naar derden meer). De referenties worden
+gemaakt door de workflow "Visuele referenties vernieuwen" in precies de
+Chromium van CI, die ze op de branch commit; lokaal gemaakte
+schermafbeeldingen wijken daar altijd iets van af. In
+`docs/design-systeem.md` staan de vier poorten en een checklist voor een
+nieuwe pagina. Admin-, partner- en logiesportaal blijven buiten de
+telling en de test.
+
 **Fase 5: borging (1–2 dagen).** De lintregel hard maken in CI, een
 visuele-regressietest met Playwright (het screenshotscript uit dit
 onderzoek, in `tests/e2e/visual`, per pagina op desktop en mobiel,
@@ -812,7 +832,11 @@ volgende begint.
    Deel 1 (de negen verhaalpagina's), deel 2 (de cataloguspagina's) en
    deel 3 (de homepage) zijn op 21 september gebouwd; alleen het beoordelen
    van de overlappende secties wacht op GA4-sectiedata.
-7. **Fase 5: borging.**
+7. **Fase 5: borging.** Op 21 september gebouwd: ontwerpschuld per
+   bestand hard in CI, visuele regressietest in `tests/e2e/visual` met
+   referenties uit de workflow "Visuele referenties vernieuwen",
+   lettertypes zelf gehost, `docs/design-systeem.md` met de vier poorten
+   en de checklist voor een nieuwe pagina.
 
 Los hiervan, zonder bouwwerk of door Erwin zelf: Lovable Cloud opruimen,
 storage-bucket, zelftest controleren, partnerprofielen, MAP-aanbieders,

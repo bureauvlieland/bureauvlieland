@@ -1,0 +1,99 @@
+# Visuele referenties (tests/e2e/visual/__snapshots__) opnieuw maken in
+# precies de omgeving waarin CI ze vergelijkt, en het resultaat committen op
+# de gekozen branch. Gebruik dit na een bedoelde visuele wijziging, als de
+# job "Visuele regressie" in CI faalt: Actions → "Visuele referenties
+# vernieuwen" → Run workflow → de branch van de pull request kiezen.
+#
+# Lokaal gemaakte referenties wijken af (andere Chromium, ander besturings-
+# systeem, andere tekstweergave); daarom gebeurt dit hier en niet op een
+# laptop. Zie tests/e2e/visual/README.md.
+#
+# Een push met GITHUB_TOKEN start uit zichzelf geen andere workflow; daarom
+# start deze workflow CI na de commit zelf opnieuw op de branch.
+
+name: Visuele referenties vernieuwen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: visuele-referenties-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vernieuwen:
+    name: Referenties opnieuw maken en committen
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Zelfde stappen als de job "Visuele regressie" in ci.yml.
+      - name: Playwright-versie bepalen
+        id: pw
+        run: echo "version=$(node -e 'console.log(require("@playwright/test/package.json").version)')" >> "$GITHUB_OUTPUT"
+
+      - name: Chromium uit de cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ steps.pw.outputs.version }}
+
+      - name: Chromium installeren
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+
+      - name: Systeemafhankelijkheden van Chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      - name: Bouwen zoals de preview
+        run: bunx vite build --mode preview
+
+      - name: Referenties opnieuw maken
+        run: bunx playwright test -c playwright.visual.config.ts --update-snapshots
+        env:
+          CI: "true"
+
+      - name: Committen en pushen
+        id: commit
+        run: |
+          git add tests/e2e/visual/__snapshots__
+          if git diff --cached --quiet; then
+            echo "## Geen verschil met de bestaande referenties" >> "$GITHUB_STEP_SUMMARY"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          {
+            echo "## Vernieuwde referenties"
+            echo
+            echo '```'
+            git diff --cached --stat
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Visuele referenties vernieuwd" \
+            -m "Opnieuw gemaakt door de workflow 'Visuele referenties vernieuwen' (run ${{ github.run_id }})."
+          git push origin "HEAD:${{ github.ref_name }}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: CI opnieuw starten op de branch
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run ci.yml --ref "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}

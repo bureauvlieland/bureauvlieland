@@ -7,6 +7,8 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: /.*\.spec\.ts$/,
+  // De visuele regressietest heeft een eigen config (playwright.visual.config.ts).
+  testIgnore: /\/visual\//,
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
