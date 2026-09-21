@@ -56,7 +56,7 @@ export const ActivitiesShowcase = () => {
               <span className="italic text-primary">één eiland.</span>
             </h2>
             <p className="text-lg text-muted-foreground mt-6 max-w-2xl font-light">
-              Van wadlopen bij zonsopgang tot powerkiten op het strand. Iedere
+              Van een wadexcursie bij zonsopgang tot powerkiten op het strand. Iedere
               activiteit is zorgvuldig geselecteerd in samenwerking met onze lokale partners.
             </p>
           </div>

@@ -2,9 +2,8 @@
 import { z } from "npm:zod@3.22.4";
 import { sanitizeHtml, isTestMode, getSubjectPrefix, SENDER_EMAIL, SENDER_NAME, getBureauAdminEmail } from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
-const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
+import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,21 +50,6 @@ const PayloadSchema = z.object({
   indicativeTotal: z.number().nullable().optional(),
   origin: z.string().optional(),
 });
-
-const sendMailjet = async (messages: any[]) => {
-  if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) throw new Error("MAILJET_NOT_CONFIGURED");
-  const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
-  const r = await fetch("https://api.mailjet.com/v3.1/send", {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ Messages: messages }),
-  });
-  if (!r.ok) {
-    console.error("Mailjet error", await r.text());
-    throw new Error("EMAIL_SERVICE_ERROR");
-  }
-  return r.json();
-};
 
 const fmtEur = (n: number | null | undefined) =>
   typeof n === "number" ? `€ ${n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "Op aanvraag";
@@ -187,25 +171,80 @@ Deno.serve(async (req: Request) => {
     `;
 
     const customerRecipient = testMode ? bureauEmail : p.contact.email;
+    const customerSubject = `${prefix}Bevestiging catering-aanvraag — Bureau Vlieland`;
+    const bureauSubject = `${prefix}Nieuwe catering-aanvraag — ${safe.type} · ${p.guests}p · ${safe.date}`;
 
-    await sendMailjet([
-      {
+    // Twee losse verzendingen via de gedeelde verzender (blokkadelijst,
+    // exacte MessageID), elk gelogd volgens het e-mail-logging-contract.
+    // Los van elkaar, zodat een geblokkeerd klantadres de interne melding
+    // niet tegenhoudt. Zonder logregel kon de terugkoppeling van Mailjet op
+    // deze mails nergens op matchen en stonden ze niet in het maillog.
+    const customerResult = await sendMailjet({
+      source: "send-catering-request:customer",
+      messages: [{
         From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
         To: [{ Email: customerRecipient, Name: p.contact.name }],
-        Subject: `${prefix}Bevestiging catering-aanvraag — Bureau Vlieland`,
+        Subject: customerSubject,
         HTMLPart: customerHtml,
-      },
-      {
+      }],
+    });
+    const bureauResult = await sendMailjet({
+      source: "send-catering-request:bureau",
+      messages: [{
         From: { Email: SENDER_EMAIL, Name: "Bureau Vlieland Website" },
         To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
-        Subject: `${prefix}Nieuwe catering-aanvraag — ${safe.type} · ${p.guests}p · ${safe.date}`,
+        Subject: bureauSubject,
         HTMLPart: internalHtml,
-      },
+      }],
+    });
+
+    await Promise.all([
+      logEmail({
+        email_type: "catering_request_customer",
+        subject: customerSubject,
+        recipient_email: customerRecipient,
+        recipient_name: p.contact.name,
+        related_request_id: p.requestId,
+        status: customerResult.ok ? "sent" : "failed",
+        error_message: customerResult.ok ? undefined : customerResult.error,
+        mailjet_message_id: customerResult.ok ? (customerResult.messageId ?? undefined) : undefined,
+        sent_by: "system",
+        html_body: customerHtml,
+        metadata: {
+          template_name: "catering_request_customer",
+          actor: "system → klant (bevestiging catering-aanvraag)",
+          catering_type: p.cateringType,
+          guests: p.guests,
+          skipped: customerResult.ok ? (customerResult.skipped ?? null) : null,
+        },
+      }),
+      logEmail({
+        email_type: "catering_request_bureau",
+        subject: bureauSubject,
+        recipient_email: bureauEmail,
+        recipient_name: "Bureau Vlieland",
+        related_request_id: p.requestId,
+        status: bureauResult.ok ? "sent" : "failed",
+        error_message: bureauResult.ok ? undefined : bureauResult.error,
+        mailjet_message_id: bureauResult.ok ? (bureauResult.messageId ?? undefined) : undefined,
+        sent_by: "system",
+        html_body: internalHtml,
+        metadata: {
+          template_name: "catering_request_bureau",
+          actor: "klant → bureau (catering-aanvraag)",
+          catering_type: p.cateringType,
+          guests: p.guests,
+          customer_email: p.contact.email,
+          skipped: bureauResult.ok ? (bureauResult.skipped ?? null) : null,
+        },
+      }),
     ]);
 
-    console.log(`Catering request emails sent for ${p.contact.email} (test=${testMode})`);
+    if (!customerResult.ok) console.error("send-catering-request: klantmail niet verstuurd:", customerResult.error);
+    if (!bureauResult.ok) console.error("send-catering-request: interne melding niet verstuurd:", bureauResult.error);
+    console.log(`Catering request emails handled for ${p.contact.email} (test=${testMode})`);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: customerResult.ok && bureauResult.ok }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });

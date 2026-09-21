@@ -41,6 +41,11 @@ describe("extractPageFactText", () => {
     expect(text).not.toContain("€999");
     expect(text).not.toContain("€888");
   });
+
+  it("controleert een inhoudsbestand zonder FAQ-array of KeyFacts-blok helemaal", () => {
+    const src = `export const x = { summary: "€10", faq: [{ question: "q", answer: "2 uur" }] };`;
+    expect(extractPageFactText(src)).toBe(src);
+  });
 });
 
 describe("findFactViolations", () => {

@@ -41,6 +41,8 @@ export type LandingSection =
       /** Slotzin, iets zwaarder gezet. */
       closing?: string;
       align?: "left" | "center";
+      /** `compact` voor een korte sectie die anders in witruimte verdrinkt. */
+      spacing?: "compact" | "default";
     }
   | {
       kind: "features";
@@ -49,6 +51,8 @@ export type LandingSection =
       items: LandingFeature[];
       closing?: string;
       columns?: 2 | 3;
+      /** Kleine regels onder het raster, bijvoorbeeld "Meenemen: …". */
+      notes?: string[];
     }
   | {
       kind: "gallery";
@@ -91,5 +95,48 @@ export interface LandingContent {
   quote?: { text: string; author: string; company?: string };
   faq: { question: string; answer: string }[];
   /** "Bekijk ook": het ene linkblok onderaan. */
+  also: LandingLink[];
+}
+
+/**
+ * Inhoud van een activiteitpagina (Wadexcursie, Zeehondentocht): dezelfde
+ * opbouw als een landingspagina, maar met de kaart "In het kort", een
+ * boekblok dat direct boekt zodra de bouwsteen aan de boekmodule hangt en
+ * anders naar het aanvraagformulier stuurt, en TouristTrip-structured data.
+ */
+export interface ActivityLandingContent {
+  kind: "activity";
+  slug: string;
+  path: string;
+  breadcrumb: string;
+  seo: { title: string; description: string };
+  trip: { name: string; description: string; touristType: string; lowPrice: string; highPrice: string };
+  hero: { image: string; alt: string; eyebrow: string; title: string; intro: string };
+  /** Eén samenvattende alinea in de kaart "In het kort". */
+  summary: string;
+  facts: { icon: LucideIcon; label: string; value: string }[];
+  intro: { title: string; paragraphs: string[]; trust: LandingFeature[] };
+  sections: LandingSection[];
+  booking: {
+    /** Bouwsteen-id; hangt die aan de boekmodule, dan boekt de pagina direct. */
+    blockId: string;
+    title: string;
+    /** Intro van het boekblok als direct boeken kan. */
+    intro: string;
+    /** Intro als de excursie alleen aan te vragen is. */
+    introRequest: string;
+    price: string;
+    priceNote?: string;
+    bookLabel: string;
+    requestLabel: string;
+    requestPath: string;
+    groupRequestPath: string;
+    /** Derde vertrouwensregel naast de ambassadeursbadge. */
+    trustBookable: string;
+    trustRequest: string;
+  };
+  faqTitle: string;
+  faq: { question: string; answer: string }[];
+  reviews: { title: string; subtitle: string };
   also: LandingLink[];
 }

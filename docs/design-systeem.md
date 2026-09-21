@@ -67,17 +67,17 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `FloatingStack` | De zwevende knoppen rechtsonder (chat, programma): staat boven een vaste balk (`useFloatingBar`) en wijkt voor de footer en voor een `WizardFooter` in beeld (`useFloatingClearance`); `z-40` | Eigen `fixed bottom-4 right-4`-blokken |
 | `ResponsiveSheetContent` | Sheet die op een telefoon van onderen komt (ronde bovenhoeken, max. 85% hoog) en op een groter scherm van rechts | `SheetContent side="right"` in de funnel; het navigatiemenu blijft van rechts komen |
 | `PageHero` | Foto-hero van een landingspagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop | Eigen hero's met Ken Burns, gradient-overlays en twee gelijkwaardige knoppen |
-| `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel) | USP-iconen in een rij, losse feitengrids |
+| `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel); met `title`, `summary` en een icoon per feit is het de kaart "In het kort" van een activiteitpagina | USP-iconen in een rij, losse feitengrids, `KeyFacts` op landingspagina's |
 | `MediaCard` | Kaart met foto, eyebrow ("3 dagen"), Fraunces-kop en tekst, als link; voor echte programma's en activiteiten uit de database; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover |
 | `PersonQuote` | Eén klantcitaat in Fraunces met naam en organisatie, op een `sand`-sectie | Citatencarrousels, `Quote`-iconen, sterren bij een handmatig citaat |
 | `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden | De vijf CTA-banden en `FinalCTA`-varianten |
+| `ActivityPage` (`components/landing`) | De tweede sjabloonvariant, voor één boekbare activiteit (Wadexcursie, Zeehondentocht): zelfde opbouw als `LandingPage` maar met de kaart "In het kort", een boekblok (`DirectBookingPanel` zodra de bouwsteen aan de boekmodule hangt, anders het aanvraagformulier) en TouristTrip-structured data; geen `RouteChooser`, de actie is boeken. Inhoud in `src/content/landings/<slug>.ts` met `kind: "activity"`; de feiten (duur, prijs, groepsgrootte) worden bewaakt tegen `src/content/activityContent.ts` | Eigen activiteitpagina's met `KeyFacts`, losse accordions en drie linkblokken |
 | `LandingPage` (`components/landing`) | Het ene sjabloon voor de landingspagina's, gevoed door `src/content/landings/<slug>.ts` (geregistreerd in `index.ts` en `paths.ts`): kruimelpad, `PageHero`, intro met `FactList`, genummerde secties (`prose`, `features`, `gallery`, `split`), voorbeeldprogramma's uit de database, `PersonQuote`, Google-reviews, `RouteChooser`, `FaqSection`, één `RelatedLinks` | Een pagina-component per landingspagina; een nieuwe landingspagina is een nieuw inhoudsbestand |
 
-Nog te bouwen (fase 3 deel 2): de tweede sjabloonvariant voor Wadlopen en
-Zeehondentochten, met boekpaneel. `FaqSection`, `LandingBreadcrumb`,
-`GoogleReviewsBlock` en `RelatedLinks` staan sinds fase 3 op `Section`,
-`Container` en `SectionHeader`; een aparte `Faq` en `Breadcrumb` zijn niet
-meer nodig.
+`FaqSection`, `LandingBreadcrumb`, `GoogleReviewsBlock` en `RelatedLinks`
+staan sinds fase 3 op `Section`, `Container` en `SectionHeader`; een aparte
+`Faq` en `Breadcrumb` zijn niet meer nodig. Fase 4 zet de overige pagina's
+en de homepage op dezelfde componenten.
 
 ## Regels voor interactie
 
@@ -126,6 +126,12 @@ meer nodig.
   secties krijgen automatisch een nummer en wisselen van toon (`muted`,
   `default`); wat erna komt ligt vast: voorbeeldprogramma's, citaat,
   reviews, `RouteChooser`, FAQ, één linkblok.
+  Een activiteitpagina (`kind: "activity"`) volgt dezelfde regels; haar
+  vaste staart is boekblok, FAQ, reviews, één linkblok. Elke duur, prijs
+  en groepsgrootte in zo'n bestand moet letterlijk in
+  `src/content/activityContent.ts` staan (`scripts/validate-activity-facts.ts`
+  draait voor elke build); schrijf een getijvenster dus als "een uur vóór
+  tot een uur ná laagwater", anders leest de bewaker het als een duur.
 
 ## Zo controleer je een wijziging
 

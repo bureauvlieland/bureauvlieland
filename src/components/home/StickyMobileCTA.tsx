@@ -7,7 +7,13 @@ import { ArrowRight } from "lucide-react";
  * Floating "Start uw aanvraag" CTA that appears on mobile after the hero
  * scrolls out of view. Desktop already has a persistent CTA in the nav.
  */
-export const StickyMobileCTA = () => {
+interface StickyMobileCTAProps {
+  label?: string;
+  /** Pad of anker op dezelfde pagina (`#boeken`). */
+  to?: string;
+}
+
+export const StickyMobileCTA = ({ label = "Start uw aanvraag", to = "/programma-samenstellen" }: StickyMobileCTAProps) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -28,15 +34,19 @@ export const StickyMobileCTA = () => {
       style={{ bottom: "calc(1rem + var(--floating-offset, 0px))" }}
       aria-hidden={!visible}
     >
-      <Link to="/programma-samenstellen" className="block">
-        <Button
-          size="xl"
-          className="w-full shadow-dramatic"
-        >
-          Start uw aanvraag
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </Link>
+      <Button asChild size="xl" className="w-full shadow-dramatic">
+        {to.startsWith("#") ? (
+          <a href={to}>
+            {label}
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+          </a>
+        ) : (
+          <Link to={to}>
+            {label}
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+          </Link>
+        )}
+      </Button>
     </div>
   );
 };

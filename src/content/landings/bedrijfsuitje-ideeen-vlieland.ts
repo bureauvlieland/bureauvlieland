@@ -39,7 +39,7 @@ export const bedrijfsuitjeIdeeenVlieland: LandingContent = {
       columns: 2,
       items: [
         { icon: Bike, title: "Actief en buiten", text: "Fietsen, surfen, beachsporten of eilandspellen." },
-        { icon: Ship, title: "Water en natuur", text: "Zeehondentocht, speedboot of wadlopen." },
+        { icon: Ship, title: "Water en natuur", text: "Zeehondentocht, speedboot of wadexcursie." },
         { icon: Utensils, title: "Culinair", text: "BBQ, diner bij zonsondergang of walking dinner." },
         { icon: Camera, title: "Beleving", text: "Vuurtorenbezoek, dorpstour of silent disco." },
       ],

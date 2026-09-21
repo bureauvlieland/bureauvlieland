@@ -25,7 +25,7 @@ export const featuredActivities: ActivityLink[] = [
   },
   {
     slug: "wadloopexcursie",
-    label: "Wadloopexcursie",
+    label: "Wadexcursie",
     teaser: "Met een lokale gids het wad op — voor vrijwel alle leeftijden.",
   },
   {

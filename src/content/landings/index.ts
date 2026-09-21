@@ -1,4 +1,4 @@
-import type { LandingContent } from "./types";
+import type { ActivityLandingContent, LandingContent } from "./types";
 import { bedrijfsuitjeVlieland } from "./bedrijfsuitje-vlieland";
 import { teamuitjeVlieland } from "./teamuitje-vlieland";
 import { meerdaagsBedrijfsuitjeVlieland } from "./meerdaags-bedrijfsuitje-vlieland";
@@ -9,12 +9,14 @@ import { zakelijkEvenementVlieland } from "./zakelijk-evenement-vlieland";
 import { groepsweekendVlieland } from "./groepsweekend-vlieland";
 import { jubileumVlieland } from "./jubileum-vlieland";
 import { familieweekendVlieland } from "./familieweekend-vlieland";
+import { wadlopenVlieland } from "./wadlopen-vlieland";
+import { zeehondentochtenVlieland } from "./zeehondentochten-vlieland";
 
-export type { LandingContent } from "./types";
+export type { ActivityLandingContent, LandingContent } from "./types";
 
 /**
  * Alle landingspagina's die het sjabloon `LandingPage` tekent. Nieuwe pagina:
- * inhoudsbestand toevoegen, hier registreren, route in `App.tsx`.
+ * inhoudsbestand toevoegen, hier registreren, pad in `paths.ts`.
  */
 export const LANDINGS: LandingContent[] = [
   bedrijfsuitjeVlieland,
@@ -28,3 +30,6 @@ export const LANDINGS: LandingContent[] = [
   jubileumVlieland,
   familieweekendVlieland,
 ];
+
+/** Activiteitpagina's (tweede sjabloonvariant, `ActivityPage`). */
+export const ACTIVITY_LANDINGS: ActivityLandingContent[] = [wadlopenVlieland, zeehondentochtenVlieland];

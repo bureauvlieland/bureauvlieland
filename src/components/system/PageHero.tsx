@@ -17,6 +17,7 @@ interface PageHeroProps {
   eyebrow?: string;
   title: ReactNode;
   intro?: ReactNode;
+  /** `to` mag een anker op dezelfde pagina zijn (`#boeken`). */
   cta?: { label: string; to: string };
   /** Tweede, ondergeschikte link naast de knop. */
   secondary?: { label: string; to: string };
@@ -41,10 +42,17 @@ export const PageHero = ({ image, alt, eyebrow, title, intro, cta, secondary, cl
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             {cta && (
               <Button asChild size="lg">
-                <Link to={cta.to}>
-                  {cta.label}
-                  <ArrowRight aria-hidden="true" />
-                </Link>
+                {cta.to.startsWith("#") ? (
+                  <a href={cta.to}>
+                    {cta.label}
+                    <ArrowRight aria-hidden="true" />
+                  </a>
+                ) : (
+                  <Link to={cta.to}>
+                    {cta.label}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                )}
               </Button>
             )}
             {secondary && (
