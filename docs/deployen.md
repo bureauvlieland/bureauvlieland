@@ -170,8 +170,16 @@ draaiden cron-watchdog, critical-selftest, flag-missing-partner-invoices,
 auto-close-past-execution, auto-close-monitor, send-arrival-reminder en
 map-sync-blocks van 8 tot 21 september 2026 geen enkele keer, en de watchdog
 kon dat niet melden omdat hij zelf ook geweigerd werd. Migratie
-`20260921113000_cron-bearer-en-timeout.sql` heeft alle jobs hersteld; een
-nieuwe job schrijf je zo:
+`20260921113000_cron-bearer-en-timeout.sql` vult bij elke job aan wat
+ontbreekt. De jobs zijn in de loop van de tijd op vier manieren geschreven:
+een JSON-literal met alleen `apikey` (de jobs uit deze repo), Lovable-stijl
+met alleen `Authorization` (de jobs die Lovable rechtstreeks in de database
+zette), `jsonb_build_object(...)` en zonder headers. De eerste versie van de
+migratie kende alleen de eerste vorm en had een controleblok dat de hele
+migratie liet falen zodra één job niet klopte; daardoor mislukte de deploy
+van 21 september en bleef ook de rest kapot. Nu geeft een onbekende vorm een
+`WARNING` met de jobnaam, en meldt de watchdog zo'n job de volgende ochtend.
+Een nieuwe job schrijf je zo:
 
 ```sql
 select cron.schedule('mijn-taak-daily', '0 6 * * *', $cron$
