@@ -28,7 +28,7 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "De zeehondentocht op Vlieland duurt ongeveer 45 minuten, vertrekt vanuit de haven van Oost-Vlieland en vaart langs de zandbanken waar gewone en grijze zeehonden liggen te rusten.",
     paragraphs: [
-      "Rondom Vlieland liggen de zandplaten van de Waddenzee, en juist daar komen zeehonden bij laag water uit het water om te rusten en op te warmen. Vanaf het water kom je dichterbij dan vanaf het strand ooit lukt: de boot houdt respectvol afstand, maar met een verrekijker of een telelens zie je de dieren duidelijk liggen. Je treft er twee soorten aan: de gewone zeehond (kleiner, ronde kop) en de grijze zeehond (fors, met een langgerekte 'paardenkop').",
+      "Rondom Vlieland liggen de zandplaten van de Waddenzee, en juist daar komen zeehonden bij laag water uit het water om te rusten en op te warmen. Vanaf het water komt u dichterbij dan vanaf het strand ooit lukt: de boot houdt respectvol afstand, maar met een verrekijker of een telelens ziet u de dieren duidelijk liggen. U treft er twee soorten aan: de gewone zeehond (kleiner, ronde kop) en de grijze zeehond (fors, met een langgerekte 'paardenkop').",
       "De tocht wordt gepland op het getij, niet op de klok. De schipper kiest een vertrektijd rond laagwater, want alleen dan liggen de platen droog. Voor groepen betekent dat: het vaarmoment is leidend, en de rest van het dagprogramma bouwen wij daaromheen. Dat is precies het soort puzzel dat wij voor u oplossen — u krijgt één programma en één factuur.",
       "Onderweg vertelt de schipper over het ontstaan van de Waddenzee, de werking van eb en vloed en over het herstel van de zeehondenpopulatie in de afgelopen decennia. Het is daarmee net zo goed een korte natuurexcursie als een boottocht. Doordat de tocht kort is en u aan boord blijft, is dit voor gezelschappen met kinderen een laagdrempelige manier om het wad van dichtbij te beleven.",
     ],
@@ -52,7 +52,7 @@ export const activityContent: Record<string, ActivityContent> = {
           "De vaartocht duurt ongeveer 45 minuten. Reken met in- en uitstappen en de uitleg vooraf op ruim een uur in uw programma.",
       },
       {
-        question: "Zie je gegarandeerd zeehonden?",
+        question: "Ziet u gegarandeerd zeehonden?",
         answer:
           "Een garantie geeft niemand — het zijn wilde dieren. De tocht wordt echter rond laagwater gepland, wanneer de zeehonden op de droogvallende zandplaten liggen. In de praktijk worden er vrijwel altijd zeehonden gespot.",
       },
@@ -119,9 +119,9 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "De Vliehors Expres rijdt in ongeveer twee uur met een omgebouwde legertruck over de Vliehors, de twintig vierkante kilometer grote zandvlakte aan de westkant van Vlieland die de Sahara van het Noorden wordt genoemd.",
     paragraphs: [
-      "De Vliehors is het grootste zandstrand van Europa en normaal gesproken niet zomaar toegankelijk: het gebied wordt deels gebruikt als militair oefenterrein en is verder beschermd natuurgebied. Met de Vliehors Expres — een oude legertruck met ramen — rijd je er wél overheen, onder begeleiding van een chauffeur-gids die het terrein op zijn duimpje kent.",
-      "Onderweg passeer je de wrakstukken en de betonnen doelen van het schietterrein, kom je langs plekken waar zeehonden op de zandbanken liggen en rijd je naar de Posthuys-zijde van het eiland. De gids vertelt over strandingen, over de verdwenen dorpen van West-Vlieland en over hoe wind en zee dit landschap elk jaar opnieuw vormgeven.",
-      "Omdat het gebied leeg en weids is, werkt de rit uitstekend als opening van een groepsdag: iedereen zit samen in één truck, er is niets dat afleidt, en aan het eindpunt kun je uitstappen voor een strandwandeling. De rit vertrekt vanaf Badweg 6 en wordt geboekt voor gezelschappen van 15 tot 50 personen.",
+      "De Vliehors is het grootste zandstrand van Europa en normaal gesproken niet zomaar toegankelijk: het gebied wordt deels gebruikt als militair oefenterrein en is verder beschermd natuurgebied. Met de Vliehors Expres — een oude legertruck met ramen — rijdt u er wél overheen, onder begeleiding van een chauffeur-gids die het terrein op zijn duimpje kent.",
+      "Onderweg passeert u de wrakstukken en de betonnen doelen van het schietterrein, komt u langs plekken waar zeehonden op de zandbanken liggen en rijdt u naar de Posthuys-zijde van het eiland. De gids vertelt over strandingen, over de verdwenen dorpen van West-Vlieland en over hoe wind en zee dit landschap elk jaar opnieuw vormgeven.",
+      "Omdat het gebied leeg en weids is, werkt de rit uitstekend als opening van een groepsdag: iedereen zit samen in één truck, er is niets dat afleidt, en aan het eindpunt kunt u uitstappen voor een strandwandeling. De rit vertrekt vanaf Badweg 6 en wordt geboekt voor gezelschappen van 15 tot 50 personen.",
     ],
     practical: [
       { label: "Duur", value: "Circa 2 uur" },
@@ -143,7 +143,7 @@ export const activityContent: Record<string, ActivityContent> = {
           "Een omgebouwde legertruck die bezoekers over de Vliehors rijdt, de grote zandvlakte aan de westkant van Vlieland. De rit duurt ongeveer twee uur en wordt begeleid door een chauffeur-gids.",
       },
       {
-        question: "Kun je de Vliehors ook zelf op?",
+        question: "Kunt u de Vliehors ook zelf op?",
         answer:
           "Delen van de Vliehors zijn afgesloten omdat het een militair oefenterrein en beschermd natuurgebied is. Met de Vliehors Expres komt u legaal en veilig op plekken die anders gesloten blijven.",
       },
@@ -164,8 +164,8 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "Powerkiten op het strand van Vlieland duurt ongeveer anderhalf uur, gebeurt met tweelijns- of vierlijnsmatrassen onder begeleiding van een instructeur en vraagt geen voorkennis.",
     paragraphs: [
-      "Op het brede Noordzeestrand van Vlieland staat vrijwel altijd wind, en dat maakt het eiland een van de betere plekken in Nederland om te powerkiten. Je begint met een kleine kite om het stuurgevoel te pakken te krijgen, en werkt op naar een groter model dat je echt over het zand trekt. De instructeur legt eerst het windvenster uit: waar in de lucht de kite kracht maakt en waar juist niet.",
-      "Het aantrekkelijke van powerkiten als groepsactiviteit is dat de leercurve steil is. Binnen een kwartier stuurt iedereen zijn eigen kite, en na een half uur staan de eerste deelnemers te slippen over het strand. Dat levert precies de mix van spanning en gelach op waar teamdagen om vragen — zonder dat je sportief hoeft te zijn.",
+      "Op het brede Noordzeestrand van Vlieland staat vrijwel altijd wind, en dat maakt het eiland een van de betere plekken in Nederland om te powerkiten. U begint met een kleine kite om het stuurgevoel te pakken te krijgen, en werkt op naar een groter model dat u echt over het zand trekt. De instructeur legt eerst het windvenster uit: waar in de lucht de kite kracht maakt en waar juist niet.",
+      "Het aantrekkelijke van powerkiten als groepsactiviteit is dat de leercurve steil is. Binnen een kwartier stuurt iedereen zijn eigen kite, en na een half uur staan de eerste deelnemers te slippen over het strand. Dat levert precies de mix van spanning en gelach op waar teamdagen om vragen — zonder dat u sportief hoeft te zijn.",
       "De activiteit is uitstekend te combineren met blokarten op hetzelfde stuk strand ter hoogte van bushalte Ankerplaats; het materiaal en de begeleiding staan dan al klaar. Houd er rekening mee dat er op die locatie geen toiletvoorzieningen zijn. Wij plannen het als één blok in het dagprogramma, inclusief het fietsen naar het strand en terug.",
     ],
     practical: [
@@ -183,7 +183,7 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     faq: [
       {
-        question: "Moet je ervaring hebben om te powerkiten?",
+        question: "Moet u ervaring hebben om te powerkiten?",
         answer:
           "Nee. De instructeur begint met een kleine kite en legt het windvenster uit. Vrijwel iedereen stuurt binnen een kwartier zelfstandig.",
       },
@@ -204,7 +204,7 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "Surfles op Vlieland duurt ongeveer 2,5 uur, kost €55,00 per persoon en wordt op het strand ter hoogte van bushalte Ankerplaats gegeven aan groepen van 6 tot 20 personen, voor zowel beginners als gevorderden.",
     paragraphs: [
-      "Het Noordzeestrand van Vlieland loopt flauw af, waardoor de golven relatief ver uit de kust al breken. Dat is ideaal voor beginners: je staat lang op stahoogte en hoeft niet ver te peddelen om een golf te pakken. De les begint op het droge met de pop-up, de veiligheidsregels en de stroming, en gaat daarna het water in.",
+      "Het Noordzeestrand van Vlieland loopt flauw af, waardoor de golven relatief ver uit de kust al breken. Dat is ideaal voor beginners: u staat lang op stahoogte en hoeft niet ver te peddelen om een golf te pakken. De les begint op het droge met de pop-up, de veiligheidsregels en de stroming, en gaat daarna het water in.",
       "Een groep wordt opgesplitst naar niveau, zodat wie al eens gesurft heeft niet hoeft te wachten op de eerste pop-up van de rest. De les wordt geboekt voor 6 tot 20 personen; welk materiaal de aanbieder meelevert, bevestigen wij vooraf bij de reservering.",
       "Voor bedrijfsgroepen is surfles een activiteit waarbij hiërarchie snel verdwijnt: iedereen valt evenveel om. Plan er wel voldoende tijd omheen in: omkleden, douchen en warm worden kost samen al gauw een half uur extra. Wij houden daar in het programma rekening mee.",
     ],
@@ -225,7 +225,7 @@ export const activityContent: Record<string, ActivityContent> = {
       {
         question: "Is surfles op Vlieland geschikt voor beginners?",
         answer:
-          "Ja. Het strand loopt flauw af, waardoor je lang op stahoogte staat. De les start op het droge met de basistechniek voordat u het water in gaat.",
+          "Ja. Het strand loopt flauw af, waardoor u lang op stahoogte staat. De les start op het droge met de basistechniek voordat u het water in gaat.",
       },
       {
         question: "Wat kost surfles en hoe groot mag de groep zijn?",
@@ -233,7 +233,7 @@ export const activityContent: Record<string, ActivityContent> = {
           "Surfles kost €55,00 per persoon en wordt gegeven aan groepen van 6 tot 20 personen. Neem zelf badkleding, een handdoek en droge kleding mee; welk materiaal is inbegrepen bevestigen wij bij de reservering.",
       },
       {
-        question: "Moet je kunnen zwemmen?",
+        question: "Moet u kunnen zwemmen?",
         answer:
           "Ja, zwemvaardigheid is een voorwaarde. De instructeur blijft in het water bij de groep en het lesgebied ligt op stahoogte.",
       },
@@ -244,8 +244,8 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "Blokarten op Vlieland is strandzeilen in een driewielige kar met zeil; een sessie duurt ongeveer 1 uur, kost €32,50 per persoon en wordt geboekt voor groepen van 8 tot 16 personen.",
     paragraphs: [
-      "Een blokart is een lage driewieler met een zeil, waarmee je over het harde, natte zand langs de vloedlijn racet. Sturen doe je met je voeten, snelheid regel je met het touw waarmee je het zeil aantrekt of laat vieren. Dat klinkt technisch, maar in de praktijk rijdt vrijwel iedereen na een korte instructie zelfstandig een baan.",
-      "Doordat je vlak boven het zand zit, voelt de snelheid als het dubbele. Er zit een natuurlijke competitie in: groepen gaan onherroepelijk tijden vergelijken. Voor teamdagen is dat een sterke motor — het is fysiek licht maar mentaal fanatiek.",
+      "Een blokart is een lage driewieler met een zeil, waarmee u over het harde, natte zand langs de vloedlijn racet. Sturen doet u met uw voeten, snelheid regelt u met het touw waarmee u het zeil aantrekt of laat vieren. Dat klinkt technisch, maar in de praktijk rijdt vrijwel iedereen na een korte instructie zelfstandig een baan.",
+      "Doordat u vlak boven het zand zit, voelt de snelheid als het dubbele. Er zit een natuurlijke competitie in: groepen gaan onherroepelijk tijden vergelijken. Voor teamdagen is dat een sterke motor — het is fysiek licht maar mentaal fanatiek.",
       "Blokarten kan alleen bij laag water en met pal aanlandige wind. Er is minimaal windkracht 3 (8 tot 10 knopen) nodig; windkracht 4 tot 6 geeft de beste omstandigheden. Bij te weinig of juist te veel wind kan de activiteit worden verschoven. De instructeur beslist dat op de dag zelf; wij zorgen dan voor een passend alternatief in hetzelfde tijdvak.",
     ],
     practical: [
@@ -259,7 +259,7 @@ export const activityContent: Record<string, ActivityContent> = {
     goodToKnow: [
       "Draag een zonnebril of sportbril: opspattend zand is het enige echte ongemak.",
       "Instructie door een begeleider hoort bij de activiteit.",
-      "Ook geschikt voor deelnemers die niet sportief zijn — je zit, je rent niet.",
+      "Ook geschikt voor deelnemers die niet sportief zijn: u zit, u rent niet.",
     ],
     faq: [
       {
@@ -284,7 +284,7 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "Het vuurtorenbezoek op Vlieland duurt ongeveer een uur, gaat via een trap naar boven en levert bij helder weer uitzicht op het hele eiland, de Waddenzee en de buureilanden.",
     paragraphs: [
-      "De vuurtoren van Vlieland staat op het hoogste duin van het eiland, waardoor je al vanaf de voet ver kijkt. Boven op het balkon zie je in één blik hoe smal Vlieland eigenlijk is: aan de ene kant de Noordzee met de eindeloze branding, aan de andere kant het wad met zijn geulen en platen. Bij helder weer herken je Terschelling en Texel aan de horizon.",
+      "De vuurtoren van Vlieland staat op het hoogste duin van het eiland, waardoor u al vanaf de voet ver kijkt. Boven op het balkon ziet u in één blik hoe smal Vlieland eigenlijk is: aan de ene kant de Noordzee met de eindeloze branding, aan de andere kant het wad met zijn geulen en platen. Bij helder weer herkent u Terschelling en Texel aan de horizon.",
       "De beklimming gaat via een trap; er is geen lift. Dat maakt het bezoek minder geschikt voor wie slecht ter been is, maar de klim is met rustpunten goed te doen. Boven is beperkt ruimte, dus grotere groepen gaan in kleinere clusters naar boven — daar houden wij in de planning rekening mee.",
       "Als programmaonderdeel werkt het vuurtorenbezoek het best aan het begin van een verblijf: het geeft deelnemers meteen gevoel voor de schaal en de indeling van het eiland, waardoor de rest van het programma logischer voelt. Combineer het met een fietstocht die vanaf de vuurtoren het dorp in of de duinen door gaat.",
     ],
@@ -303,12 +303,12 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     faq: [
       {
-        question: "Kun je de vuurtoren van Vlieland beklimmen?",
+        question: "Kunt u de vuurtoren van Vlieland beklimmen?",
         answer:
           "Ja, tijdens een begeleid bezoek gaat u via de trap naar boven. Er is geen lift. Het bezoek duurt inclusief uitleg ongeveer een uur.",
       },
       {
-        question: "Wat zie je vanaf de vuurtoren?",
+        question: "Wat ziet u vanaf de vuurtoren?",
         answer:
           "Bij helder weer overziet u het hele eiland, de Noordzee, de Waddenzee met de zandplaten en aan de horizon Terschelling en Texel.",
       },
@@ -324,7 +324,7 @@ export const activityContent: Record<string, ActivityContent> = {
     summary:
       "Een begeleide fietstocht over Vlieland duurt ongeveer twee uur, volgt de verharde fietspaden door duin, bos en dorp, en wordt geleid door een eilandgids die onderweg het verhaal van het eiland vertelt.",
     paragraphs: [
-      "Vlieland is autoluw en telt tientallen kilometers fietspad, dus de fiets is hier geen alternatief maar het normale vervoermiddel. Tijdens een begeleide tocht rijd je in rustig tempo van het dorp naar het bos, langs de duinen en naar uitzichtpunten die je met een kaartje in de hand zelden vindt.",
+      "Vlieland is autoluw en telt tientallen kilometers fietspad, dus de fiets is hier geen alternatief maar het normale vervoermiddel. Tijdens een begeleide tocht rijdt u in rustig tempo van het dorp naar het bos, langs de duinen en naar uitzichtpunten die u met een kaartje in de hand zelden vindt.",
       "Wat de tocht onderscheidt van zelf rondfietsen is het verhaal. De gids vertelt over het verdwenen dorp West-Vlieland dat door de zee is opgeslokt, over de bosaanplant die het stuifzand moest vastleggen, en over hoe een eiland met ruim duizend inwoners in de zomer tienduizenden gasten opvangt. Daar hoort ook de minder romantische kant bij: drinkwater, afvalverwerking en woningnood op een eiland.",
       "De route wordt afgestemd op de groep en start bij de Waddendijk ter hoogte van Willem de Vlamingh. Met een gezelschap dat stevig doortrapt gaan we verder het eiland op; met een gemengde groep blijven we dichter bij het dorp en lassen we meer stops in. E-bikes zijn los bij te boeken, wat het verschil in tempo binnen een groep grotendeels wegneemt.",
     ],
@@ -383,7 +383,7 @@ export const activityContent: Record<string, ActivityContent> = {
     ],
     faq: [
       {
-        question: "Wat kun je zien in het bunkermuseum op Vlieland?",
+        question: "Wat kunt u zien in het bunkermuseum op Vlieland?",
         answer:
           "Een gerestaureerde Duitse bunker uit de Tweede Wereldoorlog, ingericht met originele apparatuur, uniformen en op het eiland gevonden objecten, met uitleg over de Atlantikwall en het leven op Vlieland tijdens de bezetting.",
       },

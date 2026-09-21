@@ -23,6 +23,8 @@ export { FloatingStack } from "./FloatingStack";
 export { PageHero } from "./PageHero";
 export { FactList } from "./FactList";
 export { MediaCard } from "./MediaCard";
+export { CatalogCard, type CatalogAction } from "./CatalogCard";
+export { LinkCard } from "./LinkCard";
 export { PersonQuote } from "./PersonQuote";
 export { RouteChooser, type RouteChooserRoute } from "./RouteChooser";
 export { ResponsiveSheetContent } from "./ResponsiveSheetContent";

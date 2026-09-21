@@ -23,6 +23,8 @@ export interface RouteChooserRoute {
 }
 
 interface RouteChooserProps {
+  /** Anker voor een knop hogerop de pagina (`#aanvraag`). */
+  id?: string;
   eyebrow?: string;
   title?: string;
   intro?: string;
@@ -55,12 +57,13 @@ const DEFAULT_ROUTES: RouteChooserRoute[] = [
 ];
 
 export const RouteChooser = ({
+  id,
   eyebrow = "Uw volgende stap",
   title = "Klaar om te beginnen?",
   intro = "Vrijblijvend, en binnen 5 werkdagen een voorstel. Kies de route die bij u past.",
   routes = DEFAULT_ROUTES,
 }: RouteChooserProps) => (
-  <Section tone="dark">
+  <Section id={id} tone="dark" className={id ? "scroll-mt-24" : undefined}>
     <Container size="wide">
       <SectionHeader onDark eyebrow={eyebrow} title={title} intro={intro} align="center" />
       <div className="mt-12 grid gap-4 md:grid-cols-3">

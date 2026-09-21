@@ -68,6 +68,11 @@ export type LandingSection =
       paragraphs: string[];
       checklist?: string[];
       image: LandingImage;
+      /** Foto links van de tekst in plaats van rechts. */
+      imagePosition?: "left" | "right";
+      /** Knop onder de tekst, en optioneel een tweede (outline). */
+      cta?: LandingLink;
+      secondary?: LandingLink;
     };
 
 export interface LandingContent {

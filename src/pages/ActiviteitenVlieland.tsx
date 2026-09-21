@@ -1,45 +1,32 @@
 /**
- * ActiviteitenVlieland — redactioneel SEO-overzicht van wat je op Vlieland kunt doen.
- *
- * Verschil met /bouwstenen (transactionele catalogus): deze pagina is een
- * thematisch overzicht dat doorlinkt naar de juiste landingspagina of
- * bouwsteen-detail. Doel-zoekwoorden: "vlieland activiteiten",
- * "wat te doen op vlieland", "uitjes vlieland".
+ * Activiteiten op Vlieland: redactioneel SEO-overzicht van wat er op het
+ * eiland te doen is. Verschil met /bouwstenen (de catalogus): deze pagina is
+ * een thematisch overzicht dat doorlinkt naar de juiste landingspagina of
+ * bouwsteen. Doel-zoekwoorden: "vlieland activiteiten", "wat te doen op
+ * vlieland", "uitjes vlieland". Op het ontwerpsysteem sinds fase 4 deel 2.
  */
 import { Helmet } from "react-helmet";
-import { Link } from "react-router-dom";
-import {
-  ChevronRight,
-  Waves,
-  Bike,
-  Landmark,
-  UtensilsCrossed,
-  Users,
-  Compass,
-  Ship,
-  CalendarDays,
-  Clock,
-} from "lucide-react";
+import { Bike, CalendarDays, Clock, Flower2, Landmark, Leaf, Ship, Snowflake, Sun, Users, UtensilsCrossed, Waves, type LucideIcon } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
+import { FaqSection } from "@/components/FaqSection";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { ActivityFilter } from "@/components/ActivityFilter";
-import { featuredActivities } from "@/content/activityLinks";
 import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
-import { KeyFacts } from "@/components/seo/KeyFacts";
+import { BodySection, Paragraphs } from "@/components/landing/sections";
+import { sectionCounter } from "@/components/landing/sectionCounter";
+import { Container, FactList, LinkCard, PageHero, RouteChooser, Section, SectionHeader } from "@/components/system";
+import { featuredActivities } from "@/content/activityLinks";
+import type { LandingSection } from "@/content/landings/types";
+import heroImage from "@/assets/beach-activity.jpg";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+const URL = "https://bureauvlieland.nl/activiteiten-vlieland";
+const EYEBROW = "Activiteiten op Vlieland";
 
 type Thema = {
-  icon: typeof Waves;
+  icon: LucideIcon;
   title: string;
   intro: string;
   items: { label: string; to: string; description: string }[];
@@ -48,155 +35,113 @@ type Thema = {
 const themas: Thema[] = [
   {
     icon: Waves,
-    title: "Wadden & natuur",
-    intro:
-      "Vlieland ligt midden in het UNESCO-Werelderfgoed Waddenzee. Het wad, de zandbanken en de duinen zijn dé reden om te komen.",
+    title: "Wadden en natuur",
+    intro: "Vlieland ligt midden in het UNESCO-Werelderfgoed Waddenzee. Het wad, de zandbanken en de duinen zijn dé reden om te komen.",
     items: [
-      {
-        label: "Wadexcursie",
-        to: "/wadlopen-vlieland",
-        description: "Met een lokale gids het wad op — voor alle leeftijden.",
-      },
-      {
-        label: "Zeehondentocht",
-        to: "/zeehondentochten-vlieland",
-        description: "Per boot naar de zandbanken om zeehonden te spotten.",
-      },
-      {
-        label: "Excursies Staatsbosbeheer",
-        to: "/bouwstenen",
-        description: "Strandjutten, vogels kijken, paddenstoelen — onder leiding.",
-      },
+      { label: "Wadexcursie", to: "/wadlopen-vlieland", description: "Met een lokale gids het wad op, voor alle leeftijden." },
+      { label: "Zeehondentocht", to: "/zeehondentochten-vlieland", description: "Per boot naar de zandbanken om zeehonden te spotten." },
+      { label: "Excursies Staatsbosbeheer", to: "/bouwstenen", description: "Strandjutten, vogels kijken, paddenstoelen, onder leiding van een boswachter." },
     ],
   },
   {
     icon: Bike,
     title: "Actief op het eiland",
-    intro:
-      "Vlieland is autoluw — fiets, voet en strand zijn koning. Van rustige fietstocht tot stevige strandsessie.",
+    intro: "Vlieland is autoluw: fiets, voet en strand zijn koning. Van rustige fietstocht tot stevige strandsessie.",
     items: [
-      {
-        label: "Begeleide fietstocht",
-        to: "/activiteit/fietstocht-met-begeleiding",
-        description: "Ontdek de mooiste plekken met een lokale gids.",
-      },
-      {
-        label: "Blokarten op het strand",
-        to: "/activiteit/blokarten",
-        description: "Zeilen op wielen over het Vliehors-strand.",
-      },
-      {
-        label: "Vuurtoren beklimmen",
-        to: "/activiteit/vuurtorenbezoek",
-        description: "Honderden treden naar het hoogste punt van het eiland.",
-      },
+      { label: "Begeleide fietstocht", to: "/activiteit/fietstocht-met-begeleiding", description: "Ontdek de mooiste plekken met een lokale gids." },
+      { label: "Blokarten op het strand", to: "/activiteit/blokarten", description: "Zeilen op wielen over het Vliehors-strand." },
+      { label: "Vuurtoren beklimmen", to: "/activiteit/vuurtorenbezoek", description: "Honderden treden naar het hoogste punt van het eiland." },
     ],
   },
   {
     icon: Landmark,
-    title: "Cultuur & historie",
-    intro:
-      "Eilandverhalen: van walvisvaarders tot Drenkelingenhuisje. Kleinschalig maar verrassend.",
+    title: "Cultuur en historie",
+    intro: "Eilandverhalen: van walvisvaarders tot Drenkelingenhuisje. Kleinschalig maar verrassend.",
     items: [
-      {
-        label: "Museum Tromp's Huys",
-        to: "/bouwstenen",
-        description: "Het oudste huis van Vlieland — eilandgeschiedenis.",
-      },
-      {
-        label: "Dorpsommetje Oost-Vlieland",
-        to: "/bouwstenen",
-        description: "Een wandeling langs de mooiste plekjes van het dorp.",
-      },
-      {
-        label: "Vuurboetsduin",
-        to: "/bouwstenen",
-        description: "Hoogste duin met uitzicht over het hele eiland.",
-      },
+      { label: "Museum Tromp's Huys", to: "/bouwstenen", description: "Het oudste huis van Vlieland, vol eilandgeschiedenis." },
+      { label: "Dorpsommetje Oost-Vlieland", to: "/bouwstenen", description: "Een wandeling langs de mooiste plekjes van het dorp." },
+      { label: "Vuurboetsduin", to: "/bouwstenen", description: "Het hoogste duin, met uitzicht over het hele eiland." },
     ],
   },
   {
     icon: UtensilsCrossed,
-    title: "Eten & drinken",
-    intro:
-      "Lunches met uitzicht, BBQ op locatie of een diner in het dorp — we regelen het.",
+    title: "Eten en drinken",
+    intro: "Lunches met uitzicht, BBQ op locatie of een diner in het dorp: wij regelen het.",
     items: [
-      {
-        label: "Catering & lunches",
-        to: "/catering",
-        description: "Van borrelhap tot warm buffet, op locatie geleverd.",
-      },
-      {
-        label: "Restaurants & terrassen",
-        to: "/bouwstenen",
-        description: "Eilandadressen die we zelf graag aanbevelen.",
-      },
-      {
-        label: "BBQ op locatie",
-        to: "/catering-aanvragen",
-        description: "Vergunning, koks en setup — wij regelen het volledige programma.",
-      },
+      { label: "Catering en lunches", to: "/catering", description: "Van borrelhap tot warm buffet, op locatie geleverd." },
+      { label: "Restaurants en terrassen", to: "/bouwstenen", description: "Eilandadressen die wij zelf graag aanbevelen." },
+      { label: "BBQ op locatie", to: "/catering-aanvragen?type=bbq", description: "Vergunning, koks en opbouw: wij regelen het volledig." },
     ],
   },
   {
     icon: Users,
     title: "Voor groepen",
-    intro:
-      "Bedrijfsuitje, teambuilding of familieweekend: we stellen een compleet programma samen — één partij, één factuur.",
+    intro: "Bedrijfsuitje, teambuilding of familieweekend: wij stellen een compleet programma samen. Eén partij, één factuur.",
     items: [
-      {
-        label: "Bedrijfsuitje Vlieland",
-        to: "/bedrijfsuitje-vlieland",
-        description: "Compleet dag- of meerdaagsprogramma voor teams.",
-      },
-      {
-        label: "Teambuilding",
-        to: "/teamuitje-vlieland",
-        description: "Activiteiten die je team echt dichter bij elkaar brengen.",
-      },
-      {
-        label: "Familieweekend",
-        to: "/familieweekend-vlieland",
-        description: "Een weekend dat voor jong én oud werkt.",
-      },
-      {
-        label: "Voorbeeldprogramma's",
-        to: "/voorbeeldprogrammas",
-        description: "Concrete dagindelingen uit eerdere groepen — gratis inspiratie.",
-      },
+      { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland", description: "Compleet dag- of meerdaags programma voor teams." },
+      { label: "Teambuilding", to: "/teamuitje-vlieland", description: "Activiteiten die uw team echt dichter bij elkaar brengen." },
+      { label: "Familieweekend", to: "/familieweekend-vlieland", description: "Een weekend dat voor jong én oud werkt." },
+      { label: "Voorbeeldprogramma's", to: "/voorbeeldprogrammas", description: "Concrete dagindelingen van eerdere groepen, om van te starten." },
     ],
   },
 ];
 
-const FAQ: { q: string; a: string }[] = [
+const dayPlan: LandingSection = {
+  kind: "prose",
+  title: "Een dag op Vlieland: hoe deelt u die in?",
+  paragraphs: [
+    "Een dagje Vlieland begint meestal met de boot van 9:00 of 10:30 vanuit Harlingen. Na aankomst pakt u een fiets bij de haven en bent u in tien minuten in het dorp. Een wadexcursie of fietstocht met gids vult de ochtend, u luncht in het dorp of op het strand, en 's middags staat een zeehondentocht, blokarten of een wandeling door de duinen op het programma. Begin van de avond gaat de boot terug, of u blijft slapen.",
+    "Voor groepen plannen wij dit van A tot Z. Bekijk onze [voorbeeldprogramma's](/voorbeeldprogrammas) voor concrete dagindelingen, of [stel zelf een programma samen](/programma-samenstellen).",
+  ],
+};
+
+const seasons: LandingSection = {
+  kind: "features",
+  title: "Activiteiten per seizoen",
+  intro: "Elk seizoen heeft zijn eigen eiland. Voor groepen plannen wij het hele jaar door.",
+  columns: 2,
+  items: [
+    { icon: Flower2, title: "Voorjaar (maart tot mei)", text: "Rustig op het eiland, volop vogeltrek. Wadexcursies, fietstochten en duinwandelingen zijn op hun mooist. Ideaal voor heisessies en teamdagen." },
+    { icon: Sun, title: "Zomer (juni tot augustus)", text: "Alles draait: zeehondentochten, blokarten, strandactiviteiten en BBQ's op het strand. Reserveer ruim vooraf, want aanbieders zitten vol." },
+    { icon: Leaf, title: "Najaar (september en oktober)", text: "Het beste van twee werelden: nog warm water, minder drukte en prachtig licht. De populairste periode voor bedrijfsuitjes." },
+    { icon: Snowflake, title: "Winter (november tot februari)", text: "Stormachtig en stil. Vliehors Expres, museum, proeverijen en vergaderarrangementen met een stevige wandeling ertussen." },
+  ],
+};
+
+const faq = [
   {
-    q: "Wat zijn de leukste activiteiten op Vlieland?",
-    a: "Een wadexcursie en een zeehondentocht zijn klassiekers. Fietsen door de duinen, blokarten op de Vliehors en de vuurtoren beklimmen horen ook in elk programma thuis. Voor groepen combineren we activiteiten tot een compleet dagprogramma.",
+    question: "Wat zijn de leukste activiteiten op Vlieland?",
+    answer: "Een wadexcursie en een zeehondentocht zijn klassiekers. Fietsen door de duinen, blokarten op de Vliehors en de vuurtoren beklimmen horen ook in elk programma thuis. Voor groepen combineren wij activiteiten tot een compleet dagprogramma.",
   },
   {
-    q: "Wat kun je doen op Vlieland bij slecht weer?",
-    a: "Museum Tromp's Huys, het Centrum voor Natuur en Landschap, een proeverij of een workshop binnen zijn goede alternatieven. Veel buitenactiviteiten — zoals een wadexcursie of fietstocht — gaan trouwens ook gewoon door bij regen; daar zijn we op gekleed.",
+    question: "Wat kunt u doen op Vlieland bij slecht weer?",
+    answer: "Museum Tromp's Huys, het Centrum voor Natuur en Landschap, een proeverij of een workshop binnen zijn goede alternatieven. Veel buitenactiviteiten, zoals een wadexcursie of fietstocht, gaan trouwens gewoon door bij regen; daar bent u op gekleed.",
   },
   {
-    q: "Wat is er te doen met kinderen op Vlieland?",
-    a: "De Vliehors Expres, een wadexcursie, vuurtoren beklimmen, strandzeilen en strandjutten zijn populair bij kinderen. Vlieland is autoluw, dus kinderen kunnen overal veilig fietsen.",
+    question: "Wat is er te doen met kinderen op Vlieland?",
+    answer: "De Vliehors Expres, een wadexcursie, de vuurtoren beklimmen, strandzeilen en strandjutten zijn populair bij kinderen. Vlieland is autoluw, dus kinderen kunnen overal veilig fietsen.",
   },
   {
-    q: "Wanneer is het beste seizoen voor activiteiten op Vlieland?",
-    a: "Mei tot oktober is hoogseizoen — alle aanbieders draaien dan vol. Buiten dat seizoen kan veel ook nog, maar het aanbod is beperkter. Voor groepen plannen we het hele jaar door.",
+    question: "Wanneer is het beste seizoen voor activiteiten op Vlieland?",
+    answer: "Mei tot oktober is hoogseizoen; alle aanbieders draaien dan vol. Buiten dat seizoen kan veel ook nog, maar het aanbod is beperkter. Voor groepen plannen wij het hele jaar door.",
   },
   {
-    q: "Kun je activiteiten op Vlieland vooraf reserveren?",
-    a: "Ja. Wadexcursies, zeehondentochten, fietstochten met gids en catering zijn allemaal te reserveren. Via Bureau Vlieland boek je in één keer alles voor je groep, inclusief de boot en eventueel overnachting.",
+    question: "Kunt u activiteiten op Vlieland vooraf reserveren?",
+    answer: "Ja. Wadexcursies, zeehondentochten, fietstochten met gids en catering zijn allemaal te reserveren. Via Bureau Vlieland boekt u in één keer alles voor uw groep, inclusief de boot en eventueel een overnachting.",
   },
   {
-    q: "Hoe kom ik op Vlieland?",
-    a: "Met de boot van Rederij Doeksen vanuit Harlingen. Auto's mogen niet mee — Vlieland is autoluw. Reken voor de overtocht ongeveer 1,5 uur (gewone boot) of 45 minuten (snelboot).",
+    question: "Hoe komt u op Vlieland?",
+    answer: "Met de boot van Rederij Doeksen vanuit Harlingen. Auto's mogen niet mee; Vlieland is autoluw. Reken voor de overtocht op ongeveer anderhalf uur met de gewone boot of 45 minuten met de snelboot.",
   },
 ];
 
 const ActiviteitenVlieland = () => {
-  const url = "https://bureauvlieland.nl/activiteiten-vlieland";
+  const next = sectionCounter();
+  const themesAt = next();
+  const filterAt = next();
+  const detailAt = next();
+  const dayPlanAt = next();
+  const seasonsAt = next();
 
   return (
     <div className="min-h-screen bg-background">
@@ -204,22 +149,19 @@ const ActiviteitenVlieland = () => {
         <title>Activiteiten Vlieland: wat te doen op het eiland | Bureau Vlieland</title>
         <meta
           name="description"
-          content="Wat te doen op Vlieland? Wadexcursies, zeehondentochten, fietsen, blokarten, vuurtoren, museum en meer. Het complete overzicht — los te boeken of als compleet programma."
+          content="Wat te doen op Vlieland? Wadexcursies, zeehondentochten, fietsen, blokarten, vuurtoren, museum en meer. Het complete overzicht, los te boeken of als compleet programma."
         />
-        <link rel="canonical" href={url} />
+        <link rel="canonical" href={URL} />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Activiteiten Vlieland: wat te doen op het eiland" />
-        <meta
-          property="og:description"
-          content="Het complete overzicht van activiteiten op Vlieland — wadexcursie, zeehonden, fietsen, cultuur en meer."
-        />
-        <meta property="og:url" content={url} />
+        <meta property="og:description" content="Het complete overzicht van activiteiten op Vlieland: wadexcursie, zeehonden, fietsen, cultuur en meer." />
+        <meta property="og:url" content={URL} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Home", item: "https://bureauvlieland.nl/" },
-            { "@type": "ListItem", position: 2, name: "Activiteiten Vlieland", item: url },
+            { "@type": "ListItem", position: 2, name: "Activiteiten Vlieland", item: URL },
           ],
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
@@ -235,231 +177,108 @@ const ActiviteitenVlieland = () => {
             })),
           ),
         })}</script>
-        <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: FAQ.map(({ q, a }) => ({
-            "@type": "Question",
-            name: q,
-            acceptedAnswer: { "@type": "Answer", text: a },
-          })),
-        })}</script>
       </Helmet>
 
       <Navigation />
+      <LandingBreadcrumb items={[{ label: "Activiteiten Vlieland" }]} />
 
       <main id="main-content">
-        {/* Hero */}
-        <section className="relative bg-gradient-to-br from-ocean-deep via-ocean-deep to-primary py-20 md:py-28 overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_20%,white,transparent_50%)]" />
-          <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-primary-foreground">
-            <nav aria-label="Kruimelpad" className="text-sm text-primary-foreground/80 mb-3">
-              <ol className="flex items-center gap-1">
-                <li><Link to="/" className="hover:text-primary-foreground">Home</Link></li>
-                <li><ChevronRight className="h-3.5 w-3.5" /></li>
-                <li aria-current="page">Activiteiten Vlieland</li>
-              </ol>
-            </nav>
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight max-w-3xl">
-              Activiteiten op Vlieland — wat kun je doen?
-            </h1>
-            <p className="text-lg md:text-xl text-primary-foreground/90 max-w-2xl mb-6">
-              Het complete overzicht van wat er op het eiland te beleven valt. Los te boeken of in één keer geregeld als compleet programma.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link to="/bouwstenen">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Bekijk alle bouwstenen
-                </Button>
-              </Link>
-              <Link to="/programma-samenstellen">
-                <Button size="lg" variant="inverseOutline" className="w-full sm:w-auto">
-                  Stel een programma samen
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <KeyFacts
-          summary="Op Vlieland zijn de populairste activiteiten een wadexcursie met gids, een zeehondentocht per boot, fietsen door de duinen en bossen, de Vliehors Expres naar het westelijke strand, blokarten, de vuurtoren beklimmen en Museum Tromp's Huys. Het eiland is autoluw en bereikbaar met de veerboot vanuit Harlingen (45 minuten met de sneldienst, circa 90 minuten met de gewone boot). Bureau Vlieland boekt losse activiteiten of een compleet groepsprogramma met één factuur."
-          facts={[
-            { icon: Ship, label: "Bereikbaar", value: "Veerboot Harlingen, 45–90 min" },
-            { icon: Bike, label: "Vervoer", value: "Autoluw — fiets en te voet" },
-            { icon: CalendarDays, label: "Hoogseizoen", value: "Mei t/m oktober" },
-            { icon: Clock, label: "Dagje eiland", value: "Boot 9:00 heen, begin avond terug" },
-          ]}
+        <PageHero
+          image={heroImage}
+          alt="Een groep bij de Vliehors Expres op het strand van Vlieland"
+          eyebrow={EYEBROW}
+          title="Activiteiten op Vlieland: wat kunt u doen?"
+          intro="Het complete overzicht van wat er op het eiland te beleven valt. Los te boeken, of in één keer geregeld als compleet programma."
+          cta={{ label: "Bekijk alle bouwstenen", to: "/bouwstenen" }}
+          secondary={{ label: "Stel een programma samen", to: "/programma-samenstellen" }}
         />
 
-        {/* Intro */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
-          <div className="prose prose-neutral max-w-none text-foreground space-y-4">
-            <p>
-              Vlieland is het kleinste bewoonde Waddeneiland — autoluw, ongerept en middenin UNESCO-Werelderfgoed. Juist die schaal maakt het eiland bijzonder: in een paar dagen ervaar je het wad, de duinen, het strand, de bossen én het dorp. Of je nu komt voor een dag, een bedrijfsuitje of een familieweekend, er is meer te doen dan veel bezoekers verwachten.
-            </p>
-            <p>
-              Hieronder vind je de activiteiten op Vlieland thematisch geordend. Alles is los te boeken, maar voor groepen stellen we vaak een compleet programma samen — inclusief de overtocht, lunch en eventueel overnachting. Eén aanvraag, één factuur, één aanspreekpunt.
-            </p>
-          </div>
-        </section>
-
-
-        {/* Thema's */}
-        <section className="bg-muted/30 py-16">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl space-y-12">
-            {themas.map(({ icon: Icon, title, intro, items }) => (
-              <div key={title}>
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="rounded-lg bg-primary/10 p-2.5">
-                    <Icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground">
-                      {title}
-                    </h2>
-                    <p className="text-muted-foreground mt-1">{intro}</p>
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  {items.map((item) => (
-                    <Link key={item.label + item.to} to={item.to} className="group">
-                      <Card className="h-full transition-colors hover:border-primary/50">
-                        <CardContent className="p-5">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-display font-semibold text-foreground">
-                              {item.label}
-                            </h3>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </div>
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
+        <Section>
+          <Container size="wide">
+            <div className="grid gap-10 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <SectionHeader title="Klein eiland, veel te beleven" />
+                <Paragraphs
+                  className="mt-6 max-w-3xl"
+                  items={[
+                    "Vlieland is het kleinste bewoonde Waddeneiland: autoluw, ongerept en midden in UNESCO-Werelderfgoed. Juist die schaal maakt het eiland bijzonder. In een paar dagen ervaart u het wad, de duinen, het strand, de bossen én het dorp. Of u nu komt voor een dag, een bedrijfsuitje of een familieweekend, er is meer te doen dan veel bezoekers verwachten.",
+                    "Hieronder vindt u de activiteiten op Vlieland thematisch geordend. Alles is los te boeken, maar voor groepen stellen wij vaak een compleet programma samen, inclusief de overtocht, lunch en eventueel een overnachting. Eén aanvraag, één factuur, één aanspreekpunt.",
+                  ]}
+                />
               </div>
-            ))}
-          </div>
-        </section>
+              <FactList
+                className="self-start"
+                title="In het kort"
+                summary="Op Vlieland zijn de populairste activiteiten een wadexcursie met gids, een zeehondentocht per boot, fietsen door de duinen en bossen, de Vliehors Expres naar het westelijke strand, blokarten, de vuurtoren beklimmen en Museum Tromp's Huys. Het eiland is autoluw en bereikbaar met de veerboot vanuit Harlingen (45 minuten met de sneldienst, circa 90 minuten met de gewone boot). Bureau Vlieland boekt losse activiteiten of een compleet groepsprogramma met één factuur."
+                items={[
+                  { icon: Ship, label: "Bereikbaar", value: "Veerboot vanuit Harlingen, 45 tot 90 minuten" },
+                  { icon: Bike, label: "Vervoer", value: "Autoluw: fiets en te voet" },
+                  { icon: CalendarDays, label: "Hoogseizoen", value: "Mei tot en met oktober" },
+                  { icon: Clock, label: "Dagje eiland", value: "Boot van 9:00 heen, begin van de avond terug" },
+                ]}
+              />
+            </div>
+          </Container>
+        </Section>
 
-        {/* Filterbaar overzicht op seizoen, duur en geschiktheid */}
-        <ActivityFilter />
+        <Section tone={themesAt.tone}>
+          <Container size="wide">
+            <SectionHeader
+              eyebrow={EYEBROW}
+              number={themesAt.number}
+              title="Wat is er te doen op Vlieland?"
+              intro="Thematisch geordend. Alles is los te boeken of onderdeel van een compleet programma."
+            />
+            <div className="mt-12 space-y-12">
+              {themas.map(({ icon: Icon, title, intro, items }) => (
+                <div key={title}>
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <h3 className="font-display text-display-md font-medium text-foreground">{title}</h3>
+                      <p className="mt-1 max-w-2xl text-muted-foreground">{intro}</p>
+                    </div>
+                  </div>
+                  <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={title}>
+                    {items.map((item) => (
+                      <li key={item.label + item.to}>
+                        <LinkCard title={item.label} text={item.description} to={item.to} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Container>
+        </Section>
 
-        {/* Alle verdiepte activiteitenpagina's — directe interne links */}
+        <ActivityFilter number={filterAt.number} tone={filterAt.tone} eyebrow={EYEBROW} />
+
         <SeeAlsoActivities
+          number={detailAt.number}
+          tone={detailAt.tone}
+          eyebrow={EYEBROW}
           title="Activiteiten in detail"
+          intro="Tien activiteiten met een eigen pagina: wat u kunt verwachten, praktische informatie en veelgestelde vragen."
           links={featuredActivities}
         />
 
+        <BodySection section={dayPlan} tone={dayPlanAt.tone} eyebrow={EYEBROW} number={dayPlanAt.number} />
+        <BodySection section={seasons} tone={seasonsAt.tone} eyebrow={EYEBROW} number={seasonsAt.number} />
 
+        <GoogleReviewsBlock limit={3} title="Wat klanten zeggen" subtitle="Recente Google-reviews over Bureau Vlieland" />
 
-        {/* Plan een dag */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="rounded-lg bg-accent/10 p-2.5">
-              <Compass className="h-6 w-6 text-accent-foreground" />
-            </div>
-            <div>
-              <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground">
-                Een dag op Vlieland — hoe deel je 'm in?
-              </h2>
-            </div>
-          </div>
-          <div className="prose prose-neutral max-w-none text-foreground space-y-4">
-            <p>
-              Een dagje Vlieland begint meestal met de boot van 9:00 of 10:30 vanuit Harlingen. Na aankomst pak je een fiets bij de haven en ben je in tien minuten in het dorp. Een wadexcursie of fietstocht met gids vult de ochtend, lunch in het dorp of op het strand, 's middags een zeehondentocht, blokarten of een wandeling door de duinen. Begin van de avond is de boot terug — of je blijft slapen.
-            </p>
-            <p>
-              Voor groepen plannen we dit van A tot Z. Bekijk onze{" "}
-              <Link to="/voorbeeldprogrammas" className="text-primary underline underline-offset-2">
-                voorbeeldprogramma's
-              </Link>{" "}
-              voor concrete dagindelingen, of{" "}
-              <Link to="/programma-samenstellen" className="text-primary underline underline-offset-2">
-                stel zelf een programma samen
-              </Link>.
-            </p>
-          </div>
-        </section>
+        <RouteChooser
+          title="Liever in één keer geregeld?"
+          intro="Voor groepen stellen wij een compleet programma samen: boot, activiteiten, lunch en eventueel een overnachting. Eén aanvraag, één factuur."
+        />
 
-        {/* Seizoen */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl pb-16">
-          <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-6">
-            Activiteiten per seizoen
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                season: "Voorjaar (maart–mei)",
-                text: "Rustig op het eiland, volop vogeltrek. Wadexcursies, fietstochten en duinwandelingen zijn op hun mooist. Ideaal voor heisessies en teamdagen.",
-              },
-              {
-                season: "Zomer (juni–augustus)",
-                text: "Alles draait: zeehondentochten, blokarten, strandactiviteiten en BBQ's op het strand. Reserveer ruim vooraf — aanbieders zitten vol.",
-              },
-              {
-                season: "Najaar (september–oktober)",
-                text: "Het beste van twee werelden: nog warm water, minder drukte en prachtig licht. Populairste periode voor bedrijfsuitjes.",
-              },
-              {
-                season: "Winter (november–februari)",
-                text: "Stormachtig en stil. Vliehors Expres, museum, proeverijen en vergaderarrangementen met een stevige wandeling ertussen.",
-              },
-            ].map(({ season, text }) => (
-              <Card key={season} className="h-full">
-                <CardContent className="p-5">
-                  <h3 className="font-display font-semibold text-foreground mb-2">{season}</h3>
-                  <p className="text-sm text-muted-foreground">{text}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-
-
-        {/* FAQ */}
-        <section className="bg-muted/30 py-16">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
-            <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-6">
-              Veelgestelde vragen over activiteiten op Vlieland
-            </h2>
-            <Accordion type="single" collapsible className="w-full">
-              {FAQ.map(({ q, a }, i) => (
-                <AccordionItem key={i} value={`item-${i}`}>
-                  <AccordionTrigger className="text-left font-semibold">{q}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">{a}</AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl py-16 text-center">
-          <h2 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">
-            Liever in één keer geregeld?
-          </h2>
-          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            We stellen voor groepen een compleet programma samen — boot, activiteiten, lunch en eventueel overnachting. Eén aanvraag, één factuur.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/programma-samenstellen">
-              <Button size="lg" className="w-full sm:w-auto">
-                Stel een programma samen
-              </Button>
-            </Link>
-            <Link to="/contact">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                Of neem contact op
-              </Button>
-            </Link>
-          </div>
-        </section>
+        <FaqSection schemaId="activiteiten-vlieland" pageUrl={URL} title="Veelgestelde vragen over activiteiten op Vlieland" items={faq} />
+        <RelatedLinks />
       </main>
 
-      <GoogleReviewsBlock title="Reviews over Bureau Vlieland" />
-      <RelatedLinks />
       <Footer />
     </div>
   );

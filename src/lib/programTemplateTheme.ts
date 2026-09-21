@@ -11,15 +11,14 @@ export type ProgramTheme =
 export interface ProgramThemeMeta {
   id: ProgramTheme;
   label: string;
-  className: string; // tailwind classes voor badge
 }
 
 export const THEME_META: Record<ProgramTheme, ProgramThemeMeta> = {
-  compleet: { id: "compleet", label: "Compleet", className: "bg-primary/90 text-primary-foreground" },
-  avontuur: { id: "avontuur", label: "Avontuur", className: "bg-orange-500/90 text-white" },
-  wellness: { id: "wellness", label: "Wellness", className: "bg-emerald-600/90 text-white" },
-  culinair: { id: "culinair", label: "Culinair", className: "bg-amber-600/90 text-white" },
-  chill:    { id: "chill",    label: "Chill",    className: "bg-sky-600/90 text-white" },
+  compleet: { id: "compleet", label: "Compleet" },
+  avontuur: { id: "avontuur", label: "Avontuur" },
+  wellness: { id: "wellness", label: "Wellness" },
+  culinair: { id: "culinair", label: "Culinair" },
+  chill:    { id: "chill",    label: "Chill" },
 };
 
 export const inferTheme = (name: string, description?: string | null): ProgramTheme => {

@@ -1,6 +1,8 @@
-import { CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Container, Section, SectionHeader, type SectionTone } from "@/components/system";
 import type { LandingFeature, LandingSection } from "@/content/landings/types";
 
@@ -136,8 +138,25 @@ export const BodySection = ({ section, tone, eyebrow, number }: { section: Landi
                     <Checklist items={section.checklist} />
                   </div>
                 )}
+                {(section.cta || section.secondary) && (
+                  <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                    {section.cta && (
+                      <Button asChild size="lg">
+                        <Link to={section.cta.to}>
+                          {section.cta.label}
+                          <ArrowRight aria-hidden="true" />
+                        </Link>
+                      </Button>
+                    )}
+                    {section.secondary && (
+                      <Button asChild size="lg" variant="outline">
+                        <Link to={section.secondary.to}>{section.secondary.label}</Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
-              <figure className="aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+              <figure className={cn("aspect-[4/3] overflow-hidden rounded-lg bg-muted", section.imagePosition === "left" && "lg:order-first")}>
                 <img src={section.image.src} alt={section.image.alt} className="h-full w-full object-cover" loading="lazy" />
               </figure>
             </div>

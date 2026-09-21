@@ -1,26 +1,32 @@
 import { useEffect } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { ArrowRight, BookOpen, Calendar, Euro, MessageSquareHeart, PenLine, Sparkles, Users } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
+import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
+import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useTemplateWithItems, usePublishedTemplates } from "@/hooks/useProgramTemplates";
 import { ProgramTimeline } from "@/components/programmas/ProgramTimeline";
-import { ProgramCard } from "@/components/programmas/ProgramCard";
-import { ProgramHighlights } from "@/components/programmas/ProgramHighlights";
-import { ProgramPractical } from "@/components/programmas/ProgramPractical";
-import { ArrowLeft, ArrowRight, Calendar, Users, Euro, Quote } from "lucide-react";
-import { useKenBurns } from "@/hooks/use-ken-burns";
+import { TemplateCard } from "@/components/programmas/TemplateCard";
+import { BodySection, Checklist, Paragraphs } from "@/components/landing/sections";
+import { sectionCounter } from "@/components/landing/sectionCounter";
+import { Container, FactList, LoadingState, Notice, PageHero, Pill, RouteChooser, Section, SectionHeader, type RouteChooserRoute } from "@/components/system";
 import { getTemplateCopy } from "@/lib/programTemplateCopy";
-import heroVlieland from "@/assets/hero-vlieland.jpg";
+import { renderRichText } from "@/lib/richText";
 import { transformImageUrl } from "@/lib/supabaseImage";
+import heroVlieland from "@/assets/hero-vlieland.jpg";
+
+const SITE = "https://bureauvlieland.nl";
+const EYEBROW = "Voorbeeldprogramma";
+
+const days = (n: number) => `${n} ${n === 1 ? "dag" : "dagen"}`;
 
 const VoorbeeldprogrammaDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const kenBurns = useKenBurns();
   const { data: template, isLoading, isError } = useTemplateWithItems(slug || null);
   const { data: allTemplates } = usePublishedTemplates();
 
@@ -30,13 +36,10 @@ const VoorbeeldprogrammaDetail = () => {
     }
   }, [isLoading, isError, template, slug, navigate]);
 
-  const heroImage = template?.image_url ? transformImageUrl(template.image_url, { width: 1800, quality: 80 }) : heroVlieland;
   const copy = getTemplateCopy(slug);
-  const related = (allTemplates || [])
-    .filter((t) => t.id !== slug)
-    .slice(0, 3);
-
-  const canonical = `https://bureauvlieland.nl/voorbeeldprogrammas/${slug}`;
+  const related = (allTemplates || []).filter((t) => t.id !== slug).slice(0, 3);
+  const canonical = `${SITE}/voorbeeldprogrammas/${slug}`;
+  const useUrl = `/programma-samenstellen?template=${slug}`;
   const description =
     template?.short_description ||
     template?.description?.slice(0, 155) ||
@@ -61,6 +64,49 @@ const VoorbeeldprogrammaDetail = () => {
       }
     : null;
 
+  const heroIntro = copy?.hook || template?.short_description || undefined;
+  const factSummary = copy?.hook && template?.short_description && template.short_description !== copy.hook ? template.short_description : undefined;
+  const facts = template
+    ? [
+        { icon: Calendar, label: "Duur", value: days(template.duration_days) },
+        ...(template.target_group ? [{ icon: Users, label: "Doelgroep", value: template.target_group }] : []),
+        ...(template.indicative_price_pp ? [{ icon: Euro, label: "Indicatie", value: `vanaf € ${template.indicative_price_pp} p.p., inclusief btw` }] : []),
+        ...(copy?.vibe?.length ? [{ icon: Sparkles, label: "Sfeer", value: copy.vibe.join(", ") }] : []),
+      ]
+    : [];
+  const descriptionParagraphs = template?.description ? template.description.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean) : [];
+
+  const routes: RouteChooserRoute[] = [
+    {
+      icon: PenLine,
+      title: "Gebruik dit programma",
+      text: "Open het programma in de programma-bouwer en pas datum, groepsgrootte en onderdelen aan uw groep aan.",
+      to: useUrl,
+      label: "Gebruik dit programma",
+      primary: true,
+    },
+    {
+      icon: MessageSquareHeart,
+      title: "Programma op maat",
+      text: "Liever niet zelf puzzelen? Vertel ons uw wensen, dan sturen wij een persoonlijk voorstel.",
+      to: "/programma-op-maat",
+      label: "Vertel ons uw wensen",
+    },
+    {
+      icon: BookOpen,
+      title: "Andere voorbeelden",
+      text: "Bekijk alle kant-en-klare programma's, per duur en thema.",
+      to: "/voorbeeldprogrammas",
+      label: "Alle voorbeeldprogramma's",
+    },
+  ];
+
+  const next = sectionCounter();
+  const highlightsAt = copy ? next() : null;
+  const forWhomAt = copy?.forWhom ? next() : null;
+  const practicalAt = copy && template ? next() : null;
+  const timelineAt = next();
+
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
@@ -74,281 +120,140 @@ const VoorbeeldprogrammaDetail = () => {
         {jsonLd && <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>}
       </Helmet>
       <Navigation />
+      <LandingBreadcrumb items={[{ label: "Voorbeeldprogramma's", href: "/voorbeeldprogrammas" }, { label: template?.name ?? "Programma" }]} />
 
       <main id="main-content">
-        {/* Hero */}
-        <section className="relative min-h-[62vh] flex items-end overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${heroImage})`, ...kenBurns }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-[hsl(var(--ocean-deep))] via-[hsl(var(--ocean-deep))]/55 to-[hsl(var(--ocean-deep))]/10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
-          </div>
-          <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl pb-14 pt-32 text-white">
-            <Link
-              to="/voorbeeldprogrammas"
-              className="inline-flex items-center gap-1.5 text-sm text-white/75 hover:text-white mb-8 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Alle voorbeeldprogramma's
-            </Link>
-            {isLoading ? (
-              <Skeleton className="h-16 w-2/3 bg-white/20" />
-            ) : (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="h-px w-10 bg-[hsl(var(--sunset))]" />
-                  <p className="text-xs uppercase tracking-[0.25em] text-white/85 font-semibold">
-                    Voorbeeldprogramma · {template?.duration_days} {template?.duration_days === 1 ? "dag" : "dagen"}
-                  </p>
+        {isLoading || !template ? (
+          <Section>
+            <Container size="content">
+              <LoadingState label="Programma laden…" />
+            </Container>
+          </Section>
+        ) : (
+          <>
+            <PageHero
+              image={template.image_url ? transformImageUrl(template.image_url, { width: 1800, quality: 80 }) : heroVlieland}
+              alt={template.name}
+              eyebrow={`${EYEBROW} · ${days(template.duration_days)}`}
+              title={template.name}
+              intro={heroIntro}
+              cta={{ label: "Gebruik dit programma", to: useUrl }}
+              secondary={{ label: "Alle voorbeeldprogramma's", to: "/voorbeeldprogrammas" }}
+            />
+
+            <Section>
+              <Container size="wide">
+                <div className="grid gap-10 lg:grid-cols-3">
+                  <div className="lg:col-span-2">
+                    <SectionHeader title="Wat u beleeft" />
+                    {descriptionParagraphs.length > 0 && <Paragraphs items={descriptionParagraphs} className="mt-6 max-w-3xl" />}
+                  </div>
+                  <div className="space-y-4 self-start">
+                    <FactList title="In het kort" summary={factSummary} items={facts} />
+                    <Button asChild size="lg" className="w-full">
+                      <Link to={useUrl}>
+                        Gebruik dit programma
+                        <ArrowRight aria-hidden="true" />
+                      </Link>
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground">Volledig aan te passen aan uw groep.</p>
+                  </div>
                 </div>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold mb-5 leading-[1.05] max-w-4xl">
-                  {template?.name}
-                </h1>
-                {(copy?.hook || template?.short_description) && (
-                  <p className="text-lg md:text-2xl text-white/90 max-w-3xl font-display italic leading-snug">
-                    {copy?.hook || template?.short_description}
-                  </p>
-                )}
-              </>
+              </Container>
+            </Section>
+
+            {copy && highlightsAt && (
+              <BodySection
+                section={{ kind: "prose", title: "Wat dit programma bijzonder maakt", paragraphs: copy.story, checklist: copy.highlights }}
+                tone={highlightsAt.tone}
+                eyebrow={EYEBROW}
+                number={highlightsAt.number}
+              />
             )}
-          </div>
-        </section>
 
-        {/* Fact strip */}
-        {template && (
-          <div className="bg-[hsl(var(--ocean-deep))] text-white border-t border-white/10">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-5 flex flex-wrap items-center gap-x-10 gap-y-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-[hsl(var(--sunset))]" />
-                <span className="text-white/70">Duur</span>
-                <span className="font-semibold">
-                  {template.duration_days} {template.duration_days === 1 ? "dag" : "dagen"}
-                </span>
-              </div>
-              {template.target_group && (
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-[hsl(var(--sunset))]" />
-                  <span className="text-white/70">Doelgroep</span>
-                  <span className="font-semibold">{template.target_group}</span>
-                </div>
-              )}
-              {template.indicative_price_pp && (
-                <div className="flex items-center gap-2">
-                  <Euro className="h-4 w-4 text-[hsl(var(--sunset))]" />
-                  <span className="text-white/70">Indicatie</span>
-                  <span className="font-semibold">vanaf €{template.indicative_price_pp} p.p.</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Verhaal + sticky positionerings-kaart */}
-        {(template?.description || copy) && (
-          <section className="py-20 bg-background">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl grid lg:grid-cols-[1fr_360px] gap-12 lg:gap-16">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-primary/70 font-semibold mb-3">
-                  Het verhaal
-                </p>
-                <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6 leading-tight">
-                  Wat u beleeft
-                </h2>
-                {template?.description && (
-                  <p className="text-lg text-foreground/80 whitespace-pre-line leading-relaxed">
-                    {template.description}
-                  </p>
-                )}
-              </div>
-
-              <aside className="lg:sticky lg:top-24 self-start">
-                <div
-                  className="bg-card rounded-2xl border border-border/60 p-7"
-                  style={{ boxShadow: "var(--shadow-medium)" }}
-                >
-                  <p className="text-xs uppercase tracking-[0.2em] text-primary/70 font-semibold mb-4">
-                    In het kort
-                  </p>
-                  <dl className="space-y-3 text-sm border-b border-border/60 pb-5 mb-5">
-                    <div className="flex justify-between gap-4">
-                      <dt className="text-muted-foreground">Duur</dt>
-                      <dd className="font-semibold text-foreground text-right">
-                        {template?.duration_days} {template?.duration_days === 1 ? "dag" : "dagen"}
-                      </dd>
-                    </div>
-                    {template?.target_group && (
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-muted-foreground">Doelgroep</dt>
-                        <dd className="font-semibold text-foreground text-right">
-                          {template.target_group}
-                        </dd>
-                      </div>
-                    )}
-                    {template?.indicative_price_pp && (
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-muted-foreground">Vanaf</dt>
-                        <dd className="font-semibold text-foreground text-right">
-                          €{template.indicative_price_pp} p.p.
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-
-                  {copy?.vibe && copy.vibe.length > 0 && (
-                    <div className="mb-6">
-                      <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground mb-2">
-                        Sfeer
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {copy.vibe.map((v) => (
-                          <span
-                            key={v}
-                            className="text-xs font-medium px-2.5 py-1 rounded-full bg-[hsl(var(--accent-soft))] text-primary"
-                          >
-                            {v}
-                          </span>
-                        ))}
-                      </div>
+            {copy?.forWhom && forWhomAt && (
+              <Section tone="sand">
+                <Container size="content">
+                  <SectionHeader eyebrow={EYEBROW} number={forWhomAt.number} title="Voor wie" align="center" />
+                  <p className="mx-auto mt-8 max-w-3xl text-center font-display text-display-md font-light leading-snug text-foreground">{copy.forWhom}</p>
+                  {copy.vibe && copy.vibe.length > 0 && (
+                    <div className="mt-6 flex flex-wrap justify-center gap-2">
+                      {copy.vibe.map((v) => (
+                        <Pill key={v} tone="neutral" size="md" className="bg-card">
+                          {v}
+                        </Pill>
+                      ))}
                     </div>
                   )}
+                </Container>
+              </Section>
+            )}
 
-                  <Link to={`/programma-samenstellen?template=${slug}`} className="block">
-                    <Button className="w-full gap-2" size="lg">
-                      Gebruik dit programma
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <p className="text-xs text-muted-foreground text-center mt-3">
-                    Volledig aan te passen aan uw groep
+            {copy && practicalAt && (
+              <Section tone={practicalAt.tone}>
+                <Container size="content">
+                  <SectionHeader eyebrow={EYEBROW} number={practicalAt.number} title="Praktische informatie" />
+                  <div className="mt-8 max-w-3xl">
+                    <Checklist items={copy.practical} />
+                    {template.duration_days === 2 ? (
+                      <Notice tone="info" title="Doordeweekse aankomst aanbevolen" className="mt-8">
+                        <p>
+                          Voor tweedaagse programma's adviseren wij een aankomst van maandag tot en met donderdag. In het weekend hanteren onze
+                          logiespartners doorgaans een minimumverblijf van twee nachten, waardoor een tweedaags arrangement op vrijdag of zaterdag
+                          vaak niet mogelijk is. Wij denken graag met u mee over alternatieve data.
+                        </p>
+                      </Notice>
+                    ) : (
+                      <p className="mt-8 text-lg font-medium leading-relaxed text-foreground">
+                        Dit voorbeeldprogramma is een vertrekpunt. Wij stemmen tijden, activiteiten en aantallen graag met u af, zodat het
+                        programma naadloos aansluit bij uw groep en gelegenheid.
+                      </p>
+                    )}
+                  </div>
+                </Container>
+              </Section>
+            )}
+
+            <Section tone={timelineAt.tone}>
+              <Container size="content">
+                <SectionHeader eyebrow={EYEBROW} number={timelineAt.number} title="Programma per dag" intro="Tijden zijn indicatief; wij stemmen ze af op de boot, het getij en uw groep." />
+                <div className="mt-10">
+                  <ProgramTimeline template={template} />
+                </div>
+              </Container>
+            </Section>
+
+            {related.length > 0 && (
+              <Section tone="sand">
+                <Container size="wide">
+                  <SectionHeader eyebrow="Verder kijken" title="Andere programma's" align="center" />
+                  <ul className="mt-12 grid gap-4 md:grid-cols-3" aria-label="Andere voorbeeldprogramma's">
+                    {related.map((t) => (
+                      <li key={t.id}>
+                        <TemplateCard template={t} />
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-8 text-center text-sm text-muted-foreground">
+                    {renderRichText("Alle voorbeelden staan bij [voorbeeldprogramma's](/voorbeeldprogrammas).")}
                   </p>
-                </div>
-              </aside>
-            </div>
-          </section>
+                </Container>
+              </Section>
+            )}
+
+            <RouteChooser
+              title="Klaar voor uw eilandbeleving?"
+              intro="Pas datum, groepsgrootte en activiteiten naar wens aan; wij verzorgen de rest. Eén partij, één factuur."
+              routes={routes}
+            />
+          </>
         )}
 
-        {/* Highlights + storytelling */}
-        {copy && <ProgramHighlights copy={copy} />}
-
-        {/* Voor wie — donker contrastblok */}
-        {copy?.forWhom && (
-          <section className="py-20 bg-[hsl(var(--ocean-deep))] text-white relative overflow-hidden">
-            <div className="absolute inset-0 opacity-[0.05]" style={{ background: "var(--gradient-sunset)" }} />
-            <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl text-center">
-              <Quote className="h-10 w-10 mx-auto mb-6" style={{ color: "hsl(var(--sunset))" }} />
-              <p className="text-xs uppercase tracking-[0.25em] text-white/70 font-semibold mb-5">
-                Voor wie
-              </p>
-              <p className="text-2xl md:text-3xl font-display leading-snug text-white/95">
-                {copy.forWhom}
-              </p>
-              {copy.vibe && copy.vibe.length > 0 && (
-                <div className="mt-8 flex flex-wrap gap-2 justify-center">
-                  {copy.vibe.map((v) => (
-                    <span
-                      key={v}
-                      className="text-sm font-medium px-3 py-1 rounded-full bg-white/10 text-white border border-white/20 backdrop-blur-sm"
-                    >
-                      {v}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Praktisch */}
-        {copy && template && (
-          <ProgramPractical copy={copy} durationDays={template.duration_days} />
-        )}
-
-        {/* Tijdlijn */}
-        <section className="py-20 bg-background">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
-            <div className="mb-10">
-              <p className="text-xs uppercase tracking-[0.2em] text-primary/70 font-semibold mb-3">
-                Het verloop
-              </p>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground">
-                Programma per dag
-              </h2>
-            </div>
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            ) : template ? (
-              <ProgramTimeline template={template} />
-            ) : null}
-          </div>
-        </section>
-
-        {/* CTA call-out */}
-        <section className="pb-20 bg-background">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
-            <div
-              className="relative rounded-3xl overflow-hidden p-10 md:p-14 text-white text-center"
-              style={{ background: "var(--gradient-hero)", boxShadow: "var(--shadow-dramatic)" }}
-            >
-              <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-20" style={{ background: "var(--gradient-sunset)" }} />
-              <div className="relative">
-                <p className="text-xs uppercase tracking-[0.25em] text-white/80 font-semibold mb-4">
-                  Klaar voor uw eilandbeleving?
-                </p>
-                <h3 className="text-3xl md:text-4xl font-display font-bold mb-4 leading-tight">
-                  Stel dit programma op maat samen
-                </h3>
-                <p className="text-white/85 max-w-xl mx-auto mb-8">
-                  Pas datum, groepsgrootte en activiteiten naar wens aan in onze
-                  configurator. Wij verzorgen de rest — één partij, één factuur.
-                </p>
-                <Link to={`/programma-samenstellen?template=${slug}`}>
-                  <Button
-                    size="lg"
-                    className="text-base px-8 gap-2 border-0"
-                    style={{
-                      background: "hsl(var(--sunset))",
-                      color: "hsl(var(--sunset-foreground))",
-                    }}
-                  >
-                    Gebruik dit programma
-                    <ArrowRight className="h-5 w-5" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Andere programma's */}
-        {related.length > 0 && (
-          <section className="py-20" style={{ background: "var(--gradient-sand)" }}>
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-              <div className="text-center mb-12">
-                <p className="text-xs uppercase tracking-[0.2em] text-primary/70 font-semibold mb-3">
-                  Verder kijken
-                </p>
-                <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground">
-                  Andere programma's
-                </h2>
-              </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {related.map((t) => (
-                  <ProgramCard key={t.id} template={t} />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        <RelatedLinks pathname="/voorbeeldprogrammas" title="Zelf verder bouwen" />
       </main>
 
-      <RelatedLinks pathname="/voorbeeldprogrammas" title="Zelf verder bouwen" />
       <Footer />
+      {template && <StickyMobileCTA label="Gebruik dit programma" to={useUrl} />}
     </div>
   );
 };
