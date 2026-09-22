@@ -51,6 +51,7 @@ const SnelAanvragen = lazy(() => import("./pages/SnelAanvragen"));
 const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
 const SharedProgram = lazy(() => import("./pages/SharedProgram"));
 const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
+const Beoordeling = lazy(() => import("./pages/Beoordeling"));
 const ParticipantProgram = lazy(() => import("./pages/ParticipantProgram"));
 const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
 const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
@@ -98,6 +99,7 @@ const AdminInvoicing = lazy(() => import("./pages/admin/AdminInvoicing"));
 const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation"));
 const AdminAccommodationDetail = lazy(() => import("./pages/admin/AdminAccommodationDetail"));
 const AdminPartnerProfiles = lazy(() => import("./pages/admin/AdminPartnerProfiles"));
+const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const AdminProgramNew = lazy(() => import("./pages/admin/AdminProgramNew"));
 const AdminQuotePreview = lazy(() => import("./pages/admin/AdminQuotePreview"));
@@ -224,6 +226,7 @@ const App = () => {
                 <ParticipantProgram />
               </FeatureGate>
             } />
+            <Route path="/beoordeling/:token" element={<Beoordeling />} />
             <Route path="/concept/:token" element={<ConceptRecover />} />
             <Route path="/mijn-logies/:token" element={
               <FeatureGate featureKey="customer_portal_enabled">
@@ -291,6 +294,7 @@ const App = () => {
             <Route path="/admin/logies" element={<Navigate to="/admin/werkbank?kind=logies" replace />} />
             <Route path="/admin/logies-legacy" element={<AdminAccommodation />} />
             <Route path="/admin/partnerprofielen" element={<AdminPartnerProfiles />} />
+            <Route path="/admin/beoordelingen" element={<AdminReviews />} />
             <Route path="/admin/logiesprofielen" element={<Navigate to="/admin/partnerprofielen" replace />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />

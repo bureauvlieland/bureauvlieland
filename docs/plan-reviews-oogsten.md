@@ -1,8 +1,8 @@
 # Plan: referenties oogsten via de eigen applicatie
 
 Status: besluiten genomen door Erwin op 22 september 2026 (alle adviezen
-overgenomen, zie "Besluiten"). Fase 1 is in aanbouw; daarna fase voor fase
-een eigen pull request met preview.
+overgenomen, zie "Besluiten"). Fase 1 (verzamelen) is op 22 september
+gebouwd; fase 2 tot en met 4 volgen elk in een eigen pull request.
 
 Aanleiding (Erwin, 22 september): referenties oogsten bij klanten, niet per
 se via Google maar via de eigen applicatie, en die vervolgens kunnen
@@ -124,6 +124,29 @@ eigen pagina, Google als tweede regel) en automatisch versturen aan.
 Instelling voor de Tripadvisor-link. Admin: Content → Beoordelingen met
 publiceren en verbergen; taak met hoge prioriteit bij score 3 of lager.
 Meting: verstuurd, geopend, geklikt, ingevuld, Google-knop geklikt.
+
+Fase 1 is op 22 september gebouwd. Elk programma heeft een vaste
+beoordelingslink (`review_token`, los van het portaal-token dat na 90
+dagen verloopt). De pagina `/beoordeling/:token` staat op het
+ontwerpsysteem (`FunnelHead`, `FormField`, sterren als radiogroep,
+`SuccessScreen`): score, "Wat sprak u het meest aan?", "Wat kan beter?"
+(intern), naam, functie, organisatie en de twee toestemmingen, standaard
+uit. De bedankpagina toont de eigen tekst met "Kopieer uw tekst" en de
+knoppen naar Google en Tripadvisor (die laatste alleen als de instelling
+`customer_review_tripadvisor_url` gevuld is), voor iedereen; bij een score
+van 3 of lager staat er dat wij persoonlijk contact opnemen en krijgt het
+bureau een taak met hoge prioriteit ("Lage beoordeling"). De edge function
+`customer-review` (openbaar, de link is het bewijs) doet context, opslaan
+(één per programma, met tijdstip en IP van de toestemming) en het
+vastleggen van een klik naar Google of Tripadvisor; tien Deno-tests. De
+nazorgmail heeft nu één knop "Deel uw ervaring" naar de eigen pagina en
+Google als tweede regel, en gaat automatisch drie dagen na de laatste
+uitgevoerde activiteit (`customer_aftersales_auto_send` aan). Admin:
+Content → Beoordelingen met score, teksten, toestemmingen, status (nieuw,
+gepubliceerd, verborgen; publiceren alleen met toestemming) en een eigen
+citaat. Nog niet: een knop in het klantportaal en de deelnemers (fase 4),
+het tonen op de site (fase 2) en de beoordelingspagina in de visuele
+regressietest (kan zodra de functie live staat en er een opname van is).
 
 **Fase 2: tonen op de site (1 tot 2 dagen).** Eigen beoordelingen in de
 klantquotes op de homepage, per landingspagina en per activiteitpagina, in

@@ -25,7 +25,8 @@ export type AutoTodoType =
   | "forward_accommodation_quote"
   | "quote_expiring_soon"
   | "customer_counter_proposal"
-  | "customer_aftersales";
+  | "customer_aftersales"
+  | "customer_review_low";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -331,5 +332,10 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Aftersales / review",
     color: "text-pink-700",
     bgColor: "bg-pink-100",
+  },
+  customer_review_low: {
+    label: "Lage beoordeling",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
   },
 };

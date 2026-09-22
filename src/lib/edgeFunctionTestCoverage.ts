@@ -49,6 +49,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "send-bureau-invoice-to-customer": "deno",
   "send-commission-invoice-to-partner": "deno",
   "send-customer-aftersales": "deno",
+  "customer-review": "deno",
   "send-guest-details-reminder": "deno",
   "send-items-to-partners": "deno",
   "send-quote-offer": "deno",
@@ -161,6 +162,8 @@ const REGISTRY: Row[] = [
   { name: "resolve-customer-token", category: "workflow", critical: true },
   { name: "check-pending-items", category: "workflow", critical: false },
   { name: "chat-visitor-send", category: "workflow", critical: false },
+
+  { name: "customer-review", category: "workflow", critical: false },
 
   // ── Utility / read-only ─────────────────────────────────────────────────
   { name: "get-accommodation-portal", category: "utility", critical: false },
