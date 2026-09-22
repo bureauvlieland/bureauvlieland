@@ -446,6 +446,53 @@ naam, aantal en periode. Geen citaten die er niet zijn; wel de feiten.
   Zoekopdrachten" en "Prestaties → Pagina's" (laatste 12 maanden) als CSV.
   Dat is de enige bron die zegt of de generieke termen iets brengen of dat
   de vragen vóór de hotelkeuze al binnenkomen.
+- Nulmeting Search Console (export van 22 september 2026, standaardperiode
+  van drie maanden, dus deels nog de oude site en de oude adressen):
+  - 755 klikken op 64.969 vertoningen. Activiteitenpagina's 465 klikken
+    (home, zeehonden, wadlopen, boeken, bouwstenen, evenementen, catering),
+    losse activiteiten 81, oude adressen 104, doelgroep- en groepspagina's
+    26 op 17.748 vertoningen, wizard 0 op 1.008.
+  - Merk: "bureau vlieland" 108 klikken op 164 vertoningen, positie 1.
+    Zeehonden met Vlieland 69 klikken op 4.334 vertoningen ("zeehondentocht
+    vlieland" positie 8,6), wadlopen 35 op 1.002 (positie 7,4).
+  - Groepsvragen met Vlieland of Wadden: 5.116 vertoningen, 6 klikken. Per
+    zoekopdracht (vertoningen, positie, klikken): teambuilding vlieland
+    818, 9,3, 0; bedrijfsuitje vlieland 583, 11,6, 4; personeelsuitje
+    vlieland 558, 8,4, 1; incentive vlieland 488, 3,6, 0; vergaderen
+    vlieland 260, 8,4, 0; congres vlieland 204, 14,7, 0; heisessie vlieland
+    87, 25,3, 0; groepsaccommodatie vlieland 43, 44,4, 1; teambuilding
+    wadden of waddeneilanden 590, 12 tot 24, 0; personeelsuitje wadden of
+    waddeneilanden 486, 17 tot 23, 0; incentive waddeneilanden 232, 9,6, 0;
+    bedrijfsfeest waddeneilanden 220, 8,5, 0. Niemand zoekt op
+    groepsgrootte.
+  - Groepspagina's (vertoningen, positie, klikken): bedrijfsuitje 3.823,
+    57,8, 3; teamuitje 2.060, 49,2, 0; zakelijk evenement 1.804, 31,4, 0;
+    voor wie 1.759, 47,7, 2; incentive 1.689, 19,0, 0; meerdaags 1.062,
+    59,5, 2; heisessie 982, 63,1, 0; ideeën 820, 62,0, 0; groepsweekend
+    728, 73,4, 2; familieweekend 434, 62,4, 5; jubileum 335, 46,6, 5;
+    logies 144, 34,3, 2.
+  - Ruis: zoekopdrachten met Zeeland en omstreken 5.458 vertoningen en 1
+    klik, allemaal op pagina 5 tot 10. Filter bij het vergelijken op
+    zoekopdrachten met "vlieland" of "wadden". www.bureauvlieland.nl/ telt
+    apart mee: 7.581 vertoningen, 51 klikken.
+  - Lezing: de vragen vóór de hotelkeuze komen binnen en de site staat er
+    op pagina 1 of 2 voor, maar het resultaat wordt niet gekozen. Dat
+    bevestigt de diagnose van dit plan. De groepsgrootte is een argument op
+    de pagina, niet in het zoekwoord.
+  - Kleine verbeteringen die hieruit volgen, ter beslissing van Erwin, elk
+    in een eigen PR: titels en omschrijvingen van incentive, teamuitje en
+    bedrijfsuitje herschrijven op de vraag die binnenkomt; redirects van
+    oude adressen naar de passende pagina (lasergamen, zeehondentochten,
+    wadexcursie, strandspektakel, /overnachten/ naar /logies-vlieland,
+    /programmas naar /voorbeeldprogrammas, /home en /en/ naar de homepage);
+    de vragen uit de AI-modus van Google (leeftijd, prijs, vaarduur,
+    opstapplek, laagwater) als vraag en antwoord op de zeehonden- en
+    wadlooppagina's; controle in Netlify dat www naar bureauvlieland.nl
+    doorstuurt; als enige nieuwe pagina vóór het voorjaar eventueel
+    personeelsuitje.
+  - Vergelijken in het voorjaar van 2027: Search Console bewaart 16
+    maanden, dus met de datumvergelijking in Search Console zelf, een even
+    lange periode, gefilterd op "vlieland".
 - De trechter van de beoordelingen blijft; hij meet iets anders.
 
 ## Fasen
