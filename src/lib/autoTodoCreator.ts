@@ -26,7 +26,9 @@ export type AutoTodoType =
   | "quote_expiring_soon"
   | "customer_counter_proposal"
   | "customer_aftersales"
-  | "customer_review_low";
+  | "customer_review_low"
+  | "reference_case_approved"
+  | "reference_case_feedback";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -337,5 +339,15 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Lage beoordeling",
     color: "text-red-700",
     bgColor: "bg-red-100",
+  },
+  reference_case_approved: {
+    label: "Referentie akkoord",
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+  },
+  reference_case_feedback: {
+    label: "Referentie: wens klant",
+    color: "text-amber-700",
+    bgColor: "bg-amber-100",
   },
 };

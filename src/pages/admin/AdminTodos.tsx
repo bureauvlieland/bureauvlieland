@@ -238,6 +238,14 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/beoordelingen?aanvraag=${t.related_request_id}` : "/admin/beoordelingen",
     linkLabel: "Bekijk beoordeling",
   },
+  reference_case_approved: {
+    getLink: (t) => t.related_request_id ? `/admin/referenties?aanvraag=${t.related_request_id}` : "/admin/referenties",
+    linkLabel: "Publiceer referentie",
+  },
+  reference_case_feedback: {
+    getLink: (t) => t.related_request_id ? `/admin/referenties?aanvraag=${t.related_request_id}` : "/admin/referenties",
+    linkLabel: "Bekijk wens",
+  },
   post_execution_invoice_check: {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
     linkLabel: "Bekijk factuur",

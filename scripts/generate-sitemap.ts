@@ -68,6 +68,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/catering", changefreq: "monthly", priority: "0.7" },
   { path: "/catering-aanvragen", changefreq: "monthly", priority: "0.6" },
   { path: "/voorbeeldprogrammas", changefreq: "weekly", priority: "0.8" },
+  { path: "/referenties", changefreq: "weekly", priority: "0.7" },
   { path: "/evenementen", changefreq: "monthly", priority: "0.7" },
   
   // Landingspagina's
@@ -156,6 +157,25 @@ async function fetchTemplateSlugs(): Promise<Array<{ slug: string; updated_at: s
 }
 
 /**
+ * Referentiepagina's zijn optioneel: nul is een normale uitkomst (er zijn er
+ * nog geen, of de klant trok zijn akkoord in). Bestaat de view nog niet
+ * (nieuwe migratie die pas na de merge wordt uitgerold), dan waarschuwen we
+ * en gaan we door zonder referenties in plaats van de build te laten falen.
+ */
+async function fetchReferenceCaseSlugs(): Promise<Array<{ slug: string; updated_at: string }>> {
+  try {
+    const rows = await fetchRows<{ slug: string; updated_at: string | null }>(
+      "published_reference_cases?select=slug,updated_at",
+      "published_reference_cases",
+    );
+    return rows.filter((r) => r.slug).map((r) => ({ slug: r.slug, updated_at: r.updated_at?.slice(0, 10) ?? today }));
+  } catch (err) {
+    console.warn("[sitemap] referenties overgeslagen:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
+/**
  * De dynamische bronnen leveren normaal tientallen pagina's. Leveren ze er
  * nul, dan is er iets mis met de bron, niet met de website — en overschrijven
  * we een goede sitemap met een die de helft van de vindbare pagina's mist.
@@ -165,7 +185,7 @@ export function isSuspiciouslyEmpty(blockCount: number, templateCount: number): 
 }
 
 async function main() {
-  const [blocks, templates] = await Promise.all([fetchBuildingBlockSlugs(), fetchTemplateSlugs()]);
+  const [blocks, templates, references] = await Promise.all([fetchBuildingBlockSlugs(), fetchTemplateSlugs(), fetchReferenceCaseSlugs()]);
 
   if (isSuspiciouslyEmpty(blocks.length, templates.length)) {
     throw new Error(
@@ -186,10 +206,17 @@ async function main() {
     priority: "0.7",
   }));
 
-  const all = [...staticEntries, ...blockEntries, ...templateEntries];
+  const referenceEntries: SitemapEntry[] = references.map((r) => ({
+    path: `/referenties/${r.slug}`,
+    lastmod: r.updated_at,
+    changefreq: "monthly",
+    priority: "0.6",
+  }));
+
+  const all = [...staticEntries, ...blockEntries, ...templateEntries, ...referenceEntries];
   const xml = buildSitemap(all);
   writeFileSync(resolve("public/sitemap.xml"), xml);
-  console.log(`sitemap.xml written (${all.length} entries: ${staticEntries.length} static + ${blockEntries.length} blocks + ${templateEntries.length} templates)`);
+  console.log(`sitemap.xml written (${all.length} entries: ${staticEntries.length} static + ${blockEntries.length} blocks + ${templateEntries.length} templates + ${referenceEntries.length} references)`);
 }
 
 const isDirectRun =

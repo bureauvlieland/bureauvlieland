@@ -2,8 +2,9 @@
 
 Status: besluiten genomen door Erwin op 22 september 2026 (alle adviezen
 overgenomen, zie "Besluiten"; later die dag: Tripadvisor vervalt helemaal).
-Fase 1 (verzamelen) en fase 2 (tonen op de site) zijn op 22 september
-gebouwd; fase 3 en 4 volgen elk in een eigen pull request.
+Fase 1 (verzamelen), fase 2 (tonen op de site) en fase 3
+(referentiepagina's) zijn op 22 september gebouwd; fase 4 volgt in een
+eigen pull request.
 
 Aanleiding (Erwin, 22 september): referenties oogsten bij klanten, niet per
 se via Google maar via de eigen applicatie, en die vervolgens kunnen
@@ -184,6 +185,36 @@ ontwerpsysteem (`PageHero`, `FactList`, tijdlijn, `PersonQuote`,
 `RouteChooser`), in de sitemap, gelinkt vanaf de landingspagina's en de
 homepage ("Zo deden anderen het"). De knop "Zoiets ook?" opent de wizard
 met dezelfde bouwstenen.
+
+Fase 3 is op 22 september gebouwd. Tabel `reference_cases` bewaart per
+programma een momentopname (dagen met onderdelen op tijd, foto's van de
+bouwstenen, feiten: soort, groepsgrootte, periode, duur, overnachting), het
+citaat uit de beoordeling en de teksten; publiceren kan alleen na akkoord
+van de klant, en de database dwingt dat af (status gepubliceerd vereist een
+akkoord met tijdstip, naam en IP). Admin: Content → Referenties. Een concept
+ontstaat uit een beoordeling met toestemming (knop "Referentie" bij
+Beoordelingen, of de lijst "Toestemming gekregen, nog geen pagina"); Erwin
+redigeert titel, webadres, intro, tekst en citaat, met een AI-voorzet
+(`draft-reference-case`: feitelijk, u-vorm, geen superlatieven en niets
+verzinnen), bekijkt de voorvertoning, vraagt akkoord
+(`send-reference-approval` stuurt de mail "Mag deze referentiepagina over uw
+programma online?" met de link naar `/referentie-akkoord/<token>`),
+publiceert of verbergt, en kan de momentopname vernieuwen zonder de teksten
+aan te raken. De klant ziet op de akkoordpagina precies de pagina zoals hij
+online komt, geeft akkoord met zijn naam (taak voor Erwin: publiceren) of
+stuurt een opmerking (taak met hoge prioriteit). Publiek: `/referenties`
+(overzicht met `MediaCard`s) en `/referenties/<slug>` (`PageHero` met de
+eerste foto, tekst met `FactList` "In het kort", tijdlijn per dag,
+`PersonQuote`, "Andere referenties", `RouteChooser` "Zoiets ook?"); die knop
+opent de programma-bouwer met dezelfde bouwstenen op dezelfde dagen
+(`?blocks=`), na de basisstap met de eigen datum en groepsgrootte. Gelinkt
+uit het menu (Inspiratie), de voettekst en, zodra er een referentie online
+staat, onder de beoordelingen op de homepage en de landingspagina's; in de
+sitemap via de view `published_reference_cases`. Edge function
+`reference-case` (openbaar, de link is het bewijs) met zeven tests;
+`draft-reference-case` en `send-reference-approval` alleen voor admins. Nog
+niet: de referentiepagina's in de visuele regressietest (kan zodra de view
+live staat en er een gepubliceerde referentie is om op te nemen).
 
 **Fase 4: opvolging en overzicht (1 dag).** De eenmalige herinnering voor
 Google. Een blok in admin met de trechter (verstuurd, ingevuld,

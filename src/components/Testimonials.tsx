@@ -3,8 +3,10 @@ import { Container, Section, SectionHeader } from "@/components/system";
 import { RatingStars } from "@/components/RatingStars";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { REVIEW_LINK_FALLBACK, useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
+import { usePublishedReferenceCases } from "@/hooks/usePublishedReferenceCases";
 import { usePublishedReviews } from "@/hooks/usePublishedReviews";
 import { mergeWithGoogle } from "@/lib/reviews";
+import { renderRichText } from "@/lib/richText";
 
 /**
  * Klantquotes op de homepage: de eigen gepubliceerde beoordelingen (nieuwste
@@ -15,6 +17,7 @@ import { mergeWithGoogle } from "@/lib/reviews";
 export const Testimonials = ({ number }: { number: string }) => {
   const { data: google } = useGoogleReviewsCache();
   const { data: eigen = [] } = usePublishedReviews();
+  const { data: referenties = [] } = usePublishedReferenceCases();
 
   const testimonials = mergeWithGoogle(eigen, google?.reviews ?? [], 12);
   const hasRating = Boolean(google?.rating && google.review_count > 0);
@@ -57,6 +60,11 @@ export const Testimonials = ({ number }: { number: string }) => {
             <a href={placeUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-4 hover:text-ocean-deep">
               Bekijk alle reviews op Google
             </a>
+          </p>
+        )}
+        {referenties.length > 0 && (
+          <p className={hasRating ? "mt-3 text-center text-sm text-muted-foreground" : "mt-8 text-center text-sm text-muted-foreground"}>
+            {renderRichText("Zo deden andere groepen het: lees de [referenties](/referenties) met het volledige programma.")}
           </p>
         )}
       </Container>

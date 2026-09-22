@@ -52,6 +52,9 @@ const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
 const SharedProgram = lazy(() => import("./pages/SharedProgram"));
 const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
 const Beoordeling = lazy(() => import("./pages/Beoordeling"));
+const Referenties = lazy(() => import("./pages/Referenties"));
+const ReferentieDetail = lazy(() => import("./pages/ReferentieDetail"));
+const ReferentieAkkoord = lazy(() => import("./pages/ReferentieAkkoord"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const ParticipantProgram = lazy(() => import("./pages/ParticipantProgram"));
 const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
@@ -101,6 +104,7 @@ const AdminAccommodation = lazy(() => import("./pages/admin/AdminAccommodation")
 const AdminAccommodationDetail = lazy(() => import("./pages/admin/AdminAccommodationDetail"));
 const AdminPartnerProfiles = lazy(() => import("./pages/admin/AdminPartnerProfiles"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
+const AdminReferenties = lazy(() => import("./pages/admin/AdminReferenties"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const AdminProgramNew = lazy(() => import("./pages/admin/AdminProgramNew"));
 const AdminQuotePreview = lazy(() => import("./pages/admin/AdminQuotePreview"));
@@ -171,6 +175,8 @@ const App = () => {
             <Route path="/sitemap" element={<Sitemap />} />
             <Route path="/voorbeeldprogrammas" element={<VoorbeeldprogrammaOverzicht />} />
             <Route path="/voorbeeldprogrammas/:slug" element={<VoorbeeldprogrammaDetail />} />
+            <Route path="/referenties" element={<Referenties />} />
+            <Route path="/referenties/:slug" element={<ReferentieDetail />} />
             <Route path="/veelgestelde-vragen" element={<VeelgesteldeVragen />} />
             <Route path="/faq" element={<Navigate to="/veelgestelde-vragen" replace />} />
             <Route path="/links" element={<LinksPage />} />
@@ -229,6 +235,7 @@ const App = () => {
               </FeatureGate>
             } />
             <Route path="/beoordeling/:token" element={<Beoordeling />} />
+            <Route path="/referentie-akkoord/:token" element={<ReferentieAkkoord />} />
             <Route path="/concept/:token" element={<ConceptRecover />} />
             <Route path="/mijn-logies/:token" element={
               <FeatureGate featureKey="customer_portal_enabled">
@@ -297,6 +304,7 @@ const App = () => {
             <Route path="/admin/logies-legacy" element={<AdminAccommodation />} />
             <Route path="/admin/partnerprofielen" element={<AdminPartnerProfiles />} />
             <Route path="/admin/beoordelingen" element={<AdminReviews />} />
+            <Route path="/admin/referenties" element={<AdminReferenties />} />
             <Route path="/admin/logiesprofielen" element={<Navigate to="/admin/partnerprofielen" replace />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />

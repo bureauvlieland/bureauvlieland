@@ -1,8 +1,10 @@
 import { Container, Section, SectionHeader, type SectionTone } from "@/components/system";
 import { RatingStars } from "@/components/RatingStars";
 import { REVIEW_LINK_FALLBACK, useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
+import { usePublishedReferenceCases } from "@/hooks/usePublishedReferenceCases";
 import { usePublishedReviews } from "@/hooks/usePublishedReviews";
 import { mergeWithGoogle, selectReviews, toDisplay, type ReviewScope } from "@/lib/reviews";
+import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 import { ReviewCard } from "./ReviewCard";
 
@@ -38,6 +40,7 @@ export const ReviewsBlock = ({
 }: ReviewsBlockProps) => {
   const { data: eigen = [] } = usePublishedReviews();
   const { data: google } = useGoogleReviewsCache();
+  const { data: referenties = [] } = usePublishedReferenceCases();
 
   const gekozen = selectReviews(eigen, scope, { limit, strict: !fallbackToGoogle });
   const items = fallbackToGoogle ? mergeWithGoogle(gekozen, google?.reviews ?? [], limit) : gekozen.map(toDisplay);
@@ -82,6 +85,11 @@ export const ReviewsBlock = ({
             >
               Bekijk alle reviews op Google
             </a>
+          </p>
+        )}
+        {referenties.length > 0 && (
+          <p className={cn("text-center text-sm text-muted-foreground", toonGoogle ? "mt-3" : "mt-8")}>
+            {renderRichText("Zo deden andere groepen het: lees de [referenties](/referenties) met het volledige programma.")}
           </p>
         )}
       </Container>

@@ -11,6 +11,7 @@ import {
   ClipboardList,
   HelpCircle,
   Zap,
+  BookMarked,
 } from "lucide-react";
 
 interface NavItem {
@@ -77,6 +78,12 @@ const inspiratieItems: NavItem[] = [
     href: "/voorbeeldprogrammas",
     description: "Kant-en-klare programma's van eerdere groepen",
     icon: Sparkles,
+  },
+  {
+    label: "Referenties",
+    href: "/referenties",
+    description: "Zo deden andere groepen het: echte programma's met citaat",
+    icon: BookMarked,
   },
   {
     label: "Bedrijfsuitje ideeën",

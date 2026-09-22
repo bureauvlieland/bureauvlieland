@@ -134,6 +134,12 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "sender_label",
     "subject"
   ],
+  "reference_case_approval": [
+    "approval_url",
+    "customer_name",
+    "reference_number",
+    "title"
+  ],
   "customer_aftersales_review": [
     "customer_name",
     "else",

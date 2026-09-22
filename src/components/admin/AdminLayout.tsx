@@ -47,7 +47,7 @@ import {
   Inbox,
   MapPin,
   Ticket,
-  Landmark, Star } from "lucide-react";
+  Landmark, Star, BookMarked } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useSalesInboxCount } from "@/hooks/useSalesInbox";
@@ -151,6 +151,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Locaties", url: "/admin/locaties", icon: MapPin },
         { title: "Partnerprofielen", url: "/admin/partnerprofielen", icon: Hotel },
         { title: "Beoordelingen", url: "/admin/beoordelingen", icon: Star },
+        { title: "Referenties", url: "/admin/referenties", icon: BookMarked },
         { title: "Templates", url: "/admin/templates", icon: LayoutTemplate },
         { title: "Media", url: "/admin/media", icon: ImageIcon },
       ],

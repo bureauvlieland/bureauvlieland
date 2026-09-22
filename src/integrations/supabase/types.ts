@@ -4432,6 +4432,120 @@ export type Database = {
         }
         Relationships: []
       }
+      reference_cases: {
+        Row: {
+          approval_sent_at: string | null
+          approval_token: string
+          approved_at: string | null
+          approved_ip: string | null
+          approved_name: string | null
+          block_ids: string[]
+          body: string
+          company: string
+          created_at: string
+          days: number
+          facts: Json
+          feedback: string | null
+          feedback_at: string | null
+          group_size: number | null
+          id: string
+          intro: string
+          landing_path: string
+          photos: Json
+          program: Json
+          program_date: string | null
+          published_at: string | null
+          quote: string
+          quote_author: string
+          quote_role: string
+          request_id: string | null
+          review_id: string | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approval_sent_at?: string | null
+          approval_token?: string
+          approved_at?: string | null
+          approved_ip?: string | null
+          approved_name?: string | null
+          block_ids?: string[]
+          body?: string
+          company?: string
+          created_at?: string
+          days?: number
+          facts?: Json
+          feedback?: string | null
+          feedback_at?: string | null
+          group_size?: number | null
+          id?: string
+          intro?: string
+          landing_path?: string
+          photos?: Json
+          program?: Json
+          program_date?: string | null
+          published_at?: string | null
+          quote?: string
+          quote_author?: string
+          quote_role?: string
+          request_id?: string | null
+          review_id?: string | null
+          slug: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          approval_sent_at?: string | null
+          approval_token?: string
+          approved_at?: string | null
+          approved_ip?: string | null
+          approved_name?: string | null
+          block_ids?: string[]
+          body?: string
+          company?: string
+          created_at?: string
+          days?: number
+          facts?: Json
+          feedback?: string | null
+          feedback_at?: string | null
+          group_size?: number | null
+          id?: string
+          intro?: string
+          landing_path?: string
+          photos?: Json
+          program?: Json
+          program_date?: string | null
+          published_at?: string | null
+          quote?: string
+          quote_author?: string
+          quote_role?: string
+          request_id?: string | null
+          review_id?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_cases_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reference_cases_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "customer_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_programs: {
         Row: {
           cart_items: Json
@@ -4518,6 +4632,30 @@ export type Database = {
       }
     }
     Views: {
+      published_reference_cases: {
+        Row: {
+          block_ids: string[] | null
+          body: string | null
+          company: string | null
+          days: number | null
+          facts: Json | null
+          group_size: number | null
+          id: string | null
+          intro: string | null
+          landing_path: string | null
+          photos: Json | null
+          program: Json | null
+          program_date: string | null
+          published_at: string | null
+          quote: string | null
+          quote_author: string | null
+          quote_role: string | null
+          slug: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       published_reviews: {
         Row: {
           author_name: string | null
