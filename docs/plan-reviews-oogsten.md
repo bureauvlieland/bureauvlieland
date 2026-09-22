@@ -1,7 +1,8 @@
 # Plan: referenties oogsten via de eigen applicatie
 
-Status: voorstel, 22 september 2026. Wacht op de besluiten onderaan; daarna
-fase voor fase een eigen pull request met preview.
+Status: besluiten genomen door Erwin op 22 september 2026 (alle adviezen
+overgenomen, zie "Besluiten"). Fase 1 is in aanbouw; daarna fase voor fase
+een eigen pull request met preview.
 
 Aanleiding (Erwin, 22 september): referenties oogsten bij klanten, niet per
 se via Google maar via de eigen applicatie, en die vervolgens kunnen
@@ -150,7 +151,20 @@ Totaal ongeveer 7 tot 10 bouwdagen. Fase 1 levert direct op: het volume
 aan beoordelingen begint te groeien bij het eerstvolgende afgeronde
 programma.
 
-## Besluiten die ik van je nodig heb
+## Besluiten (Erwin, 22 september 2026)
+
+Alle adviezen hieronder zijn overgenomen: de nazorgmail gaat automatisch
+drie dagen na afloop; eerst alleen de opdrachtgever, deelnemers later als
+optie; Google eerst en Tripadvisor alleen als er een passende vermelding
+is (de knop bestaat, verborgen zolang de link leeg is); lage scores niet
+op de site maar wel de Google-knop en persoonlijke opvolging; de
+referentiepagina met organisatie, aantal personen, maand en jaar,
+programma-onderdelen, citaat met naam en functie en foto's van de
+bouwstenen; een AI-voorzet voor de tekst die Erwin redigeert; één
+uitzetbare herinnering voor Google na zeven dagen; de vier vaste citaten
+naar de database.
+
+De vragen zoals ze zijn gesteld:
 
 1. **Nazorgmail automatisch versturen**, drie dagen na afloop? Advies: ja.
    Via de takenlijst is hij tot nu toe nul keer verstuurd.
