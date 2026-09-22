@@ -1636,6 +1636,89 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_reviews: {
+        Row: {
+          author_name: string
+          author_role: string
+          company: string
+          consent_at: string | null
+          consent_ip: string | null
+          consent_publish: boolean
+          consent_reference: boolean
+          consent_version: string
+          created_at: string
+          google_clicked_at: string | null
+          id: string
+          quote: string | null
+          rating: number
+          reminder_sent_at: string | null
+          request_id: string | null
+          source: string
+          status: string
+          tags: string[]
+          text_improve: string
+          text_positive: string
+          tripadvisor_clicked_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_name?: string
+          author_role?: string
+          company?: string
+          consent_at?: string | null
+          consent_ip?: string | null
+          consent_publish?: boolean
+          consent_reference?: boolean
+          consent_version?: string
+          created_at?: string
+          google_clicked_at?: string | null
+          id?: string
+          quote?: string | null
+          rating: number
+          reminder_sent_at?: string | null
+          request_id?: string | null
+          source?: string
+          status?: string
+          tags?: string[]
+          text_improve?: string
+          text_positive?: string
+          tripadvisor_clicked_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          author_role?: string
+          company?: string
+          consent_at?: string | null
+          consent_ip?: string | null
+          consent_publish?: boolean
+          consent_reference?: boolean
+          consent_version?: string
+          created_at?: string
+          google_clicked_at?: string | null
+          id?: string
+          quote?: string | null
+          rating?: number
+          reminder_sent_at?: string | null
+          request_id?: string | null
+          source?: string
+          status?: string
+          tags?: string[]
+          text_improve?: string
+          text_positive?: string
+          tripadvisor_clicked_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_reviews_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_log: {
         Row: {
           blocked_at: string | null
@@ -3509,6 +3592,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_token: string
+          review_token: string
           participant_token: string
           dietary_notes: string | null
           excluded_fees: string[]
@@ -3584,6 +3668,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_token: string
+          review_token?: string
           participant_token?: string
           dietary_notes?: string | null
           excluded_fees?: string[]
@@ -3659,6 +3744,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           customer_token?: string
+          review_token?: string
           participant_token?: string
           dietary_notes?: string | null
           excluded_fees?: string[]

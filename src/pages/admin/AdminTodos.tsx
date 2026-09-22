@@ -234,6 +234,10 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}?action=aftersales` : "/admin/projecten",
     linkLabel: "Verstuur aftersales",
   },
+  customer_review_low: {
+    getLink: (t) => t.related_request_id ? `/admin/beoordelingen?aanvraag=${t.related_request_id}` : "/admin/beoordelingen",
+    linkLabel: "Bekijk beoordeling",
+  },
   post_execution_invoice_check: {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
     linkLabel: "Bekijk factuur",

@@ -176,3 +176,6 @@ verify_jwt = false
 # Cron stuurt de anon key als Bearer-token; de gateway controleert die, de
 # functie leest alleen de rol (zie _shared/jwt-role.ts).
 verify_jwt = true
+
+[functions.customer-review]
+verify_jwt = false

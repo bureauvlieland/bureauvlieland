@@ -9,6 +9,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -74,7 +75,7 @@ export const handler = async (req: Request): Promise<Response> => {
     const { data: request, error: reqErr } = await supabase
       .from("program_requests")
       .select(
-        "id, reference_number, customer_name, customer_email, customer_company, selected_dates, aftersales_sent_at, status",
+        "id, reference_number, customer_name, customer_email, customer_company, selected_dates, aftersales_sent_at, status, review_token",
       )
       .eq("id", request_id)
       .maybeSingle();
@@ -103,12 +104,9 @@ export const handler = async (req: Request): Promise<Response> => {
         "customer_aftersales_google_url",
         "https://g.page/r/CREi-TJGNt7kEAE/review",
       )) as string;
-    const ownUrl =
-      (await getSetting(
-        supabase,
-        "customer_aftersales_review_url",
-        "", // geen eigen reviewpagina; leeg = knop verbergen (template: {{#if own_review_url}})
-      )) as string;
+    // De eigen beoordelingspagina (docs/plan-reviews-oogsten.md, fase 1):
+    // vaste link per programma, los van het portaal-token dat verloopt.
+    const ownUrl = `${getPortalBaseUrl(origin)}/beoordeling/${request.review_token}`;
 
     const dateLabel = formatDateRange(request.selected_dates as string[] | null);
 
