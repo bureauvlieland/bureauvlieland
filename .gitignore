@@ -26,3 +26,6 @@ dist-ssr
 # Playwright
 test-results
 playwright-report
+
+# Deno schrijft dit bij lokaal testen; CI en productie gebruiken het niet.
+deno.lock
