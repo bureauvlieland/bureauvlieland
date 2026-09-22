@@ -295,7 +295,7 @@ Nieuw of herschreven. Wat niet genoemd wordt, blijft zoals het is.
 | `/` | herschrijven | Filteren en de kernzin brengen | merknaam, "Bureau Vlieland" | Niet van een hotel; 50 tot 150 personen; één factuur. Grote groep: aanvraag. Kleinere groep: regel het zelf bij onze partners |
 | `/grote-groepen-vlieland` | nieuw (hub) | De pagina voor iedereen die met veel mensen naar Vlieland wil en nog geen hotel heeft | "Vlieland grote groep", "Vlieland 100 personen", "groepsuitje Vlieland 80 personen", "Waddeneiland grote groep" | Wat kan met 50, 80, 120 en 150: de boot, de bedden, drie groepen tegelijk; zo werkt het; de drie cases; de aanvraag |
 | `/logies-vlieland` | herschrijven (zelfde URL) | De onafhankelijkheid waarmaken | "groepsaccommodatie Vlieland 100 personen", "hotel Vlieland groep", "overnachten Vlieland 80 personen", "slapen Vlieland grote groep" | Wij zijn niet van een hotel. Zo verdelen wij een groep over hotel, groepsaccommodatie en camping, met de echte aantallen per seizoen |
-| `/personeelsuitje-vlieland` | nieuw (doelgroep 1) | De directeur van het mkb die zijn mensen wil belonen | "personeelsuitje Vlieland", "personeelsuitje 100 personen", "bedrijfsuitje 100 man Waddeneiland", "personeelsreis eiland" | Eén of twee dagen voor 50 tot 150 medewerkers, hotel of verdeeld, eten en avond geregeld, één factuur. Case Kreeft |
+| `/personeelsuitje-vlieland` | gebouwd op 22 september (doelgroep 1) | De directeur van het mkb die zijn mensen wil belonen | "personeelsuitje Vlieland", "personeelsuitje 100 personen", "bedrijfsuitje 100 man Waddeneiland", "personeelsreis eiland" | Eén of twee dagen voor 50 tot 150 medewerkers, hotel of verdeeld, eten en avond geregeld, één factuur. Case Kreeft |
 | `/bedrijfsuitje-vlieland` | herschrijven (zelfde URL, staat al in de resultaten) | De generieke zoeker filteren | "bedrijfsuitje Vlieland" | Met 50 tot 150 collega's naar Vlieland. Kleiner team: activiteiten en direct boeken bij onze partners |
 | `/meerdaags-bedrijfsuitje-vlieland` | herschrijven, incentive erin | Meerdaags met overnachting | "meerdaags bedrijfsuitje Vlieland", "bedrijfsuitje met overnachting Waddeneiland", "incentive Vlieland" | Twee of drie dagen, overnachting gekozen voor uw groep, avondprogramma, één factuur. Case Lexence |
 | `/verenigingsweekend-vlieland` | nieuw (doelgroep 2) | Verenigingen, clubs, studentenverenigingen, kampweekenden, clubjubilea | "verenigingsweekend Vlieland", "kampweekend Vlieland", "sportclub weekend Waddeneiland", "studentenvereniging weekend eiland", "jubileum vereniging Vlieland" | Het hele ledenbestand een weekend bij elkaar, verdeeld over groepsaccommodatie en camping, eten en avond geregeld |
@@ -479,17 +479,29 @@ naam, aantal en periode. Geen citaten die er niet zijn; wel de feiten.
     op pagina 1 of 2 voor, maar het resultaat wordt niet gekozen. Dat
     bevestigt de diagnose van dit plan. De groepsgrootte is een argument op
     de pagina, niet in het zoekwoord.
-  - Kleine verbeteringen die hieruit volgen, ter beslissing van Erwin, elk
-    in een eigen PR: titels en omschrijvingen van incentive, teamuitje en
-    bedrijfsuitje herschrijven op de vraag die binnenkomt; redirects van
-    oude adressen naar de passende pagina (lasergamen, zeehondentochten,
-    wadexcursie, strandspektakel, /overnachten/ naar /logies-vlieland,
-    /programmas naar /voorbeeldprogrammas, /home en /en/ naar de homepage);
-    de vragen uit de AI-modus van Google (leeftijd, prijs, vaarduur,
-    opstapplek, laagwater) als vraag en antwoord op de zeehonden- en
-    wadlooppagina's; controle in Netlify dat www naar bureauvlieland.nl
-    doorstuurt; als enige nieuwe pagina vóór het voorjaar eventueel
-    personeelsuitje.
+  - Kleine verbeteringen uit de nulmeting, gebouwd op 22 september (besluit
+    Erwin, één PR): titels en omschrijvingen van de groepspagina's op de
+    vraag die binnenkomt (teambuilding voorop op de teamuitjepagina,
+    incentive, vergaderen bij de heisessie, congres en bedrijfsfeest bij het
+    zakelijk evenement, meerdaags met teambuilding en heisessie,
+    groepsweekend op maat, groepsaccommodatie op de logiespagina);
+    redirects van oude adressen naar de passende pagina (lasergamen,
+    zeehondentochten, wadexcursie, strandspektakel, kaasbunker, overtocht,
+    /overnachten/ naar /logies-vlieland, /programmas naar
+    /voorbeeldprogrammas, /home en /en/ naar de homepage); de vragen uit de
+    AI-modus van Google (vertrektijd, opstapplek, leeftijd, vandaag of
+    morgen, slecht weer) als vraag en antwoord op de zeehonden- en
+    wadlooppagina's; de nieuwe pagina `/personeelsuitje-vlieland`. De
+    www-controle blijft voor Erwin: beide hostnamen staan bij Netlify (www
+    als CNAME naar bureauvlieland.netlify.app, de kale domeinnaam op het
+    Netlify-adres), maar welke van de twee primair is en doorstuurt, is
+    vanuit deze omgeving niet te zien.
+  - Kandidaten voor een eigen pagina, pas als de nieuwe titels na een
+    kwartaal niet genoeg doen: "vergaderen vlieland" met "congres vlieland"
+    (samen 464 vertoningen, nu bij heisessie en zakelijk evenement) en
+    "bedrijfsfeest waddeneilanden" met "personeelsfeest wadden" (265
+    vertoningen, nu bij personeelsuitje en zakelijk evenement). Alle andere
+    vragen landen op een bestaande pagina.
   - Vergelijken in het voorjaar van 2027: Search Console bewaart 16
     maanden, dus met de datumvergelijking in Search Console zelf, een even
     lange periode, gefilterd op "vlieland".

@@ -1,5 +1,6 @@
 import type { ActivityLandingContent, LandingContent } from "./types";
 import { bedrijfsuitjeVlieland } from "./bedrijfsuitje-vlieland";
+import { personeelsuitjeVlieland } from "./personeelsuitje-vlieland";
 import { teamuitjeVlieland } from "./teamuitje-vlieland";
 import { meerdaagsBedrijfsuitjeVlieland } from "./meerdaags-bedrijfsuitje-vlieland";
 import { heisessieVlieland } from "./heisessie-vlieland";
@@ -20,6 +21,7 @@ export type { ActivityLandingContent, LandingContent } from "./types";
  */
 export const LANDINGS: LandingContent[] = [
   bedrijfsuitjeVlieland,
+  personeelsuitjeVlieland,
   teamuitjeVlieland,
   meerdaagsBedrijfsuitjeVlieland,
   heisessieVlieland,

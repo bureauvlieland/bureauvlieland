@@ -120,11 +120,12 @@ export const Footer = () => {
             <h4 className="font-semibold text-foreground mb-4">Voor wie</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/bedrijfsuitje-vlieland" className="hover:text-primary transition-colors">Bedrijfsuitje</Link></li>
+              <li><Link to="/personeelsuitje-vlieland" className="hover:text-primary transition-colors">Personeelsuitje</Link></li>
               <li><Link to="/meerdaags-bedrijfsuitje-vlieland" className="hover:text-primary transition-colors">Meerdaags bedrijfsuitje</Link></li>
               <li><Link to="/teamuitje-vlieland" className="hover:text-primary transition-colors">Teambuilding</Link></li>
               <li><Link to="/heisessie-vlieland" className="hover:text-primary transition-colors">Heisessie</Link></li>
               <li><Link to="/zakelijk-evenement-vlieland" className="hover:text-primary transition-colors">Zakelijk evenement</Link></li>
-              <li><Link to="/incentive-reis-vlieland" className="hover:text-primary transition-colors">Incentive reis</Link></li>
+              <li><Link to="/incentive-reis-vlieland" className="hover:text-primary transition-colors">Incentive</Link></li>
               <li><Link to="/bedrijfsuitje-ideeen-vlieland" className="hover:text-primary transition-colors">Bedrijfsuitje ideeën</Link></li>
               
               <li><Link to="/groepsweekend-vlieland" className="hover:text-primary transition-colors">Groepsweekend</Link></li>

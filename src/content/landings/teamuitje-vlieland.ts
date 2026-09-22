@@ -7,22 +7,22 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een teamuitje op Vlieland gericht op samenwerking en verbinding. Bureau Vlieland organiseert complete teamuitjes met inhoud.";
+  "Teambuilding op Vlieland: een teamuitje met inhoud, gebouwd rond samenwerking en de gesprekken die op kantoor niet ontstaan. Activiteiten, catering en overtocht in één programma.";
 
 export const teamuitjeVlieland: LandingContent = {
   slug: "teamuitje-vlieland",
   path: "/teamuitje-vlieland",
-  breadcrumb: "Teamuitje Vlieland",
+  breadcrumb: "Teambuilding Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Teamuitje op Vlieland – teambuilding met verdieping", description },
-  service: { name: "Teamuitje op Vlieland", description },
+  seo: { title: "Teambuilding op Vlieland | Teamuitje met inhoud op het Waddeneiland", description },
+  service: { name: "Teambuilding op Vlieland", description },
   hero: {
     image: heroImage,
     alt: "Team tijdens een teamuitje op Vlieland",
-    eyebrow: "Teamuitje",
-    title: "Teamuitje op Vlieland",
+    eyebrow: "Teambuilding",
+    title: "Teambuilding op Vlieland",
     intro:
-      "Samenwerken, elkaar beter leren kennen en loskomen van de dagelijkse dynamiek, in een natuurlijke setting voor teambuilding met verdieping.",
+      "Samenwerken, elkaar beter leren kennen en loskomen van de dagelijkse dynamiek: een teamuitje op een eiland dat rust en focus geeft.",
   },
   intro: {
     title: "Waarom Vlieland voor teambuilding?",

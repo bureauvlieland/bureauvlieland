@@ -6,6 +6,7 @@
  */
 export const LANDING_PATHS = [
   "/bedrijfsuitje-vlieland",
+  "/personeelsuitje-vlieland",
   "/teamuitje-vlieland",
   "/meerdaags-bedrijfsuitje-vlieland",
   "/heisessie-vlieland",

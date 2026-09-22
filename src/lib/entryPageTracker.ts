@@ -67,6 +67,7 @@ export const inferEventTypeFromPath = (path: string): string | null => {
   const pathLower = path.toLowerCase();
   
   if (pathLower.includes('bedrijfsuitje')) return 'bedrijfsuitje';
+  if (pathLower.includes('personeelsuitje')) return 'bedrijfsuitje';
   if (pathLower.includes('teamuitje')) return 'teamuitje';
   if (pathLower.includes('heisessie')) return 'heisessie';
   if (pathLower.includes('incentive')) return 'incentive';

@@ -1,9 +1,11 @@
 # 301 Redirects voor oude website URLs naar nieuwe website
-# Alle oude URLs redirecten naar de nieuwe URLs
+# Alle oude URLs redirecten naar de nieuwe URLs. De eerste regel die past
+# wint, dus specifieke paden staan vóór de wildcards. Dezelfde kaart staat in
+# src/pages/NotFound.tsx voor adressen zonder slash aan het eind.
 
 /contact/                                    /#contact                301
-/programmas/                                 /samenwerken             301
-/programmas                                  /samenwerken             301
+/programmas/                                 /voorbeeldprogrammas     301
+/programmas                                  /voorbeeldprogrammas     301
 /duurzame-zakenevents/                       /samenwerken             301
 /bedrijfsuitje-naar-vlieland-2/              /bedrijfsuitje-vlieland  301
 /incentive-op-vlieland-2/                    /incentive-reis-vlieland 301
@@ -15,13 +17,28 @@
 /schoolreis-naar-vlieland/                   /#voor-wie               301
 /catering-op-vlieland/                       /catering                301
 /culinaire-ontdekkingen/                     /bouwstenen              301
-/overnachten/                                /bouwstenen              301
+/overnachten/                                /logies-vlieland         301
 /team/                                       /#over-erwin             301
 /klanten-aan-het-woord/                      /#testimonials           301
 /offerteformulier/                           /offerte                 301
 /algemene-voorwaarden/                       /algemene-voorwaarden    301
+/home                                        /                        301
+/home/                                       /                        301
+/en/                                         /                        301
+/en/*                                        /                        301
 
-# Activiteiten redirects
+# Oude activiteitenpagina's die Google nog toont (Search Console, 22 september
+# 2026): eerst de paden met een eigen nieuwe pagina, daarna de rest naar de
+# catalogus
+/activiteiten-op-vlieland/lasergamen/                                                  /activiteit/lasergamen                                      301
+/activiteiten-op-vlieland/zeehondentochten-met-de-geus-of-northern-diver/              /zeehondentochten-vlieland                                  301
+/activiteiten-op-vlieland/zeehondentochten-met-de-ocean-king/                          /zeehondentochten-vlieland                                  301
+/activiteiten-op-vlieland/wadexcursie/                                                 /wadlopen-vlieland                                          301
+/activiteiten-op-vlieland/strandspektakel-bbq/                                         /activiteit/strandspektakel                                 301
+/activiteiten-op-vlieland/kaasproeverij-videotour/                                     /activiteit/exclusieve-rondleiding-en-proeverij-kaasbunker  301
+/activiteiten-op-vlieland/overtocht-harlingen-vlieland-v-v/                            /activiteit/watertaxi-harlingen-vlieland                    301
+/activiteiten-op-vlieland/restaurant-zuiver/                                           /catering                                                   301
+/activiteiten-op-vlieland/dagprogramma-inclusief-luxe-fietsen-lunch-en-activiteiten/   /voorbeeldprogrammas                                        301
 /activiteiten-op-vlieland/*                  /bouwstenen              301
 
 # Product pages redirects

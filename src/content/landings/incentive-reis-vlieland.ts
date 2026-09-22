@@ -7,21 +7,21 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een incentive reis op Vlieland: exclusief, overzichtelijk en volledig verzorgd. Bureau Vlieland regelt boot, logies, catering en bijzondere activiteiten.";
+  "Een incentive op Vlieland: een beloningsreis van twee of drie dagen op het Waddeneiland, met logies, diner op het strand en tochten over het wad. Van boot tot borrel geregeld vanaf het eiland.";
 
 export const incentiveReisVlieland: LandingContent = {
   slug: "incentive-reis-vlieland",
   path: "/incentive-reis-vlieland",
-  breadcrumb: "Incentive reis Vlieland",
+  breadcrumb: "Incentive Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Incentive reis op Vlieland – exclusief en verzorgd", description },
-  service: { name: "Incentive reis op Vlieland", description },
+  seo: { title: "Incentive op Vlieland | Beloningsreis met overnachting", description },
+  service: { name: "Incentive op Vlieland", description },
   hero: {
     image: heroImage,
     alt: "Exclusieve incentive reis op Vlieland",
-    eyebrow: "Incentive reis",
-    title: "Incentive reis op Vlieland",
-    intro: "Een bijzondere manier om waardering te tonen. Exclusief, overzichtelijk en volledig verzorgd.",
+    eyebrow: "Incentive",
+    title: "Incentive op Vlieland",
+    intro: "Een reis als beloning voor wie het verschil maakt. Exclusief, overzichtelijk en volledig verzorgd.",
   },
   intro: {
     title: "Een beloning die een herinnering wordt",
