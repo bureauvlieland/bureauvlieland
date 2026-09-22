@@ -103,6 +103,11 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/referenties" className="hover:text-primary transition-colors">
+                  Referenties
+                </Link>
+              </li>
+              <li>
                 <Link to="/programma-op-maat" className="hover:text-primary transition-colors">
                   Programma op maat
                 </Link>

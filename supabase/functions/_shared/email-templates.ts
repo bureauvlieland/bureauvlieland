@@ -328,6 +328,9 @@ export const TemplateIds = {
   // Quote offer
   QUOTE_OFFER_CUSTOMER: "quote_offer_customer",
 
+  // Referentiepagina: akkoord vragen (docs/plan-reviews-oogsten.md, fase 3)
+  REFERENCE_CASE_APPROVAL: "reference_case_approval",
+
   // Proforma commission notification
   PROFORMA_COMMISSION: "proforma_commission_notification",
 

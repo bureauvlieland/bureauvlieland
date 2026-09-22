@@ -17,6 +17,10 @@ interface BasicsFormProps {
   onSubmit: (data: BasicsFormData) => void;
   templateName?: string | null;
   templateDurationDays?: number | null;
+  /** Eyebrow vóór de naam; standaard "Voorbeeldprogramma", "Referentie" voor "Zoiets ook?". */
+  templateEyebrow?: string;
+  /** Eigen intro bij een voorinvulling die geen voorbeeldprogramma is. */
+  templateIntro?: string;
   initialSituation?: GroupSituation;
   initialNumberOfPeople?: number;
   /** Label van de volgende-knop, bijvoorbeeld "Volgende: voorbeeldprogramma's". */
@@ -42,6 +46,8 @@ export const BasicsForm = ({
   onSubmit,
   templateName,
   templateDurationDays,
+  templateEyebrow = "Voorbeeldprogramma",
+  templateIntro,
   initialSituation = "vanaf_wal",
   initialNumberOfPeople = 20,
   nextLabel = "Volgende",
@@ -84,11 +90,11 @@ export const BasicsForm = ({
         size="md"
         weight="medium"
         align="center"
-        eyebrow={templateName ? `Voorbeeldprogramma · ${templateName}` : undefined}
+        eyebrow={templateName ? `${templateEyebrow} · ${templateName}` : undefined}
         title={templateName ? "Wanneer en met hoeveel personen?" : "Hoeveel personen en welke datum(s)?"}
         intro={
           templateName
-            ? `Kies uw startdatum${templateDurationDays && templateDurationDays > 1 ? ` (${templateDurationDays} dagen worden automatisch ingevuld)` : ""} en aantal personen. Daarna laden wij dit programma voor u in.`
+            ? templateIntro ?? `Kies uw startdatum${templateDurationDays && templateDurationDays > 1 ? ` (${templateDurationDays} dagen worden automatisch ingevuld)` : ""} en aantal personen. Daarna laden wij dit programma voor u in.`
             : "Daarna kunt u direct activiteiten toevoegen aan uw programma."
         }
         className="mb-8"

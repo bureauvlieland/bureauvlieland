@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -8,6 +8,7 @@ import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView
 import { Container, Section, SectionHeader, StepperBar } from "@/components/system";
 import { useScrollOnStepChange } from "@/hooks/useScrollOnStepChange";
 import { wizardStepsFor, nextWizardPhase, previousWizardPhase, type ConfigPhase } from "@/lib/wizardSteps";
+import { parseBlocksParam, type BlockPrefill } from "@/lib/referenceCases";
 import { trackWizardStep } from "@/lib/analytics";
 import { TemplateSelector } from "@/components/configurator/TemplateSelector";
 import { CheckoutContactForm } from "@/components/configurator/CheckoutContactForm";
@@ -75,7 +76,8 @@ const ProgrammaSamenstellen = () => {
     loadFromTemplate,
   } = useCart();
 
-  const hasTemplateParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("template");
+  const startParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const hasTemplateParam = Boolean(startParams?.has("template") || startParams?.has("blocks"));
   const [phase, setPhase] = useState<ConfigPhase>(
     hasTemplateParam ? "basics" : (cartItems.length > 0 ? "program" : "basics")
   );
@@ -87,6 +89,21 @@ const ProgrammaSamenstellen = () => {
 
   const templateSlug = searchParams.get("template");
   const { data: templateData } = useTemplateWithItems(templateSlug);
+
+  // "Zoiets ook?" op een referentiepagina: dezelfde bouwstenen, per dag,
+  // ingeladen na de basisstap (datum en groepsgrootte van deze groep). Het
+  // inladen gebeurt in een effect, ná het leegmaken van het mandje, zodat
+  // addToCart niet tegen een verouderd mandje controleert.
+  const prefillBlocks = useMemo(() => parseBlocksParam(searchParams.get("blocks")), [searchParams]);
+  const prefillDays = prefillBlocks.reduce((max, b) => Math.max(max, b.dayIndex + 1), 0);
+  const prefillHandledRef = useRef(false);
+  const [pendingPrefill, setPendingPrefill] = useState<BlockPrefill[] | null>(null);
+
+  useEffect(() => {
+    if (!pendingPrefill) return;
+    pendingPrefill.forEach((b) => addToCart(b.blockId, b.dayIndex));
+    setPendingPrefill(null);
+  }, [pendingPrefill, addToCart]);
 
   // Welke stappen deze wizard heeft, hangt af van de situatie en het aantal dagen.
   const steps = wizardStepsFor({
@@ -138,12 +155,12 @@ const ProgrammaSamenstellen = () => {
 
   // Check for existing draft on mount — skip when arriving with a template (explicit intent overrides draft)
   useEffect(() => {
-    if (templateSlug) return;
+    if (templateSlug || prefillBlocks.length > 0 || prefillHandledRef.current) return;
     if (hasPendingDraft && pendingDraft && pendingDraft.cartItems.length > 0) {
       setShowDraftDialog(true);
       setPhase("program");
     }
-  }, [hasPendingDraft, pendingDraft, templateSlug]);
+  }, [hasPendingDraft, pendingDraft, templateSlug, prefillBlocks.length]);
 
 
   // Handle ?block=<id> deep link from /bouwstenen — auto-add and jump to program phase
@@ -209,6 +226,19 @@ const ProgrammaSamenstellen = () => {
       searchParams.delete("template");
       setSearchParams(searchParams, { replace: true });
       setPhase(nextWizardPhase(nextSteps, "template") ?? "program");
+    } else if (prefillBlocks.length > 0) {
+      // Referentie "Zoiets ook?": de dagen van deze groep, de onderdelen van
+      // de referentie; dagen die deze groep niet heeft, schuiven naar de laatste dag.
+      data.selectedDates.forEach((date, i) => {
+        if (i === 0) setSelectedDate(date);
+        else addDate(date);
+      });
+      const laatsteDag = Math.max(0, data.selectedDates.length - 1);
+      prefillHandledRef.current = true;
+      setPendingPrefill(prefillBlocks.map((b) => ({ blockId: b.blockId, dayIndex: Math.min(b.dayIndex, laatsteDag) })));
+      searchParams.delete("blocks");
+      setSearchParams(searchParams, { replace: true });
+      setPhase(nextWizardPhase(nextSteps, "template") ?? "program");
     } else {
       data.selectedDates.forEach((date, i) => {
         if (i === 0) setSelectedDate(date);
@@ -216,7 +246,7 @@ const ProgrammaSamenstellen = () => {
       });
       setPhase("template");
     }
-  }, [clearCart, wizardSituation, setWizardSituation, setNumberOfPeople, setSelectedDate, addDate, templateData, applyTemplate, searchParams, setSearchParams]);
+  }, [clearCart, wizardSituation, setWizardSituation, setNumberOfPeople, setSelectedDate, addDate, templateData, applyTemplate, prefillBlocks, searchParams, setSearchParams]);
 
   const handleTemplateSelected = useCallback((template: ProgramTemplate) => {
     if (selectedDates.length > 0) {
@@ -332,11 +362,17 @@ const ProgrammaSamenstellen = () => {
             {phase === "basics" && (
               <BasicsForm
                 onSubmit={handleBasicsSubmit}
-                templateName={templateData?.name ?? null}
+                templateName={templateData?.name ?? (prefillBlocks.length > 0 ? "Programma van een eerdere groep" : null)}
                 templateDurationDays={templateData?.duration_days ?? null}
+                templateEyebrow={templateData ? "Voorbeeldprogramma" : "Referentie"}
+                templateIntro={
+                  !templateData && prefillBlocks.length > 0
+                    ? `Kies ${prefillDays > 1 ? `uw ${prefillDays} dagen` : "uw datum"} en het aantal personen. Daarna zetten wij dezelfde onderdelen in uw programma; u past aan wat u wilt.`
+                    : undefined
+                }
                 initialSituation={wizardSituation.situation}
                 initialNumberOfPeople={numberOfPeople}
-                nextLabel={nextLabelFrom(templateData ? "template" : "basics")}
+                nextLabel={nextLabelFrom(templateData || prefillBlocks.length > 0 ? "template" : "basics")}
               />
             )}
 

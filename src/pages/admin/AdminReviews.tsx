@@ -270,9 +270,16 @@ const AdminReviews = () => {
                           </Select>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => openCitaat(r)}>
-                            Citaat
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            {r.consent_reference && r.request_id && (
+                              <Button asChild variant="secondary" size="sm">
+                                <Link to={`/admin/referenties?beoordeling=${r.id}`}>Referentie</Link>
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => openCitaat(r)}>
+                              Citaat
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

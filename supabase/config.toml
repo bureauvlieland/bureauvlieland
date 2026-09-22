@@ -179,3 +179,6 @@ verify_jwt = true
 
 [functions.customer-review]
 verify_jwt = false
+
+[functions.reference-case]
+verify_jwt = false

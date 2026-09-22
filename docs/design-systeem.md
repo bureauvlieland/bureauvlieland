@@ -76,6 +76,7 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `ActivityPage` (`components/landing`) | De tweede sjabloonvariant, voor één boekbare activiteit (Wadexcursie, Zeehondentocht): zelfde opbouw als `LandingPage` maar met de kaart "In het kort", een boekblok (`DirectBookingPanel` zodra de bouwsteen aan de boekmodule hangt, anders het aanvraagformulier) en TouristTrip-structured data; geen `RouteChooser`, de actie is boeken. Inhoud in `src/content/landings/<slug>.ts` met `kind: "activity"`; de feiten (duur, prijs, groepsgrootte) worden bewaakt tegen `src/content/activityContent.ts` | Eigen activiteitpagina's met `KeyFacts`, losse accordions en drie linkblokken |
 | `BodySection`, `FeatureGrid`, `Checklist`, `Paragraphs` (`components/landing/sections`) en `sectionCounter` | De sectiesoorten van de inhoudsbestanden, ook los te gebruiken op een verhaal- of cataloguspagina (Samenwerken en Catering bouwen hun secties als `LandingSection`-objecten; Voor wie gebruikt `FeatureGrid` en `Checklist`). Een `split` heeft optioneel een knop (`cta`, `secondary`) en de foto links (`imagePosition`). `sectionCounter()` geeft elke sectie een nummer en wisselt de toon (`muted`, `default`); roep hem aan in de volgorde van de pagina, vóór de JSX | Eigen kaartrasters, vinkjeslijsten en handmatige sectienummers |
 | `ProcessSteps` (`components/werkwijze`) | Genummerde stappen als kaarten met icoon; standaard de zes van de werkwijze, met eigen `steps`, `title` en `intro` ook elders (Logies: vier stappen van wens naar boeking) | Eigen stappenrijen met genummerde cirkels |
+| `ReferenceCaseView`, `ReferenceTimeline`, `ReferenceCard` (`components/referenties`) | De inhoud van een referentiepagina (`PageHero` met de eerste foto van het programma, tekst met `FactList` "In het kort", de tijdlijn per dag uit de momentopname, `PersonQuote`), gedeeld door de publieke pagina en de akkoordpagina voor de klant, zodat die precies ziet wat online komt; de kaart in het overzicht is een `MediaCard` | Eigen tijdlijnen en kaarten voor referenties |
 | `LandingPage` (`components/landing`) | Het ene sjabloon voor de landingspagina's, gevoed door `src/content/landings/<slug>.ts` (geregistreerd in `index.ts` en `paths.ts`): kruimelpad, `PageHero`, intro met `FactList`, genummerde secties (`prose`, `features`, `gallery`, `split`), voorbeeldprogramma's uit de database, `PersonQuote`, Google-reviews, `RouteChooser`, `FaqSection`, één `RelatedLinks` | Een pagina-component per landingspagina; een nieuwe landingspagina is een nieuw inhoudsbestand |
 
 `FaqSection`, `LandingBreadcrumb`, `ReviewsBlock` (eigen beoordelingen en Google-reviews) en `RelatedLinks`
@@ -166,6 +167,14 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
   `src/content/activityContent.ts` staan (`scripts/validate-activity-facts.ts`
   draait voor elke build); schrijf een getijvenster dus als "een uur vóór
   tot een uur ná laagwater", anders leest de bewaker het als een duur.
+- Referentiepagina's (`/referenties`, `/referenties/<slug>`,
+  `components/referenties`): het overzicht is een cataloguspagina met
+  `MediaCard`s (`ReferenceCard`); de detailpagina volgt de detailpagina uit
+  de database met `ReferenceCaseView` (`PageHero` met de eerste foto van het
+  programma, tekst met `FactList` "In het kort", `ReferenceTimeline` per
+  dag, `PersonQuote`), verwante kaarten en `RouteChooser` "Zoiets ook?". De
+  akkoordpagina voor de klant (`/referentie-akkoord/<token>`) toont dezelfde
+  `ReferenceCaseView` tussen een `Notice` en het akkoordformulier.
 
 ## Zo controleer je een wijziging
 
