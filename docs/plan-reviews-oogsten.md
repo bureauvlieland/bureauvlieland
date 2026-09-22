@@ -1,0 +1,190 @@
+# Plan: referenties oogsten via de eigen applicatie
+
+Status: voorstel, 22 september 2026. Wacht op de besluiten onderaan; daarna
+fase voor fase een eigen pull request met preview.
+
+Aanleiding (Erwin, 22 september): referenties oogsten bij klanten, niet per
+se via Google maar via de eigen applicatie, en die vervolgens kunnen
+doorplaatsen naar Google en Tripadvisor. Daarbij klanten om akkoord vragen
+om op de website een referentiepagina te maken op basis van hun programma.
+Dit sluit aan op punt 3 van `docs/concurrentie-positionering.md` (reviews
+zichtbaarder en talrijker maken, omdat het trackrecord de sterkste troef van
+de concurrent is).
+
+## Wat er nu is
+
+- **De nazorgmail bestaat al, maar is nog nooit verstuurd.** Template
+  `customer_aftersales_review` ("Bedankt voor uw bezoek aan Vlieland — deelt
+  u uw ervaring?") met een knop naar Google en een verborgen tweede knop
+  "Review op bureauvlieland.nl" (instelling `customer_aftersales_review_url`,
+  leeg). Drie dagen na de laatste uitgevoerde activiteit maakt
+  `check-pending-items` een taak "Aftersales-mail versturen" aan
+  (`customer_aftersales_days_after` = 3); automatisch versturen staat uit
+  (`customer_aftersales_auto_send` = false). Van de 14 programma's die sinds
+  september 2025 zijn afgerond (april 2, juni 4, juli 7, september 1) is bij
+  geen enkele de mail verstuurd. Het volume is dus klein en seizoensgebonden:
+  elke beoordeling telt.
+- **Google:** 11 reviews, gemiddeld 5,0. `fetch-google-reviews` haalt ze
+  dagelijks in de cache; de homepage (hero, klantquotes), elke landingspagina
+  (`GoogleReviewsBlock`, drie recente) en de structured data (score en aantal
+  bij de organisatie) putten daaruit. Daarnaast staan vier vaste citaten in
+  de code van `Testimonials.tsx`.
+- **Tripadvisor:** komt nergens voor in code of documentatie. Of Bureau
+  Vlieland een vermelding heeft, is niet bekend.
+- **Klant- en deelnemersportaal:** `/mijn-programma/:token` en
+  `/programma-deelnemers/:token`. Na afloop tonen ze het programma; er is
+  geen plek om iets terug te zeggen.
+- **E-mail:** Mailjet, templates in de database en in admin te bewerken,
+  `email_log` met opens en kliks, suppressielijst, antwoorden komen via
+  reply-to bij de aanvraag terecht.
+- **Gegevens per programma** die een referentiepagina kunnen dragen:
+  klantnaam en organisatie, aantal personen, data, de programma-onderdelen
+  (bouwstenen, logies, catering) met hun foto's uit de mediabibliotheek, en
+  sinds fase 3 van het ontwerpsysteem de instappagina (`attribution`), zodat
+  een beoordeling straks bij de passende landingspagina kan verschijnen.
+- **Geen privacyverklaring op de site.** Zodra wij namen en organisaties van
+  klanten publiceren, moet die er zijn (zie "Spelregels").
+
+## Spelregels die het ontwerp bepalen
+
+- **Google en Tripadvisor kennen geen "doorplaatsen".** Een review kan alleen
+  door de klant zelf worden geplaatst; er is geen API om dat namens iemand te
+  doen en de voorwaarden verbieden het. Wat wél kan: de klant een directe
+  schrijflink geven en zijn eigen tekst met één knop laten kopiëren. Dat is
+  in dit plan het doorplaatsen.
+- **Geen selectie op score.** Google verbiedt "review gating": alleen
+  tevreden klanten naar Google sturen. De Google- en Tripadvisor-knoppen
+  staan daarom voor iedereen op de bedankpagina, ongeacht de score. Wat wij
+  wél zelf bepalen is wat er op bureauvlieland.nl verschijnt.
+- **Geen beloningen** voor een review (beide platforms verbieden dat).
+- **AVG:** een beoordeling met naam en organisatie op de site, en zeker een
+  referentiepagina met programma en foto's, vraagt uitdrukkelijke
+  toestemming. Die leggen we vast (tijdstip, IP, tekstversie) en is
+  intrekbaar: de klant mailt, wij halen het weg. Een korte privacyverklaring
+  op de site is dan nodig.
+- **SEO:** eigen beoordelingen leveren geen sterren in Google-zoekresultaten
+  op (Google negeert "self-serving" reviews in structured data). De
+  Google-score blijft de bron voor de structured data; de winst van dit plan
+  zit in meer Google-reviews en in de referentiepagina's als unieke content.
+
+## Voorstel: zo werkt het
+
+1. **Drie dagen na afloop** gaat de nazorgmail automatisch de deur uit, met
+   één knop: "Deel uw ervaring" naar de eigen beoordelingspagina. Google
+   blijft als tweede regel genoemd, voor wie liever direct daarheen gaat.
+2. **De beoordelingspagina** (`/beoordeling/:token`, op het ontwerpsysteem:
+   `FunnelHead`, `FormField`, `SuccessScreen`) vraagt een score (1 tot 5),
+   een korte tekst ("Wat sprak u het meest aan?" en "Wat kan beter?"), naam
+   en organisatie (vooringevuld), en twee vinkjes:
+   - "Bureau Vlieland mag deze beoordeling met mijn naam en organisatie op
+     bureauvlieland.nl tonen."
+   - "Bureau Vlieland mag een referentiepagina over ons programma maken; ik
+     krijg die eerst te zien en keur hem goed voordat hij online gaat."
+3. **De bedankpagina** toont de eigen tekst met een knop "Kopieer uw tekst"
+   en de knoppen "Plaats ook op Google" en, als er een vermelding is,
+   "Plaats ook op Tripadvisor". Voor iedereen, ongeacht de score. Bij een
+   score van 3 of lager staat er ook "Wij nemen persoonlijk contact met u
+   op" en krijgt Erwin een taak met hoge prioriteit.
+4. **Admin, Content → Beoordelingen:** lijst met score, tekst, toestemmingen,
+   programma en instappagina; publiceren of verbergen; een citaat kiezen
+   voor de site. Teksten worden niet herschreven, hooguit ingekort met
+   behoud van betekenis.
+5. **Op de site:** de klantquotes op de homepage tonen eigen gepubliceerde
+   beoordelingen naast de Google-reviews; elke landingspagina toont eerst de
+   beoordelingen van klanten die via die pagina binnenkwamen (of hetzelfde
+   soort programma deden), met Google als aanvulling; een activiteitpagina
+   toont beoordelingen van programma's waar die activiteit in zat.
+6. **Referentiepagina's** (`/referenties` en `/referenties/<slug>`): per
+   programma een pagina met organisatie, groepsgrootte, maand en jaar, het
+   programma per dag (dezelfde tijdlijn als bij de voorbeeldprogramma's),
+   het citaat met naam en functie, foto's van de bouwstenen, en onderaan
+   "Zoiets ook?" met een knop die de programma-wizard opent met dezelfde
+   bouwstenen voorgeselecteerd. Dat maakt een referentie meteen een
+   verkoopkanaal.
+7. **Akkoord op de referentiepagina** in twee stappen: het vinkje bij de
+   beoordeling is de toestemming in beginsel; daarna maakt Erwin het concept
+   (met een AI-voorzet uit het programma, die hij redigeert) en stuurt vanuit
+   admin de mail "Mag dit zo online?" met een voorbeeldlink. De klant klikt
+   "Akkoord" (of antwoordt met wijzigingen); pas dan gaat de pagina live.
+   Beide toestemmingen worden vastgelegd.
+8. **Opvolging:** wie de eigen beoordeling heeft ingevuld maar niet op de
+   Google-knop klikte, krijgt na zeven dagen één herinnering (uitzetbaar).
+   Meer niet.
+
+## Fasen
+
+**Fase 1: beoordelingen verzamelen (2 tot 3 dagen).** Tabel
+`customer_reviews` (programma, token, score, tekst, naam, organisatie, de
+twee toestemmingen met tijdstip, gepubliceerd of verborgen, bron). Edge
+function `submit-customer-review` (openbaar, alleen met geldig token, één
+beoordeling per programma, rate limit). De beoordelingspagina en de
+bedankpagina op het ontwerpsysteem. Nazorgmail aangepast (één knop naar de
+eigen pagina, Google als tweede regel) en automatisch versturen aan.
+Instelling voor de Tripadvisor-link. Admin: Content → Beoordelingen met
+publiceren en verbergen; taak met hoge prioriteit bij score 3 of lager.
+Meting: verstuurd, geopend, geklikt, ingevuld, Google-knop geklikt.
+
+**Fase 2: tonen op de site (1 tot 2 dagen).** Eigen beoordelingen in de
+klantquotes op de homepage, per landingspagina en per activiteitpagina, in
+de kaarten van het ontwerpsysteem. De vier vaste citaten uit de code
+verhuizen naar de tabel (bron "bestaand", ze staan al jaren openbaar).
+Privacyverklaring op de site.
+
+**Fase 3: referentiepagina's (3 tot 4 dagen).** Tabel `reference_cases`
+(programma, slug, titel, intro, momentopname van het programma, citaat,
+foto's, status concept, verstuurd, akkoord, gepubliceerd; akkoordtoken en
+tijdstip). Admin: concept maken uit het programma met AI-voorzet, bewerken,
+akkoordmail versturen. Pagina `/referentie-akkoord/:token` voor de klant.
+Publieke pagina's `/referenties` en `/referenties/<slug>` op het
+ontwerpsysteem (`PageHero`, `FactList`, tijdlijn, `PersonQuote`,
+`RouteChooser`), in de sitemap, gelinkt vanaf de landingspagina's en de
+homepage ("Zo deden anderen het"). De knop "Zoiets ook?" opent de wizard
+met dezelfde bouwstenen.
+
+**Fase 4: opvolging en overzicht (1 dag).** De eenmalige herinnering voor
+Google. Een blok in admin met de trechter (verstuurd, ingevuld,
+gepubliceerd, Google-kliks) en het aantal Google-reviews per maand uit de
+cache. Tripadvisor-vermelding aanmaken of bevestigen (door Erwin).
+
+Totaal ongeveer 7 tot 10 bouwdagen. Fase 1 levert direct op: het volume
+aan beoordelingen begint te groeien bij het eerstvolgende afgeronde
+programma.
+
+## Besluiten die ik van je nodig heb
+
+1. **Nazorgmail automatisch versturen**, drie dagen na afloop? Advies: ja.
+   Via de takenlijst is hij tot nu toe nul keer verstuurd.
+2. **Wie vragen we:** alleen de opdrachtgever, of ook de deelnemers via het
+   deelnemersportaal? Advies: eerst de opdrachtgever; deelnemers als optie
+   in fase 4 (meer Google-reviews, maar minder zeggingskracht voor B2B).
+3. **Tripadvisor:** is er een vermelding? Zo nee: aanmaken of overslaan?
+   Advies: Google eerst; Tripadvisor alleen als de vermelding bestaat en
+   past bij de doelgroep (het is vooral een consumentenplatform).
+4. **Lage scores** (3 of lager): niet op de site, wel de Google-knop (dat
+   moet) en persoonlijke opvolging. Akkoord?
+5. **Wat mag standaard op een referentiepagina:** organisatie, aantal
+   personen, maand en jaar, programma-onderdelen, citaat met naam en
+   functie, foto's van de bouwstenen (geen klantfoto's, tenzij aangeleverd).
+   Iets weglaten of toevoegen?
+6. **Tekst van de referentiepagina:** AI-voorzet die jij redigeert, of
+   handgeschreven? Advies: AI-voorzet; de klant keurt toch goed.
+7. **Eén herinnering voor Google na zeven dagen:** ja of nee? Advies: ja,
+   uitzetbaar.
+8. **De vier vaste citaten** overzetten naar de database als bestaande
+   beoordelingen? Advies: ja.
+
+## Meetpunten
+
+- Trechter per kwartaal: verstuurd, geopend, ingevuld, gepubliceerd,
+  Google-knop geklikt. Doel: minstens 40 procent van de verstuurde mails
+  ingevuld.
+- Aantal Google-reviews (nu 11) per kwartaal, vóór en na.
+- Referentiepagina's live, bezoek en aanvragen via "Zoiets ook?" (de
+  instappagina gaat al met elke aanvraag mee).
+
+## Wat dit plan bewust niet doet
+
+- Niet automatisch plaatsen op Google of Tripadvisor: kan niet en mag niet.
+- Geen beloningen voor een review.
+- Geen selectie op score voor de knoppen naar Google en Tripadvisor.
+- Geen eigen sterren in de structured data; de Google-score blijft de bron.
