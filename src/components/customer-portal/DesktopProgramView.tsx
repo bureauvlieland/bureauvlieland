@@ -20,6 +20,7 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
+import { ReviewInviteCard } from "./ReviewInviteCard";
 import { CompactBillingSection } from "./CompactBillingSection";
 import { PracticalView } from "./PracticalView";
 
@@ -68,11 +69,14 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface DesktopProgramViewProps {
   invoicingMode?: string;
+  /** De ingevulde beoordeling van de klant (fase 4), voor de kaart na afloop. */
+  customerReview?: { created_at: string; google_clicked_at: string | null } | null;
   initialSection?: "accommodation" | "program" | "practical" | "billing" | "accept";
   program: {
     customer_name: string;
     customer_company?: string;
     customer_email: string;
+    review_token?: string | null;
     customer_phone: string;
     customer_token?: string;
     number_of_people: number;
@@ -162,6 +166,7 @@ interface DesktopProgramViewProps {
 }
 
 export const DesktopProgramView = ({
+  customerReview,
   invoicingMode,
   initialSection,
   program,
@@ -333,6 +338,9 @@ export const DesktopProgramView = ({
               onEdit={onOpenEdit}
               hasPendingItems={statusSummary.pending > 0}
             />
+
+            {/* Na afloop: de eigen beoordeling (docs/plan-reviews-oogsten.md, fase 4) */}
+            {isPostExecution && <ReviewInviteCard reviewToken={program.review_token} review={customerReview} />}
 
             <ActionRequiredCard
               statusSummary={statusSummary}

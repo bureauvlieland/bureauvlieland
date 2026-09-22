@@ -278,11 +278,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Beoordelingen (docs/plan-reviews-oogsten.md, fase 4): de klant ziet in
+    // het portaal of zijn beoordeling er al is; deelnemers krijgen na afloop
+    // alleen een knop naar Google, als die instelling aanstaat.
+    const { data: reviewSettings } = await supabase
+      .from("app_settings")
+      .select("id, value")
+      .in("id", ["participant_google_review_enabled", "customer_aftersales_google_url"]);
+    const reviewSetting = (id: string) => (reviewSettings ?? []).find((s: { id: string; value: unknown }) => s.id === id)?.value;
+    const googleUrlSetting = reviewSetting("customer_aftersales_google_url");
+    const participantReview = {
+      enabled: reviewSetting("participant_google_review_enabled") === true,
+      google_url: typeof googleUrlSetting === "string" && googleUrlSetting.trim() ? googleUrlSetting.trim() : "https://g.page/r/CREi-TJGNt7kEAE/review",
+    };
+
     if (participantMode) {
       // Deelnemers zien het programma en de praktische info, niet de
-      // contactgegevens van de klant, de codes, prijzen, historie of offertes.
+      // contactgegevens van de klant, de codes (ook niet de beoordelingslink
+      // van de opdrachtgever), prijzen, historie of offertes.
       const {
-        customer_token: _ct, customer_email: _ce, customer_phone: _cp,
+        customer_token: _ct, customer_email: _ce, customer_phone: _cp, review_token: _rt,
         acceptedTerms: _at, quote_pdf_url: _qp, ...publicProgram
       } = { ...program, items: enrichedItems, acceptedTerms, quote_pdf_url: quotePdfUrl } as Record<string, unknown>;
       const publicAccommodation = linkedAccommodation
@@ -300,10 +315,17 @@ Deno.serve(async (req) => {
           linkedAccommodation: publicAccommodation,
           accommodationQuotes: [],
           extrasByQuoteId: {},
+          participantReview,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    const { data: customerReview } = await supabase
+      .from("customer_reviews")
+      .select("created_at, google_clicked_at")
+      .eq("request_id", program.id)
+      .maybeSingle();
 
     return new Response(
       JSON.stringify({
@@ -313,6 +335,7 @@ Deno.serve(async (req) => {
           acceptedTerms,
           quote_pdf_url: quotePdfUrl,
         },
+        customerReview: customerReview ?? null,
         rawItems: itemList,
         history: historyData || [],
         billingLinesByItem,

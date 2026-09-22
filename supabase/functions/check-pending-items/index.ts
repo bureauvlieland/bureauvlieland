@@ -1069,6 +1069,24 @@ Deno.serve(async (req) => {
     }
 
     // =============================================
+    // GOOGLE-HERINNERING NA EEN BEOORDELING (docs/plan-reviews-oogsten.md, fase 4)
+    // =============================================
+    // Eén mail, zeven dagen na een beoordeling zonder klik op de Google-knop.
+    // De functie zelf leest de instellingen (uitzetbaar) en kiest de beoordelingen.
+    if (canSendEmail) {
+      try {
+        const { data, error: reminderErr } = await supabase.functions.invoke(
+          "send-review-reminder",
+          { body: { mode: "due", sent_by: "system" } },
+        );
+        if (reminderErr) console.error("review reminder failed", reminderErr);
+        else if (data?.sent) totalCreated += Number(data.sent) || 0;
+      } catch (e) {
+        console.error("review reminder block error", e);
+      }
+    }
+
+    // =============================================
      // PARTNER EVENT-DATE EMAILS: T-7 onbevestigd & T-3 briefing
     // =============================================
     if (canSendEmail) {

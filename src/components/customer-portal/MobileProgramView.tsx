@@ -21,6 +21,7 @@ import { AccommodationSection } from "./AccommodationSection";
 
 import { ProgramOverviewCard } from "./ProgramOverviewCard";
 import { ActionRequiredCard } from "./ActionRequiredCard";
+import { ReviewInviteCard } from "./ReviewInviteCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
 
 import { ProgramStepper, type StepId } from "./ProgramStepper";
@@ -66,11 +67,14 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 
 interface MobileProgramViewProps {
   invoicingMode?: string;
+  /** De ingevulde beoordeling van de klant (fase 4), voor de kaart na afloop. */
+  customerReview?: { created_at: string; google_clicked_at: string | null } | null;
   initialSection?: "accommodation" | "program" | "practical" | "billing" | "accept";
   program: {
     customer_name: string;
     customer_company?: string;
     customer_email: string;
+    review_token?: string | null;
     customer_phone: string;
     customer_token?: string;
     number_of_people: number;
@@ -158,6 +162,7 @@ interface MobileProgramViewProps {
 }
 
 export const MobileProgramView = ({
+  customerReview,
   invoicingMode,
   initialSection,
   program,
@@ -378,6 +383,11 @@ export const MobileProgramView = ({
           onEdit={onOpenEdit}
           hasPendingItems={statusSummary.pending > 0}
         />
+      )}
+
+      {/* Na afloop: de eigen beoordeling (docs/plan-reviews-oogsten.md, fase 4) */}
+      {(initialSection === "program" || !initialSection) && isPostExecution && (
+        <ReviewInviteCard reviewToken={program.review_token} review={customerReview} />
       )}
 
       {/* 2. Action Required Card + Intro card — only on Programma tab (or no tab, e.g. single-day) */}

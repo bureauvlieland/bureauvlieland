@@ -10,6 +10,7 @@ import {
   Navigation,
   Share2,
   ArrowLeft,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,10 @@ interface ParticipantViewProps {
   showTitleBlock?: boolean;
   onExit?: () => void;
   onShare?: () => void;
+  /** Deelnemers na afloop om een Google-review vragen (instelling, fase 4). */
+  participantReview?: { enabled: boolean; google_url: string | null } | null;
+  /** De laatste programmadag is voorbij. */
+  isOver?: boolean;
 }
 
 export const ParticipantView = ({
@@ -38,6 +43,8 @@ export const ParticipantView = ({
   showTitleBlock = true,
   onExit,
   onShare,
+  participantReview = null,
+  isOver = false,
 }: ParticipantViewProps) => {
   const [view, setView] = useState<View>("today");
 
@@ -151,6 +158,22 @@ export const ParticipantView = ({
 
         {view === "program" && (
           <div className="space-y-6">
+            {isOver && participantReview?.enabled && participantReview.google_url && (
+              <Card>
+                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">Hoe was het?</p>
+                    <p className="text-sm text-muted-foreground">Deel je ervaring op Google; dat helpt andere groepen bij hun keuze.</p>
+                  </div>
+                  <Button asChild variant="outline" className="shrink-0">
+                    <a href={participantReview.google_url} target="_blank" rel="noopener noreferrer">
+                      Plaats een review op Google
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             {itemsByDay.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">

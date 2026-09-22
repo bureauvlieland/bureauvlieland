@@ -140,6 +140,13 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "reference_number",
     "title"
   ],
+  "customer_review_google_reminder": [
+    "customer_name",
+    "google_review_url",
+    "own_review_url",
+    "reference_number",
+    "review_text",
+  ],
   "customer_aftersales_review": [
     "customer_name",
     "else",

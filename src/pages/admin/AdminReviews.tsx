@@ -20,6 +20,8 @@ import { RatingStars } from "@/components/RatingStars";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import { useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
+import { buildFunnel, googleReviewsPerMonth, responsePercentage } from "@/lib/reviewFunnel";
 
 /**
  * Content → Beoordelingen (docs/plan-reviews-oogsten.md, fase 1): wat
@@ -45,6 +47,8 @@ const statusVariant = (status: string): "default" | "secondary" | "outline" =>
   status === "published" ? "default" : status === "hidden" ? "outline" : "secondary";
 
 const kanPubliceren = (r: ReviewRow) => r.consent_publish || r.source !== "portal";
+const pct = (v: number | null) => (v === null ? "–" : `${v}%`);
+const kort = (iso: string) => format(new Date(iso), "d MMM", { locale: nl });
 
 const AdminReviews = () => {
   const [searchParams] = useSearchParams();
@@ -67,6 +71,30 @@ const AdminReviews = () => {
     },
   });
 
+  // Trechter (fase 4): nazorgmails uit het maillog, referentiepagina's uit de tabel, Google uit de cache.
+  const { data: nazorgVerstuurd = [] } = useQuery({
+    queryKey: ["admin-aftersales-sent"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("email_log").select("created_at").eq("email_type", "customer_aftersales_review").eq("status", "sent");
+      if (error) throw error;
+      return (data ?? []).map((r) => r.created_at);
+    },
+  });
+  const { data: referentiesOnline = [] } = useQuery({
+    queryKey: ["admin-reference-cases-published"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("reference_cases").select("published_at").eq("status", "published");
+      if (error) throw error;
+      return (data ?? []).map((r) => r.published_at).filter((v): v is string => Boolean(v));
+    },
+  });
+  const { data: google } = useGoogleReviewsCache();
+  const trechter = useMemo(
+    () => buildFunnel({ reviews: rows, aftersalesSentAt: nazorgVerstuurd, referencesPublishedAt: referentiesOnline, now: new Date() }),
+    [rows, nazorgVerstuurd, referentiesOnline],
+  );
+  const perMaand = useMemo(() => googleReviewsPerMonth(google?.reviews ?? [], new Date()), [google]);
+
   const zichtbaar = useMemo(
     () =>
       rows.filter((r) => (filter === "alle" || r.status === filter) && (!aanvraagFilter || r.request_id === aanvraagFilter)),
@@ -88,6 +116,22 @@ const AdminReviews = () => {
       void queryClient.invalidateQueries({ queryKey: ["admin-customer-reviews"] });
     },
     onError: (e: Error) => toast({ title: "Opslaan mislukt", description: e.message, variant: "destructive" }),
+  });
+
+  const herinner = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke<{ sent: number; skipped: number; failed: number; error?: string }>("send-review-reminder", {
+        body: { review_id: id, origin: window.location.origin, sent_by: "admin" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.sent) throw new Error("Niet verstuurd: geen e-mailadres, geannuleerd programma of een fout bij Mailjet.");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-customer-reviews"] });
+      toast({ title: "Herinnering verstuurd" });
+    },
+    onError: (e: Error) => toast({ title: "Herinnering niet verstuurd", description: e.message, variant: "destructive" }),
   });
 
   const zetStatus = (r: ReviewRow, status: ReviewStatus) => {
@@ -152,6 +196,63 @@ const AdminReviews = () => {
           </p>
         )}
 
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Trechter</CardTitle>
+              <CardDescription>Van nazorgmail tot referentiepagina. Doel: minstens 40 procent van de verstuurde mails ingevuld.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Stap</TableHead>
+                    <TableHead className="text-right">Laatste 90 dagen</TableHead>
+                    <TableHead className="text-right">Totaal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trechter.map((r) => (
+                    <TableRow key={r.key}>
+                      <TableCell>{r.label}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.recent}</TableCell>
+                      <TableCell className="text-right tabular-nums">{r.total}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow>
+                    <TableCell className="font-medium">Ingevuld na een nazorgmail</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{pct(responsePercentage(trechter, "recent"))}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{pct(responsePercentage(trechter, "total"))}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Google-reviews per maand</CardTitle>
+              <CardDescription>
+                {google?.review_count
+                  ? `${google.review_count} reviews op Google, gemiddeld ${google.rating ? google.rating.toFixed(1).replace(".", ",") : "–"}.`
+                  : "Uit de Google-cache."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableBody>
+                  {perMaand.map((m) => (
+                    <TableRow key={m.month}>
+                      <TableCell>{m.label}</TableCell>
+                      <TableCell className="text-right tabular-nums">{m.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <p className="mt-2 text-xs text-muted-foreground">Telt alleen de recente reviews die Google in de cache meegeeft; het totaal hierboven is wel volledig.</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
           <TabsList>
             {(["alle", "new", "published", "hidden"] as Filter[]).map((f) => (
@@ -189,7 +290,7 @@ const AdminReviews = () => {
                     <TableHead>Score</TableHead>
                     <TableHead className="min-w-[280px]">Beoordeling</TableHead>
                     <TableHead>Toestemming</TableHead>
-                    <TableHead>Google</TableHead>
+                    <TableHead>Google / herinnering</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Acties</TableHead>
                   </TableRow>
@@ -247,8 +348,27 @@ const AdminReviews = () => {
                           {r.google_clicked_at ? (
                             <span className="inline-flex items-center gap-1">
                               <Star className="h-3 w-3" aria-hidden="true" />
-                              {format(new Date(r.google_clicked_at), "d MMM", { locale: nl })}
+                              Geklikt {kort(r.google_clicked_at)}
                             </span>
+                          ) : r.reminder_sent_at ? (
+                            <span>Herinnerd {kort(r.reminder_sent_at)}</span>
+                          ) : r.reminder_skipped_at ? (
+                            <span>Geen herinnering</span>
+                          ) : r.source === "portal" ? (
+                            <div className="flex flex-col items-start gap-1">
+                              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => herinner.mutate(r.id)} disabled={herinner.isPending}>
+                                Herinner nu
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => bijwerken.mutate({ id: r.id, patch: { reminder_skipped_at: new Date().toISOString() } })}
+                                disabled={bijwerken.isPending}
+                              >
+                                Overslaan
+                              </Button>
+                            </div>
                           ) : (
                             "–"
                           )}
