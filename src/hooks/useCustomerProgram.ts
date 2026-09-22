@@ -33,8 +33,22 @@ export interface AccommodationSummary {
   totalQuotes: number;
 }
 
+/** De ingevulde beoordeling van de klant, zoals het portaal die kent (fase 4). */
+export interface CustomerReviewSummary {
+  created_at: string;
+  google_clicked_at: string | null;
+}
+
+/** Deelnemers na afloop om een Google-review vragen: instelling plus link. */
+export interface ParticipantReviewSettings {
+  enabled: boolean;
+  google_url: string | null;
+}
+
 interface UseCustomerProgramReturn {
   program: ProgramRequestWithItems | null;
+  customerReview: CustomerReviewSummary | null;
+  participantReview: ParticipantReviewSettings | null;
   history: ProgramRequestHistory[];
   isLoading: boolean;
   error: string | null;
@@ -131,6 +145,8 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
   const [blockVatRates, setBlockVatRates] = useState<Record<string, number>>({});
   const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, any[]>>({});
   const [revisionFeesTotal, setRevisionFeesTotal] = useState(0);
+  const [customerReview, setCustomerReview] = useState<CustomerReviewSummary | null>(null);
+  const [participantReview, setParticipantReview] = useState<ParticipantReviewSettings | null>(null);
   const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -280,6 +296,8 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
       setBlockVatRates(payload.blockVatRates || {});
       setExtrasByQuoteId(payload.extrasByQuoteId || {});
       setRevisionFeesTotal(Number(payload.revisionFeesTotal) || 0);
+      setCustomerReview((payload.customerReview as CustomerReviewSummary | null) ?? null);
+      setParticipantReview((payload.participantReview as ParticipantReviewSettings | null) ?? null);
     } catch (err) {
       console.error("Error fetching program:", err);
       setError("Er ging iets mis bij het ophalen van uw programma");
@@ -1060,6 +1078,8 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
     blockVatRates,
     extrasByQuoteId,
     revisionFeesTotal,
+    customerReview,
+    participantReview,
   };
 
 };

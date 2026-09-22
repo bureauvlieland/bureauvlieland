@@ -2,9 +2,9 @@
 
 Status: besluiten genomen door Erwin op 22 september 2026 (alle adviezen
 overgenomen, zie "Besluiten"; later die dag: Tripadvisor vervalt helemaal).
-Fase 1 (verzamelen), fase 2 (tonen op de site) en fase 3
-(referentiepagina's) zijn op 22 september gebouwd; fase 4 volgt in een
-eigen pull request.
+Alle vier de fasen (verzamelen, tonen op de site, referentiepagina's,
+opvolging) zijn op 22 september gebouwd, elk in een eigen pull request;
+daarmee is het plan uitgevoerd.
 
 Aanleiding (Erwin, 22 september): referenties oogsten bij klanten, niet per
 se via Google maar via de eigen applicatie, en die vervolgens kunnen
@@ -220,6 +220,26 @@ live staat en er een gepubliceerde referentie is om op te nemen).
 Google. Een blok in admin met de trechter (verstuurd, ingevuld,
 gepubliceerd, Google-kliks) en het aantal Google-reviews per maand uit de
 cache. Tripadvisor-vermelding aanmaken of bevestigen (door Erwin).
+
+Fase 4 is op 22 september gebouwd. Edge function `send-review-reminder`
+stuurt één herinnering (template `customer_review_google_reminder`, met de
+eigen tekst van de klant en de knop naar Google) aan wie de beoordeling
+invulde maar niet op de Google-knop klikte, zeven dagen na de beoordeling;
+`check-pending-items` roept hem dagelijks aan. Uitzetbaar met de instelling
+"Google-herinnering na een beoordeling" (Instellingen → herinneringen, ook
+het aantal dagen); per beoordeling kan Erwin bij Content → Beoordelingen de
+herinnering meteen sturen of overslaan. Daar staat nu ook de trechter
+(nazorgmail verstuurd, ingevuld, gepubliceerd, Google-knop geklikt,
+herinnerd, referentiepagina's online; laatste 90 dagen en totaal, met het
+percentage ingevuld na een mail) en het aantal Google-reviews per maand uit
+de cache (alleen de recente reviews die Google meegeeft; het totaal is
+volledig). Het klantportaal toont na afloop een kaart "Hoe was het op
+Vlieland?" met de knop naar de eigen beoordelingspagina, of een bedankje
+met de weg naar Google als de beoordeling er al is. Deelnemers: de
+instelling "Deelnemers om een Google-review vragen" (standaard uit, besluit
+2) zet op de deelnemerspagina na afloop een knop naar Google; de
+beoordelingslink van de opdrachtgever gaat niet meer mee naar deelnemers.
+Tripadvisor vervalt (besluit Erwin).
 
 Totaal ongeveer 7 tot 10 bouwdagen. Fase 1 levert direct op: het volume
 aan beoordelingen begint te groeien bij het eerstvolgende afgeronde

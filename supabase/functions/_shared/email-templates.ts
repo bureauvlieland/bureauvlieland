@@ -360,6 +360,7 @@ export const TemplateIds = {
 
   // Aftersales / review request
   CUSTOMER_AFTERSALES_REVIEW: "customer_aftersales_review",
+  CUSTOMER_REVIEW_GOOGLE_REMINDER: "customer_review_google_reminder",
 } as const;
 
 /**

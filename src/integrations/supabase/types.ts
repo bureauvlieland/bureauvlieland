@@ -1652,6 +1652,7 @@ export type Database = {
           quote: string | null
           rating: number | null
           reminder_sent_at: string | null
+          reminder_skipped_at: string | null
           request_id: string | null
           source: string
           status: string
@@ -1675,6 +1676,7 @@ export type Database = {
           quote?: string | null
           rating?: number | null
           reminder_sent_at?: string | null
+          reminder_skipped_at?: string | null
           request_id?: string | null
           source?: string
           status?: string
@@ -1698,6 +1700,7 @@ export type Database = {
           quote?: string | null
           rating?: number | null
           reminder_sent_at?: string | null
+          reminder_skipped_at?: string | null
           request_id?: string | null
           source?: string
           status?: string

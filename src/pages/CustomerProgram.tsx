@@ -81,6 +81,7 @@ const CustomerProgram = () => {
     billingLinesByItem,
     blockVatRates,
     revisionFeesTotal,
+    customerReview,
   } = useCustomerProgram(token || "");
 
 
@@ -408,6 +409,7 @@ const CustomerProgram = () => {
   const viewProps = {
     onNavigate: handleNavigate,
     program: program as any,
+    customerReview,
     invoicingMode,
     history,
     selectedDates,

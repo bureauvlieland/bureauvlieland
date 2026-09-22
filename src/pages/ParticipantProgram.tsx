@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useEventMode } from "@/hooks/useEventMode";
-import { parseISO } from "date-fns";
+import { endOfDay, isBefore, parseISO } from "date-fns";
 import { ArrowLeft, AlertCircle, Users, Share2 } from "lucide-react";
 import logoImage from "@/assets/logo.png";
 import { ParticipantView } from "@/components/customer-portal/ParticipantView";
@@ -20,7 +20,7 @@ const ParticipantProgram = () => {
     ? `${window.location.origin}/programma-deelnemers/${token}`
     : "";
 
-  const { program, isLoading, error, accommodation } = useCustomerProgram(token || "", { participant: true });
+  const { program, isLoading, error, accommodation, participantReview } = useCustomerProgram(token || "", { participant: true });
 
   const selectedDates = useMemo(() => {
     if (!program?.selected_dates) return [] as Date[];
@@ -47,6 +47,13 @@ const ParticipantProgram = () => {
     }
     return parsed;
   }, [program?.selected_dates, program?.items]);
+
+  // Na de laatste programmadag: dan mag de Google-knop voor deelnemers verschijnen (fase 4).
+  const isOver = useMemo(() => {
+    if (selectedDates.length === 0) return false;
+    const laatste = selectedDates.reduce((a, b) => (b > a ? b : a));
+    return isBefore(endOfDay(laatste), new Date());
+  }, [selectedDates]);
 
   const eventMode = useEventMode(
     selectedDates,
@@ -126,6 +133,8 @@ const ParticipantProgram = () => {
         selectedDates={selectedDates}
         eventMode={eventMode}
         onShare={() => setShowShare(true)}
+        participantReview={participantReview}
+        isOver={isOver}
       />
 
       <ShareWithParticipantsDialog
