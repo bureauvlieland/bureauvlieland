@@ -30,15 +30,20 @@ const Privacy = () => (
 
       <Section>
         <Container size="content">
-          <div className="prose prose-lg max-w-none">
-            <h2>Wie wij zijn</h2>
-            <p>
+          <div className="space-y-10 leading-relaxed text-foreground">
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Wie wij zijn</h2>
+            <p className="mt-3">
               Bureau Vlieland organiseert programma's voor groepen op Vlieland. Wij zijn verantwoordelijk voor de verwerking van uw gegevens
               zoals hier beschreven. Sikkelduin 11, 8899 CG Vlieland, {GENERAL_CONTACT_EMAIL}, 0562 700 208.
             </p>
 
-            <h2>Welke gegevens wij verwerken</h2>
-            <ul>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Welke gegevens wij verwerken</h2>
+            <ul className="mt-3 list-disc space-y-2 pl-5">
               <li>
                 <strong>Aanvraag en programma:</strong> uw naam, e-mailadres, telefoonnummer, organisatie, groepsgrootte, data, wensen en
                 bijzonderheden (zoals dieetwensen), de gegevens van deelnemers die u zelf aanlevert, en de factuurgegevens van uw
@@ -59,8 +64,12 @@ const Privacy = () => (
               </li>
             </ul>
 
-            <h2>Waarvoor en op welke grond</h2>
-            <ul>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Waarvoor en op welke grond</h2>
+            <ul className="mt-3 list-disc space-y-2 pl-5">
               <li>
                 <strong>Uitvoering van de overeenkomst:</strong> uw aanvraag beantwoorden, een voorstel maken, het programma boeken bij
                 de eilandpartners, u en uw deelnemers informeren, en factureren.
@@ -78,8 +87,12 @@ const Privacy = () => (
               </li>
             </ul>
 
-            <h2>Met wie wij gegevens delen</h2>
-            <p>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Met wie wij gegevens delen</h2>
+            <p className="mt-3">
               Met de eilandpartners die uw programma uitvoeren (accommodaties, activiteitenaanbieders, horeca, vervoer) delen wij alleen
               wat zij voor de uitvoering nodig hebben: de naam van de contactpersoon, aantallen, tijden en bijzonderheden. Daarnaast
               gebruiken wij dienstverleners die voor ons gegevens opslaan of versturen, zoals onze database- en websitehosting,
@@ -87,8 +100,12 @@ const Privacy = () => (
               uw gegevens. Wij verkopen geen gegevens.
             </p>
 
-            <h2>Beoordelingen en referentiepagina's</h2>
-            <p>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Beoordelingen en referentiepagina's</h2>
+            <p className="mt-3">
               Na afloop van een programma vragen wij één keer om een beoordeling. Wat u schrijft over wat beter kan, blijft intern. Uw
               naam, functie, organisatie en uw tekst komen alleen op bureauvlieland.nl als u daarvoor het vinkje heeft gezet. Een
               referentiepagina over uw programma maken wij alleen met uw toestemming; u ziet de pagina vooraf en keurt hem goed voordat
@@ -96,33 +113,50 @@ const Privacy = () => (
               referentiepagina laten weghalen, mail dan naar {GENERAL_CONTACT_EMAIL}; wij halen hem dan van de website.
             </p>
 
-            <h2>Hoe lang wij gegevens bewaren</h2>
-            <p>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Hoe lang wij gegevens bewaren</h2>
+            <p className="mt-3">
               Niet langer dan nodig. Aanvraag- en programmagegevens bewaren wij zolang wij ze nodig hebben voor de uitvoering, de
               nazorg en eventuele vragen achteraf; factuurgegevens bewaren wij zeven jaar vanwege de wettelijke bewaarplicht.
               Beoordelingen bewaren wij zolang ze gepubliceerd zijn of totdat u uw toestemming intrekt.
             </p>
 
-            <h2>Beveiliging</h2>
-            <p>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Beveiliging</h2>
+            <p className="mt-3">
               Verbindingen met de website en het klantportaal zijn versleuteld. Het klantportaal en de beoordelingspagina zijn alleen
               bereikbaar via een persoonlijke link uit onze e-mails; deel die niet met anderen. Toegang tot gegevens is beperkt tot de
               mensen die ze voor hun werk nodig hebben.
             </p>
 
-            <h2>Uw rechten</h2>
-            <p>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Uw rechten</h2>
+            <p className="mt-3">
               U kunt uw gegevens inzien, laten corrigeren of laten verwijderen, de verwerking laten beperken, bezwaar maken, uw
               gegevens laten overdragen en een gegeven toestemming intrekken. Mail daarvoor naar {GENERAL_CONTACT_EMAIL}; wij
               reageren binnen een maand. Bent u niet tevreden over hoe wij met uw gegevens omgaan, dan kunt u een klacht indienen bij
               de Autoriteit Persoonsgegevens.
             </p>
 
-            <h2>Wijzigingen</h2>
-            <p>
+            </section>
+
+
+            <section>
+            <h2 className="font-display text-display-sm font-medium text-foreground">Wijzigingen</h2>
+            <p className="mt-3">
               Verandert er iets in wat wij verwerken, dan passen wij deze verklaring aan en zetten wij de datum bovenaan bij. Vragen?
               Neem <Link to="/contact">contact</Link> met ons op.
             </p>
+          </section>
           </div>
         </Container>
       </Section>

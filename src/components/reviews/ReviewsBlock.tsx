@@ -3,6 +3,7 @@ import { RatingStars } from "@/components/RatingStars";
 import { REVIEW_LINK_FALLBACK, useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
 import { usePublishedReviews } from "@/hooks/usePublishedReviews";
 import { mergeWithGoogle, selectReviews, toDisplay, type ReviewScope } from "@/lib/reviews";
+import { cn } from "@/lib/utils";
 import { ReviewCard } from "./ReviewCard";
 
 /**
@@ -61,7 +62,12 @@ export const ReviewsBlock = ({
             <span className="text-sm text-muted-foreground">· {google.review_count} Google-reviews</span>
           </p>
         )}
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <div
+          className={cn(
+            "mt-10 grid gap-4",
+            items.length >= 3 ? "md:grid-cols-3" : items.length === 2 ? "md:mx-auto md:max-w-4xl md:grid-cols-2" : "md:mx-auto md:max-w-xl",
+          )}
+        >
           {items.map((r) => (
             <ReviewCard key={r.key} review={r} maxLength={260} />
           ))}
