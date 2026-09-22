@@ -11,6 +11,7 @@ import { Search, Archive, Plus, BedDouble, CalendarPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ProjectsListTable } from "@/components/admin/projecten/ProjectsListTable";
+import { RequestSizeStatsCard } from "@/components/admin/RequestSizeStatsCard";
 import { WeekPlanningView } from "@/components/admin/projecten/WeekPlanningView";
 import { fetchProjectsOverview, type RowKind } from "@/lib/getProjectsOverview";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,8 @@ export default function AdminProjectsOverview() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <RequestSizeStatsCard />
 
           <Tabs value={tab} onValueChange={(v) => setParam("tab", v)}>
             <div className="flex flex-wrap items-center justify-between gap-3">

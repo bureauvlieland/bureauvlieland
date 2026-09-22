@@ -1,9 +1,26 @@
 # Plan: de website voor grote groepen (50 tot 150 personen)
 
-Status: voorstel, 22 september 2026, op basis van de strategische briefing
-van Erwin van dezelfde dag. Nog niets gebouwd; uitvoeren per fase, elk in
-een eigen pull request, pas na akkoord op dit plan en antwoord op de vragen
-onder "Besluiten gevraagd".
+Status: geparkeerd op 22 september 2026 (besluit Erwin): eerst een seizoen
+draaien met de optimalisaties van september, dan dit plan opnieuw bekijken
+(voorjaar 2027). Drie dingen zijn wel meteen opgepakt, zodat het seizoen
+antwoorden oplevert: de meting per groepsgrootte in admin (Projecten), de
+drie cases als referentiepagina (Kreeft, Lexence, Stedelijk Gymnasium; de
+klant keurt zelf goed) en Search Console (de site is al geverifieerd; het
+lezen van de cijfers is aan Erwin, zie "Meten").
+
+Aanvulling van Erwin (22 september) die de tweede voordeur raakt: "zelf
+regelen bij de eilandpartners" werkt niet zonder zijn ogen. Elk programma
+vraagt controle bij partners en klanten, of de klant het nu in de wizard
+samenstelt of Erwin het op maat maakt. Het enige dat echt zonder hem kan,
+is direct boeken via MAP. Bij het opnieuw bekijken van het plan wordt de
+route voor kleinere groepen dus smaller (alleen MAP-boekingen, met een
+breder MAP-aanbod als voorwaarde) en de vraag of de wizard helemaal dicht
+mag komt erbij; vraag 4 en 8 hieronder veranderen mee.
+
+Oorspronkelijke status: voorstel, 22 september 2026, op basis van de
+strategische briefing van Erwin van dezelfde dag; uitvoeren per fase, elk
+in een eigen pull request, pas na akkoord en antwoord op de vragen onder
+"Besluiten gevraagd".
 
 Schrijfregel uit de briefing, hier al toegepast: geen gedachtestreepjes,
 gewone interpunctie. Aanspreekvorm op de site blijft "u".
@@ -414,10 +431,21 @@ naam, aantal en periode. Geen citaten die er niet zijn; wel de feiten.
 
 - Hoofd-KPI: aanvragen van 50 personen of meer per kwartaal (2026 tot nu:
   14, waarvan 8 lopend), het aandeel met overnachting, en wat doorgaat.
-- De aanvraag krijgt de groepsgroottecategorie mee in het analytics-event
-  en in admin (Projecten) komt een filter op grootte.
-- Google Search Console: toegang voor de nieuwe pagina's (welke vragen
-  brengen wie), de enige manier om te zien of de zoekintenties kloppen.
+- Gedaan (22 september): bij Projecten staat de kaart "Aanvragen per
+  groepsgrootte" (onder de 20, 20 tot 49, 50 tot 99, 100 of meer; dit
+  jaar, laatste 90 dagen of alles) met aanvragen, lopend, getekend,
+  geannuleerd, met logies, meerdaags en de instappagina's. De instappagina
+  gaat pas sinds 19 september met elke aanvraag mee; daarvoor staat hij op
+  "onbekend".
+- Google Search Console: de site is al geverifieerd (twee
+  `google-site-verification`-tags in `index.html`, sitemap in
+  `robots.txt`). Vanuit deze omgeving is er geen toegang. Erwin opent
+  Search Console met het Google-account dat de site heeft toegevoegd,
+  controleert onder Sitemaps of `https://bureauvlieland.nl/sitemap.xml` is
+  ingediend, en exporteert bij het bekijken van het seizoen "Prestaties →
+  Zoekopdrachten" en "Prestaties → Pagina's" (laatste 12 maanden) als CSV.
+  Dat is de enige bron die zegt of de generieke termen iets brengen of dat
+  de vragen vóór de hotelkeuze al binnenkomen.
 - De trechter van de beoordelingen blijft; hij meet iets anders.
 
 ## Fasen

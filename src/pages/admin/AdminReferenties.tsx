@@ -49,6 +49,16 @@ interface Candidate {
   program_requests: { reference_number: string | null; customer_name: string; customer_company: string | null } | null;
 }
 
+interface ProjectHit {
+  id: string;
+  reference_number: string | null;
+  customer_name: string;
+  customer_company: string | null;
+  number_of_people: number;
+  status: string;
+  selected_dates: unknown;
+}
+
 interface FormState {
   title: string;
   slug: string;
@@ -539,13 +549,13 @@ const AdminReferenties = () => {
   const row = bewerkId ? (rows.find((r) => r.id === bewerkId) ?? null) : null;
 
   const maakConcept = useMutation({
-    mutationFn: async (k: Candidate) => {
-      if (!k.request_id) throw new Error("Deze beoordeling hangt niet aan een programma.");
-      const input = await loadReferenceSnapshotInput(k.request_id, k.id, rows.map((r) => r.slug));
+    mutationFn: async (bron: { request_id: string | null; review_id: string | null }) => {
+      if (!bron.request_id) throw new Error("Deze beoordeling hangt niet aan een programma.");
+      const input = await loadReferenceSnapshotInput(bron.request_id, bron.review_id, rows.map((r) => r.slug));
       const snapshot = buildReferenceSnapshot(input);
       const { data, error } = await supabase
         .from("reference_cases")
-        .insert({ ...snapshotInsert(snapshot), request_id: k.request_id, review_id: k.id })
+        .insert({ ...snapshotInsert(snapshot), request_id: bron.request_id, review_id: bron.review_id })
         .select("id")
         .single();
       if (error) throw error;
@@ -572,8 +582,29 @@ const AdminReferenties = () => {
     const kandidaat = kandidaten.find((k) => k.id === beoordelingId);
     if (!kandidaat || gestartVoor.current === beoordelingId) return;
     gestartVoor.current = beoordelingId;
-    startConcept(kandidaat);
+    startConcept({ request_id: kandidaat.request_id, review_id: kandidaat.id });
   }, [beoordelingId, isLoading, kandidatenLaden, rows, kandidaten, setSearchParams, startConcept]);
+
+  // Referentie uit een project zonder beoordeling (de cases van vóór de
+  // beoordelingspagina): zoeken op referentienummer of organisatie.
+  const [projectZoek, setProjectZoek] = useState("");
+  const zoekterm = projectZoek.trim();
+  const { data: projectHits = [], isFetching: projectenZoeken } = useQuery({
+    queryKey: ["admin-reference-project-search", zoekterm],
+    enabled: zoekterm.length >= 2,
+    queryFn: async () => {
+      const patroon = `%${zoekterm.replace(/[%_]/g, "")}%`;
+      const { data, error } = await supabase
+        .from("program_requests")
+        .select("id, reference_number, customer_name, customer_company, number_of_people, status, selected_dates")
+        .neq("status", "deleted")
+        .or(`reference_number.ilike.${patroon},customer_company.ilike.${patroon},customer_name.ilike.${patroon}`)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (error) throw error;
+      return (data ?? []) as ProjectHit[];
+    },
+  });
 
   const terug = () => setSearchParams(aanvraagFilter ? { aanvraag: aanvraagFilter } : {}, { replace: true });
 
@@ -616,6 +647,74 @@ const AdminReferenties = () => {
             </p>
           )}
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Referentie uit een project</CardTitle>
+              <CardDescription>
+                Voor programma's zonder beoordeling, zoals de cases van vóór de beoordelingspagina. Het concept krijgt de momentopname van het
+                programma; het citaat vult u zelf in, en de klant keurt de pagina goed via de akkoordmail.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                value={projectZoek}
+                onChange={(e) => setProjectZoek(e.target.value)}
+                placeholder="Zoek op referentienummer of organisatie, bijvoorbeeld BV-2602 of Kreeft"
+                className="max-w-md"
+              />
+              {zoekterm.length >= 2 && (
+                projectenZoeken && projectHits.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Zoeken…</p>
+                ) : projectHits.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Geen projecten gevonden.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Project</TableHead>
+                        <TableHead>Klant</TableHead>
+                        <TableHead>Programma</TableHead>
+                        <TableHead className="text-right">Actie</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projectHits.map((p) => {
+                        const bestaand = rows.find((r) => r.request_id === p.id);
+                        const dates = Array.isArray(p.selected_dates) ? (p.selected_dates as string[]) : [];
+                        return (
+                          <TableRow key={p.id}>
+                            <TableCell className="text-sm">
+                              {p.reference_number ?? "Project"}
+                              <div className="text-xs text-muted-foreground">{p.status}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium">{p.customer_company || p.customer_name}</div>
+                              <div className="text-xs text-muted-foreground">{p.customer_name}</div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {p.number_of_people} personen{dates.length > 0 ? ` · ${dates.length} ${dates.length === 1 ? "dag" : "dagen"} · ${datum(dates[0], "MMM yyyy")}` : ""}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {bestaand ? (
+                                <Button variant="outline" size="sm" onClick={() => setSearchParams({ id: bestaand.id }, { replace: true })}>
+                                  Open concept
+                                </Button>
+                              ) : (
+                                <Button size="sm" onClick={() => startConcept({ request_id: p.id, review_id: null })} disabled={maakConcept.isPending}>
+                                  Concept maken
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )
+              )}
+            </CardContent>
+          </Card>
+
           {openen.length > 0 && (
             <Card>
               <CardHeader>
@@ -642,7 +741,7 @@ const AdminReferenties = () => {
                         </TableCell>
                         <TableCell className="text-sm">{k.program_requests?.reference_number ?? (k.request_id ? "Project" : "Geen programma")}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" onClick={() => startConcept(k)} disabled={maakConcept.isPending || !k.request_id}>
+                          <Button size="sm" onClick={() => startConcept({ request_id: k.request_id, review_id: k.id })} disabled={maakConcept.isPending || !k.request_id}>
                             Concept maken
                           </Button>
                         </TableCell>
