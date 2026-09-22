@@ -121,7 +121,8 @@ Deno.test("schema: score 1 tot 5, naam verplicht, toestemmingen standaard uit", 
   assertEquals(parsed.consent_publish, false);
   assertEquals(parsed.consent_reference, false);
   assertEquals(parsed.text_positive, "");
-  assertEquals(ClickedSchema.safeParse({ token: TOKEN, target: "facebook" }).success, false);
+  assertEquals(ClickedSchema.safeParse({ token: "kort" }).success, false);
+  assertEquals(ClickedSchema.safeParse({ token: TOKEN }).success, true);
 });
 
 Deno.test("isLowRating: 3 of lager krijgt opvolging", () => {
@@ -152,10 +153,7 @@ Deno.test("handler: onbekend of geannuleerd programma geeft 404", async () => {
 Deno.test("handler: context geeft programma, links en nog geen beoordeling", async () => {
   const stub = makeStub({
     program_requests: [programma()],
-    app_settings: [
-      { id: "customer_aftersales_google_url", value: "https://g.page/r/test/review" },
-      { id: "customer_review_tripadvisor_url", value: "" },
-    ],
+    app_settings: [{ id: "customer_aftersales_google_url", value: "https://g.page/r/test/review" }],
   });
   const res = await handleReview(post({ action: "context", token: TOKEN }), stub.client);
   assertEquals(res.status, 200);
@@ -164,8 +162,7 @@ Deno.test("handler: context geeft programma, links en nog geen beoordeling", asy
   assertEquals(body.program.company, "Districon Group");
   assertStringIncludes(body.program.date_label, "bezoek van");
   assertEquals(body.review, null);
-  assertEquals(body.links.google, "https://g.page/r/test/review");
-  assertEquals(body.links.tripadvisor, null);
+  assertEquals(body.links, { google: "https://g.page/r/test/review" });
 });
 
 Deno.test("handler: submit slaat op met toestemmingsbewijs, tweede keer 409", async () => {
@@ -219,15 +216,17 @@ Deno.test("handler: submit met ongeldige invoer geeft 400", async () => {
 Deno.test("handler: clicked legt de Google-klik één keer vast", async () => {
   const stub = makeStub({ program_requests: [programma()] });
   await handleReview(post({ action: "submit", ...beoordeling() }), stub.client);
-  const res = await handleReview(post({ action: "clicked", token: TOKEN, target: "google" }), stub.client);
+  const res = await handleReview(post({ action: "clicked", token: TOKEN }), stub.client);
   assertEquals(res.status, 200);
   const review = stub.store.customer_reviews[0];
   assertEquals(typeof review.google_clicked_at, "string");
-  assertEquals(review.tripadvisor_clicked_at ?? null, null);
+  const eerste = review.google_clicked_at;
+  await handleReview(post({ action: "clicked", token: TOKEN }), stub.client);
+  assertEquals(review.google_clicked_at, eerste);
 });
 
 Deno.test("handler: clicked zonder beoordeling geeft 404", async () => {
   const stub = makeStub({ program_requests: [programma()] });
-  const res = await handleReview(post({ action: "clicked", token: TOKEN, target: "google" }), stub.client);
+  const res = await handleReview(post({ action: "clicked", token: TOKEN }), stub.client);
   assertEquals(res.status, 404);
 });

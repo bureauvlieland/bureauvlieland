@@ -15,6 +15,7 @@ import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavaila
 import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import { FaqSection } from "@/components/FaqSection";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
+import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { getActivityContent } from "@/content/activityContent";
 import { buildFallbackFaq } from "@/lib/activityFallbackFaq";
 import { BUILDING_BLOCK_PUBLIC_SELECT_WITH_PROVIDER } from "@/lib/buildingBlockColumns";
@@ -340,6 +341,8 @@ const ActiviteitDetail = () => {
             pageUrl={seo.url}
           />
         )}
+
+        <ReviewsBlock scope={{ blockId: block.id }} fallbackToGoogle={false} title="Wat groepen zeggen" tone="sand" />
 
         <SeeAlsoActivities currentSlug={block.slug ?? block.id} />
 

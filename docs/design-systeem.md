@@ -78,7 +78,7 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `ProcessSteps` (`components/werkwijze`) | Genummerde stappen als kaarten met icoon; standaard de zes van de werkwijze, met eigen `steps`, `title` en `intro` ook elders (Logies: vier stappen van wens naar boeking) | Eigen stappenrijen met genummerde cirkels |
 | `LandingPage` (`components/landing`) | Het ene sjabloon voor de landingspagina's, gevoed door `src/content/landings/<slug>.ts` (geregistreerd in `index.ts` en `paths.ts`): kruimelpad, `PageHero`, intro met `FactList`, genummerde secties (`prose`, `features`, `gallery`, `split`), voorbeeldprogramma's uit de database, `PersonQuote`, Google-reviews, `RouteChooser`, `FaqSection`, één `RelatedLinks` | Een pagina-component per landingspagina; een nieuwe landingspagina is een nieuw inhoudsbestand |
 
-`FaqSection`, `LandingBreadcrumb`, `GoogleReviewsBlock` en `RelatedLinks`
+`FaqSection`, `LandingBreadcrumb`, `ReviewsBlock` (eigen beoordelingen en Google-reviews) en `RelatedLinks`
 staan sinds fase 3 op `Section`, `Container` en `SectionHeader`; een aparte
 `Faq` en `Breadcrumb` zijn niet meer nodig. Antwoorden in `FaqSection` mogen
 links bevatten als `[tekst](/pad)`; de structured data krijgt de platte tekst.

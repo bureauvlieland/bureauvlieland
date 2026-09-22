@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { RatingStars } from "@/components/RatingStars";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -50,6 +52,7 @@ const AdminReviews = () => {
   const [filter, setFilter] = useState<Filter>("alle");
   const [citaatVoor, setCitaatVoor] = useState<ReviewRow | null>(null);
   const [citaatTekst, setCitaatTekst] = useState("");
+  const [tagsTekst, setTagsTekst] = useState("");
   const queryClient = useQueryClient();
 
   const { data: rows = [], isLoading } = useQuery({
@@ -98,18 +101,24 @@ const AdminReviews = () => {
   const openCitaat = (r: ReviewRow) => {
     setCitaatVoor(r);
     setCitaatTekst(r.quote ?? r.text_positive);
+    setTagsTekst(r.tags.join(", "));
   };
 
   const bewaarCitaat = () => {
     if (!citaatVoor) return;
     const tekst = citaatTekst.trim();
+    const tags = tagsTekst
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
     bijwerken.mutate(
-      { id: citaatVoor.id, patch: { quote: tekst && tekst !== citaatVoor.text_positive ? tekst : null } },
+      { id: citaatVoor.id, patch: { quote: tekst && tekst !== citaatVoor.text_positive ? tekst : null, tags } },
       { onSuccess: () => setCitaatVoor(null) },
     );
   };
 
-  const gemiddelde = rows.length ? rows.reduce((a, r) => a + r.rating, 0) / rows.length : null;
+  const metScore = rows.filter((r) => r.rating !== null);
+  const gemiddelde = metScore.length ? metScore.reduce((a, r) => a + (r.rating ?? 0), 0) / metScore.length : null;
 
   return (
     <AdminLayout>
@@ -128,7 +137,7 @@ const AdminReviews = () => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RatingStars value={gemiddelde} small />
               <span>
-                {gemiddelde.toFixed(1).replace(".", ",")} gemiddeld over {rows.length}
+                {gemiddelde.toFixed(1).replace(".", ",")} gemiddeld over {metScore.length}
               </span>
             </div>
           )}
@@ -210,7 +219,7 @@ const AdminReviews = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <RatingStars value={r.rating} small />
+                          {r.rating !== null ? <RatingStars value={r.rating} small /> : <span className="text-xs text-muted-foreground">Geen score</span>}
                         </TableCell>
                         <TableCell className="text-sm">
                           {r.quote && (
@@ -228,6 +237,7 @@ const AdminReviews = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
+                            {r.source !== "portal" && <Badge variant="outline">Bestaand citaat</Badge>}
                             {r.consent_publish && <Badge variant="secondary">Website</Badge>}
                             {r.consent_reference && <Badge variant="secondary">Referentiepagina</Badge>}
                             {!r.consent_publish && !r.consent_reference && <span className="text-xs text-muted-foreground">Geen</span>}
@@ -283,6 +293,14 @@ const AdminReviews = () => {
             </DialogDescription>
           </DialogHeader>
           <Textarea value={citaatTekst} onChange={(e) => setCitaatTekst(e.target.value)} rows={6} maxLength={2000} />
+          <div className="space-y-1.5">
+            <Label htmlFor="citaat-tags">Tags</Label>
+            <Input id="citaat-tags" value={tagsTekst} onChange={(e) => setTagsTekst(e.target.value)} placeholder="bedrijfsuitje-vlieland, zeehondentocht" />
+            <p className="text-xs text-muted-foreground">
+              Kommagescheiden. De slug van een landingspagina of het id van een bouwsteen zet deze beoordeling vooraan op die pagina; via de
+              instappagina van de aanvraag gebeurt dat al vanzelf.
+            </p>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCitaatVoor(null)}>
               Annuleren

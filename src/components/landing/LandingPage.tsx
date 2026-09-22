@@ -5,7 +5,7 @@ import { RelatedLinks } from "@/components/RelatedLinks";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { LandingPageStructuredData } from "@/components/LandingPageStructuredData";
 import { FaqSection } from "@/components/FaqSection";
-import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
 import { usePublishedTemplates } from "@/hooks/useProgramTemplates";
 import { transformImageUrl } from "@/lib/supabaseImage";
@@ -143,7 +143,7 @@ export const LandingPage = ({ content }: { content: LandingContent }) => {
           </Section>
         )}
 
-        <GoogleReviewsBlock limit={3} title="Wat klanten zeggen" subtitle="Recente Google-reviews over Bureau Vlieland" />
+        <ReviewsBlock scope={{ landingPath: content.path }} />
 
         <RouteChooser />
 

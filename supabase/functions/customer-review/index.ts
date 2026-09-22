@@ -2,12 +2,13 @@
 //
 // De beoordelingspagina (/beoordeling/:token) praat alleen met deze functie:
 // - action "context": voor wie is de pagina, is er al een beoordeling, en
-//   welke links (Google, Tripadvisor) horen op de bedankpagina;
+//   welke Google-link op de bedankpagina hoort;
 // - action "submit": de beoordeling opslaan, één per programma, met de twee
 //   toestemmingen en het IP van dat moment; bij een score van 3 of lager een
 //   taak met hoge prioriteit voor het bureau;
-// - action "clicked": vastleggen dat de klant op de Google- of
-//   Tripadvisor-knop klikte (voor de herinnering en de meting).
+// - action "clicked": vastleggen dat de klant op de Google-knop klikte
+//   (voor de herinnering en de meting). Tripadvisor is bewust weggelaten
+//   (besluit Erwin, 22 september 2026).
 //
 // Openbaar (verify_jwt = false): de beoordelingslink is het bewijs, net als
 // het portaal-token. Zie docs/plan-reviews-oogsten.md, fase 1.
@@ -42,10 +43,7 @@ export const SubmitSchema = z.object({
   consent_reference: z.boolean().default(false),
 });
 
-export const ClickedSchema = z.object({
-  token: TokenSchema,
-  target: z.enum(["google", "tripadvisor"]),
-});
+export const ClickedSchema = z.object({ token: TokenSchema });
 
 /** Een score van 3 of lager krijgt persoonlijke opvolging. */
 export const isLowRating = (rating: number): boolean => rating <= 3;
@@ -68,7 +66,7 @@ export function clientIp(req: Request): string | null {
 
 const PROGRAM_COLUMNS = "id, reference_number, customer_name, customer_company, selected_dates, status, cancelled_at";
 const REVIEW_COLUMNS =
-  "id, rating, text_positive, author_name, author_role, company, consent_publish, consent_reference, google_clicked_at, tripadvisor_clicked_at, created_at";
+  "id, rating, text_positive, author_name, author_role, company, consent_publish, consent_reference, google_clicked_at, created_at";
 
 const DEFAULT_GOOGLE_URL = "https://g.page/r/CREi-TJGNt7kEAE/review";
 
@@ -103,18 +101,14 @@ interface ProgramRow {
   cancelled_at: string | null;
 }
 
-async function loadLinks(supabase: Client): Promise<{ google: string; tripadvisor: string | null }> {
+async function loadLinks(supabase: Client): Promise<{ google: string }> {
   const { data } = await supabase
     .from("app_settings")
     .select("id, value")
-    .in("id", ["customer_aftersales_google_url", "customer_review_tripadvisor_url"]);
+    .in("id", ["customer_aftersales_google_url"]);
   const rows = (data ?? []) as { id: string; value: unknown }[];
-  const map = new Map<string, unknown>(rows.map((r) => [r.id, r.value]));
-  const google = typeof map.get("customer_aftersales_google_url") === "string" && map.get("customer_aftersales_google_url")
-    ? (map.get("customer_aftersales_google_url") as string)
-    : DEFAULT_GOOGLE_URL;
-  const trip = map.get("customer_review_tripadvisor_url");
-  return { google, tripadvisor: typeof trip === "string" && trip.trim() ? trip.trim() : null };
+  const waarde = rows.find((r) => r.id === "customer_aftersales_google_url")?.value;
+  return { google: typeof waarde === "string" && waarde.trim() ? waarde.trim() : DEFAULT_GOOGLE_URL };
 }
 
 export async function handleReview(req: Request, supabase: Client): Promise<Response> {
@@ -211,15 +205,13 @@ export async function handleReview(req: Request, supabase: Client): Promise<Resp
   }
 
   if (action === "clicked") {
-    const parsed = ClickedSchema.safeParse({ ...body, token });
-    if (!parsed.success) return json(400, { error: "invalid_target" });
+    if (!ClickedSchema.safeParse({ token }).success) return json(400, { error: "invalid_token" });
     if (!existing) return json(404, { error: "no_review" });
-    const column = parsed.data.target === "google" ? "google_clicked_at" : "tripadvisor_clicked_at";
     const { error: updateError } = await supabase
       .from("customer_reviews")
-      .update({ [column]: new Date().toISOString() })
+      .update({ google_clicked_at: new Date().toISOString() })
       .eq("request_id", row.id)
-      .is(column, null);
+      .is("google_clicked_at", null);
     if (updateError) console.error("customer-review click error:", updateError);
     return json(200, { ok: true });
   }

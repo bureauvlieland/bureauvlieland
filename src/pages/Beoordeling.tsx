@@ -19,8 +19,8 @@ import { GENERAL_CONTACT_EMAIL } from "@/lib/bureauContact";
  * De beoordelingspagina uit de nazorgmail (docs/plan-reviews-oogsten.md,
  * fase 1): score, twee korte teksten, naam en organisatie, en de twee
  * toestemmingen. Daarna de bedankpagina met de eigen tekst om te kopiëren
- * en de knoppen naar Google en Tripadvisor, voor iedereen en ongeacht de
- * score (Google verbiedt selectief vragen). Praat alleen met de edge
+ * en de knop naar Google, voor iedereen en ongeacht de score (Google
+ * verbiedt selectief vragen). Praat alleen met de edge
  * function `customer-review`; de link in de mail is het bewijs.
  */
 interface ReviewProgram {
@@ -40,13 +40,11 @@ interface SavedReview {
   consent_publish: boolean;
   consent_reference: boolean;
   google_clicked_at: string | null;
-  tripadvisor_clicked_at: string | null;
   created_at: string;
 }
 
 interface ReviewLinks {
   google: string;
-  tripadvisor: string | null;
 }
 
 interface ReviewContext {
@@ -75,7 +73,7 @@ const Beoordeling = () => {
   const { token = "" } = useParams<{ token: string }>();
   const [status, setStatus] = useState<"laden" | "ongeldig" | "formulier" | "klaar">("laden");
   const [program, setProgram] = useState<ReviewProgram | null>(null);
-  const [links, setLinks] = useState<ReviewLinks>({ google: "", tripadvisor: null });
+  const [links, setLinks] = useState<ReviewLinks>({ google: "" });
   const [saved, setSaved] = useState<SavedReview | null>(null);
 
   const [rating, setRating] = useState(0);
@@ -166,9 +164,9 @@ const Beoordeling = () => {
     }
   }, [saved]);
 
-  const externeKlik = (target: "google" | "tripadvisor") => {
-    trackEvent("review_external_click", { target });
-    void roepAan({ action: "clicked", token, target });
+  const googleKlik = () => {
+    trackEvent("review_external_click", { target: "google" });
+    void roepAan({ action: "clicked", token });
   };
 
   const titel =
@@ -283,7 +281,11 @@ const Beoordeling = () => {
                   </Button>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     Uw beoordeling wordt opgeslagen bij uw programma. Op de website verschijnt alleen wat u hierboven toestaat; intrekken kan
-                    altijd met een mail aan {GENERAL_CONTACT_EMAIL}.
+                    altijd met een mail aan {GENERAL_CONTACT_EMAIL}. Zie ook onze{" "}
+                    <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                      privacyverklaring
+                    </Link>
+                    .
                   </p>
                 </div>
               </form>
@@ -320,19 +322,11 @@ const Beoordeling = () => {
 
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button asChild size="lg" className="w-full sm:w-auto">
-                      <a href={links.google} target="_blank" rel="noopener noreferrer" onClick={() => externeKlik("google")}>
+                      <a href={links.google} target="_blank" rel="noopener noreferrer" onClick={googleKlik}>
                         Plaats ook op Google
                         <ExternalLink aria-hidden="true" />
                       </a>
                     </Button>
-                    {links.tripadvisor && (
-                      <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-                        <a href={links.tripadvisor} target="_blank" rel="noopener noreferrer" onClick={() => externeKlik("tripadvisor")}>
-                          Plaats ook op Tripadvisor
-                          <ExternalLink aria-hidden="true" />
-                        </a>
-                      </Button>
-                    )}
                   </div>
 
                   <p className="text-sm text-muted-foreground">

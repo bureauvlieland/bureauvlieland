@@ -14,7 +14,7 @@ import { FaqSection } from "@/components/FaqSection";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { ActivityFilter } from "@/components/ActivityFilter";
-import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { BodySection, Paragraphs } from "@/components/landing/sections";
 import { sectionCounter } from "@/components/landing/sectionCounter";
 import { Container, FactList, LinkCard, PageHero, RouteChooser, Section, SectionHeader } from "@/components/system";
@@ -268,7 +268,7 @@ const ActiviteitenVlieland = () => {
         <BodySection section={dayPlan} tone={dayPlanAt.tone} eyebrow={EYEBROW} number={dayPlanAt.number} />
         <BodySection section={seasons} tone={seasonsAt.tone} eyebrow={EYEBROW} number={seasonsAt.number} />
 
-        <GoogleReviewsBlock limit={3} title="Wat klanten zeggen" subtitle="Recente Google-reviews over Bureau Vlieland" />
+        <ReviewsBlock scope={{ landingPath: "/activiteiten-vlieland" }} />
 
         <RouteChooser
           title="Liever in één keer geregeld?"
