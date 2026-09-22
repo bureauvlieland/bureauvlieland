@@ -41,9 +41,10 @@ const ACC_STATUS_LABEL: Record<string, string> = {
   rejected: "Afgewezen",
   selected: "Geselecteerd",
   accepted: "Geaccepteerd",
+  cancelled: "Geselecteerd, boeking vervalt",
 };
 // Partners die default-aangevinkt worden: degenen die mogelijk nog een optie open hebben.
-const ACC_DEFAULT_CHECKED = new Set(["pending", "submitted", "expired", "selected", "accepted"]);
+const ACC_DEFAULT_CHECKED = new Set(["pending", "submitted", "expired", "selected", "accepted", "cancelled"]);
 
 interface Props {
   open: boolean;

@@ -248,9 +248,11 @@ export const handler = async (req: Request): Promise<Response> => {
     let accommodationQuotesCancelled = 0;
     let accommodationEmailsSent = 0;
     if (program.linked_accommodation_id) {
+      // "cancelled": de geselecteerde offerte die de databasetrigger bij de
+      // annulering van de aanvraag heeft gesloten (de boeking vervalt).
       const quoteStatuses = skip_item_cancel
-        ? ["pending", "submitted", "expired", "selected", "accepted", "rejected", "declined"]
-        : ["pending", "submitted", "expired", "selected", "accepted"];
+        ? ["pending", "submitted", "expired", "selected", "accepted", "cancelled", "rejected", "declined"]
+        : ["pending", "submitted", "expired", "selected", "accepted", "cancelled"];
       const { data: openQuotes } = await supabase
         .from("accommodation_quotes")
         .select("id, partner_id, accommodation_name, status")
@@ -295,7 +297,7 @@ export const handler = async (req: Request): Promise<Response> => {
 
 
           if (partnerEmail) {
-            const wasSelected = quote.status === "selected" || quote.status === "accepted";
+            const wasSelected = quote.status === "selected" || quote.status === "accepted" || quote.status === "cancelled";
             const statusLine = wasSelected
               ? `Uw offerte was reeds geselecteerd voor deze aanvraag. Met deze annulering komt de boeking te vervallen.`
               : `Uw offerte was nog in behandeling bij de klant. Met deze annulering komt de offerteaanvraag te vervallen — een reactie is niet meer nodig.`;

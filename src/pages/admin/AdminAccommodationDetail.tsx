@@ -118,6 +118,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   declined: { label: "Afgewezen door partner", variant: "destructive" },
   expired: { label: "Verlopen", variant: "destructive" },
   withdrawn: { label: "Ingetrokken", variant: "outline" },
+  cancelled: { label: "Geannuleerd", variant: "outline" },
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -1080,6 +1081,7 @@ export default function AdminAccommodationDetail() {
                           case "declined": case "rejected": return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">Afgewezen</Badge>;
                           case "expired": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Verlopen</Badge>;
                           case "withdrawn": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Ingetrokken</Badge>;
+                          case "cancelled": return <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">Geannuleerd</Badge>;
                           default: return <Badge variant="secondary" className="text-xs">Reeds aangevraagd</Badge>;
                         }
                       })() : null;

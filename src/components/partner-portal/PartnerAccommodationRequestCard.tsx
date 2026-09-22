@@ -37,6 +37,7 @@ const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | 
   rejected: { label: "Niet gekozen", variant: "secondary" },
   expired: { label: "Verlopen", variant: "destructive" },
   declined: { label: "Afgewezen", variant: "destructive" },
+  cancelled: { label: "Geannuleerd", variant: "outline" },
 };
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {

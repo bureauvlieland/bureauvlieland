@@ -35,6 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending: "Wachtend op offerte",
   declined: "Afgewezen",
   rejected: "Afgewezen",
+  cancelled: "Geannuleerd",
   expired: "Verlopen",
 };
 

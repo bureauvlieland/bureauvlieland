@@ -85,6 +85,7 @@ const QUOTE_STATUS_MAP: Record<string, { label: string; variant: "default" | "se
   selected: { label: "Geselecteerd", variant: "default" },
   rejected: { label: "Afgewezen", variant: "destructive" },
   declined: { label: "Afgewezen door partner", variant: "destructive" },
+  cancelled: { label: "Geannuleerd", variant: "outline" },
   expired: { label: "Verlopen", variant: "destructive" },
 };
 
