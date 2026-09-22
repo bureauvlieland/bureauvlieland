@@ -175,13 +175,19 @@ const timeOf = (item: SnapshotItem): string | null => {
   return /^\d{2}:\d{2}$/.test(t) ? t : null;
 };
 
-/** Dagen met onderdelen op tijd; geannuleerde onderdelen doen niet mee. */
+/**
+ * Dagen met onderdelen op tijd. Geannuleerde onderdelen doen niet mee, en
+ * onderdelen met dag -1 ook niet: dat zijn losse kosten buiten het
+ * programma (bijvoorbeeld "Begeleiding Erwin - 4 uur"), geen
+ * programmaonderdeel.
+ */
 export const buildProgramDays = (items: SnapshotItem[], dates: string[], blocks: SnapshotBlock[]): ReferenceProgramDay[] => {
   const byId = new Map(blocks.map((b) => [b.id, b]));
   const perDay = new Map<number, SnapshotItem[]>();
   for (const item of items) {
     if (item.status === "cancelled") continue;
-    const day = Math.max(0, Math.floor(item.day_index || 0));
+    const day = Math.floor(item.day_index || 0);
+    if (day < 0) continue;
     const list = perDay.get(day) ?? [];
     list.push(item);
     perDay.set(day, list);

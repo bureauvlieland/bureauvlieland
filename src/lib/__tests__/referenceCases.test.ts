@@ -82,6 +82,11 @@ describe("buildProgramDays", () => {
     expect(days[1].items[0].image_url).toBe("https://cdn/wad.jpg");
   });
 
+  it("laat losse kosten buiten het programma (dag -1) weg", () => {
+    const days = buildProgramDays([item({ day_index: -1, block_name: "Begeleiding Erwin - 4 uur" }), item({ block_name: "A" })], [], []);
+    expect(days.map((d) => d.items.map((i) => i.name))).toEqual([["A"]]);
+  });
+
   it("neemt de bevestigde tijd boven de gewenste", () => {
     const days = buildProgramDays([item({ preferred_time: "10:00:00", confirmed_time: "10:30:00", block_name: "A" })], [], []);
     expect(days[0].items[0].time).toBe("10:30");

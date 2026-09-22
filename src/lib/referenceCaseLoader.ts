@@ -1,4 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabase as defaultClient } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { ACTIVITY_LANDINGS, LANDINGS } from "@/content/landings";
 import { entryPath, kindFromTitle, type SnapshotInput } from "@/lib/referenceCases";
 import { normalizePath } from "@/lib/reviews";
@@ -24,7 +26,9 @@ export const kindForPath = (path: string): string | null => {
  */
 const usableImage = (url: string | null): string | null => (url && /^https?:\/\//.test(url) ? url : null);
 
-async function loadSelectedAccommodation(requestId: string, linkedId: string | null): Promise<string | null> {
+type Client = SupabaseClient<Database>;
+
+async function loadSelectedAccommodation(supabase: Client, requestId: string, linkedId: string | null): Promise<string | null> {
   const ids = new Set<string>();
   if (linkedId) ids.add(linkedId);
   const { data: linked } = await supabase.from("accommodation_requests").select("id").eq("linked_program_id", requestId);
@@ -39,7 +43,18 @@ async function loadSelectedAccommodation(requestId: string, linkedId: string | n
   return quotes?.[0]?.accommodation_name ?? null;
 }
 
-export async function loadReferenceSnapshotInput(requestId: string, reviewId: string | null, existingSlugs: string[]): Promise<SnapshotInput> {
+/**
+ * `client` is standaard de app-client (admin, RLS); een script kan een
+ * service-role-client meegeven. `kind` overschrijft de soort uit de
+ * instappagina (voor projecten van vóór de attributie).
+ */
+export async function loadReferenceSnapshotInput(
+  requestId: string,
+  reviewId: string | null,
+  existingSlugs: string[],
+  options: { client?: Client; kind?: string | null } = {},
+): Promise<SnapshotInput> {
+  const supabase = options.client ?? defaultClient;
   const { data: request, error } = await supabase
     .from("program_requests")
     .select("id, reference_number, customer_name, customer_company, number_of_people, selected_dates, attribution, linked_accommodation_id")
@@ -72,7 +87,7 @@ export async function loadReferenceSnapshotInput(requestId: string, reviewId: st
     review = data ?? null;
   }
 
-  const accommodation = await loadSelectedAccommodation(requestId, request.linked_accommodation_id);
+  const accommodation = await loadSelectedAccommodation(supabase, requestId, request.linked_accommodation_id);
 
   return {
     request,
@@ -80,7 +95,7 @@ export async function loadReferenceSnapshotInput(requestId: string, reviewId: st
     blocks,
     review,
     accommodation,
-    kind: kindForPath(entryPath(request.attribution)),
+    kind: options.kind ?? kindForPath(entryPath(request.attribution)),
     existingSlugs,
   };
 }
