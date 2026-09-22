@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { FaqSection } from "@/components/FaqSection";
-import { GoogleReviewsBlock } from "@/components/GoogleReviewsBlock";
+import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
 import { DirectBookingPanel } from "@/components/map/DirectBookingPanel";
@@ -169,7 +169,7 @@ export const ActivityPage = ({ content }: { content: ActivityLandingContent }) =
 
         <FaqSection schemaId={content.slug} pageUrl={canonical} title={content.faqTitle} items={content.faq} />
 
-        <GoogleReviewsBlock limit={3} title={content.reviews.title} subtitle={content.reviews.subtitle} />
+        <ReviewsBlock scope={{ landingPath: content.path }} title={content.reviews.title} subtitle={content.reviews.subtitle} />
 
         <RelatedLinks title="Bekijk ook" links={content.also.map((l) => ({ href: l.to, label: l.label, description: l.description ?? "" }))} />
       </main>

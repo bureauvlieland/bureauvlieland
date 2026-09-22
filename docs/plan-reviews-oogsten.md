@@ -1,8 +1,9 @@
 # Plan: referenties oogsten via de eigen applicatie
 
 Status: besluiten genomen door Erwin op 22 september 2026 (alle adviezen
-overgenomen, zie "Besluiten"). Fase 1 (verzamelen) is op 22 september
-gebouwd; fase 2 tot en met 4 volgen elk in een eigen pull request.
+overgenomen, zie "Besluiten"; later die dag: Tripadvisor vervalt helemaal).
+Fase 1 (verzamelen) en fase 2 (tonen op de site) zijn op 22 september
+gebouwd; fase 3 en 4 volgen elk in een eigen pull request.
 
 Aanleiding (Erwin, 22 september): referenties oogsten bij klanten, niet per
 se via Google maar via de eigen applicatie, en die vervolgens kunnen
@@ -154,6 +155,25 @@ de kaarten van het ontwerpsysteem. De vier vaste citaten uit de code
 verhuizen naar de tabel (bron "bestaand", ze staan al jaren openbaar).
 Privacyverklaring op de site.
 
+Fase 2 is op 22 september gebouwd. De view `published_reviews` geeft
+alleen gepubliceerde beoordelingen en alleen de veilige kolommen vrij (het
+citaat of anders de volledige tekst, naam, functie, organisatie, score,
+tags, de instappagina van de aanvraag en de bouwstenen van het programma);
+de tabel zelf blijft dicht voor bezoekers. `ReviewsBlock` vervangt het
+Google-blok op de landingspagina's, de activiteitlandingspagina's en
+Activiteiten op Vlieland: eigen beoordelingen die bij de pagina passen
+(instappagina of tag) eerst, dan de overige eigen beoordelingen, aangevuld
+met Google-reviews van vier sterren of meer, met de Google-score erbij. Een
+activiteitpagina uit de database toont alleen beoordelingen van programma's
+waar die bouwsteen in zat, en niets als die er niet zijn. De klantquotes op
+de homepage komen uit dezelfde bron; de vier vaste citaten uit de code
+staan nu in de tabel als bestaande citaten zonder score (sterren alleen bij
+een echte score). In admin kan een beoordeling tags krijgen (slug van een
+landingspagina of id van een bouwsteen) om hem ergens vooraan te zetten.
+Nieuw: een privacyverklaring op `/privacy`, gelinkt vanuit de voettekst
+en de beoordelingspagina; Erwin controleert de tekst. De visuele
+referenties zijn na deze wijziging opnieuw gemaakt.
+
 **Fase 3: referentiepagina's (3 tot 4 dagen).** Tabel `reference_cases`
 (programma, slug, titel, intro, momentopname van het programma, citaat,
 foto's, status concept, verstuurd, akkoord, gepubliceerd; akkoordtoken en
@@ -186,6 +206,10 @@ programma-onderdelen, citaat met naam en functie en foto's van de
 bouwstenen; een AI-voorzet voor de tekst die Erwin redigeert; één
 uitzetbare herinnering voor Google na zeven dagen; de vier vaste citaten
 naar de database.
+
+Aanvulling van Erwin later op 22 september: de hele Tripadvisor-route
+vervalt. De bedankpagina verwijst alleen nog naar Google; de instelling en
+de kolom voor Tripadvisor zijn in fase 2 weer verwijderd.
 
 De vragen zoals ze zijn gesteld:
 

@@ -52,6 +52,7 @@ const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
 const SharedProgram = lazy(() => import("./pages/SharedProgram"));
 const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
 const Beoordeling = lazy(() => import("./pages/Beoordeling"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const ParticipantProgram = lazy(() => import("./pages/ParticipantProgram"));
 const LogiesAanvragen = lazy(() => import("./pages/LogiesAanvragen"));
 const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
@@ -182,6 +183,7 @@ const App = () => {
             <Route path="/contact" element={<Contact />} />
             <Route path="/offerte" element={<Offerte />} />
             <Route path="/algemene-voorwaarden" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/partner-voorwaarden" element={<PartnerTerms />} />
             {ALL_LANDING_PATHS.map((path) => (
               <Route key={path} path={path} element={<LandingRoute path={path} />} />

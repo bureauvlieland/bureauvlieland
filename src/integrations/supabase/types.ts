@@ -1650,7 +1650,7 @@ export type Database = {
           google_clicked_at: string | null
           id: string
           quote: string | null
-          rating: number
+          rating: number | null
           reminder_sent_at: string | null
           request_id: string | null
           source: string
@@ -1658,7 +1658,6 @@ export type Database = {
           tags: string[]
           text_improve: string
           text_positive: string
-          tripadvisor_clicked_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1674,7 +1673,7 @@ export type Database = {
           google_clicked_at?: string | null
           id?: string
           quote?: string | null
-          rating: number
+          rating?: number | null
           reminder_sent_at?: string | null
           request_id?: string | null
           source?: string
@@ -1682,7 +1681,6 @@ export type Database = {
           tags?: string[]
           text_improve?: string
           text_positive?: string
-          tripadvisor_clicked_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1698,7 +1696,7 @@ export type Database = {
           google_clicked_at?: string | null
           id?: string
           quote?: string | null
-          rating?: number
+          rating?: number | null
           reminder_sent_at?: string | null
           request_id?: string | null
           source?: string
@@ -1706,7 +1704,6 @@ export type Database = {
           tags?: string[]
           text_improve?: string
           text_positive?: string
-          tripadvisor_clicked_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4521,6 +4518,22 @@ export type Database = {
       }
     }
     Views: {
+      published_reviews: {
+        Row: {
+          author_name: string | null
+          author_role: string | null
+          block_ids: string[] | null
+          company: string | null
+          created_at: string | null
+          entry_path: string | null
+          id: string | null
+          rating: number | null
+          source: string | null
+          tags: string[] | null
+          text: string | null
+        }
+        Relationships: []
+      }
       partner_accommodation_requests_safe: {
         Row: {
           accommodation_type: string | null
