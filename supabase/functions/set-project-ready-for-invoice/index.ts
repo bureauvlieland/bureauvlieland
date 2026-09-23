@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     // Load program
     const { data: program, error: progErr } = await supabase
       .from("program_requests")
-      .select("id, customer_name, customer_company, completion_status, status, selected_dates")
+      .select("id, customer_name, customer_company, completion_status, status, selected_dates, terms_accepted_at, billing_company_name, billing_address_street, billing_address_postal, billing_address_city")
       .eq("id", program_id)
       .maybeSingle();
     if (progErr) throw progErr;
@@ -152,7 +152,9 @@ Deno.serve(async (req) => {
     // 4. History
     await supabase.from("program_request_history").insert({
       request_id: program_id,
-      action: "Project handmatig op facturatie gezet",
+      action: program.terms_accepted_at
+        ? "Project handmatig op facturatie gezet"
+        : "Project handmatig op facturatie gezet zonder AV-handtekening; partners kunnen factureren",
       actor: "admin",
       actor_name: user.email ?? "Admin",
       notes: reason ?? null,
@@ -165,11 +167,18 @@ Deno.serve(async (req) => {
       action: "project_marked_ready_for_invoice",
       entity_type: "program",
       entity_id: program_id,
-      details: { reason: reason ?? null },
+      details: { reason: reason ?? null, terms_accepted: !!program.terms_accepted_at },
     });
 
+    // Partners factureren op de factuurgegevens van de klant; waarschuw als die ontbreken.
+    const billingMissing =
+      !program.billing_company_name ||
+      !program.billing_address_street ||
+      !program.billing_address_postal ||
+      !program.billing_address_city;
+
     return new Response(
-      JSON.stringify({ ok: true, completion_status: "ready_for_invoice" }),
+      JSON.stringify({ ok: true, completion_status: "ready_for_invoice", billingMissing }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {

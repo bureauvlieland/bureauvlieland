@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { DismissProjectDialog } from "@/components/partner-portal/DismissProjectDialog";
 import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partnerProjectDismiss";
 import { reportError } from "@/lib/errorReporting";
+import { isPartnerInvoicingReleased } from "@/lib/partnerInvoicing";
 
 
 type Mode = "activities" | "accommodation";
@@ -674,7 +675,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
           item={selectedItem}
           commissionPercentage={data?.partner.commission_percentage ?? 0}
           billingDetails={
-            selectedItem?.program_requests.terms_accepted_at
+            selectedItem && isPartnerInvoicingReleased(selectedItem.program_requests)
               ? {
                   billing_company_name: selectedItem.program_requests.billing_company_name,
                   billing_kvk_number: selectedItem.program_requests.billing_kvk_number,

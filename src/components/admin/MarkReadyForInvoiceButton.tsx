@@ -48,9 +48,13 @@ export const MarkReadyForInvoiceButton = ({
       });
       return;
     }
+    const billingMissing = !!(data as { billingMissing?: boolean } | null)?.billingMissing;
     toast({
       title: "Project staat klaar voor facturatie",
-      description: "Een Facturatie-todo is aangemaakt.",
+      description: billingMissing
+        ? "Partners kunnen nu factureren, maar de factuurgegevens van de klant zijn onvolledig. Vul die aan bij het project."
+        : "Partners kunnen nu factureren. Een Facturatie-todo is aangemaakt.",
+      variant: billingMissing ? "destructive" : undefined,
     });
     setOpen(false);
     setReason("");
@@ -75,9 +79,11 @@ export const MarkReadyForInvoiceButton = ({
             <AlertDialogTitle>Project op facturatie zetten?</AlertDialogTitle>
             <AlertDialogDescription>
               Hiermee verschuift het project naar de fase Facturatie en wordt
-              er een "Facturatie"-todo aangemaakt — ook als de klant de AV nog
-              niet via de portal heeft geaccepteerd. Gebruik dit als shortcut
-              wanneer de uitvoering al rond is.
+              er een "Facturatie"-todo aangemaakt. Partners kunnen vanaf dat
+              moment hun factuur registreren, ook als de klant de AV nog niet
+              via de portal heeft geaccepteerd. Dit wordt met je naam en reden
+              in de history vastgelegd. Controleer of de factuurgegevens van de
+              klant compleet zijn.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">

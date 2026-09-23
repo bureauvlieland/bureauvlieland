@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo, getBureauAdminEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
@@ -165,7 +166,7 @@ Deno.serve(async (req) => {
     const itemIds = itemsList.map((x) => x.itemId);
     const { data: dbItems, error: itemsError } = await supabase
       .from("program_request_items")
-      .select("*, program_requests!inner(id, customer_name, customer_email, customer_company, selected_dates, invoicing_mode, reference_number)")
+      .select("*, program_requests!inner(id, customer_name, customer_email, customer_company, selected_dates, invoicing_mode, reference_number, terms_accepted_at, completion_status)")
       .in("id", itemIds)
       .eq("provider_id", partner.id);
 
@@ -186,6 +187,18 @@ Deno.serve(async (req) => {
     }
     const requestId = requestIds[0];
     const project = dbItems[0].program_requests;
+
+    // Same rule as the partner portal: customer signed the terms, or the
+    // bureau released the project for invoicing.
+    if (!isPartnerInvoicingReleased(project)) {
+      return new Response(
+        JSON.stringify({
+          error: "Dit project is nog niet vrijgegeven voor facturatie: de klant heeft de voorwaarden nog niet geaccepteerd. Neem contact op met Bureau Vlieland.",
+          code: "invoicing_not_released",
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const invoicingMode = project.invoicing_mode || "bureau_central";
     const commissionPercentage = partner.commission_percentage;
