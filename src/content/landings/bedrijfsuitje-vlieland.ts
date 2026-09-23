@@ -4,13 +4,13 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een bedrijfsuitje op Vlieland dat klopt van A tot Z. Activiteiten, overnachting, catering en logistiek geregeld door lokale regisseurs.";
+  "Een bedrijfsuitje op het Waddeneiland Vlieland, van 8 tot 200 personen: activiteiten, catering, overtocht en overnachting in één programma, geregeld door een bureau op het eiland zelf.";
 
 export const bedrijfsuitjeVlieland: LandingContent = {
   slug: "bedrijfsuitje-vlieland",
   path: "/bedrijfsuitje-vlieland",
   breadcrumb: "Bedrijfsuitje Vlieland",
-  seo: { title: "Bedrijfsuitje op Vlieland organiseren – Bureau Vlieland", description },
+  seo: { title: "Bedrijfsuitje op Vlieland | Programma, boot en logies geregeld", description },
   service: { name: "Bedrijfsuitje op Vlieland", description },
   hero: {
     image: heroImage,
@@ -33,9 +33,10 @@ export const bedrijfsuitjeVlieland: LandingContent = {
       kind: "prose",
       title: "Wat voor bedrijfsuitjes organiseren wij?",
       paragraphs: [
-        "Bureau Vlieland organiseert bedrijfsuitjes voor teams en organisaties die meer zoeken dan alleen vermaak. Denk aan een [teamuitje gericht op samenwerking](/teamuitje-vlieland), een [heisessie voor focus en strategie](/heisessie-vlieland), of een [zakelijk evenement](/zakelijk-evenement-vlieland) op unieke locaties.",
+        "Bureau Vlieland organiseert bedrijfsuitjes voor teams en organisaties die meer zoeken dan alleen vermaak. Denk aan een [personeelsuitje voor de hele organisatie](/personeelsuitje-vlieland), [teambuilding gericht op samenwerking](/teamuitje-vlieland), een [heisessie voor focus en strategie](/heisessie-vlieland) of een [zakelijk evenement](/zakelijk-evenement-vlieland) op unieke locaties.",
       ],
       checklist: [
+        "Personeelsuitjes voor de hele organisatie, tot 150 collega's",
         "Teambuilding met inhoud en begeleiding",
         "Meerdaagse bedrijfsuitjes met overnachting",
         "Heisessies en strategiesessies",
@@ -102,7 +103,8 @@ export const bedrijfsuitjeVlieland: LandingContent = {
     },
   ],
   also: [
-    { label: "Teamuitje Vlieland", to: "/teamuitje-vlieland" },
+    { label: "Personeelsuitje Vlieland", to: "/personeelsuitje-vlieland" },
+    { label: "Teambuilding Vlieland", to: "/teamuitje-vlieland" },
     { label: "Meerdaags bedrijfsuitje Vlieland", to: "/meerdaags-bedrijfsuitje-vlieland" },
     { label: "Heisessie Vlieland", to: "/heisessie-vlieland" },
     { label: "Zakelijk evenement Vlieland", to: "/zakelijk-evenement-vlieland" },

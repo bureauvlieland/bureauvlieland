@@ -101,7 +101,7 @@ export const ForWho = () => {
           "Professionele begeleiding op de dag zelf",
         ]}
         primary={{ label: "Bekijk bedrijfsuitjes", to: "/bedrijfsuitje-vlieland" }}
-        secondary={{ label: "Teamuitje organiseren", to: "/teamuitje-vlieland" }}
+        secondary={{ label: "Teambuilding organiseren", to: "/teamuitje-vlieland" }}
         facts={[
           { label: "Ideaal voor", value: "Afdelingen, projectteams, volledige organisaties, startups en scale-ups die investeren in hun mensen." },
           { label: "Populaire formats", value: "Eendaagse teamdagen, tweedaagse met overnachting, kick-offs en afsluitingen, seizoensuitjes en jubilea." },

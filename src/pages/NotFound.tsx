@@ -18,10 +18,21 @@ const getRedirectDestination = (pathname: string): string | null => {
   if (path === "/activiteiten") return "/bouwstenen";
   if (path === "/catering-op-vlieland") return "/catering";
   if (path === "/culinaire-ontdekkingen") return "/bouwstenen";
-  if (path === "/overnachten") return "/bouwstenen";
+  if (path === "/overnachten") return "/logies-vlieland";
 
-  if (path === "/programmas") return "/samenwerken";
+  if (path === "/programmas") return "/voorbeeldprogrammas";
+  if (path === "/home") return "/";
+  if (path === "/en" || path.startsWith("/en/")) return "/";
 
+  // Oude activiteitenpagina's met een eigen nieuwe pagina (Search Console, 22 september 2026).
+  if (path === "/activiteiten-op-vlieland/lasergamen") return "/activiteit/lasergamen";
+  if (path.startsWith("/activiteiten-op-vlieland/zeehondentochten")) return "/zeehondentochten-vlieland";
+  if (path === "/activiteiten-op-vlieland/wadexcursie") return "/wadlopen-vlieland";
+  if (path === "/activiteiten-op-vlieland/strandspektakel-bbq") return "/activiteit/strandspektakel";
+  if (path === "/activiteiten-op-vlieland/kaasproeverij-videotour") return "/activiteit/exclusieve-rondleiding-en-proeverij-kaasbunker";
+  if (path === "/activiteiten-op-vlieland/overtocht-harlingen-vlieland-v-v") return "/activiteit/watertaxi-harlingen-vlieland";
+  if (path === "/activiteiten-op-vlieland/restaurant-zuiver") return "/catering";
+  if (path === "/activiteiten-op-vlieland/dagprogramma-inclusief-luxe-fietsen-lunch-en-activiteiten") return "/voorbeeldprogrammas";
   if (path.startsWith("/activiteiten-op-vlieland")) return "/bouwstenen";
   if (path.startsWith("/product")) return "/bouwstenen";
 

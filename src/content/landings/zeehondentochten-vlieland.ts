@@ -157,6 +157,31 @@ export const zeehondentochtenVlieland: ActivityLandingContent = {
       answer:
         "Ja. De tocht wordt geboekt vanaf 10 personen, met maximaal 40 deelnemers per afvaart. Grotere gezelschappen splitsen wij over twee vaarten. Wij plannen de afvaart op een tijd die past in uw programma en verwerken die in één aanvraag en één factuur.",
     },
+    {
+      question: "Hoe laat vertrekt de zeehondentocht?",
+      answer:
+        "Dat verschilt per dag, omdat de tocht rond laag water vaart. De vertrektijd van uw datum ziet u bij het boeken; komt u met een groep, dan leggen wij de tijd vast in uw programma. De actuele waterstanden voor Vlieland staan bij Rijkswaterstaat op getij.nl.",
+    },
+    {
+      question: "Waar stapt u op voor de zeehondentocht?",
+      answer:
+        "Bij de reddingbootsteiger in de jachthaven van Oost-Vlieland. De schipper ontvangt u daar; het precieze tijdstip staat in uw boekingsbevestiging.",
+    },
+    {
+      question: "Vanaf welke leeftijd kunnen kinderen mee?",
+      answer:
+        "De tocht is geschikt voor alle leeftijden: hij is kort en u blijft aan boord. Er is geen apart kindertarief. Neem voor kinderen warme, winddichte kleding mee, want op het water is het frisser dan aan wal.",
+    },
+    {
+      question: "Kan ik vandaag of morgen nog mee?",
+      answer:
+        "Als er plek is wel. De beschikbaarheid per dag ziet u in de boekkalender op deze pagina; daar boekt u direct een plek. Een groep vanaf 10 personen plannen wij liever een paar dagen vooruit, zodat wij de afvaart op uw programma kunnen afstemmen.",
+    },
+    {
+      question: "Wat gebeurt er bij slecht weer?",
+      answer:
+        "Bij harde wind of ruwe zee beslist de schipper of er gevaren wordt. Vervalt de tocht, dan brengen wij die niet in rekening en zoeken wij waar mogelijk een ander moment of een andere activiteit.",
+    },
   ],
   reviews: { title: "Reviews over Bureau Vlieland", subtitle: "Wat klanten zeggen over hun dag op het wad" },
   also: [

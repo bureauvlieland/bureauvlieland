@@ -73,6 +73,7 @@ const staticEntries: SitemapEntry[] = [
   
   // Landingspagina's
   { path: "/bedrijfsuitje-vlieland", changefreq: "monthly", priority: "0.9" },
+  { path: "/personeelsuitje-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/teamuitje-vlieland", changefreq: "monthly", priority: "0.9" },
   { path: "/meerdaags-bedrijfsuitje-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/heisessie-vlieland", changefreq: "monthly", priority: "0.8" },

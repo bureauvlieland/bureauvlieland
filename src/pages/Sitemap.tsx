@@ -39,11 +39,12 @@ const sections: SitemapSection[] = [
     title: "Voor bedrijven",
     links: [
       { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland" },
+      { label: "Personeelsuitje", href: "/personeelsuitje-vlieland" },
       { label: "Meerdaags bedrijfsuitje", href: "/meerdaags-bedrijfsuitje-vlieland" },
       { label: "Teambuilding", href: "/teamuitje-vlieland" },
       { label: "Heisessie", href: "/heisessie-vlieland" },
       { label: "Zakelijk evenement", href: "/zakelijk-evenement-vlieland" },
-      { label: "Incentive reis", href: "/incentive-reis-vlieland" },
+      { label: "Incentive", href: "/incentive-reis-vlieland" },
       { label: "Bedrijfsuitje ideeën", href: "/bedrijfsuitje-ideeen-vlieland" },
     ],
   },

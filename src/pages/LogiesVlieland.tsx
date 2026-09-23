@@ -15,7 +15,7 @@ import type { LandingSection } from "@/content/landings/types";
 const URL = "https://bureauvlieland.nl/logies-vlieland";
 const EYEBROW = "Logies op Vlieland";
 const DESCRIPTION =
-  "Zoek en vergelijk groepsaccommodaties op Vlieland. Hotels, vakantiehuizen en groepsverblijven: wij regelen de offertes, u kiest.";
+  "Groepsaccommodatie op Vlieland zoeken en vergelijken: hotels, vakantiehuizen en groepsverblijven voor 8 tot 200 personen. Wij vragen de offertes op, u kiest.";
 const heroImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1778074823160-hotel_zeezicht_2.jpg`;
 
 const types: LandingSection = {
@@ -105,17 +105,17 @@ const LogiesVlieland = () => {
   return (
     <>
       <Helmet>
-        <title>Logies op Vlieland voor groepen | Bureau Vlieland</title>
+        <title>Groepsaccommodatie en logies op Vlieland | Bureau Vlieland</title>
         <meta name="description" content={DESCRIPTION} />
         <link rel="canonical" href={URL} />
-        <meta property="og:title" content="Logies op Vlieland voor groepen | Bureau Vlieland" />
+        <meta property="og:title" content="Groepsaccommodatie en logies op Vlieland | Bureau Vlieland" />
         <meta property="og:description" content={DESCRIPTION} />
         <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
         <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>
       <LandingPageStructuredData
-        serviceName="Logies op Vlieland voor groepen"
+        serviceName="Groepsaccommodatie en logies op Vlieland"
         serviceDescription={DESCRIPTION}
         canonicalUrl={URL}
         breadcrumbItems={[
@@ -132,7 +132,7 @@ const LogiesVlieland = () => {
           image={heroImage}
           alt="Hotel met uitzicht op zee op Vlieland"
           eyebrow={EYEBROW}
-          title="Logies op Vlieland voor groepen"
+          title="Groepsaccommodatie en logies op Vlieland"
           intro="Op zoek naar een verblijf voor uw team of organisatie? Bureau Vlieland zoekt en vergelijkt accommodaties voor u. Vrijblijvend, persoonlijk en met lokale kennis."
           cta={{ label: "Vraag logies aan", to: "/logies-aanvragen" }}
           secondary={{ label: "Liever maatwerk?", to: "/programma-op-maat" }}

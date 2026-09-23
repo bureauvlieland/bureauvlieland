@@ -160,6 +160,21 @@ export const wadlopenVlieland: ActivityLandingContent = {
       question: "Wat kost een wadexcursie op Vlieland?",
       answer: "De prijs is €17,50 per volwassene en €12,50 per kind van 4 t/m 12 jaar. De actuele beschikbaarheid ziet u bij het boeken of aanvragen.",
     },
+    {
+      question: "Vanaf welke leeftijd kunnen kinderen mee met de wadexcursie?",
+      answer:
+        "Kinderen kunnen mee; voor kinderen van 4 tot en met 12 jaar geldt het kindertarief van €12,50. Het is een wandeling door slik en langs geulen, dus kinderen moeten een tijd zelf kunnen lopen. Twijfelt u over jonge kinderen, overleg dan even met ons.",
+    },
+    {
+      question: "Kan ik vandaag of morgen nog mee?",
+      answer:
+        "Als er die dag een excursie gaat en er plek is. In de boekkalender op deze pagina ziet u per dag of er een excursie is en hoe laat; daar boekt u direct. Groepen plannen wij vooruit, zodat de gids voor uw gezelschap alleen gaat.",
+    },
+    {
+      question: "Wat gebeurt er bij slecht weer?",
+      answer:
+        "Bij dichte mist of onweer gaat de excursie niet door; dat is een veiligheidsbeslissing van de gids. Regen of wind zijn op zich geen reden om af te zeggen, trek dan kleding aan die nat mag worden. Vervalt de excursie, dan zoeken wij met u een ander moment of een andere activiteit.",
+    },
   ],
   reviews: { title: "Reviews over Bureau Vlieland", subtitle: "Wat klanten zeggen over onze wadexcursies en groepsprogramma's" },
   also: [
@@ -167,7 +182,7 @@ export const wadlopenVlieland: ActivityLandingContent = {
     { label: "Alle activiteiten op Vlieland", to: "/activiteiten-vlieland", description: "Wat kunt u doen op het eiland, per seizoen" },
     { label: "Familieweekend op Vlieland", to: "/familieweekend-vlieland" },
     { label: "Groepsweekend op Vlieland", to: "/groepsweekend-vlieland" },
-    { label: "Teamuitje op Vlieland", to: "/teamuitje-vlieland" },
+    { label: "Teambuilding op Vlieland", to: "/teamuitje-vlieland" },
     { label: "Voorbeeldprogramma's", to: "/voorbeeldprogrammas", description: "Kant-en-klare dagindelingen van eerdere groepen" },
   ],
 };

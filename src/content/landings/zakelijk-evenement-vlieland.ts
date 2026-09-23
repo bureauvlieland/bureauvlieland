@@ -7,14 +7,14 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een zakelijk evenement op Vlieland: congres, kick-off, klantendag of jubileum. Bureau Vlieland regelt locatie, techniek, catering, logies en programma van A tot Z.";
+  "Een congres, kick-off, klantendag of bedrijfsfeest op Vlieland. Bureau Vlieland regelt locatie, techniek, catering, logies en programma vanaf het eiland.";
 
 export const zakelijkEvenementVlieland: LandingContent = {
   slug: "zakelijk-evenement-vlieland",
   path: "/zakelijk-evenement-vlieland",
   breadcrumb: "Zakelijk evenement Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Zakelijk evenement op Vlieland – organisatie van A tot Z", description },
+  seo: { title: "Zakelijk evenement of congres op Vlieland | Organisatie van A tot Z", description },
   service: { name: "Zakelijk evenement op Vlieland", description },
   hero: {
     image: heroImage,
@@ -100,7 +100,7 @@ export const zakelijkEvenementVlieland: LandingContent = {
   also: [
     { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
     { label: "Heisessie Vlieland", to: "/heisessie-vlieland" },
-    { label: "Incentive reis Vlieland", to: "/incentive-reis-vlieland" },
+    { label: "Incentive Vlieland", to: "/incentive-reis-vlieland" },
     LOGIES_LINK,
   ],
 };

@@ -7,14 +7,14 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een groepsweekend op Vlieland voor vriendengroepen, sportclubs en verenigingen. Bureau Vlieland regelt activiteiten, logies, catering en overtocht.";
+  "Een groepsweekend op Vlieland, op maat samengesteld voor vriendengroepen, sportclubs en verenigingen: activiteiten, logies, catering en overtocht in één aanvraag.";
 
 export const groepsweekendVlieland: LandingContent = {
   slug: "groepsweekend-vlieland",
   path: "/groepsweekend-vlieland",
   breadcrumb: "Groepsweekend Vlieland",
   parent: { label: "Voor wie", to: "/voor-wie" },
-  seo: { title: "Groepsweekend op Vlieland organiseren | Bureau Vlieland", description },
+  seo: { title: "Groepsweekend op Vlieland op maat | Vereniging, club of vriendengroep", description },
   service: { name: "Groepsweekend op Vlieland", description },
   hero: {
     image: heroImage,

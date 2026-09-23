@@ -7,21 +7,21 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een heisessie op Vlieland: rust, focus en ruimte voor strategie. Bureau Vlieland regelt locatie, logies, catering en logistiek.";
+  "Een heisessie op Vlieland: vergaderen, strategie en teamgesprekken in alle rust, met vergaderlocatie, logies, catering en overtocht geregeld vanaf het eiland.";
 
 export const heisessieVlieland: LandingContent = {
   slug: "heisessie-vlieland",
   path: "/heisessie-vlieland",
   breadcrumb: "Heisessie Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Heisessie op Vlieland – rust en focus voor strategie", description },
+  seo: { title: "Heisessie op Vlieland | Vergaderen en strategie in alle rust", description },
   service: { name: "Heisessie op Vlieland", description },
   hero: {
     image: heroImage,
     alt: "Heisessie in de duinen van Vlieland",
     eyebrow: "Heisessie",
     title: "Heisessie op Vlieland",
-    intro: "De ideale omgeving voor organisaties die in alle rust willen werken aan strategie, visie of samenwerking.",
+    intro: "Vergaderen en werken aan strategie, visie of samenwerking, in alle rust en zonder afleiding.",
   },
   intro: {
     title: "Het eiland dwingt tot vertraging",

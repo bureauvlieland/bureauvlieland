@@ -7,14 +7,14 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een meerdaags bedrijfsuitje op Vlieland met rust en verdieping. Bureau Vlieland regelt het complete programma inclusief overnachting.";
+  "Een meerdaags bedrijfsuitje, teambuilding of heisessie op Vlieland met overnachting: programma, logies, catering en overtocht in één hand, geregeld vanaf het eiland.";
 
 export const meerdaagsBedrijfsuitjeVlieland: LandingContent = {
   slug: "meerdaags-bedrijfsuitje-vlieland",
   path: "/meerdaags-bedrijfsuitje-vlieland",
   breadcrumb: "Meerdaags bedrijfsuitje Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Meerdaags bedrijfsuitje op Vlieland – met overnachting", description },
+  seo: { title: "Meerdaags bedrijfsuitje op Vlieland | Teambuilding of heisessie met overnachting", description },
   service: { name: "Meerdaags bedrijfsuitje op Vlieland", description },
   hero: {
     image: heroImage,
@@ -104,7 +104,7 @@ export const meerdaagsBedrijfsuitjeVlieland: LandingContent = {
   also: [
     { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
     { label: "Heisessie Vlieland", to: "/heisessie-vlieland" },
-    { label: "Incentive reis Vlieland", to: "/incentive-reis-vlieland" },
+    { label: "Incentive Vlieland", to: "/incentive-reis-vlieland" },
     LOGIES_LINK,
   ],
 };

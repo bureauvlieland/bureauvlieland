@@ -119,6 +119,11 @@ const L = {
     label: "Meerdaags bedrijfsuitje",
     description: "Twee of meer dagen inclusief overnachting",
   },
+  personeelsuitje: {
+    href: "/personeelsuitje-vlieland",
+    label: "Personeelsuitje",
+    description: "Eén dag of een weekend met de hele organisatie",
+  },
   teamuitje: {
     href: "/teamuitje-vlieland",
     label: "Teambuilding",
@@ -136,7 +141,7 @@ const L = {
   },
   incentive: {
     href: "/incentive-reis-vlieland",
-    label: "Incentive reis",
+    label: "Incentive",
     description: "Belonen met een onvergetelijke eilandtrip",
   },
   ideeen: {
@@ -239,7 +244,11 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/bedrijfsuitje-vlieland": {
     title: "Ook relevant voor bedrijven",
-    links: [L.meerdaags, L.teamuitje, L.heisessie, L.zakelijk, L.incentive, L.ideeen],
+    links: [L.personeelsuitje, L.meerdaags, L.teamuitje, L.heisessie, L.zakelijk, L.incentive],
+  },
+  "/personeelsuitje-vlieland": {
+    title: "Ook relevant voor bedrijven",
+    links: [L.bedrijfsuitje, L.meerdaags, L.teamuitje, L.catering, L.logies, L.voorbeeldprogrammas],
   },
   "/meerdaags-bedrijfsuitje-vlieland": {
     title: "Ook relevant voor bedrijven",

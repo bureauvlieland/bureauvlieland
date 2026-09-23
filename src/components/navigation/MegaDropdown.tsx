@@ -114,11 +114,12 @@ const inspiratieItems: NavItem[] = [
 // Voor wie — landings (B2B + B2C)
 const voorBedrijvenItems: NavItem[] = [
   { label: "Bedrijfsuitje Vlieland", href: "/bedrijfsuitje-vlieland", highlight: true },
+  { label: "Personeelsuitje", href: "/personeelsuitje-vlieland" },
   { label: "Meerdaags bedrijfsuitje", href: "/meerdaags-bedrijfsuitje-vlieland" },
   { label: "Teambuilding", href: "/teamuitje-vlieland" },
   { label: "Heisessie", href: "/heisessie-vlieland" },
   { label: "Zakelijk evenement", href: "/zakelijk-evenement-vlieland" },
-  { label: "Incentive reis", href: "/incentive-reis-vlieland" },
+  { label: "Incentive", href: "/incentive-reis-vlieland" },
   { label: "Bedrijfsuitje ideeën", href: "/bedrijfsuitje-ideeen-vlieland" },
 ];
 

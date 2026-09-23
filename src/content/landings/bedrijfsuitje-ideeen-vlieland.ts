@@ -14,7 +14,7 @@ export const bedrijfsuitjeIdeeenVlieland: LandingContent = {
   path: "/bedrijfsuitje-ideeen-vlieland",
   breadcrumb: "Bedrijfsuitje ideeën Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Bedrijfsuitje ideeën op Vlieland – inspiratie en maatwerk", description },
+  seo: { title: "Bedrijfsuitje ideeën op Vlieland | Inspiratie en maatwerk", description },
   service: { name: "Bedrijfsuitje ideeën op Vlieland", description },
   hero: {
     image: heroImage,
@@ -66,9 +66,9 @@ export const bedrijfsuitjeIdeeenVlieland: LandingContent = {
       title: "Van idee naar programma",
       paragraphs: ["Afhankelijk van uw doel en groep adviseren wij een passend type programma."],
       checklist: [
-        "[Teamuitje](/teamuitje-vlieland): focus op samenwerking en verbinding",
+        "[Teambuilding](/teamuitje-vlieland): focus op samenwerking en verbinding",
         "[Meerdaags bedrijfsuitje](/meerdaags-bedrijfsuitje-vlieland): met overnachting voor verdieping",
-        "[Incentive reis](/incentive-reis-vlieland): exclusieve beleving als beloning",
+        "[Incentive](/incentive-reis-vlieland): exclusieve beleving als beloning",
       ],
     },
   ],
@@ -105,7 +105,7 @@ export const bedrijfsuitjeIdeeenVlieland: LandingContent = {
   ],
   also: [
     { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-    { label: "Teamuitje Vlieland", to: "/teamuitje-vlieland" },
+    { label: "Teambuilding Vlieland", to: "/teamuitje-vlieland" },
     { label: "Meerdaags bedrijfsuitje Vlieland", to: "/meerdaags-bedrijfsuitje-vlieland" },
     LOGIES_LINK,
   ],
