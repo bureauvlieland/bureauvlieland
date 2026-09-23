@@ -57,9 +57,9 @@ export const HeroEditorial = () => {
         >
           <span className="block text-[clamp(3rem,8vw,8rem)]">Het eiland</span>
           <span className="block text-[clamp(3rem,8vw,8rem)] italic text-sunset font-normal">
-            als bestemming.
+            voor uw groep.
           </span>
-          <span className="block text-[clamp(3rem,8vw,8rem)]">Wij als gids ernaartoe.</span>
+          <span className="mt-4 block text-[clamp(1.75rem,4vw,4rem)] leading-tight">Wij kennen het, van boot tot borrel.</span>
         </motion.h1>
 
         {/* Lower content row */}
