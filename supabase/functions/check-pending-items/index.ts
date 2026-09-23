@@ -10,6 +10,7 @@ import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/p
 import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
 import { allItemsConfirmedForTerms, pickTermsMail, TERMS_MAIL_TYPES, type TermsItemLike } from "../_shared/customerTermsReminder.ts";
 import { isBureauItem, type BureauItemLike } from "../_shared/bureau-item.ts";
+import { isAftersalesDue, type AftersalesItemLike, type AftersalesProgramLike } from "../_shared/aftersalesEligibility.ts";
 
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -1001,78 +1002,68 @@ Deno.serve(async (req) => {
       const daysAfter = Number(settingsMap.get("customer_aftersales_days_after") ?? 3) || 3;
       const autoSend = Boolean(settingsMap.get("customer_aftersales_auto_send") ?? false);
 
-      const cutoff = new Date(now.getTime() - daysAfter * 24 * 60 * 60 * 1000).toISOString();
+      // Wie de mail krijgt bepaalt _shared/aftersalesEligibility.ts: geboekt,
+      // afgelopen sinds `daysAfter` dagen (maximaal 30; ouder gaat via de
+      // inhaallijst in admin). Niet meer afhankelijk van "uitgevoerd" per onderdeel.
+      const aftersalesToday = now.toISOString().slice(0, 10);
+      const { data: aftersalesCandidates } = await supabase
+        .from("program_requests")
+        .select(`
+          id, reference_number, customer_name, customer_company, customer_email,
+          aftersales_sent_at, status, cancelled_at, selected_dates,
+          terms_accepted_at, quote_status, completion_status,
+          items:program_request_items(status, executed_at, customer_accepted_at, customer_approved_at)
+        `)
+        .is("aftersales_sent_at", null)
+        .is("cancelled_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      const eligibleRequests = (aftersalesCandidates || []).filter((r: AftersalesProgramLike & { items?: AftersalesItemLike[] }) =>
+        isAftersalesDue(r, r.items ?? [], aftersalesToday, daysAfter)
+      );
 
-      // Group all program_request_items by request, to determine completion + last execution
-      const { data: aftersalesItems } = await supabase
-        .from("program_request_items")
-        .select("request_id, status, executed_at, block_type")
-        .neq("status", "cancelled");
+      for (const reqRow of eligibleRequests || []) {
+        if (isSnoozed(reqRow.id)) { totalSkipped++; continue; }
+        if (!reqRow.customer_email) continue;
+        if (reqRow.aftersales_sent_at) continue;
+        if (reqRow.cancelled_at || reqRow.status === "cancelled") continue;
 
-      const byRequest = new Map<string, { lastExecuted: string | null; allExecuted: boolean }>();
-      for (const it of aftersalesItems || []) {
-        const cur = byRequest.get(it.request_id) || { lastExecuted: null, allExecuted: true };
-        if (!it.executed_at) {
-          cur.allExecuted = false;
-        } else if (!cur.lastExecuted || it.executed_at > cur.lastExecuted) {
-          cur.lastExecuted = it.executed_at;
+        const customerName = reqRow.customer_company || reqRow.customer_name || "Onbekend";
+
+        if (autoSend && canSendEmail) {
+          try {
+            const { error: invokeErr } = await supabase.functions.invoke(
+              "send-customer-aftersales",
+              { body: { request_id: reqRow.id, sent_by: "system" } },
+            );
+            if (!invokeErr) totalCreated++;
+          } catch (e) {
+            console.error("auto-send aftersales failed", reqRow.id, e);
+          }
+          continue;
         }
-        byRequest.set(it.request_id, cur);
-      }
 
-      const eligibleRequestIds = [...byRequest.entries()]
-        .filter(([, v]) => v.allExecuted && v.lastExecuted && v.lastExecuted <= cutoff)
-        .map(([id]) => id);
+        // Todo path
+        const { data: existing } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "customer_aftersales")
+          .eq("auto_entity_id", reqRow.id)
+          .maybeSingle();
 
-      if (eligibleRequestIds.length > 0) {
-        const { data: eligibleRequests } = await supabase
-          .from("program_requests")
-          .select("id, reference_number, customer_name, customer_company, customer_email, aftersales_sent_at, status, cancelled_at")
-          .in("id", eligibleRequestIds);
-
-        for (const reqRow of eligibleRequests || []) {
-          if (isSnoozed(reqRow.id)) { totalSkipped++; continue; }
-          if (!reqRow.customer_email) continue;
-          if (reqRow.aftersales_sent_at) continue;
-          if (reqRow.cancelled_at || reqRow.status === "cancelled") continue;
-
-          const customerName = reqRow.customer_company || reqRow.customer_name || "Onbekend";
-
-          if (autoSend && canSendEmail) {
-            try {
-              const { error: invokeErr } = await supabase.functions.invoke(
-                "send-customer-aftersales",
-                { body: { request_id: reqRow.id, sent_by: "system" } },
-              );
-              if (!invokeErr) totalCreated++;
-            } catch (e) {
-              console.error("auto-send aftersales failed", reqRow.id, e);
-            }
-            continue;
-          }
-
-          // Todo path
-          const { data: existing } = await supabase
+        if (!existing) {
+          const { error: todoError } = await supabase
             .from("admin_todos")
-            .select("id")
-            .eq("auto_type", "customer_aftersales")
-            .eq("auto_entity_id", reqRow.id)
-            .maybeSingle();
-
-          if (!existing) {
-            const { error: todoError } = await supabase
-              .from("admin_todos")
-              .insert({
-                title: `Aftersales-mail versturen aan ${customerName}`,
-                description: `Het programma is uitgevoerd. Verstuur de aftersales-mail met de vraag om een review op Google en de eigen site.`,
-                priority: "low",
-                status: "todo",
-                related_request_id: reqRow.id,
-                auto_type: "customer_aftersales",
-                auto_entity_id: reqRow.id,
-              });
-            if (!todoError) totalCreated++;
-          }
+            .insert({
+              title: `Aftersales-mail versturen aan ${customerName}`,
+              description: `Het programma is uitgevoerd. Verstuur de aftersales-mail met de vraag om een review op Google en de eigen site.`,
+              priority: "low",
+              status: "todo",
+              related_request_id: reqRow.id,
+              auto_type: "customer_aftersales",
+              auto_entity_id: reqRow.id,
+            });
+          if (!todoError) totalCreated++;
         }
       }
     } catch (e) {
