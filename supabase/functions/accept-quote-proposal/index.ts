@@ -367,14 +367,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       console.log(`Updated item_quote_status to 'in_afstemming' for concept/in_afstemming items`);
     }
 
-    // Auto-resolve terms_reminder todo
-    await supabase
-      .from("admin_todos")
-      .update({ status: "done", completed_at: new Date().toISOString() })
-      .eq("auto_type", "terms_reminder")
-      .eq("auto_entity_id", program.id)
-      .neq("status", "done");
-    console.log(`Resolved terms_reminder todo for program ${program.id}`);
+    // terms_reminder alleen sluiten als de AV echt getekend zijn: akkoord op
+    // het voorstel is nog geen handtekening onder de voorwaarden.
+    if (program.terms_accepted_at) {
+      await supabase
+        .from("admin_todos")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("auto_type", "terms_reminder")
+        .eq("auto_entity_id", program.id)
+        .neq("status", "done");
+      console.log(`Resolved terms_reminder todo for program ${program.id}`);
+    }
 
     if (!isAdmin) {
       // Voorstel-akkoord telt als akkoord op alle dán bekende onderdelen.

@@ -7,6 +7,9 @@ const REMINDER_REPEAT_DAYS = 7;
 import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
 import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
+import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
+import { allItemsConfirmedForTerms, pickTermsMail, TERMS_MAIL_TYPES } from "../_shared/customerTermsReminder.ts";
+import { isBureauItem } from "../_shared/bureau-item.ts";
 
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -780,7 +783,7 @@ Deno.serve(async (req) => {
       const execRequestIds = [...new Set(executedItems.map(i => i.request_id))];
       const { data: execRequests } = await supabase
         .from("program_requests")
-        .select("id, customer_name, customer_company, reference_number")
+        .select("id, customer_name, customer_company, reference_number, terms_accepted_at, completion_status")
         .in("id", execRequestIds);
       const execReqMap = new Map((execRequests || []).map(r => [r.id, r]));
 
@@ -825,6 +828,9 @@ Deno.serve(async (req) => {
         const req = execReqMap.get(item.request_id) as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const referenceNumber = req?.reference_number || "—";
+        // Partner kan pas factureren als de klant tekende of het bureau vrijgaf;
+        // tot die tijd geen factuurherinneringen naar de partner.
+        const invoicingReleased = isPartnerInvoicingReleased(req);
 
         // Post-execution feedback: 1 day after executed_at
         if (item.executed_at && item.executed_at <= oneDayAgo) {
@@ -868,6 +874,7 @@ Deno.serve(async (req) => {
         // (Was T+1 — te kort dag; verschoven naar T+3 zodat partner ruimte heeft.)
         if (
           canSendEmail &&
+          invoicingReleased &&
           item.executed_at && item.executed_at <= threeDaysAgo &&
           !hasInvoice(item) &&
           item.block_type !== "bureau"
@@ -925,9 +932,13 @@ Deno.serve(async (req) => {
               const { error: icError } = await supabase
                 .from("admin_todos")
                 .insert({
-                  title: `Factuur partner ${item.provider_name} nog niet ontvangen voor "${item.block_name}"`,
-                  description: `De activiteit is meer dan 7 dagen geleden uitgevoerd maar er is nog geen inkoopfactuur geregistreerd.`,
-                  priority: "normal",
+                  title: invoicingReleased
+                    ? `Factuur partner ${item.provider_name} nog niet ontvangen voor "${item.block_name}"`
+                    : `${item.provider_name} kan niet factureren voor "${item.block_name}": geef project vrij`,
+                  description: invoicingReleased
+                    ? `De activiteit is meer dan 7 dagen geleden uitgevoerd maar er is nog geen inkoopfactuur geregistreerd.`
+                    : `De activiteit is meer dan 7 dagen geleden uitgevoerd, maar de klant heeft de voorwaarden niet getekend en het project is niet vrijgegeven. De partner kan daardoor niet factureren. Gebruik "Markeer als klaar voor facturatie" op het project.`,
+                  priority: invoicingReleased ? "normal" : "high",
                   status: "todo",
                   related_request_id: item.request_id,
                   related_partner_id: item.provider_id,
@@ -939,7 +950,7 @@ Deno.serve(async (req) => {
           }
 
           // Partner invoice escalation T+7
-          if (canSendEmail && item.block_type !== "bureau") {
+          if (canSendEmail && invoicingReleased && item.block_type !== "bureau") {
             const partner = partnerMap.get(item.provider_id as string) as any;
             if (partner) {
               const partnerEmail = partner.contact_email || partner.email;
@@ -1546,6 +1557,145 @@ Deno.serve(async (req) => {
 
 
         if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
+    // CHECK 13: Klant heeft de voorwaarden nog niet getekend
+    // Alles is bevestigd maar terms_accepted_at ontbreekt → automatische mail
+    // aan de klant (eerste verzoek, T-14, T-7, T-3). Vanaf T-3 een taak met
+    // hoge prioriteit om de klant te bellen.
+    // =============================================
+    {
+      const { data: unsignedPrograms, error: unsignedError } = await supabase
+        .from("program_requests")
+        .select(`
+          id, customer_name, customer_company, customer_email, customer_token,
+          reference_number, selected_dates, quote_status, completion_status,
+          billing_company_name, billing_address_street, billing_address_postal, billing_address_city,
+          items:program_request_items(id, status, block_type, block_category, provider_id, day_index, item_quote_status)
+        `)
+        .eq("status", "active")
+        .is("cancelled_at", null)
+        .is("terms_accepted_at", null)
+        .in("quote_status", ["akkoord_ontvangen", "definitief_bevestigd"])
+        .not("completion_status", "in", "(ready_for_invoice,partially_invoiced,fully_invoiced,completed)");
+
+      if (unsignedError) {
+        console.error("Error fetching unsigned programs:", unsignedError);
+      } else {
+        const ids = (unsignedPrograms || []).map((p: any) => p.id);
+        const sentByReq = new Map<string, Array<{ type: string; at: string }>>();
+        if (ids.length) {
+          const { data: termsMails } = await supabase
+            .from("email_log")
+            .select("related_request_id, email_type, created_at")
+            .in("related_request_id", ids)
+            .in("email_type", TERMS_MAIL_TYPES as unknown as string[]);
+          for (const m of termsMails || []) {
+            const list = sentByReq.get((m as any).related_request_id) ?? [];
+            list.push({ type: (m as any).email_type, at: (m as any).created_at });
+            sentByReq.set((m as any).related_request_id, list);
+          }
+        }
+
+        for (const prog of unsignedPrograms || []) {
+          if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+          const items = (prog.items as any[]) || [];
+          if (!allItemsConfirmedForTerms(items, (i: any) => isBureauItem(i))) continue;
+
+          const dates = Array.isArray(prog.selected_dates)
+            ? (prog.selected_dates as unknown[]).map((d) => String(d).slice(0, 10)).sort()
+            : [];
+          if (dates.length === 0) continue;
+          const firstDate = dates[0];
+          const daysUntil = Math.round(
+            (Date.parse(firstDate) - Date.parse(todayStr)) / (1000 * 60 * 60 * 24),
+          );
+          if (daysUntil < 0) continue;
+
+          const customerLabel = prog.customer_company || prog.customer_name;
+
+          // Vanaf T-3: bellen. Hergebruik de terms_reminder-taak (sluit vanzelf
+          // bij ondertekening of vrijgave door het bureau).
+          if (daysUntil <= 3) {
+            const callTitle = `Bel ${customerLabel}: voorwaarden nog niet getekend (event over ${daysUntil} dag(en))`;
+            const callDescription = `Alle onderdelen zijn bevestigd, maar de klant heeft de algemene voorwaarden nog niet ondertekend. Zonder handtekening kunnen partners pas factureren nadat het project is vrijgegeven. Bel de klant en vraag te tekenen via ${portalBase}/mijn-programma/${prog.customer_token}.`;
+            const { data: openReminder } = await supabase
+              .from("admin_todos")
+              .select("id, priority")
+              .eq("auto_type", "terms_reminder")
+              .eq("auto_entity_id", prog.id)
+              .neq("status", "done")
+              .maybeSingle();
+            if (openReminder) {
+              if (openReminder.priority !== "high") {
+                await supabase
+                  .from("admin_todos")
+                  .update({ title: callTitle, description: callDescription, priority: "high", due_date: firstDate })
+                  .eq("id", openReminder.id);
+              }
+            } else {
+              const { error: todoError } = await supabase.from("admin_todos").insert({
+                title: callTitle,
+                description: callDescription,
+                priority: "high",
+                status: "todo",
+                due_date: firstDate,
+                related_request_id: prog.id,
+                auto_type: "terms_reminder",
+                auto_entity_id: prog.id,
+              });
+              if (!todoError) totalCreated++;
+            }
+          }
+
+          if (!canSendEmail || !prog.customer_email || !prog.customer_token) continue;
+          if (isHot(prog.id)) { totalSkipped++; continue; }
+
+          const mailType = pickTermsMail(daysUntil, sentByReq.get(prog.id) ?? []);
+          if (!mailType) continue;
+
+          const billingMissing =
+            !prog.billing_company_name ||
+            !prog.billing_address_street ||
+            !prog.billing_address_postal ||
+            !prog.billing_address_city;
+          const portalUrl = `${portalBase}/mijn-programma/${prog.customer_token}`;
+          const referenceNumber = prog.reference_number || "";
+          const isFirst = mailType === "customer_terms_request";
+          const subject = isFirst
+            ? `Uw programma is bevestigd: onderteken de voorwaarden${referenceNumber ? ` (${referenceNumber})` : ""}`
+            : `Herinnering: onderteken de voorwaarden voor uw programma${referenceNumber ? ` (${referenceNumber})` : ""}`;
+          const intro = isFirst
+            ? "Goed nieuws: alle onderdelen van uw programma op Vlieland zijn bevestigd."
+            : `Over ${daysUntil === 0 ? "enkele uren" : `${daysUntil} dag(en)`} begint uw programma op Vlieland. We missen nog uw handtekening onder de algemene voorwaarden.`;
+
+          await sendReminderEmail({
+            templateId: mailType,
+            recipientEmail: prog.customer_email,
+            recipientName: prog.customer_name || customerLabel,
+            subject,
+            variables: {
+              customer_name: prog.customer_name || customerLabel,
+              reference_number: referenceNumber,
+              first_date: firstDate,
+              days_until: String(daysUntil),
+              portal_url: portalUrl,
+              billing_missing: billingMissing ? "true" : "",
+            },
+            fallbackHtml: `<p>Beste ${prog.customer_name || customerLabel},</p>
+<p>${intro}</p>
+<p>Wilt u het programma afronden door de algemene voorwaarden te ondertekenen${billingMissing ? " en uw factuurgegevens in te vullen" : ""}? Dat kost een minuut en is nodig zodat wij en onze partners alles correct kunnen afhandelen en factureren.</p>
+<p><a href="${portalUrl}" style="display:inline-block;padding:10px 18px;background:#1a365d;color:#ffffff;text-decoration:none;border-radius:6px;">Bekijk en onderteken uw programma</a></p>
+<p>Heeft u vragen of klopt er iets niet? Beantwoord gewoon deze mail.</p>
+<p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+            logExtra: {
+              email_type: mailType,
+              related_request_id: prog.id,
+            },
+          });
+        }
       }
     }
 
