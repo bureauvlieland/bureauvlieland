@@ -1,5 +1,6 @@
 // Edge function for partner dashboard data
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { canPartnerInvoiceItem } from "../_shared/partnerInvoicing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,7 +83,8 @@ Deno.serve(async (req) => {
 
 
     // Get all items assigned to this partner (activity items)
-    // Include billing details only when terms have been accepted (for invoicing)
+    // Billing details are shown in the portal once invoicing is released
+    // (terms accepted or bureau released, see _shared/partnerInvoicing.ts)
     // Also include invoicing_mode for UI display
     const { data: items, error: itemsError } = await supabase
       .from("program_request_items")
@@ -102,6 +104,7 @@ Deno.serve(async (req) => {
           cancellation_reason,
           completed_at,
           terms_accepted_at,
+          completion_status,
           invoicing_mode,
           billing_company_name,
           billing_kvk_number,
@@ -279,11 +282,10 @@ Deno.serve(async (req) => {
     const invoiced = itemsWithSiblings.filter((i) => i.status === "invoiced" || i.invoiced_number !== null);
     const closed = itemsWithSiblings.filter((i) => ["unavailable", "cancelled"].includes(i.status));
     
-    // Items ready for invoice: executed AND customer has accepted terms
+    // Items ready for invoice: executed AND invoicing released
+    // (customer accepted terms or bureau released the project)
     const readyForInvoice = itemsWithSiblings.filter(
-      (i) => i.status === "executed" && 
-             !i.invoiced_number && 
-             i.program_requests?.terms_accepted_at !== null
+      (i) => i.status === "executed" && canPartnerInvoiceItem(i, i.program_requests)
     );
 
     // Fetch accommodation quotes if partner offers accommodation

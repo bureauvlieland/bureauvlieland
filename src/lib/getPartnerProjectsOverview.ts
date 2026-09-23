@@ -1,4 +1,5 @@
 import type { DerivedStatus } from "@/lib/projectStatus";
+import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
 import type {
   PartnerItem,
   PartnerAccommodationQuote,
@@ -33,13 +34,7 @@ function toDate(s: string | null | undefined): Date | null {
 function isItemActionRequired(i: PartnerItem): boolean {
   if (i.status === "pending" || i.status === "counter_proposed") return true;
   // ready to invoice
-  const canInvoice =
-    (i.status === "accepted" ||
-      i.status === "executed" ||
-      (i.status === "confirmed" && (i.customer_accepted_at || i.customer_approved_at))) &&
-    !i.invoiced_number &&
-    i.program_requests.terms_accepted_at;
-  if (canInvoice) return true;
+  if (canPartnerInvoiceItem(i, i.program_requests)) return true;
   return false;
 }
 
@@ -50,16 +45,7 @@ function deriveActivityStatus(items: PartnerItem[]): DerivedStatus {
   const active = items.filter(i => i.status !== "cancelled" && i.status !== "unavailable");
   if (active.length === 0) return "geannuleerd";
   if (active.every(i => !!i.invoiced_number)) return "afgerond";
-  if (
-    req.terms_accepted_at &&
-    active.some(
-      i =>
-        !i.invoiced_number &&
-        (i.status === "accepted" ||
-          i.status === "executed" ||
-          (i.status === "confirmed" && (i.customer_accepted_at || i.customer_approved_at)))
-    )
-  ) {
+  if (active.some(i => canPartnerInvoiceItem(i, req))) {
     return "facturatie";
   }
   if (req.terms_accepted_at) return "av_getekend";

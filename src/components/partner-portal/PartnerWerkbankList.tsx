@@ -22,6 +22,7 @@ import type {
 import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
 import { DismissInvoiceDialog } from "./DismissInvoiceDialog";
 import { canPartnerDismissInvoiceItem } from "@/lib/partnerInvoiceDismiss";
+import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
 import { formatDurationWindow, getEffectiveTime } from "@/lib/timeUtils";
 
 interface Props {
@@ -130,10 +131,7 @@ function buildRows(data: PartnerDashboardData): WerkbankRow[] {
       }
     }
 
-    const canInvoice =
-      (i.status === "accepted" || i.status === "executed" || (i.status === "confirmed" && customerOk)) &&
-      !i.invoiced_number &&
-      req.terms_accepted_at;
+    const canInvoice = canPartnerInvoiceItem(i, req);
     if (canInvoice) {
       const dismissable = canPartnerDismissInvoiceItem({
         status: i.status,

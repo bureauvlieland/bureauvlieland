@@ -4,6 +4,7 @@ import { nl } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
+import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
 
 interface ExportInvoicesButtonProps {
   items: PartnerItem[];
@@ -36,12 +37,7 @@ export const ExportInvoicesButton = ({
         filteredItems = items.filter((i) => i.invoiced_number !== null);
         filteredQuotes = accommodationQuotes.filter((q) => q.invoiced_number !== null);
       } else if (variant === "to-invoice") {
-        filteredItems = items.filter((i) => {
-          const effectiveStatus = getEffectiveStatus(i);
-          return (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
-            !i.invoiced_number && 
-            i.program_requests.terms_accepted_at !== null;
-        });
+        filteredItems = items.filter((i) => canPartnerInvoiceItem(i, i.program_requests));
         filteredQuotes = accommodationQuotes.filter(
           (q) => q.status === "selected" && !q.invoiced_number
         );
@@ -142,12 +138,7 @@ export const ExportInvoicesButton = ({
     (variant === "invoiced" 
       ? items.filter((i) => i.invoiced_number !== null).length + accommodationQuotes.filter((q) => q.invoiced_number !== null).length
       : variant === "to-invoice"
-        ? items.filter((i) => {
-            const effectiveStatus = getEffectiveStatus(i);
-            return (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
-              !i.invoiced_number && 
-              i.program_requests.terms_accepted_at !== null;
-          }).length + accommodationQuotes.filter((q) => q.status === "selected" && !q.invoiced_number).length
+        ? items.filter((i) => canPartnerInvoiceItem(i, i.program_requests)).length + accommodationQuotes.filter((q) => q.status === "selected" && !q.invoiced_number).length
         : items.length + accommodationQuotes.length);
 
   if (totalCount === 0) return null;

@@ -54,6 +54,7 @@ interface Props {
 
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
+import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
 
 const formatEur = (n: number) =>
   n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -84,14 +85,8 @@ export const PartnerProjectItemRow = ({
 
   const canRespond =
     item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
-  const canInvoice =
-    (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
-    !item.invoiced_number &&
-    request.terms_accepted_at !== null;
-  const awaitingTerms =
-    (effectiveStatus === "accepted" || effectiveStatus === "executed") &&
-    !item.invoiced_number &&
-    request.terms_accepted_at === null;
+  const canInvoice = canPartnerInvoiceItem(item, request);
+  const awaitingTerms = isAwaitingInvoicingRelease(item, request);
   const canMarkExecuted = effectiveStatus === "accepted" && !!item.quoted_price;
 
   // Admin price change
@@ -325,7 +320,7 @@ export const PartnerProjectItemRow = ({
       {awaitingTerms && mode === "idle" && (
         <div className="px-4 pb-3 -mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <AlertCircle className="h-3 w-3" />
-          Wacht op klantakkoord op voorwaarden voordat u kunt factureren.
+          Wacht op akkoord van de klant op de voorwaarden of vrijgave door Bureau Vlieland voordat u kunt factureren.
         </div>
       )}
 

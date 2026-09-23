@@ -53,6 +53,7 @@ import {
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
+import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
 import { PartnerCustomQuoteEditor } from "./PartnerCustomQuoteEditor";
 
 interface PartnerItemSheetProps {
@@ -145,15 +146,11 @@ export const PartnerItemSheet = ({
   const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
   const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
 
-  // Can invoice when accepted/executed and customer accepted terms
-  const canInvoice = (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
-    !item.invoiced_number && 
-    request.terms_accepted_at !== null;
+  // Can invoice once customer signed the terms or the bureau released invoicing
+  const canInvoice = canPartnerInvoiceItem(item, request);
 
-  // Waiting for customer to accept terms before invoicing
-  const awaitingTerms = (effectiveStatus === "accepted" || effectiveStatus === "executed") && 
-    !item.invoiced_number && 
-    request.terms_accepted_at === null;
+  // Waiting for customer terms (or bureau release) before invoicing
+  const awaitingTerms = isAwaitingInvoicingRelease(item, request);
 
   // Can respond if pending, alternative, or counter_proposed status
   const isCustomQuote = !!(item as any).is_custom_quote;
@@ -882,7 +879,7 @@ export const PartnerItemSheet = ({
                   <span className="font-medium">Wacht op klantbevestiging</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  De klant moet eerst de voorwaarden accepteren. Daarna kun je factureren.
+                  De klant moet eerst de voorwaarden accepteren, of Bureau Vlieland geeft het project vrij voor facturatie. Daarna kun je factureren.
                 </p>
               </div>
             </>

@@ -259,7 +259,20 @@ export async function runAutoClose(
         .update({ completion_status: "ready_for_invoice" })
         .in("id", targets);
       if (uErr) result.errors.push({ project_id: "*", error: `mark ready: ${uErr.message}` });
-      else result.projects_marked_ready_for_invoice = targets.length;
+      else {
+        result.projects_marked_ready_for_invoice = targets.length;
+        // Vastleggen dat partners vanaf nu mogen factureren, ook zonder AV-handtekening.
+        const { error: hErr } = await supabase.from("program_request_history").insert(
+          targets.map((id) => ({
+            request_id: id,
+            action: "Project automatisch op facturatie gezet na uitvoering; partners kunnen factureren",
+            actor: "system",
+            actor_name: "auto-close-past-execution",
+            new_value: { completion_status: "ready_for_invoice" },
+          })),
+        );
+        if (hErr) result.errors.push({ project_id: "*", error: `history: ${hErr.message}` });
+      }
     } else {
       result.projects_marked_ready_for_invoice = targets.length;
     }
