@@ -15,13 +15,20 @@ type Filter = (row: Row) => boolean;
 
 interface QueryState {
   table: string;
-  op: "select" | "update";
+  op: "select" | "update" | "insert";
   filters: Filter[];
   updatePatch?: Row;
+  insertRows?: Row[];
 }
 
 function buildClient(store: Record<string, Row[]>, log: string[] = []) {
   const runQuery = (state: QueryState) => {
+    if (state.op === "insert") {
+      const rows = state.insertRows ?? [];
+      (store[state.table] ??= []).push(...rows.map((r) => ({ ...r })));
+      log.push(`INSERT ${state.table} (${rows.length})`);
+      return { data: null, error: null };
+    }
     let rows = (store[state.table] ?? []).filter((r) => state.filters.every((f) => f(r)));
     if (state.op === "update" && state.updatePatch) {
       for (const r of rows) Object.assign(r, state.updatePatch);
@@ -38,6 +45,11 @@ function buildClient(store: Record<string, Row[]>, log: string[] = []) {
     builder.update = (patch: Row) => {
       state.op = "update";
       state.updatePatch = patch;
+      return chain();
+    };
+    builder.insert = (rows: Row | Row[]) => {
+      state.op = "insert";
+      state.insertRows = Array.isArray(rows) ? rows : [rows];
       return chain();
     };
     builder.in = (col: string, values: unknown[]) => {
@@ -152,6 +164,11 @@ Deno.test("runAutoClose sluit pre-executie items/quotes/todos, respecteert factu
   // past-1 project status
   const past = store.program_requests.find((p) => p.id === "past-1")!;
   assertEquals(past.completion_status, "ready_for_invoice");
+
+  // Vrijgave voor partnerfacturatie staat in de history
+  const history = (store.program_request_history ?? []).filter((h) => h.request_id === "past-1");
+  assertEquals(history.length, 1);
+  assertEquals(history[0].actor, "system");
 
   // Toekomstig project ongemoeid
   const futItem = store.program_request_items.find((i) => i.id === "item-d")!;

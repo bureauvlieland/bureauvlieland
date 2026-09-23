@@ -8,8 +8,8 @@ import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
 import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
 import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
-import { allItemsConfirmedForTerms, pickTermsMail, TERMS_MAIL_TYPES } from "../_shared/customerTermsReminder.ts";
-import { isBureauItem } from "../_shared/bureau-item.ts";
+import { allItemsConfirmedForTerms, pickTermsMail, TERMS_MAIL_TYPES, type TermsItemLike } from "../_shared/customerTermsReminder.ts";
+import { isBureauItem, type BureauItemLike } from "../_shared/bureau-item.ts";
 
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -1584,7 +1584,7 @@ Deno.serve(async (req) => {
       if (unsignedError) {
         console.error("Error fetching unsigned programs:", unsignedError);
       } else {
-        const ids = (unsignedPrograms || []).map((p: any) => p.id);
+        const ids = (unsignedPrograms || []).map((p: { id: string }) => p.id);
         const sentByReq = new Map<string, Array<{ type: string; at: string }>>();
         if (ids.length) {
           const { data: termsMails } = await supabase
@@ -1592,17 +1592,18 @@ Deno.serve(async (req) => {
             .select("related_request_id, email_type, created_at")
             .in("related_request_id", ids)
             .in("email_type", TERMS_MAIL_TYPES as unknown as string[]);
-          for (const m of termsMails || []) {
-            const list = sentByReq.get((m as any).related_request_id) ?? [];
-            list.push({ type: (m as any).email_type, at: (m as any).created_at });
-            sentByReq.set((m as any).related_request_id, list);
+          type TermsMailRow = { related_request_id: string; email_type: string; created_at: string };
+          for (const m of (termsMails || []) as TermsMailRow[]) {
+            const list = sentByReq.get(m.related_request_id) ?? [];
+            list.push({ type: m.email_type, at: m.created_at });
+            sentByReq.set(m.related_request_id, list);
           }
         }
 
         for (const prog of unsignedPrograms || []) {
           if (isSnoozed(prog.id)) { totalSkipped++; continue; }
-          const items = (prog.items as any[]) || [];
-          if (!allItemsConfirmedForTerms(items, (i: any) => isBureauItem(i))) continue;
+          const items = (prog.items as Array<TermsItemLike & BureauItemLike>) || [];
+          if (!allItemsConfirmedForTerms(items, isBureauItem)) continue;
 
           const dates = Array.isArray(prog.selected_dates)
             ? (prog.selected_dates as unknown[]).map((d) => String(d).slice(0, 10)).sort()
