@@ -170,11 +170,11 @@ const AdminReviews = () => {
       <Helmet>
         <title>Beoordelingen – Admin</title>
       </Helmet>
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Beoordelingen</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-bold text-foreground">Beoordelingen</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Wat klanten na afloop invulden via de beoordelingspagina. Publiceren kan alleen met toestemming van de klant.
             </p>
           </div>
@@ -197,8 +197,8 @@ const AdminReviews = () => {
           </p>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+        <div className="grid gap-6 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle className="text-base">Trechter</CardTitle>
               <CardDescription>Van nazorgmail tot referentiepagina. Doel: minstens 40 procent van de verstuurde mails ingevuld.</CardDescription>
@@ -256,23 +256,24 @@ const AdminReviews = () => {
 
         {!aanvraagFilter && <AftersalesCatchUpCard />}
 
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-          <TabsList>
-            {(["alle", "new", "published", "hidden"] as Filter[]).map((f) => (
-              <TabsTrigger key={f} value={f}>
-                {f === "alle" ? "Alle" : STATUS_LABEL[f]} ({tellingen[f] ?? 0})
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ingevulde beoordelingen</CardTitle>
-            <CardDescription>
-              "Wat kan beter?" is alleen voor ons en komt nooit op de website. Een eigen citaat vervangt de tekst op de site, niet in het
-              archief.
-            </CardDescription>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <CardTitle className="text-base">Ingevulde beoordelingen</CardTitle>
+              <CardDescription>
+                "Wat kan beter?" is alleen voor ons en komt nooit op de website. Een eigen citaat vervangt de tekst op de site, niet in het
+                archief.
+              </CardDescription>
+            </div>
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className="shrink-0">
+              <TabsList>
+                {(["alle", "new", "published", "hidden"] as Filter[]).map((f) => (
+                  <TabsTrigger key={f} value={f}>
+                    {f === "alle" ? "Alle" : STATUS_LABEL[f]} ({tellingen[f] ?? 0})
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -288,9 +289,7 @@ const AdminReviews = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Klant</TableHead>
-                    <TableHead>Score</TableHead>
+                    <TableHead className="min-w-[160px]">Klant</TableHead>
                     <TableHead className="min-w-[280px]">Beoordeling</TableHead>
                     <TableHead>Toestemming</TableHead>
                     <TableHead>Google / herinnering</TableHead>
@@ -303,10 +302,10 @@ const AdminReviews = () => {
                     const project = r.program_requests;
                     return (
                       <TableRow key={r.id}>
-                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                          {format(new Date(r.created_at), "d MMM yyyy", { locale: nl })}
-                        </TableCell>
                         <TableCell>
+                          <div className="whitespace-nowrap text-xs text-muted-foreground">
+                            {format(new Date(r.created_at), "d MMM yyyy", { locale: nl })}
+                          </div>
                           <div className="font-medium">{r.company || r.author_name}</div>
                           <div className="text-xs text-muted-foreground">
                             {r.author_name}
@@ -315,17 +314,19 @@ const AdminReviews = () => {
                           {project && (
                             <Link
                               to={`/admin/projecten/${project.id}`}
-                              className="mt-1 inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+                              className="mt-1 inline-flex items-center gap-1 whitespace-nowrap text-xs text-primary underline-offset-2 hover:underline"
                             >
                               {project.reference_number ?? "Project"}
                               <ExternalLink className="h-3 w-3" aria-hidden="true" />
                             </Link>
                           )}
                         </TableCell>
-                        <TableCell>
-                          {r.rating !== null ? <RatingStars value={r.rating} small /> : <span className="text-xs text-muted-foreground">Geen score</span>}
-                        </TableCell>
                         <TableCell className="text-sm">
+                          {r.rating !== null && (
+                            <div className="mb-1">
+                              <RatingStars value={r.rating} small />
+                            </div>
+                          )}
                           {r.quote && (
                             <p className="mb-1 flex items-start gap-1 font-medium">
                               <MessageSquareQuote className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -341,9 +342,9 @@ const AdminReviews = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {r.source !== "portal" && <Badge variant="outline">Bestaand citaat</Badge>}
-                            {r.consent_publish && <Badge variant="secondary">Website</Badge>}
-                            {r.consent_reference && <Badge variant="secondary">Referentiepagina</Badge>}
+                            {r.source !== "portal" && <Badge variant="outline" className="whitespace-nowrap">Bestaand citaat</Badge>}
+                            {r.consent_publish && <Badge variant="secondary" className="whitespace-nowrap">Website</Badge>}
+                            {r.consent_reference && <Badge variant="secondary" className="whitespace-nowrap">Referentiepagina</Badge>}
                             {!r.consent_publish && !r.consent_reference && <span className="text-xs text-muted-foreground">Geen</span>}
                           </div>
                         </TableCell>
@@ -393,7 +394,7 @@ const AdminReviews = () => {
                           </Select>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-col items-end gap-2">
                             {r.consent_reference && r.request_id && (
                               <Button asChild variant="secondary" size="sm">
                                 <Link to={`/admin/referenties?beoordeling=${r.id}`}>Referentie</Link>
