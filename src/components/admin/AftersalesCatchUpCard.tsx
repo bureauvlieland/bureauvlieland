@@ -116,7 +116,7 @@ export const AftersalesCatchUpCard = () => {
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <CardTitle className="text-base">Nazorgmail inhalen</CardTitle>
           <CardDescription>
             Afgelopen programma's sinds {format(new Date(AFTERSALES_CATCH_UP_FROM), "MMMM yyyy", { locale: nl })} die de
@@ -124,7 +124,7 @@ export const AftersalesCatchUpCard = () => {
             mail met "Een tijdje geleden was u…".
           </CardDescription>
         </div>
-        <Button onClick={() => setConfirmOpen(true)} disabled={chosen.length === 0 || !!sending} className="gap-2">
+        <Button onClick={() => setConfirmOpen(true)} disabled={chosen.length === 0 || !!sending} className="shrink-0 gap-2">
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           {sending ? `Bezig ${sending.done}/${sending.total}` : `Verstuur (${chosen.length})`}
         </Button>
@@ -137,56 +137,59 @@ export const AftersalesCatchUpCard = () => {
         ) : candidates.length === 0 ? (
           <p className="text-sm text-muted-foreground">Alle afgelopen programma's hebben de nazorgmail gehad.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={(v) => toggleAll(v === true)}
-                    aria-label="Alles selecteren"
-                  />
-                </TableHead>
-                <TableHead>Programma</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Laatste dag</TableHead>
-                <TableHead>Openingszin</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {candidates.map((c) => {
-                const last = lastProgramDate(c.selected_dates);
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selected.has(c.id)}
-                        onCheckedChange={(v) => toggle(c.id, v === true)}
-                        aria-label={`Selecteer ${c.customer_company || c.customer_name}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Link to={`/admin/aanvragen/${c.id}`} className="font-medium underline-offset-2 hover:underline">
-                        {c.customer_company || c.customer_name}
-                      </Link>
-                      {c.reference_number && <span className="ml-2 text-xs text-muted-foreground">{c.reference_number}</span>}
-                    </TableCell>
-                    <TableCell className="text-sm">{c.customer_email}</TableCell>
-                    <TableCell className="tabular-nums">
-                      {last ? format(new Date(last), "d MMM yyyy", { locale: nl }) : "–"}
-                    </TableCell>
-                    <TableCell>
-                      {isLateAftersales(c.selected_dates, today) ? (
-                        <Badge variant="outline">Een tijdje geleden</Badge>
-                      ) : (
-                        <Badge variant="secondary">Standaard</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="max-h-[480px] overflow-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(v) => toggleAll(v === true)}
+                      aria-label="Alles selecteren"
+                    />
+                  </TableHead>
+                  <TableHead>Programma</TableHead>
+                  <TableHead className="whitespace-nowrap">Laatste dag</TableHead>
+                  <TableHead>Openingszin</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {candidates.map((c) => {
+                  const last = lastProgramDate(c.selected_dates);
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(c.id)}
+                          onCheckedChange={(v) => toggle(c.id, v === true)}
+                          aria-label={`Selecteer ${c.customer_company || c.customer_name}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/admin/aanvragen/${c.id}`} className="font-medium underline-offset-2 hover:underline">
+                          {c.customer_company || c.customer_name}
+                        </Link>
+                        {c.reference_number && (
+                          <span className="ml-2 whitespace-nowrap text-xs text-muted-foreground">{c.reference_number}</span>
+                        )}
+                        <div className="text-xs text-muted-foreground">{c.customer_email}</div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {last ? format(new Date(last), "d MMM yyyy", { locale: nl }) : "–"}
+                      </TableCell>
+                      <TableCell>
+                        {isLateAftersales(c.selected_dates, today) ? (
+                          <Badge variant="outline" className="whitespace-nowrap">Een tijdje geleden</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="whitespace-nowrap">Standaard</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
 

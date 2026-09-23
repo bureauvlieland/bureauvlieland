@@ -34,14 +34,14 @@ export const RequestSizeStatsCard = () => {
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
-        <div>
+        <div className="min-w-0 flex-1 space-y-1.5">
           <CardTitle className="text-base">Aanvragen per groepsgrootte</CardTitle>
           <CardDescription>
             Wat het seizoen brengt, per klasse: aanvragen, lopend, getekend, geannuleerd, met logies, meerdaags en de instappagina's.
           </CardDescription>
         </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as StatsPeriod)}>
-          <SelectTrigger className="h-8 w-[170px]">
+          <SelectTrigger className="h-8 w-[170px] shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -261,15 +261,15 @@ const CaseEditor = ({ row, onChanged, onTerug }: CaseEditorProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <button type="button" onClick={onTerug} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Alle referentiepagina's
       </button>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{row.title || "Referentiepagina"}</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold text-foreground">{row.title || "Referentiepagina"}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {project ? (
               <>
                 <Link to={`/admin/projecten/${project.id}`} className="underline underline-offset-2">
@@ -617,10 +617,10 @@ const AdminReferenties = () => {
       {row ? (
         <CaseEditor key={row.id} row={row} onChanged={invalidate} onTerug={terug} />
       ) : (
-        <div className="space-y-6">
+        <div className="p-6 space-y-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Referentiepagina's</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-bold text-foreground">Referentiepagina's</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Programma's van eerdere groepen als pagina op de site, na akkoord van de klant. Een concept ontstaat uit een beoordeling waarbij de klant
               toestemming gaf.
             </p>
@@ -660,7 +660,7 @@ const AdminReferenties = () => {
                 value={projectZoek}
                 onChange={(e) => setProjectZoek(e.target.value)}
                 placeholder="Zoek op referentienummer of organisatie, bijvoorbeeld BV-2602 of Kreeft"
-                className="max-w-md"
+                className="max-w-xl"
               />
               {zoekterm.length >= 2 && (
                 projectenZoeken && projectHits.length === 0 ? (
@@ -783,7 +783,7 @@ const AdminReferenties = () => {
                     {zichtbaar.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell>
-                          <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status as CaseStatus] ?? r.status}</Badge>
+                          <Badge variant={statusVariant(r.status)} className="whitespace-nowrap">{STATUS_LABEL[r.status as CaseStatus] ?? r.status}</Badge>
                         </TableCell>
                         <TableCell>
                           <button
@@ -798,7 +798,7 @@ const AdminReferenties = () => {
                         <TableCell>
                           <div className="font-medium">{r.company || r.program_requests?.customer_company || "–"}</div>
                           {r.program_requests && (
-                            <Link to={`/admin/projecten/${r.program_requests.id}`} className="text-xs text-primary underline-offset-2 hover:underline">
+                            <Link to={`/admin/projecten/${r.program_requests.id}`} className="whitespace-nowrap text-xs text-primary underline-offset-2 hover:underline">
                               {r.program_requests.reference_number ?? "Project"}
                             </Link>
                           )}
