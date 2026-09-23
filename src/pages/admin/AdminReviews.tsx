@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ExternalLink, Loader2, MessageSquareQuote, Star } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { AftersalesCatchUpCard } from "@/components/admin/AftersalesCatchUpCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -252,6 +253,8 @@ const AdminReviews = () => {
             </CardContent>
           </Card>
         </div>
+
+        {!aanvraagFilter && <AftersalesCatchUpCard />}
 
         <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)}>
           <TabsList>

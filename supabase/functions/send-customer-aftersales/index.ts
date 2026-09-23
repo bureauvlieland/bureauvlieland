@@ -12,6 +12,7 @@ import {
   getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { isLateAftersales } from "../_shared/aftersalesEligibility.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -116,6 +117,8 @@ export const handler = async (req: Request): Promise<Response> => {
       program_date_label: dateLabel,
       google_review_url: googleUrl,
       own_review_url: ownUrl,
+      // Langer dan een maand geleden (inhaallijst): andere openingszin.
+      late_intro: isLateAftersales(request.selected_dates, new Date().toISOString().slice(0, 10)) ? "true" : "",
     });
 
     if (!rendered) {
