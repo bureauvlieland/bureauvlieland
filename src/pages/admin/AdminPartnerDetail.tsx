@@ -84,6 +84,8 @@ interface Partner {
   map_tenant_slug: string | null;
   map_return_origin: string | null;
   map_api_key: string | null;
+  receives_wedding_referrals: boolean;
+  wedding_referral_email: string | null;
 }
 
 interface RelatedRequest {
@@ -163,6 +165,8 @@ const AdminPartnerDetail = () => {
     map_tenant_slug: "",
     map_return_origin: "",
     map_api_key: "",
+    receives_wedding_referrals: false,
+    wedding_referral_email: "",
   });
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
@@ -222,6 +226,8 @@ const AdminPartnerDetail = () => {
         map_tenant_slug: (data as any).map_tenant_slug || "",
         map_return_origin: (data as any).map_return_origin || "",
         map_api_key: (data as any).map_api_key || "",
+        receives_wedding_referrals: data.receives_wedding_referrals ?? false,
+        wedding_referral_email: data.wedding_referral_email || "",
       });
     } catch (error) {
       reportError(error, { where: "AdminPartnerDetail: Error fetching partner" });
@@ -384,6 +390,8 @@ const AdminPartnerDetail = () => {
            map_tenant_slug: formData.map_tenant_slug || null,
            map_return_origin: formData.map_return_origin || null,
            map_api_key: formData.map_api_key || null,
+           receives_wedding_referrals: formData.receives_wedding_referrals,
+           wedding_referral_email: formData.wedding_referral_email.trim() || null,
         });
 
         if (error) throw error;
@@ -443,6 +451,8 @@ const AdminPartnerDetail = () => {
             map_tenant_slug: formData.map_tenant_slug || null,
             map_return_origin: formData.map_return_origin || null,
             map_api_key: formData.map_api_key || null,
+            receives_wedding_referrals: formData.receives_wedding_referrals,
+            wedding_referral_email: formData.wedding_referral_email.trim() || null,
           } as any)
           .eq("id", id);
 
@@ -946,6 +956,44 @@ const AdminPartnerDetail = () => {
                       onCheckedChange={(checked) => handleChange("is_public", checked)}
                       disabled={!formData.is_active}
                     />
+                  </div>
+
+                  <Separator />
+
+                  {/* Bruiloften: docs/plan-bruiloftsdoorverwijzingen.md */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="receives_wedding_referrals">Ontvangt bruiloftsdoorverwijzingen</Label>
+                        <p className="text-xs text-slate-500">
+                          Alleen partners met deze instelling zijn te kiezen bij een doorverwijzing onder Bruiloften
+                        </p>
+                      </div>
+                      <Switch
+                        id="receives_wedding_referrals"
+                        checked={formData.receives_wedding_referrals}
+                        onCheckedChange={(checked) => handleChange("receives_wedding_referrals", checked)}
+                      />
+                    </div>
+                    {formData.receives_wedding_referrals && (
+                      <div className="space-y-2">
+                        <Label htmlFor="wedding_referral_email">E-mailadres voor doorverwijzingen (optioneel)</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            id="wedding_referral_email"
+                            type="email"
+                            value={formData.wedding_referral_email}
+                            onChange={(e) => handleChange("wedding_referral_email", e.target.value)}
+                            placeholder="bruiloften@bedrijf.nl"
+                            className="pl-10"
+                          />
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Leeg = {formData.contact_email ? `het contactadres (${formData.contact_email})` : "het contactadres, en anders het loginadres"}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {!isNew && partner && (
