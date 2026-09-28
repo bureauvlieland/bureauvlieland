@@ -25,10 +25,11 @@ comment on column public.partners.receives_wedding_referrals is
 comment on column public.partners.wedding_referral_email is
   'Apart e-mailadres voor bruiloftsdoorverwijzingen. Leeg = contact_email, anders het loginadres.';
 
--- Island Events en Paal 50 (Island Events wordt zo nodig door Erwin als partner aangemaakt).
+-- Paal 50 en WestCord Strandhotel Seeduyn (de bruiloftentak van Island Events;
+-- het contactadres van die partner is al info@islandevents.nl).
 update public.partners
    set receives_wedding_referrals = true
- where id = 'paal-50' or name ilike 'island events%';
+ where id in ('paal-50', 'strandhotel-seeduyn');
 
 -- Beide beschermtriggers: een partner mag deze admin-velden niet zelf wijzigen.
 CREATE OR REPLACE FUNCTION public.guard_partner_self_update()

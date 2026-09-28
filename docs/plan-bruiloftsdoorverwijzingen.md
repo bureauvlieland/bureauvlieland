@@ -1,8 +1,9 @@
 # Plan: doorverwijzingen van bruiloftsaanvragen bijhouden
 
 Status: fase 1 gebouwd op 28 september 2026 (akkoord Erwin, met de
-voorgestelde keuzes bij de beslispunten; Island Events maakt Erwin zelf als
-partner aan en zet daar de schakelaar aan). Fase 2 en 3 zijn plan.
+voorgestelde keuzes bij de beslispunten). "Island Events" is in de admin de
+partner WestCord Strandhotel Seeduyn (`strandhotel-seeduyn`). Fase 2 en 3
+zijn plan.
 
 Aanleiding: Bureau Vlieland voert geen bruiloften meer uit. Binnenkomende
 bruiloftsaanvragen gaan naar partners (voorlopig Island Events en Paal 50).
@@ -34,15 +35,11 @@ bijgehouden worden.
   (`AdminPartnerDetail.tsx`) is één formulier met een Opslaan-knop; vlaggen
   staan als `Switch` in de kaart "Instellingen".
   - Paal 50 bestaat als partner `paal-50`.
-  - **Island Events komt in de migraties niet als partner voor.** Wel
-    hebben drie WestCord-hotels (`hotel-de-wadden`, `hotel-doniastate`,
-    `strandhotel-seeduyn`) `contact_email = info@islandevents.nl`. Of er in
-    de live database inmiddels een partner "Island Events" is, kan vanuit
-    deze omgeving niet worden gecontroleerd (anon mag `partners` niet
-    lezen). De migratie zet de vlag daarom aan op naam
-    (`name ilike 'island events%'`) én op `paal-50`, en meldt hoeveel rijen
-    geraakt zijn. Bestaat Island Events niet, dan maak je hem aan als
-    partner en zet je de schakelaar aan; dat is verder geen blokkade.
+  - Island Events bestaat niet als losse partner: de bruiloften lopen via
+    WestCord Strandhotel Seeduyn (`strandhotel-seeduyn`, Erwin, 28
+    september), een van de drie WestCord-hotels met
+    `contact_email = info@islandevents.nl`. De migratie zet de vlag aan
+    voor `paal-50` en `strandhotel-seeduyn`.
 - **Facturatie.** Twee uitgaande factuurtypes: `bureau_invoices` (aan
   klanten, per project) en `commission_invoices` + `commission_invoice_lines`
   (aan partners, nummer `BVC-jjmm-nnnn` via trigger, PDF in de browser met
@@ -76,7 +73,7 @@ bijgehouden worden.
 | `wedding_referral_email` | text null | Apart adres voor doorverwijzingen; leeg = `contact_email`, anders `email` |
 
 Beide kolommen komen in de twee beschermtriggers (admin-only). De migratie
-zet de vlag aan voor `paal-50` en `name ilike 'island events%'`.
+zet de vlag aan voor `paal-50` en `strandhotel-seeduyn`.
 
 **`wedding_referral_fee_schedules` (staffel, met ingangsdatum)**
 
@@ -260,9 +257,8 @@ is wat fase 1 levert.
 3. Anonimiseren: handmatig per doorverwijzing, met een melding op de pagina
    zodra een doorverwijzing 2 jaar afgerond is.
 4. Export van de controlelijst als CSV.
-5. Island Events maakt Erwin zelf aan als partner; de migratie zet de
-   schakelaar aan voor `paal-50` en voor een partner met de naam "Island
-   Events" als die op dat moment al bestaat.
+5. "Island Events" is de partner WestCord Strandhotel Seeduyn; de migratie
+   zet de schakelaar aan voor `paal-50` en `strandhotel-seeduyn`.
 
 ## Wat er in fase 1 is gebouwd
 
