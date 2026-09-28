@@ -1,9 +1,9 @@
 # Plan: doorverwijzingen van bruiloftsaanvragen bijhouden
 
-Status: fase 1 gebouwd op 28 september 2026 (akkoord Erwin, met de
-voorgestelde keuzes bij de beslispunten). "Island Events" is in de admin de
-partner WestCord Strandhotel Seeduyn (`strandhotel-seeduyn`). Fase 2 en 3
-zijn plan.
+Status: fase 1 en fase 2 gebouwd op 28 september 2026 (akkoord Erwin, met
+de voorgestelde keuzes bij de beslispunten). "Island Events" is in de admin
+de partner WestCord Strandhotel Seeduyn (`strandhotel-seeduyn`). Fase 3
+(factuur maken) is plan; advies: pas na het eerste seizoen bekijken.
 
 Aanleiding: Bureau Vlieland voert geen bruiloften meer uit. Binnenkomende
 bruiloftsaanvragen gaan naar partners (voorlopig Island Events en Paal 50).
@@ -197,10 +197,17 @@ Verder: route en lazy import in `App.tsx`, titel in `ADMIN_TITLE_MAP`,
   zou passen bij "voert geen bruiloften meer uit". Dat is een aparte,
   bewuste keuze; ik raak het in fase 1 niet aan.
 
-## Fase 2: doorverwijsknop (plan, nog niet bouwen)
+## Fase 2: doorverwijsknop (gebouwd op 28 september)
 
-Niet eenvoudig genoeg om er in fase 1 bij te nemen: het vraagt een nieuwe
-edge function, cc-ondersteuning in de mailinfrastructuur en een template.
+Gebouwd zoals hieronder gepland, in een eigen pull request na fase 1.
+Bestanden: migratie `20260928150000_bruiloftsdoorverwijzing-mail.sql`
+(template), edge function `send-wedding-referral` met `index_test.ts`,
+cc-suppressie in `_shared/mailjet-send.ts`, dialoog
+`WeddingReferralDialog.tsx`, knop in de sales-inbox en in het projectmenu,
+en "Mail bekijken" op de doorverwijzing. In testmodus (preview) gaat de mail
+naar het testadres zonder cc. Een sales-inboxmail gaat na doorverwijzen op
+"verwerkt" met een notitie; bij een project komt de mail in het
+communicatiedossier en gaat reply-to naar het project.
 
 1. **Template** `wedding_referral_customer` via migratie in
    `email_templates` (daarmee bewerkbaar op `/admin/email-templates`), met

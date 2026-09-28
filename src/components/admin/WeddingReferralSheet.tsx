@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Link2, Loader2, Search, ShieldOff, Trash2 } from "lucide-react";
+import { Link2, Loader2, Mail, Search, ShieldOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -52,6 +52,8 @@ import {
   type ReferralStatus,
 } from "@/lib/weddingReferrals";
 import { describeTier, normalizeTiers } from "@/lib/weddingReferralFee";
+import { EmailLogDetailDialog } from "@/components/admin/EmailLogDetailDialog";
+import type { ProjectCommunication } from "@/types/projectCommunication";
 
 /**
  * Aanmaken en bewerken van een doorverwijzing
@@ -173,6 +175,42 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
   const [zoekActief, setZoekActief] = useState("");
   const [bevestigVerwijderen, setBevestigVerwijderen] = useState(false);
   const [bevestigAnonimiseren, setBevestigAnonimiseren] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
+
+  // Fase 2: de verzonden doorverwijsmail, terug te lezen in het maildialoog.
+  const { data: verzondenMail = null } = useQuery({
+    queryKey: ["wedding-referral-email", referral?.referral_email_log_id ?? null],
+    enabled: open && Boolean(referral?.referral_email_log_id),
+    queryFn: async (): Promise<ProjectCommunication | null> => {
+      const { data: log, error } = await supabase.from("email_log").select("*").eq("id", referral!.referral_email_log_id!).maybeSingle();
+      if (error) throw error;
+      if (!log) return null;
+      return {
+        id: `email_log_${log.id}`,
+        email_log_id: log.id,
+        request_id: log.related_request_id,
+        accommodation_id: log.related_accommodation_id,
+        communication_type: "email_out",
+        direction: "outbound",
+        subject: log.subject,
+        content: log.text_body || "",
+        html_body: log.html_body || null,
+        text_body: log.text_body || null,
+        from_email: log.from_email || null,
+        reply_to: log.reply_to || null,
+        contact_name: log.recipient_name,
+        contact_email: log.recipient_email,
+        logged_by: null,
+        logged_at: log.created_at,
+        communication_date: log.sent_at || log.created_at,
+        metadata: { email_type: log.email_type, status: log.status, mailjet_message_id: log.mailjet_message_id, ...((log.metadata as Record<string, unknown>) || {}) },
+        created_at: log.created_at,
+        updated_at: log.created_at,
+        source: "email_log",
+        email_type: log.email_type,
+      };
+    },
+  });
 
   const save = useSaveWeddingReferral();
   const update = useUpdateWeddingReferral();
@@ -415,6 +453,19 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
             <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
               Persoonsgegevens geanonimiseerd op {datumLabel(referral.anonymized_at.slice(0, 10))}.
             </p>
+          )}
+
+          {referral?.referral_email_log_id && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+              <span className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                Doorverwezen per mail{verzondenMail?.communication_date ? ` op ${datumLabel(verzondenMail.communication_date.slice(0, 10))}` : ""}
+                {typeof verzondenMail?.metadata.cc === "string" ? `, cc ${verzondenMail.metadata.cc}` : ""}
+              </span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setMailOpen(true)} disabled={!verzondenMail}>
+                Mail bekijken
+              </Button>
+            </div>
           )}
 
           <section className="space-y-3">
@@ -706,6 +757,8 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
           </div>
         </div>
       </SheetContent>
+
+      <EmailLogDetailDialog open={mailOpen} onOpenChange={setMailOpen} communication={verzondenMail} />
 
       <AlertDialog open={bevestigAnonimiseren} onOpenChange={setBevestigAnonimiseren}>
         <AlertDialogContent>
