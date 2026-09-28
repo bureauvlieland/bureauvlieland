@@ -1,7 +1,7 @@
 import { Award, BedDouble, Sparkles, Star } from "lucide-react";
 import heroImage from "@/assets/speedboat-group.jpg";
 import speedboatImage from "@/assets/speedboat.jpg";
-import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
+import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
 import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
@@ -48,7 +48,7 @@ export const incentiveReisVlieland: LandingContent = {
       intro: "Of het nu gaat om een beloning voor topperformers of een motiverend event voor het hele team: wij zorgen voor een passend programma.",
       images: [
         { src: speedboatImage, alt: "Speedboottocht op Vlieland", title: "Unieke ervaringen", text: "Speedboottocht, privé rondvaart of exclusieve excursie." },
-        { src: sunsetDinnerImage, alt: "Diner bij zonsondergang", title: "Culinaire hoogtepunten", text: "Diner bij zonsondergang of walking dinner op het strand." },
+        { src: outdoorDiningImage, alt: "Diner aan een lange tafel buiten", title: "Culinaire hoogtepunten", text: "Diner bij zonsondergang of walking dinner op het strand." },
         { src: outdoorDrinksImage, alt: "Borrel op Vlieland", title: "Bijzondere locaties", text: "Van strandpaviljoen tot privésetting in de duinen." },
       ],
       aside: {

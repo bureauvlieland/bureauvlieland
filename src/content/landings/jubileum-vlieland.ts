@@ -1,6 +1,6 @@
 import { Cake, GraduationCap, Heart, PartyPopper, Tent } from "lucide-react";
 import heroImage from "@/assets/outdoor-dining.jpg";
-import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
+import buffetImage from "@/assets/hero-vlieland.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
 import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
@@ -47,7 +47,7 @@ export const jubileumVlieland: LandingContent = {
       title: "Wij verzorgen de details",
       intro: "Van het diner tot de aankleding en de overnachting van uw gasten: één aanspreekpunt, één factuur.",
       images: [
-        { src: sunsetDinnerImage, alt: "Diner bij zonsondergang op Vlieland", title: "Catering en diner", text: "Van walking dinner tot meergangenmenu, BBQ op locatie of borrel met hapjes." },
+        { src: buffetImage, alt: "Buffet voor een groep met de vuurtoren op de achtergrond", title: "Catering en diner", text: "Van walking dinner tot meergangenmenu, BBQ op locatie of borrel met hapjes." },
         { src: outdoorDrinksImage, alt: "Borrel buiten op Vlieland", title: "Activiteiten", text: "Een eilandtour, zeehondentocht of creatieve workshop voor uw gasten." },
       ],
       aside: {
