@@ -1,7 +1,8 @@
 # Plan: doorverwijzingen van bruiloftsaanvragen bijhouden
 
-Status: voorstel, 28 september 2026. Wacht op akkoord voordat fase 1 wordt
-gebouwd.
+Status: fase 1 gebouwd op 28 september 2026 (akkoord Erwin, met de
+voorgestelde keuzes bij de beslispunten; Island Events maakt Erwin zelf als
+partner aan en zet daar de schakelaar aan). Fase 2 en 3 zijn plan.
 
 Aanleiding: Bureau Vlieland voert geen bruiloften meer uit. Binnenkomende
 bruiloftsaanvragen gaan naar partners (voorlopig Island Events en Paal 50).
@@ -252,14 +253,28 @@ fase 3, zodat de factuurstatus niet handmatig hoeft:
 Zonder fase 3 vul je factuurnummer, -datum en status met de hand in; dat
 is wat fase 1 levert.
 
-## Beslispunten
+## Besluiten (28 september 2026)
 
-1. Staffelkeuze op **datum doorverwezen** (voorstel) of op boekingsdatum.
-2. Menu-plek: "Operationeel" → "Bruiloften" (voorstel), of onder
-   "Financiën".
-3. Anonimiseren: handmatig per doorverwijzing met een markering "kan
-   geanonimiseerd worden" na 2 jaar (voorstel), of volautomatisch via de
-   dagelijkse cron.
-4. Export van de controlelijst als CSV (voorstel; PDF later als gewenst).
-5. Island Events: bestaat die als partner in de live admin? Zo niet, dan
-   aanmaken en de schakelaar aanzetten na de migratie.
+1. Staffelkeuze op **datum doorverwezen**.
+2. Menu-plek: "Operationeel" → "Bruiloften".
+3. Anonimiseren: handmatig per doorverwijzing, met een melding op de pagina
+   zodra een doorverwijzing 2 jaar afgerond is.
+4. Export van de controlelijst als CSV.
+5. Island Events maakt Erwin zelf aan als partner; de migratie zet de
+   schakelaar aan voor `paal-50` en voor een partner met de naam "Island
+   Events" als die op dat moment al bestaat.
+
+## Wat er in fase 1 is gebouwd
+
+- Migratie `20260928120000_bruiloftsdoorverwijzingen.sql`: partnerkolommen,
+  staffeltabel met de eerste staffel, doorverwijzingentabel, dagelijkse
+  cron `wedding-referrals-expire-daily` (03:15 UTC) en de functie
+  `expire_wedding_referrals()`.
+- Logica en tests: `src/lib/weddingReferralFee.ts` en
+  `src/lib/weddingReferrals.ts` met `src/lib/__tests__/*.test.ts`.
+- Pagina `/admin/bruiloften` (`AdminWeddingReferrals.tsx`) met het
+  formulier `WeddingReferralSheet.tsx` en de staffelkaart
+  `WeddingReferralFeeSchedulesCard.tsx`; gegevens via
+  `src/hooks/useWeddingReferrals.ts`.
+- Partnerdetail: blok "Ontvangt bruiloftsdoorverwijzingen" met het aparte
+  e-mailadres.
