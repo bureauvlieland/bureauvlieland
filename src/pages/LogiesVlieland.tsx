@@ -11,12 +11,18 @@ import { sectionCounter } from "@/components/landing/sectionCounter";
 import { ProcessSteps, type ProcessStep } from "@/components/werkwijze/ProcessSteps";
 import { Container, FactList, PageHero, RouteChooser, Section, SectionHeader, type RouteChooserRoute } from "@/components/system";
 import type { LandingSection } from "@/content/landings/types";
+import { transformImageUrl } from "@/lib/supabaseImage";
 
 const URL = "https://bureauvlieland.nl/logies-vlieland";
 const EYEBROW = "Logies op Vlieland";
 const DESCRIPTION =
   "Groepsaccommodatie op Vlieland zoeken en vergelijken: hotels, vakantiehuizen en groepsverblijven voor 8 tot 200 personen. Wij vragen de offertes op, u kiest.";
-const heroImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1778074823160-hotel_zeezicht_2.jpg`;
+// Het origineel is 1,3 MB; via de beeldtransformatie komt een verkleinde
+// versie, zodat de header niet seconden leeg blijft.
+const heroImage = transformImageUrl(
+  `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1778074823160-hotel_zeezicht_2.jpg`,
+  { width: 1800, quality: 80 },
+);
 
 const types: LandingSection = {
   kind: "features",
