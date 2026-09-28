@@ -11,6 +11,7 @@ import { Container, EmptyState, LoadingState, PageHero, RouteChooser, Section, S
 import { TemplateCard } from "@/components/programmas/TemplateCard";
 import { usePublishedTemplates } from "@/hooks/useProgramTemplates";
 import { inferTheme, durationBucket, THEME_META, type ProgramTheme } from "@/lib/programTemplateTheme";
+import heroImage from "@/assets/cycling-group.jpg";
 
 const URL = "https://bureauvlieland.nl/voorbeeldprogrammas";
 
@@ -121,6 +122,8 @@ const VoorbeeldprogrammaOverzicht = () => {
 
       <main id="main-content">
         <PageHero
+          image={heroImage}
+          alt="Groep fietst over een bospad door de duinen van Vlieland"
           eyebrow="Voorbeeldprogramma's"
           title="Kant-en-klare programma's voor uw groep"
           intro="Dagindelingen van eerdere groepen, van een actieve eilanddag tot een meerdaagse heisessie. Laat u inspireren en pas ze naar wens aan; elk programma is volledig aanpasbaar."

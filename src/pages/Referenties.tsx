@@ -10,6 +10,7 @@ import { Container, EmptyState, LoadingState, PageHero, RouteChooser, Section, S
 import { ReferenceCard } from "@/components/referenties/ReferenceCard";
 import { usePublishedReferenceCases } from "@/hooks/usePublishedReferenceCases";
 import { WIZARD_PATH } from "@/lib/referenceCases";
+import heroImage from "@/assets/vandermost-12.jpg";
 
 /**
  * Overzicht van de referentiepagina's (docs/plan-reviews-oogsten.md, fase 3):
@@ -74,6 +75,9 @@ const Referenties = () => {
 
       <main id="main-content">
         <PageHero
+          image={heroImage}
+          imagePosition="50% 78%"
+          alt="Groepsfoto van ruim tweehonderd deelnemers op de haven van Vlieland"
           eyebrow="Referenties"
           title="Zo deden andere groepen het"
           intro="Echte programma's van groepen die met ons op Vlieland waren: de dagindeling, de feiten en wat de opdrachtgever erover zegt. Elke pagina staat er met akkoord van de klant, en elk programma is als vertrekpunt voor uw eigen programma te gebruiken."
