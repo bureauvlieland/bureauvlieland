@@ -34,11 +34,15 @@ Deno.serve(async (req) => {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Check if this email belongs to an active partner
+    // Check if this email belongs to an active partner. Hoofdletterongevoelig:
+    // partners.email wordt bij het uitnodigen opgeslagen zoals ingevoerd
+    // (bijvoorbeeld "Info@Hotel.nl"), terwijl de partner hier meestal in
+    // kleine letters typt. `%` en `_` zijn jokers in ilike, dus die escapen we.
+    const likePattern = trimmedEmail.replace(/[\\%_]/g, (c) => `\\${c}`);
     const { data: partner } = await supabase
       .from("partners")
       .select("id, name, auth_user_id")
-      .eq("email", trimmedEmail)
+      .ilike("email", likePattern)
       .eq("is_active", true)
       .maybeSingle();
 
