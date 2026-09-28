@@ -1,6 +1,6 @@
 import { BedDouble, Coffee, Moon, Users } from "lucide-react";
 import heroImage from "@/assets/vlieland-group.jpg";
-import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
+import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
 import beachBonfireImage from "@/assets/beach-bonfire.jpg";
 import vlielandMorningImage from "@/assets/vlieland-morning.jpg";
 import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
@@ -48,7 +48,7 @@ export const meerdaagsBedrijfsuitjeVlieland: LandingContent = {
       title: "Van aankomst tot vertrek verzorgd",
       intro: "Wij regelen overnachtingen, programma's, activiteiten en catering. Alles op elkaar afgestemd.",
       images: [
-        { src: sunsetDinnerImage, alt: "Diner bij zonsondergang", title: "Gezamenlijk diner", text: "Van borrel tot meergangenmenu: de avond als bindend moment." },
+        { src: outdoorDiningImage, alt: "Diner aan een lange tafel buiten", title: "Gezamenlijk diner", text: "Van borrel tot meergangenmenu: de avond als bindend moment." },
         { src: beachBonfireImage, alt: "Kampvuur op het strand", title: "Avondprogramma", text: "Strandvuur, silent disco of sterren kijken: informele verbinding." },
         { src: vlielandMorningImage, alt: "Ochtend op Vlieland", title: "Ontbijt en ochtend", text: "Rustig starten, fris de dag in, of vroeg actief op het strand." },
       ],

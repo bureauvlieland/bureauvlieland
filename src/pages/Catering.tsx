@@ -15,7 +15,7 @@ import { renderRichText } from "@/lib/richText";
 import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
 import type { LandingSection } from "@/content/landings/types";
 
-import sunsetDinnerImage from "@/assets/sunset-dinner.jpg";
+import buffetImage from "@/assets/hero-vlieland.jpg";
 import strandBbqImage from "@/assets/strand-bbq.jpg";
 import outdoorDiningImage from "@/assets/outdoor-dining.jpg";
 import outdoorDrinksImage from "@/assets/outdoor-drinks.jpg";
@@ -35,7 +35,7 @@ const moments = [
   { key: "lunch", label: "Lunch op locatie", desc: "Belegde broodjes, soep en salades, eenvoudig of uitgebreid.", image: lunchBuffetImage },
   { key: "borrel", label: "Borrel en receptie", desc: "Hapjes en drankpakket, binnen of buiten.", image: outdoorDrinksImage },
   { key: "bbq", label: "BBQ op locatie", desc: "Compleet verzorgde barbecue op uw verblijf of een buitenlocatie.", image: strandBbqImage },
-  { key: "diner", label: "High-end diner", desc: "Driegangendiner, walking dinner of geplate gangen door eigen chefs.", image: sunsetDinnerImage },
+  { key: "diner", label: "High-end diner", desc: "Driegangendiner, walking dinner of geplate gangen door eigen chefs.", image: buffetImage },
 ];
 
 /** Bouwsteen van Pizza en Borrel bij Café Boven; getoond zolang hij gepubliceerd is. */

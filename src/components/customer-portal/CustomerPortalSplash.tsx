@@ -18,7 +18,7 @@ import { useProgramStatus } from "@/hooks/useProgramStatus";
 import { ProgramStepper, type StepId } from "./ProgramStepper";
 import vlielandLandscape from "@/assets/vlieland-landscape.jpg";
 import cyclingGroup from "@/assets/cycling-group.jpg";
-import sunsetDinner from "@/assets/sunset-dinner.jpg";
+import outdoorDining from "@/assets/outdoor-dining.jpg";
 import speedboat from "@/assets/speedboat.jpg";
 import beachActivity from "@/assets/beach-activity.jpg";
 
@@ -143,7 +143,7 @@ export const CustomerPortalSplash = ({
         {[
           { src: cyclingGroup, alt: "Fietsen op Vlieland" },
           { src: speedboat, alt: "Speedboot activiteit" },
-          { src: sunsetDinner, alt: "Diner bij zonsondergang" },
+          { src: outdoorDining, alt: "Diner aan een lange tafel" },
           { src: beachActivity, alt: "Strandactiviteit" },
         ].map((p) => (
           <div key={p.alt} className="overflow-hidden group">
@@ -162,7 +162,7 @@ export const CustomerPortalSplash = ({
         {[
           { src: vlielandLandscape, alt: "Vlieland landschap" },
           { src: cyclingGroup, alt: "Fietsen op Vlieland" },
-          { src: sunsetDinner, alt: "Diner bij zonsondergang" },
+          { src: outdoorDining, alt: "Diner aan een lange tafel" },
           { src: speedboat, alt: "Speedboot activiteit" },
           { src: beachActivity, alt: "Strandactiviteit" },
         ].map((p) => (
