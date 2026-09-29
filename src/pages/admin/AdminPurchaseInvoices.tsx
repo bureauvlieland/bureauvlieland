@@ -64,6 +64,7 @@ import {
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 import { isForwardableInvoice, isAwaitingPdfMatch, daysAwaitingPdf } from "@/lib/purchaseInvoiceStatusFlow";
 import { reportError } from "@/lib/errorReporting";
+import { resolveInvoiceCommission } from "@/lib/purchaseInvoiceCommission";
 
 export default function AdminPurchaseInvoices() {
   const [selectedRequestId, setSelectedRequestId] = useState<string>("all");
@@ -483,17 +484,11 @@ export default function AdminPurchaseInvoices() {
                       </TableCell>
                       <TableCell className="text-right">
                         {(() => {
-                          const stamped = Number(invoice.supplier_commission_excl_vat || 0);
-                          const itemComm = Number(invoice.program_request_item?.commission_amount || 0);
-                          const quoteComm = Number((invoice as any).accommodation_quote?.commission_amount || 0);
-                          const amount = stamped || itemComm || quoteComm;
-                          if (!amount) {
+                          const resolved = resolveInvoiceCommission(invoice);
+                          if (!resolved) {
                             return <span className="text-xs text-muted-foreground">—</span>;
                           }
-                          const status =
-                            invoice.program_request_item?.commission_status ||
-                            (invoice as any).accommodation_quote?.commission_status ||
-                            "pending";
+                          const { amount, status } = resolved;
                           const variant: "default" | "secondary" | "outline" =
                             status === "invoiced" || status === "paid" ? "default" : "outline";
                           return (
