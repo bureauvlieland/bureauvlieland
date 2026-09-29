@@ -2102,6 +2102,111 @@ export type Database = {
           },
         ]
       }
+      partner_agreement_acceptances: {
+        Row: {
+          accepted_at: string
+          accepted_by: string | null
+          accepted_by_email: string
+          agreement_id: string
+          body_snapshot: string
+          created_at: string
+          id: string
+          partner_id: string
+          title_snapshot: string
+          user_agent: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_by?: string | null
+          accepted_by_email?: string
+          agreement_id: string
+          body_snapshot?: string
+          created_at?: string
+          id?: string
+          partner_id: string
+          title_snapshot?: string
+          user_agent?: string
+          version?: number
+        }
+        Update: {
+          accepted_at?: string
+          accepted_by?: string | null
+          accepted_by_email?: string
+          agreement_id?: string
+          body_snapshot?: string
+          created_at?: string
+          id?: string
+          partner_id?: string
+          title_snapshot?: string
+          user_agent?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_agreement_acceptances_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "partner_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_agreement_acceptances_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_agreements: {
+        Row: {
+          applies_to: string
+          body_markdown: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          key: string
+          published_at: string | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          applies_to?: string
+          body_markdown: string
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          id?: string
+          key: string
+          published_at?: string | null
+          status?: string
+          summary?: string
+          title: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          applies_to?: string
+          body_markdown?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          key?: string
+          published_at?: string | null
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       partner_extra_presets: {
         Row: {
           category: string | null

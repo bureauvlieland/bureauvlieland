@@ -256,6 +256,37 @@ eerst aantoonbaar contact had, heeft de klant". Wat er is gebouwd:
 - **Afspraak met de partners** (Erwin): de vijf werkdagen staan alleen
   overeind als ze in de afspraak met Paal 50 en Seeduyn zijn vastgelegd.
 
+## Partnerafspraken met akkoord in het portaal (gebouwd 29 september)
+
+Vraag van Erwin: kunnen we de afspraken met partners in het portaal
+vastleggen, zodat ze er echt akkoord mee gaan? Ja. Een klik-akkoord met
+tijdstip, ingelogde gebruiker, versie en een kopie van de tekst is een
+geldige elektronische akkoordverklaring. Wat er is gebouwd:
+
+- **Tabellen** `partner_agreements` (afspraak per sleutel en versie, met
+  markdown-tekst, ingangsdatum, voor wie hij geldt, en status concept /
+  gepubliceerd / ingetrokken) en `partner_agreement_acceptances` (het
+  akkoord: partner, gebruiker, tijdstip, versie, kopie van de tekst). Een
+  trigger vult de kopie, weigert een akkoord van een meekijkende admin en
+  maakt na het akkoord een werkbanktaak voor het bureau.
+- **Admin**: Systeem → Partnerafspraken. Concept schrijven met voorbeeld,
+  publiceren (daarna niet meer wijzigen, wel een nieuwe versie),
+  intrekken. Per gepubliceerde afspraak wie akkoord is, wie een eerdere
+  versie accepteerde en wie nog open staat. Op de partnerpagina een kaart
+  "Afspraken". Het doorverwijsdialoog waarschuwt als de partner de
+  doorverwijsregeling nog niet heeft geaccepteerd (geen blokkade).
+- **Partnerportaal**: Account → Afspraken, met de tekst, een leesvinkje en
+  de knop Akkoord. Op de werkbank een melding zolang er iets open staat.
+  Niet blokkerend.
+- **Eerste afspraak** als concept: "Doorverwijsregeling bruiloften",
+  versie 1, ingang 1 oktober 2026, voor partners die doorverwijzingen
+  ontvangen. Erwin leest hem na (met name artikel 6 over annulering) en
+  publiceert.
+- Niet gebouwd: een bevestigingsmail aan de partner en een herinnering na
+  twee weken. Het akkoord is voor de partner zichtbaar in het portaal en
+  voor het bureau als werkbanktaak; de admin ziet hoeveel dagen een
+  afspraak open staat.
+
 ## Facturatie: wat kan
 
 Automatisch factureren blijft buiten scope, maar de bestaande
