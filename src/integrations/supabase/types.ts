@@ -4661,7 +4661,12 @@ export type Database = {
           invoice_status: string
           is_multi_day: boolean
           notes: string
+          partner_claim: string
+          partner_claim_first_contact_at: string | null
+          partner_claim_note: string
+          partner_claim_reported_at: string | null
           partner_id: string
+          prior_contact_note: string
           referral_email_log_id: string | null
           referred_at: string
           request_id: string | null
@@ -4695,7 +4700,12 @@ export type Database = {
           invoice_status?: string
           is_multi_day?: boolean
           notes?: string
+          partner_claim?: string
+          partner_claim_first_contact_at?: string | null
+          partner_claim_note?: string
+          partner_claim_reported_at?: string | null
           partner_id: string
+          prior_contact_note?: string
           referral_email_log_id?: string | null
           referred_at: string
           request_id?: string | null
@@ -4729,7 +4739,12 @@ export type Database = {
           invoice_status?: string
           is_multi_day?: boolean
           notes?: string
+          partner_claim?: string
+          partner_claim_first_contact_at?: string | null
+          partner_claim_note?: string
+          partner_claim_reported_at?: string | null
           partner_id?: string
+          prior_contact_note?: string
           referral_email_log_id?: string | null
           referred_at?: string
           request_id?: string | null

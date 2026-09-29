@@ -7,7 +7,7 @@
  * het formulier roepen deze aan; de database bewaakt dezelfde regels als
  * vangnet (checks en de dagelijkse expire-functie).
  */
-import { addMonths, addYears, endOfMonth, format, parseISO } from "date-fns";
+import { addDays, addMonths, addYears, endOfMonth, format, isWeekend, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { calculateReferralFee, pickFeeSchedule, type FeeCalculation, type FeeScheduleLike } from "@/lib/weddingReferralFee";
 
@@ -30,6 +30,17 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   invoiced: "Gefactureerd",
   paid: "Betaald",
 };
+
+/** Melding van de partner over het bruidspaar: geen, of "was al bij ons bekend". */
+export type PartnerClaim = "none" | "already_known";
+export const PARTNER_CLAIMS: PartnerClaim[] = ["none", "already_known"];
+export const PARTNER_CLAIM_LABEL: Record<PartnerClaim, string> = {
+  none: "Geen melding",
+  already_known: "Al bekend bij partner",
+};
+
+/** De partner heeft na de doorverwijsmail vijf werkdagen om te melden dat het bruidspaar al bekend was. */
+export const PARTNER_RESPONSE_WORKING_DAYS = 5;
 
 /** Zonder boeking vervalt een doorverwijzing 18 maanden na de datum doorverwezen. */
 export const REFERRAL_EXPIRY_MONTHS = 18;
@@ -65,6 +76,11 @@ export interface ReferralLike {
   invoice_date: string | null;
   invoice_paid_at: string | null;
   anonymized_at: string | null;
+  prior_contact_note: string;
+  partner_claim: string;
+  partner_claim_reported_at: string | null;
+  partner_claim_first_contact_at: string | null;
+  partner_claim_note: string;
 }
 
 const ISO = "yyyy-MM-dd";
@@ -125,6 +141,45 @@ export function formatWeddingDate(
   return format(parseISO(r.expected_wedding_date), "d MMM yyyy", { locale: nl });
 }
 
+/** `n` werkdagen (ma t/m vr) na een datum; feestdagen tellen niet mee. */
+export function addWorkingDays(iso: string, n: number): string {
+  let d = parseISO(iso);
+  let left = n;
+  while (left > 0) {
+    d = addDays(d, 1);
+    if (!isWeekend(d)) left -= 1;
+  }
+  return toIsoDate(d);
+}
+
+export type PartnerConfirmation = "already_known" | "awaiting" | "confirmed_new";
+export const PARTNER_CONFIRMATION_LABEL: Record<PartnerConfirmation, string> = {
+  already_known: "Al bekend bij partner",
+  awaiting: "Wacht op partner",
+  confirmed_new: "Bevestigd nieuw",
+};
+
+/**
+ * Wie het eerst aantoonbaar contact had, heeft de klant. De partner staat in
+ * cc en meldt binnen vijf werkdagen als het bruidspaar al bekend was. Blijft
+ * die melding uit, dan is de doorverwijzing "bevestigd nieuw".
+ */
+export function partnerConfirmation(
+  r: Pick<ReferralLike, "partner_claim" | "referred_at">,
+  today: string,
+): { state: PartnerConfirmation; deadline: string } {
+  const deadline = addWorkingDays(r.referred_at, PARTNER_RESPONSE_WORKING_DAYS);
+  if (r.partner_claim === "already_known") return { state: "already_known", deadline };
+  return { state: today <= deadline ? "awaiting" : "confirmed_new", deadline };
+}
+
+/** De reden die bij een boeking zonder vergoeding wordt vastgelegd. */
+export function alreadyKnownFeeNote(r: Pick<ReferralLike, "partner_claim_first_contact_at" | "partner_claim_reported_at">): string {
+  const sinds = r.partner_claim_first_contact_at ? `, eerste contact ${format(parseISO(r.partner_claim_first_contact_at), "d MMM yyyy", { locale: nl })}` : "";
+  const gemeld = r.partner_claim_reported_at ? ` (gemeld ${format(parseISO(r.partner_claim_reported_at), "d MMM yyyy", { locale: nl })})` : "";
+  return `Al bekend bij partner${sinds}${gemeld}: geen vergoeding`;
+}
+
 export type FeeResult = { ok: true; schedule: FeeScheduleLike; calculation: FeeCalculation } | { ok: false; error: string };
 
 /**
@@ -176,7 +231,20 @@ export type StatusChangeResult = { ok: true; patch: ReferralPatch } | { ok: fals
  *   vergoeding en factuurstatus leegmaken.
  */
 export function applyStatusChange(
-  r: Pick<ReferralLike, "status" | "invoice_status" | "referred_at" | "final_day_guests" | "is_multi_day" | "fee_amount" | "fee_calculated_amount" | "fee_override_note">,
+  r: Pick<
+    ReferralLike,
+    | "status"
+    | "invoice_status"
+    | "referred_at"
+    | "final_day_guests"
+    | "is_multi_day"
+    | "fee_amount"
+    | "fee_calculated_amount"
+    | "fee_override_note"
+    | "partner_claim"
+    | "partner_claim_first_contact_at"
+    | "partner_claim_reported_at"
+  >,
   next: ReferralStatus,
   schedules: FeeScheduleLike[],
 ): StatusChangeResult {
@@ -190,14 +258,16 @@ export function applyStatusChange(
     const fee = computeReferralFee(r, schedules);
     if (fee.ok === false) return { ok: false, error: fee.error };
     const overridden = r.fee_amount !== null && r.fee_override_note.trim() !== "";
+    // Al bekend bij de partner: de boeking telt, maar de vergoeding is nul.
+    const alreadyKnown = r.partner_claim === "already_known";
     return {
       ok: true,
       patch: {
         status: "booked",
         fee_schedule_id: fee.schedule.id,
         fee_calculated_amount: fee.calculation.total,
-        fee_amount: overridden ? r.fee_amount : fee.calculation.total,
-        fee_override_note: overridden ? r.fee_override_note : "",
+        fee_amount: overridden ? r.fee_amount : alreadyKnown ? 0 : fee.calculation.total,
+        fee_override_note: overridden ? r.fee_override_note : alreadyKnown ? alreadyKnownFeeNote(r) : "",
         invoice_status: r.invoice_status === "not_applicable" ? "to_invoice" : (r.invoice_status as InvoiceStatus),
       },
     };
@@ -281,7 +351,7 @@ const csvCel = (v: string | number | null | undefined): string => {
 
 /** CSV (puntkomma, opent in Excel) van de controlelijst voor één partner. */
 export function controlListCsv(rows: ReferralLike[], partnerName: string): string {
-  const kop = ["Partner", "Bruidspaar", "E-mail", "Telefoon", "Datum aanvraag", "Datum doorverwezen", "Verwachte trouwdatum", "Geschat aantal gasten", "Vervaldatum", "Notities"];
+  const kop = ["Partner", "Bruidspaar", "E-mail", "Telefoon", "Datum aanvraag", "Datum doorverwezen", "Verwachte trouwdatum", "Geschat aantal gasten", "Vervaldatum", "Melding partner", "Notities"];
   const regels = rows.map((r) =>
     [
       partnerName,
@@ -293,6 +363,7 @@ export function controlListCsv(rows: ReferralLike[], partnerName: string): strin
       formatWeddingDate(r),
       r.estimated_guests,
       r.expires_at,
+      PARTNER_CLAIM_LABEL[r.partner_claim as PartnerClaim] ?? r.partner_claim,
       r.notes,
     ]
       .map(csvCel)
@@ -328,6 +399,8 @@ export function anonymizePatch(now: Date) {
     couple_email: null,
     couple_phone: null,
     notes: "",
+    prior_contact_note: "",
+    partner_claim_note: "",
     anonymized_at: now.toISOString(),
   };
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  addWorkingDays,
+  alreadyKnownFeeNote,
   anonymizePatch,
   applyStatusChange,
   buildControlList,
@@ -9,6 +11,7 @@ import {
   expiryDateFor,
   formatWeddingDate,
   isDueForAnonymization,
+  partnerConfirmation,
   referralsToExpire,
   seasonOf,
   shouldExpire,
@@ -51,6 +54,11 @@ const doorverwijzing = (extra: Partial<ReferralLike> = {}): ReferralLike => ({
   invoice_date: null,
   invoice_paid_at: null,
   anonymized_at: null,
+  prior_contact_note: "",
+  partner_claim: "none",
+  partner_claim_reported_at: null,
+  partner_claim_first_contact_at: null,
+  partner_claim_note: "",
   ...extra,
 });
 
@@ -199,8 +207,8 @@ describe("controlelijst", () => {
   it("maakt een puntkomma-CSV met kopregel en ontsnapte waarden", () => {
     const csv = controlListCsv([doorverwijzing({ notes: 'Belt zelf; "misschien"' })], "Paal 50");
     const regels = csv.split("\n");
-    expect(regels[0]).toBe("Partner;Bruidspaar;E-mail;Telefoon;Datum aanvraag;Datum doorverwezen;Verwachte trouwdatum;Geschat aantal gasten;Vervaldatum;Notities");
-    expect(regels[1]).toBe('Paal 50;Anna & Bram;anna@example.com;0612345678;2026-03-01;2026-03-05;12 jun. 2027;80;2027-09-05;"Belt zelf; ""misschien"""');
+    expect(regels[0]).toBe("Partner;Bruidspaar;E-mail;Telefoon;Datum aanvraag;Datum doorverwezen;Verwachte trouwdatum;Geschat aantal gasten;Vervaldatum;Melding partner;Notities");
+    expect(regels[1]).toBe('Paal 50;Anna & Bram;anna@example.com;0612345678;2026-03-01;2026-03-05;12 jun. 2027;80;2027-09-05;Geen melding;"Belt zelf; ""misschien"""');
   });
 });
 
@@ -219,7 +227,15 @@ describe("anonimiseren", () => {
 
   it("wist alleen de persoonsgegevens", () => {
     const patch = anonymizePatch(new Date("2028-09-02T09:00:00Z"));
-    expect(patch).toEqual({ couple_names: "Geanonimiseerd", couple_email: null, couple_phone: null, notes: "", anonymized_at: "2028-09-02T09:00:00.000Z" });
+    expect(patch).toEqual({
+      couple_names: "Geanonimiseerd",
+      couple_email: null,
+      couple_phone: null,
+      notes: "",
+      prior_contact_note: "",
+      partner_claim_note: "",
+      anonymized_at: "2028-09-02T09:00:00.000Z",
+    });
     expect(Object.keys(patch)).not.toContain("fee_amount");
     expect(Object.keys(patch)).not.toContain("partner_id");
   });
@@ -234,5 +250,44 @@ describe("vastgelegde staffel", () => {
     const vast = computeReferralFee(r, metNieuwe, "s-2026");
     expect(vast.ok && vast.schedule.id).toBe("s-2026");
     expect(vast.ok && vast.calculation.total).toBe(350);
+  });
+});
+
+describe("melding partner", () => {
+  it("telt vijf werkdagen, weekend niet", () => {
+    // maandag 28 september 2026 + 5 werkdagen = maandag 5 oktober
+    expect(addWorkingDays("2026-09-28", 5)).toBe("2026-10-05");
+    // vrijdag 2 oktober + 5 werkdagen = vrijdag 9 oktober
+    expect(addWorkingDays("2026-10-02", 5)).toBe("2026-10-09");
+    expect(addWorkingDays("2026-10-03", 1)).toBe("2026-10-05");
+  });
+
+  it("wacht op de partner tot en met de vijfde werkdag en is daarna bevestigd nieuw", () => {
+    const r = doorverwijzing({ referred_at: "2026-09-28" });
+    expect(partnerConfirmation(r, "2026-09-29")).toEqual({ state: "awaiting", deadline: "2026-10-05" });
+    expect(partnerConfirmation(r, "2026-10-05")).toEqual({ state: "awaiting", deadline: "2026-10-05" });
+    expect(partnerConfirmation(r, "2026-10-06")).toEqual({ state: "confirmed_new", deadline: "2026-10-05" });
+    expect(partnerConfirmation({ ...r, partner_claim: "already_known" }, "2026-09-29").state).toBe("already_known");
+  });
+
+  it("een boeking van een al bekend bruidspaar krijgt vergoeding nul met de melding als reden", () => {
+    const r = doorverwijzing({
+      final_day_guests: 80,
+      partner_claim: "already_known",
+      partner_claim_reported_at: "2026-03-09",
+      partner_claim_first_contact_at: "2026-01-15",
+    });
+    const uitkomst = applyStatusChange(r, "booked", staffels);
+    expect(uitkomst.ok && uitkomst.patch.fee_calculated_amount).toBe(550);
+    expect(uitkomst.ok && uitkomst.patch.fee_amount).toBe(0);
+    expect(uitkomst.ok && uitkomst.patch.fee_override_note).toBe("Al bekend bij partner, eerste contact 15 jan. 2026 (gemeld 9 mrt. 2026): geen vergoeding");
+    expect(uitkomst.ok && uitkomst.patch.invoice_status).toBe("to_invoice");
+    expect(alreadyKnownFeeNote(doorverwijzing())).toBe("Al bekend bij partner: geen vergoeding");
+  });
+
+  it("een handmatig vastgelegd bedrag met opmerking wint van de melding", () => {
+    const r = doorverwijzing({ final_day_guests: 80, partner_claim: "already_known", fee_amount: 100, fee_override_note: "Halve vergoeding afgesproken" });
+    const uitkomst = applyStatusChange(r, "booked", staffels);
+    expect(uitkomst.ok && uitkomst.patch.fee_amount).toBe(100);
   });
 });

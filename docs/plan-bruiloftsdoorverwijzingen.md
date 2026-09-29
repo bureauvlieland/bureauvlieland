@@ -234,6 +234,28 @@ communicatiedossier en gaat reply-to naar het project.
 4. De verzonden mail is via `referral_email_log_id` terug te lezen in het
    bestaande `EmailLogDetailDialog`.
 
+## Melding partner: bruidsparen die al bij de partner bekend waren (gebouwd 29 september)
+
+Vraag van Erwin: hoe ga je om met bruidsparen die zelf al contact hadden met
+de partner? Controleren kan alleen via de partner zelf; de regel is "wie het
+eerst aantoonbaar contact had, heeft de klant". Wat er is gebouwd:
+
+- De standaardmail vraagt de partner (in cc) om binnen vijf werkdagen te
+  melden als het bruidspaar al bekend was, met de datum van het eerste
+  contact. Blijft die melding uit, dan geldt de doorverwijzing.
+- Op de doorverwijzing: "Melding partner" (geen melding / al bekend bij
+  partner, met datum melding, datum eerste contact en toelichting). Bij
+  "al bekend" is de vergoeding bij een boeking nul, met de melding als
+  reden; handmatig aanpassen blijft mogelijk.
+- In de lijst: "Wacht op partner t/m …", daarna "Bevestigd nieuw"
+  (berekend uit datum doorverwezen plus vijf werkdagen, geen cron), of
+  "Al bekend". De controlelijst-CSV heeft een kolom "Melding partner".
+- In het doorverwijsdialoog: waarschuwing als het e-mailadres al in een
+  eerdere doorverwijzing of aanvraag voorkomt (alleen onze eigen gegevens),
+  en het intakeveld "Eerder contact volgens het bruidspaar".
+- **Afspraak met de partners** (Erwin): de vijf werkdagen staan alleen
+  overeind als ze in de afspraak met Paal 50 en Seeduyn zijn vastgelegd.
+
 ## Facturatie: wat kan
 
 Automatisch factureren blijft buiten scope, maar de bestaande

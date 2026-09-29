@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Heart, Loader2, RefreshCw, Send } from "lucide-react";
+import { AlertTriangle, Heart, Loader2, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { referralEmailFor, useWeddingReferralPartners, WEDDING_REFERRALS_KEY } from "@/hooks/useWeddingReferrals";
-import { toIsoDate } from "@/lib/weddingReferrals";
+import { REFERRAL_STATUS_LABEL, toIsoDate, type ReferralStatus } from "@/lib/weddingReferrals";
 
 /**
  * "Doorverwijzen naar…" (docs/plan-bruiloftsdoorverwijzingen.md, fase 2):
@@ -60,6 +60,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
   const [expectedMonth, setExpectedMonth] = useState("");
   const [estimatedGuests, setEstimatedGuests] = useState("");
   const [notes, setNotes] = useState("");
+  const [priorContactNote, setPriorContactNote] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [tekstAangepast, setTekstAangepast] = useState(false);
@@ -77,6 +78,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
     setExpectedMonth(prefill.expectedWeddingDate ? prefill.expectedWeddingDate.slice(0, 7) : "");
     setEstimatedGuests(prefill.estimatedGuests === null || prefill.estimatedGuests === undefined ? "" : String(prefill.estimatedGuests));
     setNotes("");
+    setPriorContactNote("");
     setSubject("");
     setBody("");
     setTekstAangepast(false);
@@ -86,6 +88,32 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
 
   const partner = kiesbaar.find((p) => p.id === partnerId) ?? null;
   const expectedIso = precision === "month" ? (expectedMonth ? `${expectedMonth}-01` : "") : expectedDay;
+
+  // Komt dit bruidspaar al voor in onze eigen gegevens? Zegt niets over
+  // contact met de partner buiten ons om; dat meldt de partner zelf.
+  const emailNet = coupleEmail.trim().toLowerCase();
+  const emailGeldig = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNet);
+  const { data: bekend = [] } = useQuery({
+    queryKey: ["wedding-referral-duplicates", emailNet, requestId ?? null],
+    enabled: open && emailGeldig,
+    queryFn: async (): Promise<string[]> => {
+      const [eerder, projecten] = await Promise.all([
+        supabase.from("wedding_referrals").select("id, partner_id, referred_at, status").ilike("couple_email", emailNet).order("referred_at", { ascending: false }).limit(5),
+        supabase.from("program_requests").select("id, reference_number, created_at, status").ilike("customer_email", emailNet).order("created_at", { ascending: false }).limit(5),
+      ]);
+      if (eerder.error) throw eerder.error;
+      if (projecten.error) throw projecten.error;
+      const namen = Object.fromEntries(partners.map((p) => [p.id, p.name]));
+      const regels = (eerder.data ?? []).map(
+        (r) => `Al doorverwezen naar ${namen[r.partner_id] ?? r.partner_id} op ${format(parseISO(r.referred_at), "d MMM yyyy", { locale: nl })} (${REFERRAL_STATUS_LABEL[r.status as ReferralStatus] ?? r.status})`,
+      );
+      for (const p of projecten.data ?? []) {
+        if (p.id === requestId) continue;
+        regels.push(`Eerdere aanvraag ${p.reference_number ?? "zonder nummer"} van ${format(parseISO(p.created_at), "d MMM yyyy", { locale: nl })}${p.status === "cancelled" ? " (geannuleerd)" : ""}`);
+      }
+      return regels;
+    },
+  });
 
   const laadTemplate = async (force = false) => {
     if (!partner) return;
@@ -149,6 +177,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
             expectedWeddingPrecision: precision,
             estimatedGuests: gasten !== null && Number.isFinite(gasten) ? Math.max(0, Math.floor(gasten)) : null,
             notes: notes.trim(),
+            priorContactNote: priorContactNote.trim(),
             subject: subject.trim(),
             body: body.trim(),
             origin: window.location.origin,
@@ -221,6 +250,30 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
               <Label htmlFor="wrd-tel">Telefoon</Label>
               <Input id="wrd-tel" value={couplePhone} onChange={(e) => setCouplePhone(e.target.value)} />
             </div>
+          </div>
+
+          {bekend.length > 0 && (
+            <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <div>
+                <p className="font-medium">Dit e-mailadres komt al voor:</p>
+                <ul className="list-disc pl-4">
+                  {bekend.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="wrd-eerder-contact">Eerder contact volgens het bruidspaar</Label>
+            <Input
+              id="wrd-eerder-contact"
+              value={priorContactNote}
+              onChange={(e) => setPriorContactNote(e.target.value)}
+              placeholder="Vraag het bij de intake: al contact gehad met een locatie of partij op Vlieland?"
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto]">

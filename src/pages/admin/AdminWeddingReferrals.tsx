@@ -30,6 +30,7 @@ import {
   formatEuro,
   formatWeddingDate,
   isDueForAnonymization,
+  partnerConfirmation,
   seasonOf,
   summarizeBySeason,
   toIsoDate,
@@ -261,7 +262,19 @@ const AdminWeddingReferrals = () => {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>{partnerNaam[r.partner_id] ?? r.partner_id}</TableCell>
+                          <TableCell>
+                            {partnerNaam[r.partner_id] ?? r.partner_id}
+                            {(r.status === "referred" || r.status === "booked") && (() => {
+                              const b = partnerConfirmation(r, today);
+                              return b.state === "already_known" ? (
+                                <div className="mt-1"><Badge variant="destructive">Al bekend</Badge></div>
+                              ) : b.state === "confirmed_new" ? (
+                                <div className="mt-1"><Badge variant="secondary">Bevestigd nieuw</Badge></div>
+                              ) : (
+                                <div className="mt-1 text-xs text-muted-foreground">wacht op partner t/m {kort(b.deadline)}</div>
+                              );
+                            })()}
+                          </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {kort(r.referred_at)}
                             {r.status === "referred" && <div className="text-xs text-muted-foreground">vervalt {kort(r.expires_at)}</div>}
