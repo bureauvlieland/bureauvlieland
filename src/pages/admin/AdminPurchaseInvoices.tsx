@@ -506,7 +506,7 @@ export default function AdminPurchaseInvoices() {
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {!invoice.item_id && !(invoice as any).accommodation_quote && (
+                          {!invoice.item_id && !invoice.accommodation_quote && !(invoice.allocations?.length) && (
                             <Button
                               variant="ghost"
                               size="icon"
