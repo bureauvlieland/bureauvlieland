@@ -37,8 +37,13 @@ import {
 import {
   INVOICE_STATUSES,
   INVOICE_STATUS_LABEL,
+  PARTNER_CLAIMS,
+  PARTNER_CLAIM_LABEL,
+  PARTNER_CONFIRMATION_LABEL,
+  PARTNER_RESPONSE_WORKING_DAYS,
   REFERRAL_STATUSES,
   REFERRAL_STATUS_LABEL,
+  alreadyKnownFeeNote,
   anonymizePatch,
   applyStatusChange,
   computeReferralFee,
@@ -46,9 +51,11 @@ import {
   formatEuro,
   isClosed,
   isDueForAnonymization,
+  partnerConfirmation,
   toIsoDate,
   validateFeeOverride,
   type InvoiceStatus,
+  type PartnerClaim,
   type ReferralStatus,
 } from "@/lib/weddingReferrals";
 import { describeTier, normalizeTiers } from "@/lib/weddingReferralFee";
@@ -96,6 +103,11 @@ interface FormState {
   invoice_number: string;
   invoice_date: string;
   invoice_paid_at: string;
+  prior_contact_note: string;
+  partner_claim: PartnerClaim;
+  partner_claim_reported_at: string;
+  partner_claim_first_contact_at: string;
+  partner_claim_note: string;
 }
 
 type LinkResult =
@@ -128,6 +140,11 @@ const leeg = (today: string): FormState => ({
   invoice_number: "",
   invoice_date: "",
   invoice_paid_at: "",
+  prior_contact_note: "",
+  partner_claim: "none",
+  partner_claim_reported_at: "",
+  partner_claim_first_contact_at: "",
+  partner_claim_note: "",
 });
 
 const vanRij = (r: WeddingReferralRow): FormState => ({
@@ -156,6 +173,11 @@ const vanRij = (r: WeddingReferralRow): FormState => ({
   invoice_number: r.invoice_number ?? "",
   invoice_date: r.invoice_date ?? "",
   invoice_paid_at: r.invoice_paid_at ?? "",
+  prior_contact_note: r.prior_contact_note,
+  partner_claim: r.partner_claim === "already_known" ? "already_known" : "none",
+  partner_claim_reported_at: r.partner_claim_reported_at ?? "",
+  partner_claim_first_contact_at: r.partner_claim_first_contact_at ?? "",
+  partner_claim_note: r.partner_claim_note,
 });
 
 const getal = (s: string): number | null => {
@@ -246,11 +268,21 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
   );
   const berekend = feeResult?.ok ? feeResult.calculation.total : null;
 
-  // Zolang de vergoeding niet handmatig is aangeraakt, volgt hij de berekening.
+  // Zolang de vergoeding niet handmatig is aangeraakt, volgt hij de berekening;
+  // bij "al bekend bij partner" is hij nul, met de melding als reden.
+  const alBekend = form.partner_claim === "already_known";
   useEffect(() => {
     if (form.status !== "booked" || feeTouched) return;
-    setForm((f) => ({ ...f, fee_amount: berekend === null ? "" : String(berekend) }));
-  }, [berekend, form.status, feeTouched]);
+    setForm((f) => {
+      if (alBekend) {
+        const reden = alreadyKnownFeeNote({ partner_claim_first_contact_at: f.partner_claim_first_contact_at || null, partner_claim_reported_at: f.partner_claim_reported_at || null });
+        return { ...f, fee_amount: berekend === null ? "" : "0", fee_override_note: f.fee_override_note.startsWith("Al bekend bij partner") || !f.fee_override_note ? reden : f.fee_override_note };
+      }
+      return { ...f, fee_amount: berekend === null ? "" : String(berekend), fee_override_note: f.fee_override_note.startsWith("Al bekend bij partner") ? "" : f.fee_override_note };
+    });
+  }, [berekend, form.status, feeTouched, alBekend, form.partner_claim_first_contact_at, form.partner_claim_reported_at]);
+
+  const bevestiging = partnerConfirmation({ partner_claim: form.partner_claim, referred_at: form.referred_at || today }, today);
 
   const vervaldatum = form.referred_at ? expiryDateFor(form.referred_at) : null;
 
@@ -264,6 +296,9 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
       fee_amount: getal(form.fee_amount),
       fee_calculated_amount: berekend,
       fee_override_note: form.fee_override_note,
+      partner_claim: form.partner_claim,
+      partner_claim_first_contact_at: form.partner_claim_first_contact_at || null,
+      partner_claim_reported_at: form.partner_claim_reported_at || null,
     };
     // Weg van een gefactureerde boeking kan niet; de vergoeding zelf wordt bij opslaan berekend.
     if (huidig.status === "booked" && next !== "booked") {
@@ -384,6 +419,11 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
       invoice_number: form.invoice_number.trim() || null,
       invoice_date: form.invoice_date || null,
       invoice_paid_at: form.invoice_paid_at || null,
+      prior_contact_note: form.prior_contact_note.trim(),
+      partner_claim: form.partner_claim,
+      partner_claim_reported_at: form.partner_claim === "already_known" ? form.partner_claim_reported_at || today : null,
+      partner_claim_first_contact_at: form.partner_claim === "already_known" ? form.partner_claim_first_contact_at || null : null,
+      partner_claim_note: form.partner_claim === "already_known" ? form.partner_claim_note.trim() : "",
     };
 
     if (form.status === "booked") {
@@ -603,6 +643,64 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
               <Label htmlFor="wr-notities">Notities</Label>
               <Textarea id="wr-notities" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} disabled={Boolean(referral?.anonymized_at)} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="wr-eerder-contact">Eerder contact volgens het bruidspaar</Label>
+              <Input
+                id="wr-eerder-contact"
+                value={form.prior_contact_note}
+                onChange={(e) => set("prior_contact_note", e.target.value)}
+                placeholder="Bijv. 'al gemaild met Seeduyn in maart' of 'nog met niemand'"
+                disabled={Boolean(referral?.anonymized_at)}
+              />
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold">Melding partner</h3>
+            <p className="text-xs text-muted-foreground">
+              De partner staat in cc en meldt binnen {PARTNER_RESPONSE_WORKING_DAYS} werkdagen als het bruidspaar al bekend was. Blijft dat uit, dan geldt de
+              doorverwijzing als bevestigd nieuw.
+            </p>
+            <div className="space-y-2">
+              <Select value={form.partner_claim} onValueChange={(v) => set("partner_claim", v as PartnerClaim)}>
+                <SelectTrigger className="sm:w-60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARTNER_CLAIMS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {PARTNER_CLAIM_LABEL[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.partner_claim === "none" && form.referred_at && (
+                <p className="text-xs text-muted-foreground">
+                  {bevestiging.state === "awaiting"
+                    ? `${PARTNER_CONFIRMATION_LABEL.awaiting} tot en met ${datumLabel(bevestiging.deadline)}.`
+                    : `${PARTNER_CONFIRMATION_LABEL.confirmed_new}: geen melding binnen ${PARTNER_RESPONSE_WORKING_DAYS} werkdagen na ${datumLabel(form.referred_at)}.`}
+                </p>
+              )}
+            </div>
+            {form.partner_claim === "already_known" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="wr-melding-datum">Gemeld op</Label>
+                  <Input id="wr-melding-datum" type="date" value={form.partner_claim_reported_at || today} onChange={(e) => set("partner_claim_reported_at", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wr-eerste-contact">Eerste contact volgens partner</Label>
+                  <Input id="wr-eerste-contact" type="date" value={form.partner_claim_first_contact_at} onChange={(e) => set("partner_claim_first_contact_at", e.target.value)} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="wr-melding-notitie">Toelichting</Label>
+                  <Input id="wr-melding-notitie" value={form.partner_claim_note} onChange={(e) => set("partner_claim_note", e.target.value)} placeholder="Bijv. 'mail van Seeduyn 9 maart: bruidspaar bezocht in januari'" />
+                </div>
+                <p className="text-xs text-muted-foreground sm:col-span-2">Bij een boeking is de vergoeding dan nul, met deze melding als reden. Handmatig aanpassen blijft mogelijk.</p>
+              </div>
+            )}
           </section>
 
           <Separator />

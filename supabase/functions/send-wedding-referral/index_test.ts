@@ -78,6 +78,7 @@ const invoer = (extra: Partial<ReferralInput> = {}): ReferralInput =>
     expectedWeddingPrecision: "month",
     estimatedGuests: 80,
     notes: "Belt zelf terug",
+    priorContactNote: "Nog met niemand gesproken",
     subject: "Uw bruiloft op Vlieland",
     body: "Beste Anna & Bram,\n\nWij verwijzen u door naar Paal 50: https://paal50.nl/bruiloften",
     origin: "https://bureauvlieland.nl",
@@ -115,6 +116,7 @@ Deno.test("BodySchema: partner, namen, e-mail, datum aanvraag, onderwerp en teks
   const parsed = BodySchema.parse({ partnerId: "p", coupleNames: "A", coupleEmail: "a@b.nl", requestedAt: "2026-01-01", subject: "s", body: "b" });
   assertEquals(parsed.expectedWeddingPrecision, "day");
   assertEquals(parsed.notes, "");
+  assertEquals(parsed.priorContactNote, "");
 });
 
 Deno.test("referralAddressFor: apart adres, anders contactadres, anders loginadres", () => {
@@ -194,6 +196,7 @@ Deno.test("handler: verstuurt, logt, maakt de doorverwijzing met vervaldatum en 
   assertEquals(rij.expected_wedding_precision, "month");
   assertEquals(rij.estimated_guests, 80);
   assertEquals(rij.status, "referred");
+  assertEquals(rij.prior_contact_note, "Nog met niemand gesproken");
   assertEquals(rij.referral_email_log_id, "log-1");
   assertEquals(rij.created_by, "admin-1");
   assertEquals(result.body.referralId, rij.id);
