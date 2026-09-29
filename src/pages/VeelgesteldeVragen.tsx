@@ -55,7 +55,7 @@ const GROUPS: { id: string; title: string; items: FaqItem[] }[] = [
       {
         id: "groepsgrootte",
         q: "Wat is de minimale of maximale groepsgrootte?",
-        a: "Wij organiseren programma's vanaf 8 personen. Er is nagenoeg geen bovengrens; wij hebben ervaring met groepen tot meer dan 400 deelnemers. Bij grote groepen splitsen wij op in deelactiviteiten, zodat alles logistiek soepel verloopt.",
+        a: "Wij organiseren programma's vanaf 20 personen. Er is nagenoeg geen bovengrens; wij hebben ervaring met groepen tot meer dan 400 deelnemers. Bij grote groepen splitsen wij op in deelactiviteiten, zodat alles logistiek soepel verloopt.",
       },
     ],
   },

@@ -84,7 +84,7 @@ export const CateringHighlight = ({ number }: { number: string }) => {
                 brengen de haute cuisine naar uw verblijf.
               </p>
               <p className="text-sm md:text-base text-primary/70 tracking-wide">
-                Voor zakelijke groepen vanaf 8 personen. Eén keuken, één aanspreekpunt, één factuur. Vrijblijvend voorstel op maat {RESPONSE_TIME.within}.
+                Voor zakelijke groepen vanaf 20 personen. Eén keuken, één aanspreekpunt, één factuur. Vrijblijvend voorstel op maat {RESPONSE_TIME.within}.
               </p>
             </div>
 
