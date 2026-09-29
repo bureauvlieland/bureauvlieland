@@ -16,7 +16,7 @@ import { transformImageUrl } from "@/lib/supabaseImage";
 const URL = "https://bureauvlieland.nl/logies-vlieland";
 const EYEBROW = "Logies op Vlieland";
 const DESCRIPTION =
-  "Groepsaccommodatie op Vlieland zoeken en vergelijken: hotels, vakantiehuizen en groepsverblijven voor 8 tot 200 personen. Wij vragen de offertes op, u kiest.";
+  "Groepsaccommodatie op Vlieland zoeken en vergelijken: hotels, vakantiehuizen en groepsverblijven voor 20 tot 200 personen. Wij vragen de offertes op, u kiest.";
 // Het origineel is 1,3 MB; via de beeldtransformatie komt een verkleinde
 // versie, zodat de header niet seconden leeg blijft.
 const heroImage = transformImageUrl(

@@ -4,7 +4,7 @@ import { ISLAND_FACTS, LOGIES_LINK } from "./shared";
 import type { LandingContent } from "./types";
 
 const description =
-  "Een bedrijfsuitje op het Waddeneiland Vlieland, van 8 tot 200 personen: activiteiten, catering, overtocht en overnachting in één programma, geregeld door een bureau op het eiland zelf.";
+  "Een bedrijfsuitje op het Waddeneiland Vlieland, van 20 tot 200 personen: activiteiten, catering, overtocht en overnachting in één programma, geregeld door een bureau op het eiland zelf.";
 
 export const bedrijfsuitjeVlieland: LandingContent = {
   slug: "bedrijfsuitje-vlieland",

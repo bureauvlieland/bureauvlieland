@@ -4,7 +4,7 @@ import type { LandingFact } from "./types";
 export const ISLAND_FACTS: LandingFact[] = [
   { label: "Overtocht", value: "90 minuten varen vanaf Harlingen" },
   { label: "Vervoer", value: "Autoluw eiland: fiets, te voet of groepsvervoer" },
-  { label: "Groepen", value: "Van 8 tot 200 personen" },
+  { label: "Groepen", value: "Van 20 tot 200 personen" },
   { label: "Voorstel", value: "Vrijblijvend, binnen 5 werkdagen" },
 ];
 
