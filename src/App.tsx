@@ -80,6 +80,7 @@ const PartnerRoomTypes = lazy(() => import("./pages/PartnerRoomTypes"));
 const PartnerGuides = lazy(() => import("./pages/PartnerGuides"));
 const PartnerResetPassword = lazy(() => import("./pages/PartnerResetPassword"));
 const PartnerPlanning = lazy(() => import("./pages/PartnerPlanning"));
+const PartnerAgreements = lazy(() => import("./pages/PartnerAgreements"));
 const PartnerProfile = lazy(() => import("./pages/PartnerProfile"));
 const PartnerProject = lazy(() => import("./pages/PartnerProject"));
 
@@ -106,6 +107,7 @@ const AdminPartnerProfiles = lazy(() => import("./pages/admin/AdminPartnerProfil
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
 const AdminReferenties = lazy(() => import("./pages/admin/AdminReferenties"));
 const AdminWeddingReferrals = lazy(() => import("./pages/admin/AdminWeddingReferrals"));
+const AdminPartnerAgreements = lazy(() => import("./pages/admin/AdminPartnerAgreements"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const AdminProgramNew = lazy(() => import("./pages/admin/AdminProgramNew"));
 const AdminQuotePreview = lazy(() => import("./pages/admin/AdminQuotePreview"));
@@ -260,6 +262,7 @@ const App = () => {
             <Route path="/partner/kamersoorten" element={<PartnerRoomTypes />} />
             <Route path="/partner/handleidingen" element={<PartnerGuides />} />
             <Route path="/partner/planning" element={<PartnerPlanning />} />
+            <Route path="/partner/afspraken" element={<PartnerAgreements />} />
             <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
             {/* Admin routes */}
             <Route path="/admin" element={<Navigate to="/admin/werkbank" replace />} />
@@ -307,6 +310,7 @@ const App = () => {
             <Route path="/admin/beoordelingen" element={<AdminReviews />} />
             <Route path="/admin/referenties" element={<AdminReferenties />} />
             <Route path="/admin/bruiloften" element={<AdminWeddingReferrals />} />
+            <Route path="/admin/partnerafspraken" element={<AdminPartnerAgreements />} />
             <Route path="/admin/logiesprofielen" element={<Navigate to="/admin/partnerprofielen" replace />} />
             <Route path="/admin/logies/:id" element={<AdminAccommodationDetail />} />
             <Route path="/admin/instellingen" element={<AdminSettings />} />

@@ -33,6 +33,7 @@ import {
   CalendarDays,
   UserCircle,
   ClipboardList,
+  ScrollText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
@@ -116,6 +117,7 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
     { title: "Mijn profiel", url: `/partner/profiel${urlSuffix}`, icon: UserCircle },
     { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
     { title: "Handleidingen", url: `/partner/handleidingen${urlSuffix}`, icon: BookOpen },
+    { title: "Afspraken", url: `/partner/afspraken${urlSuffix}`, icon: ScrollText },
   ];
 
   // Pad + optionele tab-param check zodat Werkbank/Projecten apart actief zijn.

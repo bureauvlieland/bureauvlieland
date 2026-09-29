@@ -57,6 +57,7 @@ import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { AdminPartnerUnavailability } from "@/components/admin/AdminPartnerUnavailability";
 import { AdminPartnerRevenueChart } from "@/components/admin/AdminPartnerRevenueChart";
 import { AdminPartnerTimeline } from "@/components/admin/AdminPartnerTimeline";
+import { PartnerAgreementsCard } from "@/components/admin/PartnerAgreementsCard";
 import { reportError } from "@/lib/errorReporting";
 
 interface Partner {
@@ -1092,6 +1093,9 @@ const AdminPartnerDetail = () => {
               <AdminPartnerUnavailability partnerId={id} />
             </div>
           )}
+
+          {/* Afspraken met akkoord in het portaal */}
+          {!isNew && id && <PartnerAgreementsCard partnerId={id} />}
 
           {/* Partner Activity Timeline */}
           {!isNew && id && (

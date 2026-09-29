@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { referralEmailFor, useWeddingReferralPartners, WEDDING_REFERRALS_KEY } from "@/hooks/useWeddingReferrals";
 import { REFERRAL_STATUS_LABEL, toIsoDate, type ReferralStatus } from "@/lib/weddingReferrals";
+import { useAgreementPartners, usePartnerAgreementAcceptances, usePartnerAgreements } from "@/hooks/usePartnerAgreements";
+import { weddingAgreementAccepted } from "@/lib/partnerAgreements";
 
 /**
  * "Doorverwijzen naar…" (docs/plan-bruiloftsdoorverwijzingen.md, fase 2):
@@ -87,6 +89,16 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
   }, [open]);
 
   const partner = kiesbaar.find((p) => p.id === partnerId) ?? null;
+
+  // Heeft de partner de doorverwijsregeling geaccepteerd? Waarschuwing, geen blokkade.
+  const { data: afspraken = [] } = usePartnerAgreements();
+  const { data: akkoorden = [] } = usePartnerAgreementAcceptances();
+  const { data: afspraakPartners = [] } = useAgreementPartners();
+  const regeling = useMemo(() => {
+    const p = afspraakPartners.find((x) => x.id === partnerId);
+    return p ? weddingAgreementAccepted(afspraken, akkoorden, p) : null;
+  }, [afspraken, akkoorden, afspraakPartners, partnerId]);
+
   const expectedIso = precision === "month" ? (expectedMonth ? `${expectedMonth}-01` : "") : expectedDay;
 
   // Komt dit bruidspaar al voor in onze eigen gegevens? Zegt niets over
@@ -235,6 +247,13 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
             </Select>
             {kiesbaar.length === 0 && <p className="text-xs text-muted-foreground">Geen enkele actieve partner heeft "Ontvangt bruiloftsdoorverwijzingen" aan.</p>}
             {partner && <p className="text-xs text-muted-foreground">Cc: {referralEmailFor(partner)}</p>}
+            {partner && regeling && regeling.state !== "accepted" && (
+              <p className="flex items-start gap-2 text-xs text-amber-900">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {partner.name} heeft de {regeling.agreement.title.toLowerCase()} (versie {regeling.agreement.version}) nog niet geaccepteerd in het portaal
+                {regeling.state === "outdated" ? "; een eerdere versie wel" : ""}. Doorverwijzen kan, maar de afspraak is dan nog niet bevestigd.
+              </p>
+            )}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
