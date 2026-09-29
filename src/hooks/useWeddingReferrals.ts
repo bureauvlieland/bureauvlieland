@@ -22,6 +22,8 @@ export interface ReferralPartner {
   wedding_referral_email: string | null;
   receives_wedding_referrals: boolean;
   is_active: boolean;
+  phone: string | null;
+  website_url: string | null;
 }
 
 export const WEDDING_REFERRALS_KEY = ["wedding-referrals"];
@@ -71,7 +73,7 @@ export function useWeddingReferralPartners() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partners")
-        .select("id, name, email, contact_email, wedding_referral_email, receives_wedding_referrals, is_active")
+        .select("id, name, email, contact_email, wedding_referral_email, receives_wedding_referrals, is_active, phone, website_url")
         .order("name");
       if (error) throw error;
       return (data ?? []) as ReferralPartner[];

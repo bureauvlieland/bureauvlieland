@@ -170,7 +170,8 @@ import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw, Heart } from "lucide-react";
+import { WeddingReferralDialog } from "@/components/admin/WeddingReferralDialog";
 import { ReopenRequestDialog } from "@/components/admin/ReopenRequestDialog";
 import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
 import { SendParticipantsBroadcastDialog } from "@/components/admin/SendParticipantsBroadcastDialog";
@@ -359,6 +360,7 @@ const AdminRequestDetail = () => {
   const [participantsBroadcastOpen, setParticipantsBroadcastOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [weddingReferralOpen, setWeddingReferralOpen] = useState(false);
   const [cancelNotifyOpen, setCancelNotifyOpen] = useState(false);
   const [cancelNotifyActivity, setCancelNotifyActivity] = useState<
     import("@/components/admin/PartnerCancellationNotifyDialog").ActivityPartner[]
@@ -1736,6 +1738,11 @@ const AdminRequestDetail = () => {
                           >
                             <Send className="h-4 w-4 mr-2 text-pink-600" />
                             {request.aftersales_sent_at ? "Aftersales opnieuw" : "Aftersales-mail"}
+                          </DropdownMenuItem>
+                        )}
+                        {request.status !== "cancelled" && (
+                          <DropdownMenuItem onClick={() => setWeddingReferralOpen(true)}>
+                            <Heart className="h-4 w-4 mr-2 text-pink-600" /> Doorverwijzen naar… (bruiloft)
                           </DropdownMenuItem>
                         )}
                         {request.status !== "cancelled" && (
@@ -3716,6 +3723,26 @@ const AdminRequestDetail = () => {
           onCreated={fetchRequestData}
         />
       )}
+      {/* Bruiloft doorverwijzen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md, fase 2) */}
+      {request && (
+        <WeddingReferralDialog
+          open={weddingReferralOpen}
+          onOpenChange={setWeddingReferralOpen}
+          requestId={request.id}
+          prefill={{
+            coupleNames: request.customer_name,
+            coupleEmail: request.customer_email,
+            couplePhone: request.customer_phone,
+            requestedAt: request.created_at.slice(0, 10),
+            estimatedGuests: request.number_of_people,
+            expectedWeddingDate: ((request.selected_dates as string[]) || [])[0] ?? null,
+          }}
+          onSent={() =>
+            toast.info("Doorverwijzing aangemaakt", { description: "Gaat de aanvraag niet verder als project? Annuleer hem dan via het menu." })
+          }
+        />
+      )}
+
       {/* Status update email sheet */}
       {request && (
         <SendProjectEmailSheet

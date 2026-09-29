@@ -140,6 +140,15 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "reference_number",
     "title"
   ],
+  "wedding_referral_customer": [
+    "customer_name",
+    "expected_wedding_date",
+    "number_of_people",
+    "partner_email",
+    "partner_name",
+    "partner_phone",
+    "partner_website"
+  ],
   "customer_review_google_reminder": [
     "customer_name",
     "google_review_url",

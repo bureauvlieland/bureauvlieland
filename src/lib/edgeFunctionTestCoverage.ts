@@ -67,6 +67,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "send-partner-mailing": "deno",
   "set-project-completion": "deno",
   "update-partner-item-status": "deno",
+  "send-wedding-referral": "deno",
 };
 
 type Row = { name: string; category: EdgeFunctionCategory; critical: boolean };
@@ -107,6 +108,7 @@ const REGISTRY: Row[] = [
   { name: "send-quote-request", category: "customer_email", critical: true },
   { name: "send-program-request", category: "customer_email", critical: true },
   { name: "send-project-email", category: "customer_email", critical: true },
+  { name: "send-wedding-referral", category: "customer_email", critical: true },
   { name: "send-customer-aftersales", category: "customer_email", critical: true },
   { name: "send-review-reminder", category: "customer_email", critical: false },
   { name: "send-customer-accommodation-message", category: "customer_email", critical: true },

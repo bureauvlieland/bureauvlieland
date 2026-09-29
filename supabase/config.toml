@@ -85,6 +85,10 @@ verify_jwt = false
 [functions.send-project-email]
 verify_jwt = false
 
+# Doorverwijsmail bruiloft (fase 2); controleert zelf de admin-JWT.
+[functions.send-wedding-referral]
+verify_jwt = false
+
 [functions.send-customer-accommodation-message]
 verify_jwt = false
 

@@ -4,8 +4,9 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   Inbox, Mail, Loader2, Sparkles, AlertCircle, CheckCircle,
-  RefreshCw, Download, Trash2, UserPlus, FileText,
+  RefreshCw, Download, Trash2, UserPlus, FileText, Heart,
 } from "lucide-react";
+import { WeddingReferralDialog } from "@/components/admin/WeddingReferralDialog";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export default function AdminSalesInbox() {
   const [tab, setTab] = useState<SalesInboxStatus | "all">("new");
   const { items, isLoading, discard, rescan } = useSalesInbox(tab);
   const [processing, setProcessing] = useState<SalesInboxItem | null>(null);
+  const [referring, setReferring] = useState<SalesInboxItem | null>(null);
   const [viewBody, setViewBody] = useState<SalesInboxItem | null>(null);
 
   const handleDownload = async (path: string) => {
@@ -205,6 +207,14 @@ export default function AdminSalesInbox() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => setReferring(item)}
+                          title="Bruiloft: doorverwijzen naar een partner"
+                        >
+                          <Heart className="h-3 w-3 mr-1" /> Doorverwijzen naar…
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => discard.mutate(item.id)}
                         >
@@ -234,6 +244,22 @@ export default function AdminSalesInbox() {
           onCreated={(id) => {
             setProcessing(null);
             navigate(`/admin/projecten/${id}`);
+          }}
+        />
+      )}
+
+      {referring && (
+        <WeddingReferralDialog
+          open
+          onOpenChange={(o) => !o && setReferring(null)}
+          salesInboxId={referring.id}
+          prefill={{
+            coupleNames: referring.scan_result?.customer_name || referring.from_name || "",
+            coupleEmail: referring.scan_result?.customer_email || referring.from_email,
+            couplePhone: referring.scan_result?.customer_phone || null,
+            requestedAt: referring.received_at.slice(0, 10),
+            estimatedGuests: referring.scan_result?.number_of_people ?? null,
+            expectedWeddingDate: parseDutchDates((referring.scan_result?.preferred_dates || []).join(", ")).dates[0] ?? null,
           }}
         />
       )}
