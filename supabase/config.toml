@@ -200,3 +200,6 @@ verify_jwt = false
 
 [functions.reference-case]
 verify_jwt = false
+
+[functions.dismiss-partner-invoice-item]
+verify_jwt = false
