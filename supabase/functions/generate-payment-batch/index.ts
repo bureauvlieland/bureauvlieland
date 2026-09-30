@@ -272,6 +272,8 @@ ${bicBlock}        <Cdtr><Nm>${xmlEscape(cdtrName)}</Nm></Cdtr>
       ? `        <DbtrAgt><FinInstnId><BIC>${xmlEscape(bureauBic)}</BIC></FinInstnId></DbtrAgt>`
       : `        <DbtrAgt><FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId></DbtrAgt>`;
 
+    // BtchBookg=false: de bank boekt elke betaling los af (met eigen omschrijving)
+    // in plaats van één samengesteld bedrag op het rekeningoverzicht.
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <CstmrCdtTrfInitn>
@@ -285,7 +287,7 @@ ${bicBlock}        <Cdtr><Nm>${xmlEscape(cdtrName)}</Nm></Cdtr>
     <PmtInf>
       <PmtInfId>${xmlEscape(batchRef)}-01</PmtInfId>
       <PmtMtd>TRF</PmtMtd>
-      <BtchBookg>true</BtchBookg>
+      <BtchBookg>false</BtchBookg>
       <NbOfTxs>${transactionCount}</NbOfTxs>
       <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
       <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf>
