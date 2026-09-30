@@ -1,5 +1,19 @@
 project_id = "utshmnyrjzwtrpttxdlw"
 
+# Auth-URL's. Dit moet ook in het Supabase-dashboard staan (Authentication →
+# URL Configuration): Site URL = https://bureauvlieland.nl en de redirect-URL's
+# hieronder. Staat de Site URL op de standaard http://localhost:3000 en is de
+# lijst leeg, dan negeert Supabase de `redirectTo` van de wachtwoord-reset- en
+# uitnodigingsmails en stuurt de link de partner naar localhost:3000.
+# Zie docs/migratie-supabase.md, stap 6.
+[auth]
+site_url = "https://bureauvlieland.nl"
+additional_redirect_urls = [
+  "https://bureauvlieland.nl/**",
+  "https://www.bureauvlieland.nl/**",
+  "http://localhost:8080/**",
+]
+
 [functions.send-quote-request]
 verify_jwt = false
 

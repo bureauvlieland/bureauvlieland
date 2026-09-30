@@ -366,6 +366,20 @@ Het Lovable-domein `bureauvlieland.lovable.app` wordt in de code niet meer
 als productie behandeld (mails vanaf die host krijgen [TEST] en gaan naar het
 testadres); na *Remove Lovable Cloud* bestaat die host niet meer.
 
+30 september: de wachtwoord-resetlink voor partners (Vlieland Yoga) stuurde
+naar `http://localhost:3000`. Oorzaak: in het nieuwe project stond
+*Authentication → URL Configuration* nog op de standaardwaarden (Site URL
+`http://localhost:3000`, geen redirect-URL's). De edge functions geven wel
+`redirectTo: https://bureauvlieland.nl/partner/reset-password` mee, maar een
+URL die niet op de lijst staat vervangt Supabase stilzwijgend door de Site URL.
+Dit raakt alle links die via `auth.admin.generateLink` ontstaan: wachtwoord
+vergeten, uitnodigen, opnieuw uitnodigen en de admin-reset. Instellen in het
+dashboard: Site URL `https://bureauvlieland.nl`, Redirect URLs
+`https://bureauvlieland.nl/**`, `https://www.bureauvlieland.nl/**` en
+`http://localhost:8080/**` (staat ook in `supabase/config.toml` onder
+`[auth]`). Een al verstuurde link heeft de oude redirect erin gebakken; de
+partner moet na het instellen opnieuw "wachtwoord vergeten" doen.
+
 Pas als dat groen is: in Lovable *Remove Lovable Cloud*. Tot die tijd blijft het
 oude project als vangnet staan.
 
