@@ -51,6 +51,18 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
     commission_status?: string | null;
     commission_percentage?: number | null;
   };
+  /** Verdeling over onderdelen (verzamelfactuur); leeg bij een enkelvoudige koppeling via item_id. */
+  allocations?: Array<{
+    item_id: string;
+    amount_excl_vat: number;
+    program_request_item?: {
+      id: string;
+      block_name: string;
+      commission_amount?: number | null;
+      commission_status?: string | null;
+      commission_percentage?: number | null;
+    } | null;
+  }>;
   accommodation_quote?: {
     id: string;
     partner_id: string;

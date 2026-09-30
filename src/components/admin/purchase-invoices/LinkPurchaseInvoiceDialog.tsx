@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Link2, Loader2, Search } from "lucide-react";
+import { Check, Link2, Loader2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,13 @@ import {
   sortLinkTargets,
   type LinkTarget,
 } from "@/lib/purchaseInvoiceLinkTargets";
+import {
+  buildAllocationRows,
+  isSplitBalanced,
+  proposeSplit,
+  splitTotals,
+  type AllocationAmount,
+} from "@/lib/purchaseInvoiceSplit";
 
 export interface LinkableInvoice {
   id: string;
@@ -47,18 +54,43 @@ const formatCurrency = (amount: number | null) =>
     : new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
 
 /**
- * Koppelt een losse inkoopfactuur aan een programma-onderdeel of een logies-offerte.
- * De database-triggers vullen daarna factuurnummer, bedrag en commissie op het onderdeel.
+ * Koppelt een losse inkoopfactuur aan één of meer programma-onderdelen, of aan een
+ * logies-offerte. Bij meerdere onderdelen (bv. catering op meerdere dagen op één
+ * factuur) wordt het bedrag ex btw als allocaties over de onderdelen verdeeld.
+ * De database-triggers vullen daarna factuurnummer, bedrag en commissie per onderdeel.
  */
 export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinked }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"item" | "lodging">("item");
   const [search, setSearch] = useState("");
+  /** Logies: één offerte. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Onderdelen: één of meer, in volgorde van aanklikken. */
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  /** Verdeling ex btw per onderdeel (als tekst, zodat de admin kan typen). */
+  const [splitInputs, setSplitInputs] = useState<Record<string, string>>({});
 
   const partnerId = invoice?.partner_id ?? null;
   const invoiceAmount = invoice?.amount_incl_vat ?? null;
+
+  // Bedrag ex btw en btw-tarief van de factuur zijn nodig om te kunnen verdelen;
+  // niet elke aanroeper geeft die mee, dus halen we ze hier op.
+  const { data: header } = useQuery({
+    queryKey: ["link-invoice-header", invoice?.id],
+    enabled: open && !!invoice?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_purchase_invoices")
+        .select("id, amount_excl_vat, vat_rate, request_id")
+        .eq("id", invoice!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const invoiceExcl = header ? Number(header.amount_excl_vat ?? 0) : null;
+  const invoiceVatRate = header ? Number(header.vat_rate ?? 0) : 0;
 
   const { data: itemTargets = [], isLoading: itemsLoading } = useQuery<LinkTarget[]>({
     queryKey: ["link-invoice-items", partnerId],
@@ -123,28 +155,107 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
     [tab, itemTargets, lodgingTargets, invoiceAmount, search],
   );
 
+  const selectedItems = useMemo(
+    () =>
+      selectedItemIds
+        .map((id) => itemTargets.find((t) => t.id === id))
+        .filter((t): t is LinkTarget => !!t),
+    [selectedItemIds, itemTargets],
+  );
+  const isSplit = tab === "item" && selectedItems.length > 1;
+
+  const proposeForSelection = (items: LinkTarget[]) => {
+    if (invoiceExcl === null) return;
+    const proposal = proposeSplit(
+      invoiceExcl,
+      items.map((t) => ({ id: t.id, weight: t.amountIncl })),
+    );
+    setSplitInputs(
+      Object.fromEntries(proposal.map((p) => [p.item_id, p.amount_excl_vat.toFixed(2)])),
+    );
+  };
+
+  // Nieuwe selectie of nieuw factuurtotaal → verdeling opnieuw voorstellen.
+  useEffect(() => {
+    if (selectedItems.length > 1) proposeForSelection(selectedItems);
+    else setSplitInputs({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItemIds.join("|"), invoiceExcl]);
+
+  const splitAmounts: AllocationAmount[] = selectedItems.map((t) => ({
+    item_id: t.id,
+    amount_excl_vat: Number(String(splitInputs[t.id] ?? "").replace(",", ".")) || 0,
+  }));
+  const splitBalanced = invoiceExcl !== null && isSplitBalanced(splitAmounts, invoiceExcl);
+  const splitSummary = invoiceExcl !== null ? splitTotals(splitAmounts, invoiceExcl) : null;
+
+  const toggleItem = (id: string) => {
+    setSelectedItemIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const resetSelection = () => {
+    setSelectedId(null);
+    setSelectedItemIds([]);
+    setSplitInputs({});
+  };
+
+  const canSubmit =
+    tab === "item"
+      ? selectedItems.length === 1 || (selectedItems.length > 1 && splitBalanced)
+      : !!selectedId;
+
   const linkMutation = useMutation({
     mutationFn: async () => {
-      if (!invoice || !selectedId) throw new Error("Kies eerst een onderdeel of logies-offerte.");
+      if (!invoice) throw new Error("Geen factuur geselecteerd.");
       if (tab === "item") {
-        const target = itemTargets.find((t) => t.id === selectedId);
+        if (selectedItems.length === 0) throw new Error("Kies eerst een onderdeel.");
+        const firstId = selectedItems[0].id;
         const { data: item, error: itemError } = await supabase
           .from("program_request_items")
           .select("request_id")
-          .eq("id", selectedId)
+          .eq("id", firstId)
           .maybeSingle();
         if (itemError) throw itemError;
-        const { error } = await supabase
+        const requestId = item?.request_id ?? invoice.request_id ?? null;
+
+        if (selectedItems.length === 1) {
+          const { error } = await supabase
+            .from("partner_purchase_invoices")
+            .update({ item_id: firstId, request_id: requestId })
+            .eq("id", invoice.id);
+          if (error) throw error;
+          return selectedItems[0].label;
+        }
+
+        // Verzamelfactuur: verdeel over de onderdelen via allocaties. De trigger
+        // op de allocatietabel zet per onderdeel factuurgegevens en commissie.
+        if (invoiceExcl === null) throw new Error("Factuurbedrag ex btw is nog niet geladen.");
+        if (!isSplitBalanced(splitAmounts, invoiceExcl)) {
+          throw new Error("De verdeling sluit niet op het factuurbedrag ex btw.");
+        }
+        const rows = buildAllocationRows(invoice.id, invoiceVatRate, splitAmounts);
+        if (rows.length < 2) throw new Error("Geef minstens twee onderdelen een bedrag.");
+
+        const { error: clearError } = await supabase
+          .from("partner_purchase_invoice_allocations")
+          .delete()
+          .eq("invoice_id", invoice.id);
+        if (clearError) throw clearError;
+        const { error: insertError } = await supabase
+          .from("partner_purchase_invoice_allocations")
+          .insert(rows);
+        if (insertError) throw insertError;
+        const { error: headerError } = await supabase
           .from("partner_purchase_invoices")
-          .update({
-            item_id: selectedId,
-            request_id: item?.request_id ?? invoice.request_id ?? null,
-          })
+          .update({ item_id: null, request_id: requestId })
           .eq("id", invoice.id);
-        if (error) throw error;
-        return target?.label ?? "onderdeel";
+        if (headerError) throw headerError;
+        return `${rows.length} onderdelen`;
       }
 
+      if (!selectedId) throw new Error("Kies eerst een logies-offerte.");
       const target = lodgingTargets.find((t) => t.id === selectedId);
       const today = new Date().toISOString().slice(0, 10);
       const { error: quoteError } = await supabase
@@ -166,7 +277,8 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
       queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
       queryClient.invalidateQueries({ queryKey: ["link-invoice-items"] });
       queryClient.invalidateQueries({ queryKey: ["link-invoice-lodging"] });
-      setSelectedId(null);
+      queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
+      resetSelection();
       setSearch("");
       onOpenChange(false);
       onLinked?.();
@@ -184,8 +296,9 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
         <DialogHeader>
           <DialogTitle>Factuur koppelen</DialogTitle>
           <DialogDescription>
-            Koppel deze inkoopfactuur aan een programma-onderdeel of logies-offerte, zodat de
-            commissie meeloopt in de werklijst.
+            Koppel deze inkoopfactuur aan één of meer programma-onderdelen, of aan een
+            logies-offerte, zodat de commissie meeloopt in de werklijst. Kies meerdere
+            onderdelen als één factuur over meerdere dagen of onderdelen gaat.
           </DialogDescription>
         </DialogHeader>
 
@@ -199,11 +312,12 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
                 ? format(new Date(invoice.invoice_date), "d MMM yyyy", { locale: nl })
                 : "geen datum"}{" "}
               · {formatCurrency(invoice.amount_incl_vat)} incl. btw
+              {invoiceExcl !== null && <> · {formatCurrency(invoiceExcl)} ex btw</>}
             </div>
           </div>
         )}
 
-        <Tabs value={tab} onValueChange={(v) => { setTab(v as "item" | "lodging"); setSelectedId(null); }}>
+        <Tabs value={tab} onValueChange={(v) => { setTab(v as "item" | "lodging"); resetSelection(); }}>
           <TabsList>
             <TabsTrigger value="item">Programma-onderdeel</TabsTrigger>
             <TabsTrigger value="lodging">Logies-offerte</TabsTrigger>
@@ -232,19 +346,35 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
               )}
               {visible.map((target) => {
                 const match = amountMatchFor(target, invoiceAmount);
-                const active = selectedId === target.id;
+                const active =
+                  tab === "item" ? selectedItemIds.includes(target.id) : selectedId === target.id;
                 return (
                   <button
                     key={target.id}
                     type="button"
-                    onClick={() => setSelectedId(target.id)}
+                    onClick={() =>
+                      tab === "item" ? toggleItem(target.id) : setSelectedId(target.id)
+                    }
                     className={cn(
                       "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
                       active ? "border-primary bg-primary/5" : "hover:bg-muted/50",
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{target.label}</span>
+                      <span className="flex items-center gap-2 font-medium">
+                        {tab === "item" && (
+                          <span
+                            className={cn(
+                              "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                              active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40",
+                            )}
+                            aria-hidden
+                          >
+                            {active && <Check className="h-3 w-3" />}
+                          </span>
+                        )}
+                        {target.label}
+                      </span>
                       <span className="tabular-nums text-xs text-muted-foreground">
                         {formatCurrency(target.amountIncl)}
                       </span>
@@ -262,6 +392,67 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
                 );
               })}
             </div>
+
+            {isSplit && (
+              <div className="mt-3 rounded-md border p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium">Verdeling ex btw over {selectedItems.length} onderdelen</div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => proposeForSelection(selectedItems)}
+                    disabled={invoiceExcl === null}
+                  >
+                    Naar rato van verkoopprijs
+                  </Button>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {selectedItems.map((target) => (
+                    <div key={target.id} className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate">{target.label}</div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {[target.projectReference, target.projectLabel].filter(Boolean).join(" · ")}
+                          {target.amountIncl !== null && (
+                            <> · verkoop {formatCurrency(target.amountIncl)} incl.</>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">€</span>
+                        <Input
+                          inputMode="decimal"
+                          className="h-8 w-28 text-right tabular-nums"
+                          value={splitInputs[target.id] ?? ""}
+                          onChange={(event) =>
+                            setSplitInputs((prev) => ({ ...prev, [target.id]: event.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {splitSummary && (
+                  <div
+                    className={cn(
+                      "mt-2 flex items-center justify-between text-xs",
+                      splitBalanced ? "text-muted-foreground" : "text-destructive",
+                    )}
+                  >
+                    <span>
+                      Verdeeld {formatCurrency(splitSummary.sum)} van {formatCurrency(invoiceExcl)} ex btw
+                    </span>
+                    {!splitBalanced && (
+                      <span>
+                        Verschil {formatCurrency(splitSummary.diff)} — pas de bedragen aan tot het sluit
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
@@ -270,7 +461,7 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
             Annuleren
           </Button>
           <Button
-            disabled={!selectedId || linkMutation.isPending}
+            disabled={!canSubmit || linkMutation.isPending}
             onClick={() => linkMutation.mutate()}
           >
             {linkMutation.isPending ? (
@@ -278,7 +469,7 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
             ) : (
               <Link2 className="mr-2 h-4 w-4" />
             )}
-            Koppelen
+            {isSplit ? `Verdelen over ${selectedItems.length} onderdelen` : "Koppelen"}
           </Button>
         </DialogFooter>
       </DialogContent>
