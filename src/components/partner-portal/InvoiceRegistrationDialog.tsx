@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
+import { looksLikeProjectReference } from "@/lib/purchaseInvoiceDuplicateRules";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import {
   Dialog,
@@ -124,6 +125,9 @@ export const InvoiceRegistrationDialog = ({
     } else if (!isValidInvoiceNumberInput(invoiceNumber)) {
       newErrors.invoiceNumber =
         "Vul het echte factuurnummer in (minimaal één cijfer, geen 'nvt' of '-')";
+    } else if (looksLikeProjectReference(invoiceNumber)) {
+      newErrors.invoiceNumber =
+        "Dit is ons projectnummer, niet uw factuurnummer. Vul het nummer in dat op uw eigen factuur staat.";
     }
 
 

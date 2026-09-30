@@ -159,7 +159,7 @@ export default function AdminPaymentBatches() {
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
         .select(`
-          id, invoice_number, invoice_date, amount_incl_vat, description, status, payment_batch_id,
+          id, invoice_number, invoice_date, amount_incl_vat, description, status, payment_batch_id, request_id,
           partners!inner(id, name, iban, pays_by_direct_debit),
           program_requests!inner(reference_number)
         `)
@@ -337,11 +337,23 @@ export default function AdminPaymentBatches() {
                     <AlertDescription>
                       <div className="space-y-1 mt-1">
                         {duplicatesInSelection.map((d) => (
-                          <div key={`${d.partnerId}-${d.normalized}`} className="text-sm">
-                            <span className="font-medium">{d.invoiceNumber}</span> van{" "}
-                            <span className="font-medium">{d.partnerName}</span> staat{" "}
-                            {d.ids.length}× aangevinkt. Vink één regel uit of markeer een van beide
-                            als terug te vorderen voordat je de batch genereert.
+                          <div key={`${d.partnerId}-${d.reason}-${d.ids.join("-")}`} className="text-sm">
+                            {d.reason === "number" ? (
+                              <>
+                                <span className="font-medium">{d.invoiceNumber}</span> van{" "}
+                                <span className="font-medium">{d.partnerName}</span> staat{" "}
+                                {d.ids.length}× aangevinkt.
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-medium">{d.partnerName}</span> heeft {d.ids.length} facturen
+                                met hetzelfde bedrag op hetzelfde project of rond dezelfde datum aangevinkt
+                                (<span className="font-medium">{d.invoiceNumber}</span>). Waarschijnlijk is dat één
+                                factuur die twee keer is geregistreerd.
+                              </>
+                            )}{" "}
+                            Vink één regel uit of markeer een van beide als terug te vorderen voordat je de
+                            batch genereert.
                           </div>
                         ))}
                       </div>

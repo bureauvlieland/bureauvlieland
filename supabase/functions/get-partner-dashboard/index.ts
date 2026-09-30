@@ -1,6 +1,7 @@
 // Edge function for partner dashboard data
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canPartnerInvoiceItem } from "../_shared/partnerInvoicing.ts";
+import { findItemsAlreadyInvoiced, type ItemInvoiceLink } from "../_shared/purchaseInvoiceDuplicateRules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -177,6 +178,52 @@ Deno.serve(async (req) => {
       if (activeStatuses.includes(item.status)) return true;
       return new Date(item.updated_at) > cutoffDate;
     });
+
+    // Onderdelen waarvoor het bureau zelf al een inkoopfactuur registreerde
+    // (uit de inbox of handmatig) dragen geen factuurnummer. Het portaal bood ze
+    // dan opnieuw aan als "te factureren", en zo is één factuur twee keer
+    // geregistreerd en uitbetaald. Neem het nummer van die factuur over, zodat
+    // het onderdeel als gefactureerd telt.
+    const unnumberedIds = activeItems.filter((i) => !i.invoiced_number).map((i) => i.id);
+    if (unnumberedIds.length > 0) {
+      const { data: partnerInvoices } = await supabase
+        .from("partner_purchase_invoices")
+        .select("id, item_id, invoice_number, invoice_date, file_path")
+        .eq("partner_id", partner.id)
+        .is("refund_pending_at", null);
+      const invoiceRows = (partnerInvoices || []) as Array<{
+        id: string;
+        item_id: string | null;
+        invoice_number: string | null;
+        invoice_date: string | null;
+        file_path: string | null;
+      }>;
+      if (invoiceRows.length > 0) {
+        const { data: allocationRows } = await supabase
+          .from("partner_purchase_invoice_allocations")
+          .select("item_id, invoice_id")
+          .in("invoice_id", invoiceRows.map((r) => r.id))
+          .in("item_id", unnumberedIds);
+        const byId = new Map(invoiceRows.map((r) => [r.id, r]));
+        const links: ItemInvoiceLink[] = [
+          ...invoiceRows.map((r) => ({ item_id: r.item_id, invoice_id: r.id, invoice_number: r.invoice_number })),
+          ...((allocationRows || []) as Array<{ item_id: string | null; invoice_id: string }>).map((a) => ({
+            item_id: a.item_id,
+            invoice_id: a.invoice_id,
+            invoice_number: byId.get(a.invoice_id)?.invoice_number ?? null,
+          })),
+        ];
+        const found = findItemsAlreadyInvoiced(unnumberedIds, links);
+        for (const item of activeItems) {
+          const link = found.get(item.id);
+          if (!link) continue;
+          const inv = byId.get(link.invoice_id);
+          item.invoiced_number = link.invoice_number || "(geregistreerd door Bureau Vlieland)";
+          item.invoiced_date = item.invoiced_date ?? inv?.invoice_date ?? null;
+          item.invoiced_file_path = item.invoiced_file_path ?? inv?.file_path ?? null;
+        }
+      }
+    }
 
     // Get all request IDs to fetch sibling items for conflict detection
     const requestIds = [...new Set(activeItems.map(i => i.request_id))];

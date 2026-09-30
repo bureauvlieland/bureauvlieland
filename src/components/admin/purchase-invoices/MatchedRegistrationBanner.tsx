@@ -103,15 +103,16 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
         return exactByNr;
       }
 
-      // 2. Bedrag-fallback: zelfde partner, bedrag binnen €0,02, nog geen PDF,
-      //    factuurdatum binnen 120 dagen. Vangt placeholder-nummers (1, 2, 3…) op
-      //    die later per mail met het echte nummer binnenkomen.
+      // 2. Bedrag-fallback: zelfde partner, bedrag binnen €0,02, factuurdatum
+      //    binnen 120 dagen. Vangt placeholder-nummers (1, 2, 3…) op die later per
+      //    mail met het echte nummer binnenkomen, én registraties waar de partner
+      //    ons projectnummer als factuurnummer invulde. Ook als daar al een PDF
+      //    aan hangt: die bleek eerder juist de weg naar een dubbele boeking.
       if (!supplierName || scannedAmountIncl == null) return [];
       const scanDate = item.scan_result?.invoice_date
         ? new Date(item.scan_result.invoice_date).getTime()
         : Date.now();
       return all.filter((r) => {
-        if (r.file_path) return false;
         const pname = (r.partner?.name || "").toLowerCase();
         const partnerHit = pname && (pname.includes(supplierName) || supplierName.includes(pname));
         if (!partnerHit) return false;
@@ -325,6 +326,9 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
           <p className="text-xs mt-0.5 text-blue-800 dark:text-blue-200">
             Koppel de PDF aan de bestaande registratie i.p.v. een nieuwe inkoopfactuur aan te maken.
             {isAmountFallback ? " Het factuurnummer wordt automatisch bijgewerkt naar het nummer uit de PDF." : ""}
+            {matches.some((m) => !!m.file_path)
+              ? " Een al aanwezige PDF wordt vervangen door deze uit de inbox."
+              : ""}
           </p>
         </div>
       </div>
