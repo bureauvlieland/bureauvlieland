@@ -3,6 +3,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo, getBureauAdminEmail } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
+import {
+  findItemsAlreadyInvoiced,
+  findLikelyDuplicate,
+  looksLikeProjectReference,
+  type ItemInvoiceLink,
+} from "../_shared/purchaseInvoiceDuplicateRules.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const corsHeaders = {
@@ -138,27 +144,53 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Duplicate guard: block same partner + invoice number (normalized).
-    const normalize = (v: string) => (v || "").replace(/[\s\-_.]/g, "").toUpperCase();
-    const normalizedNew = normalize(invoicedNumber);
-    if (normalizedNew) {
-      const { data: existing } = await supabase
-        .from("partner_purchase_invoices")
-        .select("id, invoice_number, invoice_date, amount_incl_vat, amount_excl_vat, status")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      const dup = (existing || []).find((r: any) => normalize(r.invoice_number) === normalizedNew);
-      if (dup) {
-        return new Response(
-          JSON.stringify({
-            error: `Factuurnummer ${dup.invoice_number} is al geregistreerd op ${dup.invoice_date} (€${Number(dup.amount_incl_vat ?? dup.amount_excl_vat).toFixed(2)}). Neem contact op met Bureau Vlieland als dit een nieuwe factuur betreft.`,
-            code: "duplicate_invoice",
-            duplicate: dup,
-          }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+    // Ons projectnummer is nooit het factuurnummer van de partner. Laten we dat
+    // toch toe, dan komt dezelfde factuur later met het echte nummer via de inbox
+    // binnen en staat hij dubbel.
+    if (looksLikeProjectReference(invoicedNumber)) {
+      return new Response(
+        JSON.stringify({
+          error: "Dit is ons projectnummer, niet uw factuurnummer. Vul het nummer in dat op uw eigen factuur staat.",
+          code: "invoice_number_is_project_reference",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Bestaande facturen van deze partner, voor de dubbel-controles hieronder.
+    const { data: existingInvoices } = await supabase
+      .from("partner_purchase_invoices")
+      .select("id, invoice_number, invoice_date, amount_incl_vat, amount_excl_vat, status, request_id, item_id")
+      .eq("partner_id", partner.id)
+      .is("refund_pending_at", null)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    const existingRows = (existingInvoices || []) as Array<{
+      id: string;
+      invoice_number: string | null;
+      invoice_date: string | null;
+      amount_incl_vat: number | null;
+      amount_excl_vat: number | null;
+      status: string;
+      request_id: string | null;
+      item_id: string | null;
+    }>;
+    const duplicateResponse = (dup: (typeof existingRows)[number], reason: "number" | "amount") =>
+      new Response(
+        JSON.stringify({
+          error: reason === "number"
+            ? `Factuurnummer ${dup.invoice_number} is al geregistreerd op ${dup.invoice_date} (€${Number(dup.amount_incl_vat ?? dup.amount_excl_vat).toFixed(2)}). Neem contact op met Bureau Vlieland als dit een nieuwe factuur betreft.`
+            : `Er is voor dit project al een factuur van €${Number(dup.amount_incl_vat ?? dup.amount_excl_vat).toFixed(2)} geregistreerd (nummer ${dup.invoice_number}, ${dup.invoice_date}). Waarschijnlijk is dit dezelfde factuur. Neem contact op met Bureau Vlieland als het toch een nieuwe factuur is.`,
+          code: "duplicate_invoice",
+          duplicate: dup,
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+
+    // Duplicate guard 1: zelfde partner + zelfde factuurnummer (genormaliseerd).
+    const byNumber = findLikelyDuplicate({ invoice_number: invoicedNumber }, existingRows);
+    if (byNumber && byNumber.reason === "number") {
+      return duplicateResponse(byNumber.invoice, "number");
     }
 
 
@@ -231,6 +263,52 @@ Deno.serve(async (req) => {
     const uniqueRates = Array.from(new Set(allocations.map((a) => a.vat_rate)));
     const headerVatRate = uniqueRates.length === 1 ? uniqueRates[0] : 0;
     const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
+
+    // Duplicate guard 2: zelfde bedrag op hetzelfde project (of rond dezelfde
+    // datum), onder een ander nummer. Zo is de factuur die het bureau al uit de
+    // inbox verwerkte niet nog een keer via het portaal te registreren.
+    const byAmount = findLikelyDuplicate(
+      { invoice_number: null, invoice_date: invoicedDate, amount_incl_vat: totalIncl, request_id: requestId },
+      existingRows,
+    );
+    if (byAmount) {
+      return duplicateResponse(byAmount.invoice, "amount");
+    }
+
+    // Duplicate guard 3: een onderdeel waar al een inkoopfactuur van deze partner
+    // aan hangt (direct of via een verdeling), ook als het bureau die registreerde
+    // en het onderdeel daardoor nog geen factuurnummer droeg.
+    const { data: existingAllocations } = existingRows.length > 0
+      ? await supabase
+        .from("partner_purchase_invoice_allocations")
+        .select("item_id, invoice_id")
+        .in("invoice_id", existingRows.map((r) => r.id))
+        .in("item_id", itemIds)
+      : { data: [] as Array<{ item_id: string | null; invoice_id: string }> };
+    const numberById = new Map(existingRows.map((r) => [r.id, r.invoice_number]));
+    const itemLinks: ItemInvoiceLink[] = [
+      ...existingRows.map((r) => ({ item_id: r.item_id, invoice_id: r.id, invoice_number: r.invoice_number })),
+      ...((existingAllocations || []) as Array<{ item_id: string | null; invoice_id: string }>).map((a) => ({
+        item_id: a.item_id,
+        invoice_id: a.invoice_id,
+        invoice_number: numberById.get(a.invoice_id) ?? null,
+      })),
+    ];
+    const alreadyInvoiced = findItemsAlreadyInvoiced(itemIds, itemLinks);
+    if (alreadyInvoiced.size > 0) {
+      const names = (dbItems as Array<{ id: string; block_name: string | null }>)
+        .filter((it) => alreadyInvoiced.has(it.id))
+        .map((it) => `"${it.block_name}" (factuur ${alreadyInvoiced.get(it.id)?.invoice_number || "zonder nummer"})`)
+        .join(", ");
+      return new Response(
+        JSON.stringify({
+          error: `Voor ${names} is al een factuur geregistreerd. Neem contact op met Bureau Vlieland als dit niet klopt.`,
+          code: "item_already_invoiced",
+          items: Array.from(alreadyInvoiced.keys()),
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const isCollective = dbItems.length > 1;
     const baseDescription = isCollective

@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  findDuplicatesInSelection,
-  findAmountDateCollisions,
-} from "@/lib/paymentBatchGuards";
+import { findDuplicatesInSelection } from "@/lib/paymentBatchGuards";
 
 const row = (over: Partial<any>) => ({
   id: crypto.randomUUID(),
@@ -39,8 +36,11 @@ describe("findDuplicatesInSelection", () => {
     expect(findDuplicatesInSelection(rows)).toHaveLength(0);
   });
 
-  it("negeert lege factuurnummers", () => {
-    const rows = [row({ invoice_number: null }), row({ invoice_number: "" })];
+  it("negeert lege factuurnummers bij de nummer-controle", () => {
+    const rows = [
+      row({ invoice_number: null, amount_incl_vat: 100 }),
+      row({ invoice_number: "", amount_incl_vat: 250 }),
+    ];
     expect(findDuplicatesInSelection(rows)).toHaveLength(0);
   });
 
@@ -53,21 +53,25 @@ describe("findDuplicatesInSelection", () => {
   });
 });
 
-describe("findAmountDateCollisions", () => {
-  it("vindt zelfde partner + bedrag + datum met verschillend nummer", () => {
+describe("findDuplicatesInSelection – bedrag", () => {
+  it("vindt zelfde partner + bedrag rond dezelfde datum met verschillend nummer", () => {
     const rows = [
       row({ invoice_number: "A1" }),
       row({ invoice_number: "A2" }),
     ];
-    expect(findAmountDateCollisions(rows)).toHaveLength(1);
+    const dups = findDuplicatesInSelection(rows);
+    expect(dups).toHaveLength(1);
+    expect(dups[0].reason).toBe("amount");
+    expect(dups[0].partnerName).toBe("Partner 1");
   });
 
-  it("negeert andere datum of ander bedrag", () => {
+  it("negeert een ander bedrag, een ander project of een datum ver weg", () => {
     const rows = [
-      row({ invoice_number: "A1", amount_incl_vat: 100 }),
-      row({ invoice_number: "A2", amount_incl_vat: 101 }),
-      row({ invoice_number: "A3", invoice_date: "2026-06-02" }),
+      row({ invoice_number: "A1", amount_incl_vat: 100, request_id: "r1" }),
+      row({ invoice_number: "A2", amount_incl_vat: 101, request_id: "r1" }),
+      row({ invoice_number: "A3", amount_incl_vat: 100, request_id: "r2" }),
+      row({ invoice_number: "A4", amount_incl_vat: 100, invoice_date: "2026-12-01" }),
     ];
-    expect(findAmountDateCollisions(rows)).toHaveLength(0);
+    expect(findDuplicatesInSelection(rows)).toHaveLength(0);
   });
 });

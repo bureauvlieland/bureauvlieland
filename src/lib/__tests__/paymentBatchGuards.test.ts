@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   findDuplicatesInSelection,
-  findAmountDateCollisions,
   buildBatchPaidUpdate,
   buildBatchCancelUpdate,
   isPaidViaBatch,
@@ -56,35 +55,45 @@ describe("findDuplicatesInSelection", () => {
   });
 });
 
-describe("findAmountDateCollisions", () => {
-  it("flagt zelfde partner + bedrag + datum met verschillende nummers", () => {
-    const groups = findAmountDateCollisions([
-      row({ id: "a", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-05-01", invoice_number: "1" }),
-      row({ id: "b", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-05-01", invoice_number: "2" }),
+describe("findDuplicatesInSelection – zelfde bedrag onder een ander nummer", () => {
+  it("flagt zelfde partner + bedrag op hetzelfde project", () => {
+    const groups = findDuplicatesInSelection([
+      row({ id: "a", partner_id: "p1", amount_incl_vat: 2340, invoice_date: "2026-09-14", invoice_number: "BV-2602-0005", request_id: "r1" }),
+      row({ id: "b", partner_id: "p1", amount_incl_vat: 2340, invoice_date: "2026-09-14", invoice_number: "2026077", request_id: "r1" }),
     ]);
     expect(groups).toHaveLength(1);
-    expect(groups[0].ids).toHaveLength(2);
+    expect(groups[0].reason).toBe("amount");
+    expect(groups[0].ids).toEqual(["a", "b"]);
+    expect(groups[0].invoiceNumber).toBe("BV-2602-0005 / 2026077");
   });
 
-  it("flagt niet bij een ander bedrag of andere datum", () => {
+  it("flagt zelfde partner + bedrag rond dezelfde datum als het project onbekend is", () => {
+    const groups = findDuplicatesInSelection([
+      row({ id: "a", partner_id: "p1", amount_incl_vat: 225, invoice_date: "2026-06-02", invoice_number: "1" }),
+      row({ id: "b", partner_id: "p1", amount_incl_vat: 225, invoice_date: "2026-06-08", invoice_number: "2" }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].reason).toBe("amount");
+  });
+
+  it("flagt niet bij een ander bedrag, een ander project of een datum ver weg", () => {
     expect(
-      findAmountDateCollisions([
-        row({ id: "a", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-05-01" }),
-        row({ id: "b", partner_id: "p1", amount_incl_vat: 491, invoice_date: "2026-05-01" }),
-        row({ id: "c", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-05-02" }),
+      findDuplicatesInSelection([
+        row({ id: "a", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-05-01", invoice_number: "1", request_id: "r1" }),
+        row({ id: "b", partner_id: "p1", amount_incl_vat: 491, invoice_date: "2026-05-01", invoice_number: "2", request_id: "r1" }),
+        row({ id: "c", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-05-01", invoice_number: "3", request_id: "r2" }),
+        row({ id: "d", partner_id: "p1", amount_incl_vat: 490, invoice_date: "2026-11-01", invoice_number: "4" }),
       ]),
     ).toEqual([]);
   });
 
-  it("negeert rijen zonder bedrag of datum", () => {
-    expect(
-      findAmountDateCollisions([
-        row({ id: "a", partner_id: "p1", amount_incl_vat: 0, invoice_date: "2026-05-01" }),
-        row({ id: "b", partner_id: "p1", amount_incl_vat: 0, invoice_date: "2026-05-01" }),
-        row({ id: "c", partner_id: "p1", amount_incl_vat: 100, invoice_date: null }),
-        row({ id: "d", partner_id: "p1", amount_incl_vat: 100, invoice_date: null }),
-      ]),
-    ).toEqual([]);
+  it("nummer-groep en bedrag-groep overlappen niet", () => {
+    const groups = findDuplicatesInSelection([
+      row({ id: "a", partner_id: "p1", amount_incl_vat: 225, invoice_date: "2026-06-02", invoice_number: "T-261008", request_id: "r1" }),
+      row({ id: "b", partner_id: "p1", amount_incl_vat: 225, invoice_date: "2026-06-08", invoice_number: "T261008", request_id: "r1" }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].reason).toBe("number");
   });
 });
 

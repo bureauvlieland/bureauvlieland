@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { findDuplicateGroupsInSelection } from "../_shared/purchaseInvoiceDuplicateRules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
       .from("partner_purchase_invoices")
       .select(`
         id, invoice_number, invoice_date, amount_incl_vat, description, payment_batch_id, status,
-        refund_pending_at, amount_mismatch_reason, pdf_total_incl_vat,
+        refund_pending_at, amount_mismatch_reason, pdf_total_incl_vat, request_id,
         partners!inner(id, name, iban, bic, pays_by_direct_debit),
         program_requests!inner(reference_number)
       `)
@@ -190,26 +191,28 @@ Deno.serve(async (req) => {
     }
 
 
-    // Duplicate guard: same (partner + normalized invoice number) mag maar 1x in de selectie zitten.
-    const normalizeInvNr = (v: string | null | undefined) =>
-      (v || "").replace(/[\s\-_.]/g, "").toUpperCase();
-    const dupBuckets = new Map<string, any[]>();
-    for (const inv of invoices as any[]) {
-      const partnerId = inv.partners?.id || "";
-      const nr = normalizeInvNr(inv.invoice_number);
-      if (!partnerId || !nr) continue;
-      const key = `${partnerId}::${nr}`;
-      const arr = dupBuckets.get(key) || [];
-      arr.push(inv);
-      dupBuckets.set(key, arr);
-    }
-    for (const [, group] of dupBuckets) {
-      if (group.length > 1) {
-        const first = group[0];
-        errors.push(
-          `Factuur ${first.invoice_number} (${first.partners?.name}) staat ${group.length}× in de selectie — controleer of het niet per ongeluk dubbel is geregistreerd`,
-        );
-      }
+    // Dubbel-controle, zelfde regels als het scherm: zelfde partner + zelfde nummer,
+    // óf zelfde bedrag op hetzelfde project / rond dezelfde datum. Die tweede regel
+    // bestaat omdat één factuur (T-261008, juli 2026) onder twee registraties in
+    // één batch is uitbetaald.
+    const duplicateGroups = findDuplicateGroupsInSelection(
+      (invoices as any[]).map((inv) => ({
+        id: inv.id as string,
+        partner_id: (inv.partners?.id || "") as string,
+        invoice_number: inv.invoice_number as string | null,
+        invoice_date: inv.invoice_date as string | null,
+        amount_incl_vat: inv.amount_incl_vat as number | null,
+        request_id: (inv.request_id ?? null) as string | null,
+      })),
+    );
+    for (const group of duplicateGroups) {
+      const first = (invoices as any[]).find((inv) => inv.id === group.rows[0].id);
+      const numbers = group.rows.map((r) => r.invoice_number).filter(Boolean).join(" / ");
+      errors.push(
+        group.reason === "number"
+          ? `Factuur ${first?.invoice_number} (${first?.partners?.name}) staat ${group.rows.length}× in de selectie — controleer of het niet per ongeluk dubbel is geregistreerd`
+          : `${first?.partners?.name}: ${group.rows.length} facturen met hetzelfde bedrag op hetzelfde project of rond dezelfde datum (${numbers}) — waarschijnlijk één factuur die twee keer is geregistreerd`,
+      );
     }
 
     if (errors.length > 0) {
