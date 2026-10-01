@@ -452,6 +452,36 @@ dagbalk, de doorlopende tijdlijn met dagkoppen en toevoegen per dag;
 opslaanbalk; de `Stepper`-band met de volgende stap in plaats van het
 percentage. `DayTabs` weg.
 
+*Gebouwd op 1 oktober, eigen PR.* `ProgramView` vervangt
+`DesktopProgramView` en `MobileProgramView`: dezelfde weergave en dezelfde
+functies op elk formaat, met de zijbalk (heffingen, contact) naast de inhoud
+vanaf `lg` en eronder op een telefoon. Het programma is één doorlopende
+tijdlijn: de dagbalk (`DayBar`, plakkend onder de tabbalk; per dag datum,
+aantal en één status: "n open", "wacht op n" of een vinkje; klik scrolt,
+scrollen licht de zichtbare dag op; tijdens het verblijf opent de tijdlijn
+bij vandaag), dagkoppen in Fraunces met "dag n van m · k onderdelen" en
+"Toevoegen aan deze dag" (de sheet noemt de dag en geeft de datum mee voor
+de beschikbaarheid; het nieuwe onderdeel licht op), `ProgramItemCard` (tijd
+met het soort tijd, titel die doorloopt, één status-pill, aanbieder en
+plek, prijs met "voorlopig", acties als één rij; uitleg, specificatie,
+personen en opmerking onder "Details"), de tijdsheet (`TimeSheet`:
+gewenste, voorgestelde en bevestigde tijd naast elkaar, de bezette tijden
+van die dag, en na goedkeuring een tegenvoorstel naar de aanbieder),
+"Naar andere dag" dat het onderdeel laat verhuizen en oplichten, en
+dagtotalen in de dagvoet. De opslaanbalk is zichtbaar: "n wijzigingen nog
+niet verstuurd" met "Versturen" en "Ongedaan maken" (`discardChanges` in
+`useCustomerProgram`). De voortgang is een `Stepper`-band (Logies,
+Programma, Akkoord; weg zodra alles rond is) met één `Notice` als volgende
+stap (`ActionRequiredCard`, met "Alle n onderdelen goedkeuren" als
+primaire knop). Weg: de samenvattingskaart boven het programma
+(`ProgramOverviewCard`; de omschrijving staat als citaat onder de kop en
+"Bewerken" rechts in de kop), het percentage, `MobileStickyStatus`,
+`ProgramSection`, `CustomerProgramItem` en `DayTabs` uit het portaal (de
+programma-bouwer gebruikt `DayTabs` nog). De twee horecakaarten staan op
+Praktisch onder "Tips op het eiland" als `LinkCard` (besluit 6). Blijft tot
+fase 3: de inhoud van Logies, Praktisch, Facturatie en Akkoord, de
+deelnemersweergave op `CustomerTimeline`, en de beta-banner.
+
 **Fase 3: de overige tabbladen en de deelnemers (2 dagen).** Overzicht,
 Logies, Praktisch, Facturatie (met landveld) en Akkoord op de nieuwe
 schil; de deelnemersweergave op dezelfde dagbalk en kaart; de beta-banner

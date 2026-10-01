@@ -11,8 +11,7 @@ import { BillingDetailsDialog, type BillingDetails } from "@/components/customer
 import { ProgramNavigation, type PortalView } from "@/components/customer-portal/ProgramNavigation";
 import { Container, Notice } from "@/components/system";
 import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
-import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
-import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
+import { ProgramView } from "@/components/customer-portal/ProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { getCustomerPortalStatus } from "@/lib/customerPortalStatus";
@@ -59,7 +58,7 @@ const CustomerProgram = () => {
     addItem,
     getPendingChanges,
     submitChanges,
-    pendingRemovals,
+    discardChanges,
     isPendingRemoval,
     updateProgramDetails,
     updateGuestDetails,
@@ -85,7 +84,6 @@ const CustomerProgram = () => {
   } = useCustomerProgram(token || "");
 
 
-  const [activeDay, setActiveDay] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showSetupDialog, setShowSetupDialog] = useState(false);
@@ -156,27 +154,6 @@ const CustomerProgram = () => {
 
     return parsed;
   }, [program?.selected_dates, program?.items]);
-
-  // Items per day
-  const itemCountPerDay = useMemo(() => {
-    if (!program?.items) return [];
-    return selectedDates.map((_, dayIdx) => 
-      program.items.filter((item) => item.day_index === dayIdx && item.day_index >= 0 && item.status !== "cancelled").length
-    );
-  }, [program?.items, selectedDates]);
-
-  // Get items for a specific day (exclude overige kosten with day_index=-1)
-  const getItemsForDay = (dayIndex: number) => {
-    if (!program?.items) return [];
-    return program.items
-      .filter((item) => item.day_index === dayIndex && item.day_index >= 0 && item.status !== "cancelled")
-      .sort((a, b) => {
-        if (!a.preferred_time && !b.preferred_time) return 0;
-        if (!a.preferred_time) return 1;
-        if (!b.preferred_time) return -1;
-        return a.preferred_time.localeCompare(b.preferred_time);
-      });
-  };
 
   // Calculate provider count for cancellation dialog
   const uniqueProviders = useMemo(() => {
@@ -408,7 +385,7 @@ const CustomerProgram = () => {
       : `${format(selectedDates[0], "EEE d MMM", { locale: nl })} - ${format(selectedDates[selectedDates.length - 1], "EEE d MMM yyyy", { locale: nl })}`
     : "";
 
-  // Shared props for both views
+  // Props voor de ene weergave
   const invoicingMode = (program as any).invoicing_mode || "bureau_central";
   const isMultiDay = selectedDates.length > 1;
 
@@ -439,13 +416,8 @@ const CustomerProgram = () => {
     history,
     selectedDates,
     statusSummary,
-    activeDay,
-    onDayChange: setActiveDay,
-    itemCountPerDay,
-    getItemsForDay,
     pendingChanges,
     hasChanges,
-    pendingRemovals,
     isPendingRemoval,
     onUpdateItem: updateItem,
     onRemoveItem: removeItem,
@@ -459,9 +431,14 @@ const CustomerProgram = () => {
     onOpenAccommodationSetup: () => setShowSetupDialog(true),
     guestDetails,
     onSubmitChanges: () => setShowConfirmDialog(true),
-    onRefresh: refetch,
+    onDiscardChanges: () => {
+      discardChanges();
+      toast({ title: "Wijzigingen ongedaan gemaakt", description: "Het programma staat weer zoals het was." });
+    },
     onAcceptTerms: handleAcceptTerms,
-    onAddActivity: (blockId: string) => addItem(blockId, activeDay, null, ""),
+    onAddActivity: (blockId: string, dayIndex: number) => addItem(blockId, dayIndex, null, ""),
+    // Tijdens het verblijf opent de tijdlijn bij vandaag.
+    todayIndex: eventMode.isEventDay ? eventMode.currentDayIndex : null,
     // Accommodation
     accommodation,
     accommodationQuotes,
@@ -516,9 +493,9 @@ const CustomerProgram = () => {
               <Sparkles className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Deelnemersweergave</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => refetch()} aria-label="Vernieuwen" className="lg:hidden">
-              <RefreshCw className="h-4 w-4 lg:mr-2" />
-              <span className="hidden lg:inline">Vernieuwen</span>
+            <Button variant="ghost" size="sm" onClick={() => refetch()} aria-label="Vernieuwen">
+              <RefreshCw className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Vernieuwen</span>
             </Button>
           </div>
         </Container>
@@ -623,50 +600,12 @@ const CustomerProgram = () => {
           />
         )}
 
-        {/* Accommodation view */}
-        {effectiveView === "accommodation" && isMultiDay && (
-          isMobile ? (
-            <MobileProgramView {...viewProps} initialSection="accommodation" />
-          ) : (
-            <DesktopProgramView {...viewProps} initialSection="accommodation" />
-          )
-        )}
-
-        {/* Program view */}
-        {effectiveView === "program" && (
-          isMobile ? (
-            <MobileProgramView {...viewProps} initialSection="program" />
-          ) : (
-            <DesktopProgramView {...viewProps} initialSection="program" />
-          )
-        )}
-
-        {/* Practical view */}
-        {effectiveView === "practical" && (
-          isMobile ? (
-            <MobileProgramView {...viewProps} initialSection="practical" />
-          ) : (
-            <DesktopProgramView {...viewProps} initialSection="practical" />
-          )
-        )}
-
-        {/* Billing as separate tab */}
-        {effectiveView === "billing" && (
-          isMobile ? (
-            <MobileProgramView {...viewProps} initialSection="billing" />
-          ) : (
-            <DesktopProgramView {...viewProps} initialSection="billing" />
-          )
-        )}
-
-        {/* Accept (akkoord) view */}
-        {effectiveView === "accept" && (
-          isMobile ? (
-            <MobileProgramView {...viewProps} initialSection="accept" />
-          ) : (
-            <DesktopProgramView {...viewProps} initialSection="accept" />
-          )
-        )}
+        {/* Logies, programma, praktisch, facturatie en akkoord: één weergave op elk formaat */}
+        {effectiveView === "accommodation" && isMultiDay && <ProgramView {...viewProps} initialSection="accommodation" />}
+        {effectiveView === "program" && <ProgramView {...viewProps} initialSection="program" />}
+        {effectiveView === "practical" && <ProgramView {...viewProps} initialSection="practical" />}
+        {effectiveView === "billing" && <ProgramView {...viewProps} initialSection="billing" />}
+        {effectiveView === "accept" && <ProgramView {...viewProps} initialSection="accept" />}
 
         {/* Today (event-modus) */}
         {effectiveView === "today" && (

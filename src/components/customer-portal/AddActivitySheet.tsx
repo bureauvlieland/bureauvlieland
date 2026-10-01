@@ -23,6 +23,8 @@ interface AddActivitySheetProps {
   onAddActivity: (blockId: string) => void;
   /** Dag waarvoor wordt toegevoegd (yyyy-MM-dd); gesloten aanbieders gaan dan onderaan met label. */
   dateIso?: string | null;
+  /** De dag waaraan wordt toegevoegd, voor in de kop ("Donderdag 5 november (dag 1 van 3)"). */
+  dayLabel?: string;
   numberOfPeople?: number;
 }
 
@@ -34,6 +36,7 @@ export const AddActivitySheet = ({
   existingBlockIds,
   onAddActivity,
   dateIso = null,
+  dayLabel,
   numberOfPeople,
 }: AddActivitySheetProps) => {
   const { data: blocks = [], isLoading } = usePublishedBuildingBlocks();
@@ -94,7 +97,7 @@ export const AddActivitySheet = ({
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
           <SheetTitle>Activiteit toevoegen</SheetTitle>
           <SheetDescription>
-            Kies een activiteit om aan uw programma toe te voegen
+            {dayLabel ? `Kies een activiteit voor ${dayLabel}.` : "Kies een activiteit om aan uw programma toe te voegen."}
           </SheetDescription>
         </SheetHeader>
 

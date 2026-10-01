@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Notice } from "@/components/system";
+import { Notice, LinkCard } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GuestDetailsCard } from "./GuestDetailsCard";
@@ -17,6 +17,8 @@ import {
   Info,
   Building2,
   MapPin,
+  UtensilsCrossed,
+  Coffee,
 } from "lucide-react";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { describeGroupSituation } from "@/types/programRequest";
@@ -258,6 +260,20 @@ export const PracticalView = ({
             Tijdens uw verblijf op Vlieland zijn wij ook telefonisch bereikbaar voor
             ondersteuning ter plekke.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Tips op het eiland (besluit 6: de horecakaarten uit de zijbalk) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <UtensilsCrossed className="h-4 w-4 text-primary" />
+            Tips op het eiland
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <LinkCard external to="https://olivavlieland.nl" icon={UtensilsCrossed} title="Trattoria Oliva" text="Authentiek Italiaans dineren op Vlieland." />
+          <LinkCard external to="https://cafeboven.nl" icon={Coffee} title="Café Boven" text="Trap op, glas vol, gezelligheid aan." />
         </CardContent>
       </Card>
     </div>

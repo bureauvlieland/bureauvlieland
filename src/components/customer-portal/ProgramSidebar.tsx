@@ -1,124 +1,48 @@
-// StatusSummary is intentionally not rendered here anymore — the new
-// ProgramStepper above the main content is the single source of voortgang.
+import { Mail, Phone, TreePine, Landmark, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Ban, TreePine, Landmark } from "lucide-react";
-import { ExternalLink, UtensilsCrossed, Coffee } from "lucide-react";
 import { WaddenAmbassadeurBadge } from "@/components/WaddenAmbassadeurBadge";
-import olivaImg from "@/assets/oliva.jpg";
-import cafeBovenImg from "@/assets/cafe-boven-feest.jpg";
 import { cn } from "@/lib/utils";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { isFeeExcluded } from "@/lib/excludedFees";
-import type { ProgramRequestItem } from "@/types/programRequest";
-import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
 
+/**
+ * De zijbalk van het programma (klantportaal fase 2): alleen nog de heffingen
+ * en het contact; de voortgang staat boven het programma en de horecatips
+ * staan op Praktisch. Op een telefoon komt hij onder de inhoud.
+ */
 interface ProgramSidebarProps {
-  statusSummary: {
-    total: number;
-    confirmed: number;
-    pending: number;
-    alternative: number;
-    progress: number;
-    counter_proposed?: number;
-  };
-  termsAccepted: boolean;
-  billingComplete: boolean;
-  onOpenBilling: () => void;
-  onRefresh: () => void;
-  onCancel: () => void;
-  items: ProgramRequestItem[];
-  numberOfPeople: number;
-  numberOfDays?: number;
-  selectedAccommodationQuote?: AccommodationQuote | null;
-  accommodation?: AccommodationRequest | null;
-  isMultiDay?: boolean;
-  isPreApproval?: boolean;
-  quoteStatus?: string | null;
-  totalCost?: number;
-  allConfirmed?: boolean;
-  onScrollToTerms?: () => void;
-  className?: string;
   /** Per-project uitgesloten automatische kostenposten (program_requests.excluded_fees). */
   excludedFees?: string[] | null;
-  /** Slot bovenaan de sidebar — gebruikt voor de verticale voortgangs-stepper op tab-pagina's. */
-  topSlot?: React.ReactNode;
+  className?: string;
 }
 
-export const ProgramSidebar = ({
-  statusSummary,
-  termsAccepted,
-  billingComplete,
-  onOpenBilling,
-  onRefresh,
-  onCancel,
-  items,
-  numberOfPeople,
-  numberOfDays,
-  selectedAccommodationQuote,
-  accommodation,
-  isMultiDay = false,
-  isPreApproval = false,
-  quoteStatus,
-  totalCost = 0,
-  allConfirmed = false,
-  excludedFees,
-  onScrollToTerms,
-  className,
-  topSlot,
-}: ProgramSidebarProps) => {
-  // Determine accommodation status
-  const hasAccommodation = !!selectedAccommodationQuote;
-  const accommodationStatus: "none" | "requested" | "selected" = selectedAccommodationQuote ? "selected" : accommodation ? "requested" : "none";
+export const ProgramSidebar = ({ excludedFees, className }: ProgramSidebarProps) => {
   const { settings: appSettings } = useAppSettings();
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("nl-NL", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-
   const showTouristTax = !isFeeExcluded(excludedFees, "tourist_tax");
   const showNature = !isFeeExcluded(excludedFees, "nature_contribution");
 
   return (
-    <aside
-      className={cn(
-        "sticky top-20 h-fit space-y-4 hidden lg:block",
-        className
-      )}
-    >
-      {/* Voortgang (verticaal) — alleen op tab-pagina's, ingevuld door parent. */}
-      {topSlot}
-
-
-
-
-      {/* Levies info — uitgesloten posten niet toelichten */}
+    <aside className={cn("space-y-4 lg:sticky lg:top-20 lg:h-fit", className)}>
       {(showTouristTax || showNature) && (
-        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+        <div className="space-y-3 rounded-lg bg-muted/50 p-4">
           {showTouristTax && (
             <div className="flex items-start gap-2.5">
-              <Landmark className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">Toeristenbelasting</p>
-                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-                  €{appSettings.tourist_tax_pp_per_day.toFixed(2).replace('.', ',')} p.p. per dag — de gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft.
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  €{appSettings.tourist_tax_pp_per_day.toFixed(2).replace(".", ",")} p.p. per dag. De gemeente Vlieland heft toeristenbelasting voor iedereen die op het eiland verblijft.
                 </p>
               </div>
             </div>
           )}
           {showNature && (
             <div className="flex items-start gap-2.5">
-              <TreePine className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <TreePine className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">Natuurbijdrage</p>
-                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-                  Evenementenbureaus op Vlieland dragen €{appSettings.nature_contribution_pp.toFixed(2).replace('.', ',')} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied.
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  Evenementenbureaus op Vlieland dragen €{appSettings.nature_contribution_pp.toFixed(2).replace(".", ",")} per persoon af aan Staatsbosbeheer als bijdrage voor het natuurbeheer van het recreatiegebied.
                 </p>
               </div>
             </div>
@@ -126,77 +50,34 @@ export const ProgramSidebar = ({
         </div>
       )}
 
-      {/* Wadden Werelderfgoed ambassadeur */}
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-primary" aria-hidden="true">
+            <Building2 className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-medium">Vragen of hulp nodig?</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Neem gerust contact met ons op.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <a href="mailto:hallo@bureauvlieland.nl">
+                  <Mail className="h-4 w-4" aria-hidden="true" />
+                  E-mail
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href="tel:+31562700208">
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Bellen
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-center pt-1">
         <WaddenAmbassadeurBadge variant="compact" />
-      </div>
-
-      {/* Horeca advertenties */}
-      <div className="space-y-3">
-        <a
-          href="https://olivavlieland.nl"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block rounded-lg overflow-hidden border group hover:shadow-soft transition-shadow"
-        >
-          <div className="relative h-28 overflow-hidden">
-            <img src={olivaImg} alt="Trattoria Oliva" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-            <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep/60 to-transparent" />
-            <span className="absolute bottom-3 left-3 right-3 text-primary-foreground font-semibold text-sm flex items-center gap-1.5 drop-shadow-soft">
-              <UtensilsCrossed className="h-4 w-4" />
-              Trattoria Oliva
-            </span>
-          </div>
-          <div className="p-3 bg-card">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Authentiek Italiaans dineren op Vlieland.
-            </p>
-            <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
-              Bekijk menu <ExternalLink className="h-3 w-3" />
-            </span>
-          </div>
-        </a>
-
-        <a
-          href="https://cafeboven.nl"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block rounded-lg overflow-hidden border group hover:shadow-soft transition-shadow"
-        >
-          <div className="relative h-28 overflow-hidden">
-            <img src={cafeBovenImg} alt="Café Boven" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-            <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep/60 to-transparent" />
-            <span className="absolute bottom-3 left-3 right-3 text-primary-foreground font-semibold text-sm flex items-center gap-1.5 drop-shadow-soft">
-              <Coffee className="h-4 w-4" />
-              Café Boven
-            </span>
-          </div>
-          <div className="p-3 bg-card">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Trap op, glas vol, gezelligheid aan.
-            </p>
-            <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1.5 group-hover:underline">
-              Meer info <ExternalLink className="h-3 w-3" />
-            </span>
-          </div>
-        </a>
-      </div>
-
-      {/* Quick actions */}
-      <div className="space-y-2">
-        <Button variant="outline" size="sm" className="w-full" onClick={onRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Vernieuwen
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={onCancel}
-        >
-          <Ban className="h-4 w-4 mr-2" />
-          Annuleren
-        </Button>
       </div>
     </aside>
   );

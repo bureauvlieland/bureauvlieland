@@ -17,10 +17,12 @@ interface LinkCardProps {
   pills?: ReactNode;
   /** Icoon in een accentcirkel vóór de tekst (de routes op de homepage). */
   icon?: LucideIcon;
+  /** Externe site: opent in een nieuw tabblad. */
+  external?: boolean;
   className?: string;
 }
 
-export const LinkCard = ({ title, text, to, pills, icon: Icon, className }: LinkCardProps) => {
+export const LinkCard = ({ title, text, to, pills, icon: Icon, external = false, className }: LinkCardProps) => {
   const classes = cn(
     "group flex h-full items-start gap-3 rounded-lg border border-border bg-card p-4 transition-colors duration-fast hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
     className,
@@ -44,7 +46,7 @@ export const LinkCard = ({ title, text, to, pills, icon: Icon, className }: Link
     </>
   );
   return isPlainHref(to) ? (
-    <a href={to} className={classes}>
+    <a href={to} className={classes} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
       {inner}
     </a>
   ) : (
