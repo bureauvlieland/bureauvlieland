@@ -176,6 +176,13 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
 const TEST_EMAIL = "erwin@bureauvlieland.nl";
 const PRODUCTION_DOMAINS = ["bureauvlieland.nl"];
 
+interface NotifyDateChangeResults {
+  results?: {
+    partners?: Array<{ sent?: boolean; reason?: string; partner_id?: string; item_id?: string }>;
+    accommodations?: Array<{ sent?: boolean; quote_id?: string }>;
+  };
+}
+
 const isTestMode = (origin: string | undefined): boolean => {
   if (!origin) return true;
   return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
@@ -516,7 +523,7 @@ Deno.serve(async (req) => {
               .select("id")
               .eq("request_id", program.linked_accommodation_id)
               .eq("status", "selected");
-            selectedQuoteIds = (selectedQuotes || []).map((q: any) => q.id);
+            selectedQuoteIds = (selectedQuotes || []).map((q) => q.id as string);
           }
           const { data: notifyData, error: notifyErr } = await supabase.functions.invoke(
             "notify-date-change",
@@ -525,7 +532,7 @@ Deno.serve(async (req) => {
                 request_id: program.id,
                 old_dates: program.selected_dates,
                 actor: "customer",
-                partner_item_ids: (activeItems || []).map((i: any) => i.id),
+                partner_item_ids: (activeItems || []).map((i) => i.id as string),
                 accommodation_quote_ids: selectedQuoteIds,
                 origin,
               },
@@ -533,11 +540,11 @@ Deno.serve(async (req) => {
             },
           );
           if (notifyErr) throw notifyErr;
-          const r = (notifyData as any)?.results;
+          const r = (notifyData as NotifyDateChangeResults | null)?.results;
           partnersNotified = true;
           notifyIssues = [
-            ...(r?.partners || []).filter((p: any) => !p.sent && p.reason !== "not_eligible").map((p: any) => p.partner_id || p.item_id),
-            ...(r?.accommodations || []).filter((a: any) => !a.sent).map((a: any) => a.quote_id),
+            ...(r?.partners || []).filter((p) => !p.sent && p.reason !== "not_eligible").map((p) => p.partner_id || p.item_id || ""),
+            ...(r?.accommodations || []).filter((a) => !a.sent).map((a) => a.quote_id || ""),
           ];
         } catch (notifyErr) {
           console.error("notify-date-change failed:", notifyErr);

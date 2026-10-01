@@ -73,6 +73,30 @@ const renderDateBlock = (rows: string[]) =>
 const button = (href: string, label: string) =>
   `<p><a href="${href}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">${label}</a></p>`;
 
+interface ItemRow {
+  id: string;
+  block_name: string;
+  status: string;
+  provider_id: string | null;
+  provider_name: string | null;
+  provider_email: string | null;
+  block_type: string | null;
+  block_category: string | null;
+  skip_partner_notification: boolean | null;
+  item_quote_status: string | null;
+  preferred_time: string | null;
+  customer_approved_at: string | null;
+  customer_accepted_at: string | null;
+  day_index: number | null;
+}
+
+interface PartnerResult {
+  partner_id?: string;
+  item_id?: string;
+  sent: boolean;
+  [key: string]: unknown;
+}
+
 interface Payload {
   request_id: string;
   old_dates: string[];
@@ -183,7 +207,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       )
       .eq("request_id", request_id)
       .neq("status", "cancelled");
-    const items = (allItems || []) as any[];
+    const items = (allItems || []) as ItemRow[];
 
     // Server-side guard voor partners: alleen niet-bureau items die de klant
     // al goedkeurde én al naar de partner zijn verstuurd. Anders kent de
@@ -204,7 +228,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // ---------------- Partners: reset + mail ----------------
-    const groups = new Map<string, any[]>();
+    const groups = new Map<string, ItemRow[]>();
     for (const it of partnerItems) {
       const key = it.provider_id || "_no_partner";
       if (!groups.has(key)) groups.set(key, []);
@@ -484,7 +508,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // ---------------- Tijdlijn ----------------
-    const partnersOk = (results.partners as any[]).filter((p) => p.sent).length;
+    const partnersOk = (results.partners as PartnerResult[]).filter((p) => p.sent).length;
     if (actor === "admin") await supabase.from("program_request_history").insert({
       request_id: program.id,
       action: "dates_changed",

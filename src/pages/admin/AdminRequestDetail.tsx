@@ -3881,7 +3881,7 @@ const AdminRequestDetail = () => {
           requestId={request.id}
           linkedAccommodationId={request.linked_accommodation_id}
           customerName={request.customer_name}
-          customerEmail={(request as any).customer_email ?? null}
+          customerEmail={request.customer_email ?? null}
           newDates={request.selected_dates as string[]}
           oldDates={dateChangeNotifyState.oldDates}
           onSent={() => fetchRequestData()}
