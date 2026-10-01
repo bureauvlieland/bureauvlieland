@@ -165,6 +165,7 @@ import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminAddCustomItemSheet } from "@/components/admin/AdminAddCustomItemSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
+import { NotifyDateChangeDialog } from "@/components/admin/NotifyDateChangeDialog";
 import { NotifyHeadcountChangeDialog } from "@/components/admin/NotifyHeadcountChangeDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
@@ -531,6 +532,9 @@ const AdminRequestDetail = () => {
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const [headcountNotifyState, setHeadcountNotifyState] = useState<
     { open: boolean; oldPeople: number; newPeople: number } | null
+  >(null);
+  const [dateChangeNotifyState, setDateChangeNotifyState] = useState<
+    { open: boolean; oldDates: string[] } | null
   >(null);
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
@@ -1974,6 +1978,14 @@ const AdminRequestDetail = () => {
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Bewerken
                       </Button>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-full text-xs"
+                      onClick={() => setDateChangeNotifyState({ open: true, oldDates: [] })}
+                    >
+                      <Calendar className="h-3.5 w-3.5 mr-1" /> Datumwijziging melden…
+                    </Button>
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-slate-400" /> {request.number_of_people} personen
                     </div>
@@ -3858,6 +3870,21 @@ const AdminRequestDetail = () => {
           onPeopleChanged={(oldP, newP) =>
             setHeadcountNotifyState({ open: true, oldPeople: oldP, newPeople: newP })
           }
+          onDatesChanged={(oldDates) => setDateChangeNotifyState({ open: true, oldDates })}
+        />
+      )}
+
+      {request && dateChangeNotifyState && (
+        <NotifyDateChangeDialog
+          open={dateChangeNotifyState.open}
+          onOpenChange={(o) => setDateChangeNotifyState((s) => (s ? { ...s, open: o } : null))}
+          requestId={request.id}
+          linkedAccommodationId={request.linked_accommodation_id}
+          customerName={request.customer_name}
+          customerEmail={(request as any).customer_email ?? null}
+          newDates={request.selected_dates as string[]}
+          oldDates={dateChangeNotifyState.oldDates}
+          onSent={() => fetchRequestData()}
         />
       )}
 

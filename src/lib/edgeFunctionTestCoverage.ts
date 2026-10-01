@@ -138,6 +138,7 @@ const REGISTRY: Row[] = [
   
   { name: "notify-partners-informational", category: "partner_email", critical: false },
   { name: "notify-headcount-change-bulk", category: "partner_email", critical: false },
+  { name: "notify-date-change", category: "partner_email", critical: false },
   { name: "invite-partner", category: "partner_email", critical: true },
   { name: "bulk-invite-partners", category: "partner_email", critical: false },
   { name: "bulk-resend-unconfirmed", category: "partner_email", critical: false },

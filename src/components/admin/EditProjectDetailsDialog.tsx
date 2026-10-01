@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MultiDatePicker } from "@/components/configurator/MultiDatePicker";
 import { toast } from "sonner";
+import { sameDates } from "@/lib/dateChange";
 
 interface EditProjectDetailsDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ interface EditProjectDetailsDialogProps {
   linkedAccommodationId: string | null;
   onSuccess: () => void;
   onPeopleChanged?: (oldPeople: number, newPeople: number) => void;
+  onDatesChanged?: (oldDates: string[], newDates: string[]) => void;
 }
 
 export function EditProjectDetailsDialog({
@@ -39,6 +41,7 @@ export function EditProjectDetailsDialog({
   linkedAccommodationId,
   onSuccess,
   onPeopleChanged,
+  onDatesChanged,
 }: EditProjectDetailsDialogProps) {
   const [dates, setDates] = useState<Date[]>([]);
   const [people, setPeople] = useState(initialPeople);
@@ -114,6 +117,9 @@ export function EditProjectDetailsDialog({
       onSuccess();
       if (people !== initialPeople) {
         onPeopleChanged?.(initialPeople, people);
+      }
+      if (!sameDates(initialDates, dateStrings)) {
+        onDatesChanged?.([...initialDates].sort(), dateStrings);
       }
     } catch (err) {
       console.error(err);
