@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import { ReviewInviteCard } from "./ReviewInviteCard";
 import { MobileStickyStatus } from "./MobileStickyStatus";
 
 import { ProgramStepper, type StepId } from "./ProgramStepper";
+import { type PortalView } from "./ProgramNavigation";
+import { useFloatingClearance } from "@/hooks/useFloatingLayer";
 import { TabHeader } from "./TabHeader";
 import { buildTabHeader } from "./tabHeaderConfig";
 import { CustomerProgramItem } from "./CustomerProgramItem";
@@ -158,7 +160,8 @@ interface MobileProgramViewProps {
   blockVatRates?: Record<string, number>;
   /** Som van billable wijzigingsrondes (uit get-customer-program). */
   revisionFeesTotal?: number;
-  onNavigate?: (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => void;
+  /** Naar een weergave; met `anchor` daarna naar dat element scrollen. */
+  onNavigate?: (view: PortalView, anchor?: string) => void;
 }
 
 export const MobileProgramView = ({
@@ -245,6 +248,16 @@ export const MobileProgramView = ({
     customerApprovableTotal: customerApprovableCount,
     isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
+
+  // De chatknop wijkt zolang de opslaanbalk in beeld is (hij stond over de knop heen).
+  const saveBarRef = useRef<HTMLDivElement>(null);
+  useFloatingClearance(saveBarRef, hasChanges);
+
+  // De ankers staan op verschillende tabbladen; via onNavigate eerst daarheen.
+  const goToAnchor = (view: PortalView, anchor: string) => {
+    if (onNavigate) onNavigate(view, anchor);
+    else document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth" });
+  };
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
 
@@ -272,14 +285,14 @@ export const MobileProgramView = ({
     if (!isPostExecution && customerActionsCount > 0) {
       return {
         label: "Goedkeuren",
-        onClick: () => document.getElementById("program")?.scrollIntoView({ behavior: "smooth" }),
+        onClick: () => goToAnchor("program", "program"),
       };
     }
 
     if (isMultiDay && !hasSelectedAccommodation) {
       return { 
         label: "Logies", 
-        onClick: () => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" }) 
+        onClick: () => goToAnchor("accommodation", "accommodation") 
       };
     }
     if (!billingComplete && allConfirmed) {
@@ -288,7 +301,7 @@ export const MobileProgramView = ({
     if (allConfirmed && billingComplete && !termsAccepted) {
       return { 
         label: "Ondertekenen", 
-        onClick: () => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" }) 
+        onClick: () => goToAnchor("accept", "terms-section") 
       };
     }
     return undefined;
@@ -303,13 +316,12 @@ export const MobileProgramView = ({
 
   const handleStepAction = (stepId: StepId) => {
     if (stepId === "lodging") {
-      document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" });
+      goToAnchor("accommodation", "accommodation");
     } else if (stepId === "providers" || stepId === "approve") {
-      document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
+      goToAnchor("program", "program");
     } else if (stepId === "billing_terms") {
       if (!billingComplete) onOpenBilling();
-      else if (onNavigate) onNavigate("accept");
-      else document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" });
+      else goToAnchor("accept", "terms-section");
     }
   };
 
@@ -400,8 +412,8 @@ export const MobileProgramView = ({
             billingComplete={billingComplete}
             termsAccepted={termsAccepted}
             onOpenBilling={onOpenBilling}
-            onScrollToTerms={() => document.getElementById("terms-section")?.scrollIntoView({ behavior: "smooth" })}
-            onScrollToAccommodation={() => document.getElementById("accommodation")?.scrollIntoView({ behavior: "smooth" })}
+            onScrollToTerms={() => goToAnchor("accept", "terms-section")}
+            onScrollToAccommodation={() => goToAnchor("accommodation", "accommodation")}
             programType={program.origin}
             quoteStatus={program.quote_status}
             programPublishedAt={program.program_published_at}
@@ -483,68 +495,60 @@ export const MobileProgramView = ({
         title="Programma"
         icon={<Calendar className="h-4 w-4 text-primary" />}
           badge={
-            <div className="flex items-center gap-2 ml-auto">
-              <ProgramPdfDownload
-                customerName={program.customer_name}
-                customerCompany={program.customer_company}
-                selectedDates={selectedDates}
-                numberOfPeople={program.number_of_people}
-                items={program.items}
-                referenceNumber={program.reference_number}
-                requestId={(program as any).id}
-                customerToken={program.customer_token}
-                variant="sm"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
-                  downloadAllEvents(
-                    activeItems.map(i => ({
-                      id: i.id,
-                      block_name: i.block_name,
-                      provider_name: i.provider_name,
-                      day_index: i.day_index,
-                      confirmed_time: i.confirmed_time,
-                      proposed_time: i.proposed_time,
-                      preferred_time: i.preferred_time,
-                      duration: i.duration,
-                      location_address: i.location_address,
-                    })),
-                    selectedDates.map(d => d.toISOString().split("T")[0]),
-                    program.number_of_people,
-                    `Programma ${program.customer_company || program.customer_name}`
-                  );
-                }}
-              >
-                <CalendarPlus className="h-3 w-3" />
-              </Button>
-              {/* Offerte-PDF knop verwijderd: de offerte loopt achter op de live programmastatus en zorgt voor verwarring. */}
-              {!termsAccepted && isPublished && !isPostExecution && (
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsAddActivityOpen(true);
-                  }}
-                  className="h-7 text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Toevoegen
-                </Button>
-              )}
-              {!(isMaatwerkProject(program) && statusSummary.total === 0) && (
-                <Badge variant="secondary">
-                  {statusSummary.total} activiteiten
-                </Badge>
-              )}
-            </div>
+            !(isMaatwerkProject(program) && statusSummary.total === 0) ? (
+              <Badge variant="secondary" className="ml-auto">
+                {statusSummary.total} activiteiten
+              </Badge>
+            ) : undefined
           }
         defaultOpen
       >
+        {/* Werkbalk. Stond in de accordeonkop, waar hij op een telefoon buiten beeld viel. */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <ProgramPdfDownload
+            customerName={program.customer_name}
+            customerCompany={program.customer_company}
+            selectedDates={selectedDates}
+            numberOfPeople={program.number_of_people}
+            items={program.items}
+            referenceNumber={program.reference_number}
+            requestId={(program as any).id}
+            customerToken={program.customer_token}
+            variant="sm"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const activeItems = program.items.filter(i => i.status !== "cancelled" && i.day_index >= 0);
+              downloadAllEvents(
+                activeItems.map(i => ({
+                  id: i.id,
+                  block_name: i.block_name,
+                  provider_name: i.provider_name,
+                  day_index: i.day_index,
+                  confirmed_time: i.confirmed_time,
+                  proposed_time: i.proposed_time,
+                  preferred_time: i.preferred_time,
+                  duration: i.duration,
+                  location_address: i.location_address,
+                })),
+                selectedDates.map(d => d.toISOString().split("T")[0]),
+                program.number_of_people,
+                `Programma ${program.customer_company || program.customer_name}`
+              );
+            }}
+          >
+            <CalendarPlus className="h-4 w-4 mr-1.5" />
+            Agenda (.ics)
+          </Button>
+          {!termsAccepted && isPublished && !isPostExecution && (
+            <Button size="sm" className="ml-auto" onClick={() => setIsAddActivityOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Toevoegen
+            </Button>
+          )}
+        </div>
         {program.items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
             <Sparkles className="h-8 w-8 text-primary/50" />
@@ -723,7 +727,7 @@ export const MobileProgramView = ({
         <>
           {/* Floating changes bar — only in program view */}
           {initialSection === "program" && hasChanges && isPublished && !isPostExecution && (
-            <div className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl mx-2 ring-2 ring-amber-200 dark:ring-amber-900/50">
+            <div ref={saveBarRef} className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl mx-2 ring-2 ring-amber-200 dark:ring-amber-900/50">
               <div className="flex flex-col gap-3">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -732,7 +736,7 @@ export const MobileProgramView = ({
                       {pendingChanges.length} niet-opgeslagen wijziging{pendingChanges.length > 1 ? "en" : ""}
                     </p>
                     <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
-                      Zonder opslaan gaan uw wijzigingen bij een refresh verloren.
+                      Zonder opslaan gaan uw wijzigingen verloren als u de pagina ververst.
                     </p>
                   </div>
                 </div>

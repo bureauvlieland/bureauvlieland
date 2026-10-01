@@ -84,7 +84,7 @@ export const ParticipantWhatsAppOptIn = ({ requestId, participantToken }: Partic
         <CardContent className="py-4 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm text-foreground">
-            Aangemeld voor WhatsApp-updates. Heb je zonet geen WhatsApp-venster geopend?{" "}
+            Aangemeld voor WhatsApp-updates. Heeft u zonet geen WhatsApp-venster geopend?{" "}
             <button
               type="button"
               className="text-primary underline underline-offset-2"
@@ -97,7 +97,7 @@ export const ParticipantWhatsAppOptIn = ({ requestId, participantToken }: Partic
             >
               Open WhatsApp
             </button>{" "}
-            en stuur het bericht — anders komen updates niet aan.
+            en stuur het bericht, anders komen updates niet aan.
           </p>
         </CardContent>
       </Card>
@@ -114,7 +114,7 @@ export const ParticipantWhatsAppOptIn = ({ requestId, participantToken }: Partic
           <div>
             <h3 className="font-semibold text-foreground">Blijf op de hoogte via WhatsApp</h3>
             <p className="text-sm text-muted-foreground">
-              Meld je aan om wijzigingen in dit programma via WhatsApp te ontvangen.
+              Meld u aan om wijzigingen in dit programma via WhatsApp te ontvangen.
             </p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
+import { FloatingStack } from "@/components/system/FloatingStack";
 
 interface ChatWidgetProps {
   source: "customer_portal" | "partner_portal";
@@ -86,10 +87,12 @@ export const ChatWidget = ({
   ).length;
 
   return (
-    <>
+    // In de zwevende laag: boven een vaste balk onderaan (--floating-offset) en
+    // weg zodra een opslaanbalk of de footer in beeld is. Een open paneel blijft.
+    <FloatingStack forceVisible={isOpen}>
       {/* Floating bubble */}
       {!isOpen && (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-1.5 group">
+        <div className="flex flex-col items-center gap-1.5 group">
           <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full shadow-sm border opacity-0 group-hover:opacity-100 transition-opacity">
             Hulp nodig?
           </span>
@@ -110,7 +113,10 @@ export const ChatWidget = ({
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-6rem)] bg-card border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div
+          className="w-[360px] max-w-[calc(100vw-2rem)] h-[500px] bg-card border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "calc(100vh - 6rem - var(--floating-offset, 0px))" }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -143,7 +149,7 @@ export const ChatWidget = ({
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-8">
-                <p className="font-medium mb-1">Welkom! 👋</p>
+                <p className="font-medium mb-1">Welkom 👋</p>
                 <p>Hoe kunnen we u helpen? Stel gerust uw vraag.</p>
               </div>
             )}
@@ -197,7 +203,7 @@ export const ChatWidget = ({
           </div>
         </div>
       )}
-    </>
+    </FloatingStack>
   );
 };
 

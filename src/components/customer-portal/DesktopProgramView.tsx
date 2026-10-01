@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { resolveFeeStructure } from "@/lib/feeEngine";
 import { usePricingStructures } from "@/hooks/usePricing";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgramSidebar } from "./ProgramSidebar";
 import { ProgramStepper, type StepId } from "./ProgramStepper";
+import { type PortalView } from "./ProgramNavigation";
+import { useFloatingClearance } from "@/hooks/useFloatingLayer";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
@@ -162,7 +164,8 @@ interface DesktopProgramViewProps {
   blockVatRates?: Record<string, number>;
   /** Som van billable wijzigingsrondes (uit get-customer-program). */
   revisionFeesTotal?: number;
-  onNavigate?: (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => void;
+  /** Naar een weergave; met `anchor` daarna naar dat element scrollen. */
+  onNavigate?: (view: PortalView, anchor?: string) => void;
 }
 
 export const DesktopProgramView = ({
@@ -253,18 +256,21 @@ export const DesktopProgramView = ({
     customerApprovableTotal: customerApprovableCount,
     isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
+
+  // De chatknop wijkt zolang de opslaanbalk in beeld is (hij stond over de knop heen).
+  const saveBarRef = useRef<HTMLDivElement>(null);
+  useFloatingClearance(saveBarRef, hasChanges);
+
+  // De ankers staan op verschillende tabbladen; via onNavigate eerst daarheen.
+  const goToAnchor = (view: PortalView, anchor: string) => {
+    if (onNavigate) onNavigate(view, anchor);
+    else document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth" });
+  };
   // Hide "Logies nog niet geregeld" banner if there's an active accommodation request OR a selected quote
   const hasActiveAccommodation = hasSelectedAccommodation || !!accommodation;
 
-  const scrollToTerms = () => {
-    const termsSection = document.getElementById("terms-section");
-    termsSection?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const scrollToAccommodation = () => {
-    const accommodationSection = document.getElementById("accommodation");
-    accommodationSection?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollToTerms = () => goToAnchor("accept", "terms-section");
+  const scrollToAccommodation = () => goToAnchor("accommodation", "accommodation");
 
   const accommodationStatus: "none" | "requested" | "selected" =
     accommodationQuotes.some((q) => q.status === "selected")
@@ -277,10 +283,9 @@ export const DesktopProgramView = ({
     if (stepId === "lodging") {
       scrollToAccommodation();
     } else if (stepId === "providers" || stepId === "approve") {
-      document.getElementById("program")?.scrollIntoView({ behavior: "smooth" });
+      goToAnchor("program", "program");
     } else if (stepId === "billing_terms") {
       if (!billingComplete) onOpenBilling();
-      else if (onNavigate) onNavigate("accept");
       else scrollToTerms();
     }
   };
@@ -619,7 +624,7 @@ export const DesktopProgramView = ({
 
             {/* Floating changes bar */}
             {hasChanges && isPublished && !isPostExecution && (
-              <div className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl ring-2 ring-amber-200 dark:ring-amber-900/50">
+              <div ref={saveBarRef} className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl ring-2 ring-amber-200 dark:ring-amber-900/50">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-start gap-2 min-w-0">
                     <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -628,7 +633,7 @@ export const DesktopProgramView = ({
                         U heeft {pendingChanges.length} niet-opgeslagen wijziging{pendingChanges.length > 1 ? "en" : ""}
                       </p>
                       <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
-                        Klik op <strong>"Wijzigingen opslaan"</strong> om ze door te voeren. Zonder opslaan gaan uw wijzigingen bij een refresh verloren.
+                        Klik op <strong>"Wijzigingen opslaan"</strong> om ze door te voeren. Zonder opslaan gaan uw wijzigingen verloren als u de pagina ververst.
                       </p>
                     </div>
                   </div>

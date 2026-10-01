@@ -163,7 +163,7 @@ export const ParticipantView = ({
                 <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium">Hoe was het?</p>
-                    <p className="text-sm text-muted-foreground">Deel je ervaring op Google; dat helpt andere groepen bij hun keuze.</p>
+                    <p className="text-sm text-muted-foreground">Deel uw ervaring op Google; dat helpt andere groepen bij hun keuze.</p>
                   </div>
                   <Button asChild variant="outline" className="shrink-0">
                     <a href={participantReview.google_url} target="_blank" rel="noopener noreferrer">
@@ -278,8 +278,8 @@ export const ParticipantView = ({
                 <p className="font-medium">Goed om te weten</p>
                 <ul className="list-disc pl-5 text-muted-foreground space-y-1">
                   <li>Volg de tijden in het programma; ze gelden als startmoment.</li>
-                  <li>Op het eiland reis je het makkelijkst per fiets.</li>
-                  <li>Kleed je op het weer; controleer wind &amp; regen vóór vertrek.</li>
+                  <li>Op het eiland reist u het makkelijkst per fiets.</li>
+                  <li>Kleed u naar het weer en controleer wind en regen vóór vertrek.</li>
                 </ul>
                 <p className="text-xs text-muted-foreground pt-2">
                   Vragen? Neem contact op met de organisator van dit programma.

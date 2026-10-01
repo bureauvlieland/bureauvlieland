@@ -406,7 +406,7 @@ export const PriceSummaryCard = ({
                         {extra.pricing_type === "fixed"
                           ? <span className="ml-1 opacity-70">(vaste prijs)</span>
                           : extra.quantity > 1 && <span className="ml-1 opacity-70">({extra.quantity}× per persoon)</span>}
-                        <span className="ml-1 opacity-70">— BTW {Number(extra.vat_rate ?? 9)}%</span>
+                        <span className="ml-1 opacity-70">· BTW {Number(extra.vat_rate ?? 9)}%</span>
                       </span>
                       <span className="whitespace-nowrap ml-2">€{formatPrice(total)}</span>
                     </div>
@@ -458,7 +458,7 @@ export const PriceSummaryCard = ({
                         <span className="truncate">
                           {bl.description}
                           {bl.quantity !== 1 && ` (${bl.quantity}×)`}
-                          <span className="ml-1 opacity-70">— BTW {Number(bl.vat_rate)}%</span>
+                          <span className="ml-1 opacity-70">· BTW {Number(bl.vat_rate)}%</span>
                         </span>
                         <span className="whitespace-nowrap ml-2">€{formatPrice(Number(bl.amount_incl_vat))}</span>
                       </div>
@@ -497,7 +497,7 @@ export const PriceSummaryCard = ({
           {summary.showCoordinationFee && (
             <div className="py-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm">Coördinatie & handling fee</span>
+                <span className="text-sm">Coördinatiefee</span>
                 <span className="text-sm whitespace-nowrap">€{formatPrice(summary.coordinationFee)}</span>
               </div>
             </div>
@@ -571,7 +571,7 @@ export const PriceSummaryCard = ({
             <Clock className="h-4 w-4 shrink-0 mt-0.5" />
             <p>
               {summary.pendingCount > 0
-                ? `${summary.pendingCount} onderde${summary.pendingCount > 1 ? "len" : "el"} nog te bevestigen — `
+                ? `${summary.pendingCount} onderde${summary.pendingCount > 1 ? "len" : "el"} nog te bevestigen. `
                 : ""}
               {summary.hasPreliminaryItems
                 ? "Onderdelen gemarkeerd als (voorlopig) zijn nog niet definitief. "

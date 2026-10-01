@@ -13,7 +13,8 @@ import {
   MapPin,
 } from "lucide-react";
 
-type ActiveView =
+/** De weergaven van het klantportaal: de tabbladen plus de evenementweergaven. */
+export type PortalView =
   | "splash"
   | "accommodation"
   | "program"
@@ -22,6 +23,8 @@ type ActiveView =
   | "accept"
   | "today"
   | "map";
+
+type ActiveView = PortalView;
 
 export interface TabBadge {
   label: string;

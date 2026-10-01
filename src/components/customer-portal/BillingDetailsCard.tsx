@@ -53,7 +53,7 @@ export const BillingDetailsCard = ({ program, onEdit }: BillingDetailsCardProps)
             <div>
               <h3 className="font-semibold">Facturatiegegevens ontbreken</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Vul je facturatiegegevens in zodat aanbieders je kunnen factureren na bevestiging.
+                Vul uw facturatiegegevens in zodat de aanbieders u na bevestiging kunnen factureren.
               </p>
             </div>
             <Button onClick={onEdit}>

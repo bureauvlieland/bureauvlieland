@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useFloatingBar } from "@/hooks/useFloatingLayer";
 import { Calendar, MapPin, Sparkles, ClipboardList } from "lucide-react";
 
 export type BottomNavView = "today" | "program" | "map" | "practical";
@@ -18,8 +20,12 @@ const items: { id: BottomNavView; label: string; icon: typeof Calendar }[] = [
 ];
 
 export const MobileBottomNav = ({ active, onChange, badges }: MobileBottomNavProps) => {
+  // Meldt zijn hoogte als --floating-offset, zodat de chatknop erboven blijft.
+  const navRef = useRef<HTMLElement>(null);
+  useFloatingBar(navRef);
   return (
     <nav
+      ref={navRef}
       className="fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-t md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       role="tablist"
