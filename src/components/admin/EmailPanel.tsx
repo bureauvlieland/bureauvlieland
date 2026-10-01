@@ -302,8 +302,30 @@ async function fetchEmails(): Promise<EmailItem[]> {
   return all;
 }
 
+function threadKey(e: EmailItem): string {
+  if (e.request_id) return `p:${e.request_id}`;
+  if (e.accommodation_id) return `a:${e.accommodation_id}`;
+  return `c:${(e.contact_email || "onbekend").toLowerCase()}`;
+}
+
+/** Sleutels van gesprekken die uitsluitend uit automatische mails bestaan. */
+function automaticOnlyKeys(items: EmailItem[]): Set<string> {
+  const human = new Set<string>();
+  const all = new Set<string>();
+  for (const e of items) {
+    const k = threadKey(e);
+    all.add(k);
+    if (e.origin !== "automatic") human.add(k);
+  }
+  return new Set([...all].filter((k) => !human.has(k)));
+}
+
 function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Origin | "all" | "unanswered"): ThreadGroup[] {
   const groups = new Map<string, ThreadGroup>();
+  // Gesprekken met alleen automatische mails houden we uit de standaardlijst;
+  // ze staan onder het filter "Automatisch" (of met "Toon archief" aan).
+  const hideAutomaticOnly = !showArchived && originFilter !== "automatic";
+  const autoOnly = hideAutomaticOnly ? automaticOnlyKeys(items) : new Set<string>();
   for (const e of items) {
     if (originFilter !== "all" && originFilter !== "unanswered" && e.origin !== originFilter) continue;
 
@@ -380,6 +402,7 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
       items: showArchived ? g.items : g.items.filter((e) => !e.archived_at),
     }))
     .filter((g) => g.items.length > 0)
+    .filter((g) => !autoOnly.has(g.key))
     .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .sort((a, b) => {
       if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1;
@@ -439,6 +462,11 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     () => buildGroups(items, showArchived, "unanswered").length,
     [items, showArchived],
   );
+
+  const automaticOnlyGroups = useMemo(() => {
+    const keys = automaticOnlyKeys(items);
+    return buildGroups(items, false, "automatic").filter((g) => keys.has(g.key));
+  }, [items]);
 
   useEffect(() => {
     if (!initialOpenId || activeKey) return;
@@ -526,6 +554,20 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
     }
     toast.success(archived ? "Gesprek gearchiveerd" : "Gesprek teruggehaald");
     if (archived) setActiveKey(null);
+    invalidate();
+  };
+
+  /** Archiveert in één keer alle gesprekken die alleen uit automatische mails bestaan. */
+  const archiveAllAutomatic = async () => {
+    const ids = automaticOnlyGroups.flatMap((g) => g.items.filter((e) => !e.archived_at).map((e) => stripPrefix(e.id)));
+    if (!ids.length) return;
+    const { error } = await supabase
+      .from("email_log")
+      .update({ archived_at: new Date().toISOString() })
+      .in("id", ids);
+    if (error) return toast.error("Archiveren mislukt");
+    toast.success(`${automaticOnlyGroups.length} automatische gesprekken gearchiveerd`);
+    setActiveKey(null);
     invalidate();
   };
 
@@ -713,6 +755,27 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
             </span>
             <Switch checked={showArchived} onCheckedChange={setShowArchived} />
           </div>
+          {!showArchived && automaticOnlyGroups.length > 0 && (
+            <div className="flex items-center justify-between text-xs rounded-md bg-slate-50 px-2 py-1.5">
+              <span className="text-muted-foreground">
+                {automaticOnlyGroups.length} automatische gesprekken
+                {originFilter === "automatic" ? "" : " verborgen"}
+              </span>
+              {originFilter === "automatic" ? (
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={archiveAllAutomatic}>
+                  <Archive className="h-3 w-3 mr-1" /> Archiveer alle
+                </Button>
+              ) : (
+                <button
+                  type="button"
+                  className="text-primary hover:underline"
+                  onClick={() => setOriginFilter("automatic")}
+                >
+                  Bekijk
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
