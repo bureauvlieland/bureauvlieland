@@ -193,11 +193,14 @@ Deno.serve(async (req) => {
 
       // Verzamel ALLE relevante quotes — ook expired/declined/rejected — zodat
       // de admin per partner kan kiezen of er een annuleringsmail uitgaat.
+      // De geselecteerde offerte (de boeking) hoort daar ook bij; de trigger
+      // close_selected_quotes_on_cancel (migratie 20261001100000) heeft die
+      // bij de update hierboven al op "cancelled" gezet.
       const { data: quotesToCollect } = await supabase
         .from("accommodation_quotes")
         .select("id, status, partner_id, accommodation_name, partner:partners(id, name, email, contact_email)")
         .eq("request_id", accommodationId)
-        .in("status", ["pending", "submitted", "expired", "declined", "rejected"]);
+        .in("status", ["pending", "submitted", "selected", "cancelled", "expired", "declined", "rejected"]);
 
       if (quotesToCollect) {
         for (const q of quotesToCollect) {
@@ -213,7 +216,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Auto-reject blijft beperkt tot nog-openstaande quotes.
+      // Auto-reject blijft beperkt tot nog-openstaande quotes; een geselecteerde,
+      // nog niet gefactureerde offerte is door de databasetrigger al "cancelled".
       await supabase
         .from("accommodation_quotes")
         .update({ status: "rejected", updated_at: new Date().toISOString() })

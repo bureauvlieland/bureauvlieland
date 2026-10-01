@@ -123,6 +123,7 @@ const ACCOMMODATION_QUOTE_STATUS: Record<string, { label: string; variant: "defa
   rejected: { label: "Niet gekozen", variant: "secondary" },
   expired: { label: "Verlopen", variant: "destructive" },
   declined: { label: "Afgewezen", variant: "destructive" },
+  cancelled: { label: "Geannuleerd", variant: "outline" },
 };
 
 const PARTNER_TYPE_OPTIONS = [

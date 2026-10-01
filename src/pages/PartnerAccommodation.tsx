@@ -426,7 +426,7 @@ const PartnerAccommodationContent = () => {
   const expiredRequests = requests.filter(r => r.quote?.status === "expired");
   const acceptedRequests = requests.filter(r => r.quote?.status === "selected");
   const closedRequests = requests.filter(r => 
-    r.quote?.status === "rejected" || r.quote?.status === "declined"
+    r.quote?.status === "rejected" || r.quote?.status === "declined" || r.quote?.status === "cancelled"
   );
 
   return (
