@@ -45,3 +45,18 @@ describe("notify-date-change — waarborgen", () => {
     expect(src).toContain("quoted_at: null");
   });
 });
+
+describe("klantwijziging → notify-date-change", () => {
+  const fn = readFileSync("supabase/functions/notify-date-change/index.ts", "utf8");
+  const customer = readFileSync("supabase/functions/update-customer-program/index.ts", "utf8");
+
+  it("update-customer-program roept notify-date-change aan als klant", () => {
+    expect(customer).toContain('"notify-date-change"');
+    expect(customer).toContain('actor: "customer"');
+  });
+  it("service-aanroep mag nooit klantmail of akkoord-reset triggeren", () => {
+    expect(fn).toContain('const send_customer = actor === "admin" && sendCustomerRequested');
+    expect(fn).toContain('const reset_customer_approval = actor === "admin" && resetRequested');
+    expect(fn).toContain('isServiceCall && requestedActor === "customer"');
+  });
+});

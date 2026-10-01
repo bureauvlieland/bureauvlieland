@@ -79,6 +79,12 @@ interface Payload {
   note?: string;
   origin?: string;
   send_customer?: boolean;
+  /**
+   * 'customer' alleen via interne service-aanroep: de klant wijzigde zelf de
+   * datum. Dan geen klantmail, geen akkoord-reset en geen eigen tijdlijnregel
+   * (de aanroeper logt die al).
+   */
+  actor?: "admin" | "customer";
   /** Klant moet de onderdelen opnieuw goedkeuren (zet customer_approved_at/accepted_at terug). */
   reset_customer_approval?: boolean;
   /** Items van partners die de wijziging moeten ontvangen en opnieuw moeten bevestigen. */
@@ -95,19 +101,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
   );
 
   try {
-    // Alleen ingelogde admins (zelfde check als publish-program-changes).
+    // Twee aanroepers: een ingelogde admin (browser) of een andere edge function
+    // met de service-role key (klant wijzigde zelf de datum, actor=customer).
     const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!jwt) return json({ error: "Unauthorized" }, 401);
-    const { data: userData } = await supabase.auth.getUser(jwt);
-    const actorUserId = userData?.user?.id ?? null;
-    if (!actorUserId) return json({ error: "Unauthorized" }, 401);
-    const { data: roleRow } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", actorUserId)
-      .eq("role", "admin")
-      .maybeSingle();
-    if (!roleRow) return json({ error: "Forbidden" }, 403);
+    const isServiceCall = jwt === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!isServiceCall) {
+      const { data: userData } = await supabase.auth.getUser(jwt);
+      const actorUserId = userData?.user?.id ?? null;
+      if (!actorUserId) return json({ error: "Unauthorized" }, 401);
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", actorUserId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (!roleRow) return json({ error: "Forbidden" }, 403);
+    }
 
     const body = (await req.json()) as Payload;
     const {
@@ -115,11 +125,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       old_dates,
       note,
       origin,
-      send_customer = false,
-      reset_customer_approval = false,
+      actor: requestedActor,
+      send_customer: sendCustomerRequested = false,
+      reset_customer_approval: resetRequested = false,
       partner_item_ids = [],
       accommodation_quote_ids = [],
     } = body;
+
+    const actor = isServiceCall && requestedActor === "customer" ? "customer" : "admin";
+    const send_customer = actor === "admin" && sendCustomerRequested;
+    const reset_customer_approval = actor === "admin" && resetRequested;
 
     if (!request_id || !Array.isArray(old_dates) || old_dates.length === 0) {
       return json({ error: "request_id en old_dates zijn verplicht" }, 400);
@@ -287,10 +302,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
         status: mail.ok ? "sent" : "failed",
         error_message: mail.ok ? undefined : mail.error,
         mailjet_message_id: mail.messageId ?? undefined,
-        sent_by: "admin",
+        sent_by: actor === "customer" ? "update-customer-program" : "admin",
         metadata: {
           template_name: "date_change_partner",
-          actor: "admin → partner (datumwijziging, opnieuw bevestigen)",
+          actor: actor === "customer"
+            ? "klant → partner (datumwijziging, opnieuw bevestigen)"
+            : "admin → partner (datumwijziging, opnieuw bevestigen)",
           old_dates: oldSorted,
           new_dates: newSorted,
           item_ids: groupItems.map((i) => i.id),
@@ -468,7 +485,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ---------------- Tijdlijn ----------------
     const partnersOk = (results.partners as any[]).filter((p) => p.sent).length;
-    await supabase.from("program_request_history").insert({
+    if (actor === "admin") await supabase.from("program_request_history").insert({
       request_id: program.id,
       action: "dates_changed",
       actor: "admin",
