@@ -94,7 +94,7 @@ export function NotifyDateChangeDialog({
   const [partnerGroups, setPartnerGroups] = useState<PartnerGroup[]>([]);
   const [accommodationQuotes, setAccommodationQuotes] = useState<AccommodationQuoteRow[]>([]);
   const [sendCustomer, setSendCustomer] = useState(true);
-  const [resetCustomer, setResetCustomer] = useState(true);
+  const [resetCustomer, setResetCustomer] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
@@ -106,7 +106,7 @@ export function NotifyDateChangeDialog({
     setNote("");
     setOldDates(initialOldDates);
     setSendCustomer(!!customerEmail);
-    setResetCustomer(true);
+    setResetCustomer(false);
     let cancelled = false;
 
     (async () => {
@@ -333,6 +333,8 @@ export function NotifyDateChangeDialog({
                 <div className="font-medium">Klant opnieuw akkoord laten geven</div>
                 <div className="text-muted-foreground text-xs">
                   Zet het akkoord op alle onderdelen terug; de klant keurt ze opnieuw goed in het klantportaal.
+                  Let op: partners krijgen de datumwijziging alleen voor onderdelen mét klantakkoord, dus
+                  zet dit alleen aan als de klant echt opnieuw moet beslissen.
                 </div>
               </div>
             </label>
