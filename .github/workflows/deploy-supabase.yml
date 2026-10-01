@@ -1,15 +1,10 @@
 # Backend naar productie: edge functions en migraties naar Supabase.
 #
-# LET OP — STAAT BEWUST UIT tot de verhuizing naar een eigen Supabase-project
-# is afgerond (docs/migratie-supabase.md). Onder Lovable Cloud bestaat er geen
-# personal access token en kan deze workflow er niet bij; deployen gaat dan via
-# Lovable (docs/deployen.md). Aanzetten: repository variable
-# SUPABASE_DEPLOY_ENABLED=true plus de twee secrets hieronder.
+# De frontend gaat vanzelf via Netlify; de backend (alles onder supabase/) gaat
+# alleen via deze workflow. Zonder hem bereikt geen enkele wijziging onder
+# supabase/ productie, hoe groen CI ook is. Uitleg: docs/deployen.md.
 #
-# De frontend gaat vanzelf via Netlify. De backend niet: Lovable deployde edge
-# functions en migraties zelf, en dat mechanisme is met de overstap verdwenen.
-# Zonder deze workflow bereikt geen enkele wijziging onder supabase/ productie,
-# hoe groen CI ook is.
+# Draait alleen als de repository variable SUPABASE_DEPLOY_ENABLED=true staat.
 #
 # Draait alleen op main, alleen als er iets onder supabase/ veranderd is, en
 # alleen als de geheimen bestaan (anders slaat de job zichzelf over met een
