@@ -92,20 +92,20 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
       <Dialog open={openIndex !== null} onOpenChange={(o) => !o && close()}>
         <DialogContent className="max-w-5xl p-0 bg-background border-0 [&>button]:hidden">
           {openIndex !== null && (
-            <div ref={containerRef} className="relative bg-black">
+            <div ref={containerRef} className="relative bg-ocean-deep">
               <img
                 src={transformImageUrl(images[openIndex].url, { width: 1600, quality: 85, resize: "contain" })}
                 srcSet={buildSrcSet(images[openIndex].url, [800, 1200, 1600, 2000], { quality: 85, resize: "contain" })}
                 sizes="100vw"
                 alt={images[openIndex].alt || `${accommodationName} foto ${openIndex + 1}`}
                 decoding="async"
-                className={isFullscreen ? "w-screen h-screen object-contain bg-black" : "w-full max-h-[85vh] object-contain bg-black"}
+                className={isFullscreen ? "w-screen h-screen object-contain bg-ocean-deep" : "w-full max-h-[85vh] object-contain bg-ocean-deep"}
               />
               <Button
                 size="icon"
                 variant="secondary"
                 onClick={toggleFullscreen}
-                className="absolute top-2 right-12 h-9 w-9 rounded-full"
+                className="absolute top-2 right-12"
                 aria-label={isFullscreen ? "Volledig scherm verlaten" : "Volledig scherm"}
               >
                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -117,7 +117,7 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
                   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
                   close();
                 }}
-                className="absolute top-2 right-2 h-9 w-9 rounded-full"
+                className="absolute top-2 right-2"
                 aria-label="Sluiten"
               >
                 <X className="h-4 w-4" />
@@ -128,7 +128,7 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
                     size="icon"
                     variant="secondary"
                     onClick={prev}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full"
+                    className="absolute left-2 top-1/2 -translate-y-1/2"
                     aria-label="Vorige"
                   >
                     <ChevronLeft className="h-5 w-5" />
@@ -137,7 +137,7 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
                     size="icon"
                     variant="secondary"
                     onClick={next}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full"
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
                     aria-label="Volgende"
                   >
                     <ChevronRight className="h-5 w-5" />

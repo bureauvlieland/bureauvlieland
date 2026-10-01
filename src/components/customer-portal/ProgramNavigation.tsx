@@ -1,17 +1,6 @@
-import type React from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import {
-  Calendar,
-  BedDouble,
-  LayoutGrid,
-  Receipt,
-  ClipboardList,
-  FileSignature,
-  Sparkles,
-  MapPin,
-} from "lucide-react";
+import { Calendar, BedDouble, LayoutGrid, Receipt, ClipboardList, FileSignature, Sparkles, MapPin } from "lucide-react";
+import { PortalTabs, type PortalTab } from "@/components/system";
+import type { PillTone } from "@/components/system";
 
 /** De weergaven van het klantportaal: de tabbladen plus de evenementweergaven. */
 export type PortalView =
@@ -24,23 +13,26 @@ export type PortalView =
   | "today"
   | "map";
 
-type ActiveView = PortalView;
-
 export interface TabBadge {
   label: string;
-  variant?: "default" | "secondary" | "outline" | "destructive";
+  tone?: PillTone;
 }
 
 interface ProgramNavigationProps {
   className?: string;
   isMultiDay?: boolean;
-  activeView?: ActiveView;
-  onNavigate?: (view: ActiveView) => void;
-  badges?: Partial<Record<ActiveView, TabBadge | undefined>>;
-  /** Toon "Vandaag" en "Kaart" tabs (event-modus) */
+  activeView?: PortalView;
+  onNavigate?: (view: PortalView) => void;
+  badges?: Partial<Record<PortalView, TabBadge | undefined>>;
+  /** Toon "Vandaag" en "Kaart" (evenementmodus). */
   showEventTabs?: boolean;
 }
 
+/**
+ * De tabbalk van het klantportaal op `PortalTabs` (klantportaal fase 1).
+ * Welke tabbladen er zijn hangt af van het programma: Overzicht en Logies
+ * alleen bij meerdere dagen, Vandaag en Kaart alleen tijdens het verblijf.
+ */
 export const ProgramNavigation = ({
   className,
   isMultiDay = false,
@@ -49,165 +41,30 @@ export const ProgramNavigation = ({
   badges = {},
   showEventTabs = false,
 }: ProgramNavigationProps) => {
-  const handleClick = (view: ActiveView) => {
-    onNavigate?.(view);
-  };
+  const tab = (key: PortalView, label: string, icon: PortalTab["icon"]): PortalTab => ({
+    key,
+    label,
+    icon,
+    badge: badges[key] ?? null,
+  });
 
-  const tabClass = (view: ActiveView) =>
-    cn("shrink-0 gap-2", activeView === view && "bg-primary/10 text-primary");
-
-  const renderBadge = (view: ActiveView) => {
-    const b = badges[view];
-    if (!b) return null;
-    return (
-      <Badge variant={b.variant ?? "secondary"} className="text-[10px] px-1.5 py-0 h-4">
-        {b.label}
-      </Badge>
-    );
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
-    const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-    );
-    if (tabs.length === 0) return;
-    const idx = tabs.findIndex((t) => t === document.activeElement);
-    let next = idx;
-    if (e.key === "ArrowRight") next = idx < 0 ? 0 : (idx + 1) % tabs.length;
-    if (e.key === "ArrowLeft") next = idx < 0 ? tabs.length - 1 : (idx - 1 + tabs.length) % tabs.length;
-    if (e.key === "Home") next = 0;
-    if (e.key === "End") next = tabs.length - 1;
-    e.preventDefault();
-    tabs[next]?.focus();
-  };
+  const tabs: PortalTab[] = [
+    ...(isMultiDay ? [tab("splash", "Overzicht", <LayoutGrid />)] : []),
+    ...(showEventTabs ? [tab("today", "Vandaag", <Sparkles />), tab("map", "Kaart", <MapPin />)] : []),
+    ...(isMultiDay ? [tab("accommodation", "Logies", <BedDouble />)] : []),
+    tab("program", "Programma", <Calendar />),
+    tab("practical", "Praktisch", <ClipboardList />),
+    tab("billing", "Facturatie", <Receipt />),
+    tab("accept", "Akkoord", <FileSignature />),
+  ];
 
   return (
-    <nav
-      className={cn(
-        "sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b",
-        className
-      )}
-      role="tablist"
-      aria-label="Programma navigatie"
-    >
-      <div className="container mx-auto px-4">
-        <div
-          className="flex items-center gap-1 py-2 overflow-x-auto"
-          onKeyDown={handleKeyDown}
-        >
-          {isMultiDay && (
-            <Button
-              variant={activeView === "splash" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => handleClick("splash")}
-              className={tabClass("splash")}
-              role="tab"
-              aria-selected={activeView === "splash"}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Overzicht
-              {renderBadge("splash")}
-            </Button>
-          )}
-
-          {showEventTabs && (
-            <>
-              <Button
-                variant={activeView === "today" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => handleClick("today")}
-                className={tabClass("today")}
-                role="tab"
-                aria-selected={activeView === "today"}
-              >
-                <Sparkles className="h-4 w-4" />
-                Vandaag
-                {renderBadge("today")}
-              </Button>
-              <Button
-                variant={activeView === "map" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => handleClick("map")}
-                className={tabClass("map")}
-                role="tab"
-                aria-selected={activeView === "map"}
-              >
-                <MapPin className="h-4 w-4" />
-                Kaart
-                {renderBadge("map")}
-              </Button>
-            </>
-          )}
-
-          {isMultiDay && (
-            <Button
-              variant={activeView === "accommodation" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => handleClick("accommodation")}
-              className={tabClass("accommodation")}
-              role="tab"
-              aria-selected={activeView === "accommodation"}
-            >
-              <BedDouble className="h-4 w-4" />
-              Logies
-              {renderBadge("accommodation")}
-            </Button>
-          )}
-
-          <Button
-            variant={activeView === "program" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => handleClick("program")}
-            className={tabClass("program")}
-            role="tab"
-            aria-selected={activeView === "program"}
-          >
-            <Calendar className="h-4 w-4" />
-            Programma
-            {renderBadge("program")}
-          </Button>
-
-          <Button
-            variant={activeView === "practical" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => handleClick("practical")}
-            className={tabClass("practical")}
-            role="tab"
-            aria-selected={activeView === "practical"}
-          >
-            <ClipboardList className="h-4 w-4" />
-            Praktisch
-            {renderBadge("practical")}
-          </Button>
-
-          <Button
-            variant={activeView === "billing" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => handleClick("billing")}
-            className={tabClass("billing")}
-            role="tab"
-            aria-selected={activeView === "billing"}
-          >
-            <Receipt className="h-4 w-4" />
-            Facturatie
-            {renderBadge("billing")}
-          </Button>
-
-          <Button
-            variant={activeView === "accept" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => handleClick("accept")}
-            className={tabClass("accept")}
-            role="tab"
-            aria-selected={activeView === "accept"}
-          >
-            <FileSignature className="h-4 w-4" />
-            Akkoord
-            {renderBadge("accept")}
-          </Button>
-        </div>
-      </div>
-    </nav>
+    <PortalTabs
+      tabs={tabs}
+      current={activeView}
+      onChange={(key) => onNavigate?.(key as PortalView)}
+      label="Programma navigatie"
+      className={className}
+    />
   );
 };

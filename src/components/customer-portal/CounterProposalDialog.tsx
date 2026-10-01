@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Notice } from "@/components/system";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { type ProgramRequestItem } from "@/types/programRequest";
 import { getAvailableTimeSlots, getBlockedTimeSlots, hasTimeConflict } from "@/lib/timeUtils";
@@ -111,7 +111,7 @@ export const CounterProposalDialog = ({
             )}
             {/* Show confirmed price for accepted items */}
             {isAcceptedItem && item.quoted_price && (
-              <p className="text-green-700 dark:text-green-400 font-medium mt-1">
+              <p className="text-success-ink font-medium mt-1">
                 Prijs: €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} (blijft ongewijzigd)
               </p>
             )}
@@ -119,9 +119,8 @@ export const CounterProposalDialog = ({
 
           {/* Blocked time slots info */}
           {blockedSlots.length > 0 && (
-            <Alert variant="default" className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800 dark:text-amber-300">
+            <Notice tone="warning">
+              <div className="space-y-1">
                 <span className="font-medium">Bezette tijden op deze dag:</span>
                 <ul className="mt-1 space-y-0.5 text-sm">
                   {blockedSlots.map((slot) => (
@@ -130,8 +129,8 @@ export const CounterProposalDialog = ({
                     </li>
                   ))}
                 </ul>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </Notice>
           )}
 
           {/* Time selection */}

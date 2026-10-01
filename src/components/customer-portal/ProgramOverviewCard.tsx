@@ -125,20 +125,20 @@ export const ProgramOverviewCard = ({
   const getStatusBadgeVariant = (variant: "success" | "info" | "warning" | "muted" | "destructive") => {
     switch (variant) {
       case "success":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+        return "bg-success-soft text-success-ink";
       case "info":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+        return "bg-info-soft text-info-ink";
       case "warning":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+        return "bg-warning-soft text-warning-ink";
       case "destructive":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+        return "bg-destructive-soft text-destructive-ink";
       default:
         return "bg-muted text-muted-foreground";
     }
   };
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-amber-50/50 to-primary/5">
+    <Card className="border-primary/20 bg-gradient-to-br from-warning-soft/50 to-primary/5">
       <CardContent className="p-6">
         <div className="space-y-4">
         {/* Header */}
@@ -157,11 +157,11 @@ export const ProgramOverviewCard = ({
                 return (
                   <>
                     {hasPersonalHeadline && (
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                      <p className="font-medium text-muted-foreground uppercase text-eyebrow">
                         {eyebrow}
                       </p>
                     )}
-                    <h1 className="text-2xl md:text-4xl font-bold tracking-tight mt-0.5 break-words">
+                    <h1 className="font-display text-display-md font-medium mt-0.5 break-words">
                       {headline}
                     </h1>
                   </>
@@ -180,7 +180,7 @@ export const ProgramOverviewCard = ({
                   </Badge>
                 )}
                 {isMaatwerk && (
-                  <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                  <Badge variant="outline" className="gap-1 border-warning/30 bg-warning-soft text-warning-ink">
                     <Sparkles className="h-3 w-3" />
                     Maatwerk
                   </Badge>
@@ -215,13 +215,13 @@ export const ProgramOverviewCard = ({
 
           {/* Quote validity warning */}
           {quoteStatus === "offerte_verstuurd" && validUntilDate && !termsAcceptedAt && (
-            <div className={`flex items-center gap-2 p-3 rounded-lg ${isExpired ? "bg-red-50 dark:bg-red-900/20" : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? "bg-amber-50 dark:bg-amber-900/20" : "bg-blue-50 dark:bg-blue-900/20"}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-lg ${isExpired ? "bg-destructive-soft" : daysUntilExpiry !== null && daysUntilExpiry <= 3 ? "bg-warning-soft" : "bg-info-soft"}`}>
               {isExpired ? (
-                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
               ) : (
-                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <Clock className="h-4 w-4 text-warning shrink-0" />
               )}
-              <p className={`text-sm ${isExpired ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}>
+              <p className={`text-sm ${isExpired ? "text-destructive-ink" : "text-warning-ink"}`}>
                 {isExpired ? (
                   <>Dit voorstel is verlopen op {format(validUntilDate, "EEE d MMMM yyyy", { locale: nl })}. Neem contact op voor een nieuw voorstel.</>
                 ) : daysUntilExpiry === 0 ? (

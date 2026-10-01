@@ -315,30 +315,30 @@ export const ActionRequiredCard = ({
   if (!action) return null;
 
   const variantStyles = {
-    warning: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
-    info: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
-    success: "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800",
+    warning: "bg-warning-soft border-warning/40",
+    info: "bg-info-soft border-info/30",
+    success: "bg-success-soft border-success/30",
     neutral: "bg-muted/50 border-border",
   };
 
   const iconStyles = {
-    warning: "bg-amber-100 dark:bg-amber-900 text-amber-600 dark:text-amber-400",
-    info: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400",
-    success: "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400",
+    warning: "bg-warning-soft text-warning",
+    info: "bg-info-soft text-info",
+    success: "bg-success-soft text-success",
     neutral: "bg-muted text-muted-foreground",
   };
 
   const titleStyles = {
-    warning: "text-amber-800 dark:text-amber-200",
-    info: "text-blue-800 dark:text-blue-200",
-    success: "text-green-800 dark:text-green-200",
+    warning: "text-warning-ink",
+    info: "text-info-ink",
+    success: "text-success-ink",
     neutral: "text-foreground",
   };
 
   const descriptionStyles = {
-    warning: "text-amber-700 dark:text-amber-300",
-    info: "text-blue-700 dark:text-blue-300",
-    success: "text-green-700 dark:text-green-300",
+    warning: "text-warning-ink",
+    info: "text-info-ink",
+    success: "text-success-ink",
     neutral: "text-muted-foreground",
   };
 

@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Notice } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GuestDetailsCard } from "./GuestDetailsCard";
@@ -70,17 +71,13 @@ export const PracticalView = ({
   return (
     <div className="space-y-6">
       {/* Intro strip */}
-      <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
-        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-900 dark:text-blue-100">
-          <p className="font-medium">Wat kunt u hier doen?</p>
-          <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
-            Geef de gegevens van uw groep door (gasten, dieet, kamerindeling),
-            download tickets en bewaar uw programma als Word-document of in uw agenda.
-            Hier vindt u ook de contactgegevens van Bureau Vlieland.
-          </p>
-        </div>
-      </div>
+      <Notice tone="info" title="Wat kunt u hier doen?">
+        <p>
+          Geef de gegevens van uw groep door (gasten, dieet, kamerindeling),
+          download tickets en bewaar uw programma als Word-document of in uw agenda.
+          Hier vindt u ook de contactgegevens van Bureau Vlieland.
+        </p>
+      </Notice>
 
       {/* Situatie en vervoer, zoals in de wizard ingevuld */}
       {(() => {

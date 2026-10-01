@@ -105,7 +105,7 @@ export const AccommodationQuotesMap = ({ quotes, formatPrice }: AccommodationQuo
       {withoutCoords.length > 0 && (
         <Card className="bg-muted/30">
           <CardContent className="py-3 space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+            <p className="font-medium text-muted-foreground uppercase text-eyebrow flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" />
               Zonder pin op de kaart
             </p>

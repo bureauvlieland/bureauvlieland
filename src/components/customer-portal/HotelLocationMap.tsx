@@ -130,8 +130,7 @@ export const HotelLocationMap = ({ lat, lng, label, address }: HotelLocationMapP
     <div className="space-y-3">
       <div
         ref={mapRef}
-        className="w-full h-64 rounded-lg overflow-hidden border z-0"
-        style={{ background: "hsl(var(--muted))" }}
+        className="w-full h-64 rounded-lg overflow-hidden border z-0 bg-muted"
       />
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={handleLocate} disabled={locating}>

@@ -93,12 +93,12 @@ export const ChatWidget = ({
       {/* Floating bubble */}
       {!isOpen && (
         <div className="flex flex-col items-center gap-1.5 group">
-          <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full shadow-sm border opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-xs font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full shadow-soft border opacity-0 group-hover:opacity-100 transition-opacity">
             Hulp nodig?
           </span>
           <button
             onClick={() => setIsOpen(true)}
-            className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 hover:opacity-100 opacity-70 flex items-center justify-center relative"
+            className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-medium hover:shadow-medium transition-all hover:scale-105 hover:opacity-100 opacity-70 flex items-center justify-center relative"
             aria-label="Open chat"
           >
             <MessageCircle className="h-5 w-5" />
@@ -114,18 +114,18 @@ export const ChatWidget = ({
       {/* Chat window */}
       {isOpen && (
         <div
-          className="w-[360px] max-w-[calc(100vw-2rem)] h-[500px] bg-card border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          className="w-[360px] max-w-[calc(100vw-2rem)] h-[500px] bg-card border rounded-lg shadow-medium flex flex-col overflow-hidden"
           style={{ maxHeight: "calc(100vh - 6rem - var(--floating-offset, 0px))" }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground rounded-t-2xl">
+          <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground rounded-t-lg">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <MessageCircle className="h-5 w-5" />
                 <span
                   className={cn(
                     "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-primary",
-                    isAdminOnline ? "bg-green-400" : "bg-muted-foreground"
+                    isAdminOnline ? "bg-success" : "bg-muted-foreground"
                   )}
                 />
               </div>
@@ -167,7 +167,7 @@ export const ChatWidget = ({
             })}
 
             {waitingForReply && (
-              <div className="bg-muted/60 rounded-xl px-4 py-3 text-sm text-muted-foreground">
+              <div className="bg-muted/60 rounded-lg px-4 py-3 text-sm text-muted-foreground">
                 <p>We kijken of er iemand beschikbaar is. Laat gerust een bericht achter, dan nemen we zo snel mogelijk contact op.</p>
               </div>
             )}
@@ -214,7 +214,7 @@ const ChatBubble = ({ message }: { message: ChatMessage }) => {
     <div className={cn("flex", isVisitor ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
+          "max-w-[80%] rounded-lg px-4 py-2.5 text-sm",
           isVisitor
             ? "bg-primary text-primary-foreground rounded-br-md"
             : "bg-muted rounded-bl-md"

@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { Notice, EmptyState } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import { MobileStickyStatus } from "./MobileStickyStatus";
 
 import { ProgramStepper, type StepId } from "./ProgramStepper";
 import { type PortalView } from "./ProgramNavigation";
-import { useFloatingClearance } from "@/hooks/useFloatingLayer";
+import { useFloatingBar } from "@/hooks/useFloatingLayer";
 import { TabHeader } from "./TabHeader";
 import { buildTabHeader } from "./tabHeaderConfig";
 import { CustomerProgramItem } from "./CustomerProgramItem";
@@ -249,9 +250,10 @@ export const MobileProgramView = ({
     isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
 
-  // De chatknop wijkt zolang de opslaanbalk in beeld is (hij stond over de knop heen).
+  // De opslaanbalk is een vaste balk onderaan; hij meldt zijn hoogte, zodat de
+  // chatknop erboven staat en de inhoud er niet onder verdwijnt (pb-floating).
   const saveBarRef = useRef<HTMLDivElement>(null);
-  useFloatingClearance(saveBarRef, hasChanges);
+  useFloatingBar(saveBarRef, hasChanges && isPublished && !isPostExecution);
 
   // De ankers staan op verschillende tabbladen; via onNavigate eerst daarheen.
   const goToAnchor = (view: PortalView, anchor: string) => {
@@ -550,15 +552,11 @@ export const MobileProgramView = ({
           )}
         </div>
         {program.items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
-            <Sparkles className="h-8 w-8 text-primary/50" />
-            <p className="text-muted-foreground">
-              Bureau Vlieland is uw programma aan het samenstellen.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Zodra het programma klaar is, vindt u het hier terug.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Sparkles />}
+            title="Bureau Vlieland is uw programma aan het samenstellen"
+            description="Zodra het programma klaar is, vindt u het hier terug."
+          />
         ) : selectedDates.length > 1 ? (
           <DayTabs
             selectedDates={selectedDates}
@@ -653,15 +651,9 @@ export const MobileProgramView = ({
       {/* 5. Billing-only view: financial summary */}
       {initialSection === "billing" && (
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
-            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-900 dark:text-blue-100">
-              <p className="font-medium">Wat kunt u hier doen?</p>
-              <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
-                Hier vindt u het kostenoverzicht en de status van facturen.
-              </p>
-            </div>
-          </div>
+          <Notice tone="info" title="Wat kunt u hier doen?" icon={<FileText className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />}>
+            <p>Hier vindt u het kostenoverzicht en de status van facturen.</p>
+          </Notice>
           <BillingDetailsCard program={program as any} onEdit={onOpenBilling} />
           <PriceSummaryCard
             items={program.items}
@@ -727,21 +719,23 @@ export const MobileProgramView = ({
         <>
           {/* Floating changes bar — only in program view */}
           {initialSection === "program" && hasChanges && isPublished && !isPostExecution && (
-            <div ref={saveBarRef} className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl mx-2 ring-2 ring-amber-200 dark:ring-amber-900/50">
+            <div
+              ref={saveBarRef}
+              role="status"
+              className="fixed inset-x-0 bottom-0 z-30 border-t border-warning/40 bg-warning-soft/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-warning-soft/90"
+            >
               <div className="flex flex-col gap-3">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 text-warning-ink">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
                   <div>
-                    <p className="font-semibold text-amber-900 dark:text-amber-100">
-                      {pendingChanges.length} niet-opgeslagen wijziging{pendingChanges.length > 1 ? "en" : ""}
+                    <p className="font-medium">
+                      {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""} nog niet verstuurd
                     </p>
-                    <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
-                      Zonder opslaan gaan uw wijzigingen verloren als u de pagina ververst.
-                    </p>
+                    <p className="text-sm">Zonder opslaan gaan uw wijzigingen verloren als u de pagina ververst.</p>
                   </div>
                 </div>
-                <Button onClick={onSubmitChanges} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold">
-                  <Send className="h-4 w-4 mr-2" />
+                <Button onClick={onSubmitChanges} className="w-full">
+                  <Send className="h-4 w-4" aria-hidden="true" />
                   Wijzigingen opslaan
                 </Button>
               </div>

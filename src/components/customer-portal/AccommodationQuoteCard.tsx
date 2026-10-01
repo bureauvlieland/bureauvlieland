@@ -55,7 +55,7 @@ export const AccommodationQuoteCard = ({
   ].filter(Boolean).join(", ");
 
   return (
-    <div className={cn("rounded-lg border bg-card shadow-sm overflow-hidden", isExpired && "opacity-70")}>
+    <div className={cn("rounded-lg border bg-card shadow-soft overflow-hidden", isExpired && "opacity-70")}>
       {/* Foto's */}
       {photos.length > 0 ? (
         <button
@@ -80,7 +80,7 @@ export const AccommodationQuoteCard = ({
                   <div className="h-full w-full bg-muted" />
                 )}
                 {morePhotos > 0 && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-primary/55 text-white text-sm font-semibold">+{morePhotos} foto's</span>
+                  <span className="absolute inset-0 flex items-center justify-center bg-primary/55 text-primary-foreground text-sm font-semibold">+{morePhotos} foto's</span>
                 )}
               </div>
             </div>
@@ -154,7 +154,7 @@ export const AccommodationQuoteCard = ({
         {/* Kamers, verzorging, extra's */}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Kamers</p>
+            <p className="uppercase text-eyebrow text-muted-foreground">Kamers</p>
             {rooms.length > 0 ? rooms.map((room, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 {room.images[0] && (
@@ -177,7 +177,7 @@ export const AccommodationQuoteCard = ({
             )}
           </div>
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Verzorging &amp; inbegrepen</p>
+            <p className="uppercase text-eyebrow text-muted-foreground">Verzorging &amp; inbegrepen</p>
             <p><strong>{board.label}</strong></p>
             {quote.board_notes && <p className="text-xs text-muted-foreground">{quote.board_notes}</p>}
             {includes.length > 0 && (
@@ -190,7 +190,7 @@ export const AccommodationQuoteCard = ({
             )}
           </div>
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Extra's in deze offerte</p>
+            <p className="uppercase text-eyebrow text-muted-foreground">Extra's in deze offerte</p>
             {extras.length === 0 ? (
               <p className="text-muted-foreground">Geen extra's aangeboden.</p>
             ) : (

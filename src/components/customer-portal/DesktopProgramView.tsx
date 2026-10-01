@@ -8,7 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ProgramSidebar } from "./ProgramSidebar";
 import { ProgramStepper, type StepId } from "./ProgramStepper";
 import { type PortalView } from "./ProgramNavigation";
-import { useFloatingClearance } from "@/hooks/useFloatingLayer";
+import { useFloatingBar } from "@/hooks/useFloatingLayer";
+import { Container, EmptyState } from "@/components/system";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { ProgramIntroCard } from "./ProgramIntroCard";
@@ -257,9 +258,10 @@ export const DesktopProgramView = ({
     isPostExecution,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
 
-  // De chatknop wijkt zolang de opslaanbalk in beeld is (hij stond over de knop heen).
+  // De opslaanbalk is een vaste balk onderaan; hij meldt zijn hoogte, zodat de
+  // chatknop erboven staat en de inhoud er niet onder verdwijnt (pb-floating).
   const saveBarRef = useRef<HTMLDivElement>(null);
-  useFloatingClearance(saveBarRef, hasChanges);
+  useFloatingBar(saveBarRef, hasChanges && isPublished && !isPostExecution);
 
   // De ankers staan op verschillende tabbladen; via onNavigate eerst daarheen.
   const goToAnchor = (view: PortalView, anchor: string) => {
@@ -490,7 +492,7 @@ export const DesktopProgramView = ({
                         <Button
                           size="sm"
                           variant="default"
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-success hover:bg-success text-primary-foreground"
                           onClick={async () => {
                             await onBulkApproveQuoteItems();
                           }}
@@ -520,15 +522,11 @@ export const DesktopProgramView = ({
                 </CardHeader>
                 <CardContent>
                   {program.items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
-                      <Sparkles className="h-8 w-8 text-primary/50" />
-                      <p className="text-muted-foreground">
-                        Bureau Vlieland is uw programma aan het samenstellen.
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Zodra het programma klaar is, vindt u het hier terug.
-                      </p>
-                    </div>
+                    <EmptyState
+                      icon={<Sparkles />}
+                      title="Bureau Vlieland is uw programma aan het samenstellen"
+                      description="Zodra het programma klaar is, vindt u het hier terug."
+                    />
                   ) : selectedDates.length > 1 ? (
                     <DayTabs
                       selectedDates={selectedDates}
@@ -624,24 +622,26 @@ export const DesktopProgramView = ({
 
             {/* Floating changes bar */}
             {hasChanges && isPublished && !isPostExecution && (
-              <div ref={saveBarRef} className="sticky bottom-4 left-0 right-0 z-50 bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-400 dark:border-amber-700 rounded-lg p-4 shadow-xl ring-2 ring-amber-200 dark:ring-amber-900/50">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-start gap-2 min-w-0">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div
+                ref={saveBarRef}
+                role="status"
+                className="fixed inset-x-0 bottom-0 z-30 border-t border-warning/40 bg-warning-soft/95 backdrop-blur supports-[backdrop-filter]:bg-warning-soft/90"
+              >
+                <Container size="full" className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-start gap-2 text-warning-ink">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
                     <div>
-                      <p className="font-semibold text-amber-900 dark:text-amber-100">
-                        U heeft {pendingChanges.length} niet-opgeslagen wijziging{pendingChanges.length > 1 ? "en" : ""}
+                      <p className="font-medium">
+                        {pendingChanges.length} wijziging{pendingChanges.length > 1 ? "en" : ""} nog niet verstuurd
                       </p>
-                      <p className="text-sm text-amber-800/90 dark:text-amber-200/90">
-                        Klik op <strong>"Wijzigingen opslaan"</strong> om ze door te voeren. Zonder opslaan gaan uw wijzigingen verloren als u de pagina ververst.
-                      </p>
+                      <p className="text-sm">Zonder opslaan gaan uw wijzigingen verloren als u de pagina ververst.</p>
                     </div>
                   </div>
-                  <Button onClick={onSubmitChanges} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold shrink-0">
-                    <Send className="h-4 w-4 mr-2" />
+                  <Button onClick={onSubmitChanges} className="shrink-0">
+                    <Send className="h-4 w-4" aria-hidden="true" />
                     Wijzigingen opslaan
                   </Button>
-                </div>
+                </Container>
               </div>
             )}
 

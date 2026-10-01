@@ -32,11 +32,11 @@ export const PendingConfirmationExplainer = ({
   if (items.length === 0) return null;
 
   return (
-    <Card className="border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20">
+    <Card className="border-warning/40 bg-warning-soft/60">
       <CardContent className="p-6 space-y-4">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/50">
-            <Clock className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+          <div className="p-2 rounded-full bg-warning-soft">
+            <Clock className="h-5 w-5 text-warning-ink" />
           </div>
           <div className="space-y-1">
             <h3 className="font-semibold text-lg">
@@ -76,7 +76,7 @@ export const PendingConfirmationExplainer = ({
         </div>
 
         {canAcceptUnderReservation && (
-          <div className="rounded-lg border border-amber-300 bg-white/70 dark:border-amber-800 dark:bg-background/60 p-4 space-y-3">
+          <div className="rounded-lg border border-warning/40 bg-card/70 dark:bg-background/60 p-4 space-y-3">
             <div>
               <p className="text-sm font-medium">Wilt u nu al ondertekenen?</p>
               <p className="text-sm text-muted-foreground mt-1">

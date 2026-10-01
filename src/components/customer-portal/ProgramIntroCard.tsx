@@ -121,7 +121,7 @@ export const ProgramIntroCard = ({
   // is omdat de boeking dan nog niet definitief is.
   if (isConfirmed && termsAcceptedAt) {
     return (
-      <Card className="border-green-200/50 bg-green-50/30 dark:border-green-900/50 dark:bg-green-950/10">
+      <Card className="border-success/30 bg-success-soft/30">
         <CardContent className="p-5">
           <p className="text-sm text-foreground leading-relaxed">
             Uw programma is bevestigd. Hieronder vindt u het overzicht van alle onderdelen.

@@ -1,4 +1,5 @@
 import { RESPONSE_TIME } from "@/content/promises";
+import { Notice } from "@/components/system";
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { differenceInDays, format, isPast } from "date-fns";
@@ -232,14 +233,14 @@ export const AccommodationSection = ({
   if (hasSelectedQuote && selectedQuote) {
     return (
       <>
-      <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+      <Card className="border-success/30 bg-success-soft/50">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              <BedDouble className="h-5 w-5 text-green-600" />
+              <BedDouble className="h-5 w-5 text-success" />
               Uw Logies
             </CardTitle>
-            <Badge className="bg-green-500">
+            <Badge className="bg-success">
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Gekozen
             </Badge>
@@ -298,7 +299,7 @@ export const AccommodationSection = ({
                 const board = getBoardDisplay(selectedQuote.board_type);
                 return (
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Verzorging</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Verzorging</p>
                   <Badge variant={board.isKnown ? "secondary" : "outline"} className="font-normal">
                     {board.label}
                   </Badge>
@@ -318,7 +319,7 @@ export const AccommodationSection = ({
 
               {(selectedQuote.room_configuration?.length ?? 0) > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Kamerindeling</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Kamerindeling</p>
                   <ul className="text-sm space-y-1">
                     {selectedQuote.room_configuration.map((room, i) => (
                       <li key={i} className="flex items-center justify-between gap-2 rounded bg-muted/50 px-2 py-1.5">
@@ -339,17 +340,13 @@ export const AccommodationSection = ({
           )}
 
           {/* Reservation status */}
-          <div className="rounded-lg border border-green-200 bg-green-100/60 dark:border-green-900 dark:bg-green-900/20 p-3 text-sm text-green-800 dark:text-green-200 flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">Reservering bevestigd</p>
-              <p className="text-green-700 dark:text-green-300 mt-0.5">
-                {isBureauCentral
-                  ? "Bureau Vlieland regelt de reservering en facturatie. U hoeft verder niets te doen — hieronder vindt u alle informatie over uw verblijf."
-                  : "Uw verblijf is geboekt. Hieronder vindt u alle praktische informatie."}
-              </p>
-            </div>
-          </div>
+          <Notice tone="success" title="Reservering bevestigd">
+            <p>
+              {isBureauCentral
+                ? "Bureau Vlieland regelt de reservering en facturatie. U hoeft verder niets te doen. Hieronder vindt u alle informatie over uw verblijf."
+                : "Uw verblijf is geboekt. Hieronder vindt u alle praktische informatie."}
+            </p>
+          </Notice>
 
           {/* Hotel / accommodation information */}
           {(selectedQuote.partner || selectedQuote.description || selectedQuote.includes?.length || selectedQuote.conditions || selectedQuote.partner_notes) && (
@@ -382,11 +379,11 @@ export const AccommodationSection = ({
 
               {selectedQuote.includes && selectedQuote.includes.length > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Inbegrepen</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Inbegrepen</p>
                   <ul className="text-sm space-y-1">
                     {selectedQuote.includes.map((item, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-green-600 shrink-0" />
+                        <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-success shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -398,7 +395,7 @@ export const AccommodationSection = ({
                 <div className="grid sm:grid-cols-2 gap-3 text-sm pt-2 border-t">
                   {(selectedQuote.partner.address_street || selectedQuote.partner.address_city) && (
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Adres</p>
+                      <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Adres</p>
                       <p>
                         {selectedQuote.partner.address_street}
                         {selectedQuote.partner.address_postal || selectedQuote.partner.address_city ? (
@@ -417,7 +414,7 @@ export const AccommodationSection = ({
                     if (!phone && !email && !website) return null;
                     return (
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">Contact accommodatie</p>
+                        <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Contact accommodatie</p>
                         <div className="flex flex-wrap gap-2">
                           {phone && (
                             <a href={`tel:${phone.replace(/\s/g, "")}`}>
@@ -454,7 +451,7 @@ export const AccommodationSection = ({
                   })()}
                   {selectedQuote.partner.location_description && (
                     <div className="sm:col-span-2">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Locatie</p>
+                      <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Locatie</p>
                       <p className="text-muted-foreground whitespace-pre-line">{selectedQuote.partner.location_description}</p>
                     </div>
                   )}
@@ -463,7 +460,7 @@ export const AccommodationSection = ({
 
               {selectedQuote.partner?.location_lat && selectedQuote.partner?.location_lng && (
                 <div className="pt-2 border-t">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Kaart & route</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-2">Kaart & route</p>
                   <HotelLocationMap
                     lat={Number(selectedQuote.partner.location_lat)}
                     lng={Number(selectedQuote.partner.location_lng)}
@@ -478,14 +475,14 @@ export const AccommodationSection = ({
 
               {selectedQuote.partner_notes && (
                 <div className="pt-2 border-t">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Toelichting van de accommodatie</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-1">Toelichting van de accommodatie</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.partner_notes}</p>
                 </div>
               )}
 
               {selectedQuote.conditions && (
                 <div className="pt-2 border-t">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Voorwaarden</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-1">Voorwaarden</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.conditions}</p>
                 </div>
               )}
@@ -591,7 +588,7 @@ export const AccommodationSection = ({
                   type="button"
                   onClick={() => setQuoteView("list")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    quoteView === "list" ? "bg-background shadow-sm" : "text-muted-foreground"
+                    quoteView === "list" ? "bg-background shadow-soft" : "text-muted-foreground"
                   }`}
                 >
                   <List className="h-3.5 w-3.5" />
@@ -601,7 +598,7 @@ export const AccommodationSection = ({
                   type="button"
                   onClick={() => setQuoteView("map")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    quoteView === "map" ? "bg-background shadow-sm" : "text-muted-foreground"
+                    quoteView === "map" ? "bg-background shadow-soft" : "text-muted-foreground"
                   }`}
                 >
                   <MapIcon className="h-3.5 w-3.5" />
@@ -669,12 +666,12 @@ export const AccommodationSection = ({
   // State 3b: Only expired quotes, no submitted ones
   if (expiredQuotes.length > 0 && submittedQuotes.length === 0) {
     return (
-      <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+      <Card className="border-warning/40 bg-warning-soft/50">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row md:items-start gap-4">
             <div className="flex items-start gap-4 flex-1">
-              <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              <div className="h-12 w-12 rounded-full bg-warning-soft flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-warning" />
               </div>
               <div className="space-y-2">
                 <h3 className="font-semibold">Logiesofferte verlopen</h3>
@@ -707,17 +704,17 @@ export const AccommodationSection = ({
   return (
     <Card className={allDeclined
       ? "border-destructive/30 bg-destructive/5 dark:border-destructive/50 dark:bg-destructive/10"
-      : "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+      : "border-warning/40 bg-warning-soft/50"
     }>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <BedDouble className={`h-5 w-5 ${allDeclined ? "text-destructive" : "text-amber-600"}`} />
+            <BedDouble className={`h-5 w-5 ${allDeclined ? "text-destructive" : "text-warning"}`} />
             Uw Logiesaanvraag
           </CardTitle>
           <Badge variant="outline" className={allDeclined
             ? "border-destructive text-destructive"
-            : "border-amber-500 text-amber-700"
+            : "border-warning text-warning-ink"
           }>
             {allDeclined ? (
               <><AlertTriangle className="h-3 w-3 mr-1" /> Geen beschikbaarheid</>
@@ -792,13 +789,13 @@ export const AccommodationSection = ({
               <div className="px-3 pb-3 pt-1 space-y-3 text-sm">
                 {occupancyLabel && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Kamerbezetting</p>
+                    <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Kamerbezetting</p>
                     <p>{occupancyLabel}</p>
                   </div>
                 )}
                 {roomTypeLabels.length > 0 && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Gewenste kamertypes</p>
+                    <p className="uppercase text-eyebrow text-muted-foreground mb-1">Gewenste kamertypes</p>
                     <div className="flex flex-wrap gap-1.5">
                       {roomTypeLabels.map((label, i) => (
                         <Badge key={i} variant="secondary" className="font-normal">{label}</Badge>
@@ -808,7 +805,7 @@ export const AccommodationSection = ({
                 )}
                 {locationLabels.length > 0 && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Locatievoorkeur</p>
+                    <p className="uppercase text-eyebrow text-muted-foreground mb-1">Locatievoorkeur</p>
                     <div className="flex flex-wrap gap-1.5">
                       {locationLabels.map((loc, i) => {
                         const Icon = locationIcon(loc.value);
@@ -824,7 +821,7 @@ export const AccommodationSection = ({
                 )}
                 {facilityLabels.length > 0 && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Gewenste faciliteiten</p>
+                    <p className="uppercase text-eyebrow text-muted-foreground mb-1">Gewenste faciliteiten</p>
                     <div className="flex flex-wrap gap-1.5">
                       {facilityLabels.map((label, i) => (
                         <Badge key={i} variant="secondary" className="font-normal">{label}</Badge>
@@ -834,13 +831,13 @@ export const AccommodationSection = ({
                 )}
                 {budgetLabel && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Budget</p>
+                    <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Budget</p>
                     <p>{budgetLabel}</p>
                   </div>
                 )}
                 {accommodation.special_requests && (
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground mb-0.5">Bijzondere wensen</p>
+                    <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Bijzondere wensen</p>
                     <p className="whitespace-pre-line text-muted-foreground">{accommodation.special_requests}</p>
                   </div>
                 )}
@@ -864,10 +861,10 @@ export const AccommodationSection = ({
             </div>
           </div>
         ) : (
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-            <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-warning-soft">
+            <Clock className="h-5 w-5 text-warning shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
+              <p className="text-sm text-warning-ink">
                 {(() => {
                   const waiting = Math.max(0, requested - declined);
                   const parts: string[] = [];
@@ -885,7 +882,7 @@ export const AccommodationSection = ({
                   return parts.join(' ');
                 })()}
               </p>
-              <Progress value={30} className="h-1.5 mt-2 bg-amber-200" />
+              <Progress value={30} className="h-1.5 mt-2 bg-warning/20" />
             </div>
           </div>
         )}
@@ -910,7 +907,7 @@ export const AccommodationSection = ({
 
         {/* Kamers & verzorging — klant kan dit zelf bijsturen */}
         <div className="rounded-lg border p-3 space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <p className="font-medium text-muted-foreground uppercase text-eyebrow">
             Kamers &amp; verzorging
           </p>
           <p className="text-sm">

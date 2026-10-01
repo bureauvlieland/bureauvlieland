@@ -423,6 +423,28 @@ woordenlijsten voor klantstatussen in `itemStatus.ts` en
 naar onder de 100); `useFloatingBar` voor de opslaanbalk; de baseline
 verlaagd.
 
+*Gebouwd op 1 oktober, eigen PR.* `PortalHead` en `PortalTabs` staan in
+`src/components/system` en op `/ontwerp` (blok 09); `TabHeader` en
+`ProgramNavigation` draaien erop, met de tonen uit de woordenlijst als
+`Pill` in de tabbalk en bij de kop. `--secondary` is nu licht blauwgrijs
+met merkblauwe tekst (was gelijk aan `--primary`), waardoor `Badge` en
+`Button` met `variant="secondary"` eindelijk de zachte variant zijn. De
+woordenlijst klant staat in `itemStatus.ts` (`customerLabel`,
+`customerTone`, `customerItemStatusLabel` voor "Voorstel: andere tijd")
+en in `tabHeaderConfig.ts`. De hele `customer-portal`-map en de chat
+staan op de statustokens: 436 losse paletkleuren, 176 `dark:`-varianten,
+16 keer `text-white`, 44 eigen eyebrows, 20 Tailwind-schaduwen en 12
+radii zijn weg; de duidelijke meldingsvlakken zijn een `Notice`, de lege
+en laadtoestanden `EmptyState` en `LoadingState`, de opslaanbalk is een
+vaste balk onderaan die zijn hoogte meldt (`useFloatingBar`, de chat
+staat erboven) en de beta-banner is een `Notice`. Ontwerpschuld in het
+portaal: van 517 naar 0; het plafond staat op 30 (de rest zit in de
+programma-bouwer). Blijft tot fase 2: de hero-kaart "Uw voorstel" op het
+programma-tabblad (nu in dezelfde Fraunces-maat als de kop), het
+percentage, de dagtabs en de getinte kaarten (`AcceptedTermsCard`,
+`PendingConfirmationExplainer`, de logieskaart), die op de tokens staan
+maar nog geen `Notice` zijn.
+
 **Fase 2: het programma (3 dagen).** Eén responsieve `ProgramView` in
 plaats van de twee kopieën, met dezelfde functies op elk formaat; de
 dagbalk, de doorlopende tijdlijn met dagkoppen en toevoegen per dag;

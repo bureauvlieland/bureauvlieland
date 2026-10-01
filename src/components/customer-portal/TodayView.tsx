@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { Notice, EmptyState } from "@/components/system";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -119,7 +120,7 @@ export const TodayView = ({
         <CardContent className="py-5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              <p className="uppercase text-eyebrow text-muted-foreground">
                 {isToday ? "Vandaag" : isUpcoming ? "Binnenkort" : "Programma-dag"}
               </p>
               <h2 className="text-xl font-semibold mt-0.5">
@@ -172,23 +173,17 @@ export const TodayView = ({
       </Card>
 
       {!isToday && (
-        <div className="flex items-start gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 text-sm">
-          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-          <p className="text-blue-900 dark:text-blue-100">
+        <Notice tone="info">
+          <p>
             U kijkt vooruit naar het programma. Tijdens uw verblijf toont deze tab
             automatisch het actuele dagdeel.
           </p>
-        </div>
+        </Notice>
       )}
 
       {/* Timeline */}
       {todayItems.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Geen geplande activiteiten op deze dag.</p>
-          </CardContent>
-        </Card>
+        <EmptyState icon={<CalendarDays />} title="Geen geplande activiteiten op deze dag" />
       ) : (
         <div className="space-y-2">
           {todayItems.map((item, idx) => {
@@ -201,7 +196,7 @@ export const TodayView = ({
                 key={item.id}
                 className={
                   isActive
-                    ? "border-primary border-2 shadow-md"
+                    ? "border-primary border-2 shadow-soft"
                     : isPast
                     ? "opacity-60"
                     : ""
@@ -274,7 +269,7 @@ export const TodayView = ({
       {/* Weather hint */}
       <Card className="bg-muted/30">
         <CardContent className="py-4 flex items-center gap-3">
-          <Sun className="h-5 w-5 text-amber-500 shrink-0" />
+          <Sun className="h-5 w-5 text-warning shrink-0" />
           <div className="text-sm">
             <p className="font-medium">Weer & wind</p>
             <p className="text-muted-foreground text-xs">

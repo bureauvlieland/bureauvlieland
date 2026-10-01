@@ -49,11 +49,11 @@ export const AcceptedTermsCard = ({
   }, [acceptedTerms]);
 
   return (
-    <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+    <Card className="border-success/30 bg-success-soft/50">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/50">
-            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <div className="p-2 rounded-full bg-success-soft">
+            <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
           <CardTitle className="text-lg">Boeking definitief bevestigd</CardTitle>
         </div>

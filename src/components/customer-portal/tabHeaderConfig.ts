@@ -51,13 +51,15 @@ export function buildTabHeader({
     case "accommodation": {
       const selected = accommodationQuotes.some((q) => q.status === "selected");
       const received = accommodationQuotes.filter((q) => q.status === "submitted").length;
+      // Woordenlijst klant (plan klantportaal): info = wacht op een ander,
+      // warning = u bent aan zet, success = rond.
       const badge = selected
-        ? { label: "Gekozen", variant: "default" as const }
+        ? { label: "Gekozen", tone: "info" as const }
         : received > 0
-          ? { label: `${received} offerte${received !== 1 ? "s" : ""}`, variant: "secondary" as const }
+          ? { label: "Kies uw logies", tone: "warning" as const }
           : hasAccommodationRequest
-            ? { label: "In behandeling", variant: "outline" as const }
-            : { label: "Nog te regelen", variant: "outline" as const };
+            ? { label: "Aangevraagd", tone: "info" as const }
+            : { label: "Nog te regelen", tone: "warning" as const };
       return {
         icon: BedDouble,
         title: "Uw logies",
@@ -65,7 +67,7 @@ export function buildTabHeader({
           ? "U heeft uw logies vastgelegd. Hieronder vindt u de details."
           : received > 0
             ? "Vergelijk de logies-offertes en kies waar u slaapt."
-            : "Wij verzamelen logies-offertes voor u — u hoort het zodra ze binnen zijn.",
+            : "Wij verzamelen logies-offertes voor u. U hoort het zodra ze binnen zijn.",
         badge,
       };
     }
@@ -75,7 +77,7 @@ export function buildTabHeader({
           icon: Calendar,
           title: "Uw programma",
           subtitle: "Het programma is uitgevoerd. De resterende acties staan bij facturatie en voorwaarden.",
-          badge: { label: "Uitgevoerd", variant: "default" as const },
+          badge: { label: "Uitgevoerd", tone: "success" as const },
         };
       }
 
@@ -89,21 +91,15 @@ export function buildTabHeader({
       const allApproved =
         customerApprovableCount > 0 && customerApprovedCount >= customerApprovableCount;
       const badge =
-        statusSummary.total === 0
-          ? { label: "In voorbereiding", variant: "outline" as const }
-          : isPreOfferte
-            ? { label: "In voorbereiding", variant: "outline" as const }
-            : allApproved
-              ? { label: "Alles goedgekeurd", variant: "default" as const }
-              : customerActionsCount > 0
-                ? {
-                    // Amber 'secondary' — geen rood alarm, wél duidelijk dat u aan zet bent.
-                    label: `${customerActionsCount} goed te keuren`,
-                    variant: "secondary" as const,
-                  }
-                : allConfirmed
-                  ? { label: "Klaar voor ondertekening", variant: "secondary" as const }
-                  : { label: "Wacht op partners", variant: "outline" as const };
+        statusSummary.total === 0 || isPreOfferte
+          ? { label: "In voorbereiding", tone: "info" as const }
+          : allApproved
+            ? { label: "Alles goedgekeurd", tone: "success" as const }
+            : customerActionsCount > 0
+              ? { label: `${customerActionsCount} goed te keuren`, tone: "warning" as const }
+              : allConfirmed
+                ? { label: "Klaar voor ondertekening", tone: "warning" as const }
+                : { label: "Wacht op aanbieders", tone: "info" as const };
       return {
         icon: Calendar,
         title: "Uw programma",
@@ -126,19 +122,19 @@ export function buildTabHeader({
         title: "Facturatie",
         subtitle: "Aan wie sturen we de factuur? Vul of controleer uw gegevens.",
         badge: billingComplete
-          ? { label: "Compleet", variant: "default" as const }
-          : { label: "Nog invullen", variant: "destructive" as const },
+          ? { label: "Compleet", tone: "success" as const }
+          : { label: "Aanvullen", tone: "warning" as const },
       };
     case "accept":
       return {
         icon: FileSignature,
-        title: "Akkoord & voorwaarden",
+        title: "Akkoord en voorwaarden",
         subtitle: termsAccepted
           ? "U heeft akkoord gegeven. Hieronder vindt u uw ondertekening terug."
           : "Laatste stap: bekijk de voorwaarden en geef akkoord om de boeking definitief te maken.",
         badge: termsAccepted
-          ? { label: "Ondertekend", variant: "default" as const }
-          : { label: "Nog open", variant: "secondary" as const },
+          ? { label: "Ondertekend", tone: "success" as const }
+          : { label: "Nog te ondertekenen", tone: "warning" as const },
       };
   }
 }

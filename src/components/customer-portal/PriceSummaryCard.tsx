@@ -374,7 +374,7 @@ export const PriceSummaryCard = ({
         {/* Order lines table */}
         <div className="divide-y divide-border">
           {/* Table header */}
-          <div className="flex items-center justify-between py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <div className="flex items-center justify-between py-2 font-medium text-muted-foreground uppercase text-eyebrow">
             <span>Onderdeel</span>
             <span>Bedrag</span>
           </div>
@@ -398,7 +398,7 @@ export const PriceSummaryCard = ({
               )}
               {summary.extrasWithTotals.length > 0 && (
                 <div className="ml-6 mt-2 space-y-0.5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Logies-extra's</p>
+                  <p className="font-medium text-muted-foreground uppercase text-eyebrow mb-1">Logies-extra's</p>
                   {summary.extrasWithTotals.map(({ extra, total }) => (
                     <div key={extra.id} className="flex items-center justify-between text-xs text-muted-foreground">
                       <span className="truncate">
@@ -526,7 +526,7 @@ export const PriceSummaryCard = ({
           {/* Self-arranged items */}
           {summary.selfArrangedItems.length > 0 && (
             <div className="py-2.5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Zelf te regelen</p>
+              <p className="font-medium text-muted-foreground uppercase text-eyebrow mb-1">Zelf te regelen</p>
               {summary.selfArrangedItems.map(item => (
                 <div key={item.id} className="flex items-center justify-between py-0.5">
                   <span className="text-sm text-muted-foreground">{item.block_name}</span>
@@ -583,7 +583,7 @@ export const PriceSummaryCard = ({
 
         {/* Invoicing info */}
         <div className="border-t pt-3 mt-3 space-y-2">
-          <div className="flex items-start gap-2 text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200 rounded-lg p-3">
+          <div className="flex items-start gap-2 text-xs bg-info-soft text-info-ink rounded-lg p-3">
             <FileText className="h-4 w-4 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="font-medium">Facturatie door Bureau Vlieland</p>
@@ -596,7 +596,7 @@ export const PriceSummaryCard = ({
           </div>
 
           {!termsAccepted && (
-            <div className="flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 rounded-lg p-3">
+            <div className="flex items-start gap-2 text-xs bg-warning-soft text-warning-ink rounded-lg p-3">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="font-medium">Let op: meerdere voorwaarden van toepassing</p>

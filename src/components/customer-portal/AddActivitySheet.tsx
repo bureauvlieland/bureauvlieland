@@ -5,7 +5,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { ResponsiveSheetContent } from "@/components/system";
+import { ResponsiveSheetContent, EmptyState, LoadingState } from "@/components/system";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -128,15 +128,13 @@ export const AddActivitySheet = ({
         <ScrollArea className="flex-1">
           <div className="p-4 pt-2 space-y-2">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Laden...
-              </div>
+              <LoadingState label="Activiteiten laden…" />
             ) : availableBlocks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchQuery || categoryFilter !== "all"
+              <EmptyState
+                title={searchQuery || categoryFilter !== "all"
                   ? "Geen activiteiten gevonden met deze filters"
                   : "Alle beschikbare activiteiten zitten al in uw programma"}
-              </div>
+              />
             ) : (
               sortedBlocks.map((block) => (
                 <AddActivityCard

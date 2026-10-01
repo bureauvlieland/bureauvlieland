@@ -157,7 +157,7 @@ export const ProposalHeroCard = ({
               size="lg"
               className={cn(
                 "w-full sm:w-auto transition-transform",
-                isChecked && !isLoading && "hover:scale-[1.02] shadow-lg shadow-primary/20",
+                isChecked && !isLoading && "hover:scale-[1.02] shadow-medium shadow-primary/20",
                 isChecked && !isLoading && "animate-[pulse_2.5s_ease-in-out_infinite]"
               )}
             >

@@ -35,19 +35,19 @@ interface ProgramHistoryTimelineProps {
 
 const actionConfig: Record<string, { icon: typeof Clock; label: string; color: string; bgColor: string }> = {
   created: { icon: Send, label: "Aanvraag ingediend", color: "text-primary", bgColor: "bg-primary/10" },
-  status_changed: { icon: CheckCircle, label: "Status gewijzigd", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
-  confirmed: { icon: CheckCircle, label: "Bevestigd door aanbieder", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
-  unavailable: { icon: XCircle, label: "Niet beschikbaar", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900" },
-  alternative: { icon: MessageSquare, label: "Alternatief voorgesteld", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900" },
-  time_changed: { icon: Clock, label: "Tijd gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
-  day_changed: { icon: Calendar, label: "Dag gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  status_changed: { icon: CheckCircle, label: "Status gewijzigd", color: "text-success", bgColor: "bg-success-soft" },
+  confirmed: { icon: CheckCircle, label: "Bevestigd door aanbieder", color: "text-success", bgColor: "bg-success-soft" },
+  unavailable: { icon: XCircle, label: "Niet beschikbaar", color: "text-destructive", bgColor: "bg-destructive-soft" },
+  alternative: { icon: MessageSquare, label: "Alternatief voorgesteld", color: "text-info", bgColor: "bg-info-soft" },
+  time_changed: { icon: Clock, label: "Tijd gewijzigd", color: "text-warning", bgColor: "bg-warning-soft" },
+  day_changed: { icon: Calendar, label: "Dag gewijzigd", color: "text-warning", bgColor: "bg-warning-soft" },
   notes_changed: { icon: Edit, label: "Opmerking gewijzigd", color: "text-muted-foreground", bgColor: "bg-muted" },
-  removed: { icon: Ban, label: "Activiteit verwijderd", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900" },
-  cancelled: { icon: Ban, label: "Geannuleerd", color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900" },
-  people_changed: { icon: Users, label: "Aantal personen gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
-  dates_changed: { icon: Calendar, label: "Datums gewijzigd", color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900" },
+  removed: { icon: Ban, label: "Activiteit verwijderd", color: "text-destructive", bgColor: "bg-destructive-soft" },
+  cancelled: { icon: Ban, label: "Geannuleerd", color: "text-destructive", bgColor: "bg-destructive-soft" },
+  people_changed: { icon: Users, label: "Aantal personen gewijzigd", color: "text-warning", bgColor: "bg-warning-soft" },
+  dates_changed: { icon: Calendar, label: "Datums gewijzigd", color: "text-warning", bgColor: "bg-warning-soft" },
   billing_updated: { icon: FileText, label: "Facturatiegegevens bijgewerkt", color: "text-muted-foreground", bgColor: "bg-muted" },
-  terms_accepted: { icon: CreditCard, label: "Voorwaarden geaccepteerd", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900" },
+  terms_accepted: { icon: CreditCard, label: "Voorwaarden geaccepteerd", color: "text-success", bgColor: "bg-success-soft" },
 };
 
 const getActionDetails = (action: string) => {

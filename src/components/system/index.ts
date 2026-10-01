@@ -28,3 +28,5 @@ export { LinkCard } from "./LinkCard";
 export { PersonQuote } from "./PersonQuote";
 export { RouteChooser, type RouteChooserRoute } from "./RouteChooser";
 export { ResponsiveSheetContent } from "./ResponsiveSheetContent";
+export { PortalHead, type PortalHeadFact } from "./PortalHead";
+export { PortalTabs, type PortalTab } from "./PortalTabs";

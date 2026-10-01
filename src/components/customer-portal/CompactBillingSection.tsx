@@ -77,12 +77,12 @@ export const CompactBillingSection = ({
           <h2 className="text-lg font-semibold">Facturatie & Kosten</h2>
         </div>
         {billingComplete ? (
-          <div className="flex items-center gap-1.5 text-sm text-green-600">
+          <div className="flex items-center gap-1.5 text-sm text-success">
             <CheckCircle className="h-4 w-4" />
             <span>Gegevens compleet</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-sm text-amber-600">
+          <div className="flex items-center gap-1.5 text-sm text-warning">
             <AlertCircle className="h-4 w-4" />
             <span>Gegevens invullen</span>
           </div>

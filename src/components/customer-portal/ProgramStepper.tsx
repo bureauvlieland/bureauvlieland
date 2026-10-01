@@ -275,15 +275,15 @@ function buildBillingTrack(billingComplete: boolean, termsAccepted: boolean): Tr
 // ─── Tone classes ────────────────────────────────────────────────────────────
 
 const toneAccent: Record<TrackTone, string> = {
-  lodging: "from-sky-500/15 to-sky-500/0 text-sky-700 dark:text-sky-300",
+  lodging: "from-info/20 to-info/20 text-info-ink",
   program: "from-primary/15 to-primary/0 text-primary",
-  billing: "from-amber-500/15 to-amber-500/0 text-amber-700 dark:text-amber-300",
+  billing: "from-warning/20 to-warning/20 text-warning-ink",
 };
 
 const toneIconBg: Record<TrackTone, string> = {
-  lodging: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  lodging: "bg-info/10 text-info-ink",
   program: "bg-primary/10 text-primary",
-  billing: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  billing: "bg-warning/10 text-warning-ink",
 };
 
 const toneIcon: Record<TrackTone, React.ComponentType<{ className?: string }>> = {
@@ -309,7 +309,7 @@ const StepPip = ({
       className={cn(
         "relative z-10 flex shrink-0 items-center justify-center rounded-full border-2 transition-all",
         dimensions,
-        step.state === "done" && "bg-success border-success text-success-foreground shadow-sm",
+        step.state === "done" && "bg-success border-success text-success-foreground shadow-soft",
         step.state === "active" &&
           "bg-background border-primary text-primary ring-4 ring-primary/15",
         step.state === "upcoming" && "bg-background border-border text-muted-foreground",
@@ -381,7 +381,7 @@ const TrackCard = ({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-sm",
+        "relative overflow-hidden rounded-lg border bg-card transition-shadow hover:shadow-soft",
         track.done && "bg-muted/30",
       )}
     >
@@ -623,25 +623,25 @@ export const ProgramStepper = ({
     : isPostExecution
       ? {
           label: "Facturatie",
-          tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+          tone: "bg-success/10 text-success-ink border-success/20",
         }
     : programTrack.done && billingTrack.done
       ? {
           label: "Bijna klaar",
-          tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+          tone: "bg-success/10 text-success-ink border-success/20",
         }
       : {
           label: "In afstemming",
-          tone: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+          tone: "bg-warning/10 text-warning-ink border-warning/20",
         };
 
   // ─── Vertical (sidebar) ──────────────────────────────────────────────────
 
   if (isVertical) {
     return (
-      <div className={cn("bg-card border rounded-xl p-3", className)}>
+      <div className={cn("bg-card border rounded-lg p-3", className)}>
         <div className="flex items-center justify-between mb-2.5 px-1">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="text-[11px] font-semibold uppercase text-eyebrow text-muted-foreground">
             Voortgang
           </h3>
           <span
@@ -684,7 +684,7 @@ export const ProgramStepper = ({
   return (
     <div
       className={cn(
-        "bg-gradient-to-br from-muted/40 via-card to-card border rounded-2xl p-4 sm:p-5",
+        "bg-gradient-to-br from-muted/40 via-card to-card border rounded-lg p-4 sm:p-5",
         className,
       )}
     >

@@ -55,7 +55,7 @@ export const AccommodationQuoteDetailSheet = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <ResponsiveSheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-3 border-b text-left">
-          <SheetDescription className="text-xs uppercase tracking-wider">Logiesofferte</SheetDescription>
+          <SheetDescription className="uppercase text-eyebrow">Logiesofferte</SheetDescription>
           <SheetTitle className="font-display text-2xl font-medium">{quote.accommodation_name}</SheetTitle>
           {quote.partner?.name && quote.partner.name !== quote.accommodation_name && (
             <p className="text-sm text-muted-foreground">{quote.partner.name}</p>
@@ -80,7 +80,7 @@ export const AccommodationQuoteDetailSheet = ({
               )}
               {quote.description && (
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Over deze offerte</p>
+                  <p className="uppercase text-eyebrow text-muted-foreground mb-1">Over deze offerte</p>
                   <p className="text-sm whitespace-pre-line">{quote.description}</p>
                 </div>
               )}
@@ -89,7 +89,7 @@ export const AccommodationQuoteDetailSheet = ({
 
           {(partner.coordinates || partner.addressLine || partner.locationDescription) && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Ligging</p>
+              <p className="uppercase text-eyebrow text-muted-foreground">Ligging</p>
               {partner.coordinates && (
                 <HotelLocationMap
                   lat={partner.coordinates.lat}
@@ -117,7 +117,7 @@ export const AccommodationQuoteDetailSheet = ({
 
           {(!facilityMatch.unknown || hasTimes) && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Faciliteiten &amp; tijden</p>
+              <p className="uppercase text-eyebrow text-muted-foreground">Faciliteiten &amp; tijden</p>
               {!facilityMatch.unknown && (
                 <div className="flex flex-wrap gap-1.5 text-xs">
                   {facilityMatch.matched.map((label) => (
@@ -145,7 +145,7 @@ export const AccommodationQuoteDetailSheet = ({
 
           {rooms.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Kamers in deze offerte</p>
+              <p className="uppercase text-eyebrow text-muted-foreground">Kamers in deze offerte</p>
               <div className="rounded-lg border divide-y">
                 {rooms.map((room, idx) => (
                   <div key={idx} className="px-3 py-3 text-sm space-y-2">
@@ -181,7 +181,7 @@ export const AccommodationQuoteDetailSheet = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Verzorging &amp; inbegrepen</p>
+              <p className="uppercase text-eyebrow text-muted-foreground">Verzorging &amp; inbegrepen</p>
               <div className="text-sm"><Badge variant={board.isKnown ? "secondary" : "outline"}>{board.label}</Badge></div>
               {quote.board_notes && <p className="text-sm text-muted-foreground whitespace-pre-line">{quote.board_notes}</p>}
               {includes.length > 0 && (
@@ -193,7 +193,7 @@ export const AccommodationQuoteDetailSheet = ({
               )}
             </div>
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Extra's (optioneel)</p>
+              <p className="uppercase text-eyebrow text-muted-foreground">Extra's (optioneel)</p>
               {extras.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Geen extra's aangeboden.</p>
               ) : (
@@ -223,7 +223,7 @@ export const AccommodationQuoteDetailSheet = ({
 
           {(quote.conditions || quote.quote_attachment_url || quote.quote_external_url) && (
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Voorwaarden &amp; documenten</p>
+              <p className="uppercase text-eyebrow text-muted-foreground">Voorwaarden &amp; documenten</p>
               {quote.conditions && <p className="text-sm text-muted-foreground whitespace-pre-line">{quote.conditions}</p>}
               <div className="flex flex-wrap gap-2">
                 {quote.quote_attachment_url && (
@@ -246,7 +246,7 @@ export const AccommodationQuoteDetailSheet = ({
 
           {quote.partner_notes && (
             <div className="rounded-lg border bg-muted/40 p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Toelichting van de accommodatie</p>
+              <p className="uppercase text-eyebrow text-muted-foreground mb-1">Toelichting van de accommodatie</p>
               <p className="text-sm whitespace-pre-line">{quote.partner_notes}</p>
             </div>
           )}

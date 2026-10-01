@@ -57,8 +57,10 @@ All colors MUST be HSL.
     --primary: 198 71% 22%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 198 71% 22%;
-    --secondary-foreground: 0 0% 100%;
+    /* Licht blauwgrijs met merkblauwe tekst: de zachte variant naast primary
+       (badges en knoppen met variant "secondary"). Was gelijk aan --primary. */
+    --secondary: 198 30% 93%;
+    --secondary-foreground: 198 71% 22%;
 
     --muted: 198 30% 93%;
     --muted-foreground: 0 0% 32%;
@@ -154,8 +156,8 @@ All colors MUST be HSL.
     --primary: 198 60% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 198 40% 20%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 198 30% 18%;
+    --secondary-foreground: 0 0% 90%;
 
     --muted: 198 30% 18%;
     --muted-foreground: 0 0% 75%;
