@@ -60,3 +60,11 @@ describe("klantwijziging → notify-date-change", () => {
     expect(fn).toContain('isServiceCall && requestedActor === "customer"');
   });
 });
+
+describe("approve-quote-item — bureau-onderdelen", () => {
+  const src = readFileSync("supabase/functions/approve-quote-item/index.ts", "utf8");
+  it("slaat de item_quote_status-eis over voor bureau-onderdelen", () => {
+    expect(src).toContain("const isBureauManaged = isBureauItem(item)");
+    expect(src).toContain("!isBureauManaged && !allowedItemStatuses.includes");
+  });
+});
