@@ -176,6 +176,13 @@ const changeTypeLabels: Record<PendingChange["type"], string> = {
 const TEST_EMAIL = "erwin@bureauvlieland.nl";
 const PRODUCTION_DOMAINS = ["bureauvlieland.nl"];
 
+interface NotifyDateChangeResults {
+  results?: {
+    partners?: Array<{ sent?: boolean; reason?: string; partner_id?: string; item_id?: string }>;
+    accommodations?: Array<{ sent?: boolean; quote_id?: string }>;
+  };
+}
+
 const isTestMode = (origin: string | undefined): boolean => {
   if (!origin) return true;
   return !PRODUCTION_DOMAINS.some(domain => origin.includes(domain));
@@ -501,18 +508,58 @@ Deno.serve(async (req) => {
           }
         }
 
-        // === ADMIN TODO ===
-        const allInvolved = [
-          ...Array.from(providerItems.values()).map((p) => p.name),
-        ];
-        // Interne bureau-mail vervangen door admin_todo (zie hieronder).
+        // === PARTNERS AUTOMATISCH INFORMEREN (opnieuw bevestigen) ===
+        // notify-date-change zet de partnerbevestiging terug naar open aanvraag
+        // en mailt de partner. Alleen onderdelen die de klant al goedkeurde en
+        // die al naar de partner gingen komen in aanmerking (server-side guard).
+        const allInvolved = Array.from(providerItems.values()).map((p) => p.name);
+        let partnersNotified = false;
+        let notifyIssues: string[] = [];
+        try {
+          let selectedQuoteIds: string[] = [];
+          if (program.linked_accommodation_id) {
+            const { data: selectedQuotes } = await supabase
+              .from("accommodation_quotes")
+              .select("id")
+              .eq("request_id", program.linked_accommodation_id)
+              .eq("status", "selected");
+            selectedQuoteIds = (selectedQuotes || []).map((q) => q.id as string);
+          }
+          const { data: notifyData, error: notifyErr } = await supabase.functions.invoke(
+            "notify-date-change",
+            {
+              body: {
+                request_id: program.id,
+                old_dates: program.selected_dates,
+                actor: "customer",
+                partner_item_ids: (activeItems || []).map((i) => i.id as string),
+                accommodation_quote_ids: selectedQuoteIds,
+                origin,
+              },
+              headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+            },
+          );
+          if (notifyErr) throw notifyErr;
+          const r = (notifyData as NotifyDateChangeResults | null)?.results;
+          partnersNotified = true;
+          notifyIssues = [
+            ...(r?.partners || []).filter((p) => !p.sent && p.reason !== "not_eligible").map((p) => p.partner_id || p.item_id || ""),
+            ...(r?.accommodations || []).filter((a) => !a.sent).map((a) => a.quote_id || ""),
+          ];
+        } catch (notifyErr) {
+          console.error("notify-date-change failed:", notifyErr);
+        }
 
-
-
-        // Admin-todo
+        // Admin-todo: blijft altijd staan, bureau-onderdelen (overtocht, fiets,
+        // bagage) en niet-verzonden partnermails vragen om handmatige opvolging.
         await supabase.from("admin_todos").insert({
-          title: `Klant heeft data gewijzigd — informeer partners handmatig`,
-          description: `${customerLabel} heeft de data aangepast naar ${newDates}. Betrokken partners: ${allInvolved.join(", ") || "geen"}.`,
+          title: partnersNotified && notifyIssues.length === 0
+            ? `Klant heeft data gewijzigd — controleer bureau-boekingen`
+            : `Klant heeft data gewijzigd — informeer partners handmatig`,
+          description: `${customerLabel} heeft de data aangepast naar ${newDates}. Betrokken partners: ${allInvolved.join(", ") || "geen"}. ` +
+            (partnersNotified && notifyIssues.length === 0
+              ? `Partners zijn automatisch gemaild en moeten opnieuw bevestigen. Controleer zelf de bureau-boekingen (overtocht, fiets, bagage).`
+              : `De automatische partnermail is (deels) mislukt of overgeslagen — controleer het maillogboek en informeer de partners handmatig.`),
           priority: "high",
           status: "todo",
           related_request_id: program.id,

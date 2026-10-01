@@ -2102,6 +2102,111 @@ export type Database = {
           },
         ]
       }
+      partner_agreement_acceptances: {
+        Row: {
+          accepted_at: string
+          accepted_by: string | null
+          accepted_by_email: string
+          agreement_id: string
+          body_snapshot: string
+          created_at: string
+          id: string
+          partner_id: string
+          title_snapshot: string
+          user_agent: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_by?: string | null
+          accepted_by_email?: string
+          agreement_id: string
+          body_snapshot?: string
+          created_at?: string
+          id?: string
+          partner_id: string
+          title_snapshot?: string
+          user_agent?: string
+          version?: number
+        }
+        Update: {
+          accepted_at?: string
+          accepted_by?: string | null
+          accepted_by_email?: string
+          agreement_id?: string
+          body_snapshot?: string
+          created_at?: string
+          id?: string
+          partner_id?: string
+          title_snapshot?: string
+          user_agent?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_agreement_acceptances_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "partner_agreements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_agreement_acceptances_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_agreements: {
+        Row: {
+          applies_to: string
+          body_markdown: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          key: string
+          published_at: string | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          applies_to?: string
+          body_markdown: string
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          id?: string
+          key: string
+          published_at?: string | null
+          status?: string
+          summary?: string
+          title: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          applies_to?: string
+          body_markdown?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          key?: string
+          published_at?: string | null
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       partner_extra_presets: {
         Row: {
           category: string | null
@@ -2688,12 +2793,14 @@ export type Database = {
           password_set_at: string | null
           pays_by_direct_debit: boolean
           phone: string | null
+          receives_wedding_referrals: boolean
           reference_number: string | null
           terms_pdf_path: string | null
           terms_uploaded_at: string | null
           updated_at: string
           uses_default_terms: boolean | null
           website_url: string | null
+          wedding_referral_email: string | null
         }
         Insert: {
           about_text?: string | null
@@ -2741,12 +2848,14 @@ export type Database = {
           password_set_at?: string | null
           pays_by_direct_debit?: boolean
           phone?: string | null
+          receives_wedding_referrals?: boolean
           reference_number?: string | null
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
           uses_default_terms?: boolean | null
           website_url?: string | null
+          wedding_referral_email?: string | null
         }
         Update: {
           about_text?: string | null
@@ -2794,12 +2903,14 @@ export type Database = {
           password_set_at?: string | null
           pays_by_direct_debit?: boolean
           phone?: string | null
+          receives_wedding_referrals?: boolean
           reference_number?: string | null
           terms_pdf_path?: string | null
           terms_uploaded_at?: string | null
           updated_at?: string
           uses_default_terms?: boolean | null
           website_url?: string | null
+          wedding_referral_email?: string | null
         }
         Relationships: []
       }
@@ -4600,6 +4711,192 @@ export type Database = {
         }
         Relationships: []
       }
+      wedding_referral_fee_schedules: {
+        Row: {
+          created_at: string
+          effective_from: string
+          id: string
+          multi_day_surcharge: number
+          note: string
+          tiers: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          id?: string
+          multi_day_surcharge?: number
+          note?: string
+          tiers: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          multi_day_surcharge?: number
+          note?: string
+          tiers?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wedding_referrals: {
+        Row: {
+          anonymized_at: string | null
+          couple_email: string | null
+          couple_names: string
+          couple_phone: string | null
+          created_at: string
+          created_by: string | null
+          estimated_guests: number | null
+          expected_wedding_date: string | null
+          expected_wedding_precision: string
+          expires_at: string
+          fee_amount: number | null
+          fee_calculated_amount: number | null
+          fee_override_note: string
+          fee_schedule_id: string | null
+          final_day_guests: number | null
+          final_wedding_date: string | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          invoice_paid_at: string | null
+          invoice_status: string
+          is_multi_day: boolean
+          notes: string
+          partner_claim: string
+          partner_claim_first_contact_at: string | null
+          partner_claim_note: string
+          partner_claim_reported_at: string | null
+          partner_id: string
+          prior_contact_note: string
+          referral_email_log_id: string | null
+          referred_at: string
+          request_id: string | null
+          requested_at: string
+          sales_inbox_id: string | null
+          status: string
+          status_changed_at: string
+          updated_at: string
+        }
+        Insert: {
+          anonymized_at?: string | null
+          couple_email?: string | null
+          couple_names: string
+          couple_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          estimated_guests?: number | null
+          expected_wedding_date?: string | null
+          expected_wedding_precision?: string
+          expires_at?: string
+          fee_amount?: number | null
+          fee_calculated_amount?: number | null
+          fee_override_note?: string
+          fee_schedule_id?: string | null
+          final_day_guests?: number | null
+          final_wedding_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          invoice_paid_at?: string | null
+          invoice_status?: string
+          is_multi_day?: boolean
+          notes?: string
+          partner_claim?: string
+          partner_claim_first_contact_at?: string | null
+          partner_claim_note?: string
+          partner_claim_reported_at?: string | null
+          partner_id: string
+          prior_contact_note?: string
+          referral_email_log_id?: string | null
+          referred_at: string
+          request_id?: string | null
+          requested_at: string
+          sales_inbox_id?: string | null
+          status?: string
+          status_changed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          anonymized_at?: string | null
+          couple_email?: string | null
+          couple_names?: string
+          couple_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          estimated_guests?: number | null
+          expected_wedding_date?: string | null
+          expected_wedding_precision?: string
+          expires_at?: string
+          fee_amount?: number | null
+          fee_calculated_amount?: number | null
+          fee_override_note?: string
+          fee_schedule_id?: string | null
+          final_day_guests?: number | null
+          final_wedding_date?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          invoice_paid_at?: string | null
+          invoice_status?: string
+          is_multi_day?: boolean
+          notes?: string
+          partner_claim?: string
+          partner_claim_first_contact_at?: string | null
+          partner_claim_note?: string
+          partner_claim_reported_at?: string | null
+          partner_id?: string
+          prior_contact_note?: string
+          referral_email_log_id?: string | null
+          referred_at?: string
+          request_id?: string | null
+          requested_at?: string
+          sales_inbox_id?: string | null
+          status?: string
+          status_changed_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wedding_referrals_fee_schedule_id_fkey"
+            columns: ["fee_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_referral_fee_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_referrals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_referrals_referral_email_log_id_fkey"
+            columns: ["referral_email_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_referrals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_referrals_sales_inbox_id_fkey"
+            columns: ["sales_inbox_id"]
+            isOneToOne: false
+            referencedRelation: "sales_inbox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_contacts: {
         Row: {
           created_at: string
@@ -4865,6 +5162,10 @@ export type Database = {
           p_request_id: string
         }
         Returns: undefined
+      }
+      expire_wedding_referrals: {
+        Args: never
+        Returns: number
       }
       get_accommodation_quote_terms: {
         Args: { _quote_id: string }

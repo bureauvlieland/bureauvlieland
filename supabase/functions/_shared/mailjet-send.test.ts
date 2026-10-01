@@ -102,6 +102,43 @@ Deno.test({
 });
 
 Deno.test({
+  name: "sendMailjet blokkeert ook als een cc-adres op de suppressielijst staat",
+  sanitizeOps: false,
+  sanitizeResources: false,
+}, async () => {
+  Deno.env.set("MAILJET_API_KEY", "key");
+  Deno.env.set("MAILJET_SECRET_KEY", "secret");
+
+  await withFetchStub(
+    async (input) => {
+      const url = input.toString();
+      if (url.includes("/email_suppressions") && url.includes("partner")) {
+        return new Response(JSON.stringify({ reason: "spam", source: "mailjet" }), { status: 200 });
+      }
+      if (url.includes("/email_suppressions")) {
+        return new Response("null", { status: 200 });
+      }
+      return new Response("{}", { status: 200 });
+    },
+    async () => {
+      const result = await sendMailjet({
+        onSuppressed: async () => {},
+        messages: [{
+          From: { Email: "x@bureauvlieland.nl" },
+          To: [{ Email: "paar@example.com" }],
+          Cc: [{ Email: "partner@example.com" }],
+          Subject: "T",
+        }],
+      });
+      assertEquals(result.ok, true);
+      const r = result as { ok: true; skipped?: string; suppressedRecipient?: { email: string; reason: string } };
+      assertEquals(r.skipped, "suppressed");
+      assertEquals(r.suppressedRecipient?.email, "partner@example.com");
+    },
+  );
+});
+
+Deno.test({
   name: "sendMailjet blokkeert bij suppression",
   sanitizeOps: false,
   sanitizeResources: false,

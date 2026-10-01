@@ -165,12 +165,14 @@ import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { AdminAddCustomItemSheet } from "@/components/admin/AdminAddCustomItemSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
+import { NotifyDateChangeDialog } from "@/components/admin/NotifyDateChangeDialog";
 import { NotifyHeadcountChangeDialog } from "@/components/admin/NotifyHeadcountChangeDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw } from "lucide-react";
+import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw, Heart } from "lucide-react";
+import { WeddingReferralDialog } from "@/components/admin/WeddingReferralDialog";
 import { ReopenRequestDialog } from "@/components/admin/ReopenRequestDialog";
 import { SendWhatsAppDialog } from "@/components/admin/SendWhatsAppDialog";
 import { SendParticipantsBroadcastDialog } from "@/components/admin/SendParticipantsBroadcastDialog";
@@ -359,6 +361,7 @@ const AdminRequestDetail = () => {
   const [participantsBroadcastOpen, setParticipantsBroadcastOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [weddingReferralOpen, setWeddingReferralOpen] = useState(false);
   const [cancelNotifyOpen, setCancelNotifyOpen] = useState(false);
   const [cancelNotifyActivity, setCancelNotifyActivity] = useState<
     import("@/components/admin/PartnerCancellationNotifyDialog").ActivityPartner[]
@@ -529,6 +532,9 @@ const AdminRequestDetail = () => {
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const [headcountNotifyState, setHeadcountNotifyState] = useState<
     { open: boolean; oldPeople: number; newPeople: number } | null
+  >(null);
+  const [dateChangeNotifyState, setDateChangeNotifyState] = useState<
+    { open: boolean; oldDates: string[] } | null
   >(null);
   const [guestDialogOpen, setGuestDialogOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
@@ -1739,6 +1745,11 @@ const AdminRequestDetail = () => {
                           </DropdownMenuItem>
                         )}
                         {request.status !== "cancelled" && (
+                          <DropdownMenuItem onClick={() => setWeddingReferralOpen(true)}>
+                            <Heart className="h-4 w-4 mr-2 text-pink-600" /> Doorverwijzen naar… (bruiloft)
+                          </DropdownMenuItem>
+                        )}
+                        {request.status !== "cancelled" && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setCancelDialogOpen(true)}>
@@ -1967,6 +1978,14 @@ const AdminRequestDetail = () => {
                         <Pencil className="h-3.5 w-3.5 mr-1" /> Bewerken
                       </Button>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-full text-xs"
+                      onClick={() => setDateChangeNotifyState({ open: true, oldDates: [] })}
+                    >
+                      <Calendar className="h-3.5 w-3.5 mr-1" /> Datumwijziging melden…
+                    </Button>
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-slate-400" /> {request.number_of_people} personen
                     </div>
@@ -3716,6 +3735,26 @@ const AdminRequestDetail = () => {
           onCreated={fetchRequestData}
         />
       )}
+      {/* Bruiloft doorverwijzen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md, fase 2) */}
+      {request && (
+        <WeddingReferralDialog
+          open={weddingReferralOpen}
+          onOpenChange={setWeddingReferralOpen}
+          requestId={request.id}
+          prefill={{
+            coupleNames: request.customer_name,
+            coupleEmail: request.customer_email,
+            couplePhone: request.customer_phone,
+            requestedAt: request.created_at.slice(0, 10),
+            estimatedGuests: request.number_of_people,
+            expectedWeddingDate: ((request.selected_dates as string[]) || [])[0] ?? null,
+          }}
+          onSent={() =>
+            toast.info("Doorverwijzing aangemaakt", { description: "Gaat de aanvraag niet verder als project? Annuleer hem dan via het menu." })
+          }
+        />
+      )}
+
       {/* Status update email sheet */}
       {request && (
         <SendProjectEmailSheet
@@ -3831,6 +3870,21 @@ const AdminRequestDetail = () => {
           onPeopleChanged={(oldP, newP) =>
             setHeadcountNotifyState({ open: true, oldPeople: oldP, newPeople: newP })
           }
+          onDatesChanged={(oldDates) => setDateChangeNotifyState({ open: true, oldDates })}
+        />
+      )}
+
+      {request && dateChangeNotifyState && (
+        <NotifyDateChangeDialog
+          open={dateChangeNotifyState.open}
+          onOpenChange={(o) => setDateChangeNotifyState((s) => (s ? { ...s, open: o } : null))}
+          requestId={request.id}
+          linkedAccommodationId={request.linked_accommodation_id}
+          customerName={request.customer_name}
+          customerEmail={request.customer_email ?? null}
+          newDates={request.selected_dates as string[]}
+          oldDates={dateChangeNotifyState.oldDates}
+          onSent={() => fetchRequestData()}
         />
       )}
 

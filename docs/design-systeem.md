@@ -150,8 +150,8 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
   golven, blur-bollen of Ken Burns meer.
   Een activiteitpagina (`kind: "activity"`) volgt dezelfde regels; haar
   vaste staart is boekblok, FAQ, reviews, één linkblok.
-- Cataloguspagina's (Bouwstenen, Voorbeeldprogramma's): `PageHero` zonder
-  foto (de kaarten brengen de foto's), direct daaronder één genummerde
+- Cataloguspagina's (Bouwstenen, Voorbeeldprogramma's, Referenties):
+  `PageHero`, direct daaronder één genummerde
   sectie met het zoekveld en de filterknoppen (`Button` `sm`: `default`
   voor de actieve, `outline` voor de rest, met `aria-pressed`), dan het
   raster van kaarten (`CatalogCard` met knoppen, `MediaCard` als de kaart
@@ -175,6 +175,11 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
   dag, `PersonQuote`), verwante kaarten en `RouteChooser` "Zoiets ook?". De
   akkoordpagina voor de klant (`/referentie-akkoord/<token>`) toont dezelfde
   `ReferenceCaseView` tussen een `Notice` en het akkoordformulier.
+- Foto in de `PageHero` of niet: de marketingpagina's, Referenties en
+  Voorbeeldprogramma's hebben een foto (een groep op het eiland, geen
+  losse activiteit); Bouwstenen niet, want daar brengen de kaarten de
+  foto's en staat het zoekveld direct onder de kop. Contact, Veelgestelde
+  vragen, de funnelpagina's en 404 houden de rustige donkere band.
 
 ## Zo controleer je een wijziging
 

@@ -47,7 +47,7 @@ import {
   Inbox,
   MapPin,
   Ticket,
-  Landmark, Star, BookMarked } from "lucide-react";
+  Landmark, Star, BookMarked, Heart, ScrollText } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useSalesInboxCount } from "@/hooks/useSalesInbox";
@@ -136,6 +136,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Sales Inbox", url: "/admin/sales-inbox", icon: Mail, badge: salesInboxCount },
         { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
         { title: "CRM", url: "/admin/crm", icon: Users },
+        { title: "Bruiloften", url: "/admin/bruiloften", icon: Heart },
       ],
     },
     {
@@ -173,6 +174,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       label: "Systeem",
       items: [
         { title: "Instellingen", url: "/admin/instellingen", icon: Settings },
+        { title: "Partnerafspraken", url: "/admin/partnerafspraken", icon: ScrollText },
         { title: "Email Templates", url: "/admin/berichten/templates", icon: Mail },
         { title: "Email health", url: "/admin/email-health", icon: BarChart3 },
       ],
@@ -451,6 +453,8 @@ const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/projecten/, title: "Projecten & Planning" },
   { match: /^\/admin\/programma-nieuw/, title: "Nieuw programma" },
   { match: /^\/admin\/crm/, title: "CRM" },
+  { match: /^\/admin\/bruiloften/, title: "Bruiloften" },
+  { match: /^\/admin\/partnerafspraken/, title: "Partnerafspraken" },
   { match: /^\/admin\/partners\/[^/]+/, title: "Partnerdetail" },
   { match: /^\/admin\/chat/, title: "Chat" },
   { match: /^\/admin\/bouwstenen/, title: "Bouwstenen" },

@@ -73,7 +73,7 @@ export const groepsweekendVlieland: LandingContent = {
     {
       question: "Voor hoeveel personen kan Bureau Vlieland een groepsweekend organiseren?",
       answer:
-        "Van kleine groepen vanaf 8 personen tot groepen van 80 en meer. Voor grotere groepen combineren wij meerdere logies of werken wij met een groepsaccommodatie of hotelovername.",
+        "Van groepen vanaf 20 personen tot groepen van 80 en meer. Voor grotere groepen combineren wij meerdere logies of werken wij met een groepsaccommodatie of hotelovername.",
     },
     {
       question: "Wat kost een groepsweekend op Vlieland?",

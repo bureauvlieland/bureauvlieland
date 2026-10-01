@@ -1,6 +1,6 @@
 # End-to-end tests
 
-Eén happy-path E2E per kritieke flow. Niet draaiend in Lovable Cloud CI —
+Eén happy-path E2E per kritieke flow. Niet draaiend in CI —
 Playwright en de service-role-key zijn lokaal nodig.
 
 ## Setup

@@ -14,6 +14,7 @@ import {
   getEffectiveItemTime,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -180,7 +181,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const isProposalPhaseItem = program.quote_status === "offerte_verstuurd";
     const programIsAccepted = ["akkoord_ontvangen", "definitief_bevestigd"].includes(program.quote_status);
     const isLateConceptItem = programIsAccepted && item.item_quote_status === "concept";
-    if (!isProposalPhaseItem && !allowedItemStatuses.includes(item.item_quote_status || "") && !isLateConceptItem) {
+    // Bureau-managed onderdelen (overtocht, fiets, bagage) doorlopen geen partner-
+    // offertetraject en hebben daarom vaak een andere/lege item_quote_status. Ze
+    // mogen altijd door de klant goedgekeurd worden zolang het programma akkoord
+    // is of in offerte staat; anders bleef een gereset akkoord onhaalbaar.
+    const isBureauManaged = isBureauItem(item);
+    if (!isProposalPhaseItem && !isBureauManaged && !allowedItemStatuses.includes(item.item_quote_status || "") && !isLateConceptItem) {
       return new Response(
         JSON.stringify({ error: "Dit onderdeel kan nog niet geaccordeerd worden" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

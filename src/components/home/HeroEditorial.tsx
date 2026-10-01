@@ -17,7 +17,7 @@ export const HeroEditorial = () => {
         <img
           src={heroImage}
           alt="Lange tafel voor een groep bij zonsondergang op Vlieland, met de vuurtoren op de achtergrond"
-          className="w-full h-full object-cover object-[50%_65%]"
+          className="w-full h-full object-cover object-[50%_80%]"
           width={1920}
           height={1277}
           fetchPriority="high"
@@ -32,13 +32,13 @@ export const HeroEditorial = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep/50 via-ocean-deep/10 to-transparent pointer-events-none" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px] pt-32 pb-20 lg:pt-40 min-h-screen flex flex-col">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-28 pb-16 lg:pt-32 lg:pb-20 min-h-screen flex flex-col">
         {/* Top meta line */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-3 text-sand mb-12"
+          className="flex items-center gap-3 text-sand mb-8 lg:mb-10"
         >
           <div className="h-px w-12 bg-sunset" />
           <MapPin className="h-4 w-4 text-sunset" />
@@ -54,15 +54,17 @@ export const HeroEditorial = () => {
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           className="font-display font-light text-primary-foreground leading-[0.92] tracking-tight max-w-5xl"
         >
-          <span className="block text-[clamp(3rem,8vw,8rem)]">Het eiland</span>
-          <span className="block text-[clamp(3rem,8vw,8rem)] italic text-sunset font-normal">
+          <span className="block text-[clamp(3rem,6.5vw,6.5rem)]">Het eiland</span>
+          <span className="block text-[clamp(3rem,6.5vw,6.5rem)] italic text-sunset font-normal">
             voor uw groep.
           </span>
-          <span className="mt-4 block text-[clamp(1.75rem,4vw,4rem)] leading-tight">Van 50 tot 150 personen, van boot tot borrel.</span>
+          <span className="mt-5 block max-w-2xl text-[clamp(1.25rem,1.8vw,1.75rem)] leading-snug tracking-normal text-sand">
+            Van 50 tot 150 personen, van boot tot borrel.
+          </span>
         </motion.h1>
 
         {/* Lower content row */}
-        <div className="grid grid-cols-12 gap-6 mt-12 lg:mt-20">
+        <div className="grid grid-cols-12 gap-6 mt-10 lg:mt-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

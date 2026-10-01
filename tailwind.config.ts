@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import plugin from "tailwindcss/plugin";
+import typography from "@tailwindcss/typography";
 
 export default {
   darkMode: ["class"],
@@ -208,6 +209,8 @@ export default {
   },
   plugins: [
     require("tailwindcss-animate"),
+    // `prose` voor door de admin geschreven markdown (partnerafspraken).
+    typography,
     // `coarse:` voor aanraakschermen (pointer: coarse): grotere aanraakdoelen
     // zonder de muisdichtheid op desktop te verliezen (ontwerpsysteem fase 2).
     plugin(({ addVariant }) => {

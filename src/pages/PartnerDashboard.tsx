@@ -19,6 +19,7 @@ import {
   type PartnerRowKind,
 } from "@/lib/getPartnerProjectsOverview";
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
+import { PartnerAgreementsBanner } from "@/components/partner-portal/PartnerAgreementsBanner";
 import { PartnerCompletenessBanner } from "@/components/partner-portal/PartnerCompletenessBanner";
 import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
 import { reportError } from "@/lib/errorReporting";
@@ -199,6 +200,8 @@ const PartnerDashboardContent = () => {
       />
 
       {completeness && <PartnerCompletenessBanner completeness={completeness} />}
+
+      <PartnerAgreementsBanner />
 
 
 

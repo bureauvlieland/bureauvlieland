@@ -270,7 +270,8 @@ export function installMailjetBodyCapture(): void {
     if (isMailjetSend && messages.length > 0) {
       const blocked: Array<{ email: string; reason: string }> = [];
       for (const msg of messages) {
-        for (const to of msg.To ?? []) {
+        // Ook cc-adressen: een geblokkeerd adres mag ook niet als cc mee.
+        for (const to of [...(msg.To ?? []), ...(msg.Cc ?? [])]) {
           if (!to?.Email) continue;
           const supp = await checkEmailSuppressed(to.Email);
           if (supp) blocked.push({ email: to.Email, reason: supp.reason });
@@ -370,11 +371,11 @@ export async function sendMailjet(
     return { ok: false, error: "Mailjet credentials not configured" };
   }
 
-  // Suppression pre-flight: als één van de To-adressen op de lijst staat,
-  // versturen we niets. Default aan; alleen expliciet uit te schakelen.
+  // Suppression pre-flight: als één van de To- of Cc-adressen op de lijst
+  // staat, versturen we niets. Default aan; alleen expliciet uit te schakelen.
   if (opts.checkSuppression !== false) {
     for (const msg of opts.messages) {
-      for (const to of msg.To ?? []) {
+      for (const to of [...(msg.To ?? []), ...(msg.Cc ?? [])]) {
         const lookup = opts.suppressionLookup ?? checkEmailSuppressed;
         const supp = await lookup(to.Email);
         if (supp) {

@@ -127,6 +127,11 @@ const AdminMessages = () => {
         .from("project_communications")
         .select("id, request_id, accommodation_id")
         .eq("direction", "inbound")
+        // Zelfde filters als EmailPanel: alleen e-mailtypes (geen telefoon/notities)
+        // en het 90-dagenvenster, anders blijft er een badge staan voor items
+        // die nooit in de lijst verschijnen.
+        .in("communication_type", ["email", "email_in", "email_out"])
+        .gte("communication_date", new Date(Date.now() - 90 * 86400000).toISOString())
         .is("answered_at", null)
         .is("archived_at", null);
       if (error) throw error;

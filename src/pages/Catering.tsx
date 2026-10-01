@@ -48,7 +48,7 @@ const faq = [
   },
   {
     question: "Wat is de minimale groepsgrootte voor catering?",
-    answer: "Onze catering is bedoeld voor groepen vanaf 8 personen; voor een diner vanaf 20. Voor maatwerk of grote partijen belt u 0562 700 208 of stuurt u een aanvraag.",
+    answer: "Onze catering is bedoeld voor groepen vanaf 20 personen. Voor maatwerk of grote partijen belt u 0562 700 208 of stuurt u een aanvraag.",
   },
   {
     question: "Verzorgen jullie ook catering op het strand?",
@@ -69,7 +69,7 @@ const chefs: LandingSection = {
   ],
   checklist: [
     "Eigen chefs en compleet materiaal, ook op een buitenlocatie",
-    "Lunch en borrel vanaf 8 personen, diner vanaf 20",
+    "Lunch, borrel en diner vanaf 20 personen",
     "Van eenvoudige lunch tot geplate gangen",
   ],
   image: { src: lexence2, alt: "Chef aan het plateren op locatie" },
@@ -113,7 +113,7 @@ const bbq: LandingSection = {
     "Ruim assortiment vlees, vegetarisch mogelijk",
     "Salades, sauzen, brood en kruidenboter inbegrepen",
     "Servies, afwas en schoonmaak van de barbecue geregeld",
-    "Vanaf 8 personen, op de plek die u kiest",
+    "Vanaf 20 personen, op de plek die u kiest",
   ],
   image: { src: strandBbqImage, alt: "BBQ op het strand van Vlieland" },
   imagePosition: "left",
@@ -254,7 +254,7 @@ const Catering = () => {
                 className="self-start"
                 items={[
                   { icon: ChefHat, label: "Keuken", value: "Professionele horecakeuken op het eiland, eigen chefs en materiaal" },
-                  { icon: Users, label: "Groepsgrootte", value: "Lunch en borrel vanaf 8 personen, diner vanaf 20" },
+                  { icon: Users, label: "Groepsgrootte", value: "Lunch, borrel en diner vanaf 20 personen" },
                   { icon: MapPin, label: "Locatie", value: "Uw verblijf, een buitenlocatie, het strand of een van onze partnerlocaties" },
                   { icon: Clock, label: "Aanvragen", value: "Minimaal 7 dagen vóór de gewenste datum" },
                   { icon: FileText, label: "Voorstel", value: `Vrijblijvend, ${RESPONSE_TIME.within}` },

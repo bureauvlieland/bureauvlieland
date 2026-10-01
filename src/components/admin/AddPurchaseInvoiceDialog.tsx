@@ -46,7 +46,11 @@ import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
-import { useDuplicatePurchaseInvoiceCheck } from "@/lib/purchaseInvoiceDuplicateCheck";
+import {
+  useItemsWithExistingPurchaseInvoice,
+  useLikelyDuplicatePurchaseInvoice,
+} from "@/lib/purchaseInvoiceDuplicateCheck";
+import { looksLikeProjectReference } from "@/lib/purchaseInvoiceDuplicateRules";
 import { useRegisterPartnerIban } from "@/hooks/usePartnerIbanSuggestions";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -216,17 +220,38 @@ export function AddPurchaseInvoiceDialog({
   const [copyToBillingLines, setCopyToBillingLines] = useState(true);
 
 
-  // Duplicate check (same partner + invoice number)
-  const { data: duplicateInvoice } = useDuplicatePurchaseInvoiceCheck(
+  // Dubbel-controle: zelfde partner + zelfde nummer, óf zelfde bedrag op
+  // hetzelfde project / rond dezelfde datum. Die tweede vangt de factuur die
+  // de partner onder ons projectnummer registreerde.
+  const { data: duplicateMatch } = useLikelyDuplicatePurchaseInvoice(
+    {
+      partnerId,
+      invoiceNumber,
+      invoiceDate: invoiceDate ? format(invoiceDate, "yyyy-MM-dd") : null,
+      amountInclVat: parseFloat(amountIncl) || null,
+      requestId: requestId || null,
+    },
+    { enabled: open },
+  );
+  const duplicateInvoice = duplicateMatch?.invoice ?? null;
+
+  // Onderdelen die al een inkoopfactuur van deze partner hebben.
+  const selectedItemIds = useMemo(() => {
+    const ids = [itemId, ...allocations.map((a) => a.item_id)];
+    for (const e of extraProjects) ids.push(...e.allocations.map((a) => a.item_id));
+    return ids.filter(Boolean);
+  }, [itemId, allocations, extraProjects]);
+  const selectedItemsKey = selectedItemIds.join(",");
+  const { data: itemsAlreadyInvoiced } = useItemsWithExistingPurchaseInvoice(
     partnerId,
-    invoiceNumber,
+    selectedItemIds,
     { enabled: open },
   );
 
   // Reset override when key fields change
   useEffect(() => {
     setAcceptDuplicate(false);
-  }, [partnerId, invoiceNumber]);
+  }, [partnerId, invoiceNumber, amountIncl, requestId, selectedItemsKey]);
 
 
   const { data: partners } = useQuery({
@@ -291,6 +316,17 @@ export function AddPurchaseInvoiceDialog({
     },
     enabled: extraProjectIds.length > 0,
   });
+
+  const alreadyInvoicedItems = useMemo(() => {
+    if (!itemsAlreadyInvoiced || itemsAlreadyInvoiced.size === 0) return [];
+    const allItems = [...(items ?? []), ...(extraItems ?? [])] as Array<{ id: string; block_name?: string | null }>;
+    return Array.from(itemsAlreadyInvoiced.entries()).map(([id, link]) => ({
+      itemId: id,
+      label: allItems.find((it) => it.id === id)?.block_name || "Onderdeel",
+      invoiceNumber: link.invoice_number || "(zonder nummer)",
+    }));
+  }, [itemsAlreadyInvoiced, items, extraItems]);
+  const hasDuplicateWarning = !!duplicateInvoice || alreadyInvoicedItems.length > 0;
 
   // Reset on open
   useEffect(() => {
@@ -574,9 +610,16 @@ export function AddPurchaseInvoiceDialog({
     const excl = parseFloat(amountExcl);
     if (isNaN(excl) || excl <= 0) return toast.error("Bedrag excl. BTW is verplicht");
 
-    if (duplicateInvoice && !acceptDuplicate) {
+    if (looksLikeProjectReference(invoiceNumber)) {
       return toast.error(
-        `Factuurnummer ${duplicateInvoice.invoice_number} is al geregistreerd voor deze leverancier. Vink "Toch opslaan" aan om door te gaan.`,
+        "Dit is een projectreferentie van Bureau Vlieland, geen factuurnummer van de leverancier. Neem het nummer van de factuur zelf over.",
+      );
+    }
+    if (hasDuplicateWarning && !acceptDuplicate) {
+      return toast.error(
+        duplicateInvoice
+          ? `Deze factuur lijkt al geregistreerd te zijn (${duplicateInvoice.invoice_number}). Vink "Toch opslaan" aan om door te gaan.`
+          : `Er hangt al een inkoopfactuur van deze leverancier aan ${alreadyInvoicedItems.length === 1 ? "dit onderdeel" : "deze onderdelen"}. Vink "Toch opslaan" aan om door te gaan.`,
       );
     }
 
@@ -1743,18 +1786,33 @@ export function AddPurchaseInvoiceDialog({
               </div>
             </div>
 
-            {duplicateInvoice && (
+            {hasDuplicateWarning && (
               <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 p-3 space-y-2">
                 <div className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="space-y-1">
                     <p className="font-medium">Mogelijk dubbele inkoopfactuur</p>
-                    <p className="text-xs mt-0.5">
-                      Factuurnummer <strong>{duplicateInvoice.invoice_number}</strong> is al geregistreerd
-                      voor deze leverancier op {duplicateInvoice.invoice_date} voor €
-                      {Number(duplicateInvoice.amount_incl_vat ?? duplicateInvoice.amount_excl_vat).toFixed(2)}
-                      {" "}(status: {duplicateInvoice.status}).
-                    </p>
+                    {duplicateInvoice && duplicateMatch?.reason === "number" && (
+                      <p className="text-xs">
+                        Factuurnummer <strong>{duplicateInvoice.invoice_number}</strong> is al geregistreerd
+                        voor deze leverancier op {duplicateInvoice.invoice_date} voor €
+                        {Number(duplicateInvoice.amount_incl_vat ?? duplicateInvoice.amount_excl_vat).toFixed(2)}
+                        {" "}(status: {duplicateInvoice.status}).
+                      </p>
+                    )}
+                    {duplicateInvoice && duplicateMatch?.reason === "amount" && (
+                      <p className="text-xs">
+                        Deze leverancier heeft al een factuur van €
+                        {Number(duplicateInvoice.amount_incl_vat ?? duplicateInvoice.amount_excl_vat).toFixed(2)}
+                        {" "}onder nummer <strong>{duplicateInvoice.invoice_number}</strong> ({duplicateInvoice.invoice_date}, status: {duplicateInvoice.status}).
+                        Waarschijnlijk is dit dezelfde factuur met een ander nummer. Koppel de PDF dan aan die registratie via de inbox in plaats van hier een nieuwe te maken.
+                      </p>
+                    )}
+                    {alreadyInvoicedItems.map((it) => (
+                      <p key={it.itemId} className="text-xs">
+                        Onderdeel <strong>{it.label}</strong> heeft al inkoopfactuur <strong>{it.invoiceNumber}</strong> van deze leverancier.
+                      </p>
+                    ))}
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-100 cursor-pointer">

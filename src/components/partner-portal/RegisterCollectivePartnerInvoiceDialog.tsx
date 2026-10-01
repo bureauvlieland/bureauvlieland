@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
+import { looksLikeProjectReference } from "@/lib/purchaseInvoiceDuplicateRules";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import {
   Dialog,
@@ -223,6 +224,8 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     if (!invoiceNumber.trim()) e.invoiceNumber = "Factuurnummer is verplicht";
     else if (!isValidInvoiceNumberInput(invoiceNumber))
       e.invoiceNumber = "Vul het echte factuurnummer in (minimaal \u00e9\u00e9n cijfer, geen 'nvt' of '-')";
+    else if (looksLikeProjectReference(invoiceNumber))
+      e.invoiceNumber = "Dit is ons projectnummer, niet uw factuurnummer. Vul het nummer in dat op uw eigen factuur staat.";
     if (!invoiceDate) e.invoiceDate = "Factuurdatum is verplicht";
     // In e-mailmodus is de PDF optioneel — partner mailt 'm naar de inkoop-inbox.
     if (!isEmailMode && !selectedFile) e.file = "PDF van de factuur is verplicht";

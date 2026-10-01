@@ -15,12 +15,12 @@ const FAQ = [
   {
     question: "Voor welke groepen organiseert Bureau Vlieland programma's?",
     answer:
-      "Wij werken voor bedrijven (teamuitjes, heisessies, incentives en jubilea), verenigingen en studiegroepen, en voor families en vriendengroepen. Groepen vanaf circa 8 personen tot ruim 200 deelnemers zijn mogelijk.",
+      "Wij werken voor bedrijven (teamuitjes, heisessies, incentives en jubilea), verenigingen en studiegroepen, en voor families en vriendengroepen. Groepen vanaf 20 personen tot ruim 200 deelnemers zijn mogelijk.",
   },
   {
     question: "Wat is de minimale groepsgrootte?",
     answer:
-      "Voor een compleet verzorgd programma werken wij meestal vanaf 8 tot 10 personen. Kleinere gezelschappen kunnen [losse activiteiten boeken](/activiteiten-boeken) via de website.",
+      "Voor een compleet verzorgd programma werken wij vanaf 20 personen. Kleinere gezelschappen kunnen [losse activiteiten boeken](/activiteiten-boeken) via de website.",
   },
   {
     question: "Kan Bureau Vlieland ook een programma voor één dag maken?",

@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
       // Verzamel ALLE relevante quotes — ook expired/declined/rejected — zodat
       // de admin per partner kan kiezen of er een annuleringsmail uitgaat.
       // De geselecteerde offerte (de boeking) hoort daar ook bij; de trigger
-      // close_selected_quotes_on_cancel (migratie 20260928160000) heeft die
+      // close_selected_quotes_on_cancel (migratie 20261001100000) heeft die
       // bij de update hierboven al op "cancelled" gezet.
       const { data: quotesToCollect } = await supabase
         .from("accommodation_quotes")

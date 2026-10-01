@@ -17,6 +17,8 @@ import { SectionHeader } from "./SectionHeader";
 interface PageHeroProps {
   image?: string;
   alt?: string;
+  /** Welk deel van de foto in beeld blijft bij bijsnijden (CSS `object-position`), standaard het midden. */
+  imagePosition?: string;
   eyebrow?: string;
   title: ReactNode;
   intro?: ReactNode;
@@ -27,7 +29,7 @@ interface PageHeroProps {
   className?: string;
 }
 
-export const PageHero = ({ image, alt = "", eyebrow, title, intro, cta, secondary, className }: PageHeroProps) => (
+export const PageHero = ({ image, alt = "", imagePosition, eyebrow, title, intro, cta, secondary, className }: PageHeroProps) => (
   <section className={className}>
     <div className={cn("relative flex items-end overflow-hidden bg-ocean-deep", image && "min-h-[26rem] md:min-h-[32rem]")}>
       {image && (
@@ -36,6 +38,7 @@ export const PageHero = ({ image, alt = "", eyebrow, title, intro, cta, secondar
             src={image}
             alt={alt}
             className="absolute inset-0 h-full w-full object-cover"
+            style={imagePosition ? { objectPosition: imagePosition } : undefined}
             loading="eager"
             decoding="sync"
             fetchPriority="high"
