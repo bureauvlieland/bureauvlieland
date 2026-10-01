@@ -1,10 +1,11 @@
 # Plan: het ontwerpsysteem in het klantportaal
 
-Status: onderzoek en voorstel, 1 oktober 2026. Vraag van Erwin: breng de
-ontwerptaal van de site door in het klantportaal ("Uw programma", de
-vernieuwde klantomgeving), met de bruikbaarheid voorop; de dagtabs van een
-meerdaags programma zijn "niet heel duidelijk". Niets hieruit is gebouwd;
-dat gebeurt per fase, na akkoord, elke fase als eigen PR met preview.
+Status: onderzoek en voorstel, 1 oktober 2026; besluiten genomen door
+Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Vraag van
+Erwin: breng de ontwerptaal van de site door in het klantportaal ("Uw
+programma", de vernieuwde klantomgeving), met de bruikbaarheid voorop; de
+dagtabs van een meerdaags programma zijn "niet heel duidelijk". De bouw
+volgt per fase, elke fase als eigen PR met preview.
 
 De norm is `docs/design-systeem.md` (tokens, componenten in
 `src/components/system`, interactieregels). Het onderzoek achter de site
@@ -455,6 +456,25 @@ kern en verdient een eigen beoordeling op desktop en telefoon.
    drie dagen, logies en een open goedkeuring, dat alleen voor beoordelen
    dient. Dan hoef je geen klantlink te gebruiken.
 8. **De beta-banner** verdwijnt na fase 3. Akkoord?
+
+## Besluiten (genomen door Erwin, 1 oktober 2026)
+
+Erwin heeft alle aanbevelingen overgenomen:
+
+1. Dagweergave: voorstel A, één doorlopende tijdlijn met dagkoppen en een
+   vaste dagbalk. `DayTabs` verdwijnt.
+2. Eén responsieve weergave in plaats van de twee kopieën, met dezelfde
+   functies op desktop en telefoon.
+3. Opslaan: het huidige model blijft (wijzigingen verzamelen en in één
+   keer versturen), maar wordt zichtbaar met een vaste balk.
+4. Actiekleur: het klantportaal blijft oranje, zoals de site.
+5. Voortgang: het percentage verdwijnt; een stepper met de volgende stap.
+6. De twee horecakaarten gaan naar Praktisch onder "Tips op het eiland".
+7. Er komt een demoprogramma voor previews, op naam van Erwin, met drie
+   dagen, logies en een open goedkeuring.
+8. De beta-banner verdwijnt na fase 3.
+
+Volgorde: fase 0 tot en met 4 zoals hierboven, elk als eigen PR.
 
 ## Meetpunten
 
