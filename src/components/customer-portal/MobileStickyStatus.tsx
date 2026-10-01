@@ -27,7 +27,7 @@ export const MobileStickyStatus = ({
         {/* Status indicator */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-success" />
             <span className="text-sm font-medium">
               {completedSteps}/{totalSteps}
             </span>
@@ -36,11 +36,7 @@ export const MobileStickyStatus = ({
 
         {/* Next action button */}
         {nextAction && (
-          <Button 
-            size="sm" 
-            onClick={nextAction.onClick}
-            className="h-8 text-xs"
-          >
+          <Button size="sm" onClick={nextAction.onClick}>
             {nextAction.label}
             <ArrowRight className="h-3 w-3 ml-1" />
           </Button>

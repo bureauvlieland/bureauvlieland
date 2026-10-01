@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Notice } from "@/components/system";
 import { Mail, Send, CheckCircle2, Info } from "lucide-react";
 import {
   Dialog,
@@ -90,8 +91,8 @@ export const ContactAccommodationDialog = ({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <div className="flex flex-col items-center text-center py-4 space-y-3">
-            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
+            <div className="h-12 w-12 rounded-full bg-success-soft flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-success" />
             </div>
             <DialogTitle>Bericht verstuurd</DialogTitle>
             <DialogDescription>
@@ -118,10 +119,9 @@ export const ContactAccommodationDialog = ({
         </DialogHeader>
 
         {isBureauCentral && (
-          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>Uw contactgegevens worden niet met de accommodatie gedeeld. Alle communicatie verloopt via Bureau Vlieland.</span>
-          </div>
+          <Notice tone="info">
+            <p>Uw contactgegevens worden niet met de accommodatie gedeeld. Alle communicatie verloopt via Bureau Vlieland.</p>
+          </Notice>
         )}
 
         <div className="space-y-4 py-2">

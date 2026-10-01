@@ -76,7 +76,7 @@ export const BillingDetailsCard = ({ program, onEdit }: BillingDetailsCardProps)
           </CardTitle>
           <div className="flex items-center gap-2">
             {!isComplete && (
-              <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+              <Badge variant="outline" className="text-warning border-warning/40 bg-warning-soft">
                 Incompleet
               </Badge>
             )}

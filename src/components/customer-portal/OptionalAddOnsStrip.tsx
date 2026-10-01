@@ -102,7 +102,7 @@ export const OptionalAddOnsStrip = ({
 
   return (
     <div className="mt-4 pt-3 border-t border-dashed">
-      <div className="flex items-center gap-1.5 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <div className="flex items-center gap-1.5 mb-2 font-medium text-muted-foreground uppercase text-eyebrow">
         <Sparkles className="h-3.5 w-3.5" />
         Bijbestellen
       </div>

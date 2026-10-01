@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
-import { ArrowRight, CalendarOff, Mail, MapPin, Ship, Ticket, Users } from "lucide-react";
+import { ArrowRight, Calendar, CalendarOff, ClipboardList, FileSignature, Hash, Mail, MapPin, Receipt, Ship, Ticket, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import {
   SubmitNote,
   EmptyState,
   LoadingState,
+  PortalHead,
+  PortalTabs,
   MediaCard,
   CatalogCard,
   LinkCard,
@@ -140,6 +142,44 @@ const FunnelDemo = () => {
           />
           <LoadingState label="Beschikbaarheid ophalen…" />
         </div>
+      </div>
+    </div>
+  );
+};
+
+/** Het portaal: één kop en één tabbalk voor elk scherm (klantportaal fase 1). */
+const PortalDemo = () => {
+  const [tab, setTab] = useState("program");
+  return (
+    <div className="mt-10 overflow-hidden rounded-lg border bg-card">
+      <PortalTabs
+        sticky={false}
+        label="Voorbeeld"
+        current={tab}
+        onChange={setTab}
+        tabs={[
+          { key: "program", label: "Programma", icon: <Calendar />, badge: { label: "2 goed te keuren", tone: "warning" } },
+          { key: "practical", label: "Praktisch", icon: <ClipboardList /> },
+          { key: "billing", label: "Facturatie", icon: <Receipt />, badge: { label: "Compleet", tone: "success" } },
+          { key: "accept", label: "Akkoord", icon: <FileSignature />, badge: { label: "Nog te ondertekenen", tone: "warning" } },
+        ]}
+      />
+      <div className="p-6">
+        <PortalHead
+          icon={<Calendar />}
+          title="Uw programma"
+          description="Keur de onderdelen goed; wij vragen daarna beschikbaarheid op bij de aanbieders."
+          facts={[
+            { key: "datum", icon: <Calendar />, label: "16 t/m 18 okt 2026" },
+            { key: "personen", icon: <Users />, label: "7 personen" },
+            { key: "kenmerk", icon: <Hash />, label: "BV-2606-0013" },
+          ]}
+          status={{ label: "2 goed te keuren", tone: "warning" }}
+          actions={<Button variant="outline" size="sm">Bewerken</Button>}
+        />
+        <Notice tone="warning" title="Volgende stap" className="mt-6">
+          <p>Twee onderdelen wachten op uw goedkeuring.</p>
+        </Notice>
       </div>
     </div>
   );
@@ -387,6 +427,13 @@ const Ontwerp = () => (
           <div className="h-20 rounded-lg bg-card shadow-dramatic flex items-center justify-center text-xs">shadow-dramatic</div>
           <div className="h-20 rounded-lg bg-card shadow-lg flex items-center justify-center text-xs">shadow-lg → medium</div>
         </div>
+      </Container>
+    </Section>
+
+    <Section>
+      <Container size="wide">
+        <SectionHeader eyebrow="Componenten" number="09" title="Portaal" intro="Elk scherm van het klantportaal begint met dezelfde PortalHead (titel, één regel feiten, hoogstens één status) onder dezelfde PortalTabs (plakkend, met een Pill als status en een vervaging waar de rij doorloopt). De volgende stap staat in één Notice." />
+        <PortalDemo />
         <p className="mt-10 text-sm text-muted-foreground">
           Terug naar de <Link to="/" className="text-primary underline underline-offset-4">homepage</Link>.
         </p>

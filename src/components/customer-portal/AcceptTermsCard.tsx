@@ -193,8 +193,8 @@ export const AcceptTermsCard = ({
     <Card
       className={cn(
         isUnderReservation
-          ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
-          : "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20",
+          ? "border-warning/40 bg-warning-soft/50"
+          : "border-success/30 bg-success-soft/50",
       )}
     >
       <CardContent className="p-6">
@@ -203,16 +203,16 @@ export const AcceptTermsCard = ({
             className={cn(
               "p-2 rounded-full",
               isUnderReservation
-                ? "bg-amber-100 dark:bg-amber-900/50"
-                : "bg-green-100 dark:bg-green-900/50",
+                ? "bg-warning-soft"
+                : "bg-success-soft",
             )}
           >
             <CheckCircle
               className={cn(
                 "h-6 w-6",
                 isUnderReservation
-                  ? "text-amber-700 dark:text-amber-300"
-                  : "text-green-600 dark:text-green-400",
+                  ? "text-warning-ink"
+                  : "text-success",
               )}
             />
           </div>
@@ -239,16 +239,16 @@ export const AcceptTermsCard = ({
 
 
             {!isBillingComplete && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-soft text-warning-ink">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <div className="text-sm">
                   <p className="font-medium">Facturatiegegevens vereist</p>
-                  <p className="text-amber-700 dark:text-amber-300">
+                  <p className="text-warning-ink">
                     Vul eerst uw facturatiegegevens in voordat u kunt bevestigen.
                   </p>
                   <Button
                     variant="link"
-                    className="h-auto p-0 text-amber-800 dark:text-amber-200 underline"
+                    className="h-auto p-0 text-warning-ink underline"
                     onClick={onOpenBilling}
                   >
                     Facturatiegegevens invullen →
@@ -351,7 +351,7 @@ export const AcceptTermsCard = ({
             </div>
 
             {lodgingPartialAcceptedAt && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-100/60 dark:bg-green-900/30 text-green-900 dark:text-green-100 text-sm">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-success-soft/60 text-success-ink text-sm">
                 <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <p>
                   De voorwaarden voor uw logies zijn al door u geaccepteerd op{" "}
@@ -390,7 +390,7 @@ export const AcceptTermsCard = ({
               </div>
 
               {isUnderReservation && (
-                <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/30 p-3">
+                <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning-soft/80 p-3">
                   <Checkbox
                     id="reservation-checkbox"
                     checked={reservationAcknowledged}

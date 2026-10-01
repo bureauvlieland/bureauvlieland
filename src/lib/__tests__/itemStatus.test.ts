@@ -2,8 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   deriveItemDisplayStatus,
   deriveItemDisplayStatusLoose,
-  itemDisplayStatusConfig,
-} from "@/lib/itemStatus";
+  itemDisplayStatusConfig, customerItemStatusLabel } from "@/lib/itemStatus";
 import type { ProgramRequestItem } from "@/types/programRequest";
 
 const ctx = { programPeople: 10, numberOfDays: 2 };
@@ -117,9 +116,9 @@ describe("deriveItemDisplayStatus — klant-akkoord scenarios", () => {
   });
 
   it("de drie klant-akkoord-varianten hebben onderscheidende klantlabels", () => {
-    expect(itemDisplayStatusConfig.klant_akkoord_wacht_partner.customerLabel).toBe("Wacht op bevestiging aanbieder");
-    expect(itemDisplayStatusConfig.klant_akkoord_bureau.customerLabel).toBe("Geregeld door Bureau Vlieland");
-    expect(itemDisplayStatusConfig.geaccepteerd.customerLabel).toBe("Bevestigd door aanbieder");
+    expect(itemDisplayStatusConfig.klant_akkoord_wacht_partner.customerLabel).toBe("Wacht op aanbieder");
+    expect(itemDisplayStatusConfig.klant_akkoord_bureau.customerLabel).toBe("Geregeld");
+    expect(itemDisplayStatusConfig.geaccepteerd.customerLabel).toBe("Bevestigd");
   });
 
 
@@ -471,5 +470,25 @@ describe("legacy akkoord: alleen customer_approved_at gevuld", () => {
         ctx,
       ),
     ).toBe("klant_akkoord_bureau");
+  });
+});
+
+describe("woordenlijst klant (plan klantportaal fase 1)", () => {
+  it("geeft elke status een toon voor de klant", () => {
+    for (const cfg of Object.values(itemDisplayStatusConfig)) {
+      expect(["info", "success", "warning", "danger", "neutral"]).toContain(cfg.customerTone);
+      expect(cfg.customerLabel).not.toMatch(/[—–]/);
+    }
+    expect(itemDisplayStatusConfig.wacht_op_klant.customerTone).toBe("warning");
+    expect(itemDisplayStatusConfig.wacht_op_partner.customerTone).toBe("info");
+    expect(itemDisplayStatusConfig.geaccepteerd.customerTone).toBe("success");
+    expect(itemDisplayStatusConfig.niet_beschikbaar.customerTone).toBe("danger");
+  });
+
+  it("noemt een alternatieve tijd van de aanbieder bij naam", () => {
+    expect(customerItemStatusLabel("wacht_op_klant", { status: "alternative" })).toBe("Voorstel: andere tijd");
+    expect(customerItemStatusLabel("wacht_op_klant", { status: "pending" })).toBe("Uw goedkeuring gevraagd");
+    expect(customerItemStatusLabel("prijs_gewijzigd", { status: "alternative" })).toBe("Voorstel: andere prijs");
+    expect(customerItemStatusLabel("geaccepteerd")).toBe("Bevestigd");
   });
 });

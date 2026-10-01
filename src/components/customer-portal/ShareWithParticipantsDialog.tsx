@@ -117,7 +117,7 @@ export const ShareWithParticipantsDialog = ({
           <div className="flex items-center gap-2">
             <Input value={shareUrl} readOnly className="text-sm" onFocus={(e) => e.currentTarget.select()} />
             <Button size="icon" variant="outline" onClick={copy} className="shrink-0" aria-label="Link kopiëren">
-              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
 
@@ -147,7 +147,7 @@ export const ShareWithParticipantsDialog = ({
               </Button>
             ) : (
               <div className="space-y-3">
-                <div id="participants-qr-canvas" className="flex justify-center bg-white p-4 rounded-lg border">
+                <div id="participants-qr-canvas" className="flex justify-center bg-card p-4 rounded-lg border">
                   <QRCodeCanvas value={shareUrl} size={220} level="M" includeMargin />
                 </div>
                 <p className="text-xs text-center text-muted-foreground">

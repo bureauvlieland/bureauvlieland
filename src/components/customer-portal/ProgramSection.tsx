@@ -27,7 +27,7 @@ export const ProgramSection = forwardRef<HTMLDivElement, ProgramSectionProps>(
           collapsible
           defaultValue={defaultOpen ? value || id : undefined}
         >
-          <AccordionItem value={value || id} className="border rounded-lg bg-card shadow-sm">
+          <AccordionItem value={value || id} className="border rounded-lg bg-card shadow-soft">
             <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 rounded-t-lg [&[data-state=open]]:rounded-b-none">
               <div className="flex items-center gap-3 flex-1">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

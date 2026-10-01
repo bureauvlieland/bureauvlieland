@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { LoadingState } from "@/components/system";
 import { Mail, Send, User, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,12 +85,10 @@ export const AccommodationMessageThread = ({
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? (
-            <div className="flex items-center justify-center py-6 text-muted-foreground text-sm">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Berichten laden…
-            </div>
+            <LoadingState label="Berichten laden…" className="py-6" />
           ) : messages.length === 0 ? (
             <p className="text-sm text-muted-foreground py-2">
-              Nog geen berichten. Stel een vraag of geef extra wensen door — uw bericht gaat direct naar {accommodationName}, antwoorden ontvangt u per e-mail én hier in het overzicht.
+              Nog geen berichten. Stel een vraag of geef extra wensen door; uw bericht gaat direct naar {accommodationName}, antwoorden ontvangt u per e-mail én hier in het overzicht.
             </p>
           ) : (
             messages.map((m) => {

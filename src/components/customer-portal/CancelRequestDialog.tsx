@@ -1,3 +1,4 @@
+import { Notice } from "@/components/system";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -110,13 +111,9 @@ export const CancelRequestDialog = ({
                 </div>
               )}
 
-              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  Na annulering kunt u deze aanvraag niet meer bekijken. 
-                  U kunt altijd een nieuwe aanvraag indienen.
-                </p>
-              </div>
+              <Notice tone="warning">
+                <p>Na annulering kunt u deze aanvraag niet meer bekijken. U kunt altijd een nieuwe aanvraag indienen.</p>
+              </Notice>
 
               <div className="space-y-2">
                 <Label htmlFor="reason">Reden voor annulering (optioneel)</Label>

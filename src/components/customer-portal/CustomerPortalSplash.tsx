@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { Notice } from "@/components/system";
 import { nl } from "date-fns/locale";
 import {
   Calendar,
@@ -127,7 +128,7 @@ export const CustomerPortalSplash = ({
   return (
     <div className="space-y-6">
       {/* Fotomosaic hero — volledige breedte, desktop grid */}
-      <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-1.5 h-72 rounded-2xl overflow-hidden shadow-medium">
+      <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-1.5 h-72 rounded-lg overflow-hidden shadow-medium">
         <div className="row-span-2 relative overflow-hidden group">
           <img
             src={vlielandLandscape}
@@ -135,9 +136,9 @@ export const CustomerPortalSplash = ({
             loading="eager"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-          <div className="absolute bottom-4 left-4 text-white">
-            <p className="text-xs font-medium uppercase tracking-widest opacity-80">Bureau Vlieland</p>
+          <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep/40 via-transparent to-transparent" />
+          <div className="absolute bottom-4 left-4 text-primary-foreground">
+            <p className="font-medium uppercase text-eyebrow opacity-80">Bureau Vlieland</p>
             <p className="text-lg font-semibold leading-tight">Uw verblijf op het eiland</p>
           </div>
         </div>
@@ -167,7 +168,7 @@ export const CustomerPortalSplash = ({
           { src: speedboat, alt: "Speedboot activiteit" },
           { src: beachActivity, alt: "Strandactiviteit" },
         ].map((p) => (
-          <div key={p.alt} className="shrink-0 w-52 h-44 rounded-xl overflow-hidden snap-start">
+          <div key={p.alt} className="shrink-0 w-52 h-44 rounded-lg overflow-hidden snap-start">
             <img src={p.src} alt={p.alt} loading="lazy" className="w-full h-full object-cover" />
           </div>
         ))}
@@ -176,7 +177,7 @@ export const CustomerPortalSplash = ({
       {/* Welkomstboodschap */}
       <div className="space-y-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
+          <h1 className="font-display text-display-md font-medium text-foreground">
             Welkom
             {(() => {
               // Bedrijf voorop; anders de naam zonder meegetypte aanhef ("Mevrouw. M. ...").
@@ -216,9 +217,8 @@ export const CustomerPortalSplash = ({
           <span className="font-medium text-foreground">Erwin</span>
         </p>
 
-        <div className="flex items-start gap-3 p-3 sm:p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-800 dark:text-amber-200">
+        <Notice tone="warning">
+          <p>
             {isPostExecution ? (
               <>
                 <strong>Uw programma is uitgevoerd.</strong> Bureau Vlieland bereidt de facturatie voor. Vul eventueel nog ontbrekende gegevens aan.
@@ -240,7 +240,7 @@ export const CustomerPortalSplash = ({
               </>
             )}
           </p>
-        </div>
+        </Notice>
       </div>
 
       {/* Traject-lint — exact hetzelfde visuele blok als op de tabs */}

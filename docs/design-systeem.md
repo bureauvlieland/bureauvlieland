@@ -1,6 +1,8 @@
 # Ontwerpsysteem: de levende referentie
 
-Status: fase 1 (fundament) gebouwd op 18 september 2026. Dit document is de
+Status: fase 1 (fundament) gebouwd op 18 september 2026; het klantportaal
+staat sinds 1 oktober op dezelfde tokens en componenten (fase 1 van
+`docs/plan-klantportaal-ontwerpsysteem.md`). Dit document is de
 regel; `docs/plan-design-systeem.md` is het onderzoek en het plan erachter.
 Alle componenten staan naast elkaar op `/ontwerp` (alleen op previews en
 lokaal, niet in productie).
@@ -30,6 +32,7 @@ lokaal, niet in productie).
 | `--sunset` | `text-sunset` | Alleen de cursieve regel in de hero-kop en de "Meest gekozen"-markering. Niet voor knoppen, niet voor eyebrows |
 | `--sand` | `bg-sand`, `text-sand` | Warme tussensecties, eyebrow en intro op donker |
 | `--accent-soft` | `bg-accent-soft` | Secundaire knop, zachte vlakken |
+| `--secondary` | `bg-secondary`, `text-secondary-foreground` | De zachte variant naast primary voor `Badge` en `Button` met `variant="secondary"` (licht blauwgrijs, merkblauwe tekst). Was tot 1 oktober gelijk aan `--primary` |
 | `--muted` | `bg-muted`, `text-muted-foreground` | Lichte vlakken, hover, bijschriften |
 | `--info` / `--success` / `--warning` / `--destructive` | `bg-*`, `bg-*-soft`, `text-*-ink` | Status: uitleg / goed / aandacht / geblokkeerd. Zacht vlak plus inkt voor pills en meldingen, vol vlak voor iconen en puntjes |
 | `--radius` = 0.5rem | `rounded-sm` 4px, `rounded-lg` 8px, `rounded-full` | Knoppen, velden en chips 4px; kaarten en overlays 8px; rond alleen voor avatars, puntjes en tags. `rounded-xl/2xl/3xl` zijn ook 8px (overgang) |
@@ -65,6 +68,8 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `SubmitNote` | De regel onder een verstuurknop: vrijblijvend, de responstijd uit `src/content/promises.ts`, de voorwaarden | Eigen privacy- en voorwaardenregels per formulier |
 | `EmptyState` / `LoadingState` | Lege lijst met icoon, tekst en actie; laadstatus met spinner en `aria-live` | Losse "Geen …"-teksten, eigen spinners |
 | `FloatingStack` | De zwevende knoppen rechtsonder (chat, programma): staat boven een vaste balk (`useFloatingBar`) en wijkt voor de footer en voor een `WizardFooter` in beeld (`useFloatingClearance`); `z-40` | Eigen `fixed bottom-4 right-4`-blokken |
+| `PortalHead` | De kop van elk portaalscherm: icoon, Fraunces-titel (`text-display-md`), één zin, één regel feiten (datum, personen, kenmerk) en hoogstens één status-`Pill`; `actions` voor een `outline`-knop rechts. In het klantportaal via `TabHeader` en `tabHeaderConfig.ts` | Eigen tabkoppen met `Badge`, hero-kaarten met vier feiten, percentages |
+| `PortalTabs` | De plakkende tabbalk van een portaal: knoppen op de tokens (`accent-soft` voor het actieve tabblad), een `Pill` als status, pijltjestoetsen, en op een telefoon een horizontale rij met vervaging aan de rand waar hij doorloopt. `ProgramNavigation` bouwt er de klanttabs op | Rijen `Button`s met `role="tab"` en eigen `Badge`s |
 | `ResponsiveSheetContent` | Sheet die op een telefoon van onderen komt (ronde bovenhoeken, max. 85% hoog) en op een groter scherm van rechts | `SheetContent side="right"` in de funnel; het navigatiemenu blijft van rechts komen |
 | `PageHero` | Hero van elke marketingpagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop; zonder foto een rustige donkere band (Contact, Veelgestelde vragen, 404). `cta.to` mag ook een anker (`#boeken`) of `mailto:` zijn | Eigen hero's met Ken Burns, golven en gradient-overlays, gecentreerde vette koppen, twee gelijkwaardige knoppen |
 | `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel); met `title`, `summary` en een icoon per feit is het de kaart "In het kort" van een activiteitpagina | USP-iconen in een rij, losse feitengrids, `KeyFacts` op landingspagina's |

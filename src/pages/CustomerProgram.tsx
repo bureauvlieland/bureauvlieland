@@ -9,6 +9,7 @@ import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDe
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { ProgramNavigation, type PortalView } from "@/components/customer-portal/ProgramNavigation";
+import { Container, Notice } from "@/components/system";
 import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
 import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
@@ -25,7 +26,6 @@ import {
   ArrowLeft,
   AlertCircle,
   RefreshCw,
-  Info,
   X,
   Sparkles,
   Share2,
@@ -489,7 +489,7 @@ const CustomerProgram = () => {
       
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
+        <Container size="full" className="py-3 sm:py-4 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
           </Link>
@@ -521,27 +521,29 @@ const CustomerProgram = () => {
               <span className="hidden lg:inline">Vernieuwen</span>
             </Button>
           </div>
-        </div>
+        </Container>
       </header>
 
       {/* Beta banner */}
       {appSettings.portal_beta_banner_enabled && !betaBannerDismissed && (
-        <div className="bg-blue-50 border-b border-blue-200">
-          <div className="container mx-auto px-4 py-3 flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-800 flex-1">
-              <strong>Nieuwe klantomgeving.</strong> U kijkt naar onze vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
-              <a href="mailto:hallo@bureauvlieland.nl" className="underline font-medium">hallo@bureauvlieland.nl</a>.
-            </p>
-            <button
-              onClick={() => setBetaBannerDismissed(true)}
-              className="text-blue-600 hover:text-blue-800 flex-shrink-0"
-              aria-label="Sluiten"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <Container size="full" className="pt-4">
+          <Notice tone="info">
+            <div className="flex items-start gap-3">
+              <p className="flex-1">
+                <strong>Nieuwe klantomgeving.</strong> U kijkt naar onze vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
+                <a href="mailto:hallo@bureauvlieland.nl" className="underline font-medium">hallo@bureauvlieland.nl</a>.
+              </p>
+              <button
+                type="button"
+                onClick={() => setBetaBannerDismissed(true)}
+                className="shrink-0 rounded-sm p-1 hover:bg-info/10"
+                aria-label="Sluiten"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </Notice>
+        </Container>
       )}
 
       {/* Deelnemersweergave: identiek aan wat deelnemers zien */}
@@ -575,24 +577,24 @@ const CustomerProgram = () => {
         const allConfirmed = portalStatus.allConfirmed;
         const badges = {
           accommodation: hasNewAccommodationQuote
-            ? { label: "Nieuw", variant: "default" as const }
+            ? { label: "Nieuw", tone: "warning" as const }
             : hasSelectedAccommodation
-            ? { label: "✓", variant: "secondary" as const }
+            ? { label: "✓", tone: "success" as const }
             : undefined,
           // Amber 'default' i.p.v. rood 'destructive': klantactie is geen alarm.
           // Het programma is gewoon klaar om te beoordelen.
           program: isPostExecution
-            ? { label: "Uitgevoerd", variant: "secondary" as const }
+            ? { label: "Uitgevoerd", tone: "success" as const }
             : customerActionsCount > 0
-            ? { label: `${customerActionsCount} goed te keuren`, variant: "default" as const }
+            ? { label: `${customerActionsCount} goed te keuren`, tone: "warning" as const }
             : undefined,
           practical: guestIncomplete
-            ? { label: "Aanvullen", variant: "outline" as const }
+            ? { label: "Aanvullen", tone: "warning" as const }
             : undefined,
           accept: termsAccepted
-            ? { label: "✓", variant: "secondary" as const }
+            ? { label: "✓", tone: "success" as const }
             : allConfirmed && !isPostExecution
-            ? { label: "Klaar", variant: "default" as const }
+            ? { label: "Klaar", tone: "warning" as const }
             : undefined,
         };
         return (
@@ -606,7 +608,7 @@ const CustomerProgram = () => {
         );
       })()}
 
-      <main id="main-content" className="container mx-auto px-4 py-8">
+      <Container as="main" id="main-content" size="full" className="pt-8 pb-floating">
         {/* Splash view — only for multi-day */}
         {effectiveView === "splash" && (
           <CustomerPortalSplash
@@ -690,7 +692,7 @@ const CustomerProgram = () => {
             accommodationAddress={(accommodation as any)?.location_address ?? null}
           />
         )}
-      </main>
+      </Container>
       </>
       )}
 

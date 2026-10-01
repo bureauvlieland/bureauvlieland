@@ -75,7 +75,7 @@ export const InstallPwaBanner = ({ programToken, visible = true }: InstallPwaBan
 
   return (
     <div className="sticky bottom-16 left-0 right-0 z-40 px-3 pb-2 md:hidden">
-      <div className="rounded-xl border bg-primary/5 backdrop-blur shadow-lg p-3">
+      <div className="rounded-lg border bg-primary/5 backdrop-blur shadow-medium p-3">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-primary/10 p-2 shrink-0">
             <Smartphone className="h-4 w-4 text-primary" />

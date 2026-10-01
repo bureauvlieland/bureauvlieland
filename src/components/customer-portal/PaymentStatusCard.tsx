@@ -17,15 +17,15 @@ export const PaymentStatusCard = ({ items, termsAcceptedAt: _termsAcceptedAt }: 
   const someExecuted = executedItems.length > 0 && !allExecuted;
 
   return (
-    <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
+    <Card className="border-success/30 bg-success-soft/50">
       <CardContent className="py-4">
         <div className="flex items-start gap-3">
           {allExecuted ? (
-            <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
           ) : someExecuted ? (
-            <FileCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+            <FileCheck className="h-5 w-5 text-success shrink-0 mt-0.5" />
           ) : (
-            <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <Clock className="h-5 w-5 text-warning shrink-0 mt-0.5" />
           )}
           <div>
             <p className="font-medium text-sm">

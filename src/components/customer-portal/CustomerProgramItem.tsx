@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Notice } from "@/components/system";
 import { useParams } from "react-router-dom";
 import { CustomerItemChangelog } from "./CustomerItemChangelog";
 
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/collapsible";
 
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
-import { deriveItemDisplayStatus } from "@/lib/itemStatus";
+import { deriveItemDisplayStatus, customerItemStatusLabel } from "@/lib/itemStatus";
 import { MicroPill } from "@/components/shared/MicroPill";
 
 import { CounterProposalDialog } from "./CounterProposalDialog";
@@ -177,18 +178,17 @@ export const CustomerProgramItem = ({
       "transition-all rounded-lg border bg-card p-4",
       hasChanges && "ring-2 ring-primary/50",
       item.status === "cancelled" && "opacity-60",
-      isPendingRemoval && "border-red-400 dark:border-red-700 bg-red-50/60 dark:bg-red-950/20 ring-2 ring-red-300",
-      needsCustomerAction && !isPendingRemoval && "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
+      isPendingRemoval && "border-destructive bg-destructive-soft/60 ring-2 ring-destructive/30",
+      needsCustomerAction && !isPendingRemoval && "border-warning/40 bg-warning-soft/30"
     )}>
       {isPendingRemoval && (
-        <div className="mb-3 flex items-start gap-2 p-2.5 rounded-md bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
-          <Trash2 className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>
+        <Notice tone="danger" className="mb-3" icon={<Trash2 className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />}>
+          <p>
             <strong>Wordt verwijderd</strong>, nog niet opgeslagen. Klik onderaan
             op <strong>"Wijzigingen opslaan"</strong> om dit door te voeren, of gebruik
             de knop hieronder om het terug te zetten.
-          </span>
-        </div>
+          </p>
+        </Notice>
       )}
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Header row */}
@@ -220,7 +220,7 @@ export const CustomerProgramItem = ({
                 {isNewlyAdded && (
                   <MicroPill tone="purple">Nieuw</MicroPill>
                 )}
-                <ItemDisplayStatusBadge status={derivedStatus} audience="customer" />
+                <ItemDisplayStatusBadge status={derivedStatus} audience="customer" label={customerItemStatusLabel(derivedStatus, item)} />
                 {priceChangeNeedsAttention && (
                   <MicroPill tone="amber">Prijs gewijzigd</MicroPill>
                 )}
@@ -258,7 +258,7 @@ export const CustomerProgramItem = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="basis-full justify-start sm:basis-auto sm:justify-center shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/5"
+                className="basis-full justify-start sm:basis-auto sm:justify-center shrink-0 gap-1.5 text-primary hover:text-primary"
                 aria-label={isOpen ? "Details verbergen" : "Details, tijd en opmerkingen aanpassen"}
               >
                 <span className="text-sm font-medium">
@@ -331,7 +331,7 @@ export const CustomerProgramItem = ({
               return (
                 <span className={cn(
                   "font-semibold",
-                  isProvisional ? "text-foreground" : "text-green-700 dark:text-green-500"
+                  isProvisional ? "text-foreground" : "text-success-ink"
                 )}>
                   €{(showPerPerson ? unitPrice! : lineTotal).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   {showPerPerson ? (
@@ -388,19 +388,15 @@ export const CustomerProgramItem = ({
 
           {/* Banner: prijs is door Bureau Vlieland aangepast — klant moet opnieuw akkoord geven */}
           {priceChangeNeedsAttention && needsCustomerAction && !readOnly && (
-            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>
-                De prijs van dit onderdeel is door Bureau Vlieland aangepast. Geef opnieuw uw akkoord op de nieuwe prijs.
-              </span>
-            </div>
+            <Notice tone="warning" className="mt-3">
+              <p>De prijs van dit onderdeel is door Bureau Vlieland aangepast. Geef opnieuw uw akkoord op de nieuwe prijs.</p>
+            </Notice>
           )}
 
           {/* Action hint for items needing customer approval */}
           {needsCustomerAction && !readOnly && !priceChangeNeedsAttention && (
-            <div className="mt-3 flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300">
-              <Info className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>
+            <Notice tone="warning" className="mt-3" icon={<Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />}>
+              <p>
                 {item.status === "alternative" ? (
                   <>De aanbieder stelt een <strong>aanpassing</strong> voor op tijd of prijs. Bekijk de details en geef akkoord, of stel via <em>Andere tijd</em> een alternatief voor.</>
                 ) : item.provider_id === "bureau" ? (
@@ -416,8 +412,8 @@ export const CustomerProgramItem = ({
                 ) : (
                   <>Dit onderdeel hoort bij uw voorstel. Keur het programma goed zodat wij beschikbaarheid en definitieve prijs bij de aanbieder kunnen opvragen.</>
                 )}
-              </span>
-            </div>
+              </p>
+            </Notice>
           )}
 
           {!isSelfArranged && item.quoted_price && item.quoted_notes && (
@@ -444,15 +440,15 @@ export const CustomerProgramItem = ({
 
           {/* Counter proposal pending - waiting for partner response */}
           {item.status === "counter_proposed" && (
-            <div className="mt-3 p-3 rounded-lg border bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
+            <div className="mt-3 p-3 rounded-lg border bg-invoice-soft border-invoice/30">
               <div className="flex items-start gap-2">
-                <ArrowLeftRight className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
+                <ArrowLeftRight className="h-4 w-4 text-invoice shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-purple-800 dark:text-purple-300">
+                  <p className="font-medium text-invoice">
                     Uw tegenvoorstel: {item.customer_counter_time}
                   </p>
                   {item.customer_counter_note && (
-                    <p className="text-sm text-purple-700/80 dark:text-purple-400/80 mt-1">
+                    <p className="text-sm text-invoice/80 mt-1">
                       "{item.customer_counter_note}"
                     </p>
                   )}
@@ -475,7 +471,7 @@ export const CustomerProgramItem = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40"
+                  className="border-destructive/30 text-destructive-ink hover:bg-destructive-soft hover:text-destructive-ink"
                   onClick={onRemove}
                 >
                   <ArrowLeftRight className="h-4 w-4 mr-1.5" />
@@ -503,7 +499,7 @@ export const CustomerProgramItem = ({
                   }}
                   disabled={localApproving || localAccepting || isAccepting}
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium ring-1 ring-green-400/30"
+                  className="bg-success hover:bg-success text-primary-foreground font-medium ring-1 ring-success/30"
                 >
                   {(localApproving || localAccepting) ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -623,7 +619,7 @@ export const CustomerProgramItem = ({
             {/* Over de aanbieder: alleen als er iets te tonen is */}
             {provider?.hasContent && (
               <div className="rounded-lg border bg-muted/30 p-3 space-y-2.5">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="font-semibold uppercase text-eyebrow text-muted-foreground">
                   Over {provider.name}
                 </div>
                 {provider.images.length > 0 && (
@@ -665,7 +661,7 @@ export const CustomerProgramItem = ({
             {/* Maatwerk-specificatie */}
             {Array.isArray((item as any).quote_lines) && (item as any).quote_lines.length > 0 && (
               <div className="rounded-lg border bg-muted/30 p-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                <div className="font-semibold uppercase text-eyebrow text-muted-foreground mb-2">
                   Specificatie
                 </div>
                 <ul className="space-y-1 text-sm">

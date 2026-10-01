@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { EmptyState } from "@/components/system";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -103,7 +104,7 @@ export const ParticipantView = ({
                 )}
               </div>
             )}
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Deelnemersweergave</p>
+            <p className="uppercase text-eyebrow text-muted-foreground">Deelnemersweergave</p>
             <h1 className="text-xl sm:text-2xl font-semibold mt-1">
               {program.customer_company || program.customer_name}
             </h1>
@@ -175,11 +176,7 @@ export const ParticipantView = ({
               </Card>
             )}
             {itemsByDay.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  Nog geen activiteiten gepland.
-                </CardContent>
-              </Card>
+              <EmptyState title="Nog geen activiteiten gepland" />
             ) : (
               itemsByDay.map(({ day, items }) => {
                 const date = selectedDates[day];
@@ -258,7 +255,7 @@ export const ParticipantView = ({
                   <div className="flex items-start gap-3">
                     <BedDouble className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <p className="uppercase text-eyebrow text-muted-foreground">
                         Verblijf
                       </p>
                       <p className="font-medium">{accommodation.partner_name || "Logies"}</p>

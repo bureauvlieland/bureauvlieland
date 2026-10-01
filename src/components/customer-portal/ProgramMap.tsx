@@ -169,7 +169,7 @@ export const ProgramMap = ({
       {unpinned.length > 0 && (
         <Card>
           <CardContent className="py-3 space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <p className="font-medium text-muted-foreground uppercase text-eyebrow">
               Zonder pin op de kaart
             </p>
             {unpinned.map((i) => (

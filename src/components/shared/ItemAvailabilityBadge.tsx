@@ -30,7 +30,7 @@ export const ItemAvailabilityBadge = ({ availability, showAvailable = false, cla
     <p
       className={cn(
         "text-xs flex items-start gap-1.5",
-        closed ? "text-amber-800 dark:text-amber-300" : "text-muted-foreground",
+        closed ? "text-warning-ink" : "text-muted-foreground",
         className,
       )}
     >

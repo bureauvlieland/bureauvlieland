@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Notice } from "@/components/system";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format, isBefore, startOfDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { CalendarIcon, X, AlertTriangle, Users, Loader2, FileText } from "lucide-react";
@@ -217,9 +217,8 @@ export const EditProgramDetailsDialog = ({
 
           {/* Warning when changes detected */}
           {(hasDateChanges || hasPeopleChanges) && hasActiveAccommodation && (
-            <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200 space-y-2">
+            <Notice tone="warning">
+              <div className="space-y-2">
                 <p className="font-medium">Gevolgen voor uw logies</p>
                 {hasDateChanges && (
                   <p>De accommodatie ontvangt automatisch een bericht en bevestigt of de nieuwe data nog beschikbaar zijn. Tot die bevestiging staat uw boeking weer op 'in behandeling'.</p>
@@ -227,22 +226,20 @@ export const EditProgramDetailsDialog = ({
                 {hasPeopleChanges && (
                   <p>De accommodatie past het aantal kamers/gasten aan en stuurt een bijgewerkte prijsopgave. Uw boeking staat weer op 'in behandeling' tot deze opnieuw is bevestigd.</p>
                 )}
-              </AlertDescription>
-            </Alert>
+              </div>
+            </Notice>
           )}
           {(hasDateChanges || hasPeopleChanges) && !hasActiveAccommodation && (
-            <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200">
+            <Notice tone="warning">
+              <div className="space-y-1">
                 De aanbieders worden op de hoogte gesteld van de wijziging.
-              </AlertDescription>
-            </Alert>
+              </div>
+            </Notice>
           )}
 
           {capacityIssues.length > 0 && (
-            <Alert variant="default" className="border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200 space-y-1">
+            <Notice tone="warning">
+              <div className="space-y-1">
                 <p className="font-medium">Let op: capaciteit onderdelen</p>
                 <p className="text-xs">
                   Bij {people} personen passen niet alle onderdelen binnen hun capaciteit:
@@ -253,8 +250,8 @@ export const EditProgramDetailsDialog = ({
                   ))}
                 </ul>
                 <p className="text-xs">Bureau Vlieland neemt hierover contact met u op om een passende oplossing te vinden.</p>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </Notice>
           )}
         </div>
 

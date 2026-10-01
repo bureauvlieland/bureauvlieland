@@ -27,6 +27,13 @@ export type ItemDisplayStatus =
   | "self_arranged"
   | "afgesloten_automatisch";
 
+/**
+ * Toon van een status voor de klant (woordenlijst klant, plan klantportaal):
+ * `info` wacht op een ander, `warning` u bent aan zet, `success` rond,
+ * `danger` geblokkeerd, `neutral` informatief. Dezelfde namen als de `Pill`.
+ */
+export type CustomerStatusTone = "info" | "success" | "warning" | "danger" | "neutral";
+
 export interface ItemDisplayStatusInfo {
   /** Label voor admin- en interne views */
   adminLabel: string;
@@ -42,6 +49,8 @@ export interface ItemDisplayStatusInfo {
   partnerTooltip: string;
   /** Wie moet er actie ondernemen? */
   actor: "partner" | "klant" | "bureau" | "geen";
+  /** Toon van de pill in het klantportaal. */
+  customerTone: CustomerStatusTone;
   /** Tailwind text-color (semantisch via tokens waar mogelijk) */
   color: string;
   /** Tailwind background-color */
@@ -67,78 +76,85 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     customerTooltip: "We wachten op een reactie van de aanbieder. Bureau Vlieland volgt dit voor u op.",
     partnerTooltip: "Bureau Vlieland wacht op jouw reactie: bevestig, stel een alternatief voor of meld dat je niet beschikbaar bent.",
     actor: "partner",
+    customerTone: "info",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "Clock",
   },
   wacht_op_klant: {
     adminLabel: "Wacht op klant-goedkeuring",
-    customerLabel: "Goedkeuring nodig",
+    customerLabel: "Uw goedkeuring gevraagd",
     partnerLabel: "Voorstel verstuurd",
     adminTooltip: "Dit onderdeel wacht op goedkeuring door de klant voordat Bureau Vlieland verder kan.",
-    customerTooltip: "Keur dit onderdeel goed als onderdeel van uw programmavoorstel.",
+    customerTooltip: "Dit onderdeel wacht op uw goedkeuring.",
     partnerTooltip: "Dit onderdeel staat bij de klant ter goedkeuring.",
     actor: "klant",
+    customerTone: "warning",
     color: "text-blue-700 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-950/50",
     icon: "AlertCircle",
   },
   prijs_gewijzigd: {
     adminLabel: "Wacht op klant (nieuwe prijs)",
-    customerLabel: "Nieuwe prijs — akkoord nodig",
-    partnerLabel: "Nieuwe prijs — wacht op klant",
+    customerLabel: "Voorstel: andere prijs",
+    partnerLabel: "Nieuwe prijs, wacht op klant",
     adminTooltip: "De prijs is aangepast. De klant moet de nieuwe prijs nog goedkeuren.",
     customerTooltip: "De prijs van dit onderdeel is bijgewerkt. Bevestig de nieuwe prijs om door te gaan.",
     partnerTooltip: "De prijs is door Bureau Vlieland aangepast. De klant moet de nieuwe prijs nog goedkeuren.",
     actor: "klant",
+    customerTone: "warning",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "AlertTriangle",
   },
   klant_akkoord_wacht_partner: {
-    adminLabel: "Klant akkoord — wacht op aanbieder",
-    customerLabel: "Wacht op bevestiging aanbieder",
-    partnerLabel: "Klant akkoord — reactie gevraagd",
+    adminLabel: "Klant akkoord, wacht op aanbieder",
+    customerLabel: "Wacht op aanbieder",
+    partnerLabel: "Klant akkoord, reactie gevraagd",
     adminTooltip: "Klant heeft dit onderdeel goedgekeurd. We wachten nog op bevestiging van de aanbieder.",
     customerTooltip: "U hebt dit onderdeel goedgekeurd. Wij wachten nog op bevestiging van de aanbieder en houden u op de hoogte.",
     partnerTooltip: "De klant heeft dit onderdeel goedgekeurd. Bevestig of stel een alternatief voor.",
     actor: "partner",
+    customerTone: "info",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "Clock",
   },
   tegenvoorstel_klant: {
     adminLabel: "Tegenvoorstel van klant",
-    customerLabel: "Uw tegenvoorstel — wacht op aanbieder",
-    partnerLabel: "Tegenvoorstel van klant — reageer",
+    customerLabel: "Wacht op aanbieder",
+    partnerLabel: "Tegenvoorstel van klant, reageer",
     adminTooltip: "De klant stelt een andere tijd/datum voor. De aanbieder moet dit accepteren of een alternatief geven.",
-    customerTooltip: "Wij hebben uw voorkeur doorgegeven aan de aanbieder en wachten op bevestiging.",
+    customerTooltip: "Uw voorstel voor een andere tijd ligt bij de aanbieder. Wij wachten op bevestiging.",
     partnerTooltip: "De klant stelt een andere tijd voor. Ga akkoord met de klanttijd of stel een alternatief voor.",
     actor: "partner",
+    customerTone: "info",
     color: "text-purple-700 dark:text-purple-400",
     bgColor: "bg-purple-100 dark:bg-purple-950/50",
     icon: "AlertCircle",
   },
   klant_akkoord_bureau: {
-    adminLabel: "Klant akkoord — Bureau regelt zelf",
-    customerLabel: "Geregeld door Bureau Vlieland",
+    adminLabel: "Klant akkoord, Bureau regelt zelf",
+    customerLabel: "Geregeld",
     partnerLabel: "Door Bureau Vlieland geregeld",
-    adminTooltip: "Klant heeft dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf — geen aanbieder-bevestiging nodig.",
-    customerTooltip: "U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt en boekt dit zelf voor u — geen aanbieder-bevestiging nodig.",
+    adminTooltip: "Klant heeft dit onderdeel goedgekeurd. Bureau Vlieland regelt dit zelf, er is geen bevestiging van een aanbieder nodig.",
+    customerTooltip: "U hebt dit onderdeel goedgekeurd. Bureau Vlieland regelt en boekt dit zelf voor u; er is geen bevestiging van een aanbieder nodig.",
     partnerTooltip: "Bureau Vlieland regelt dit onderdeel zelf.",
     actor: "geen",
+    customerTone: "success",
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
   },
   geaccepteerd: {
-    adminLabel: "Klant akkoord — aanbieder bevestigd",
-    customerLabel: "Bevestigd door aanbieder",
-    partnerLabel: "Klant akkoord — bevestig in planning",
+    adminLabel: "Klant akkoord, aanbieder bevestigd",
+    customerLabel: "Bevestigd",
+    partnerLabel: "Klant akkoord, bevestig in planning",
     adminTooltip: "Klant heeft goedgekeurd en de aanbieder heeft bevestigd. Geen actie nodig tot uitvoering.",
     customerTooltip: "U hebt dit onderdeel goedgekeurd. De aanbieder heeft het bevestigd.",
     partnerTooltip: "De klant heeft akkoord gegeven. Reserveer dit definitief in je planning.",
     actor: "geen",
+    customerTone: "success",
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
@@ -152,6 +168,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     customerTooltip: "Dit onderdeel is uitgevoerd.",
     partnerTooltip: "Dit onderdeel is uitgevoerd. Je kunt het factureren als dat nog niet is gebeurd.",
     actor: "geen",
+    customerTone: "success",
     color: "text-emerald-700 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-950/50",
     icon: "CheckCircle2",
@@ -164,6 +181,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     customerTooltip: "Dit onderdeel is geannuleerd.",
     partnerTooltip: "Dit onderdeel is geannuleerd en telt niet meer mee in het programma.",
     actor: "geen",
+    customerTone: "neutral",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
     icon: "Ban",
@@ -176,6 +194,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     customerTooltip: "De aanbieder is niet beschikbaar. Bureau Vlieland zoekt een passend alternatief.",
     partnerTooltip: "Je hebt aangegeven niet beschikbaar te zijn. Bureau Vlieland zoekt een alternatief.",
     actor: "bureau",
+    customerTone: "danger",
     color: "text-red-700 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-950/50",
     icon: "XCircle",
@@ -184,10 +203,11 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     adminLabel: "Zelf te regelen",
     customerLabel: "Zelf te regelen",
     partnerLabel: "Klant regelt zelf",
-    adminTooltip: "Klant regelt en betaalt dit onderdeel zelf — buiten Bureau Vlieland om.",
+    adminTooltip: "Klant regelt en betaalt dit onderdeel zelf, buiten Bureau Vlieland om.",
     customerTooltip: "U boekt en betaalt dit onderdeel zelf, rechtstreeks bij de aanbieder.",
     partnerTooltip: "De klant regelt en betaalt dit onderdeel rechtstreeks bij jou, buiten Bureau Vlieland om.",
     actor: "klant",
+    customerTone: "neutral",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "ExternalLink",
@@ -200,11 +220,25 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     customerTooltip: "Dit onderdeel is automatisch afgesloten omdat de uitvoerdatum is verstreken.",
     partnerTooltip: "De uitvoerdatum is verstreken en dit onderdeel is automatisch afgesloten. Controleer de status en factureer indien nodig.",
     actor: "geen",
+    customerTone: "neutral",
     color: "text-slate-600 dark:text-slate-400",
     bgColor: "bg-slate-100 dark:bg-slate-900/50",
     icon: "Ban",
   },
 };
+
+/**
+ * Het woord voor de klant. Eén geval wijkt af van de tabel: stelt de
+ * aanbieder een andere tijd voor (status "alternative" zonder nieuw akkoord),
+ * dan zegt de pill wat er voorligt in plaats van alleen "Uw goedkeuring gevraagd".
+ */
+export function customerItemStatusLabel(
+  status: ItemDisplayStatus,
+  item?: Pick<ProgramRequestItem, "status"> | null,
+): string {
+  if (status === "wacht_op_klant" && item?.status === "alternative") return "Voorstel: andere tijd";
+  return itemDisplayStatusConfig[status].customerLabel;
+}
 
 interface DeriveContext {
   programPeople: number;

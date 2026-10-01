@@ -40,8 +40,8 @@ export const AccommodationWarningDialog = ({
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <BedDouble className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="h-10 w-10 rounded-full bg-warning-soft flex items-center justify-center">
+              <BedDouble className="h-5 w-5 text-warning" />
             </div>
             <AlertDialogTitle className="text-left">
               U heeft nog geen logies geselecteerd

@@ -27,7 +27,7 @@ const Row = ({
   emptyLabel: string;
 }) => (
   <div className="space-y-1">
-    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+    <div className="flex items-center gap-2 font-medium text-muted-foreground uppercase text-eyebrow">
       {icon}
       {label}
     </div>
@@ -52,7 +52,7 @@ export const GuestDetailsDisplay = ({
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 flex items-center gap-2">
+        <h3 className="font-semibold uppercase text-eyebrow text-muted-foreground flex items-center gap-2">
           <Users className="h-4 w-4" />
           Groep & wensen
         </h3>

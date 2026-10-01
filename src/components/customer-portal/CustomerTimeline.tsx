@@ -46,7 +46,7 @@ export const CustomerTimeline = ({ items, showTimeColumn = false, children }: Cu
               )}
               {/* Dot */}
               <div className={`shrink-0 mt-3.5 ${showTimeColumn ? "" : "z-10"}`}>
-                <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-sm" />
+                <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow-soft" />
               </div>
               {/* Card */}
               <div className="flex-1 min-w-0">

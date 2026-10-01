@@ -14,6 +14,8 @@ import {
 interface ItemDisplayStatusBadgeProps {
   status: ItemDisplayStatus;
   audience?: "admin" | "customer" | "partner";
+  /** Eigen tekst, bijvoorbeeld uit `customerItemStatusLabel`. */
+  label?: string;
   className?: string;
 }
 
@@ -43,18 +45,22 @@ const ACTOR_LABEL: Record<string, string> = {
 export const ItemDisplayStatusBadge = ({
   status,
   audience = "admin",
+  label: labelOverride,
   className,
 }: ItemDisplayStatusBadgeProps) => {
   const cfg = itemDisplayStatusConfig[status];
   const label =
-    audience === "customer" ? cfg.customerLabel :
+    labelOverride ??
+    (audience === "customer" ? cfg.customerLabel :
     audience === "partner" ? cfg.partnerLabel :
-    cfg.adminLabel;
+    cfg.adminLabel);
   const tooltip =
     audience === "customer" ? cfg.customerTooltip :
     audience === "partner" ? cfg.partnerTooltip :
     cfg.adminTooltip;
-  const tone = TONE_BY_STATUS[status] ?? "neutral";
+  // De klant ziet de toon uit de woordenlijst (info = wacht op een ander,
+  // warning = u bent aan zet); admin en partner houden hun eigen indeling.
+  const tone: PillTone = audience === "customer" ? cfg.customerTone : (TONE_BY_STATUS[status] ?? "neutral");
 
   return (
     <TooltipProvider delayDuration={150}>
