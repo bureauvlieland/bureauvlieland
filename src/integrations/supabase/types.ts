@@ -1721,6 +1721,7 @@ export type Database = {
       }
       email_log: {
         Row: {
+          archived_at: string | null
           blocked_at: string | null
           bounced_at: string | null
           click_count: number
@@ -1754,6 +1755,7 @@ export type Database = {
           unsub_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           blocked_at?: string | null
           bounced_at?: string | null
           click_count?: number
@@ -1787,6 +1789,7 @@ export type Database = {
           unsub_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           blocked_at?: string | null
           bounced_at?: string | null
           click_count?: number

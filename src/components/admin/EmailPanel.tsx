@@ -138,7 +138,7 @@ async function fetchEmails(): Promise<EmailItem[]> {
   const logQuery = supabase
     .from("email_log")
     .select(
-      "id, email_type, subject, recipient_email, recipient_name, related_request_id, related_accommodation_id, status, created_at, sent_at",
+      "id, email_type, subject, recipient_email, recipient_name, related_request_id, related_accommodation_id, status, created_at, sent_at, archived_at",
     )
     .gte("created_at", sinceIso)
     .in("status", ["sent", "delivered", "opened", "clicked"])
@@ -211,7 +211,7 @@ async function fetchEmails(): Promise<EmailItem[]> {
         contact_email: r.recipient_email,
         date: r.sent_at || r.created_at,
         answered_at: null,
-        archived_at: null,
+        archived_at: r.archived_at ?? null,
         request_id: r.related_request_id,
         accommodation_id: r.related_accommodation_id,
         request_ref: prog?.reference_number ?? null,
@@ -395,6 +395,22 @@ interface EmailPanelProps {
 
 type ExtendedOrigin = Origin | "all" | "unanswered";
 
+/**
+ * Onbeantwoorde gesprekken, afgeleid uit dezelfde data en filters als de lijst
+ * (zelfde queryKey), zodat de tab-badge altijd klopt met wat je ziet.
+ */
+export function useUnansweredEmailThreads() {
+  const { data: items = [] } = useQuery({
+    queryKey: ["admin-email-threads"],
+    queryFn: () => fetchEmails(),
+    refetchInterval: 60_000,
+  });
+  return useMemo(() => {
+    const threads = buildGroups(items, false, "unanswered");
+    return { count: threads.length, labels: threads.map((g) => g.label) };
+  }, [items]);
+}
+
 export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-[calc(100vh-220px)]" }: EmailPanelProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -476,12 +492,8 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
   };
 
   const archiveItem = async (item: EmailItem, archived = true) => {
-    if (item.source !== "communication") {
-      toast.info("Automatische mails kun je niet los archiveren.");
-      return;
-    }
     const { error } = await supabase
-      .from("project_communications")
+      .from(item.source === "communication" ? "project_communications" : "email_log")
       .update({ archived_at: archived ? new Date().toISOString() : null })
       .eq("id", stripPrefix(item.id));
     if (error) toast.error("Archiveren mislukt");
@@ -497,15 +509,19 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
    */
   const archiveThread = async (group: ThreadGroup, archived = true) => {
     const plan = planThreadArchive(group.items, archived);
-    if (plan.noop) {
-      toast.info("Dit gesprek bestaat alleen uit automatische mails en kan niet gearchiveerd worden.");
-      return;
-    }
+    if (plan.noop) return;
     if (plan.ids.length) {
       const { error } = await supabase
         .from("project_communications")
         .update({ archived_at: plan.archivedAt })
         .in("id", plan.ids);
+      if (error) return toast.error("Archiveren mislukt");
+    }
+    if (plan.logIds.length) {
+      const { error } = await supabase
+        .from("email_log")
+        .update({ archived_at: plan.archivedAt })
+        .in("id", plan.logIds);
       if (error) return toast.error("Archiveren mislukt");
     }
     toast.success(archived ? "Gesprek gearchiveerd" : "Gesprek teruggehaald");
@@ -972,7 +988,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                             <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Markeer als beantwoord
                           </Button>
                         )}
-                        {email.source === "communication" && (
+                        {(
                           email.archived_at ? (
                             <Button variant="ghost" size="sm" onClick={() => archiveItem(email, false)}>
                               <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> Uit archief

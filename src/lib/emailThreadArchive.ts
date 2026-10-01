@@ -26,21 +26,21 @@ export function communicationIds(items: ArchivableEmailItem[]): string[] {
 
 /**
  * Een gesprek is gearchiveerd wanneer het minstens één bericht bevat en
- * al die berichten gearchiveerd zijn. Automatische mails uit email_log kunnen
- * niet los gearchiveerd worden en tellen dus niet mee.
+ * al die berichten (ook de automatische mails) gearchiveerd zijn.
  */
 export function isThreadArchived(items: ArchivableEmailItem[]): boolean {
-  const comms = items.filter((i) => i.source === "communication");
-  if (comms.length === 0) return false;
-  return comms.every((i) => !!i.archived_at);
+  if (items.length === 0) return false;
+  return items.every((i) => !!i.archived_at);
 }
 
 export interface ThreadArchivePlan {
   /** project_communications-ids die geüpdatet moeten worden */
   ids: string[];
+  /** email_log-ids (automatische mails) die geüpdatet moeten worden */
+  logIds: string[];
   /** waarde voor archived_at (null = terughalen) */
   archivedAt: string | null;
-  /** true wanneer er niets te archiveren valt (alleen automatische mails) */
+  /** true wanneer er niets te (de)archiveren valt */
   noop: boolean;
 }
 
@@ -53,13 +53,11 @@ export function planThreadArchive(
   archived: boolean,
   now: Date = new Date(),
 ): ThreadArchivePlan {
-  const all = communicationIds(items);
-  const ids = items
-    .filter((i) => i.source === "communication" && (archived ? !i.archived_at : !!i.archived_at))
-    .map((i) => stripSourcePrefix(i.id));
+  const todo = items.filter((i) => (archived ? !i.archived_at : !!i.archived_at));
   return {
-    ids,
+    ids: todo.filter((i) => i.source === "communication").map((i) => stripSourcePrefix(i.id)),
+    logIds: todo.filter((i) => i.source === "email_log").map((i) => stripSourcePrefix(i.id)),
     archivedAt: archived ? now.toISOString() : null,
-    noop: all.length === 0,
+    noop: items.length === 0,
   };
 }

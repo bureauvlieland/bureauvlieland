@@ -12,7 +12,11 @@ const comm = (id: string, archived_at: string | null = null): ArchivableEmailIte
   source: "communication",
   archived_at,
 });
-const log = (id: string): ArchivableEmailItem => ({ id: `l:${id}`, source: "email_log", archived_at: null });
+const log = (id: string, archived_at: string | null = null): ArchivableEmailItem => ({
+  id: `l:${id}`,
+  source: "email_log",
+  archived_at,
+});
 
 describe("stripSourcePrefix", () => {
   it("verwijdert c: en l: prefixes", () => {
@@ -34,12 +38,16 @@ describe("isThreadArchived", () => {
     expect(isThreadArchived([log("1")])).toBe(false);
   });
 
+  it("is true voor een gesprek met alleen gearchiveerde automatische mails", () => {
+    expect(isThreadArchived([log("1", "2026-01-01T00:00:00Z")])).toBe(true);
+  });
+
   it("is false zolang één bericht niet gearchiveerd is", () => {
     expect(isThreadArchived([comm("1", "2026-01-01T00:00:00Z"), comm("2")])).toBe(false);
   });
 
   it("is true als alle berichten gearchiveerd zijn", () => {
-    expect(isThreadArchived([comm("1", "2026-01-01T00:00:00Z"), log("2")])).toBe(true);
+    expect(isThreadArchived([comm("1", "2026-01-01T00:00:00Z"), log("2", "2026-01-01T00:00:00Z")])).toBe(true);
   });
 });
 
@@ -49,6 +57,7 @@ describe("planThreadArchive", () => {
   it("archiveert alleen nog-niet-gearchiveerde berichten", () => {
     const plan = planThreadArchive([comm("1"), comm("2", "2026-01-01T00:00:00Z"), log("3")], true, now);
     expect(plan.ids).toEqual(["1"]);
+    expect(plan.logIds).toEqual(["3"]);
     expect(plan.archivedAt).toBe(now.toISOString());
     expect(plan.noop).toBe(false);
   });
@@ -59,14 +68,19 @@ describe("planThreadArchive", () => {
     expect(plan.archivedAt).toBeNull();
   });
 
-  it("is een noop wanneer er alleen automatische mails zijn", () => {
+  it("archiveert ook gesprekken met alleen automatische mails", () => {
     const plan = planThreadArchive([log("1")], true, now);
     expect(plan.ids).toEqual([]);
-    expect(plan.noop).toBe(true);
+    expect(plan.logIds).toEqual(["1"]);
+    expect(plan.noop).toBe(false);
+  });
+
+  it("is een noop bij een leeg gesprek", () => {
+    expect(planThreadArchive([], true, now).noop).toBe(true);
   });
 
   it("raakt nooit dossiertabellen aan (geen project-ids in het plan)", () => {
     const plan = planThreadArchive([comm("1")], true, now);
-    expect(Object.keys(plan)).toEqual(["ids", "archivedAt", "noop"]);
+    expect(Object.keys(plan)).toEqual(["ids", "logIds", "archivedAt", "noop"]);
   });
 });
