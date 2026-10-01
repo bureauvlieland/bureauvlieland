@@ -8,7 +8,7 @@ import { EditProgramDetailsDialog } from "@/components/customer-portal/EditProgr
 import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDetailsDialog";
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
-import { ProgramNavigation } from "@/components/customer-portal/ProgramNavigation";
+import { ProgramNavigation, type PortalView } from "@/components/customer-portal/ProgramNavigation";
 import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
 import { MobileProgramView } from "@/components/customer-portal/MobileProgramView";
 import { DesktopProgramView } from "@/components/customer-portal/DesktopProgramView";
@@ -197,7 +197,7 @@ const CustomerProgram = () => {
     if (success) {
       toast({
         title: "Wijzigingen opgeslagen",
-        description: "De aanbieders zijn op de hoogte gesteld van je wijzigingen.",
+        description: "De aanbieders zijn op de hoogte gesteld van uw wijzigingen.",
       });
     } else {
       toast({
@@ -315,9 +315,22 @@ const CustomerProgram = () => {
   useEffect(() => {
     if (eventMode.eventModeActive && activeView === "splash") {
       setActiveView("today");
+    } else if (!eventMode.eventModeActive && (activeView === "today" || activeView === "map")) {
+      // Terug uit de evenementmodus: die weergaven hebben dan geen tabblad meer.
+      setActiveView("splash");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventMode.eventModeActive]);
+
+  // Een anker op een ander tabblad: na het wisselen van weergave pas scrollen.
+  const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pendingAnchor) return;
+    const target = document.getElementById(pendingAnchor);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    setPendingAnchor(null);
+  }, [pendingAnchor, activeView]);
 
   // Loading state
   if (isLoading) {
@@ -371,7 +384,19 @@ const CustomerProgram = () => {
   // Navigate to a specific view
   // Decision 1: Splash always shown for multi-day (no localStorage skip)
   // Decision 2: Single-day → skip splash, go directly to program
-  const handleNavigate = (view: "splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map") => {
+  // Met een anker: staat het al op het scherm, dan direct scrollen; anders eerst
+  // naar het tabblad waar het staat (voorwaarden op "accept", logies op "accommodation").
+  const handleNavigate = (view: PortalView, anchor?: string) => {
+    if (anchor) {
+      const target = document.getElementById(anchor);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      setPendingAnchor(anchor);
+      setActiveView(view);
+      return;
+    }
     setActiveView(view);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -505,7 +530,7 @@ const CustomerProgram = () => {
           <div className="container mx-auto px-4 py-3 flex items-start gap-3">
             <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-blue-800 flex-1">
-              <strong>Nieuw! Vernieuwde klantomgeving</strong> — Wij werken momenteel met een volledig vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
+              <strong>Nieuwe klantomgeving.</strong> U kijkt naar onze vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
               <a href="mailto:hallo@bureauvlieland.nl" className="underline font-medium">hallo@bureauvlieland.nl</a>.
             </p>
             <button

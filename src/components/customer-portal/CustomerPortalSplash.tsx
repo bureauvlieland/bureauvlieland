@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { isMaatwerkProject } from "@/lib/projectOrigin";
+import { greetingName } from "@/lib/greetingName";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
 import { ProgramStepper, type StepId } from "./ProgramStepper";
 import vlielandLandscape from "@/assets/vlieland-landscape.jpg";
@@ -177,11 +178,11 @@ export const CustomerPortalSplash = ({
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
             Welkom
-            {program.customer_company
-              ? `, ${program.customer_company}`
-              : program.customer_name
-                ? `, ${program.customer_name}`
-                : ""}
+            {(() => {
+              // Bedrijf voorop; anders de naam zonder meegetypte aanhef ("Mevrouw. M. ...").
+              const name = program.customer_company?.trim() || greetingName(program.customer_name);
+              return name ? `, ${name}` : "";
+            })()}
           </h1>
           {dateRange && (
             <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1 flex-wrap">
@@ -205,9 +206,9 @@ export const CustomerPortalSplash = ({
         </div>
 
         <p className="text-muted-foreground">
-          Fijn dat u er bent! Via dit portaal vindt u alles over uw verblijf op Vlieland op één
-          plek. Bureau Vlieland coördineert het programma en de logies — u hoeft alleen te kijken,
-          kiezen en akkoord te geven.
+          Fijn dat u er bent. Via dit portaal vindt u alles over uw verblijf op Vlieland op één
+          plek. Bureau Vlieland coördineert het programma en de logies. U hoeft alleen te kijken,
+          te kiezen en akkoord te geven.
         </p>
         <p className="text-muted-foreground text-sm">
           Met vriendelijke eilandgroet,
@@ -297,8 +298,8 @@ export const CustomerPortalSplash = ({
                 <h3 className="font-semibold">Delen met deelnemers</h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Stuur uw groep een vereenvoudigde weergave — met dagindeling, kaart en praktische
-                info. Zonder facturatie of akkoordstappen.
+                Stuur uw groep een vereenvoudigde weergave met dagindeling, kaart en praktische
+                informatie, zonder facturatie of akkoordstappen.
               </p>
               <Button variant="outline" className="w-full" onClick={onShareWithParticipants}>
                 <Share2 className="h-4 w-4 mr-2" />

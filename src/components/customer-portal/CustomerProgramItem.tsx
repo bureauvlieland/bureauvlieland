@@ -184,7 +184,7 @@ export const CustomerProgramItem = ({
         <div className="mb-3 flex items-start gap-2 p-2.5 rounded-md bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
           <Trash2 className="h-4 w-4 shrink-0 mt-0.5" />
           <span>
-            <strong>Wordt verwijderd</strong> — nog niet opgeslagen. Klik onderaan
+            <strong>Wordt verwijderd</strong>, nog niet opgeslagen. Klik onderaan
             op <strong>"Wijzigingen opslaan"</strong> om dit door te voeren, of gebruik
             de knop hieronder om het terug te zetten.
           </span>
@@ -192,7 +192,8 @@ export const CustomerProgramItem = ({
       )}
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           {/* Header row */}
-          <div className="flex items-start gap-3">
+          {/* Op een telefoon komt de knop onder de titel, anders valt de titel in de knel. */}
+          <div className="flex flex-wrap sm:flex-nowrap items-start gap-3">
             {/* Thumbnail */}
             {thumbnailSrc && thumbnailSrc !== "/placeholder.svg" && (
               <button
@@ -257,7 +258,7 @@ export const CustomerProgramItem = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/5"
+                className="basis-full justify-start sm:basis-auto sm:justify-center shrink-0 gap-1.5 text-primary hover:text-primary hover:bg-primary/5"
                 aria-label={isOpen ? "Details verbergen" : "Details, tijd en opmerkingen aanpassen"}
               >
                 <span className="text-sm font-medium">

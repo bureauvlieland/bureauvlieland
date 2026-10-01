@@ -222,7 +222,7 @@ export const AcceptTermsCard = ({
               <h3 className="font-semibold text-lg">
                 {isUnderReservation
                   ? "Ondertekenen onder voorbehoud"
-                  : "Alle activiteiten zijn bevestigd!"}
+                  : "Alle activiteiten zijn bevestigd"}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {isUnderReservation
@@ -436,7 +436,7 @@ export const AcceptTermsCard = ({
                   id="signature-name"
                   value={signatureName}
                   onChange={(e) => setSignatureName(e.target.value)}
-                  placeholder="Typ hier je volledige naam"
+                  placeholder="Typ hier uw volledige naam"
                   disabled={!isChecked || !isBillingComplete}
                   className={cn(!isChecked && "opacity-50")}
                 />

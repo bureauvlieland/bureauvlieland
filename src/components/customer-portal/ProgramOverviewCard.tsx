@@ -185,6 +185,12 @@ export const ProgramOverviewCard = ({
                     Maatwerk
                   </Badge>
                 )}
+                {quoteDisplayStatus && (
+                  <Badge variant="secondary" className={`gap-1.5 ${getStatusBadgeVariant(quoteDisplayStatus.variant)}`}>
+                    <quoteDisplayStatus.icon className="h-3.5 w-3.5" />
+                    {quoteDisplayStatus.label}
+                  </Badge>
+                )}
               </div>
               
               {/* Program description */}
@@ -197,24 +203,14 @@ export const ProgramOverviewCard = ({
               )}
             </div>
             
-            {/* Edit button + Quote status */}
-            <div className="flex items-center gap-2 shrink-0">
-              {onEdit && (
-                <Button variant="outline" size="sm" onClick={onEdit} className="gap-1.5">
-                  <Pencil className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Bewerken</span>
-                </Button>
-              )}
-              {quoteDisplayStatus && (
-                <Badge 
-                  variant="secondary" 
-                  className={`gap-1.5 ${getStatusBadgeVariant(quoteDisplayStatus.variant)}`}
-                >
-                  <quoteDisplayStatus.icon className="h-3.5 w-3.5" />
-                  {quoteDisplayStatus.label}
-                </Badge>
-              )}
-            </div>
+            {/* Bewerken. De offertestatus staat bij de kenmerken onder de titel,
+                zodat de titel op een telefoon niet in de knel komt. */}
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={onEdit} className="gap-1.5 shrink-0">
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Bewerken</span>
+              </Button>
+            )}
           </div>
 
           {/* Quote validity warning */}

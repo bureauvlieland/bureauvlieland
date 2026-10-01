@@ -76,8 +76,8 @@ export const PracticalView = ({
           <p className="font-medium">Wat kunt u hier doen?</p>
           <p className="text-blue-800/90 dark:text-blue-100/90 mt-1">
             Geef de gegevens van uw groep door (gasten, dieet, kamerindeling),
-            download tickets en uw programma als PDF of agenda-export. Hier vindt u
-            ook de contactgegevens van Bureau Vlieland.
+            download tickets en bewaar uw programma als Word-document of in uw agenda.
+            Hier vindt u ook de contactgegevens van Bureau Vlieland.
           </p>
         </div>
       </div>

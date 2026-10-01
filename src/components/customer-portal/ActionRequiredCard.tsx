@@ -112,7 +112,7 @@ export const ActionRequiredCard = ({
       if (!billingComplete) {
         return {
           type: "billing",
-          title: "Uw programma is uitgevoerd — laatste stap: facturatiegegevens",
+          title: "Uw programma is uitgevoerd. Laatste stap: facturatiegegevens",
           description:
             "Bureau Vlieland maakt uw factuur klaar. Vul nog uw bedrijfsgegevens in zodat wij die aan de factuur kunnen koppelen.",
           icon: <FileText className="h-5 w-5" />,
@@ -123,7 +123,7 @@ export const ActionRequiredCard = ({
       if (!termsAccepted) {
         return {
           type: "terms",
-          title: "Uw programma is uitgevoerd — accepteer de voorwaarden",
+          title: "Uw programma is uitgevoerd. Accepteer nog de voorwaarden",
           description:
             "Alleen de voorwaarden zijn nog niet ondertekend. Zodra dat is gebeurd kunnen wij de factuur versturen.",
           icon: <CheckCircle className="h-5 w-5" />,
@@ -137,7 +137,7 @@ export const ActionRequiredCard = ({
         type: "past_execution",
         title: "Uw programma is uitgevoerd",
         description:
-          "Wij bereiden nu de facturatie voor. U ontvangt de factuur binnenkort per e-mail. Bedankt voor uw bezoek aan Vlieland!",
+          "Wij bereiden nu de facturatie voor. U ontvangt de factuur binnenkort per e-mail. Bedankt voor uw bezoek aan Vlieland.",
         icon: <CheckCircle2 className="h-5 w-5" />,
         variant: "success",
       };
@@ -300,8 +300,8 @@ export const ActionRequiredCard = ({
     if (termsAccepted) {
       return {
         type: "complete",
-        title: "Uw boeking is compleet!",
-        description: "U ontvangt de factuur van Bureau Vlieland. Wij wensen u veel plezier op Vlieland!",
+        title: "Uw boeking is compleet",
+        description: "U ontvangt de factuur van Bureau Vlieland. Wij wensen u veel plezier op Vlieland.",
         icon: <PartyPopper className="h-5 w-5" />,
         variant: "success",
       };

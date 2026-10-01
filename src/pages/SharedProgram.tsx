@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -24,6 +24,7 @@ interface SharedProgramData {
 
 const SharedProgram = () => {
   const { shareCode } = useParams<{ shareCode: string }>();
+  const location = useLocation();
   const { toast } = useToast();
   const { addToCart, setNumberOfPeople, setSelectedDate } = useCart();
   
@@ -123,7 +124,8 @@ const SharedProgram = () => {
   };
 
   if (redirectToken) {
-    return <Navigate to={`/mijn-programma/${redirectToken}`} replace />;
+    // De query gaat mee (bijvoorbeeld ?eventmode=on voor een preview of ?chat=open).
+    return <Navigate to={{ pathname: `/mijn-programma/${redirectToken}`, search: location.search }} replace />;
   }
 
   if (loading || isLoadingBlocks) {

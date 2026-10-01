@@ -403,6 +403,17 @@ chat in `FloatingStack` zodat hij nergens overheen valt; de aanhef
 klantteksten; de titel die onder "Details en aanpassen" valt en de
 woordafbreking in de onderdeelkaart en de kop op een telefoon.
 
+*Gebouwd op 1 oktober, eigen PR.* Daarbij ook: de chatknop wijkt zolang
+de opslaanbalk in beeld is en staat boven de onderste navigatie van de
+deelnemersweergave; de werkbalk van het programma (Word-document, agenda,
+toevoegen) staat op een telefoon onder de kop in plaats van erin; de
+offertestatus staat onder de titel van het overzicht, zodat de titel
+niet meer afbreekt; de deellink `/programma/<code>` geeft `?eventmode=on`
+en `?chat=open` door aan het portaal. Bewust niet in fase 0: de 22
+gedachtestreepjes in andere klantteksten (fase 3, copy) en de
+categorienaam "Outdoor & Sport", die uit de bouwstenen komt en op de
+hele site staat.
+
 **Fase 1: fundament voor het portaal (2 dagen).** `PortalHead` en
 `PortalTabs` in `src/components/system`; `--secondary` los van
 `--primary` (controle op `/ontwerp` en in de visuele test); de

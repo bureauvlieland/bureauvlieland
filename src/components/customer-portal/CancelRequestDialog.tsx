@@ -62,7 +62,7 @@ export const CancelRequestDialog = ({
           <AlertDialogDescription asChild>
             <div className="space-y-4">
               <p>
-                Weet je zeker dat je de hele aanvraag wilt annuleren?
+                Weet u zeker dat u de hele aanvraag wilt annuleren?
               </p>
               
               <div className="bg-muted rounded-lg p-4 space-y-2 text-sm">
