@@ -143,12 +143,38 @@ describe("buildReconciliationRows", () => {
     expect(rows[0].projectReference).toBe("BV-2606-0001");
   });
 
-  it("lek 2: inkoopfactuur zonder koppeling aan een onderdeel", () => {
-    const rows = buildReconciliationRows({ items: [], invoices: [invoice()], projects, partners });
+  it("lek 2: inkoopfactuur zonder project én zonder onderdeel is niet gekoppeld", () => {
+    const rows = buildReconciliationRows({
+      items: [],
+      invoices: [invoice({ request_id: null })],
+      projects,
+      partners,
+    });
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe("unlinked_invoice");
     expect(rows[0].invoiceId).toBe("inv-1");
     expect(rows[0].commissionAtRisk).toBeCloseTo(100, 6);
+  });
+
+  it("inkoopfactuur alleen aan een project is voldoende en blijft factureerbaar", () => {
+    const rows = buildReconciliationRows({ items: [], invoices: [invoice()], projects, partners });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("match");
+    expect(rows[0].itemType).toBe("purchase_invoice");
+    expect(rows[0].projectReference).toBe("BV-2606-0001");
+    expect(isBillableRow(rows[0])).toBe(true);
+    expect(rows[0].purchaseCommission).toBeCloseTo(100, 6);
+  });
+
+  it("project-factuur dekt onderdelen van dezelfde partner in dat project (geen dubbele commissie)", () => {
+    const rows = buildReconciliationRows({
+      items: [item()],
+      invoices: [invoice()],
+      projects,
+      partners,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].itemType).toBe("purchase_invoice");
   });
 
   it("match wanneer inkoopfactuur en verkoopwaarde gelijk zijn", () => {
@@ -272,7 +298,7 @@ describe("summarizeReconciliation", () => {
         item({ id: "i2", invoiced_number: "7" }),
         item({ id: "i3", provider_id: "rederij", commission_percentage: 0 }),
       ],
-      invoices: [invoice(), invoice({ id: "inv-9", invoice_number: "9", amount_excl_vat: 500 })],
+      invoices: [invoice(), invoice({ id: "inv-9", invoice_number: "9", amount_excl_vat: 500, request_id: null })],
       projects,
       partners,
     });
