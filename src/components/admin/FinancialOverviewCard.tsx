@@ -562,7 +562,7 @@ export const FinancialOverviewCard = ({
                 {invoices.map((invoice) => {
                   const isForwarded =
                     invoice.status === "forwarded" || !!invoice.forwarded_to_accounting_at;
-                  const customerSentAt = customerSendMap[invoice.id];
+                  const customerSentAt = customerSendMap[invoice.id] ?? customerSendMap[`number:${invoice.invoice_number}`];
                   return (
                     <div key={invoice.id} className="flex items-start justify-between text-sm gap-2">
                       <div className="flex flex-col gap-1 min-w-0 flex-1">
