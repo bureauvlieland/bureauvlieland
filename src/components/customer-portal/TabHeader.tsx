@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Calendar, Users, Hash } from "lucide-react";
@@ -13,6 +14,8 @@ export interface TabHeaderProps {
   selectedDates?: Date[];
   numberOfPeople?: number;
   referenceNumber?: string | null;
+  /** Knoppen rechts in de kop, bijvoorbeeld "Bewerken". */
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -29,6 +32,7 @@ export const TabHeader = ({
   selectedDates,
   numberOfPeople,
   referenceNumber,
+  actions,
   className,
 }: TabHeaderProps) => {
   const dateRange =
@@ -54,6 +58,7 @@ export const TabHeader = ({
       description={subtitle || undefined}
       facts={facts}
       status={badge ? { label: badge.label, tone: badge.tone } : null}
+      actions={actions}
       className={className}
     />
   );

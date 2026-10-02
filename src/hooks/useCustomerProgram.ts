@@ -61,6 +61,8 @@ interface UseCustomerProgramReturn {
   /** Item-ids die de klant lokaal heeft aangeklikt om te verwijderen, maar
    *  waarvoor nog niet op "Wijzigingen opslaan" is geklikt. Het onderdeel
    *  blijft zichtbaar in de tijdlijn met een "wordt verwijderd"-badge. */
+  /** Alle nog niet verstuurde wijzigingen laten vallen. */
+  discardChanges: () => void;
   pendingRemovals: Set<string>;
   isPendingRemoval: (itemId: string) => boolean;
   updateProgramDetails: (updates: { selectedDates?: Date[]; numberOfPeople?: number; programDescription?: string }) => Promise<boolean>;
@@ -112,7 +114,7 @@ export interface PendingChange {
 }
 
 // Temporary ID prefix for locally added items (before submission)
-const TEMP_ID_PREFIX = "temp-";
+export const TEMP_ID_PREFIX = "temp-";
 
 export interface UseCustomerProgramOptions {
   /** Deelnemersweergave: token is de aparte deelnemerscode (participant_token). */
@@ -358,6 +360,36 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
     (itemId: string) => pendingRemovals.has(itemId),
     [pendingRemovals],
   );
+
+  // Alle nog niet verstuurde wijzigingen laten vallen (klantportaal fase 2,
+  // "Ongedaan maken" op de opslaanbalk): toegevoegde onderdelen weg,
+  // verwijderingen terug, tijd, dag, aantal en opmerking terug naar wat de
+  // server kent.
+  const discardChanges = useCallback(() => {
+    setAddedItems([]);
+    setPendingRemovals(new Set());
+    setProgram((prev) => {
+      if (!prev) return prev;
+      const originals = new Map(originalItems.map((o) => [o.id, o]));
+      return {
+        ...prev,
+        items: prev.items
+          .filter((item) => !item.id.startsWith(TEMP_ID_PREFIX))
+          .map((item) => {
+            const original = originals.get(item.id);
+            if (!original) return item;
+            return {
+              ...item,
+              preferred_time: original.preferred_time,
+              day_index: original.day_index,
+              customer_notes: original.customer_notes,
+              override_people: original.override_people,
+              status: original.status,
+            };
+          }),
+      };
+    });
+  }, [originalItems]);
 
 
   const addItem = useCallback(async (
@@ -1052,6 +1084,7 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
     addItem,
     getPendingChanges,
     submitChanges,
+    discardChanges,
     pendingRemovals,
     isPendingRemoval,
 

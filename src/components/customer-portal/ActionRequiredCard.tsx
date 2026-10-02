@@ -1,4 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { Notice, type NoticeTone } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { 
   Clock, 
@@ -11,7 +12,6 @@ import {
   MessageSquareWarning,
   CheckCircle2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { getProjectExecutionState } from "@/lib/projectExecutionState";
 
 interface ActionRequiredCardProps {
@@ -48,6 +48,8 @@ interface ActionRequiredCardProps {
   completionStatus?: string | null;
   /** cancelled_at uit program_requests — nodig voor executie-state. */
   cancelledAt?: string | null;
+  /** Alle open onderdelen in één keer goedkeuren; dan is dat de primaire knop. */
+  onBulkApprove?: () => Promise<unknown>;
   className?: string;
 }
 
@@ -88,8 +90,10 @@ export const ActionRequiredCard = ({
   selectedDates = null,
   completionStatus = null,
   cancelledAt = null,
+  onBulkApprove,
   className,
 }: ActionRequiredCardProps) => {
+  const [bulkBusy, setBulkBusy] = useState(false);
   const isPublished = !!programPublishedAt;
   const allConfirmed = statusSummary.pending === 0 && statusSummary.alternative === 0 && (statusSummary.counter_proposed || 0) === 0 && statusSummary.total > 0;
   // Quote-pipeline geldt voor alle projecten — niet meer afhankelijk van programType.
@@ -314,75 +318,55 @@ export const ActionRequiredCard = ({
 
   if (!action) return null;
 
-  const variantStyles = {
-    warning: "bg-warning-soft border-warning/40",
-    info: "bg-info-soft border-info/30",
-    success: "bg-success-soft border-success/30",
-    neutral: "bg-muted/50 border-border",
+  const TONE: Record<ActionConfig["variant"], NoticeTone> = {
+    warning: "warning",
+    info: "info",
+    success: "success",
+    neutral: "info",
   };
-
-  const iconStyles = {
-    warning: "bg-warning-soft text-warning",
-    info: "bg-info-soft text-info",
-    success: "bg-success-soft text-success",
-    neutral: "bg-muted text-muted-foreground",
-  };
-
-  const titleStyles = {
-    warning: "text-warning-ink",
-    info: "text-info-ink",
-    success: "text-success-ink",
-    neutral: "text-foreground",
-  };
-
-  const descriptionStyles = {
-    warning: "text-warning-ink",
-    info: "text-info-ink",
-    success: "text-success-ink",
-    neutral: "text-muted-foreground",
-  };
+  const showBulk = !!onBulkApprove && customerActionsCount > 1 && (action.type === "alternative" || action.type === "pending") && !isPastExecution;
 
   return (
-    <Card className={cn("border", variantStyles[action.variant], className)}>
-      <CardContent className="py-4">
-        <div className="flex items-start gap-4">
-          <div className={cn(
-            "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
-            iconStyles[action.variant]
-          )}>
-            {action.icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className={cn("font-semibold", titleStyles[action.variant])}>
-              {action.title}
-            </h3>
-            <p className={cn("text-sm mt-0.5", descriptionStyles[action.variant])}>
-              {action.description}
-            </p>
-            {action.itemNames && action.itemNames.length > 0 && (
-              <ul className={cn("text-sm mt-2 space-y-1", descriptionStyles[action.variant])}>
-                {action.itemNames.map((name) => (
-                  <li key={name} className="flex items-start gap-1.5">
-                    <span aria-hidden>&bull;</span>
-                    <span className="font-medium">{name}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+    <Notice tone={TONE[action.variant]} title={action.title} icon={action.icon} className={className}>
+      <p>{action.description}</p>
+      {action.itemNames && action.itemNames.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 font-medium">
+          {action.itemNames.map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+        </ul>
+      )}
+      {(action.cta || showBulk) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {showBulk && (
+            <Button
+              size="sm"
+              disabled={bulkBusy}
+              onClick={async () => {
+                setBulkBusy(true);
+                try {
+                  await onBulkApprove!();
+                } finally {
+                  setBulkBusy(false);
+                }
+              }}
+            >
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              {bulkBusy ? "Bezig…" : `Alle ${customerActionsCount} onderdelen goedkeuren`}
+            </Button>
+          )}
           {action.cta && (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={action.cta.onClick}
-              className="shrink-0"
-              variant={action.variant === "success" ? "default" : "outline"}
+              variant={showBulk ? "outline" : action.variant === "success" ? "default" : "outline"}
             >
               {action.cta.label}
-              <ArrowRight className="h-4 w-4 ml-1" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </Notice>
   );
 };
