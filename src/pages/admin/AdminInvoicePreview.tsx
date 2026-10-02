@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { billingCountryLabel } from "@/lib/billingCountry";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format, addDays, differenceInCalendarDays } from "date-fns";
@@ -66,6 +67,7 @@ interface ProgramRequest {
   billing_address_city: string | null;
   billing_vat_number: string | null;
   billing_reference: string | null;
+  billing_country?: string | null;
 }
 
 interface ProgramItem {
@@ -849,9 +851,12 @@ const AdminInvoicePreview = () => {
     const billingNameLocal =
       request.billing_company_name || request.customer_company || request.customer_name;
     const contactName = request.billing_contact_name || request.customer_name;
-    const postalCity = [request.billing_address_postal, request.billing_address_city]
+    const postalCity = [
+      [request.billing_address_postal, request.billing_address_city].filter(Boolean).join(" "),
+      request.billing_country && request.billing_country !== "NL" ? billingCountryLabel(request.billing_country) : null,
+    ]
       .filter(Boolean)
-      .join(" ");
+      .join(", ");
 
     const eventDates = request.selected_dates
       .map((d) => format(new Date(d), "d MMM yyyy", { locale: nl }))
@@ -971,6 +976,7 @@ const AdminInvoicePreview = () => {
   const billingAddress = [
     request.billing_address_street,
     [request.billing_address_postal, request.billing_address_city].filter(Boolean).join(" "),
+    request.billing_country && request.billing_country !== "NL" ? billingCountryLabel(request.billing_country) : null,
   ].filter(Boolean);
 
   const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + bundledExtras.length;

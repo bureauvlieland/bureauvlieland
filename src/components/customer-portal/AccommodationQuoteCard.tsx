@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { BedDouble, Clock, AlertTriangle, ExternalLink, FileText, ImageIcon, Mail, MapPin, Check, Navigation, X } from "lucide-react";
+import { BedDouble, ExternalLink, FileText, ImageIcon, Mail, MapPin, Check, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/system";
 import { cn } from "@/lib/utils";
 import { transformImageUrl } from "@/lib/supabaseImage";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
@@ -101,11 +101,11 @@ export const AccommodationQuoteCard = ({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-display text-xl font-medium leading-tight">{quote.accommodation_name}</h4>
+              <h3 className="font-display text-xl font-medium leading-tight">{quote.accommodation_name}</h3>
               {isExpired ? (
-                <Badge variant="destructive" className="gap-1 text-xs"><AlertTriangle className="h-3 w-3" />Verlopen</Badge>
+                <Pill tone="danger">Verlopen</Pill>
               ) : (
-                <Badge variant="outline" className="gap-1 text-xs"><Clock className="h-3 w-3" />Geldig t/m {format(validUntil, "d MMM", { locale: nl })}</Badge>
+                <Pill tone="neutral">Geldig t/m {format(validUntil, "d MMM", { locale: nl })}</Pill>
               )}
             </div>
             {quote.partner?.name && quote.partner.name !== quote.accommodation_name && (
@@ -124,17 +124,17 @@ export const AccommodationQuoteCard = ({
             {!facilityMatch.unknown && (facilityMatch.matched.length > 0 || facilityMatch.missing.length > 0) && (
               <div className="flex flex-wrap gap-1.5 pt-0.5 text-xs">
                 {facilityMatch.matched.map((label) => (
-                  <span key={label} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5"><Check className="h-3 w-3" />{label}</span>
+                  <Pill key={label} tone="success" className="gap-1"><Check className="h-3 w-3" aria-hidden="true" />{label}</Pill>
                 ))}
                 {facilityMatch.missing.map((label) => (
-                  <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2 py-0.5"><X className="h-3 w-3" />{label}</span>
+                  <Pill key={label} tone="neutral" className="gap-1"><X className="h-3 w-3" aria-hidden="true" />{label}</Pill>
                 ))}
               </div>
             )}
             {partner.highlights.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {partner.highlights.slice(0, 6).map((f, i) => (
-                  <Badge key={i} variant="secondary" className="font-normal">{f}</Badge>
+                  <Pill key={i} tone="neutral">{f}</Pill>
                 ))}
               </div>
             )}
@@ -183,7 +183,7 @@ export const AccommodationQuoteCard = ({
             {includes.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {includes.slice(0, 5).map((item, idx) => (
-                  <Badge key={idx} variant="outline" className="font-normal text-xs">{String(item)}</Badge>
+                  <Pill key={idx} tone="neutral">{String(item)}</Pill>
                 ))}
                 {includes.length > 5 && <span className="text-xs text-muted-foreground">+{includes.length - 5}</span>}
               </div>

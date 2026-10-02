@@ -114,7 +114,7 @@ export const ContactAccommodationDialog = ({
             Bericht via Bureau Vlieland
           </DialogTitle>
           <DialogDescription>
-            Uw bericht wordt namens Bureau Vlieland direct naar de accommodatie verzonden. Hun antwoord komt automatisch bij ons binnen — u ontvangt daarvan een e-mail én ziet het hier in het overzicht.
+            Uw bericht wordt namens Bureau Vlieland direct naar de accommodatie verzonden. Hun antwoord komt automatisch bij ons binnen; u ontvangt daarvan een e-mail en ziet het hier in het overzicht.
           </DialogDescription>
         </DialogHeader>
 

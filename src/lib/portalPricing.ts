@@ -479,3 +479,22 @@ export function getHeadcountMismatch(
   if (Math.abs(newTotal - oldTotal) <= 0.01) return null;
   return { unitPrice, oldTotal, newTotal, peopleNow };
 }
+
+/**
+ * "Voorlopig": er is nog geen definitieve prijs. Een partneronderdeel heeft
+ * die pas met de bevestigde groepsprijs (quoted_price); een onderdeel dat
+ * Bureau Vlieland zelf regelt heeft met de admin-prijs zijn definitieve prijs
+ * zodra de klant akkoord is. Eén regel voor de onderdeelkaart en de
+ * kostenspecificatie (plan klantportaal, fase 3).
+ */
+export function isProvisionalPrice(item: {
+  quoted_price?: number | null;
+  admin_price_override?: number | null;
+  provider_id?: string | null;
+  customer_accepted_at?: string | null;
+}): boolean {
+  if (item.quoted_price != null) return false;
+  if (item.admin_price_override == null) return false;
+  if (item.provider_id === "bureau" && item.customer_accepted_at) return false;
+  return true;
+}

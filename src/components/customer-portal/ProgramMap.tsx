@@ -179,7 +179,7 @@ export const ProgramMap = ({
               >
                 <span className="truncate">{i.block_name}</span>
                 <Badge variant="outline" className="text-[10px] shrink-0">
-                  {i.location_address || i.provider_name || "—"}
+                  {i.location_address || i.provider_name || "Locatie volgt"}
                 </Badge>
               </div>
             ))}

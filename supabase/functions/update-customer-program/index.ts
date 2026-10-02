@@ -45,6 +45,7 @@ interface ProgramDetailsUpdate {
 
 interface BillingDetailsUpdate {
   billing_company_name: string;
+  billing_country?: string;
   billing_kvk_number: string;
   billing_vat_number: string;
   billing_address_street: string;
@@ -623,6 +624,7 @@ Deno.serve(async (req) => {
         .from("program_requests")
         .update({
           billing_company_name: billingDetails.billing_company_name,
+          billing_country: /^[A-Z]{2}$/.test(billingDetails.billing_country ?? "") ? billingDetails.billing_country : "NL",
           billing_kvk_number: billingDetails.billing_kvk_number,
           billing_vat_number: billingDetails.billing_vat_number,
           billing_address_street: billingDetails.billing_address_street,
@@ -1404,7 +1406,7 @@ Deno.serve(async (req) => {
             <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_company_name || "-")}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>KvK:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_kvk_number || "-")}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>BTW:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_vat_number || "-")}</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}${updatedProgram?.billing_country && updatedProgram.billing_country !== "NL" ? `, ${sanitizeHtml(updatedProgram.billing_country)}` : ""}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Contactpersoon:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_name || "-")}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_email || program.customer_email)}</td></tr>
             ${updatedProgram?.billing_reference ? `<tr><td style="padding: 4px 0;"><strong>Referentie:</strong></td><td>${sanitizeHtml(updatedProgram.billing_reference)}</td></tr>` : ""}

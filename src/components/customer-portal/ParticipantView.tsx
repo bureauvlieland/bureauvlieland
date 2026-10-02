@@ -1,32 +1,27 @@
-import { useMemo, useState } from "react";
-import { EmptyState } from "@/components/system";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import {
-  Calendar,
-  Sparkles,
-  MapPin as MapIcon,
-  Info,
-  BedDouble,
-  Navigation,
-  Share2,
-  ArrowLeft,
-  ExternalLink,
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, BedDouble, Calendar, ExternalLink, Info, MapPin as MapIcon, Share2, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TodayView } from "@/components/customer-portal/TodayView";
-import { ProgramMap } from "@/components/customer-portal/ProgramMap";
-import { CustomerTimeline } from "@/components/customer-portal/CustomerTimeline";
+import { Card, CardContent } from "@/components/ui/card";
+import { Container, EmptyState, Pill, PortalHead, PortalTabs, type PortalHeadFact, type PortalTab } from "@/components/system";
+import { TodayView } from "./TodayView";
+import { ProgramMap } from "./ProgramMap";
+import { DayBar, type DayBarDay } from "./DayBar";
+import { ProgramItemCard } from "./ProgramItemCard";
+import { byEffectiveTime } from "./timelineUtils";
+import { useActiveDay } from "./useActiveDay";
 import { cn } from "@/lib/utils";
+import { greetingName } from "@/lib/greetingName";
+import type { ProgramRequestItem } from "@/types/programRequest";
 
-type View = "today" | "program" | "map" | "practical";
+export type ParticipantViewKey = "today" | "program" | "map" | "practical";
 
 interface ParticipantViewProps {
   program: any;
   accommodation?: any;
   selectedDates: Date[];
-  eventMode: { currentDayIndex: number; isUpcoming: boolean };
+  eventMode: { currentDayIndex: number | null; isUpcoming: boolean };
   showTitleBlock?: boolean;
   onExit?: () => void;
   onShare?: () => void;
@@ -34,8 +29,31 @@ interface ParticipantViewProps {
   participantReview?: { enabled: boolean; google_url: string | null } | null;
   /** De laatste programmadag is voorbij. */
   isOver?: boolean;
+  /** Van buiten gestuurd (de onderbalk op een telefoon); anders eigen toestand. */
+  view?: ParticipantViewKey;
+  onViewChange?: (view: ParticipantViewKey) => void;
+  /** De onderbalk neemt het schakelen over op een telefoon. */
+  hideTabsOnMobile?: boolean;
 }
 
+interface DayData extends DayBarDay {
+  items: ProgramRequestItem[];
+}
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const TABS: PortalTab[] = [
+  { key: "today", label: "Vandaag", icon: <Sparkles /> },
+  { key: "program", label: "Programma", icon: <Calendar /> },
+  { key: "map", label: "Kaart", icon: <MapIcon /> },
+  { key: "practical", label: "Praktisch", icon: <Info /> },
+];
+
+/**
+ * De deelnemersweergave (klantportaal fase 3): dezelfde kop, tabbalk, dagbalk
+ * en onderdeelkaart als het portaal, zonder prijzen en acties. Op een
+ * telefoon schakelt de onderbalk dezelfde weergave.
+ */
 export const ParticipantView = ({
   program,
   accommodation,
@@ -46,114 +64,105 @@ export const ParticipantView = ({
   onShare,
   participantReview = null,
   isOver = false,
+  view: controlledView,
+  onViewChange,
+  hideTabsOnMobile = false,
 }: ParticipantViewProps) => {
-  const [view, setView] = useState<View>("today");
+  const [internalView, setInternalView] = useState<ParticipantViewKey>("today");
+  const view = controlledView ?? internalView;
+  const setView = (next: ParticipantViewKey) => {
+    if (onViewChange) onViewChange(next);
+    else setInternalView(next);
+  };
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [view]);
 
-  const itemsByDay = useMemo(() => {
-    if (!program?.items) return [] as Array<{ day: number; items: any[] }>;
-    const byDay = new Map<number, any[]>();
-    program.items
-      .filter((i: any) => i.status !== "cancelled" && (i.day_index ?? -1) >= 0)
-      .forEach((i: any) => {
-        const d = i.day_index ?? 0;
-        if (!byDay.has(d)) byDay.set(d, []);
-        byDay.get(d)!.push(i);
-      });
-    return Array.from(byDay.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([day, items]) => ({ day, items }));
-  }, [program?.items]);
+  const items: ProgramRequestItem[] = program?.items ?? [];
+  const dayCount = Math.max(selectedDates.length, 1);
+  const todayIndex = eventMode.isUpcoming ? null : eventMode.currentDayIndex;
+  const days: DayData[] = useMemo(() => {
+    const timeline = items.filter((i) => i.status !== "cancelled" && (i.day_index ?? -1) >= 0);
+    return Array.from({ length: dayCount }, (_, index) => {
+      const dayItems = timeline.filter((i) => Math.min(i.day_index, dayCount - 1) === index).sort(byEffectiveTime);
+      return {
+        index,
+        date: selectedDates[index] ?? null,
+        count: dayItems.length,
+        status: "empty" as const,
+        openCount: 0,
+        waitingCount: 0,
+        isToday: todayIndex === index,
+        items: dayItems,
+      };
+    });
+  }, [items, dayCount, selectedDates, todayIndex]);
+  const hasItems = days.some((d) => d.count > 0);
+
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const { activeDayIndex, scrollToDay } = useActiveDay(timelineRef, dayCount, todayIndex, view === "program");
 
   const dateRange =
     selectedDates.length === 0
-      ? ""
+      ? null
       : selectedDates.length === 1
-      ? format(selectedDates[0], "EEEE d MMMM yyyy", { locale: nl })
-      : `${format(selectedDates[0], "d MMM", { locale: nl })} – ${format(
-          selectedDates[selectedDates.length - 1],
-          "d MMM yyyy",
-          { locale: nl }
-        )}`;
-
-  const tabs: { id: View; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "today", label: "Vandaag", icon: Sparkles },
-    { id: "program", label: "Programma", icon: Calendar },
-    { id: "map", label: "Kaart", icon: MapIcon },
-    { id: "practical", label: "Praktisch", icon: Info },
-  ];
+        ? format(selectedDates[0], "EEEE d MMMM yyyy", { locale: nl })
+        : `${format(selectedDates[0], "d MMM", { locale: nl })} t/m ${format(selectedDates[selectedDates.length - 1], "d MMM yyyy", { locale: nl })}`;
+  const facts: PortalHeadFact[] = [];
+  if (dateRange) facts.push({ key: "datum", icon: <Calendar />, label: dateRange });
+  if (program.number_of_people) facts.push({ key: "personen", icon: <Users />, label: `${program.number_of_people} personen` });
 
   return (
     <>
       {showTitleBlock && (
-        <section className="border-b bg-muted/30">
-          <div className="container mx-auto px-4 py-4 sm:py-6 max-w-4xl">
-            {(onExit || onShare) && (
-              <div className="flex items-center justify-between gap-2 mb-3">
-                {onExit ? (
-                  <Button size="sm" variant="ghost" onClick={onExit} className="-ml-2">
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    <span className="hidden sm:inline">Terug naar volledig programma</span>
-                    <span className="sm:hidden">Volledig programma</span>
-                  </Button>
-                ) : <span />}
-                {onShare && (
-                  <Button size="sm" variant="outline" onClick={onShare}>
-                    <Share2 className="h-4 w-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Delen met deelnemers</span>
-                  </Button>
-                )}
-              </div>
-            )}
-            <p className="uppercase text-eyebrow text-muted-foreground">Deelnemersweergave</p>
-            <h1 className="text-xl sm:text-2xl font-semibold mt-1">
-              {program.customer_company || program.customer_name}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {dateRange} · {program.number_of_people} personen
-            </p>
-          </div>
-        </section>
+        <div className="border-b bg-muted/30">
+          <Container size="content" className="py-4 sm:py-6">
+            <PortalHead
+              eyebrow="Deelnemersweergave"
+              title={program.customer_company?.trim() || greetingName(program.customer_name) || program.customer_name}
+              facts={facts}
+              actions={
+                onExit || onShare ? (
+                  <>
+                    {onExit && (
+                      <Button size="sm" variant="ghost" onClick={onExit}>
+                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                        Volledig programma
+                      </Button>
+                    )}
+                    {onShare && (
+                      <Button size="sm" variant="outline" onClick={onShare}>
+                        <Share2 className="h-4 w-4" aria-hidden="true" />
+                        Delen
+                      </Button>
+                    )}
+                  </>
+                ) : undefined
+              }
+            />
+          </Container>
+        </div>
       )}
 
-      <nav className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="flex items-center gap-1 py-2 overflow-x-auto">
-            {tabs.map((t) => {
-              const Icon = t.icon;
-              const active = view === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    setView(t.id);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={cn(
-                    "shrink-0 inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+      <PortalTabs
+        tabs={TABS}
+        current={view}
+        onChange={(key) => setView(key as ParticipantViewKey)}
+        label="Deelnemersweergave"
+        sticky
+        className={cn(hideTabsOnMobile && "hidden md:block")}
+      />
 
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
+      <Container as="main" id="main-content" size="content" className="py-6">
         {view === "today" && (
           <TodayView
             selectedDates={selectedDates}
-            items={program.items as any}
+            items={items as any}
             currentDayIndex={eventMode.currentDayIndex}
             isUpcoming={eventMode.isUpcoming}
             numberOfPeople={program.number_of_people}
             customerCompany={program.customer_company}
-            customerName={program.customer_name}
+            customerName={greetingName(program.customer_name) || program.customer_name}
           />
         )}
 
@@ -175,70 +184,64 @@ export const ParticipantView = ({
                 </CardContent>
               </Card>
             )}
-            {itemsByDay.length === 0 ? (
-              <EmptyState title="Nog geen activiteiten gepland" />
+
+            {!hasItems ? (
+              <EmptyState icon={<Calendar />} title="Nog geen activiteiten gepland" description="Zodra het programma rond is, staat het hier." />
             ) : (
-              itemsByDay.map(({ day, items }) => {
-                const date = selectedDates[day];
-                return (
-                  <div key={day}>
-                    <div className="mb-3 flex items-baseline gap-3">
-                      <h2 className="text-lg font-semibold">Dag {day + 1}</h2>
-                      {date && (
-                        <span className="text-sm text-muted-foreground">
-                          {format(date, "EEEE d MMMM", { locale: nl })}
-                        </span>
+              <>
+                <DayBar days={days} activeIndex={activeDayIndex} onSelect={scrollToDay} className={cn(hideTabsOnMobile && "top-0 md:top-14")} />
+                <div ref={timelineRef} className="space-y-8">
+                  {days.map((day) => (
+                    <section key={day.index} id={`dag-${day.index}`} data-day-section={day.index} className="scroll-mt-36" aria-labelledby={`dag-${day.index}-kop`}>
+                      <header className="mb-3 border-b pb-2">
+                        <h2 id={`dag-${day.index}-kop`} className="font-display text-xl font-medium leading-tight">
+                          {day.date ? capitalize(format(day.date, "EEEE d MMMM", { locale: nl })) : "Programma"}
+                        </h2>
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+                          {dayCount > 1 && (
+                            <>
+                              <span>
+                                dag {day.index + 1} van {dayCount}
+                              </span>
+                              <span aria-hidden="true">·</span>
+                            </>
+                          )}
+                          <span>
+                            {day.count} onderde{day.count === 1 ? "el" : "len"}
+                          </span>
+                          {day.isToday && <Pill tone="brand">vandaag</Pill>}
+                        </p>
+                      </header>
+                      {day.items.length === 0 ? (
+                        <EmptyState className="py-6" title="Nog niets op deze dag" />
+                      ) : (
+                        <div className="space-y-3">
+                          {day.items.map((item) => (
+                            <ProgramItemCard
+                              key={item.id}
+                              item={item}
+                              selectedDates={selectedDates}
+                              onUpdate={() => undefined}
+                              onRemove={() => undefined}
+                              allItems={items}
+                              numberOfPeople={program.number_of_people}
+                              readOnly
+                              audience="participant"
+                            />
+                          ))}
+                        </div>
                       )}
-                    </div>
-                    <CustomerTimeline items={items as any} showTimeColumn>
-                      {(item) => (
-                        <Card>
-                          <CardContent className="py-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <h3 className="font-medium leading-snug">{item.block_name}</h3>
-                                {item.provider_name && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    {item.provider_name}
-                                  </p>
-                                )}
-                                {item.location_address && (
-                                  <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1">
-                                    <MapIcon className="h-3 w-3 mt-0.5 shrink-0" />
-                                    <span>{item.location_address}</span>
-                                  </p>
-                                )}
-                              </div>
-                              {item.location_address && (
-                                <a
-                                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                                    item.location_address
-                                  )}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="shrink-0"
-                                >
-                                  <Button size="sm" variant="outline" className="h-7 text-xs">
-                                    <Navigation className="h-3 w-3 mr-1" />
-                                    Route
-                                  </Button>
-                                </a>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </CustomerTimeline>
-                  </div>
-                );
-              })
+                    </section>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
 
         {view === "map" && (
           <ProgramMap
-            items={program.items as any}
+            items={items as any}
             selectedDates={selectedDates}
             accommodationLabel={accommodation?.partner_name || "Logies"}
             accommodationLat={accommodation?.location_lat ?? null}
@@ -253,39 +256,30 @@ export const ParticipantView = ({
               <Card>
                 <CardContent className="py-4">
                   <div className="flex items-start gap-3">
-                    <BedDouble className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <BedDouble className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
                     <div className="min-w-0">
-                      <p className="uppercase text-eyebrow text-muted-foreground">
-                        Verblijf
-                      </p>
+                      <p className="text-eyebrow uppercase text-muted-foreground">Verblijf</p>
                       <p className="font-medium">{accommodation.partner_name || "Logies"}</p>
-                      {accommodation.location_address && (
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          {accommodation.location_address}
-                        </p>
-                      )}
+                      {accommodation.location_address && <p className="mt-0.5 text-sm text-muted-foreground">{accommodation.location_address}</p>}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )}
-
             <Card>
-              <CardContent className="py-4 space-y-2 text-sm">
+              <CardContent className="space-y-2 py-4 text-sm">
                 <p className="font-medium">Goed om te weten</p>
-                <ul className="list-disc pl-5 text-muted-foreground space-y-1">
+                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
                   <li>Volg de tijden in het programma; ze gelden als startmoment.</li>
                   <li>Op het eiland reist u het makkelijkst per fiets.</li>
-                  <li>Kleed u naar het weer en controleer wind en regen vóór vertrek.</li>
+                  <li>Kleed u naar het weer en controleer wind en regen voor vertrek.</li>
                 </ul>
-                <p className="text-xs text-muted-foreground pt-2">
-                  Vragen? Neem contact op met de organisator van dit programma.
-                </p>
+                <p className="pt-2 text-xs text-muted-foreground">Vragen? Neem contact op met de organisator van dit programma.</p>
               </CardContent>
             </Card>
           </div>
         )}
-      </main>
+      </Container>
     </>
   );
 };

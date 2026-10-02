@@ -124,7 +124,7 @@ export function validateAccommodationSetup(
     numberOfGuests > 0 &&
     normalized.room_count > numberOfGuests
   ) {
-    return `Meer kamers (${normalized.room_count}) dan gasten (${numberOfGuests}) — controleer de invoer`;
+    return `Meer kamers (${normalized.room_count}) dan gasten (${numberOfGuests}), controleer de invoer`;
   }
   const occ = normalized.room_occupancy;
   if (

@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { FileText, Loader2, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, ExternalLink, Loader2, AlertCircle, FileText, PenLine } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { FormField, Notice } from "@/components/system";
 import { supabase } from "@/integrations/supabase/client";
 import { AccommodationWarningDialog } from "./AccommodationWarningDialog";
 import type { ProgramRequestItem } from "@/types/programRequest";
@@ -41,6 +40,18 @@ const DEFAULT_TERMS_URL = "/partner-voorwaarden";
 const BUREAU_TERMS_URL = "/algemene-voorwaarden";
 const UVH_TERMS_URL = "https://assets.khn.nl/uploads/downloads/UVH_Nederlands_vanaf_2024_2024-10-18-082210_zkdv.pdf";
 
+const TermLink = ({ href, children }: { href: string; children: ReactNode }) => (
+  <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium text-primary hover:underline">
+    <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+    {children}
+  </a>
+);
+
+/**
+ * Het ondertekenen (klantportaal fase 3): de voorwaarden als links, de
+ * facturatiegegevens als voorwaarde vooraf, één vinkje (en één extra bij
+ * voorbehoud), de naam als handtekening en één knop.
+ */
 export const AcceptTermsCard = ({
   onAccept,
   isBillingComplete,
@@ -50,7 +61,6 @@ export const AcceptTermsCard = ({
   selectedDates = [],
   unconfirmedItems = [],
 }: AcceptTermsCardProps) => {
-
   const navigate = useNavigate();
   const [isChecked, setIsChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,65 +70,34 @@ export const AcceptTermsCard = ({
   const [showAccommodationWarning, setShowAccommodationWarning] = useState(false);
   const [reservationAcknowledged, setReservationAcknowledged] = useState(false);
 
-
-  // Check if this is a multi-day program without accommodation
   const isMultiDay = selectedDates.length > 1;
-  const hasSelectedAccommodation = accommodationQuotes.some(q => q.status === "selected");
+  const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");
 
-  // Get unique partner IDs from items (excluding self_arranged and bureau types)
-  // Also include accommodation partner if there's a selected quote
+  // De aanbieders in het programma, plus de gekozen logies.
   useEffect(() => {
     const fetchPartnerTerms = async () => {
-      const itemPartnerIds = items
-        .filter(item => item.block_type === "partner" && item.status !== "cancelled")
-        .map(item => item.provider_id);
-      
-      // Add accommodation partner if there's a selected quote
-      const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
-      if (selectedQuote) {
-        itemPartnerIds.push(selectedQuote.partner_id);
-      }
-      
+      const itemPartnerIds = items.filter((item) => item.block_type === "partner" && item.status !== "cancelled").map((item) => item.provider_id);
+      const selectedQuote = accommodationQuotes.find((q) => q.status === "selected");
+      if (selectedQuote) itemPartnerIds.push(selectedQuote.partner_id);
       const uniquePartnerIds = [...new Set(itemPartnerIds)];
-
       if (uniquePartnerIds.length === 0) {
         setIsLoadingPartners(false);
         return;
       }
-
-      const { data, error } = await supabase
-        .from("partners_public")
-        .select("id, name, terms_pdf_path, uses_default_terms")
-        .in("id", uniquePartnerIds);
-
-      if (!error && data) {
-        setPartnerTerms(data);
-      }
+      const { data, error } = await supabase.from("partners_public").select("id, name, terms_pdf_path, uses_default_terms").in("id", uniquePartnerIds);
+      if (!error && data) setPartnerTerms(data);
       setIsLoadingPartners(false);
     };
-
     fetchPartnerTerms();
   }, [items, accommodationQuotes]);
 
-  const getPublicUrl = (path: string) => {
-    const { data } = supabase.storage.from("partner-terms").getPublicUrl(path);
-    return data.publicUrl;
-  };
+  const getPublicUrl = (path: string) => supabase.storage.from("partner-terms").getPublicUrl(path).data.publicUrl;
 
   const isUnderReservation = unconfirmedItems.length > 0;
+  const count = unconfirmedItems.length;
+  const names = unconfirmedItems.map((item) => item.block_name).join(", ");
 
-  const handleAcceptClick = () => {
-    if (!canSubmit) return;
-
-    // Check if multi-day without accommodation - show warning
-    if (isMultiDay && !hasSelectedAccommodation) {
-      setShowAccommodationWarning(true);
-      return;
-    }
-
-    // Proceed with acceptance
-    handleAccept();
-  };
+  const canSubmit = isChecked && isBillingComplete && signatureName.trim().length >= 2 && (!isUnderReservation || reservationAcknowledged);
 
   const handleAccept = async () => {
     setIsSubmitting(true);
@@ -129,352 +108,147 @@ export const AcceptTermsCard = ({
     }
   };
 
-  const handleContinueWithAccommodation = () => {
-    setShowAccommodationWarning(false);
-    navigate("/logies-aanvragen");
-  };
-
-  const handleContinueWithoutAccommodation = () => {
-    setShowAccommodationWarning(false);
+  const handleAcceptClick = () => {
+    if (!canSubmit) return;
+    if (isMultiDay && !hasSelectedAccommodation) {
+      setShowAccommodationWarning(true);
+      return;
+    }
     handleAccept();
   };
 
-  const canSubmit =
-    isChecked &&
-    isBillingComplete &&
-    signatureName.trim().length >= 2 &&
-    (!isUnderReservation || reservationAcknowledged);
+  const defaultPartners = partnerTerms.filter((p) => !p.terms_pdf_path || p.uses_default_terms);
+  const customPartners = partnerTerms.filter((p) => p.terms_pdf_path && !p.uses_default_terms);
 
-
-  // Helper to get the appropriate terms link/label for a partner
-  const getPartnerTermsInfo = (partner: PartnerTermsInfo) => {
-    if (partner.terms_pdf_path && !partner.uses_default_terms) {
-      return {
-        label: "Bekijken",
-        url: getPublicUrl(partner.terms_pdf_path),
-        type: "custom" as const,
-      };
-    }
-    // Partner uses default terms or has no terms uploaded
-    return {
-      label: "Standaardvoorwaarden",
-      url: DEFAULT_TERMS_URL,
-      type: "default" as const,
-    };
-  };
-
-  // Determine if UVH terms should be shown:
-  // 1. If there are catering items
-  // 2. If there's a selected accommodation where partner has no custom terms
-  const hasCateringItems = items.some(item => 
-    item.block_category === "catering" && item.status !== "cancelled"
-  );
-  
-  const selectedQuote = accommodationQuotes.find(q => q.status === "selected");
-  const selectedAccommodationPartner = selectedQuote 
-    ? partnerTerms.find(p => p.id === selectedQuote.partner_id)
-    : null;
-  
-  // Show UVH if:
-  // - There are catering items, OR
-  // - There's a selected accommodation AND the partner uses default terms (no custom PDF)
-  const accommodationUsesDefaultTerms = selectedQuote && (
-    !selectedAccommodationPartner?.terms_pdf_path || 
-    selectedAccommodationPartner?.uses_default_terms
-  );
-  
+  // UVH: bij catering, of bij gekozen logies zonder eigen voorwaarden.
+  const hasCateringItems = items.some((item) => item.block_category === "catering" && item.status !== "cancelled");
+  const selectedQuote = accommodationQuotes.find((q) => q.status === "selected");
+  const selectedAccommodationPartner = selectedQuote ? partnerTerms.find((p) => p.id === selectedQuote.partner_id) : null;
+  const accommodationUsesDefaultTerms = !!selectedQuote && (!selectedAccommodationPartner?.terms_pdf_path || selectedAccommodationPartner?.uses_default_terms);
   const showUvhTerms = hasCateringItems || accommodationUsesDefaultTerms;
 
-  // Deel-akkoord op logies-voorwaarden (juridisch ankerpunt op moment van selectie)
+  // Deel-akkoord op de logiesvoorwaarden, gegeven bij het kiezen.
   const lodgingPartialAcceptedAt = selectedQuote?.customer_terms_accepted_at || null;
   const lodgingSignatureName = selectedQuote?.customer_signature_name || null;
 
   return (
-    <Card
-      className={cn(
-        isUnderReservation
-          ? "border-warning/40 bg-warning-soft/50"
-          : "border-success/30 bg-success-soft/50",
-      )}
-    >
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4">
-          <div
-            className={cn(
-              "p-2 rounded-full",
-              isUnderReservation
-                ? "bg-warning-soft"
-                : "bg-success-soft",
+    <>
+      <section className="rounded-lg border bg-card p-4 sm:p-6" aria-labelledby="ondertekenen-kop">
+        <h2 id="ondertekenen-kop" className="font-display text-2xl font-medium leading-tight">
+          {isUnderReservation ? "Ondertekenen onder voorbehoud" : "Ondertekenen"}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {isUnderReservation
+            ? `U legt uw programma en de voorwaarden nu vast. ${count === 1 ? "Eén onderdeel wacht" : `${count} onderdelen wachten`} nog op bevestiging van de aanbieder en ${count === 1 ? "blijft" : "blijven"} onder voorbehoud.`
+            : "De aanbieders hebben alle onderdelen bevestigd. Met uw handtekening wordt de boeking definitief."}
+        </p>
+
+        {!isBillingComplete && (
+          <Notice tone="warning" title="Facturatiegegevens nodig" className="mt-4">
+            <p>Vul eerst uw facturatiegegevens in; daarna kunt u ondertekenen.</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={onOpenBilling}>
+              Facturatiegegevens invullen
+            </Button>
+          </Notice>
+        )}
+
+        <div className="mt-5">
+          <h3 className="text-eyebrow font-medium uppercase text-muted-foreground">Voorwaarden</h3>
+          <ul className="mt-2 space-y-2 text-sm">
+            <li>
+              <TermLink href={BUREAU_TERMS_URL}>Bemiddelingsvoorwaarden Bureau Vlieland</TermLink>
+            </li>
+            {defaultPartners.length > 0 && (
+              <li>
+                <TermLink href={DEFAULT_TERMS_URL}>Standaardvoorwaarden Partneraanbod Bureau Vlieland</TermLink>
+                <p className="text-xs text-muted-foreground">Van toepassing op {defaultPartners.map((p) => p.name).join(", ")}</p>
+              </li>
             )}
-          >
-            <CheckCircle
-              className={cn(
-                "h-6 w-6",
-                isUnderReservation
-                  ? "text-warning-ink"
-                  : "text-success",
-              )}
-            />
+            {customPartners.map((partner) => (
+              <li key={partner.id}>
+                <TermLink href={getPublicUrl(partner.terms_pdf_path!)}>Voorwaarden {partner.name}</TermLink>
+              </li>
+            ))}
+            {showUvhTerms && (
+              <li>
+                <TermLink href={UVH_TERMS_URL}>Uniforme Voorwaarden Horeca 2024 (pdf)</TermLink>
+              </li>
+            )}
+          </ul>
+          {isLoadingPartners && <p className="mt-2 text-xs text-muted-foreground">De voorwaarden van de aanbieders worden geladen…</p>}
+        </div>
+
+        {lodgingPartialAcceptedAt && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            De voorwaarden voor uw logies heeft u al geaccepteerd op {new Date(lodgingPartialAcceptedAt).toLocaleDateString("nl-NL")}
+            {lodgingSignatureName ? ` (${lodgingSignatureName})` : ""}. Met deze ondertekening bevestigt u uw volledige programma.
+          </p>
+        )}
+
+        <div className="mt-5 space-y-3">
+          <div className="flex items-start gap-3">
+            <Checkbox id="terms-checkbox" checked={isChecked} onCheckedChange={(checked) => setIsChecked(checked === true)} disabled={!isBillingComplete} className="mt-0.5" />
+            <Label htmlFor="terms-checkbox" className="text-sm leading-relaxed">
+              Ik ga akkoord met de bemiddelingsvoorwaarden van Bureau Vlieland{partnerTerms.length > 0 && " en de voorwaarden van de genoemde aanbieders"}.
+            </Label>
           </div>
-          
-          <div className="flex-1 space-y-4">
-            <div>
-              <h3 className="font-semibold text-lg">
-                {isUnderReservation
-                  ? "Ondertekenen onder voorbehoud"
-                  : "Alle activiteiten zijn bevestigd"}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {isUnderReservation
-                  ? `U legt uw programma en de voorwaarden nu vast. ${
-                      unconfirmedItems.length === 1
-                        ? "Eén onderdeel wacht"
-                        : `${unconfirmedItems.length} onderdelen wachten`
-                    } nog op bevestiging van de aanbieder en blijft daarom onder voorbehoud.`
-                  : "De aanbieders hebben alle activiteiten in uw programma bevestigd. Voordat de definitieve boeking ingaat, vragen we uw akkoord op de voorwaarden."}
-              </p>
-            </div>
-
-
-
-
-            {!isBillingComplete && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-soft text-warning-ink">
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium">Facturatiegegevens vereist</p>
-                  <p className="text-warning-ink">
-                    Vul eerst uw facturatiegegevens in voordat u kunt bevestigen.
-                  </p>
-                  <Button
-                    variant="link"
-                    className="h-auto p-0 text-warning-ink underline"
-                    onClick={onOpenBilling}
-                  >
-                    Facturatiegegevens invullen →
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Terms Section - rewritten per briefing with bundled default terms */}
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium">
-                Voor dit programma gelden de volgende voorwaarden:
-              </p>
-              <ul className="space-y-2">
-                {/* Bureau Vlieland terms - always shown first */}
-                <li className="flex items-center gap-2 text-sm">
-                  <span>•</span>
-                  <span className="font-medium">Bemiddelingsvoorwaarden Bureau Vlieland</span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 text-primary"
-                    onClick={() => window.open(BUREAU_TERMS_URL, "_blank")}
-                  >
-                    <FileText className="h-3 w-3 mr-1" />
-                    Bekijken
-                  </Button>
-                </li>
-
-                {/* Bundled default terms */}
-                {!isLoadingPartners && (() => {
-                  const defaultPartners = partnerTerms.filter(p => !p.terms_pdf_path || p.uses_default_terms);
-                  const customPartners = partnerTerms.filter(p => p.terms_pdf_path && !p.uses_default_terms);
-                  
-                  return (
-                    <>
-                      {/* Bundled standard terms - one entry for all default partners */}
-                      {defaultPartners.length > 0 && (
-                        <li className="text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>•</span>
-                            <span className="font-medium">Standaardvoorwaarden Partneraanbod Bureau Vlieland</span>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="h-auto p-0 text-primary"
-                              asChild
-                            >
-                              <a href={DEFAULT_TERMS_URL} target="_blank" rel="noopener noreferrer">
-                                <FileText className="h-3 w-3 mr-1" />
-                                Bekijken
-                              </a>
-                            </Button>
-                          </div>
-                          <p className="ml-4 text-xs text-muted-foreground mt-1">
-                            Van toepassing op: {defaultPartners.map(p => p.name).join(", ")}
-                          </p>
-                        </li>
-                      )}
-
-                      {/* Custom partner terms - each shown separately */}
-                      {customPartners.map((partner) => (
-                        <li key={partner.id} className="flex items-center gap-2 text-sm">
-                          <span>•</span>
-                          <span className="font-medium">Voorwaarden {partner.name}</span>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-primary"
-                            onClick={() => window.open(getPublicUrl(partner.terms_pdf_path!), "_blank")}
-                          >
-                            <FileText className="h-3 w-3 mr-1" />
-                            Bekijken
-                          </Button>
-                        </li>
-                      ))}
-
-                      {/* UVH 2024 - only if catering or accommodation without custom terms */}
-                      {showUvhTerms && (
-                        <li className="flex items-center gap-2 text-sm">
-                          <span>•</span>
-                          <span className="font-medium">Uniforme Voorwaarden Horeca 2024</span>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-primary"
-                            asChild
-                          >
-                            <a href={UVH_TERMS_URL} target="_blank" rel="noopener noreferrer">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Download PDF
-                            </a>
-                          </Button>
-                        </li>
-                      )}
-                    </>
-                  );
-                })()}
-              </ul>
-            </div>
-
-            {lodgingPartialAcceptedAt && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-success-soft/60 text-success-ink text-sm">
-                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <p>
-                  De voorwaarden voor uw logies zijn al door u geaccepteerd op{" "}
-                  {new Date(lodgingPartialAcceptedAt).toLocaleDateString("nl-NL")}
-                  {lodgingSignatureName ? ` (${lodgingSignatureName})` : ""}. Met deze ondertekening bevestigt u uw volledige programma.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-3">
+          {isUnderReservation && (
+            <Notice tone="warning">
               <div className="flex items-start gap-3">
                 <Checkbox
-                  id="terms-checkbox"
-                  checked={isChecked}
-                  onCheckedChange={(checked) => setIsChecked(checked === true)}
+                  id="reservation-checkbox"
+                  checked={reservationAcknowledged}
+                  onCheckedChange={(checked) => setReservationAcknowledged(checked === true)}
                   disabled={!isBillingComplete}
-                  className={cn(!isBillingComplete && "opacity-50")}
+                  className="mt-0.5"
                 />
-                <Label
-                  htmlFor="terms-checkbox"
-                  className={cn(
-                    "text-sm cursor-pointer leading-relaxed",
-                    !isBillingComplete && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  Ik ga akkoord met:
-                  <br />
-                  – de bemiddelingsvoorwaarden van Bureau Vlieland
-                  {partnerTerms.length > 0 && (
-                    <>
-                      <br />
-                      – de voorwaarden van de hierboven genoemde aanbieders
-                    </>
-                  )}
+                <Label htmlFor="reservation-checkbox" className="text-sm leading-relaxed">
+                  Ik begrijp dat {count === 1 ? "dit onderdeel" : "deze onderdelen"} nog onder voorbehoud van bevestiging door de aanbieder {count === 1 ? "staat" : "staan"}:{" "}
+                  <strong className="font-medium">{names}</strong>. Lukt een onderdeel niet, dan zoekt Bureau Vlieland een alternatief of vervalt het zonder kosten.
                 </Label>
               </div>
-
-              {isUnderReservation && (
-                <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning-soft/80 p-3">
-                  <Checkbox
-                    id="reservation-checkbox"
-                    checked={reservationAcknowledged}
-                    onCheckedChange={(checked) => setReservationAcknowledged(checked === true)}
-                    disabled={!isBillingComplete}
-                  />
-                  <Label
-                    htmlFor="reservation-checkbox"
-                    className="text-sm cursor-pointer leading-relaxed"
-                  >
-                    Ik begrijp dat{" "}
-                    {unconfirmedItems.length === 1
-                      ? "het volgende onderdeel"
-                      : "de volgende onderdelen"}{" "}
-                    nog onder voorbehoud van bevestiging door de aanbieder{" "}
-                    {unconfirmedItems.length === 1 ? "staat" : "staan"}:{" "}
-                    <span className="font-medium">
-                      {unconfirmedItems.map((item) => item.block_name).join(", ")}
-                    </span>
-                    . Lukt een onderdeel niet, dan zoekt Bureau Vlieland een alternatief of
-                    vervalt het onderdeel zonder kosten.
-                  </Label>
-                </div>
-              )}
-            </div>
-
-
-            {/* Digital Signature Section - simplified per briefing */}
-            <div className={cn(
-              "border rounded-lg p-4 space-y-3",
-              !isChecked ? "opacity-50 bg-muted/30" : "bg-background"
-            )}>
-              <div className="flex items-center gap-2">
-                <PenLine className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Digitale ondertekening</span>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="signature-name" className="text-sm">
-                  Volledige naam
-                </Label>
-                <Input
-                  id="signature-name"
-                  value={signatureName}
-                  onChange={(e) => setSignatureName(e.target.value)}
-                  placeholder="Typ hier uw volledige naam"
-                  disabled={!isChecked || !isBillingComplete}
-                  className={cn(!isChecked && "opacity-50")}
-                />
-              </div>
-
-              <ul className="text-xs text-muted-foreground space-y-1 pl-4">
-                <li>
-                  {isUnderReservation
-                    ? "• Bevestigde onderdelen worden definitief gereserveerd"
-                    : "• Reserveringen worden definitief bevestigd"}
-                </li>
-                <li>• Annuleringsvoorwaarden zijn van toepassing</li>
-              </ul>
-            </div>
-
-            <Button
-              onClick={handleAcceptClick}
-              disabled={!canSubmit || isSubmitting}
-              className="w-full sm:w-auto"
-            >
-              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <PenLine className="h-4 w-4 mr-2" />
-              {isUnderReservation
-                ? "Ondertekenen onder voorbehoud"
-                : "Ondertekenen & Definitief boeken"}
-
-            </Button>
-          </div>
+            </Notice>
+          )}
         </div>
-      </CardContent>
 
-      {/* Accommodation Warning Dialog */}
+        <div className="mt-5">
+          <FormField
+            label="Volledige naam"
+            htmlFor="signature-name"
+            required
+            help="Uw naam geldt als digitale handtekening. Reserveringen worden definitief en de annuleringsvoorwaarden zijn van toepassing."
+          >
+            <Input
+              id="signature-name"
+              value={signatureName}
+              onChange={(e) => setSignatureName(e.target.value)}
+              placeholder="Typ uw volledige naam"
+              disabled={!isChecked || !isBillingComplete}
+              autoComplete="name"
+            />
+          </FormField>
+        </div>
+
+        <div className="mt-5">
+          <Button onClick={handleAcceptClick} disabled={!canSubmit || isSubmitting} className="w-full sm:w-auto">
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <PenLine className="h-4 w-4" aria-hidden="true" />}
+            {isUnderReservation ? "Ondertekenen onder voorbehoud" : "Ondertekenen"}
+          </Button>
+        </div>
+      </section>
+
       <AccommodationWarningDialog
         open={showAccommodationWarning}
         onOpenChange={setShowAccommodationWarning}
-        onContinueWithAccommodation={handleContinueWithAccommodation}
-        onContinueWithout={handleContinueWithoutAccommodation}
+        onContinueWithAccommodation={() => {
+          setShowAccommodationWarning(false);
+          navigate("/logies-aanvragen");
+        }}
+        onContinueWithout={() => {
+          setShowAccommodationWarning(false);
+          handleAccept();
+        }}
       />
-    </Card>
+    </>
   );
 };

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { EmptyState, FormField } from "@/components/system";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
@@ -36,6 +36,8 @@ export interface ProjectDocument {
   created_at: string;
 }
 
+const DEFAULT_EMPTY_HINT = "Nog geen documenten geüpload.";
+
 interface Props {
   programRequestId?: string | null;
   accommodationRequestId?: string | null;
@@ -66,7 +68,7 @@ export function ProjectDocumentsPanel({
   viewer,
   canUpload = true,
   title = "Documenten",
-  emptyHint = "Nog geen documenten geüpload.",
+  emptyHint = DEFAULT_EMPTY_HINT,
   compact = false,
   showVisibilityToggles = false,
 }: Props) {
@@ -222,17 +224,15 @@ export function ProjectDocumentsPanel({
       {canUpload && (
         <Card className="p-3 space-y-2 border-dashed">
           {!compact && (
-            <div className="space-y-1.5">
-              <Label htmlFor="doc-label" className="text-xs">Label (optioneel)</Label>
+            <FormField label="Label" htmlFor="doc-label">
               <Input
                 id="doc-label"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
-                placeholder="bv. Kamerindeling, Gastenlijst"
-                className="h-8 text-sm"
+                placeholder="Bijvoorbeeld kamerindeling of gastenlijst"
                 disabled={busy}
               />
-            </div>
+            </FormField>
           )}
           <div className="flex items-center gap-2">
             <input
@@ -256,7 +256,7 @@ export function ProjectDocumentsPanel({
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            PDF, Word, Excel, CSV of afbeelding — max {MAX_MB} MB per bestand.
+            PDF, Word, Excel, CSV of afbeelding, maximaal {MAX_MB} MB per bestand.
           </p>
         </Card>
       )}
@@ -266,7 +266,7 @@ export function ProjectDocumentsPanel({
           <Loader2 className="h-4 w-4 animate-spin" /> Laden…
         </div>
       ) : docs.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic">{emptyHint}</p>
+        <EmptyState icon={<FileText />} title="Nog geen documenten" description={emptyHint === DEFAULT_EMPTY_HINT ? undefined : emptyHint} className="py-6" />
       ) : (
         <ul className="space-y-2">
           {docs.map((doc) => (

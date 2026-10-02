@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Notice, LinkCard } from "@/components/system";
+import { LinkCard, Pill } from "@/components/system";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { GuestDetailsCard } from "./GuestDetailsCard";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
@@ -72,15 +71,6 @@ export const PracticalView = ({
 
   return (
     <div className="space-y-6">
-      {/* Intro strip */}
-      <Notice tone="info" title="Wat kunt u hier doen?">
-        <p>
-          Geef de gegevens van uw groep door (gasten, dieet, kamerindeling),
-          download tickets en bewaar uw programma als Word-document of in uw agenda.
-          Hier vindt u ook de contactgegevens van Bureau Vlieland.
-        </p>
-      </Notice>
-
       {/* Situatie en vervoer, zoals in de wizard ingevuld */}
       {(() => {
         const sit = describeGroupSituation(program);
@@ -98,7 +88,7 @@ export const PracticalView = ({
               {sit.crossing && <p>Overtocht: {sit.crossing}</p>}
               {sit.bikes && <p>Fietsen: {sit.bikes}</p>}
               {sit.window && <p>Op het eiland: {sit.window}</p>}
-              <p className="text-xs pt-1">Klopt dit niet meer? Laat het ons weten via de chat of telefonisch.</p>
+              <p className="pt-1 text-xs">Klopt dit niet meer? Laat het ons weten via de chat of telefonisch.</p>
             </CardContent>
           </Card>
         );
@@ -133,7 +123,7 @@ export const PracticalView = ({
               viewer="customer"
               canUpload={true}
               title=""
-              emptyHint="Nog geen documenten. U kunt hier bijvoorbeeld een gastenlijst, kamerindeling (spreadsheet), of andere documenten uploaden."
+              emptyHint="U kunt hier bijvoorbeeld een gastenlijst of kamerindeling uploaden."
             />
           </CardContent>
         </Card>
@@ -145,10 +135,8 @@ export const PracticalView = ({
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Ticket className="h-4 w-4 text-primary" />
-              Tickets & vouchers
-              <Badge variant="secondary" className="text-xs">
-                {ticketItems.length}
-              </Badge>
+              Tickets en vouchers
+              <Pill tone="neutral">{ticketItems.length}</Pill>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">

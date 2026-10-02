@@ -1,6 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, Pencil, CheckCircle, AlertCircle } from "lucide-react";
 import { BillingDetailsCard } from "./BillingDetailsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import type { ProgramRequestItem } from "@/types/programRequest";
@@ -10,6 +7,7 @@ import type { FeeStructureSet } from "@/types/pricing";
 interface CompactBillingSectionProps {
   program: {
     billing_company_name?: string;
+    billing_country?: string | null;
     billing_kvk_number?: string;
     billing_vat_number?: string;
     billing_address_street?: string;
@@ -56,41 +54,13 @@ export const CompactBillingSection = ({
   arrivalDate,
   revisionFeesTotal,
 }: CompactBillingSectionProps) => {
-  const billingComplete = !!(
-    program.billing_company_name &&
-    program.billing_address_street &&
-    program.billing_address_postal &&
-    program.billing_address_city &&
-    program.billing_contact_name
-  );
-
   const extrasOverride = selectedAccommodationQuote && accommodationExtrasByQuoteId
     ? accommodationExtrasByQuoteId[selectedAccommodationQuote.id]
     : undefined;
 
   return (
-    <div id="billing" className="scroll-mt-20 space-y-4">
-      {/* Section header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Facturatie & Kosten</h2>
-        </div>
-        {billingComplete ? (
-          <div className="flex items-center gap-1.5 text-sm text-success">
-            <CheckCircle className="h-4 w-4" />
-            <span>Gegevens compleet</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-sm text-warning">
-            <AlertCircle className="h-4 w-4" />
-            <span>Gegevens invullen</span>
-          </div>
-        )}
-      </div>
-
-      {/* Billing details card */}
-      <BillingDetailsCard program={program as any} onEdit={onEditBilling} />
+    <div className="space-y-4">
+      <BillingDetailsCard program={program} onEdit={onEditBilling} />
 
       {/* Price summary / cost specification */}
       <PriceSummaryCard

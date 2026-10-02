@@ -14,9 +14,8 @@ import {
   Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Container, EmptyState, Pill, Stepper, type StepperStep } from "@/components/system";
+import { Container, EmptyState, Pill, Stepper } from "@/components/system";
 import { useFloatingBar } from "@/hooks/useFloatingLayer";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
@@ -35,6 +34,9 @@ import { cn } from "@/lib/utils";
 import type { ProgramRequestItem, ProgramRequestHistory } from "@/types/programRequest";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import { type PortalView } from "./ProgramNavigation";
+import { buildPortalSteps } from "./portalSteps";
+import { byEffectiveTime } from "./timelineUtils";
+import { useActiveDay } from "./useActiveDay";
 import { TabHeader } from "./TabHeader";
 import { buildTabHeader } from "./tabHeaderConfig";
 import { DayBar, type DayBarDay, type DayStatus } from "./DayBar";
@@ -87,6 +89,7 @@ export interface ProgramViewProgram {
   billing_vat_number?: string;
   billing_contact_email?: string;
   billing_reference?: string;
+  billing_country?: string | null;
   acceptedTerms?: AcceptedTermsEntry[];
   reference_number?: string | null;
   origin?: string | null;
@@ -173,28 +176,8 @@ interface DayData extends DayBarDay {
 const money = (n: number) => n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** De tijd waarop de tijdlijn sorteert: bevestigd, anders het voorstel, anders de wens. */
-const effectiveTime = (item: ProgramRequestItem): string | null => {
-  if (item.confirmed_time) return item.confirmed_time;
-  if (item.proposed_time && (item.status === "confirmed" || item.status === "alternative")) return item.proposed_time;
-  if (item.preferred_time && item.preferred_time !== "flexibel") return item.preferred_time;
-  return null;
-};
-
-const byTime = (a: ProgramRequestItem, b: ProgramRequestItem) => {
-  const ta = effectiveTime(a);
-  const tb = effectiveTime(b);
-  if (!ta && !tb) return 0;
-  if (!ta) return 1;
-  if (!tb) return -1;
-  return ta.localeCompare(tb);
-};
-
 const WAITING_STATUSES: ItemDisplayStatus[] = ["wacht_op_partner", "klant_akkoord_wacht_partner", "tegenvoorstel_klant"];
 const DONE_STATUSES: ItemDisplayStatus[] = ["geaccepteerd", "klant_akkoord_bureau", "uitgevoerd", "self_arranged", "afgesloten_automatisch"];
-
-/** De dagkop staat na een klik 144px (scroll-mt-36) onder de bovenrand; daaronder telt een dag als "in beeld". */
-const SCROLL_LINE = 150;
 
 export const ProgramView = ({
   customerReview,
@@ -313,15 +296,15 @@ export const ProgramView = ({
     isPostExecution,
   });
 
-  // Voortgang: drie stappen, de eerste die nog niet rond is licht op. Alles rond: geen band.
-  const steps: StepperStep[] = [
-    ...(isMultiDay ? [{ key: "lodging", label: "Logies" }] : []),
-    { key: "program", label: "Programma" },
-    { key: "accept", label: "Akkoord" },
-  ];
-  const lodgingDone = !isMultiDay || hasSelectedAccommodation;
-  const programDone = allConfirmed || isPostExecution;
-  const currentStep = isCancelled ? null : !lodgingDone ? "lodging" : !programDone ? "program" : !termsAccepted ? "accept" : null;
+  // Voortgang: de eerste stap die nog niet rond is licht op; alles rond: geen band.
+  const { steps, current: currentStep } = buildPortalSteps({
+    isMultiDay,
+    hasSelectedAccommodation,
+    allConfirmed,
+    isPostExecution,
+    termsAccepted,
+    isCancelled,
+  });
 
   // De dagen: onderdelen op volgorde van tijd, de stand per dag voor de dagbalk en het dagtotaal.
   const dayCount = Math.max(selectedDates.length, 1);
@@ -332,7 +315,7 @@ export const ProgramView = ({
   const days: DayData[] = useMemo(() => {
     const timeline = program.items.filter((i) => i.status !== "cancelled" && i.day_index >= 0);
     return Array.from({ length: dayCount }, (_, index) => {
-      const items = timeline.filter((i) => Math.min(i.day_index, dayCount - 1) === index).sort(byTime);
+      const items = timeline.filter((i) => Math.min(i.day_index, dayCount - 1) === index).sort(byEffectiveTime);
       let openCount = 0;
       let waitingCount = 0;
       let doneCount = 0;
@@ -372,46 +355,10 @@ export const ProgramView = ({
     });
   }, [program.items, program.number_of_people, program.quote_status, dayCount, selectedDates, priceThresholds, isPostExecution, isApprovalPhase, getItemVatRate, todayIndex]);
 
-  // De dagbalk volgt het scrollen: de laatste dagkop boven de lijn is de actieve dag.
-  const [activeDayIndex, setActiveDayIndex] = useState(() => (todayIndex != null && todayIndex > 0 ? todayIndex : 0));
+  // De dagbalk volgt het scrollen en scrolt bij een klik naar de dag.
   const timelineRef = useRef<HTMLDivElement>(null);
   const programTab = section === "program";
-  useEffect(() => {
-    if (!programTab || dayCount <= 1) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const sections = timelineRef.current?.querySelectorAll<HTMLElement>("[data-day-section]");
-      if (!sections?.length) return;
-      let current = 0;
-      sections.forEach((el) => {
-        if (el.getBoundingClientRect().top <= SCROLL_LINE) current = Number(el.dataset.daySection);
-      });
-      setActiveDayIndex(current);
-    };
-    const onScroll = () => {
-      if (!frame) frame = window.requestAnimationFrame(update);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [programTab, dayCount]);
-
-  // Tijdens het verblijf opent de tijdlijn bij vandaag.
-  const openedAtToday = useRef(false);
-  useEffect(() => {
-    if (!programTab || openedAtToday.current || todayIndex == null || todayIndex <= 0 || dayCount <= 1) return;
-    openedAtToday.current = true;
-    document.getElementById(`dag-${todayIndex}`)?.scrollIntoView({ block: "start" });
-    setActiveDayIndex(todayIndex);
-  }, [programTab, todayIndex, dayCount]);
-
-  const scrollToDay = (index: number) => {
-    setActiveDayIndex(index);
-    document.getElementById(`dag-${index}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const { activeDayIndex, scrollToDay } = useActiveDay(timelineRef, dayCount, todayIndex, programTab);
 
   // Na toevoegen of verplaatsen scrolt de tijdlijn mee en licht de kaart kort op.
   const knownIds = useRef<Set<string>>(new Set(program.items.map((i) => i.id)));
@@ -751,22 +698,18 @@ export const ProgramView = ({
 
         {section === "accommodation" && isMultiDay && (
           <div id="accommodation" className="scroll-mt-20">
-            <Card>
-              <CardContent className="pt-6">
-                <AccommodationSection
-                  accommodation={accommodation}
-                  quotes={accommodationQuotes}
-                  extrasByQuoteId={accommodationExtrasByQuoteId}
-                  onSelectQuote={onSelectAccommodationQuote}
-                  selectedDates={selectedDates}
-                  onEditAccommodation={onOpenEdit}
-                  onEditAccommodationSetup={onOpenAccommodationSetup}
-                  customerToken={program.customer_token}
-                  numberOfPeople={program.number_of_people}
-                  invoicingMode={invoicingMode}
-                />
-              </CardContent>
-            </Card>
+            <AccommodationSection
+              accommodation={accommodation}
+              quotes={accommodationQuotes}
+              extrasByQuoteId={accommodationExtrasByQuoteId}
+              onSelectQuote={onSelectAccommodationQuote}
+              selectedDates={selectedDates}
+              onEditAccommodation={onOpenEdit}
+              onEditAccommodationSetup={onOpenAccommodationSetup}
+              customerToken={program.customer_token}
+              numberOfPeople={program.number_of_people}
+              invoicingMode={invoicingMode}
+            />
           </div>
         )}
 
@@ -823,6 +766,7 @@ export const ProgramView = ({
             signatureId={program.signature_id}
             onAcceptTerms={onAcceptTerms}
             onOpenBilling={onOpenBilling}
+            onGoToProgram={onNavigate ? () => onNavigate("program") : undefined}
           />
         )}
       </div>

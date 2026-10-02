@@ -487,6 +487,41 @@ Logies, Praktisch, Facturatie (met landveld) en Akkoord op de nieuwe
 schil; de deelnemersweergave op dezelfde dagbalk en kaart; de beta-banner
 weg.
 
+*Gebouwd op 2 oktober, eigen PR.* Overzicht: `PortalHead` met de aanhef,
+de `Stepper`-band uit `portalSteps.ts` (gedeeld met het programma), één
+melding met de stand, "Programma beoordelen" als enige primaire knop en
+delen als `outline`; `ProgramStepper` is weg. Logies: per toestand één
+kaart (`AccommodationSection`): bij gekozen logies de feiten, foto's of
+een `EmptyState`, kamerindeling, verzorging, inbegrepen, adres en contact
+als links, kaart en route (route en Google Maps als link, niet meer in de
+actiekleur) en de echte acties als knoppen onderaan; bij offertes de
+wensen als `Pill`s en de keuzekaarten op `Pill`; bij een aanvraag één
+`Notice` met de stand in plaats van de valse voortgangsbalk. Praktisch:
+gastenlijst, dieetwensen en kamerindeling als `FormField`s in een sheet
+(`ResponsiveSheetContent`), de documenten met `EmptyState` en
+`FormField` (ook in admin en partnerportaal, `ProjectDocumentsPanel`), de
+intro-melding weg. Facturatie: de dialoog is een sheet met `FormField`s
+en een landveld (`billingCountry.ts`: postcode, btw-nummer en
+registratienummer per land, met controle per veld zodra u het verlaat;
+kolom `program_requests.billing_country` met migratie,
+`update-customer-program` slaat het op en de factuur toont het land
+buiten Nederland); de kop boven de kostenspecificatie is weg (de tabkop
+zegt het al) en "voorlopig" komt voor de onderdeelkaart en de
+kostenspecificatie uit één regel (`isProvisionalPrice`). Akkoord: één
+`Notice` met de stand (klaar voor ondertekening, wacht op de aanbieder
+met de open onderdelen erbij, eerst akkoord op het voorstel, ondertekend),
+de voorwaarden als links, één vinkje (plus één bij voorbehoud), de naam
+als handtekening in een `FormField` en na het ondertekenen een
+`SuccessScreen` in de pagina; `PendingConfirmationExplainer` is weg.
+Deelnemersweergave: `PortalHead`, `PortalTabs`, dezelfde dagbalk en
+`ProgramItemCard` in leesstand (`audience="participant"`: geen status,
+prijs of acties; wel agenda en route), en de onderbalk op een telefoon
+stuurt dezelfde weergave (`participantView` in `CustomerProgram`);
+`CustomerTimeline` en `CounterProposalDialog` zijn weg. De beta-banner en
+de instelling `portal_beta_banner_enabled` zijn weg (besluit 8), en de
+gedachtestreepjes zijn uit de klantteksten. Plafonds: `STRICT_MAX` van 26
+naar 24 en `LINT_MAX` van 1190 naar 1159.
+
 **Fase 4: borging (1 dag).** De baseline per bestand en
 `DESIGN_DEBT_MAX` omlaag; de visuele test met een vaste opname van één
 programma (overzicht, programma, logies, akkoord, deelnemersweergave) op

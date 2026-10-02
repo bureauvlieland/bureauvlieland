@@ -1,23 +1,14 @@
 import { format } from "date-fns";
-import { Notice } from "@/components/system";
 import { nl } from "date-fns/locale";
-import {
-  Calendar,
-  Mail,
-  Phone,
-  Users,
-  AlertCircle,
-  Share2,
-  ChevronRight,
-} from "lucide-react";
+import { Calendar, ChevronRight, Hash, Mail, Phone, Share2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Notice, PortalHead, Stepper, type NoticeTone, type PortalHeadFact } from "@/components/system";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { isMaatwerkProject } from "@/lib/projectOrigin";
 import { greetingName } from "@/lib/greetingName";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
-import { ProgramStepper, type StepId } from "./ProgramStepper";
+import { buildPortalSteps } from "./portalSteps";
 import vlielandLandscape from "@/assets/vlieland-landscape.jpg";
 import cyclingGroup from "@/assets/cycling-group.jpg";
 import outdoorDining from "@/assets/outdoor-dining.jpg";
@@ -62,6 +53,19 @@ interface CustomerPortalSplashProps {
   onShareWithParticipants?: () => void;
 }
 
+const PHOTOS = [
+  { src: vlielandLandscape, alt: "Vlieland landschap" },
+  { src: cyclingGroup, alt: "Fietsen op Vlieland" },
+  { src: speedboat, alt: "Speedboot activiteit" },
+  { src: outdoorDining, alt: "Diner aan een lange tafel" },
+  { src: beachActivity, alt: "Strandactiviteit" },
+];
+
+/**
+ * Het startpunt van een meerdaags programma (klantportaal fase 3): fotomozaïek,
+ * welkom met een goede aanhef, de drie stappen, één melding met de stand en
+ * één primaire knop naar het programma; delen als tweede knop.
+ */
 export const CustomerPortalSplash = ({
   program,
   selectedDates,
@@ -73,13 +77,7 @@ export const CustomerPortalSplash = ({
   onShareWithParticipants,
 }: CustomerPortalSplashProps) => {
   const items = program.items ?? [];
-  const {
-    termsAccepted,
-    billingComplete,
-    customerApprovedCount,
-    customerApprovableTotal: customerApprovableCount,
-    isPostExecution,
-  } = useProgramStatus(
+  const { termsAccepted, allConfirmed, hasSelectedAccommodation, isPostExecution } = useProgramStatus(
     {
       ...program,
       terms_accepted_at: program.terms_accepted_at,
@@ -98,236 +96,118 @@ export const CustomerPortalSplash = ({
   );
 
   const isMaatwerk = isMaatwerkProject(program);
-  const isQuoteAwaitingApproval =
-    !isPostExecution && program.quote_status === "offerte_verstuurd" && !termsAccepted;
+  const isQuoteAwaitingApproval = !isPostExecution && program.quote_status === "offerte_verstuurd" && !termsAccepted;
   const isMaatwerkEmpty = isMaatwerk && statusSummary.total === 0;
-
-  const accommodationStatus: "none" | "requested" | "selected" =
-    accommodationQuotes.some((q) => q.status === "selected")
-      ? "selected"
-      : accommodation
-        ? "requested"
-        : "none";
-  const handleStepAction = (stepId: StepId) => {
-    if (stepId === "lodging") onNavigate("accommodation");
-    else if (stepId === "providers" || stepId === "approve") onNavigate("program");
-    else if (stepId === "billing_terms") onNavigate(billingComplete ? "accept" : "billing");
-  };
+  const { steps, current } = buildPortalSteps({
+    isMultiDay,
+    hasSelectedAccommodation,
+    allConfirmed,
+    isPostExecution,
+    termsAccepted,
+    isCancelled: !!program.cancelled_at,
+  });
 
   const dateRange =
     selectedDates.length > 0
       ? selectedDates.length === 1
         ? format(selectedDates[0], "EEE d MMMM yyyy", { locale: nl })
-        : `${format(selectedDates[0], "EEE d MMM", { locale: nl })} – ${format(
-            selectedDates[selectedDates.length - 1],
-            "EEE d MMM yyyy",
-            { locale: nl },
-          )}`
+        : `${format(selectedDates[0], "EEE d MMM", { locale: nl })} t/m ${format(selectedDates[selectedDates.length - 1], "EEE d MMM yyyy", { locale: nl })}`
       : null;
+  const facts: PortalHeadFact[] = [];
+  if (dateRange) facts.push({ key: "datum", icon: <Calendar />, label: dateRange });
+  if (program.number_of_people > 0) facts.push({ key: "personen", icon: <Users />, label: `${program.number_of_people} personen` });
+  if (program.reference_number) facts.push({ key: "kenmerk", icon: <Hash />, label: program.reference_number });
+
+  // Bedrijf voorop; anders de naam zonder meegetypte aanhef ("Mevrouw. M. ...").
+  const name = program.customer_company?.trim() || greetingName(program.customer_name);
+
+  const status: { tone: NoticeTone; title: string; text: string } = isPostExecution
+    ? { tone: "success", title: "Uw programma is uitgevoerd", text: "Bureau Vlieland bereidt de facturatie voor. Vul eventueel nog ontbrekende gegevens aan." }
+    : isQuoteAwaitingApproval
+      ? { tone: "warning", title: "Uw offerte staat klaar", text: "Open het programma om de onderdelen te bekijken en akkoord te geven." }
+      : isMaatwerkEmpty
+        ? { tone: "info", title: "Bureau Vlieland is uw programma aan het samenstellen", text: "Zodra het programma klaar is, vindt u het hier terug. Wij nemen contact met u op." }
+        : { tone: "info", title: "Dit is een werkdocument", text: "Onderdelen, aantallen en tijden kunnen we samen verder aanscherpen. Na afstemming maken we het voorstel definitief." };
+
+  const primaryLabel = termsAccepted
+    ? "Programma bekijken"
+    : isQuoteAwaitingApproval
+      ? "Offerte bekijken en akkoord geven"
+      : statusSummary.total > 0
+        ? "Programma beoordelen"
+        : "Programma bekijken";
 
   return (
     <div className="space-y-6">
-      {/* Fotomosaic hero — volledige breedte, desktop grid */}
-      <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-1.5 h-72 rounded-lg overflow-hidden shadow-medium">
-        <div className="row-span-2 relative overflow-hidden group">
+      {/* Fotomozaïek: raster vanaf sm, strook op een telefoon */}
+      <div className="hidden h-72 grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-1.5 overflow-hidden rounded-lg shadow-medium sm:grid">
+        <div className="group relative row-span-2 overflow-hidden">
           <img
-            src={vlielandLandscape}
-            alt="Vlieland landschap"
+            src={PHOTOS[0].src}
+            alt={PHOTOS[0].alt}
             loading="eager"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            className="h-full w-full object-cover transition-transform duration-slow ease-out group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-ocean-deep/40 via-transparent to-transparent" />
           <div className="absolute bottom-4 left-4 text-primary-foreground">
-            <p className="font-medium uppercase text-eyebrow opacity-80">Bureau Vlieland</p>
+            <p className="text-eyebrow font-medium uppercase opacity-80">Bureau Vlieland</p>
             <p className="text-lg font-semibold leading-tight">Uw verblijf op het eiland</p>
           </div>
         </div>
-        {[
-          { src: cyclingGroup, alt: "Fietsen op Vlieland" },
-          { src: speedboat, alt: "Speedboot activiteit" },
-          { src: outdoorDining, alt: "Diner aan een lange tafel" },
-          { src: beachActivity, alt: "Strandactiviteit" },
-        ].map((p) => (
-          <div key={p.alt} className="overflow-hidden group">
-            <img
-              src={p.src}
-              alt={p.alt}
-              loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-            />
+        {PHOTOS.slice(1).map((p) => (
+          <div key={p.alt} className="group overflow-hidden">
+            <img src={p.src} alt={p.alt} loading="lazy" className="h-full w-full object-cover transition-transform duration-slow ease-out group-hover:scale-105" />
+          </div>
+        ))}
+      </div>
+      <div className="-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 sm:hidden">
+        {PHOTOS.map((p) => (
+          <div key={p.alt} className="h-44 w-52 shrink-0 snap-start overflow-hidden rounded-lg">
+            <img src={p.src} alt={p.alt} loading="lazy" className="h-full w-full object-cover" />
           </div>
         ))}
       </div>
 
-      {/* Mobiele scrollstrip */}
-      <div className="flex sm:hidden gap-2 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory">
-        {[
-          { src: vlielandLandscape, alt: "Vlieland landschap" },
-          { src: cyclingGroup, alt: "Fietsen op Vlieland" },
-          { src: outdoorDining, alt: "Diner aan een lange tafel" },
-          { src: speedboat, alt: "Speedboot activiteit" },
-          { src: beachActivity, alt: "Strandactiviteit" },
-        ].map((p) => (
-          <div key={p.alt} className="shrink-0 w-52 h-44 rounded-lg overflow-hidden snap-start">
-            <img src={p.src} alt={p.alt} loading="lazy" className="w-full h-full object-cover" />
-          </div>
-        ))}
-      </div>
+      <PortalHead
+        title={name ? `Welkom, ${name}` : "Welkom"}
+        description="Fijn dat u er bent. Hier vindt u uw programma, de logies en alles voor uw verblijf op Vlieland op één plek. Bureau Vlieland regelt het; u kijkt, kiest en geeft akkoord."
+        facts={facts}
+      />
 
-      {/* Welkomstboodschap */}
-      <div className="space-y-3">
-        <div>
-          <h1 className="font-display text-display-md font-medium text-foreground">
-            Welkom
-            {(() => {
-              // Bedrijf voorop; anders de naam zonder meegetypte aanhef ("Mevrouw. M. ...").
-              const name = program.customer_company?.trim() || greetingName(program.customer_name);
-              return name ? `, ${name}` : "";
-            })()}
-          </h1>
-          {dateRange && (
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1 flex-wrap">
-              <Calendar className="h-3.5 w-3.5" />
-              {dateRange}
-              {program.number_of_people > 0 && (
-                <>
-                  <span className="mx-1">·</span>
-                  <Users className="h-3.5 w-3.5" />
-                  {program.number_of_people} personen
-                </>
-              )}
-              {program.reference_number && (
-                <>
-                  <span className="mx-1">·</span>
-                  <span>Kenmerk {program.reference_number}</span>
-                </>
-              )}
-            </p>
-          )}
+      {current && (
+        <div className="rounded-lg border bg-card px-4 py-3">
+          <Stepper steps={steps} current={current} />
         </div>
+      )}
 
-        <p className="text-muted-foreground">
-          Fijn dat u er bent. Via dit portaal vindt u alles over uw verblijf op Vlieland op één
-          plek. Bureau Vlieland coördineert het programma en de logies. U hoeft alleen te kijken,
-          te kiezen en akkoord te geven.
-        </p>
-        <p className="text-muted-foreground text-sm">
-          Met vriendelijke eilandgroet,
-          <br />
-          <span className="font-medium text-foreground">Erwin</span>
-        </p>
+      <Notice tone={status.tone} title={status.title}>
+        <p>{status.text}</p>
+      </Notice>
 
-        <Notice tone="warning">
-          <p>
-            {isPostExecution ? (
-              <>
-                <strong>Uw programma is uitgevoerd.</strong> Bureau Vlieland bereidt de facturatie voor. Vul eventueel nog ontbrekende gegevens aan.
-              </>
-            ) : isQuoteAwaitingApproval ? (
-              <>
-                <strong>Uw offerte staat klaar.</strong> Open het programma om de onderdelen te
-                bekijken en akkoord te geven.
-              </>
-            ) : isMaatwerkEmpty ? (
-              <>
-                <strong>Bureau Vlieland is uw programma aan het samenstellen.</strong> Zodra het
-                programma klaar is, vindt u het hier terug. Wij nemen contact met u op.
-              </>
-            ) : (
-              <>
-                <strong>Dit is een werkdocument.</strong> Onderdelen, aantallen en tijden kunnen we
-                samen verder aanscherpen. Na afstemming maken we het voorstel definitief.
-              </>
-            )}
-          </p>
-        </Notice>
-      </div>
-
-      {/* Traject-lint — exact hetzelfde visuele blok als op de tabs */}
-      <div className="space-y-2">
-        <h2 className="text-base font-semibold">Zo verloopt uw traject</h2>
-        <p className="text-sm text-muted-foreground">
-          Klik op een stap om er direct heen te gaan. Op elke pagina ziet u dit lint terug, zodat u
-          altijd weet waar u staat.
-        </p>
-        <ProgramStepper
-          statusSummary={statusSummary}
-          billingComplete={billingComplete}
-          termsAccepted={termsAccepted}
-          isMultiDay={isMultiDay}
-          accommodationStatus={accommodationStatus}
-          accommodationQuoteReceivedCount={
-            accommodationQuotes.filter((q) => q.status === "submitted").length
-          }
-          customerApprovedCount={customerApprovedCount}
-          customerApprovableCount={customerApprovableCount}
-          quoteStatus={program.quote_status}
-          isPostExecution={isPostExecution}
-          onStepAction={handleStepAction}
-        />
-      </div>
-
-      {/* Snel-navigatie + Delen */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="border-2 hover:border-primary/50 transition-colors">
-          <CardContent className="p-5 space-y-3">
-            <h3 className="font-semibold">Direct naar het programma</h3>
-            <p className="text-sm text-muted-foreground">
-              Bekijk uw activiteiten, geef feedback en keur per onderdeel goed.
-            </p>
-            <Button className="w-full" onClick={() => onNavigate("program")}>
-              {termsAccepted
-                ? "Programma bekijken"
-                : isQuoteAwaitingApproval
-                  ? "Offerte bekijken en akkoord geven"
-                  : statusSummary.total > 0
-                    ? "Programma beoordelen"
-                    : "Programma bekijken"}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </CardContent>
-        </Card>
-
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button onClick={() => onNavigate("program")}>
+          {primaryLabel}
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
         {onShareWithParticipants && (
-          <Card className="border-dashed">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Share2 className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="font-semibold">Delen met deelnemers</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Stuur uw groep een vereenvoudigde weergave met dagindeling, kaart en praktische
-                informatie, zonder facturatie of akkoordstappen.
-              </p>
-              <Button variant="outline" className="w-full" onClick={onShareWithParticipants}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Deellink & QR-code
-              </Button>
-            </CardContent>
-          </Card>
+          <Button variant="outline" onClick={onShareWithParticipants}>
+            <Share2 className="h-4 w-4" aria-hidden="true" />
+            Delen met deelnemers
+          </Button>
         )}
       </div>
 
-      {/* Contact */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>Vragen?</span>
-        <a
-          href="mailto:hallo@bureauvlieland.nl"
-          className="flex items-center gap-1 hover:text-foreground transition-colors"
-        >
-          <Mail className="h-3 w-3" />
+        <a href="mailto:hallo@bureauvlieland.nl" className="inline-flex items-center gap-1 transition-colors duration-fast hover:text-foreground">
+          <Mail className="h-3 w-3" aria-hidden="true" />
           hallo@bureauvlieland.nl
         </a>
-        <a
-          href="tel:+31562700208"
-          className="flex items-center gap-1 hover:text-foreground transition-colors"
-        >
-          <Phone className="h-3 w-3" />
+        <a href="tel:+31562700208" className="inline-flex items-center gap-1 transition-colors duration-fast hover:text-foreground">
+          <Phone className="h-3 w-3" aria-hidden="true" />
           0562 700 208
         </a>
-      </div>
+      </p>
     </div>
   );
 };

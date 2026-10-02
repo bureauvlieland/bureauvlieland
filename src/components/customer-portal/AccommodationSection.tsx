@@ -1,29 +1,12 @@
-import { RESPONSE_TIME } from "@/content/promises";
-import { Notice } from "@/components/system";
-import { useState, useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { differenceInDays, format, isPast } from "date-fns";
 import { nl } from "date-fns/locale";
-import {
-  BedDouble,
-  Calendar,
-  Users,
-  Clock,
-  CheckCircle2,
-  ChevronRight,
-  Pencil,
-  AlertTriangle,
-  Info,
-  Phone,
-  Mail,
-  Globe,
-  Download,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BedDouble, Check, ChevronRight, Download, Globe, List, Mail, Map as MapIcon, Pencil, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { EmptyState, Notice, Pill } from "@/components/system";
 import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
+import { RESPONSE_TIME } from "@/content/promises";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
 import {
   ACCOMMODATION_TYPES,
@@ -35,16 +18,14 @@ import {
   getBoardDisplay,
 } from "@/types/accommodation";
 import { summarizeBoard, summarizeRooms } from "@/lib/accommodationSetup";
-import { accommodationTypeIcon, locationIcon } from "@/lib/accommodationIcons";
+import { presentQuotePartner } from "@/lib/accommodationQuotePresentation";
+import { cn } from "@/lib/utils";
 import { AccommodationQuoteCard } from "./AccommodationQuoteCard";
 import { ContactAccommodationDialog } from "./ContactAccommodationDialog";
 import { AccommodationMessageThread } from "./AccommodationMessageThread";
 import { HotelLocationMap } from "./HotelLocationMap";
 import { HotelGallery } from "./HotelGallery";
 import { AccommodationQuotesMap } from "./AccommodationQuotesMap";
-import { presentQuotePartner } from "@/lib/accommodationQuotePresentation";
-import { List, Map as MapIcon } from "lucide-react";
-import { transformImageUrl } from "@/lib/supabaseImage";
 
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
@@ -59,6 +40,24 @@ interface AccommodationSectionProps {
   invoicingMode?: string | null;
 }
 
+const formatPrice = (price: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
+const day = (iso: string, pattern = "EEE d MMM") => format(new Date(iso), pattern, { locale: nl });
+
+/** Een kopje met inhoud in de logieskaart. */
+const Block = ({ label, children, className }: { label: string; children: ReactNode; className?: string }) => (
+  <div className={className}>
+    <h3 className="text-eyebrow font-medium uppercase text-muted-foreground">{label}</h3>
+    <div className="mt-1.5 text-sm">{children}</div>
+  </div>
+);
+
+/**
+ * Het tabblad Logies (klantportaal fase 3): per toestand één kaart in plaats
+ * van kaart-in-kaart-in-kaart. Gekozen logies: de feiten, foto's, kamers,
+ * verzorging, adres en contact als links, kaart en route, en de echte acties
+ * als knoppen onderaan. Offertes: de wensen als pills en per offerte een
+ * keuzekaart. Aangevraagd: één melding met de stand.
+ */
 export const AccommodationSection = ({
   accommodation,
   quotes,
@@ -75,32 +74,20 @@ export const AccommodationSection = ({
   const [quoteView, setQuoteView] = useState<"list" | "map">("list");
   const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [contactQuote, setContactQuote] = useState<AccommodationQuote | null>(null);
 
-  // Build URL with all parameters for seamless handoff
+  // De logiesaanvraag krijgt datum, aantal en de programmacode mee.
   const logiesUrl = useMemo(() => {
     const params = new URLSearchParams();
-    
-    // Add dates if multi-day
     if (selectedDates.length > 1) {
       const sorted = [...selectedDates].sort((a, b) => a.getTime() - b.getTime());
       params.set("arrival", format(sorted[0], "yyyy-MM-dd"));
       params.set("departure", format(sorted[sorted.length - 1], "yyyy-MM-dd"));
     }
-    
-    // Add guests
-    if (numberOfPeople) {
-      params.set("guests", numberOfPeople.toString());
-    }
-    
-    // Add program token for linking
-    if (customerToken) {
-      params.set("programToken", customerToken);
-    }
-    
-    const paramString = params.toString();
-    return paramString ? `/logies-aanvragen?${paramString}` : "/logies-aanvragen";
+    if (numberOfPeople) params.set("guests", numberOfPeople.toString());
+    if (customerToken) params.set("programToken", customerToken);
+    const query = params.toString();
+    return query ? `/logies-aanvragen?${query}` : "/logies-aanvragen";
   }, [selectedDates, numberOfPeople, customerToken]);
 
   const handleSelectQuote = async (signatureName: string, acceptedTerms: boolean) => {
@@ -108,12 +95,10 @@ export const AccommodationSection = ({
     setIsSelecting(true);
     const success = await onSelectQuote(selectedQuoteForConfirm.id, signatureName, acceptedTerms);
     setIsSelecting(false);
-    if (success) {
-      setSelectedQuoteForConfirm(null);
-    }
+    if (success) setSelectedQuoteForConfirm(null);
   };
 
-  // Wensen van de klant als chips boven de offertes (alleen wat is ingevuld).
+  // De wensen van de klant, als maatstaf bij het kiezen (alleen wat is ingevuld).
   const wishChips = useMemo(() => {
     if (!accommodation) return [] as string[];
     const chips: string[] = [];
@@ -132,11 +117,9 @@ export const AccommodationSection = ({
       const l = LOCATION_PREFERENCES.find((o) => o.value === v);
       if (l && v !== "no_preference") chips.push(l.label);
     }
-    const facilities: string[] = [];
-    for (const v of accommodation.facilities_required || []) {
-      const label = FACILITIES.find((o) => o.value === v)?.label;
-      if (label) facilities.push(label);
-    }
+    const facilities = (accommodation.facilities_required || [])
+      .map((v) => FACILITIES.find((o) => o.value === v)?.label)
+      .filter(Boolean) as string[];
     if (facilities.length > 0) chips.push(facilities.join(" · "));
     return chips;
   }, [accommodation]);
@@ -144,16 +127,15 @@ export const AccommodationSection = ({
   const numberOfNights = accommodation
     ? differenceInDays(new Date(accommodation.departure_date), new Date(accommodation.arrival_date))
     : selectedDates.length > 1
-    ? selectedDates.length - 1
-    : 1;
+      ? selectedDates.length - 1
+      : 1;
 
-  const hasSelectedQuote = quotes.some((q) => q.status === "selected");
   const selectedQuote = quotes.find((q) => q.status === "selected");
   const submittedQuotes = quotes.filter((q) => q.status === "submitted");
   const expiredQuotes = quotes.filter((q) => q.status === "expired");
   const declinedQuotes = quotes.filter((q) => q.status === "declined" || q.status === "rejected");
 
-  // Deduplicated decline reasons (anonymized - no partner names)
+  // Redenen van afwijzing, zonder namen van partners.
   const declineReasons = useMemo(() => {
     const reasons = declinedQuotes
       .map((q) => q.partner_notes)
@@ -161,335 +143,213 @@ export const AccommodationSection = ({
     return [...new Set(reasons)];
   }, [declinedQuotes]);
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(price);
-
-  // State 0: Cancelled - show closure message
+  // Gesloten: geen passende logies gevonden.
   if (accommodation?.status === "cancelled") {
     return (
-      <Card className="border-muted bg-muted/30">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center shrink-0">
-              <BedDouble className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold text-muted-foreground">Logiesaanvraag gesloten</h3>
-              <p className="text-sm text-muted-foreground">
-                Bureau Vlieland heeft helaas geen passende logies kunnen vinden voor uw aanvraag.
-                Neem gerust contact met ons op als u zelf alternatieve logies heeft gevonden of als wij u op een andere manier kunnen helpen.
-              </p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {format(new Date(accommodation.arrival_date), "EEE d MMM", { locale: nl })} –{" "}
-                  {format(new Date(accommodation.departure_date), "EEE d MMM yyyy", { locale: nl })}
-                </span>
-                <span>·</span>
-                <Users className="h-3 w-3" />
-                <span>{accommodation.number_of_guests} gasten</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Notice tone="info" title="Logiesaanvraag gesloten" icon={<BedDouble className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}>
+        <p>
+          Bureau Vlieland heeft helaas geen passende logies kunnen vinden voor uw aanvraag. Neem gerust contact met ons op als u zelf logies heeft
+          gevonden of als wij u op een andere manier kunnen helpen.
+        </p>
+        <p className="mt-1 text-xs">
+          {day(accommodation.arrival_date)} t/m {day(accommodation.departure_date, "EEE d MMM yyyy")} · {accommodation.number_of_guests} gasten
+        </p>
+      </Notice>
     );
   }
 
-  // State 1: No accommodation linked - show CTA with partner-oriented tone
+  // Nog geen aanvraag: één lege staat met de knop.
   if (!accommodation) {
     return (
-      <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-start gap-4">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <BedDouble className="h-6 w-6 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold">Meerdaags verblijf? Wij helpen graag met passende logies.</h3>
-                <p className="text-sm text-muted-foreground">
-                  Een sterk programma begint met comfortabele en beschikbare accommodatie.
-                  Wij vragen vrijblijvend offertes aan bij geschikte locaties en voegen deze toe aan uw programma.
-                </p>
-                <p className="text-xs text-muted-foreground/80 italic">
-                  Vrijblijvend. U ontvangt {RESPONSE_TIME.within} passende voorstellen.
-                </p>
-              </div>
-            </div>
-            <Button asChild className="shrink-0">
-              <Link to={logiesUrl}>
-                Logies laten regelen
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={<BedDouble />}
+        title="Nog geen logies"
+        description={`Wij vragen vrijblijvend offertes aan bij geschikte locaties en voegen ze toe aan uw programma. U ontvangt ${RESPONSE_TIME.within} passende voorstellen.`}
+        action={
+          <Button asChild>
+            <Link to={logiesUrl}>
+              Logies laten regelen
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        }
+      />
     );
   }
 
-  // State 2: Accommodation with selected quote - show confirmation
-  if (hasSelectedQuote && selectedQuote) {
+  // Gekozen: één kaart met alles over het verblijf.
+  if (selectedQuote) {
+    const partner = presentQuotePartner(selectedQuote);
+    const quotePartner = selectedQuote.partner;
+    const board = getBoardDisplay(selectedQuote.board_type);
+    const phone = quotePartner?.booking_contact_phone || quotePartner?.phone;
+    const email = quotePartner?.contact_email || quotePartner?.email;
+    const rooms = selectedQuote.room_configuration ?? [];
+    const includes = Array.isArray(selectedQuote.includes) ? selectedQuote.includes : [];
+    const nights = Math.max(numberOfNights, 1);
+    const facts = [
+      `${day(accommodation.arrival_date)} t/m ${day(accommodation.departure_date)}`,
+      `${nights} ${nights === 1 ? "nacht" : "nachten"}`,
+      `${accommodation.number_of_guests} gasten`,
+      board.isKnown ? board.label : null,
+    ].filter(Boolean);
+    const address = [quotePartner?.address_street, [quotePartner?.address_postal, quotePartner?.address_city].filter(Boolean).join(" ")]
+      .filter((s) => s && String(s).trim().length > 0)
+      .join(", ");
+
     return (
-      <>
-      <Card className="border-success/30 bg-success-soft/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BedDouble className="h-5 w-5 text-success" />
-              Uw Logies
-            </CardTitle>
-            <Badge className="bg-success">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Gekozen
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-start gap-4">
-            {/* Partner gallery thumbnail */}
-            {selectedQuote.partner?.gallery_images && (selectedQuote.partner.gallery_images as any[]).length > 0 && (
-              <img
-                src={transformImageUrl((selectedQuote.partner.gallery_images as any[])[0].url, { width: 800, quality: 78 })}
-                alt={selectedQuote.accommodation_name}
-                className="w-full md:w-32 h-24 md:h-24 rounded-lg object-cover shrink-0"
-              />
-            )}
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg">{selectedQuote.accommodation_name}</h3>
-              {selectedQuote.partner?.name && (
-                <p className="text-sm text-muted-foreground">{selectedQuote.partner.name}</p>
+      <div className="space-y-6">
+        <article className="rounded-lg border bg-card p-4 sm:p-6" aria-labelledby="logies-kop">
+          <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+            <div className="min-w-0">
+              <h2 id="logies-kop" className="font-display text-2xl font-medium leading-tight">
+                {selectedQuote.accommodation_name}
+              </h2>
+              {quotePartner?.name && quotePartner.name !== selectedQuote.accommodation_name && (
+                <p className="text-sm text-muted-foreground">{quotePartner.name}</p>
               )}
-              
-              {/* Details grid */}
-              <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {format(new Date(accommodation.arrival_date), "EEE d MMM", { locale: nl })} -{" "}
-                    {format(new Date(accommodation.departure_date), "EEE d MMM", { locale: nl })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{accommodation.number_of_guests} gasten</span>
-                </div>
-              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{facts.join(" · ")}</p>
             </div>
-
-            {/* Price */}
-            <div className="text-right">
-              <p className="text-2xl font-bold text-primary">{formatPrice(selectedQuote.price_total)}</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedQuote.price_includes_vat ? "incl." : "excl."} BTW
+            <div className="sm:text-right">
+              <p className="font-display text-2xl font-semibold leading-none">{formatPrice(selectedQuote.price_total)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {selectedQuote.price_includes_vat ? "incl. btw" : "excl. btw"}
+                {selectedQuote.price_per_person_per_night ? ` · ${formatPrice(selectedQuote.price_per_person_per_night)} p.p. per nacht` : ""}
               </p>
-              {selectedQuote.price_per_person_per_night && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {formatPrice(selectedQuote.price_per_person_per_night)} p.p.p.n.
-                </p>
-              )}
             </div>
+          </header>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {isBureauCentral
+              ? "Bureau Vlieland regelt de reservering en de facturatie. U hoeft verder niets te doen."
+              : "Uw verblijf is geboekt. Hieronder vindt u alle praktische informatie."}
+          </p>
+
+          <div className="mt-5">
+            <HotelGallery images={partner.images} accommodationName={selectedQuote.accommodation_name} />
           </div>
 
-          {/* Verzorging + kamerconfiguratie */}
-          {(
-            <div className="rounded-lg border bg-card p-4 space-y-3">
-              {(() => {
-                const board = getBoardDisplay(selectedQuote.board_type);
-                return (
-                <div>
-                  <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Verzorging</p>
-                  <Badge variant={board.isKnown ? "secondary" : "outline"} className="font-normal">
-                    {board.label}
-                  </Badge>
-                  {selectedQuote.board_notes && (
-                    <p className="text-sm text-muted-foreground mt-2 whitespace-pre-line">{selectedQuote.board_notes}</p>
-                  )}
-                  {!board.isKnown && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Wilt u dit direct weten? Stel uw vraag via "Nieuw bericht" onderaan deze pagina.
-                    </p>
-                  )}
-                </div>
-                );
-              })()}
-
-
-
-              {(selectedQuote.room_configuration?.length ?? 0) > 0 && (
-                <div>
-                  <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Kamerindeling</p>
-                  <ul className="text-sm space-y-1">
-                    {selectedQuote.room_configuration.map((room, i) => (
-                      <li key={i} className="flex items-center justify-between gap-2 rounded bg-muted/50 px-2 py-1.5">
-                        <span className="flex items-center gap-2">
-                          <BedDouble className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          {room.count}x {ROOM_TYPES.find((t) => t.value === room.type)?.label || room.type}
-                          {room.occupancy ? ` (${room.occupancy} pers.)` : ""}
-                        </span>
-                        {room.price_per_night ? (
-                          <span className="text-muted-foreground">{formatPrice(room.price_per_night)} p.n.</span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+          {(selectedQuote.description || partner.aboutText) && (
+            <div className="mt-5 space-y-2 whitespace-pre-line text-sm text-muted-foreground">
+              {selectedQuote.description && <p>{selectedQuote.description}</p>}
+              {partner.aboutText && <p>{partner.aboutText}</p>}
+            </div>
+          )}
+          {partner.highlights.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {partner.highlights.map((h) => (
+                <Pill key={h} tone="neutral">
+                  {h}
+                </Pill>
+              ))}
             </div>
           )}
 
-          {/* Reservation status */}
-          <Notice tone="success" title="Reservering bevestigd">
-            <p>
-              {isBureauCentral
-                ? "Bureau Vlieland regelt de reservering en facturatie. U hoeft verder niets te doen. Hieronder vindt u alle informatie over uw verblijf."
-                : "Uw verblijf is geboekt. Hieronder vindt u alle praktische informatie."}
-            </p>
-          </Notice>
-
-          {/* Hotel / accommodation information */}
-          {(selectedQuote.partner || selectedQuote.description || selectedQuote.includes?.length || selectedQuote.conditions || selectedQuote.partner_notes) && (
-            <div className="rounded-lg border bg-card p-4 space-y-4">
-              <h4 className="font-semibold text-sm flex items-center gap-2">
-                <Info className="h-4 w-4 text-primary" />
-                Informatie over uw verblijf
-              </h4>
-
-              <HotelGallery
-                images={selectedQuote.partner?.gallery_images || []}
-                accommodationName={selectedQuote.accommodation_name}
-              />
-
-              {selectedQuote.description && (
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.description}</p>
-              )}
-
-              {selectedQuote.partner?.about_text && (
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.partner.about_text}</p>
-              )}
-
-              {selectedQuote.partner?.highlight_features && selectedQuote.partner.highlight_features.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedQuote.partner.highlight_features.map((f, i) => (
-                    <Badge key={i} variant="secondary" className="font-normal">{f}</Badge>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <Block label="Kamerindeling">
+              {rooms.length > 0 ? (
+                <ul className="space-y-1">
+                  {rooms.map((room, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2">
+                      <span>
+                        {room.count}× {ROOM_TYPES.find((t) => t.value === room.type)?.label || room.type}
+                        {room.occupancy ? <span className="text-muted-foreground"> · {room.occupancy} pers.</span> : null}
+                      </span>
+                      {room.price_per_night ? <span className="text-muted-foreground">{formatPrice(room.price_per_night)} p.n.</span> : null}
+                    </li>
                   ))}
-                </div>
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">De kamerindeling volgt van de accommodatie.</p>
               )}
-
-              {selectedQuote.includes && selectedQuote.includes.length > 0 && (
-                <div>
-                  <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Inbegrepen</p>
-                  <ul className="text-sm space-y-1">
-                    {selectedQuote.includes.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-success shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {selectedQuote.partner && (selectedQuote.partner.address_street || selectedQuote.partner.phone || selectedQuote.partner.booking_contact_phone || selectedQuote.partner.contact_email || selectedQuote.partner.email || selectedQuote.partner.website_url || selectedQuote.partner.location_description) && (
-                <div className="grid sm:grid-cols-2 gap-3 text-sm pt-2 border-t">
-                  {(selectedQuote.partner.address_street || selectedQuote.partner.address_city) && (
-                    <div>
-                      <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Adres</p>
-                      <p>
-                        {selectedQuote.partner.address_street}
-                        {selectedQuote.partner.address_postal || selectedQuote.partner.address_city ? (
-                          <>
-                            <br />
-                            {[selectedQuote.partner.address_postal, selectedQuote.partner.address_city].filter(Boolean).join(" ")}
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
+            </Block>
+            <Block label="Verzorging">
+              <p>{board.label}</p>
+              {selectedQuote.board_notes && <p className="mt-1 whitespace-pre-line text-muted-foreground">{selectedQuote.board_notes}</p>}
+              {!board.isKnown && <p className="mt-1 text-muted-foreground">Wilt u dit direct weten? Stel uw vraag via "Nieuw bericht" hieronder.</p>}
+            </Block>
+            {includes.length > 0 && (
+              <Block label="Inbegrepen">
+                <ul className="space-y-1">
+                  {includes.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
+                      <span>{String(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Block>
+            )}
+            {(partner.checkInTime || partner.checkOutTime) && (
+              <Block label="In- en uitchecken">
+                <p>
+                  {partner.checkInTime && `Inchecken vanaf ${partner.checkInTime}`}
+                  {partner.checkInTime && partner.checkOutTime && " · "}
+                  {partner.checkOutTime && `uitchecken voor ${partner.checkOutTime}`}
+                </p>
+              </Block>
+            )}
+            {(address || phone || email || partner.websiteUrl) && (
+              <Block label="Adres en contact">
+                {address && <p>{address}</p>}
+                <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                  {phone && (
+                    <a href={`tel:${phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1.5 text-primary hover:underline">
+                      <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                      {phone}
+                    </a>
                   )}
-                  {(() => {
-                    const phone = selectedQuote.partner.booking_contact_phone || selectedQuote.partner.phone;
-                    const email = selectedQuote.partner.contact_email || selectedQuote.partner.email;
-                    const website = selectedQuote.partner.website_url;
-                    if (!phone && !email && !website) return null;
-                    return (
-                      <div>
-                        <p className="uppercase text-eyebrow text-muted-foreground mb-1.5">Contact accommodatie</p>
-                        <div className="flex flex-wrap gap-2">
-                          {phone && (
-                            <a href={`tel:${phone.replace(/\s/g, "")}`}>
-                              <Button size="sm" variant="default">
-                                <Phone className="h-4 w-4 mr-2" />
-                                Bel {phone}
-                              </Button>
-                            </a>
-                          )}
-                          {email && (
-                            <a href={`mailto:${email}`}>
-                              <Button size="sm" variant="outline">
-                                <Mail className="h-4 w-4 mr-2" />
-                                E-mail
-                              </Button>
-                            </a>
-                          )}
-                          {website && (
-                            <a href={website} target="_blank" rel="noreferrer">
-                              <Button size="sm" variant="outline">
-                                <Globe className="h-4 w-4 mr-2" />
-                                Website
-                              </Button>
-                            </a>
-                          )}
-                        </div>
-                        {selectedQuote.partner.booking_contact_name && (
-                          <p className="text-xs text-muted-foreground mt-1.5">
-                            t.a.v. {selectedQuote.partner.booking_contact_name}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  {selectedQuote.partner.location_description && (
-                    <div className="sm:col-span-2">
-                      <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Locatie</p>
-                      <p className="text-muted-foreground whitespace-pre-line">{selectedQuote.partner.location_description}</p>
-                    </div>
+                  {email && (
+                    <a href={`mailto:${email}`} className="inline-flex items-center gap-1.5 text-primary hover:underline">
+                      <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                      {email}
+                    </a>
                   )}
-                </div>
-              )}
+                  {partner.websiteUrl && (
+                    <a href={partner.websiteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-primary hover:underline">
+                      <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+                      Website
+                    </a>
+                  )}
+                </p>
+                {quotePartner?.booking_contact_name && <p className="mt-1 text-xs text-muted-foreground">t.a.v. {quotePartner.booking_contact_name}</p>}
+              </Block>
+            )}
+            {partner.locationDescription && (
+              <Block label="Ligging">
+                <p className="whitespace-pre-line text-muted-foreground">{partner.locationDescription}</p>
+              </Block>
+            )}
+          </div>
 
-              {selectedQuote.partner?.location_lat && selectedQuote.partner?.location_lng && (
-                <div className="pt-2 border-t">
-                  <p className="uppercase text-eyebrow text-muted-foreground mb-2">Kaart & route</p>
-                  <HotelLocationMap
-                    lat={Number(selectedQuote.partner.location_lat)}
-                    lng={Number(selectedQuote.partner.location_lng)}
-                    label={selectedQuote.accommodation_name}
-                    address={[
-                      selectedQuote.partner.address_street,
-                      [selectedQuote.partner.address_postal, selectedQuote.partner.address_city].filter(Boolean).join(" "),
-                    ].filter(Boolean).join(", ")}
-                  />
-                </div>
-              )}
-
-              {selectedQuote.partner_notes && (
-                <div className="pt-2 border-t">
-                  <p className="uppercase text-eyebrow text-muted-foreground mb-1">Toelichting van de accommodatie</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.partner_notes}</p>
-                </div>
-              )}
-
-              {selectedQuote.conditions && (
-                <div className="pt-2 border-t">
-                  <p className="uppercase text-eyebrow text-muted-foreground mb-1">Voorwaarden</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedQuote.conditions}</p>
-                </div>
-              )}
-            </div>
+          {partner.coordinates && (
+            <Block label="Kaart en route" className="mt-5">
+              <HotelLocationMap lat={partner.coordinates.lat} lng={partner.coordinates.lng} label={selectedQuote.accommodation_name} address={address || null} />
+            </Block>
+          )}
+          {selectedQuote.partner_notes && (
+            <Block label="Toelichting van de accommodatie" className="mt-5">
+              <p className="whitespace-pre-line text-muted-foreground">{selectedQuote.partner_notes}</p>
+            </Block>
+          )}
+          {selectedQuote.conditions && (
+            <Block label="Voorwaarden" className="mt-5">
+              <p className="whitespace-pre-line text-muted-foreground">{selectedQuote.conditions}</p>
+            </Block>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <footer className="mt-6 flex flex-wrap gap-2 border-t pt-4">
+            {onEditAccommodationSetup && (
+              <Button variant="outline" size="sm" onClick={onEditAccommodationSetup}>
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+                Kamers en verzorging aanpassen
+              </Button>
+            )}
+            {onEditAccommodation && (
+              <Button variant="outline" size="sm" onClick={onEditAccommodation}>
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+                Datum, aantal personen of doel wijzigen
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -497,147 +357,98 @@ export const AccommodationSection = ({
                 const { generateStayOverviewPdf } = await import("@/lib/stayOverviewPdf");
                 await generateStayOverviewPdf(accommodation, selectedQuote, accommodation.customer_company || accommodation.customer_name);
               }}
-              className="w-full sm:w-auto"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Download verblijfsoverzicht (PDF)
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Verblijfsoverzicht (pdf)
             </Button>
-            {onEditAccommodation && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEditAccommodation}
-                className="w-full sm:w-auto"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Datum, aantal personen of doel wijzigen
-              </Button>
-            )}
-            {onEditAccommodationSetup && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEditAccommodationSetup}
-                className="w-full sm:w-auto"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Kamers &amp; verzorging aanpassen
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </footer>
+        </article>
 
-      {customerToken && (
-        <AccommodationMessageThread
-          customerToken={customerToken}
-          quoteId={selectedQuote.id}
-          accommodationName={selectedQuote.accommodation_name}
-          isBureauCentral={isBureauCentral}
-        />
-      )}
-    </>
+        {customerToken && (
+          <AccommodationMessageThread
+            customerToken={customerToken}
+            quoteId={selectedQuote.id}
+            accommodationName={selectedQuote.accommodation_name}
+            isBureauCentral={isBureauCentral}
+          />
+        )}
+      </div>
     );
   }
 
-  // State 3: Quotes available - show as collapsible items like program items
+  // Offertes binnen: kiezen.
   if (submittedQuotes.length > 0) {
+    const requested = accommodation.quotes_requested_count;
+    const received = submittedQuotes.length;
+    const declined = accommodation.quotes_declined_count || 0;
+    const waiting = Math.max(0, requested - received - declined);
+    const showMapToggle = submittedQuotes.length > 1 && submittedQuotes.some((q) => presentQuotePartner(q).coordinates);
+
     return (
-      <>
-        <div className="space-y-3">
-          {accommodation.quotes_requested_count > 0 && (() => {
-            const requested = accommodation.quotes_requested_count;
-            const received = submittedQuotes.length;
-            const declined = accommodation.quotes_declined_count || 0;
-            const waiting = Math.max(0, requested - received - declined);
-            return (
-              <p className="text-xs text-muted-foreground/80 mb-1">
-                {requested} logiespartner{requested !== 1 ? 's' : ''} benaderd
-                {received > 0 && `. Van ${received} partner${received !== 1 ? 's' : ''} hebben wij een offerte ontvangen`}
-                {declined > 0 && `. ${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} de aanvraag helaas afgewezen`}
-                {waiting > 0 && `. Wij wachten nog op een reactie van ${waiting} partner${waiting !== 1 ? 's' : ''}`}
-                .
-              </p>
-            );
-          })()}
-          <p className="text-sm text-muted-foreground">
-            {submittedQuotes.length === 1
-              ? "Bekijk de offerte en kies als het bij u past."
-              : "Bekijk en vergelijk de offertes. Kies de optie die het beste bij u past."}
-          </p>
-
-          {/* Wensen van de klant, als maatstaf bij het kiezen */}
-          {wishChips.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2.5">
-              <span className="text-xs font-semibold text-primary mr-1">Uw wensen</span>
-              {wishChips.map((chip, i) => (
-                <Badge key={i} variant="outline" className="bg-background font-medium">{chip}</Badge>
-              ))}
-              {onEditAccommodationSetup && (
-                <button type="button" onClick={onEditAccommodationSetup} className="ml-auto text-xs font-medium text-primary hover:underline">
-                  Wensen aanpassen
-                </button>
-              )}
-            </div>
+      <div className="space-y-4">
+        <div className="space-y-1 text-sm">
+          <p>{received === 1 ? "Bekijk de offerte en kies als die bij u past." : "Vergelijk de offertes en kies de optie die het beste bij u past."}</p>
+          {requested > 0 && (
+            <p className="text-muted-foreground">
+              {requested} logiespartner{requested !== 1 ? "s" : ""} benaderd
+              {received > 0 && `, ${received} offerte${received !== 1 ? "s" : ""} ontvangen`}
+              {declined > 0 && `, ${declined} afgewezen`}
+              {waiting > 0 && `, wij wachten nog op ${waiting}`}.
+            </p>
           )}
-
-          {submittedQuotes.length > 1 &&
-            submittedQuotes.some((q) => presentQuotePartner(q).coordinates) && (
-              <div className="flex items-center gap-1.5 bg-muted rounded-lg p-1 w-fit">
-                <button
-                  type="button"
-                  onClick={() => setQuoteView("list")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    quoteView === "list" ? "bg-background shadow-soft" : "text-muted-foreground"
-                  }`}
-                >
-                  <List className="h-3.5 w-3.5" />
-                  Lijst
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuoteView("map")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    quoteView === "map" ? "bg-background shadow-soft" : "text-muted-foreground"
-                  }`}
-                >
-                  <MapIcon className="h-3.5 w-3.5" />
-                  Kaart
-                </button>
-              </div>
-            )}
-
-          {quoteView === "map" ? (
-            <AccommodationQuotesMap quotes={submittedQuotes} formatPrice={formatPrice} />
-          ) : null}
-
-          {submittedQuotes.map((quote) => {
-            const validUntil = new Date(quote.valid_until);
-            const isExpired = isPast(validUntil);
-
-            return (
-              <div key={quote.id} id={`quote-${quote.id}`} className="scroll-mt-24">
-                <AccommodationQuoteCard
-                  quote={quote}
-                  isExpired={isExpired}
-                  validUntil={validUntil}
-                  onSelect={() => setSelectedQuoteForConfirm(quote)}
-                  onContact={customerToken ? () => {
-                    setContactQuote(quote);
-                    setContactDialogOpen(true);
-                  } : undefined}
-                  formatPrice={formatPrice}
-                  extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
-                  numberOfGuests={accommodation.number_of_guests}
-                  numberOfNights={numberOfNights}
-                  facilitiesRequired={accommodation?.facilities_required ?? null}
-                />
-              </div>
-            );
-          })}
         </div>
 
-        {/* Confirmation dialog */}
+        {wishChips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2.5">
+            <span className="mr-1 text-xs font-semibold text-primary">Uw wensen</span>
+            {wishChips.map((chip) => (
+              <Pill key={chip} tone="neutral" className="bg-background">
+                {chip}
+              </Pill>
+            ))}
+            {onEditAccommodationSetup && (
+              <button type="button" onClick={onEditAccommodationSetup} className="ml-auto text-xs font-medium text-primary hover:underline">
+                Wensen aanpassen
+              </button>
+            )}
+          </div>
+        )}
+
+        {showMapToggle && (
+          <div className="flex w-fit items-center gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Weergave">
+            <Button variant={quoteView === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setQuoteView("list")} aria-pressed={quoteView === "list"}>
+              <List className="h-3.5 w-3.5" aria-hidden="true" />
+              Lijst
+            </Button>
+            <Button variant={quoteView === "map" ? "secondary" : "ghost"} size="sm" onClick={() => setQuoteView("map")} aria-pressed={quoteView === "map"}>
+              <MapIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              Kaart
+            </Button>
+          </div>
+        )}
+
+        {quoteView === "map" && <AccommodationQuotesMap quotes={submittedQuotes} formatPrice={formatPrice} />}
+
+        {submittedQuotes.map((quote) => {
+          const validUntil = new Date(quote.valid_until);
+          return (
+            <div key={quote.id} id={`quote-${quote.id}`} className="scroll-mt-32">
+              <AccommodationQuoteCard
+                quote={quote}
+                isExpired={isPast(validUntil)}
+                validUntil={validUntil}
+                onSelect={() => setSelectedQuoteForConfirm(quote)}
+                onContact={customerToken ? () => setContactQuote(quote) : undefined}
+                formatPrice={formatPrice}
+                extrasOverride={extrasByQuoteId ? (extrasByQuoteId[quote.id] ?? []) : undefined}
+                numberOfGuests={accommodation.number_of_guests}
+                numberOfNights={numberOfNights}
+                facilitiesRequired={accommodation.facilities_required ?? null}
+              />
+            </div>
+          );
+        })}
+
         <SelectQuoteDialog
           quote={selectedQuoteForConfirm}
           open={!!selectedQuoteForConfirm}
@@ -648,9 +459,8 @@ export const AccommodationSection = ({
 
         {customerToken && contactQuote && (
           <ContactAccommodationDialog
-            open={contactDialogOpen}
+            open={!!contactQuote}
             onOpenChange={(open) => {
-              setContactDialogOpen(open);
               if (!open) setContactQuote(null);
             }}
             accommodationName={contactQuote.accommodation_name}
@@ -659,291 +469,110 @@ export const AccommodationSection = ({
             isBureauCentral={isBureauCentral}
           />
         )}
-      </>
+      </div>
     );
   }
 
-  // State 3b: Only expired quotes, no submitted ones
-  if (expiredQuotes.length > 0 && submittedQuotes.length === 0) {
+  // Alleen verlopen offertes.
+  if (expiredQuotes.length > 0) {
     return (
-      <Card className="border-warning/40 bg-warning-soft/50">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-start gap-4">
-            <div className="flex items-start gap-4 flex-1">
-              <div className="h-12 w-12 rounded-full bg-warning-soft flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-6 w-6 text-warning" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold">Logiesofferte verlopen</h3>
-                <p className="text-sm text-muted-foreground">
-                  De ontvangen offerte van{" "}
-                  <strong>{expiredQuotes[0].accommodation_name}</strong> is helaas verlopen.
-                  Neem contact op met Bureau Vlieland om een nieuwe offerte aan te vragen.
-                </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground/80">
-                  <Clock className="h-3 w-3" />
-                  <span>
-                    Geldig t/m {format(new Date(expiredQuotes[0].valid_until), "EEE d MMMM yyyy", { locale: nl })}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Notice tone="warning" title="Logiesofferte verlopen">
+        <p>
+          De offerte van <strong>{expiredQuotes[0].accommodation_name}</strong> was geldig tot en met{" "}
+          {day(expiredQuotes[0].valid_until, "EEE d MMMM yyyy")} en is verlopen. Neem contact op met Bureau Vlieland voor een nieuwe offerte.
+        </p>
+      </Notice>
     );
   }
 
-  // State 4: Waiting for quotes
+  // Aangevraagd: wachten op offertes.
   const accommodationType = ACCOMMODATION_TYPES.find((t) => t.value === accommodation.accommodation_type);
-  const TypeIcon = accommodationTypeIcon(accommodation.accommodation_type);
   const requested = accommodation.quotes_requested_count || 0;
   const declined = accommodation.quotes_declined_count || 0;
   const allDeclined = requested > 0 && declined >= requested;
+  const waiting = Math.max(0, requested - declined);
+  const statusParts: string[] = [];
+  if (requested > 0) statusParts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? "s" : ""} benaderd.`);
+  if (declined > 0) statusParts.push(`${declined} partner${declined !== 1 ? "s" : ""} ${declined !== 1 ? "hebben" : "heeft"} helaas afgewezen.`);
+  if (allDeclined) statusParts.push("Bureau Vlieland zoekt naar alternatieven en neemt contact met u op.");
+  else if (waiting > 0) statusParts.push(`Wij wachten nog op ${waiting} partner${waiting !== 1 ? "s" : ""}.`);
+  else statusParts.push("U ontvangt een e-mail zodra er offertes binnenkomen.");
+
+  const occupancyLabel = ROOM_OCCUPANCY_OPTIONS.find((o) => o.value === accommodation.room_occupancy)?.label;
+  const roomTypeLabels = (accommodation.room_types || []).map((v) => ROOM_TYPES.find((r) => r.value === v)?.label).filter(Boolean) as string[];
+  const locationLabels = (accommodation.location_preference || [])
+    .filter((v) => v !== "no_preference")
+    .map((v) => LOCATION_PREFERENCES.find((l) => l.value === v)?.label)
+    .filter(Boolean) as string[];
+  const facilityLabels = (accommodation.facilities_required || []).map((v) => FACILITIES.find((f) => f.value === v)?.label).filter(Boolean) as string[];
+  const budgetLabel = BUDGET_RANGES.find((b) => b.value === accommodation.budget_range)?.label;
+  const wishPills = [...roomTypeLabels, ...locationLabels, ...facilityLabels];
+  const hasWishes = wishPills.length > 0 || !!occupancyLabel || !!budgetLabel || !!accommodation.special_requests;
+  const facts = [
+    `${day(accommodation.arrival_date)} t/m ${day(accommodation.departure_date)}`,
+    `${accommodation.number_of_guests} gasten`,
+    accommodationType?.label ?? null,
+    accommodation.room_count ? `${accommodation.room_count} kamer${accommodation.room_count > 1 ? "s" : ""}` : null,
+  ].filter(Boolean);
 
   return (
-    <Card className={allDeclined
-      ? "border-destructive/30 bg-destructive/5 dark:border-destructive/50 dark:bg-destructive/10"
-      : "border-warning/40 bg-warning-soft/50"
-    }>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <BedDouble className={`h-5 w-5 ${allDeclined ? "text-destructive" : "text-warning"}`} />
-            Uw Logiesaanvraag
-          </CardTitle>
-          <Badge variant="outline" className={allDeclined
-            ? "border-destructive text-destructive"
-            : "border-warning text-warning-ink"
-          }>
-            {allDeclined ? (
-              <><AlertTriangle className="h-3 w-3 mr-1" /> Geen beschikbaarheid</>
-            ) : (
-              <><Clock className="h-3 w-3 mr-1" /> In behandeling</>
-            )}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Request summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>
-              {format(new Date(accommodation.arrival_date), "EEE d MMM", { locale: nl })} -{" "}
-              {format(new Date(accommodation.departure_date), "EEE d MMM", { locale: nl })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span>{accommodation.number_of_guests} gasten</span>
-          </div>
-          {accommodationType && (
-            <div className="flex items-center gap-2">
-              <TypeIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              <span>{accommodationType.label}</span>
-            </div>
-          )}
-          {accommodation.room_count && (
-            <div className="flex items-center gap-2">
-              <BedDouble className="h-4 w-4 text-muted-foreground" />
-              <span>{accommodation.room_count} kamer{accommodation.room_count > 1 ? "s" : ""}</span>
-            </div>
-          )}
-        </div>
+    <article className="rounded-lg border bg-card p-4 sm:p-6" aria-labelledby="logies-kop">
+      <header>
+        <h2 id="logies-kop" className="font-display text-2xl font-medium leading-tight">
+          Uw logiesaanvraag
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{facts.join(" · ")}</p>
+      </header>
 
-        {/* Uw wensen - customer-entered preferences */}
-        {(() => {
-          const occupancyLabel = ROOM_OCCUPANCY_OPTIONS.find((o) => o.value === accommodation.room_occupancy)?.label;
-          const roomTypeLabels = (accommodation.room_types || [])
-            .map((v) => ROOM_TYPES.find((r) => r.value === v)?.label)
-            .filter(Boolean) as string[];
-          const locationLabels = (accommodation.location_preference || [])
-            .map((v) => LOCATION_PREFERENCES.find((l) => l.value === v))
-            .filter((v): v is (typeof LOCATION_PREFERENCES)[number] => !!v);
-          const facilityLabels = (accommodation.facilities_required || [])
-            .map((v) => FACILITIES.find((f) => f.value === v)?.label)
-            .filter(Boolean) as string[];
-          const budgetLabel = BUDGET_RANGES.find((b) => b.value === accommodation.budget_range)?.label;
-
-          const filledCount = [
-            occupancyLabel,
-            roomTypeLabels.length > 0,
-            locationLabels.length > 0,
-            facilityLabels.length > 0,
-            budgetLabel,
-            accommodation.special_requests,
-          ].filter(Boolean).length;
-
-          if (filledCount === 0) return null;
-
-          return (
-            <details className="rounded-lg border bg-card/50 group" open={filledCount <= 2}>
-              <summary className="flex items-center justify-between cursor-pointer px-3 py-2 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                  Uw wensen ({filledCount})
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
-              </summary>
-              <div className="px-3 pb-3 pt-1 space-y-3 text-sm">
-                {occupancyLabel && (
-                  <div>
-                    <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Kamerbezetting</p>
-                    <p>{occupancyLabel}</p>
-                  </div>
-                )}
-                {roomTypeLabels.length > 0 && (
-                  <div>
-                    <p className="uppercase text-eyebrow text-muted-foreground mb-1">Gewenste kamertypes</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {roomTypeLabels.map((label, i) => (
-                        <Badge key={i} variant="secondary" className="font-normal">{label}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {locationLabels.length > 0 && (
-                  <div>
-                    <p className="uppercase text-eyebrow text-muted-foreground mb-1">Locatievoorkeur</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {locationLabels.map((loc, i) => {
-                        const Icon = locationIcon(loc.value);
-                        return (
-                          <Badge key={i} variant="secondary" className="font-normal">
-                            <Icon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                            {loc.label}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {facilityLabels.length > 0 && (
-                  <div>
-                    <p className="uppercase text-eyebrow text-muted-foreground mb-1">Gewenste faciliteiten</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {facilityLabels.map((label, i) => (
-                        <Badge key={i} variant="secondary" className="font-normal">{label}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {budgetLabel && (
-                  <div>
-                    <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Budget</p>
-                    <p>{budgetLabel}</p>
-                  </div>
-                )}
-                {accommodation.special_requests && (
-                  <div>
-                    <p className="uppercase text-eyebrow text-muted-foreground mb-0.5">Bijzondere wensen</p>
-                    <p className="whitespace-pre-line text-muted-foreground">{accommodation.special_requests}</p>
-                  </div>
-                )}
-              </div>
-            </details>
-          );
-        })()}
-
-
-        {/* Status message */}
-        {allDeclined ? (
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 dark:bg-destructive/20">
-            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-destructive">
-                Helaas hebben alle {requested} benaderde partner{requested !== 1 ? 's' : ''} de aanvraag afgewezen.
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Bureau Vlieland zoekt naar alternatieven en neemt contact met u op.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-warning-soft">
-            <Clock className="h-5 w-5 text-warning shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm text-warning-ink">
-                {(() => {
-                  const waiting = Math.max(0, requested - declined);
-                  const parts: string[] = [];
-                  if (requested > 0) {
-                    parts.push(`Bureau Vlieland heeft ${requested} logiespartner${requested !== 1 ? 's' : ''} benaderd.`);
-                  }
-                  if (declined > 0) {
-                    parts.push(`${declined} partner${declined !== 1 ? 's' : ''} ${declined !== 1 ? 'hebben' : 'heeft'} helaas afgewezen.`);
-                  }
-                  if (waiting > 0) {
-                    parts.push(`Wij wachten nog op ${waiting} partner${waiting !== 1 ? 's' : ''}.`);
-                  } else {
-                    parts.push('U ontvangt een email zodra er offertes binnenkomen.');
-                  }
-                  return parts.join(' ');
-                })()}
-              </p>
-              <Progress value={30} className="h-1.5 mt-2 bg-warning/20" />
-            </div>
-          </div>
-        )}
-
-        {/* Decline reasons (anonymized) */}
+      <Notice tone={allDeclined ? "danger" : "info"} title={allDeclined ? "Geen beschikbaarheid" : "Aangevraagd"} className="mt-4">
+        <p>{statusParts.join(" ")}</p>
         {declineReasons.length > 0 && (
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-            <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Opgegeven redenen van afwijzing:</p>
-              <ul className="text-xs text-muted-foreground space-y-0.5">
-                {declineReasons.map((reason, i) => (
-                  <li key={i} className="flex items-start gap-1.5">
-                    <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground/50 shrink-0" />
-                    {reason}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <ul className="mt-2 list-disc pl-5">
+            {declineReasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
         )}
+      </Notice>
 
-        {/* Kamers & verzorging — klant kan dit zelf bijsturen */}
-        <div className="rounded-lg border p-3 space-y-1.5">
-          <p className="font-medium text-muted-foreground uppercase text-eyebrow">
-            Kamers &amp; verzorging
-          </p>
-          <p className="text-sm">
-            <span className="text-muted-foreground">Kamers: </span>
-            {summarizeRooms(accommodation) || "nog niet opgegeven"}
-          </p>
-          <p className="text-sm">
-            <span className="text-muted-foreground">Verzorging: </span>
-            {summarizeBoard(accommodation) || "nog niet opgegeven"}
-          </p>
+      <div className={cn("mt-5 grid gap-5", hasWishes ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+        <Block label="Kamers">{summarizeRooms(accommodation) || <span className="text-muted-foreground">nog niet opgegeven</span>}</Block>
+        <Block label="Verzorging">{summarizeBoard(accommodation) || <span className="text-muted-foreground">nog niet opgegeven</span>}</Block>
+        {hasWishes && (
+          <Block label="Uw wensen">
+            {wishPills.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {wishPills.map((label) => (
+                  <Pill key={label} tone="neutral">
+                    {label}
+                  </Pill>
+                ))}
+              </div>
+            )}
+            {(occupancyLabel || budgetLabel) && (
+              <p className={cn("text-muted-foreground", wishPills.length > 0 && "mt-1.5")}>{[occupancyLabel, budgetLabel].filter(Boolean).join(" · ")}</p>
+            )}
+            {accommodation.special_requests && <p className="mt-1.5 whitespace-pre-line text-muted-foreground">{accommodation.special_requests}</p>}
+          </Block>
+        )}
+      </div>
+
+      {(onEditAccommodationSetup || onEditAccommodation) && (
+        <footer className="mt-6 flex flex-wrap gap-2 border-t pt-4">
           {onEditAccommodationSetup && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onEditAccommodationSetup}
-              className="mt-2 w-full sm:w-auto"
-            >
-              <Pencil className="h-4 w-4 mr-2" />
-              Kamers &amp; verzorging aanpassen
+            <Button variant="outline" size="sm" onClick={onEditAccommodationSetup}>
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Kamers en verzorging aanpassen
             </Button>
           )}
-        </div>
-
-        {/* Edit button */}
-        {onEditAccommodation && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onEditAccommodation}
-            className="w-full sm:w-auto"
-          >
-            <Pencil className="h-4 w-4 mr-2" />
-            Gegevens wijzigen
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+          {onEditAccommodation && (
+            <Button variant="outline" size="sm" onClick={onEditAccommodation}>
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              Datum, aantal personen of doel wijzigen
+            </Button>
+          )}
+        </footer>
+      )}
+    </article>
   );
 };

@@ -16,6 +16,7 @@ import { extractEdgeError } from "@/lib/edgeFunctionError";
 
 export interface BillingDetails {
   billing_company_name: string;
+  billing_country?: string;
   billing_kvk_number: string;
   billing_vat_number: string;
   billing_address_street: string;

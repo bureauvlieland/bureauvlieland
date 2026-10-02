@@ -3686,6 +3686,7 @@ export type Database = {
           billing_contact_name: string | null
           billing_kvk_number: string | null
           billing_reference: string | null
+          billing_country: string
           billing_vat_number: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
@@ -3762,6 +3763,7 @@ export type Database = {
           billing_contact_name?: string | null
           billing_kvk_number?: string | null
           billing_reference?: string | null
+          billing_country?: string
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -3838,6 +3840,7 @@ export type Database = {
           billing_contact_name?: string | null
           billing_kvk_number?: string | null
           billing_reference?: string | null
+          billing_country?: string
           billing_vat_number?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null

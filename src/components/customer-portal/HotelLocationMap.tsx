@@ -132,21 +132,17 @@ export const HotelLocationMap = ({ lat, lng, label, address }: HotelLocationMapP
         ref={mapRef}
         className="w-full h-64 rounded-lg overflow-hidden border z-0 bg-muted"
       />
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={handleLocate} disabled={locating}>
-          {locating ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <MapPin className="h-4 w-4 mr-2" />
-          )}
+          {locating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
           {userPos ? "Locatie bijwerken" : "Toon route vanaf mijn locatie"}
         </Button>
-        <a href={directionsUrl} target="_blank" rel="noreferrer">
-          <Button size="sm" variant="default">
-            <Navigation className="h-4 w-4 mr-2" />
+        <Button asChild size="sm" variant="link">
+          <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
+            <Navigation className="h-4 w-4" aria-hidden="true" />
             Open in Google Maps
-          </Button>
-        </a>
+          </a>
+        </Button>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

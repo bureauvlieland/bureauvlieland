@@ -9,13 +9,12 @@ import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDe
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
 import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
 import { ProgramNavigation, type PortalView } from "@/components/customer-portal/ProgramNavigation";
-import { Container, Notice } from "@/components/system";
+import { Container } from "@/components/system";
 import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
 import { ProgramView } from "@/components/customer-portal/ProgramView";
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { getCustomerPortalStatus } from "@/lib/customerPortalStatus";
-import { useAppSettings } from "@/hooks/useAppSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEventMode } from "@/hooks/useEventMode";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,6 @@ import {
   ArrowLeft,
   AlertCircle,
   RefreshCw,
-  X,
   Sparkles,
   Share2,
 } from "lucide-react";
@@ -43,8 +41,8 @@ const CustomerProgram = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { settings: appSettings } = useAppSettings();
-  const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
+  // De deelnemersweergave: één toestand voor de tabbalk bovenin en de onderbalk op een telefoon.
+  const [participantView, setParticipantView] = useState<BottomNavView>("today");
   const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">("splash");
   
   const {
@@ -501,27 +499,6 @@ const CustomerProgram = () => {
         </Container>
       </header>
 
-      {/* Beta banner */}
-      {appSettings.portal_beta_banner_enabled && !betaBannerDismissed && (
-        <Container size="full" className="pt-4">
-          <Notice tone="info">
-            <div className="flex items-start gap-3">
-              <p className="flex-1">
-                <strong>Nieuwe klantomgeving.</strong> U kijkt naar onze vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
-                <a href="mailto:hallo@bureauvlieland.nl" className="underline font-medium">hallo@bureauvlieland.nl</a>.
-              </p>
-              <button
-                type="button"
-                onClick={() => setBetaBannerDismissed(true)}
-                className="shrink-0 rounded-sm p-1 hover:bg-info/10"
-                aria-label="Sluiten"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </Notice>
-        </Container>
-      )}
 
       {/* Deelnemersweergave: identiek aan wat deelnemers zien */}
       {eventMode.eventModeActive ? (
@@ -530,6 +507,9 @@ const CustomerProgram = () => {
           accommodation={accommodation}
           selectedDates={selectedDates}
           eventMode={eventMode}
+          view={participantView}
+          onViewChange={setParticipantView}
+          hideTabsOnMobile
           onExit={() => eventMode.setManualOverride("off")}
           onShare={() => setShowShareDialog(true)}
         />
@@ -641,12 +621,8 @@ const CustomerProgram = () => {
       {/* Mobile bottom nav — alleen tijdens event-modus */}
       {isMobile && eventMode.eventModeActive && (
         <MobileBottomNav
-          active={
-            (["today", "program", "map", "practical"].includes(effectiveView)
-              ? (effectiveView as BottomNavView)
-              : "today") as BottomNavView
-          }
-          onChange={(v) => handleNavigate(v)}
+          active={participantView}
+          onChange={setParticipantView}
           badges={{
             program: getCustomerPortalStatus({
               program: program as any,
@@ -750,6 +726,7 @@ const CustomerProgram = () => {
         onSave={handleSaveBillingDetails}
         initialValues={{
           billing_company_name: (program as any).billing_company_name || "",
+          billing_country: (program as any).billing_country || "NL",
           billing_kvk_number: (program as any).billing_kvk_number || "",
           billing_vat_number: (program as any).billing_vat_number || "",
           billing_address_street: (program as any).billing_address_street || "",

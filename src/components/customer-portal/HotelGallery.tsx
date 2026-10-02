@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X, ImageIcon, Maximize2, Minimize2 } from "l
 import { Button } from "@/components/ui/button";
 import { transformImageUrl, buildSrcSet } from "@/lib/supabaseImage";
 import { reportError } from "@/lib/errorReporting";
+import { EmptyState } from "@/components/system";
 
 interface HotelGalleryProps {
   images: { url: string; alt?: string }[];
@@ -35,11 +36,12 @@ export const HotelGallery = ({ images, accommodationName }: HotelGalleryProps) =
 
   if (!images || images.length === 0) {
     return (
-      <div className="aspect-[16/6] w-full rounded-lg border border-dashed bg-muted/40 flex flex-col items-center justify-center text-muted-foreground gap-2">
-        <ImageIcon className="h-8 w-8" />
-        <p className="text-sm">Nog geen foto's beschikbaar van {accommodationName}.</p>
-        <p className="text-xs">De accommodatie voegt deze binnenkort toe.</p>
-      </div>
+      <EmptyState
+        icon={<ImageIcon />}
+        title={`Nog geen foto's van ${accommodationName}`}
+        description="De accommodatie voegt deze binnenkort toe."
+        className="py-6"
+      />
     );
   }
 

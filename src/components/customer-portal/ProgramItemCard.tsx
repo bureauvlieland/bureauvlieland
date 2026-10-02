@@ -34,7 +34,7 @@ import { downloadSingleEvent } from "@/lib/calendarExport";
 import { type ProgramRequestItem } from "@/types/programRequest";
 import { formatTimeHHmm } from "@/lib/timeUtils";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
-import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
+import { getDisplayLineTotal, getDisplayUnitPrice, isPerPersonItem, isProvisionalPrice, hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { resolveCustomerItemDescription } from "@/lib/customerItemDescription";
 import { presentProvider, itemLocationLine, groupSizeLabel } from "@/lib/providerPresentation";
@@ -71,6 +71,8 @@ interface ProgramItemCardProps {
   isPendingRemoval?: boolean;
   /** Kort oplichten (na toevoegen of verplaatsen). */
   highlighted?: boolean;
+  /** Deelnemers zien geen status, prijs of acties; alleen tijd, plek, uitleg, agenda en route. */
+  audience?: "customer" | "participant";
 }
 
 const money = (n: number) => n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -95,7 +97,9 @@ export const ProgramItemCard = ({
   numberOfPeople,
   isPendingRemoval = false,
   highlighted = false,
+  audience = "customer",
 }: ProgramItemCardProps) => {
+  const forParticipant = audience === "participant";
   const [isOpen, setIsOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -137,7 +141,7 @@ export const ProgramItemCard = ({
   const needsCustomerAction =
     !isSelfArranged && !isPostExecution && isApprovalPhase && (derivedStatus === "wacht_op_klant" || derivedStatus === "prijs_gewijzigd");
   const isNewlyAdded = item.status === "pending" && new Date(item.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
-  const canEdit = item.status !== "cancelled" && !readOnly && !isPostExecution;
+  const canEdit = item.status !== "cancelled" && !readOnly && !isPostExecution && !forParticipant;
 
   // Tijd en het soort tijd
   const timeKind: { time: string | null; kind: string } = item.confirmed_time
@@ -165,7 +169,7 @@ export const ProgramItemCard = ({
   const lineTotal = isSelfArranged ? null : getDisplayLineTotal(item, effectivePeople, numberOfDays);
   const unitPrice = isSelfArranged ? null : getDisplayUnitPrice(item, effectivePeople);
   const showPerPerson = lineTotal != null && isPerPersonItem(item) && unitPrice !== null && unitPrice !== lineTotal;
-  const isProvisional = item.status === "pending";
+  const isProvisional = isProvisionalPrice(item);
 
   const approve = async () => {
     if (!onApproveQuoteItem && !onAccept) return;
@@ -177,6 +181,29 @@ export const ProgramItemCard = ({
       setApproving(false);
     }
   };
+
+  const routeUrl = item.location_address
+    ? item.location_lat && item.location_lng
+      ? `https://www.google.com/maps/dir/?api=1&destination=${item.location_lat},${item.location_lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location_address)}`
+    : null;
+
+  const exportToAgenda = () =>
+    downloadSingleEvent(
+      {
+        id: item.id,
+        block_name: item.block_name,
+        provider_name: item.provider_name,
+        day_index: item.day_index,
+        confirmed_time: item.confirmed_time,
+        proposed_time: item.proposed_time,
+        preferred_time: item.preferred_time,
+        duration: item.duration,
+        location_address: item.location_address,
+      },
+      selectedDates.map((d) => format(d, "yyyy-MM-dd")),
+      undefined,
+    );
 
   const moveToDay = (dayIndex: number) => {
     if (dayIndex === item.day_index) return;
@@ -239,12 +266,14 @@ export const ProgramItemCard = ({
               <h3 className={cn("break-words text-base font-medium leading-snug", isPendingRemoval && "line-through text-muted-foreground")}>
                 {item.block_name}
               </h3>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <ItemDisplayStatusBadge status={derivedStatus} audience="customer" label={customerItemStatusLabel(derivedStatus, item)} />
-                {(item as any).is_custom_quote && <Pill tone="brand">Maatwerk</Pill>}
-                {isNewlyAdded && <Pill tone="neutral">Nieuw</Pill>}
-                {priceChangeInfoOnly && <Pill tone="neutral">Prijs bijgewerkt</Pill>}
-              </div>
+              {!forParticipant && (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <ItemDisplayStatusBadge status={derivedStatus} audience="customer" label={customerItemStatusLabel(derivedStatus, item)} />
+                  {(item as any).is_custom_quote && <Pill tone="brand">Maatwerk</Pill>}
+                  {isNewlyAdded && <Pill tone="neutral">Nieuw</Pill>}
+                  {priceChangeInfoOnly && <Pill tone="neutral">Prijs bijgewerkt</Pill>}
+                </div>
+              )}
               <p className="mt-1 text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
               {locationLine && (
                 <p className="mt-0.5 flex items-start gap-1 text-xs text-muted-foreground">
@@ -252,7 +281,7 @@ export const ProgramItemCard = ({
                   <span>{locationLine}</span>
                 </p>
               )}
-              {typeof item.block_map_activity_type_id === "number" && item.provider_profile?.map_tenant_slug && !isSelfArranged && item.status !== "cancelled" && (
+              {typeof item.block_map_activity_type_id === "number" && item.provider_profile?.map_tenant_slug && !isSelfArranged && !forParticipant && item.status !== "cancelled" && (
                 <MapAvailabilityLine
                   tenantSlug={item.provider_profile.map_tenant_slug}
                   activityTypeId={item.block_map_activity_type_id}
@@ -261,7 +290,7 @@ export const ProgramItemCard = ({
                 />
               )}
               {/* Prijs */}
-              {!isSelfArranged && (lineTotal != null ? (
+              {!isSelfArranged && !forParticipant && (lineTotal != null ? (
                 <p className="mt-1.5 text-sm">
                   <span className={cn("font-semibold", isProvisional ? "text-foreground" : "text-success-ink")}>
                     €{money(showPerPerson ? unitPrice! : lineTotal)}
@@ -275,7 +304,7 @@ export const ProgramItemCard = ({
               ) : item.price_indication ? (
                 <p className="mt-1.5 text-sm font-medium">{item.price_indication}</p>
               ) : null)}
-              {priceNote && <p className="mt-0.5 text-xs text-muted-foreground">{priceNote}</p>}
+              {priceNote && !forParticipant && <p className="mt-0.5 text-xs text-muted-foreground">{priceNote}</p>}
               {isSelfArranged && item.external_url && (
                 <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -310,15 +339,15 @@ export const ProgramItemCard = ({
               </p>
             </Notice>
           )}
-          {!isSelfArranged && item.quoted_price && item.quoted_notes && (
+          {!isSelfArranged && !forParticipant && item.quoted_price && item.quoted_notes && (
             <p className="mt-2 text-xs italic text-muted-foreground">{item.quoted_notes}</p>
           )}
-          {item.status_note && !/^Tijd (\d{1,2}:\d{2} ingesteld|verwijderd) door (admin|Bureau Vlieland)/i.test(item.status_note) && (
+          {!forParticipant && item.status_note && !/^Tijd (\d{1,2}:\d{2} ingesteld|verwijderd) door (admin|Bureau Vlieland)/i.test(item.status_note) && (
             <Notice tone="info" className="mt-3" title="Toelichting van de aanbieder" icon={<MessageSquare className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}>
               <p>{item.status_note}</p>
             </Notice>
           )}
-          {item.status === "counter_proposed" && (
+          {!forParticipant && item.status === "counter_proposed" && (
             <Notice tone="info" className="mt-3" title={`Uw voorstel: ${formatTimeHHmm(item.customer_counter_time) ?? item.customer_counter_time}`} icon={<ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}>
               {item.customer_counter_note && <p>"{item.customer_counter_note}"</p>}
               <p>De aanbieder laat weten of deze tijd kan.</p>
@@ -366,27 +395,7 @@ export const ProgramItemCard = ({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    downloadSingleEvent(
-                      {
-                        id: item.id,
-                        block_name: item.block_name,
-                        provider_name: item.provider_name,
-                        day_index: item.day_index,
-                        confirmed_time: item.confirmed_time,
-                        proposed_time: item.proposed_time,
-                        preferred_time: item.preferred_time,
-                        duration: item.duration,
-                        location_address: item.location_address,
-                      },
-                      selectedDates.map((d) => d.toISOString().split("T")[0]),
-                      undefined,
-                    )
-                  }
-                >
+                <Button size="sm" variant="ghost" onClick={exportToAgenda}>
                   <CalendarPlus className="h-4 w-4" aria-hidden="true" />
                   Agenda
                 </Button>
@@ -398,7 +407,24 @@ export const ProgramItemCard = ({
             )
           )}
 
-          {!(item as any).parent_item_id && !isPostExecution && (
+          {forParticipant && (
+            <div className="mt-3 flex flex-wrap items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={exportToAgenda}>
+                <CalendarPlus className="h-4 w-4" aria-hidden="true" />
+                Agenda
+              </Button>
+              {routeUrl && (
+                <Button asChild size="sm" variant="ghost">
+                  <a href={routeUrl} target="_blank" rel="noopener noreferrer">
+                    <MapPin className="h-4 w-4" aria-hidden="true" />
+                    Route
+                  </a>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {!(item as any).parent_item_id && !isPostExecution && !forParticipant && (
             <OptionalAddOnsStrip item={item} allItems={allItems} quoteStatus={quoteStatus} readOnly={readOnly} />
           )}
 
@@ -411,7 +437,7 @@ export const ProgramItemCard = ({
                   {isOpen ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
                 </Button>
               </CollapsibleTrigger>
-              {customerToken && <CustomerItemChangelog itemId={item.id} customerToken={customerToken} />}
+              {customerToken && !forParticipant && <CustomerItemChangelog itemId={item.id} customerToken={customerToken} />}
             </div>
             <CollapsibleContent className="mt-3 space-y-4 border-t pt-4">
               {description && <p className="whitespace-pre-line text-sm text-muted-foreground">{description}</p>}
@@ -449,7 +475,7 @@ export const ProgramItemCard = ({
                 </div>
               )}
 
-              {Array.isArray((item as any).quote_lines) && (item as any).quote_lines.length > 0 && (
+              {!forParticipant && Array.isArray((item as any).quote_lines) && (item as any).quote_lines.length > 0 && (
                 <div className="rounded-lg border bg-muted/30 p-3">
                   <p className="mb-2 text-eyebrow font-medium uppercase text-muted-foreground">Specificatie</p>
                   <ul className="space-y-1 text-sm">
@@ -469,19 +495,15 @@ export const ProgramItemCard = ({
                 </div>
               )}
 
-              {!isSelfArranged && vatRate !== undefined && lineTotal != null && (
+              {!isSelfArranged && !forParticipant && vatRate !== undefined && lineTotal != null && (
                 <p className="text-xs text-muted-foreground">
                   Excl. btw €{money(lineTotal / (1 + vatRate / 100))} · btw ({vatRate}%) €{money(lineTotal - lineTotal / (1 + vatRate / 100))}
                 </p>
               )}
 
-              {item.location_address && (
+              {routeUrl && (
                 <a
-                  href={
-                    item.location_lat && item.location_lng
-                      ? `https://www.google.com/maps/dir/?api=1&destination=${item.location_lat},${item.location_lng}`
-                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location_address)}`
-                  }
+                  href={routeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary"
@@ -492,6 +514,7 @@ export const ProgramItemCard = ({
                 </a>
               )}
 
+              {!forParticipant && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor={`pers-${item.id}`} className="flex items-center gap-1.5 text-sm">
@@ -533,12 +556,13 @@ export const ProgramItemCard = ({
                   )}
                 </div>
               </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
         </div>
       </div>
 
-      {!isSelfArranged && (
+      {!isSelfArranged && !forParticipant && (
         <TimeSheet
           item={item}
           allItems={allItems}

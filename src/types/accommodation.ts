@@ -272,7 +272,7 @@ export const BOARD_TYPES = [
 
 export const BOARD_PREFERENCE_OPTIONS = [
   ...BOARD_TYPES.filter((b) => b.value !== 'other'),
-  { value: 'no_preference', label: 'Geen voorkeur — adviseer mij', icon: '🔄' },
+  { value: 'no_preference', label: 'Geen voorkeur, adviseer mij', icon: '🔄' },
 ] as const;
 
 export type BoardType = (typeof BOARD_TYPES)[number]['value'];
@@ -289,7 +289,7 @@ export function getBoardLabel(value?: string | null): string | null {
 
 /** Tekst die de klant ziet als de verzorging nog niet is vastgelegd. */
 export const BOARD_UNKNOWN_LABEL =
-  'Nog niet bevestigd — wij checken dit bij de accommodatie';
+  'Nog niet bevestigd, wij checken dit bij de accommodatie';
 
 /**
  * Weergave van de verzorging die nooit leeg is: bekende waarden krijgen hun

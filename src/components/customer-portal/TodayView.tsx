@@ -207,7 +207,7 @@ export const TodayView = ({
                     {/* Time column */}
                     <div className="text-center shrink-0 w-14">
                       <div className="text-lg font-semibold leading-none">
-                        {time || "—"}
+                        {time || "flexibel"}
                       </div>
                       {item.duration ? (
                         <div className="text-[10px] text-muted-foreground mt-1">

@@ -30,9 +30,9 @@ export const PaymentStatusCard = ({ items, termsAcceptedAt: _termsAcceptedAt }: 
           <div>
             <p className="font-medium text-sm">
               {allExecuted
-                ? "Alle activiteiten afgerond — facturen worden opgesteld"
+                ? "Alle activiteiten afgerond; de facturen worden opgesteld"
                 : someExecuted
-                  ? `${executedItems.length}/${confirmedItems.length} activiteiten afgerond — facturen in voorbereiding`
+                  ? `${executedItems.length}/${confirmedItems.length} activiteiten afgerond; de facturen zijn in voorbereiding`
                   : "Facturen worden voorbereid"}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
