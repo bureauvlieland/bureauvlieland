@@ -65,7 +65,7 @@ export function isAftersalesCandidate(
   items: AftersalesItemLike[],
   today: string,
 ): boolean {
-  if (p.cancelled_at || p.status === "cancelled") return false;
+  if (p.cancelled_at || p.status === "cancelled" || p.status === "deleted") return false;
   if (p.aftersales_sent_at) return false;
   if (!p.customer_email) return false;
   const days = daysSinceProgram(p.selected_dates, today);
