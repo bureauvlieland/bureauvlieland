@@ -33,19 +33,22 @@ Deno.serve(async (req) => {
     }
 
     // Preload sales + purchase invoices + payment batches (unpaid)
-    const { data: salesInvoices } = await supabase
+    const { data: salesInvoices, error: salesErr } = await supabase
       .from('bureau_invoices')
       .select('id, invoice_number, amount_incl_vat, customer_name, paid_at')
       .is('bank_line_id', null);
-    const { data: purchaseInvoices } = await supabase
+    if (salesErr) throw new Error(`Verkoopfacturen laden mislukt: ${salesErr.message}`);
+    const { data: purchaseInvoices, error: purchaseErr } = await supabase
       .from('partner_purchase_invoices')
       .select('id, invoice_number, amount_incl_vat, partner_id, status')
       .is('bank_line_id', null)
       .neq('status', 'paid');
-    const { data: batches } = await supabase
+    if (purchaseErr) throw new Error(`Inkoopfacturen laden mislukt: ${purchaseErr.message}`);
+    const { data: batches, error: batchErr } = await supabase
       .from('payment_batches')
       .select('id, batch_reference, total_amount, status')
       .is('bank_line_id', null);
+    if (batchErr) throw new Error(`Betaalbatches laden mislukt: ${batchErr.message}`);
 
     let matchedCount = 0;
 
@@ -116,7 +119,7 @@ Deno.serve(async (req) => {
         confidence = top.confidence;
       }
 
-      await supabase
+      const { error: updErr } = await supabase
         .from('bank_statement_lines')
         .update({
           status,
@@ -126,6 +129,7 @@ Deno.serve(async (req) => {
           suggestions: suggestions.slice(0, 5),
         })
         .eq('id', line.id);
+      if (updErr) throw new Error(`Regel bijwerken mislukt: ${updErr.message}`);
     }
 
     await supabase

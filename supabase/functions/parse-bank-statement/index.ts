@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
     const stmts = Array.isArray(doc.Stmt) ? doc.Stmt : [doc.Stmt];
 
     const createdStatements: string[] = [];
+    const matchWarnings: string[] = [];
 
     for (const stmt of stmts) {
       const iban = stmt?.Acct?.Id?.IBAN ?? null;
@@ -161,17 +162,21 @@ Deno.serve(async (req) => {
 
       // Trigger matching
       try {
-        await supabase.functions.invoke('match-bank-lines', {
+        const { data: matchData, error: matchErr } = await supabase.functions.invoke('match-bank-lines', {
           body: { statement_id: stmtRow.id },
         });
+        if (matchErr || matchData?.error) {
+          throw new Error(matchData?.error || matchErr?.message || 'onbekende fout');
+        }
       } catch (matchErr) {
         console.error('match-bank-lines invoke error:', matchErr);
+        matchWarnings.push((matchErr as Error).message);
       }
 
       createdStatements.push(stmtRow.id);
     }
 
-    return new Response(JSON.stringify({ ok: true, statement_ids: createdStatements }), {
+    return new Response(JSON.stringify({ ok: true, statement_ids: createdStatements, match_warnings: matchWarnings }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {

@@ -76,13 +76,34 @@ export function useBankStatements() {
       if (error || data?.error) throw new Error(data?.error || error?.message || "Verwerken mislukt");
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["bank-statements"] });
       qc.invalidateQueries({ queryKey: ["bank-statement-lines"] });
       qc.invalidateQueries({ queryKey: ["bank-pending-count"] });
-      toast.success("Bankafschrift verwerkt");
+      if (data?.match_warnings?.length) {
+        toast.warning(`Afschrift verwerkt, maar automatisch matchen mislukte: ${data.match_warnings[0]}. Gebruik "Opnieuw matchen".`);
+      } else {
+        toast.success("Bankafschrift verwerkt");
+      }
     },
     onError: (err: Error) => toast.error(err.message || "Fout bij uploaden"),
+  });
+
+  const rematchStatement = useMutation({
+    mutationFn: async (statementId: string) => {
+      const { data, error } = await supabase.functions.invoke("match-bank-lines", {
+        body: { statement_id: statementId },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Matchen mislukt");
+      return data as { matched: number };
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["bank-statements"] });
+      qc.invalidateQueries({ queryKey: ["bank-statement-lines"] });
+      qc.invalidateQueries({ queryKey: ["bank-pending-count"] });
+      toast.success(`Opnieuw gematcht: ${data?.matched ?? 0} regel(s) automatisch voorgesteld`);
+    },
+    onError: (err: Error) => toast.error(err.message || "Matchen mislukt"),
   });
 
   const deleteStatement = useMutation({
@@ -98,7 +119,7 @@ export function useBankStatements() {
     },
   });
 
-  return { statements, isLoading, uploadStatement, deleteStatement };
+  return { statements, isLoading, uploadStatement, deleteStatement, rematchStatement };
 }
 
 export function useBankStatementLines(statementId?: string) {
