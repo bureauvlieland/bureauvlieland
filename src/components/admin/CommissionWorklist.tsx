@@ -319,28 +319,37 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Zonder inkoopfactuur
+              {FILTER_LABELS[filter]}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{missingInvoiceCount}</CardContent>
+          <CardContent className="text-2xl font-bold">{rows.length}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Losse inkoopfacturen
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{unlinkedCount}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Commissie in beeld
+              Totale commissie in deze tab
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-bold">{formatCurrency(bucketTotal)}</CardContent>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Geselecteerd</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">
+            {selectedRows.length} ({formatCurrency(selectedTotal)})
+          </CardContent>
+        </Card>
       </div>
+
+      {(missingInvoiceCount > 0 || unlinkedCount > 0) && (
+        <p className="text-sm text-muted-foreground">
+          In deze tab:{" "}
+          <strong>{missingInvoiceCount}</strong> regel(s) zonder inkoopfactuur ·{" "}
+          <strong>{unlinkedCount}</strong> losse inkoopfactuur/-facturen (nog te koppelen aan een
+          onderdeel of logies).
+        </p>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">

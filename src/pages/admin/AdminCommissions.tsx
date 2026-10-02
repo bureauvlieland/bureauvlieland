@@ -413,7 +413,8 @@ export default function AdminCommissions() {
 
         <>
 
-        {/* Summary Cards */}
+        {/* Summary Cards (niet voor de werklijst: die toont zijn eigen samenvatting) */}
+        {statusFilter !== "pending" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {isExpectedView ? (
@@ -498,6 +499,7 @@ export default function AdminCommissions() {
             </>
           )}
         </div>
+        )}
 
         {/* Filters & Actions */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -517,7 +519,8 @@ export default function AdminCommissions() {
               </SelectContent>
             </Select>
 
-            {/* Type Filter */}
+            {/* Type Filter (werklijst heeft eigen tabs en zoekveld) */}
+            {statusFilter !== "pending" && (
             <Select value={typeFilter} onValueChange={(val) => {
               setTypeFilter(val);
               setSelectedItems(new Set());
@@ -531,8 +534,10 @@ export default function AdminCommissions() {
                 <SelectItem value="accommodation">Logies</SelectItem>
               </SelectContent>
             </Select>
+            )}
 
             {/* Month Filter */}
+            {statusFilter !== "pending" && (
             <Select 
               value={selectedMonth || "all"} 
               onValueChange={(val) => {
@@ -553,6 +558,7 @@ export default function AdminCommissions() {
                 ))}
               </SelectContent>
             </Select>
+            )}
 
             {/* Partner Filter */}
             <Select 
@@ -578,46 +584,6 @@ export default function AdminCommissions() {
           </div>
 
           <div className="flex gap-2">
-            {statusFilter === "pending" && selectedItems.size > 0 && (
-              <>
-                <Button
-                  onClick={() => {
-                    // Validate single partner
-                    const selected = Array.from(selectedItems);
-                    const partnerIds = new Set(
-                      selected
-                        .map((id) => data?.items.find((i) => i.id === id)?.provider_id)
-                        .filter(Boolean)
-                    );
-                    if (partnerIds.size > 1) {
-                      toast({
-                        title: "Eén partner per factuur",
-                        description: "Selecteer alleen items van dezelfde partner om een commissiefactuur te maken.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    const itemIds = selected
-                      .filter((id) => data?.items.find((i) => i.id === id)?.item_type === "activity")
-                      .join(",");
-                    const quoteIds = selected
-                      .filter((id) => data?.items.find((i) => i.id === id)?.item_type === "accommodation")
-                      .join(",");
-                    const params = new URLSearchParams();
-                    if (itemIds) params.set("itemIds", itemIds);
-                    if (quoteIds) params.set("quoteIds", quoteIds);
-                    navigate(`/admin/commissies/factuur-maken?${params.toString()}`);
-                  }}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Commissiefactuur maken ({selectedItems.size})
-                </Button>
-                <Button onClick={handleMarkAsInvoiced} variant="outline" size="sm">
-                  <Send className="h-4 w-4 mr-2" />
-                  Snel markeren zonder PDF
-                </Button>
-              </>
-            )}
             {statusFilter === "invoiced" && selectedItems.size > 0 && (
               <Button onClick={handleMarkAsPaid} variant="outline">
                 <CheckCircle2 className="h-4 w-4 mr-2" />
