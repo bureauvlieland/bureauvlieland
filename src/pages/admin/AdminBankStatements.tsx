@@ -9,7 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Upload, Banknote, ArrowDownLeft, ArrowUpRight, Check, X, Trash2, Loader2,
+  Upload, Banknote, ArrowDownLeft, ArrowUpRight, Check, X, Trash2, Loader2, RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -155,7 +155,14 @@ function LinesTable({ statementId }: { statementId?: string }) {
   );
 }
 
-function StatementCard({ s, onDelete }: { s: BankStatement; onDelete: (s: BankStatement) => void }) {
+function StatementCard({
+  s, onDelete, onRematch, rematching,
+}: {
+  s: BankStatement;
+  onDelete: (s: BankStatement) => void;
+  onRematch: (s: BankStatement) => void;
+  rematching: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Card>
@@ -172,6 +179,10 @@ function StatementCard({ s, onDelete }: { s: BankStatement; onDelete: (s: BankSt
             </CardDescription>
           </div>
           <div className="flex items-center gap-1">
+            <Button size="sm" variant="outline" disabled={rematching} onClick={() => onRematch(s)}>
+              {rematching ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              Opnieuw matchen
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
               {open ? "Verbergen" : "Bekijken"}
             </Button>
@@ -188,7 +199,7 @@ function StatementCard({ s, onDelete }: { s: BankStatement; onDelete: (s: BankSt
 }
 
 export default function AdminBankStatements() {
-  const { statements, isLoading, uploadStatement, deleteStatement } = useBankStatements();
+  const { statements, isLoading, uploadStatement, deleteStatement, rematchStatement } = useBankStatements();
   const { data: pendingCount = 0 } = useBankPendingCount();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -254,7 +265,13 @@ export default function AdminBankStatements() {
               </CardContent></Card>
             )}
             {statements?.map((s) => (
-              <StatementCard key={s.id} s={s} onDelete={(x) => deleteStatement.mutate(x)} />
+              <StatementCard
+                key={s.id}
+                s={s}
+                onDelete={(x) => deleteStatement.mutate(x)}
+                onRematch={(x) => rematchStatement.mutate(x.id)}
+                rematching={rematchStatement.isPending && rematchStatement.variables === s.id}
+              />
             ))}
           </TabsContent>
         </Tabs>
