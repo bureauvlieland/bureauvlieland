@@ -19,13 +19,12 @@ import { reportError } from "@/lib/errorReporting";
 interface SendCommissionInvoiceDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  commissionInvoiceId: string;
   defaultRecipient: string;
   recipientName?: string | null;
   invoiceNumber: string;
   amountInclVat: number;
-  /** Async; resolves with the PDF blob to send. */
-  onGeneratePdf: () => Promise<Blob | null>;
+  /** Slaat de factuur op (nummer wordt toegekend) en levert de definitieve PDF. */
+  onPrepare: () => Promise<{ id: string; invoiceNumber: string; blob: Blob } | null>;
   onSent?: () => void;
 }
 
@@ -44,12 +43,11 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
 export const SendCommissionInvoiceDialog = ({
   isOpen,
   onClose,
-  commissionInvoiceId,
   defaultRecipient,
   recipientName,
   invoiceNumber,
   amountInclVat,
-  onGeneratePdf,
+  onPrepare,
   onSent,
 }: SendCommissionInvoiceDialogProps) => {
   const [recipient, setRecipient] = useState(defaultRecipient);
@@ -80,16 +78,17 @@ export const SendCommissionInvoiceDialog = ({
     }
     setIsSubmitting(true);
     try {
-      const blob = await onGeneratePdf();
-      if (!blob) throw new Error("PDF kon niet worden gegenereerd");
-      const base64 = await blobToBase64(blob);
+      const prepared = await onPrepare();
+      if (!prepared) throw new Error("Factuur kon niet worden opgeslagen of PDF niet worden gegenereerd");
+      const base64 = await blobToBase64(prepared.blob);
+      // Het definitieve nummer is pas bekend na opslaan: vervang het voorlopige nummer in de teksten.
+      const withNumber = (text: string) => text.split(invoiceNumber).join(prepared.invoiceNumber);
 
       const { error: fnError } = await supabase.functions.invoke(
         "send-commission-invoice-to-partner",
         {
           body: {
-            commissionInvoiceId,
-            pdfBase64: base64,
+                      pdfBase64: base64,
             pdfFilename: `Commissiefactuur-${invoiceNumber}.pdf`,
             recipientEmail: recipient.trim(),
             customSubject: subject.trim() || undefined,

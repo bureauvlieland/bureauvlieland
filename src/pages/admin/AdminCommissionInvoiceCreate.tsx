@@ -354,21 +354,8 @@ export default function AdminCommissionInvoiceCreate() {
         .insert(lineInserts as any);
       if (linesErr) throw linesErr;
 
-      // Losse inkoopfacturen markeren zodat ze niet dubbel gefactureerd worden
-      const usedInvoiceIds = lines
-        .map((l) => l.purchaseInvoiceId)
-        .filter((id): id is string => !!id);
-      if (usedInvoiceIds.length > 0) {
-        const { error: markErr } = await supabase
-          .from("partner_purchase_invoices")
-          .update({
-            commission_invoiced_at: new Date().toISOString(),
-            commission_invoice_id: invRow.id,
-          } as any)
-          .in("id", usedInvoiceIds);
-        if (markErr) reportError(markErr, { where: "AdminCommissionInvoiceCreate: Kon inkoopfacturen niet markeren" });
-      }
-
+      // Let op: inkoopfacturen/programma-onderdelen worden pas als gefactureerd gemarkeerd
+      // bij daadwerkelijk versturen (send-commission-invoice-to-partner), niet bij een concept.
 
       setSavedInvoiceId(invRow.id);
       setSavedInvoiceNumber(invRow.invoice_number);
@@ -384,7 +371,7 @@ export default function AdminCommissionInvoiceCreate() {
     }
   };
 
-  const buildPdfBlob = async (): Promise<Blob | null> => {
+  const buildPdfBlob = async (numberOverride?: string): Promise<Blob | null> => {
     if (!partner) return null;
     const fmt = (n: number) => formatCurrency(n);
 
@@ -412,7 +399,7 @@ export default function AdminCommissionInvoiceCreate() {
           : `${formatDateNL(eventDates[0]!)} – ${formatDateNL(eventDates[eventDates.length - 1]!)}`
         : undefined;
 
-    const numberToUse = savedInvoiceNumber || invoiceNumber;
+    const numberToUse = numberOverride || savedInvoiceNumber || invoiceNumber;
 
     const blob = await renderInvoicePdf({
       bureau: {
@@ -455,23 +442,21 @@ export default function AdminCommissionInvoiceCreate() {
     return blob;
   };
 
+  // Download is een voorbeeld: er wordt niets opgeslagen en er gaat geen factuurnummer verloren.
   const downloadPdf = async () => {
     setIsGenerating(true);
     try {
-      // Save first so the PDF gets the official invoice number
-      const saved = await saveInvoice();
-      if (!saved) return;
       const blob = await buildPdfBlob();
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Commissiefactuur-${saved.invoiceNumber}.pdf`;
+      link.download = `Commissiefactuur-${savedInvoiceNumber || invoiceNumber}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("PDF gedownload");
+      toast.success("Voorbeeld-PDF gedownload");
     } catch (err) {
       reportError(err, { where: "AdminCommissionInvoiceCreate" });
       toast.error("Fout bij genereren PDF");
@@ -480,9 +465,18 @@ export default function AdminCommissionInvoiceCreate() {
     }
   };
 
-  const openSendDialog = async () => {
+  // Pas bij verzenden wordt de factuur opgeslagen (en krijgt hij zijn nummer).
+  const prepareSend = async () => {
     const saved = await saveInvoice();
-    if (saved) setSendDialogOpen(true);
+    if (!saved) return null;
+    const blob = await buildPdfBlob(saved.invoiceNumber);
+    if (!blob) return null;
+    return { id: saved.id, invoiceNumber: saved.invoiceNumber, blob };
+  };
+
+  const openSendDialog = () => {
+    if (lines.length === 0) return;
+    setSendDialogOpen(true);
   };
 
   if (isLoading || isAppSettingsLoading) {
@@ -737,21 +731,18 @@ export default function AdminCommissionInvoiceCreate() {
         </div>
       </AdminLayout>
 
-      {savedInvoiceId && (
-        <SendCommissionInvoiceDialog
-          isOpen={sendDialogOpen}
-          onClose={() => setSendDialogOpen(false)}
-          commissionInvoiceId={savedInvoiceId}
-          defaultRecipient={partner.contact_email || partner.email || ""}
-          recipientName={partner.name}
-          invoiceNumber={savedInvoiceNumber || invoiceNumber}
-          amountInclVat={totals.totalInclVat}
-          onGeneratePdf={buildPdfBlob}
-          onSent={() => {
-            navigate("/admin/commissies/facturen");
-          }}
-        />
-      )}
+      <SendCommissionInvoiceDialog
+        isOpen={sendDialogOpen}
+        onClose={() => setSendDialogOpen(false)}
+        defaultRecipient={partner.contact_email || partner.email || ""}
+        recipientName={partner.name}
+        invoiceNumber={savedInvoiceNumber || invoiceNumber}
+        amountInclVat={totals.totalInclVat}
+        onPrepare={prepareSend}
+        onSent={() => {
+          navigate("/admin/commissies/facturen");
+        }}
+      />
     </>
   );
 }

@@ -106,6 +106,33 @@ export async function handler(req: Request): Promise<Response> {
       .select("*")
       .eq("invoice_id", invoice.id);
 
+    // Guard: nooit dubbel factureren. Regels die al op een verstuurde factuur staan mogen niet opnieuw.
+    {
+      const lineItemIds = (lines || []).filter((l) => l.item_id).map((l) => l.item_id as string);
+      const lineQuoteIds = (lines || []).filter((l) => l.quote_id).map((l) => l.quote_id as string);
+      const linePurchaseIds = (lines || []).filter((l) => l.purchase_invoice_id).map((l) => l.purchase_invoice_id as string);
+      const settled = ["invoiced", "paid"];
+      const conflicts: string[] = [];
+      if (lineItemIds.length > 0) {
+        const { data } = await supabase.from("program_request_items").select("id, commission_status").in("id", lineItemIds).in("commission_status", settled);
+        conflicts.push(...(data || []).map((r) => r.id));
+      }
+      if (lineQuoteIds.length > 0) {
+        const { data } = await supabase.from("accommodation_quotes").select("id, commission_status").in("id", lineQuoteIds).in("commission_status", settled);
+        conflicts.push(...(data || []).map((r) => r.id));
+      }
+      if (linePurchaseIds.length > 0) {
+        const { data } = await supabase.from("partner_purchase_invoices").select("id, commission_invoice_id").in("id", linePurchaseIds).not("commission_invoiced_at", "is", null).neq("commission_invoice_id", invoice.id);
+        conflicts.push(...(data || []).map((r) => r.id));
+      }
+      if (conflicts.length > 0) {
+        return new Response(
+          JSON.stringify({ error: "Een of meer regels zijn al gefactureerd. Maak de factuur opnieuw aan vanuit het commissie-overzicht." }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Fetch partner for fallback email
     const { data: partner } = await supabase
       .from("partners")
@@ -284,6 +311,15 @@ export async function handler(req: Request): Promise<Response> {
           commission_invoiced_at: nowIso,
         })
         .in("id", quoteIds);
+    }
+
+    // Losse inkoopfacturen pas nu markeren als gefactureerd (niet bij een concept)
+    const purchaseIds = (lines || []).filter((l) => l.purchase_invoice_id).map((l) => l.purchase_invoice_id as string);
+    if (purchaseIds.length > 0) {
+      await supabase
+        .from("partner_purchase_invoices")
+        .update({ commission_invoiced_at: nowIso, commission_invoice_id: invoice.id })
+        .in("id", purchaseIds);
     }
 
     // Log email

@@ -16,6 +16,7 @@ import {
   Euro,
   FileText,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,6 +72,7 @@ export default function AdminCommissionInvoices() {
   const [partnerFilter, setPartnerFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [forwardingId, setForwardingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
 
   const { data: partners } = useQuery({
@@ -148,6 +150,32 @@ export default function AdminCommissionInvoices() {
       toast.error("Fout bij doorsturen");
     } finally {
       setForwardingId(null);
+    }
+  };
+
+  // Een concept is nooit verstuurd: verwijderen geeft alle regels weer vrij voor een nieuwe factuur.
+  const deleteDraft = async (invoice: CommissionInvoice) => {
+    if (invoice.status !== "draft") return;
+    if (!window.confirm(`Concept ${invoice.invoice_number} verwijderen? De regels komen weer beschikbaar in het commissie-overzicht.`)) return;
+    setDeletingId(invoice.id);
+    try {
+      const { error: releaseErr } = await supabase
+        .from("partner_purchase_invoices")
+        .update({ commission_invoiced_at: null, commission_invoice_id: null } as any)
+        .eq("commission_invoice_id", invoice.id);
+      if (releaseErr) throw releaseErr;
+      const { error: linesErr } = await supabase.from("commission_invoice_lines").delete().eq("invoice_id", invoice.id);
+      if (linesErr) throw linesErr;
+      const { error } = await supabase.from("commission_invoices").delete().eq("id", invoice.id).eq("status", "draft");
+      if (error) throw error;
+      toast.success(`Concept ${invoice.invoice_number} verwijderd`);
+      queryClient.invalidateQueries({ queryKey: ["commission-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
+    } catch (err) {
+      reportError(err, { where: "AdminCommissionInvoices: deleteDraft" });
+      toast.error("Fout bij verwijderen concept");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -407,7 +435,22 @@ export default function AdminCommissionInvoices() {
                               <Download className="h-4 w-4" />
                             </Button>
                           )}
-                          {(invoice.status === "sent" || invoice.status === "draft") && (
+                          {invoice.status === "draft" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteDraft(invoice)}
+                              title="Concept verwijderen"
+                              disabled={deletingId === invoice.id}
+                            >
+                              {deletingId === invoice.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          {invoice.status === "sent" && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -422,7 +465,7 @@ export default function AdminCommissionInvoices() {
                               )}
                             </Button>
                           )}
-                          {invoice.status !== "paid" && (
+                          {(invoice.status === "sent" || invoice.status === "forwarded") && (
                             <Button
                               variant="ghost"
                               size="icon"
