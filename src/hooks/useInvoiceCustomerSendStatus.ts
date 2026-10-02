@@ -26,9 +26,12 @@ export const useInvoiceCustomerSendStatus = (requestId: string | undefined, invo
       (data || []).forEach((row) => {
         const meta = (row.metadata ?? {}) as Record<string, unknown>;
         const id = typeof meta.invoiceId === "string" ? meta.invoiceId : null;
-        if (id && row.sent_at && !map[id]) {
-          map[id] = row.sent_at as string;
-        }
+        // Fallback: mails verstuurd voordat de factuur geregistreerd was hebben
+        // geen invoiceId, alleen een factuurnummer.
+        const number = typeof meta.invoiceNumber === "string" ? `number:${meta.invoiceNumber}` : null;
+        if (!row.sent_at) return;
+        if (id && !map[id]) map[id] = row.sent_at as string;
+        if (number && !map[number]) map[number] = row.sent_at as string;
       });
       return map;
     },
