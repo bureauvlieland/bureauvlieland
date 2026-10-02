@@ -41,6 +41,8 @@ interface CompletionActionsProps {
   /** Override the invalidate keys after success */
   invalidateKeys?: string[][];
   size?: "sm" | "default";
+  /** Knopstijl van "Markeer als afgerond"; ondergeschikt gebruiken naast een primaire actie. */
+  completeVariant?: "default" | "outline" | "secondary";
 }
 
 /**
@@ -57,6 +59,7 @@ export const CompletionActions = ({
   variant = "compact",
   invalidateKeys,
   size = "sm",
+  completeVariant = "default",
 }: CompletionActionsProps) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -131,7 +134,7 @@ export const CompletionActions = ({
         {!isCompleted && canComplete && (
           <Button
             size={size}
-            variant="default"
+            variant={completeVariant}
             className="gap-1.5"
             onClick={() => setCompleteOpen(true)}
             disabled={busy}
