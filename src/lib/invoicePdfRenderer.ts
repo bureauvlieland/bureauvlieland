@@ -23,10 +23,10 @@ const CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R;
 
 // Column geometry for line-item table (mm, summing to CONTENT_W = 174)
 const COL_DESC_X = MARGIN_L;
-const COL_QTY_X = MARGIN_L + 110;
-const COL_PRICE_X = MARGIN_L + 132;
+const COL_QTY_X = MARGIN_L + 100; // qty right edge = COL_QTY_X + 18
+const COL_PRICE_X = MARGIN_L + 138; // price (incl. suffix) right edge = COL_PRICE_X + 18
 const COL_AMOUNT_X = MARGIN_L + 174; // right-aligned end
-const COL_DESC_W = 108;
+const COL_DESC_W = 98;
 
 // Colors (RGB tuples)
 const NAVY: [number, number, number] = [30, 58, 95];
@@ -438,13 +438,19 @@ function renderRow(pdf: jsPDF, row: InvoiceLineRow, y: number): number {
 
   pdf.text(row.qty || "—", COL_QTY_X + 18, valueY, { align: "right" });
 
+  // Price and suffix share one right-aligned slot so a long price never runs into the qty column
+  const priceRight = COL_PRICE_X + 18;
   const priceText = row.unitPrice || "—";
-  pdf.text(priceText, COL_PRICE_X + 18, valueY, { align: "right" });
+  let priceEnd = priceRight;
   if (row.unitPriceSuffix) {
     pdf.setFontSize(6.5);
     setText(pdf, TEXT_FAINT);
-    pdf.text(row.unitPriceSuffix, COL_PRICE_X + 19, valueY, { align: "left" });
+    pdf.text(row.unitPriceSuffix, priceRight, valueY, { align: "right" });
+    priceEnd = priceRight - pdf.getTextWidth(row.unitPriceSuffix) - 1.2;
+    pdf.setFontSize(baseFont);
+    setText(pdf, row.isSubRow ? TEXT_MUTED : TEXT);
   }
+  pdf.text(priceText, priceEnd, valueY, { align: "right" });
 
   pdf.setFont("helvetica", row.bold ? "bold" : row.isSubRow ? "normal" : "normal");
   pdf.setFontSize(baseFont);
@@ -676,15 +682,15 @@ export async function renderInvoicePdf(data: InvoiceData): Promise<Blob> {
   state.y = renderTableHeader(pdf, state.y);
 
   // Pagination loop over rows
-  const drawCategoryHeader = (label: string) => {
+  const drawCategoryHeader = async (label: string) => {
     // Reserve room for header + at least 1 row
     if (state.y + 18 > PAGE_H - MARGIN_B) {
-      addContinuationPage();
+      await addContinuationPage();
     }
     state.y = renderCategoryHeader(pdf, label, state.y);
   };
 
-  const addContinuationPage = async () => {
+  const addContinuationPage = async (withTableHeader = true) => {
     // footer for page being closed
     renderFooter(pdf, data, state.page, 999); // placeholder; final pass updates
     pdf.addPage();
@@ -714,12 +720,12 @@ export async function renderInvoicePdf(data: InvoiceData): Promise<Blob> {
     pdf.setLineWidth(0.5);
     pdf.line(MARGIN_L, MARGIN_T + 16, PAGE_W - MARGIN_R, MARGIN_T + 16);
     state.y = MARGIN_T + 22;
-    state.y = renderTableHeader(pdf, state.y);
+    if (withTableHeader) state.y = renderTableHeader(pdf, state.y);
   };
 
   for (const cat of data.categories) {
     if (cat.rows.length === 0) continue;
-    drawCategoryHeader(cat.label);
+    await drawCategoryHeader(cat.label);
     for (const row of cat.rows) {
       const h = estimateRowHeight(pdf, row);
       if (state.y + h > PAGE_H - MARGIN_B) {
@@ -732,9 +738,10 @@ export async function renderInvoicePdf(data: InvoiceData): Promise<Blob> {
   }
 
   // Reserve space for totals + legal block (~ 70mm). If not enough, new page.
-  const reservedForFooterBlock = 80;
+  const reservedForFooterBlock = 60;
   if (state.y + reservedForFooterBlock > PAGE_H - MARGIN_B) {
-    await addContinuationPage();
+    // Totals-only page: no repeated table header above the totals
+    await addContinuationPage(false);
   }
 
   state.y += 4;
