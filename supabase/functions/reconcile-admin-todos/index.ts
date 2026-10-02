@@ -135,8 +135,7 @@ Deno.serve(async (req) => {
       purchaseInvoiceIds.size
         ? supabase
             .from("partner_purchase_invoices")
-            .select("id, status, item_id, commission_exempt, partner_id, invoice_number")
-
+            .select("id, status, item_id, request_id, commission_exempt, partner_id, invoice_number")
             .in("id", [...purchaseInvoiceIds])
         : Promise.resolve({ data: [], error: null }),
       batchIds.size
@@ -393,6 +392,7 @@ Deno.serve(async (req) => {
           }
           if (
             inv.item_id ||
+            inv.request_id ||
             inv.commission_exempt === true ||
             allocatedInvoiceIds.has(inv.id) ||
             linkedInvoiceKeys.has(invoiceKeyOf(inv.partner_id, inv.invoice_number)) ||

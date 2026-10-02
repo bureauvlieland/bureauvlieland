@@ -62,7 +62,7 @@ const formatCurrency = (amount: number | null) =>
 export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinked }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"item" | "lodging">("item");
+  const [tab, setTab] = useState<"item" | "lodging" | "project">("item");
   const [search, setSearch] = useState("");
   /** Logies: één offerte. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -91,17 +91,24 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
   });
   const invoiceExcl = header ? Number(header.amount_excl_vat ?? 0) : null;
   const invoiceVatRate = header ? Number(header.vat_rate ?? 0) : 0;
+  const invoiceRequestId = header?.request_id ?? invoice?.request_id ?? null;
 
   const { data: itemTargets = [], isLoading: itemsLoading } = useQuery<LinkTarget[]>({
-    queryKey: ["link-invoice-items", partnerId],
+    queryKey: ["link-invoice-items", partnerId, invoiceRequestId],
     enabled: open && !!partnerId,
     queryFn: async () => {
+      // Onderdelen van de partner, plus alle onderdelen van het project waar de
+      // factuur al aan hangt (de partner op het onderdeel kan afwijken).
       const { data, error } = await supabase
         .from("program_request_items")
         .select(
           "id, block_name, quoted_price, admin_price_override, invoiced_number, request_id, program_requests(reference_number, customer_name, customer_company)",
         )
-        .eq("provider_id", partnerId!)
+        .or(
+          invoiceRequestId
+            ? `provider_id.eq.${partnerId},request_id.eq.${invoiceRequestId}`
+            : `provider_id.eq.${partnerId}`,
+        )
         .is("invoiced_number", null)
         .order("updated_at", { ascending: false })
         .limit(200);
@@ -150,9 +157,36 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
     },
   });
 
+  const { data: projectTargets = [], isLoading: projectsLoading } = useQuery<LinkTarget[]>({
+    queryKey: ["link-invoice-projects", invoiceRequestId],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("program_requests")
+        .select("id, reference_number, customer_name, customer_company, created_at")
+        .is("cancelled_at", null)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      const targets = (data ?? []).map((row: any) => ({
+        id: row.id as string,
+        label: (row.customer_company || row.customer_name || "Project") as string,
+        projectReference: row.reference_number ?? null,
+        projectLabel: row.customer_company ? row.customer_name ?? null : null,
+        amountIncl: null,
+      }));
+      // Het project waar de factuur al aan hangt staat bovenaan.
+      return [
+        ...targets.filter((t) => t.id === invoiceRequestId),
+        ...targets.filter((t) => t.id !== invoiceRequestId),
+      ];
+    },
+  });
+
+  const targetsForTab = tab === "item" ? itemTargets : tab === "lodging" ? lodgingTargets : projectTargets;
   const visible = useMemo(
-    () => sortLinkTargets(tab === "item" ? itemTargets : lodgingTargets, invoiceAmount, search),
-    [tab, itemTargets, lodgingTargets, invoiceAmount, search],
+    () => sortLinkTargets(targetsForTab, invoiceAmount, search),
+    [targetsForTab, invoiceAmount, search],
   );
 
   const selectedItems = useMemo(
@@ -255,6 +289,19 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
         return `${rows.length} onderdelen`;
       }
 
+      if (tab === "project") {
+        if (!selectedId) throw new Error("Kies eerst een project.");
+        // Alleen aan het project hangen is genoeg voor de commissie: de factuur
+        // telt dan mee als losse inkoopfactuur van dat project.
+        const target = projectTargets.find((t) => t.id === selectedId);
+        const { error } = await supabase
+          .from("partner_purchase_invoices")
+          .update({ request_id: selectedId, item_id: null })
+          .eq("id", invoice.id);
+        if (error) throw error;
+        return target ? `project ${target.projectReference ?? target.label}` : "project";
+      }
+
       if (!selectedId) throw new Error("Kies eerst een logies-offerte.");
       const target = lodgingTargets.find((t) => t.id === selectedId);
       const today = new Date().toISOString().slice(0, 10);
@@ -277,6 +324,7 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
       queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
       queryClient.invalidateQueries({ queryKey: ["link-invoice-items"] });
       queryClient.invalidateQueries({ queryKey: ["link-invoice-lodging"] });
+      queryClient.invalidateQueries({ queryKey: ["link-invoice-projects"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
       resetSelection();
       setSearch("");
@@ -288,7 +336,13 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
     },
   });
 
-  const isLoading = tab === "item" ? itemsLoading : lodgingLoading;
+  const isLoading = tab === "item" ? itemsLoading : tab === "lodging" ? lodgingLoading : projectsLoading;
+  const emptyLabel =
+    tab === "item"
+      ? "Geen open onderdelen van deze partner of dit project gevonden."
+      : tab === "lodging"
+        ? "Geen open logies-offertes van deze partner gevonden."
+        : "Geen projecten gevonden.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -296,9 +350,10 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
         <DialogHeader>
           <DialogTitle>Factuur koppelen</DialogTitle>
           <DialogDescription>
-            Koppel deze inkoopfactuur aan één of meer programma-onderdelen, of aan een
-            logies-offerte, zodat de commissie meeloopt in de werklijst. Kies meerdere
-            onderdelen als één factuur over meerdere dagen of onderdelen gaat.
+            Koppel deze inkoopfactuur aan een project (voldoende voor de commissie, ook bij
+            op maat factureren), of aan één of meer programma-onderdelen of een
+            logies-offerte. Kies meerdere onderdelen als één factuur over meerdere dagen
+            of onderdelen gaat.
           </DialogDescription>
         </DialogHeader>
 
@@ -317,17 +372,18 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
           </div>
         )}
 
-        <Tabs value={tab} onValueChange={(v) => { setTab(v as "item" | "lodging"); resetSelection(); }}>
+        <Tabs value={tab} onValueChange={(v) => { setTab(v as "item" | "lodging" | "project"); resetSelection(); }}>
           <TabsList>
             <TabsTrigger value="item">Programma-onderdeel</TabsTrigger>
             <TabsTrigger value="lodging">Logies-offerte</TabsTrigger>
+            <TabsTrigger value="project">Alleen project</TabsTrigger>
           </TabsList>
 
           <div className="relative mt-3">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-8"
-              placeholder="Zoek op onderdeel, project of klant"
+              placeholder={tab === "project" ? "Zoek op project of klant" : "Zoek op onderdeel, project of klant"}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -339,10 +395,7 @@ export function LinkPurchaseInvoiceDialog({ invoice, open, onOpenChange, onLinke
                 <div className="py-8 text-center text-sm text-muted-foreground">Laden…</div>
               )}
               {!isLoading && visible.length === 0 && (
-                <div className="py-8 text-center text-sm text-muted-foreground">
-                  Geen open {tab === "item" ? "onderdelen" : "logies-offertes"} van deze partner
-                  gevonden.
-                </div>
+                <div className="py-8 text-center text-sm text-muted-foreground">{emptyLabel}</div>
               )}
               {visible.map((target) => {
                 const match = amountMatchFor(target, invoiceAmount);

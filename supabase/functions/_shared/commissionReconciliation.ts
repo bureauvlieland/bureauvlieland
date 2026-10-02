@@ -412,11 +412,30 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
   const rows: ReconRow[] = [];
 
+  // Een inkoopfactuur die alleen aan een project hangt (op maat gefactureerd,
+  // bv. vanuit overige kosten) is voldoende om commissie over te rekenen. De
+  // onderdelen van dezelfde partner in dat project zonder eigen factuur zijn
+  // dan gedekt en mogen niet óók als "factuur ontbreekt" meetellen.
+  const projectLevelInvoiceKeys = new Set<string>();
+  for (const inv of input.invoices) {
+    if (!inv.request_id || inv.commission_exempt === true) continue;
+    if (invoiceIsLinked(inv, linkedInvoiceNumbers)) continue;
+    projectLevelInvoiceKeys.add(`${inv.partner_id ?? ""}::${inv.request_id}`);
+  }
+
   // ── 1. Regels vanuit de verkoopkant (programma-onderdelen) ──────────────
   for (const item of input.items) {
     const partnerId = item.provider_id ?? "";
     if (!partnerId) continue;
     if (item.block_type === "bureau" || item.block_type === "self_arranged") continue;
+    if (
+      item.request_id &&
+      !item.invoiced_number &&
+      !invoicesByItem.has(item.id) &&
+      projectLevelInvoiceKeys.has(`${partnerId}::${item.request_id}`)
+    ) {
+      continue;
+    }
 
     const partner = partnerMap.get(partnerId);
     const project = item.request_id ? projectMap.get(item.request_id) : undefined;
@@ -551,7 +570,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
 
     rows.push({
       key: `invoice:${inv.id}`,
-      status: exempt ? "exempt" : "unlinked_invoice",
+      // Aan een project gekoppeld is genoeg; alleen een factuur zonder project
+      // én zonder onderdeel blijft "niet gekoppeld".
+      status: exempt ? "exempt" : inv.request_id ? "match" : "unlinked_invoice",
       partnerId,
       partnerName: partner?.name ?? partnerId,
       projectId: inv.request_id,
