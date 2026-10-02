@@ -120,7 +120,10 @@ const AdminFinancialDashboardContent = () => {
       const { data, error } = await supabase
         .from("program_requests")
         .select("id, reference_number, customer_name, customer_company, completion_status")
-        .eq("completion_status", "ready_for_invoice");
+        .eq("completion_status", "ready_for_invoice")
+        // Geannuleerde/verwijderde projecten horen niet in "te factureren"
+        .not("status", "in", "(cancelled,deleted)")
+        .is("cancelled_at", null);
       if (error) throw error;
       return data || [];
     },
