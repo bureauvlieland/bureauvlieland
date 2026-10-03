@@ -31,8 +31,17 @@ export const SOLD_ITEM_STATUSES = [
   "completed",
 ];
 
+/** Onderdeelstatussen die nooit commissie opleveren, ook niet met een inkoopfactuur. */
+export const DEAD_ITEM_STATUSES = ["cancelled", "rejected", "declined"];
+
 /** Inkoopfactuurstatussen die niet meetellen in de reconciliatie. */
 export const IGNORED_INVOICE_STATUSES = ["rejected", "archived"];
+
+const ITEM_COLUMNS =
+  "id, request_id, provider_id, block_id, block_name, quoted_price, vat_rate, commission_percentage, " +
+  "commission_status, commission_basis, invoiced_number, invoiced_amount, " +
+  "status, block_type, proposed_date, commission_exempt, commission_exempt_reason, " +
+  "commission_exempt_at, partner_dismissed_at";
 
 export interface LoadReconciliationOptions {
   /** Beperk tot één partner (null/undefined = alle partners). */
@@ -90,12 +99,7 @@ export async function loadReconciliationInputs(
   // ── Verkoopkant: programma-onderdelen ────────────────────────────────────
   let itemsQuery = client
     .from("program_request_items")
-    .select(
-      "id, request_id, provider_id, block_id, block_name, quoted_price, vat_rate, commission_percentage, " +
-        "commission_status, commission_basis, invoiced_number, invoiced_amount, " +
-        "status, block_type, proposed_date, commission_exempt, commission_exempt_reason, " +
-        "commission_exempt_at",
-    )
+    .select(ITEM_COLUMNS)
     .in("status", SOLD_ITEM_STATUSES)
     .not("provider_id", "is", null);
   if (partnerIdFilter) itemsQuery = itemsQuery.eq("provider_id", partnerIdFilter);
@@ -167,6 +171,36 @@ export async function loadReconciliationInputs(
         rec[a.item_id] = (rec[a.item_id] ?? 0) + (Number(a.amount_excl_vat) || 0);
         allocAmountMap.set(a.invoice_id, rec);
       }
+    }
+  }
+
+  // ── Onderdelen met een inkoopfactuur maar zonder verkochte status ────────
+  // Een gekoppelde inkoopfactuur bewijst dat het werk geleverd is, ook als het
+  // onderdeel nooit op "bevestigd" is gezet. Zonder deze stap verdwijnen die
+  // regels volledig: ze staan niet als onderdeel in de lijst, en de factuur
+  // geldt als gekoppeld en staat dus ook niet bij "niet gekoppeld".
+  const knownItemIds = new Set(rawItems.map((i) => i.id));
+  const linkedItemIds = new Set<string>();
+  for (const inv of rawInvoices) {
+    if (IGNORED_INVOICE_STATUSES.includes(inv.status ?? "")) continue;
+    if (inv.item_id) linkedItemIds.add(inv.item_id);
+    for (const id of allocMap.get(inv.id) ?? []) linkedItemIds.add(id);
+  }
+  const extraItemIds = [...linkedItemIds].filter((id) => !knownItemIds.has(id));
+  if (extraItemIds.length) {
+    const { data: extraItems, error: extraItemsError } = await client
+      .from("program_request_items")
+      .select(ITEM_COLUMNS)
+      .in("id", extraItemIds)
+      .not("provider_id", "is", null);
+    if (extraItemsError) {
+      throw new Error(`program_request_items (met inkoopfactuur) lookup failed: ${extraItemsError.message}`);
+    }
+    // deno-lint-ignore no-explicit-any
+    for (const item of (extraItems ?? []) as any[]) {
+      if (DEAD_ITEM_STATUSES.includes(item.status ?? "")) continue;
+      if (partnerIdFilter && item.provider_id !== partnerIdFilter) continue;
+      rawItems.push(item);
     }
   }
 
@@ -282,8 +316,13 @@ export async function loadReconciliationInputs(
       : [],
   );
 
+  const cancelledRequestIds = new Set<string>(
+    rawProjects.filter((p) => p.cancelled_at).map((p) => p.id),
+  );
   const items: ReconItemInput[] = rawItems
     .filter((i) => !skipRequestIds.has(i.request_id))
+    // Een inkoopfactuur maakt een onderdeel verkocht, maar niet in een geannuleerd project.
+    .filter((i) => !(SOLD_ITEM_STATUSES.includes(i.status ?? "") ? false : cancelledRequestIds.has(i.request_id)))
     .map((i) => ({
       id: i.id,
       request_id: i.request_id,
@@ -303,6 +342,7 @@ export async function loadReconciliationInputs(
       commission_exempt: i.commission_exempt ?? false,
       commission_exempt_reason: i.commission_exempt_reason ?? null,
       commission_exempt_at: i.commission_exempt_at ?? null,
+      partner_dismissed: !!i.partner_dismissed_at,
     }));
 
   const partnerById = new Map<string, ReconPartnerInput>(
@@ -352,6 +392,7 @@ export async function loadReconciliationInputs(
       status: q.status,
       block_type: "partner",
       execution_date: request?.arrival_date ?? null,
+      execution_end_date: request?.departure_date ?? null,
       item_type: "accommodation" as const,
       commission_exempt: q.commission_exempt ?? false,
       commission_exempt_reason: q.commission_exempt_reason ?? null,

@@ -24,8 +24,11 @@ export type ReconStatus =
 /** Soort regel in de werklijst. */
 export type ReconItemType = "activity" | "accommodation" | "purchase_invoice";
 
-/** Is de regel al factureerbaar (uitgevoerd) of nog een verwachte commissie? */
-export type ReconReadiness = "expected" | "billable";
+/**
+ * Is de regel al factureerbaar (uitgevoerd), nog een verwachte commissie, of
+ * is er geen grondslag (geen verkoopprijs én geen inkoopfactuur)?
+ */
+export type ReconReadiness = "expected" | "billable" | "unknown_base";
 
 /** Grondslag voor de commissieberekening. */
 export type CommissionBasis = "purchase" | "sales";
@@ -61,12 +64,16 @@ export interface ReconItemInput {
   block_type?: string | null;
   /** Datum waarop het onderdeel plaatsvond (yyyy-mm-dd). */
   execution_date?: string | null;
+  /** Laatste dag van het onderdeel (logies: vertrekdatum), yyyy-mm-dd. */
+  execution_end_date?: string | null;
   /** "activity" (programma-onderdeel) of "accommodation" (logies-offerte). */
   item_type?: ReconItemType;
   /** Admin heeft deze regel definitief commissievrij (gearchiveerd) gemarkeerd. */
   commission_exempt?: boolean | null;
   commission_exempt_reason?: string | null;
   commission_exempt_at?: string | null;
+  /** De partner heeft gemeld dat dit onderdeel niet geleverd is. */
+  partner_dismissed?: boolean;
   /**
    * Logies: de offerte heeft extra's en het extra's-percentage van de partner
    * wijkt af van het logiespercentage. De werklijst laat de admin de regel
@@ -188,6 +195,8 @@ export interface ReconRow {
   commissionComponents: LodgingCommissionComponent[] | null;
   /** True als niet alle componenten hetzelfde percentage hebben. */
   hasMixedRates: boolean;
+  /** De partner meldt: niet geleverd. */
+  partnerDismissed?: boolean;
 }
 
 
@@ -249,22 +258,44 @@ export const COMPLETED_PROJECT_STATUSES = [
 /**
  * Is dit onderdeel/logies al uitgevoerd (en dus factureerbaar), of nog verwacht?
  *
- * Bewust niet op datum: een project dat nog moet plaatsvinden levert een verwachte
- * commissie op, ook als de datum inmiddels verstreken is maar niets is afgerond.
+ * Factureerbaar is een onderdeel als:
+ *  - de status "uitgevoerd" is, of het project is afgerond;
+ *  - het logies is en de vertrekdatum voorbij is (de afsluiting loopt niet
+ *    automatisch voor logies);
+ *  - de datum voorbij is én er een inkoopfactuur ligt: de partner heeft dan
+ *    gefactureerd, dus het werk is geleverd.
+ * Een verstreken datum zonder inkoopfactuur blijft "verwacht".
  */
 export function readinessForItem(input: {
   status?: string | null;
   projectCompleted?: boolean | null;
   hasPurchaseInvoice?: boolean | null;
+  itemType?: ReconItemType | null;
+  /** yyyy-mm-dd; logies: vertrekdatum, anders de uitvoerdatum. */
+  endDate?: string | null;
+  now?: Date;
 }): ReconReadiness {
   if (input.status && EXECUTED_ITEM_STATUSES.includes(input.status)) return "billable";
   if (input.projectCompleted) return "billable";
+  const daysPast = daysSince(input.endDate ?? null, input.now);
+  const datePassed = daysPast !== null && daysPast >= 1;
+  if (datePassed && (input.itemType === "accommodation" || input.hasPurchaseInvoice)) {
+    return "billable";
+  }
   return "expected";
 }
 
 /** Regels die nog gefactureerd moeten worden: uitgevoerd, niet commissievrij en niet afgehandeld. */
 export function isBillableRow(row: ReconRow): boolean {
   if (row.readiness !== "billable") return false;
+  if (row.commissionExempt) return false;
+  if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
+  return row.commissionPercentage > 0;
+}
+
+/** Regels waarvoor we geen grondslag hebben: geen verkoopprijs en geen inkoopfactuur. */
+export function isUnknownBaseRow(row: ReconRow): boolean {
+  if (row.readiness !== "unknown_base") return false;
   if (row.commissionExempt) return false;
   if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
   return row.commissionPercentage > 0;
@@ -502,7 +533,17 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         (project?.completion_status &&
           COMPLETED_PROJECT_STATUSES.includes(project.completion_status)),
     );
-    const readiness = readinessForItem({ status: item.status, projectCompleted });
+    const hasBase = salesBase !== null || purchaseExcl !== null;
+    const readiness = !hasBase && !exemptItem
+      ? "unknown_base"
+      : readinessForItem({
+        status: item.status,
+        projectCompleted,
+        hasPurchaseInvoice: purchaseExcl !== null,
+        itemType: item.item_type ?? "activity",
+        endDate: item.execution_end_date ?? executionDate,
+        now,
+      });
 
 
     rows.push({
@@ -551,6 +592,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       hasMixedRates: components
         ? new Set(components.map((c) => c.commissionPct)).size > 1
         : false,
+      partnerDismissed: item.partner_dismissed === true,
     });
   }
 
