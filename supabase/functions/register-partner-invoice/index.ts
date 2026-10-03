@@ -233,7 +233,16 @@ Deno.serve(async (req) => {
     }
 
     const invoicingMode = project.invoicing_mode || "bureau_central";
-    const commissionPercentage = partner.commission_percentage;
+    // Partnerpercentage (nooit NaN bij een leeg veld). Een percentage dat al op
+    // het onderdeel staat is de afspraak voor dat onderdeel en gaat voor, net
+    // als in de databasetrigger sync_item_invoice_fields.
+    const commissionPercentage = Number(partner.commission_percentage) || 0;
+    const pctForItem = (it: { commission_percentage?: number | string | null }): number => {
+      const own = it?.commission_percentage;
+      return own === null || own === undefined || own === "" || Number.isNaN(Number(own))
+        ? commissionPercentage
+        : Number(own);
+    };
 
     // Build allocations + totals. VAT rate comes per item from the client
     // (derived from the building block); default to 21% for safety.
@@ -262,7 +271,10 @@ Deno.serve(async (req) => {
     // Header VAT rate: use first allocation's rate if uniform, else 0 (mixed)
     const uniqueRates = Array.from(new Set(allocations.map((a) => a.vat_rate)));
     const headerVatRate = uniqueRates.length === 1 ? uniqueRates[0] : 0;
-    const totalCommission = +((totalExcl * commissionPercentage) / 100).toFixed(2);
+    const itemById = new Map(dbItems.map((it: any) => [it.id, it]));
+    const totalCommission = +allocations
+      .reduce((sum, a) => sum + (a.amount_excl_vat * pctForItem(itemById.get(a.item_id))) / 100, 0)
+      .toFixed(2);
 
     // Duplicate guard 2: zelfde bedrag op hetzelfde project (of rond dezelfde
     // datum), onder een ander nummer. Zo is de factuur die het bureau al uit de
@@ -365,7 +377,8 @@ Deno.serve(async (req) => {
     // Update each program_request_items row with denormalized invoice metadata
     // so existing UI (admin + partner) keeps working until fully migrated.
     for (const a of allocations) {
-      const itemCommission = +((a.amount_excl_vat * commissionPercentage) / 100).toFixed(2);
+      const itemPct = pctForItem(itemById.get(a.item_id));
+      const itemCommission = +((a.amount_excl_vat * itemPct) / 100).toFixed(2);
       await supabase
         .from("program_request_items")
         .update({
@@ -373,9 +386,9 @@ Deno.serve(async (req) => {
           invoiced_number: invoicedNumber,
           invoiced_date: invoicedDate,
           invoiced_file_path: filePath || null,
-          commission_percentage: commissionPercentage,
+          commission_percentage: itemPct,
           commission_amount: itemCommission,
-          commission_status: commissionPercentage > 0 ? "pending" : "not_applicable",
+          commission_status: itemPct > 0 ? "pending" : "not_applicable",
           commission_notes: notes || null,
           updated_at: new Date().toISOString(),
         })

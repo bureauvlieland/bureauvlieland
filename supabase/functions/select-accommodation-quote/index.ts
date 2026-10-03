@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     // Calculate commission over grand total (base + extras)
-    const commissionPercentage = partner?.accommodation_commission_percentage || 10;
+    const commissionPercentage = partner?.accommodation_commission_percentage ?? 10;
     const commissionAmount = (grandTotal * commissionPercentage) / 100;
 
     // Capture client IP for audit (customer flow only)

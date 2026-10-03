@@ -11,7 +11,11 @@
  */
 
 import { getCommissionRate } from "./commissionRates.ts";
-import { amountExclVat, type LodgingExtraInput } from "./lodgingCommission.ts";
+import {
+  amountExclVat,
+  calculateLodgingCommission,
+  type LodgingExtraInput,
+} from "./lodgingCommission.ts";
 import {
   DEFAULT_RECON_SETTINGS,
   invoiceKey,
@@ -377,6 +381,15 @@ export async function loadReconciliationInputs(
     });
     const totalExcl = roomExcl + (extrasExclByQuote.get(q.id) ?? 0);
     const partner = partnerById.get(q.partner_id);
+    // Kamer en extra's elk tegen hun eigen btw-tarief en percentage. Een
+    // percentage op de offerte is de afspraak voor de kamer en gaat voor.
+    const lodgingRate = q.commission_percentage ?? getCommissionRate(partner, "lodging");
+    const calculation = calculateLodgingCommission({
+      room: { amount: q.price_total, vatRate: q.vat_rate, priceIncludesVat: q.price_includes_vat, label: q.accommodation_name },
+      extras: extrasByQuote.get(q.id) ?? [],
+      lodgingRate,
+      extrasRate: getCommissionRate(partner, "extras"),
+    });
     return {
       id: q.id,
       request_id: request?.id ?? q.request_id ?? null,
@@ -394,6 +407,8 @@ export async function loadReconciliationInputs(
       execution_date: request?.arrival_date ?? null,
       execution_end_date: request?.departure_date ?? null,
       item_type: "accommodation" as const,
+      commission_components: calculation.components.length > 0 ? calculation.components : null,
+      purchase_invoice_applied: !!q.purchase_invoice_id,
       commission_exempt: q.commission_exempt ?? false,
       commission_exempt_reason: q.commission_exempt_reason ?? null,
       commission_exempt_at: q.commission_exempt_at ?? null,

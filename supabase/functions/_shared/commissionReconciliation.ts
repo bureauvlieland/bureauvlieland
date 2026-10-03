@@ -524,6 +524,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     }
 
     const basisAmount = purchaseExcl ?? salesBase ?? 0;
+    // Per component rekenen kan alleen over onze eigen offerteregels. Ligt er een
+    // inkoopfactuur die niet op de offerte is toegepast, dan telt die als grondslag.
+    const useComponentsForRisk = hasComponents && (purchaseExcl === null || invoiceApplied);
     const exemptItem = status === "exempt";
     // Is de factuur al op de offerte toegepast, dan is de verkoopkant de
     // authoritatieve grondslag — niet het ruwe factuurbedrag.
@@ -566,7 +569,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionPercentage: commissionPct,
       commissionAtRisk: exemptItem
         ? 0
-        : (componentCommission ?? basisAmount * (commissionPct / 100)),
+        : (useComponentsForRisk ? componentCommission! : basisAmount * (commissionPct / 100)),
       // Bij logies met componenten is de som van de componenten de verkoopcommissie:
       // elk component tegen zijn eigen tarief en percentage.
       salesCommission: exemptItem
