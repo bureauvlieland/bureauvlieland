@@ -39,6 +39,7 @@ import {
   commissionForBasis,
   isArchivedRow,
   isBillableRow,
+  isUnknownBaseRow,
   isExpectedRow,
   type CommissionBasis,
   type ReconRow,
@@ -56,17 +57,18 @@ const TYPE_LABELS: Record<ReconRow["itemType"], string> = {
   purchase_invoice: "Losse inkoopfactuur",
 };
 
-type WorklistFilter = "billable" | "expected" | "invoiced" | "paid" | "archived";
+type WorklistFilter = "billable" | "unknown_base" | "expected" | "invoiced" | "paid" | "archived";
 
 const FILTER_LABELS: Record<WorklistFilter, string> = {
   billable: "Te factureren",
+  unknown_base: "Zonder grondslag",
   expected: "Verwacht",
   invoiced: "Gefactureerd",
   paid: "Betaald",
   archived: "Commissievrij / gearchiveerd",
 };
 
-const FILTER_ORDER: WorklistFilter[] = ["billable", "expected", "invoiced", "paid", "archived"];
+const FILTER_ORDER: WorklistFilter[] = ["billable", "unknown_base", "expected", "invoiced", "paid", "archived"];
 
 /** In welke filterbucket hoort deze regel? Precies één per regel. */
 export function bucketForRow(row: ReconRow): WorklistFilter {
@@ -74,6 +76,7 @@ export function bucketForRow(row: ReconRow): WorklistFilter {
   if (row.commissionStatus === "paid") return "paid";
   if (row.commissionStatus === "invoiced") return "invoiced";
   if (isBillableRow(row)) return "billable";
+  if (isUnknownBaseRow(row)) return "unknown_base";
   if (isExpectedRow(row)) return "expected";
   return "archived";
 }
@@ -126,6 +129,7 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
   const counts = useMemo(() => {
     const base: Record<WorklistFilter, number> = {
       billable: 0,
+      unknown_base: 0,
       expected: 0,
       invoiced: 0,
       paid: 0,

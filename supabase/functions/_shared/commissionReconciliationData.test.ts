@@ -100,3 +100,21 @@ Deno.test("prijs al ex btw (price_includes_vat false) wordt niet nog eens gedeel
   const inputs = await loadReconciliationInputs(client, {});
   assertAlmostEquals(inputs.items[0].quoted_price ?? 0, 1000, 0.01);
 });
+
+Deno.test("logies-offerte krijgt commissiecomponenten per kamer en extra", async () => {
+  const client = fakeClient({
+    accommodation_quotes: [{ ...quote, purchase_invoice_id: "inv1" }],
+    accommodation_quote_extras: [
+      { quote_id: "q1", name: "Diner", category: "fb", unit_price: 121, quantity: 1, pricing_type: "fixed", vat_rate: 21, price_includes_vat: true, commission_percentage: 15 },
+    ],
+    partners: [partner],
+  });
+  const inputs = await loadReconciliationInputs(client, {});
+  const item = inputs.items[0];
+  assertEquals(item.purchase_invoice_applied, true);
+  const components = item.commission_components ?? [];
+  assertEquals(components.length, 2);
+  // kamer 1000 × 10 % + diner 100 × 15 %
+  assertAlmostEquals(components[0].commissionAmount, 100, 0.01);
+  assertAlmostEquals(components[1].commissionAmount, 15, 0.01);
+});

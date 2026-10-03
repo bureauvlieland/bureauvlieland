@@ -7,6 +7,7 @@ import {
   invoiceKey,
   isBillableRow,
   isExpectedRow,
+  isUnknownBaseRow,
   isArchivedRow,
   readinessForItem,
   exclVatFromIncl,
@@ -325,6 +326,38 @@ describe("readiness: verwacht vs factureerbaar", () => {
   });
 });
 
+describe("readiness: datum voorbij", () => {
+  const now = new Date("2026-10-03T12:00:00Z");
+
+  it("logies is factureerbaar na de vertrekdatum, ook zonder afronding", () => {
+    expect(
+      readinessForItem({ status: "selected", itemType: "accommodation", endDate: "2026-09-10", now }),
+    ).toBe("billable");
+    expect(
+      readinessForItem({ status: "selected", itemType: "accommodation", endDate: "2026-10-20", now }),
+    ).toBe("expected");
+  });
+
+  it("activiteit met verstreken datum is alleen factureerbaar met inkoopfactuur", () => {
+    const base = { status: "confirmed", itemType: "activity" as const, endDate: "2026-06-10", now };
+    expect(readinessForItem({ ...base, hasPurchaseInvoice: true })).toBe("billable");
+    expect(readinessForItem({ ...base, hasPurchaseInvoice: false })).toBe("expected");
+  });
+
+  it("regel zonder verkoopprijs en zonder inkoopfactuur heeft geen grondslag", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ status: "executed", quoted_price: null })],
+      invoices: [],
+      projects,
+      partners,
+      now,
+    });
+    expect(rows[0].readiness).toBe("unknown_base");
+    expect(isBillableRow(rows[0])).toBe(false);
+    expect(isUnknownBaseRow(rows[0])).toBe(true);
+  });
+});
+
 describe("commissievrij markeren", () => {
   it("haalt een gearchiveerde regel uit zowel te factureren als verwacht", () => {
     const rows = buildReconciliationRows({
@@ -385,6 +418,9 @@ describe("regressie: partnerregels met default commissiestatus blijven zichtbaar
     ],
     projects,
     partners,
+    // Vóór de projectdatum (10 juni): een inkoopfactuur maakt een onderdeel
+    // pas factureerbaar als de datum voorbij is.
+    now: new Date("2026-06-01T12:00:00Z"),
   });
 
   it("bouwt een regel per verkocht onderdeel", () => {

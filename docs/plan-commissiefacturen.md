@@ -3,6 +3,12 @@
 Status: onderzoek en plan 3 oktober 2026, nog te beoordelen. Daarna bouwen in
 fasen; na fase 0 en 1 kan Erwin de commissiefacturen van 2026 verwerken.
 
+Voortgang (3 oktober 2026): fase 1 is gebouwd, behalve de duplicaatcontrole in
+de admin-registratie: die bestaat al (`useLikelyDuplicatePurchaseInvoice` in
+`AddPurchaseInvoiceDialog` met "Toch opslaan"), het plan ging daar uit van een
+verouderde situatie. Migratie `20261003120000` moet nog worden uitgerold; fase 0
+(dataopschoning) is nog niet gedaan.
+
 ## Samenvatting
 
 De commissieflow bestaat uit drie schermen (werklijst, factuur maken,
