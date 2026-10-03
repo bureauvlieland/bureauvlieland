@@ -106,7 +106,8 @@ export async function loadReconciliationInputs(
     .select(
       "id, partner_id, request_id, item_id, invoice_number, invoice_date, amount_excl_vat, " +
         "amount_incl_vat, commission_exempt, commission_exempt_reason, commission_exempt_at, " +
-        "status, created_at, commission_invoiced_at",
+        "status, created_at, commission_invoiced_at, commission_invoice_id, " +
+        "commission_invoices(status)",
     );
   if (partnerIdFilter) invoicesQuery = invoicesQuery.eq("partner_id", partnerIdFilter);
 
@@ -381,7 +382,13 @@ export async function loadReconciliationInputs(
       commission_exempt_reason: i.commission_exempt_reason ?? null,
       commission_exempt_at: i.commission_exempt_at ?? null,
 
-      commission_invoiced_at: i.commission_invoiced_at,
+      // Alleen gefactureerd als de commissiefactuur niet meer in concept staat;
+      // oudere concepten hadden deze vlag al gezet bij opslaan.
+      commission_invoiced_at:
+        i.commission_invoiced_at &&
+        (!i.commission_invoice_id || i.commission_invoices?.status !== "draft")
+          ? i.commission_invoiced_at
+          : null,
       created_at: i.created_at,
       allocated_item_ids: allocMap.get(i.id) ?? [],
       allocation_amounts: allocAmountMap.get(i.id) ?? null,

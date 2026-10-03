@@ -266,7 +266,17 @@ export async function handler(req: Request): Promise<Response> {
     const itemIds = (lines || []).filter((l) => l.item_id).map((l) => l.item_id as string);
     const quoteIds = (lines || []).filter((l) => l.quote_id).map((l) => l.quote_id as string);
 
+    const purchaseInvoiceIds = (lines || [])
+      .map((l) => l.purchase_invoice_id)
+      .filter((id): id is string => !!id);
+
     const nowIso = new Date().toISOString();
+    if (purchaseInvoiceIds.length > 0) {
+      await supabase
+        .from("partner_purchase_invoices")
+        .update({ commission_invoiced_at: nowIso, commission_invoice_id: invoice.id })
+        .in("id", purchaseInvoiceIds);
+    }
     if (itemIds.length > 0) {
       await supabase
         .from("program_request_items")

@@ -354,17 +354,16 @@ export default function AdminCommissionInvoiceCreate() {
         .insert(lineInserts as any);
       if (linesErr) throw linesErr;
 
-      // Losse inkoopfacturen markeren zodat ze niet dubbel gefactureerd worden
+      // Losse inkoopfacturen aan dit concept koppelen. `commission_invoiced_at`
+      // zetten we pas bij verzenden (send-commission-invoice-to-partner), net als
+      // bij onderdelen: een concept mag een regel niet al als gefactureerd tonen.
       const usedInvoiceIds = lines
         .map((l) => l.purchaseInvoiceId)
         .filter((id): id is string => !!id);
       if (usedInvoiceIds.length > 0) {
         const { error: markErr } = await supabase
           .from("partner_purchase_invoices")
-          .update({
-            commission_invoiced_at: new Date().toISOString(),
-            commission_invoice_id: invRow.id,
-          } as any)
+          .update({ commission_invoice_id: invRow.id } as any)
           .in("id", usedInvoiceIds);
         if (markErr) reportError(markErr, { where: "AdminCommissionInvoiceCreate: Kon inkoopfacturen niet markeren" });
       }
