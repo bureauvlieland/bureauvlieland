@@ -52,6 +52,7 @@ const ProgrammaOpMaat = lazy(() => import("./pages/ProgrammaOpMaat"));
 const SharedProgram = lazy(() => import("./pages/SharedProgram"));
 const CustomerProgram = lazy(() => import("./pages/CustomerProgram"));
 const Beoordeling = lazy(() => import("./pages/Beoordeling"));
+const DoorverwijzingMelding = lazy(() => import("./pages/DoorverwijzingMelding"));
 const Referenties = lazy(() => import("./pages/Referenties"));
 const ReferentieDetail = lazy(() => import("./pages/ReferentieDetail"));
 const ReferentieAkkoord = lazy(() => import("./pages/ReferentieAkkoord"));
@@ -238,6 +239,7 @@ const App = () => {
               </FeatureGate>
             } />
             <Route path="/beoordeling/:token" element={<Beoordeling />} />
+            <Route path="/doorverwijzing/:token" element={<DoorverwijzingMelding />} />
             <Route path="/referentie-akkoord/:token" element={<ReferentieAkkoord />} />
             <Route path="/concept/:token" element={<ConceptRecover />} />
             <Route path="/mijn-logies/:token" element={

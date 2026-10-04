@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Link2, Loader2, Mail, Search, ShieldOff, Trash2 } from "lucide-react";
@@ -29,6 +29,7 @@ import {
   useDeleteWeddingReferral,
   useSaveWeddingReferral,
   useUpdateWeddingReferral,
+  WEDDING_REFERRALS_KEY,
   type FeeScheduleRow,
   type ReferralPartner,
   type WeddingReferralInsert,
@@ -51,6 +52,7 @@ import {
   formatEuro,
   isClosed,
   isDueForAnonymization,
+  nextInvoiceStatus,
   partnerConfirmation,
   toIsoDate,
   validateFeeOverride,
@@ -189,22 +191,13 @@ const getal = (s: string): number | null => {
 
 const datumLabel = (iso: string | null) => (iso ? format(parseISO(iso), "d MMM yyyy", { locale: nl }) : "–");
 
-export function WeddingReferralSheet({ open, onOpenChange, referral, partners, schedules }: Props) {
-  const today = toIsoDate(new Date());
-  const [form, setForm] = useState<FormState>(() => leeg(today));
-  const [feeTouched, setFeeTouched] = useState(false);
-  const [zoekterm, setZoekterm] = useState("");
-  const [zoekActief, setZoekActief] = useState("");
-  const [bevestigVerwijderen, setBevestigVerwijderen] = useState(false);
-  const [bevestigAnonimiseren, setBevestigAnonimiseren] = useState(false);
-  const [mailOpen, setMailOpen] = useState(false);
-
-  // Fase 2: de verzonden doorverwijsmail, terug te lezen in het maildialoog.
-  const { data: verzondenMail = null } = useQuery({
-    queryKey: ["wedding-referral-email", referral?.referral_email_log_id ?? null],
-    enabled: open && Boolean(referral?.referral_email_log_id),
+/** Eén verzonden mail uit email_log, in de vorm die het maildialoog verwacht. */
+function useVerzondenMail(logId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["wedding-referral-email", logId],
+    enabled: enabled && Boolean(logId),
     queryFn: async (): Promise<ProjectCommunication | null> => {
-      const { data: log, error } = await supabase.from("email_log").select("*").eq("id", referral!.referral_email_log_id!).maybeSingle();
+      const { data: log, error } = await supabase.from("email_log").select("*").eq("id", logId!).maybeSingle();
       if (error) throw error;
       if (!log) return null;
       return {
@@ -232,7 +225,23 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
         email_type: log.email_type,
       };
     },
-  });
+  }).data ?? null;
+}
+
+export function WeddingReferralSheet({ open, onOpenChange, referral, partners, schedules }: Props) {
+  const today = toIsoDate(new Date());
+  const [form, setForm] = useState<FormState>(() => leeg(today));
+  const [feeTouched, setFeeTouched] = useState(false);
+  const [zoekterm, setZoekterm] = useState("");
+  const [zoekActief, setZoekActief] = useState("");
+  const [bevestigVerwijderen, setBevestigVerwijderen] = useState(false);
+  const [bevestigAnonimiseren, setBevestigAnonimiseren] = useState(false);
+  const [mailOpen, setMailOpen] = useState<"klant" | "partner" | null>(null);
+  const queryClient = useQueryClient();
+
+  // De verzonden mails, terug te lezen in het maildialoog: aan het bruidspaar (partner in cc) en aan de partner.
+  const klantMail = useVerzondenMail(referral?.referral_email_log_id ?? null, open);
+  const partnerMail = useVerzondenMail(referral?.partner_email_log_id ?? null, open);
 
   const save = useSaveWeddingReferral();
   const update = useUpdateWeddingReferral();
@@ -276,13 +285,26 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
     setForm((f) => {
       if (alBekend) {
         const reden = alreadyKnownFeeNote({ partner_claim_first_contact_at: f.partner_claim_first_contact_at || null, partner_claim_reported_at: f.partner_claim_reported_at || null });
-        return { ...f, fee_amount: berekend === null ? "" : "0", fee_override_note: f.fee_override_note.startsWith("Al bekend bij partner") || !f.fee_override_note ? reden : f.fee_override_note };
+        return {
+          ...f,
+          fee_amount: berekend === null ? "" : "0",
+          fee_override_note: f.fee_override_note.startsWith("Al bekend bij partner") || !f.fee_override_note ? reden : f.fee_override_note,
+          // Geen vergoeding, dus niets te factureren.
+          invoice_status: nextInvoiceStatus(f.invoice_status, 0),
+        };
       }
-      return { ...f, fee_amount: berekend === null ? "" : String(berekend), fee_override_note: f.fee_override_note.startsWith("Al bekend bij partner") ? "" : f.fee_override_note };
+      return {
+        ...f,
+        fee_amount: berekend === null ? "" : String(berekend),
+        fee_override_note: f.fee_override_note.startsWith("Al bekend bij partner") ? "" : f.fee_override_note,
+        invoice_status: nextInvoiceStatus(f.invoice_status, berekend ?? 1),
+      };
     });
   }, [berekend, form.status, feeTouched, alBekend, form.partner_claim_first_contact_at, form.partner_claim_reported_at]);
 
   const bevestiging = partnerConfirmation({ partner_claim: form.partner_claim, referred_at: form.referred_at || today }, today);
+  // De partner kreeg een mail met de "al bekend"-link (niet bij een handmatig aangemaakte doorverwijzing).
+  const heeftLink = Boolean(referral?.partner_email_log_id);
 
   const vervaldatum = form.referred_at ? expiryDateFor(form.referred_at) : null;
 
@@ -311,7 +333,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
     setForm((f) => ({
       ...f,
       status: next,
-      invoice_status: next === "booked" ? (f.invoice_status === "not_applicable" ? "to_invoice" : f.invoice_status) : "not_applicable",
+      invoice_status: next === "booked" ? nextInvoiceStatus(f.invoice_status, f.partner_claim === "already_known" ? 0 : 1) : "not_applicable",
       fee_amount: next === "booked" ? f.fee_amount : "",
       fee_override_note: next === "booked" ? f.fee_override_note : "",
     }));
@@ -424,6 +446,8 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
       partner_claim_reported_at: form.partner_claim === "already_known" ? form.partner_claim_reported_at || today : null,
       partner_claim_first_contact_at: form.partner_claim === "already_known" ? form.partner_claim_first_contact_at || null : null,
       partner_claim_note: form.partner_claim === "already_known" ? form.partner_claim_note.trim() : "",
+      partner_claim_source: form.partner_claim === "already_known" ? (referral?.partner_claim_source ?? "admin") : null,
+      partner_claim_submitted_at: form.partner_claim === "already_known" ? (referral?.partner_claim_submitted_at ?? null) : null,
     };
 
     if (form.status === "booked") {
@@ -437,14 +461,30 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
       values.fee_calculated_amount = feeResult.calculation.total;
       values.fee_amount = bedrag;
       values.fee_override_note = Math.abs(bedrag - feeResult.calculation.total) < 0.005 ? "" : form.fee_override_note.trim();
-      values.invoice_status = form.invoice_status === "not_applicable" ? "to_invoice" : form.invoice_status;
+      values.invoice_status = nextInvoiceStatus(form.invoice_status, bedrag);
       if (values.invoice_status === "paid" && !values.invoice_paid_at) values.invoice_paid_at = today;
       if (values.invoice_status !== "not_applicable" && values.invoice_status !== "to_invoice" && !values.invoice_date) values.invoice_date = today;
+      if (values.invoice_status === "not_applicable") {
+        values.invoice_number = null;
+        values.invoice_date = null;
+        values.invoice_paid_at = null;
+      }
     }
 
     if (!referral) {
       const { data: sessie } = await supabase.auth.getSession();
       values.created_by = sessie.session?.user.id ?? null;
+    } else {
+      // Meldt de partner via de link terwijl dit scherm openstaat, dan mag opslaan die melding niet overschrijven.
+      const { data: actueel } = await supabase
+        .from("wedding_referrals")
+        .select("partner_claim, partner_claim_submitted_at")
+        .eq("id", referral.id)
+        .maybeSingle();
+      if (actueel && (actueel.partner_claim !== referral.partner_claim || actueel.partner_claim_submitted_at !== referral.partner_claim_submitted_at)) {
+        void queryClient.invalidateQueries({ queryKey: WEDDING_REFERRALS_KEY });
+        return toast.error("De melding van de partner is intussen gewijzigd. Sluit dit scherm en open de doorverwijzing opnieuw; er is niets opgeslagen.");
+      }
     }
 
     save.mutate(
@@ -496,15 +536,30 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
           )}
 
           {referral?.referral_email_log_id && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
-              <span className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                Doorverwezen per mail{verzondenMail?.communication_date ? ` op ${datumLabel(verzondenMail.communication_date.slice(0, 10))}` : ""}
-                {typeof verzondenMail?.metadata.cc === "string" ? `, cc ${verzondenMail.metadata.cc}` : ""}
-              </span>
-              <Button type="button" variant="outline" size="sm" onClick={() => setMailOpen(true)} disabled={!verzondenMail}>
-                Mail bekijken
-              </Button>
+            <div className="space-y-2 rounded-md border px-3 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  Mail aan het bruidspaar{klantMail?.communication_date ? ` op ${datumLabel(klantMail.communication_date.slice(0, 10))}` : ""}
+                  {typeof klantMail?.metadata.cc === "string" ? `, cc ${klantMail.metadata.cc}` : ""}
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={() => setMailOpen("klant")} disabled={!klantMail}>
+                  Mail bekijken
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  {referral.partner_email_log_id
+                    ? `Mail aan de partner${partnerMail?.communication_date ? ` op ${datumLabel(partnerMail.communication_date.slice(0, 10))}` : ""}${partnerMail?.contact_email ? ` (${partnerMail.contact_email})` : ""}`
+                    : "Geen mail aan de partner vastgelegd"}
+                </span>
+                {referral.partner_email_log_id && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMailOpen("partner")} disabled={!partnerMail}>
+                    Mail bekijken
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
@@ -679,8 +734,15 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
               {form.partner_claim === "none" && form.referred_at && (
                 <p className="text-xs text-muted-foreground">
                   {bevestiging.state === "awaiting"
-                    ? `${PARTNER_CONFIRMATION_LABEL.awaiting} tot en met ${datumLabel(bevestiging.deadline)}.`
-                    : `${PARTNER_CONFIRMATION_LABEL.confirmed_new}: geen melding binnen ${PARTNER_RESPONSE_WORKING_DAYS} werkdagen na ${datumLabel(form.referred_at)}.`}
+                    ? `${PARTNER_CONFIRMATION_LABEL.awaiting} tot en met ${datumLabel(bevestiging.deadline)}.${heeftLink ? " De link in de mail aan de partner werkt tot dan." : ""}`
+                    : `${PARTNER_CONFIRMATION_LABEL.confirmed_new}: geen melding binnen ${PARTNER_RESPONSE_WORKING_DAYS} werkdagen na ${datumLabel(form.referred_at)}.${heeftLink ? " De link in de mail aan de partner is verlopen." : ""}`}
+                </p>
+              )}
+              {form.partner_claim === "already_known" && referral?.partner_claim === "already_known" && (
+                <p className="text-xs text-muted-foreground">
+                  {referral.partner_claim_source === "link" && referral.partner_claim_submitted_at
+                    ? `Gemeld door de partner via de link in de mail, op ${format(parseISO(referral.partner_claim_submitted_at), "d MMM yyyy 'om' HH:mm", { locale: nl })}.`
+                    : "Handmatig vastgelegd."}
                 </p>
               )}
             </div>
@@ -787,6 +849,11 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
                 </div>
 
                 <div className="space-y-3">
+                  {form.invoice_status === "not_applicable" && (getal(form.fee_amount) ?? 1) <= 0 ? (
+                    <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                      Geen factuur: de vergoeding is nul{alBekend ? ", want het bruidspaar was al bij de partner bekend" : ""}.
+                    </p>
+                  ) : (
                   <div className="space-y-2">
                     <Label>Factuurstatus</Label>
                     <Select value={form.invoice_status} onValueChange={(v) => set("invoice_status", v as InvoiceStatus)}>
@@ -802,7 +869,8 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
                       </SelectContent>
                     </Select>
                   </div>
-                  {form.invoice_status !== "to_invoice" && (
+                  )}
+                  {form.invoice_status !== "to_invoice" && form.invoice_status !== "not_applicable" && (
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-2">
                         <Label htmlFor="wr-factuurnr">Factuurnummer</Label>
@@ -856,7 +924,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
         </div>
       </SheetContent>
 
-      <EmailLogDetailDialog open={mailOpen} onOpenChange={setMailOpen} communication={verzondenMail} />
+      <EmailLogDetailDialog open={mailOpen !== null} onOpenChange={(o) => !o && setMailOpen(null)} communication={mailOpen === "partner" ? partnerMail : klantMail} />
 
       <AlertDialog open={bevestigAnonimiseren} onOpenChange={setBevestigAnonimiseren}>
         <AlertDialogContent>

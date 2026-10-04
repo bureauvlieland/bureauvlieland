@@ -4744,6 +4744,7 @@ export type Database = {
       wedding_referrals: {
         Row: {
           anonymized_at: string | null
+          claim_token: string
           couple_email: string | null
           couple_names: string
           couple_phone: string | null
@@ -4770,6 +4771,9 @@ export type Database = {
           partner_claim_first_contact_at: string | null
           partner_claim_note: string
           partner_claim_reported_at: string | null
+          partner_claim_source: string | null
+          partner_claim_submitted_at: string | null
+          partner_email_log_id: string | null
           partner_id: string
           prior_contact_note: string
           referral_email_log_id: string | null
@@ -4783,6 +4787,7 @@ export type Database = {
         }
         Insert: {
           anonymized_at?: string | null
+          claim_token?: string
           couple_email?: string | null
           couple_names: string
           couple_phone?: string | null
@@ -4809,6 +4814,9 @@ export type Database = {
           partner_claim_first_contact_at?: string | null
           partner_claim_note?: string
           partner_claim_reported_at?: string | null
+          partner_claim_source?: string | null
+          partner_claim_submitted_at?: string | null
+          partner_email_log_id?: string | null
           partner_id: string
           prior_contact_note?: string
           referral_email_log_id?: string | null
@@ -4822,6 +4830,7 @@ export type Database = {
         }
         Update: {
           anonymized_at?: string | null
+          claim_token?: string
           couple_email?: string | null
           couple_names?: string
           couple_phone?: string | null
@@ -4848,6 +4857,9 @@ export type Database = {
           partner_claim_first_contact_at?: string | null
           partner_claim_note?: string
           partner_claim_reported_at?: string | null
+          partner_claim_source?: string | null
+          partner_claim_submitted_at?: string | null
+          partner_email_log_id?: string | null
           partner_id?: string
           prior_contact_note?: string
           referral_email_log_id?: string | null
@@ -4865,6 +4877,13 @@ export type Database = {
             columns: ["fee_schedule_id"]
             isOneToOne: false
             referencedRelation: "wedding_referral_fee_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wedding_referrals_partner_email_log_id_fkey"
+            columns: ["partner_email_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_log"
             referencedColumns: ["id"]
           },
           {

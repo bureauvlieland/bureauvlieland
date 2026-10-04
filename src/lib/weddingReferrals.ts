@@ -7,9 +7,13 @@
  * het formulier roepen deze aan; de database bewaakt dezelfde regels als
  * vangnet (checks en de dagelijkse expire-functie).
  */
-import { addDays, addMonths, addYears, endOfMonth, format, isWeekend, parseISO } from "date-fns";
+import { addMonths, addYears, endOfMonth, format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { calculateReferralFee, pickFeeSchedule, type FeeCalculation, type FeeScheduleLike } from "@/lib/weddingReferralFee";
+import { addWorkingDays, claimDeadline, PARTNER_RESPONSE_WORKING_DAYS } from "../../supabase/functions/_shared/weddingReferralDates";
+
+// De termijn voor "al bekend" wordt op één plek uitgerekend (de edge functions gebruiken dezelfde module).
+export { addWorkingDays, PARTNER_RESPONSE_WORKING_DAYS };
 
 export type ReferralStatus = "referred" | "booked" | "not_proceeded" | "expired";
 export type InvoiceStatus = "not_applicable" | "to_invoice" | "invoiced" | "paid";
@@ -39,8 +43,18 @@ export const PARTNER_CLAIM_LABEL: Record<PartnerClaim, string> = {
   already_known: "Al bekend bij partner",
 };
 
-/** De partner heeft na de doorverwijsmail vijf werkdagen om te melden dat het bruidspaar al bekend was. */
-export const PARTNER_RESPONSE_WORKING_DAYS = 5;
+/**
+ * Aanhef voor de mail aan het bruidspaar: de voornamen, niet de volledige namen.
+ * "Anna & Bram de Vries" wordt "Anna en Bram", "Ilona Norbart" wordt "Ilona".
+ */
+export function couplePrenames(coupleNames: string): string {
+  const voornamen = coupleNames
+    .split(/\s*(?:&|\+|,|\ben\b)\s*/i)
+    .map((deel) => deel.trim().split(/\s+/)[0])
+    .filter(Boolean);
+  if (voornamen.length <= 1) return voornamen[0] ?? "";
+  return `${voornamen.slice(0, -1).join(", ")} en ${voornamen[voornamen.length - 1]}`;
+}
 
 /** Zonder boeking vervalt een doorverwijzing 18 maanden na de datum doorverwezen. */
 export const REFERRAL_EXPIRY_MONTHS = 18;
@@ -81,6 +95,10 @@ export interface ReferralLike {
   partner_claim_reported_at: string | null;
   partner_claim_first_contact_at: string | null;
   partner_claim_note: string;
+  /** Tijdstip van de melding via de link in de partnermail; leeg bij een handmatige invoer. */
+  partner_claim_submitted_at: string | null;
+  /** "link" = door de partner via de mail, "admin" = handmatig vastgelegd. */
+  partner_claim_source: string | null;
 }
 
 const ISO = "yyyy-MM-dd";
@@ -141,17 +159,6 @@ export function formatWeddingDate(
   return format(parseISO(r.expected_wedding_date), "d MMM yyyy", { locale: nl });
 }
 
-/** `n` werkdagen (ma t/m vr) na een datum; feestdagen tellen niet mee. */
-export function addWorkingDays(iso: string, n: number): string {
-  let d = parseISO(iso);
-  let left = n;
-  while (left > 0) {
-    d = addDays(d, 1);
-    if (!isWeekend(d)) left -= 1;
-  }
-  return toIsoDate(d);
-}
-
 export type PartnerConfirmation = "already_known" | "awaiting" | "confirmed_new";
 export const PARTNER_CONFIRMATION_LABEL: Record<PartnerConfirmation, string> = {
   already_known: "Al bekend bij partner",
@@ -168,7 +175,7 @@ export function partnerConfirmation(
   r: Pick<ReferralLike, "partner_claim" | "referred_at">,
   today: string,
 ): { state: PartnerConfirmation; deadline: string } {
-  const deadline = addWorkingDays(r.referred_at, PARTNER_RESPONSE_WORKING_DAYS);
+  const deadline = claimDeadline(r.referred_at);
   if (r.partner_claim === "already_known") return { state: "already_known", deadline };
   return { state: today <= deadline ? "awaiting" : "confirmed_new", deadline };
 }
@@ -210,6 +217,16 @@ export function validateFeeOverride(feeAmount: number | null, calculated: number
   if (feeAmount === null || calculated === null) return null;
   if (Math.abs(feeAmount - calculated) < 0.005) return null;
   return note.trim() ? null : "Geef een opmerking bij een afwijkende vergoeding.";
+}
+
+/**
+ * Factuurstatus bij een boeking: "te factureren" zodra er een vergoeding is,
+ * "n.v.t." bij een vergoeding van nul (bijvoorbeeld een bruidspaar dat al bij
+ * de partner bekend was). Wat al gefactureerd of betaald is, blijft zo.
+ */
+export function nextInvoiceStatus(current: InvoiceStatus, feeAmount: number): InvoiceStatus {
+  if (current === "invoiced" || current === "paid") return current;
+  return feeAmount > 0 ? "to_invoice" : "not_applicable";
 }
 
 export interface ReferralPatch {
@@ -268,7 +285,7 @@ export function applyStatusChange(
         fee_calculated_amount: fee.calculation.total,
         fee_amount: overridden ? r.fee_amount : alreadyKnown ? 0 : fee.calculation.total,
         fee_override_note: overridden ? r.fee_override_note : alreadyKnown ? alreadyKnownFeeNote(r) : "",
-        invoice_status: r.invoice_status === "not_applicable" ? "to_invoice" : (r.invoice_status as InvoiceStatus),
+        invoice_status: nextInvoiceStatus(r.invoice_status as InvoiceStatus, overridden ? (r.fee_amount ?? 0) : alreadyKnown ? 0 : fee.calculation.total),
       },
     };
   }

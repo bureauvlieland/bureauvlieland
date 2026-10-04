@@ -61,4 +61,6 @@ export const EMAIL_TYPE_LABELS: Record<string, string> = {
   partner_invite: 'Partner uitnodiging',
   proforma_invoice: 'Proforma factuur',
   project_email: 'Project e-mail',
+  wedding_referral_customer: 'Doorverwijzing bruiloft (bruidspaar)',
+  wedding_referral_partner: 'Doorverwijzing bruiloft (partner)',
 };

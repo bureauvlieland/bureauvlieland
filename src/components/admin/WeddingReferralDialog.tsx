@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { referralEmailFor, useWeddingReferralPartners, WEDDING_REFERRALS_KEY } from "@/hooks/useWeddingReferrals";
-import { REFERRAL_STATUS_LABEL, toIsoDate, type ReferralStatus } from "@/lib/weddingReferrals";
+import { couplePrenames, REFERRAL_STATUS_LABEL, toIsoDate, type ReferralStatus } from "@/lib/weddingReferrals";
 import { useAgreementPartners, usePartnerAgreementAcceptances, usePartnerAgreements } from "@/hooks/usePartnerAgreements";
 import { weddingAgreementAccepted } from "@/lib/partnerAgreements";
 
@@ -137,13 +137,11 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
           templateId: TEMPLATE_ID,
           requestId: requestId ?? undefined,
           variables: {
-            customer_name: coupleNames.trim() || "bruidspaar",
-            partner_name: partner.name,
+            voornaam: couplePrenames(coupleNames) || "bruidspaar",
+            trouwdatum: expectedIso ? datumLabel(expectedIso, precision) : "",
+            partner_naam: partner.name,
             partner_email: referralEmailFor(partner),
-            partner_phone: partner.phone ?? "",
-            partner_website: partner.website_url ?? "",
-            expected_wedding_date: expectedIso ? datumLabel(expectedIso, precision) : "",
-            number_of_people: estimatedGuests.trim() || "",
+            aantal_gasten: estimatedGuests.trim() || "",
           },
         },
       });
@@ -174,7 +172,14 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
     setVerstuurt(true);
     try {
       const gasten = estimatedGuests.trim() === "" ? null : Number(estimatedGuests);
-      const { data, error } = await supabase.functions.invoke<{ referralId?: string; error?: string; testMode?: boolean; cc?: string | null }>(
+      const { data, error } = await supabase.functions.invoke<{
+        referralId?: string;
+        error?: string;
+        testMode?: boolean;
+        cc?: string | null;
+        partnerMail?: "sent" | "duplicate" | "suppressed" | "failed";
+        partnerMailError?: string;
+      }>(
         "send-wedding-referral",
         {
           body: {
@@ -202,8 +207,16 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
       void queryClient.invalidateQueries({ queryKey: ["sales-inbox"] });
       void queryClient.invalidateQueries({ queryKey: ["sales-inbox-count"] });
       toast.success(`Doorverwezen naar ${partner.name}`, {
-        description: data.testMode ? "Testmodus: de mail ging naar het testadres, zonder cc." : `Mail verstuurd aan ${coupleEmail.trim()}, cc ${data.cc ?? referralEmailFor(partner)}.`,
+        description: data.testMode
+          ? "Testmodus: beide mails gingen naar het testadres, zonder cc."
+          : `Mail verstuurd aan ${coupleEmail.trim()}, cc ${data.cc ?? referralEmailFor(partner)}. ${partner.name} kreeg daarnaast een eigen mail met alle gegevens.`,
       });
+      if (data.partnerMail === "failed" || data.partnerMail === "suppressed") {
+        toast.warning(`De mail aan ${partner.name} is niet verstuurd`, {
+          description: `${data.partnerMailError ?? "Onbekende fout."} De doorverwijzing staat wel onder Bruiloften; stuur de partner de gegevens zelf door.`,
+          duration: 15000,
+        });
+      }
       onSent?.(data.referralId);
       onOpenChange(false);
     } catch (e) {
@@ -222,7 +235,8 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
             Doorverwijzen naar…
           </DialogTitle>
           <DialogDescription>
-            Het bruidspaar krijgt de mail, de partner staat in cc. Na verzenden staat de doorverwijzing onder{" "}
+            Het bruidspaar krijgt de mail, de partner staat in cc. Op hetzelfde moment krijgt de partner een eigen mail met alle gegevens van het
+            bruidspaar en een link om te melden dat ze al bekend waren. Na verzenden staat de doorverwijzing onder{" "}
             <Link to="/admin/bruiloften" className="underline underline-offset-2">
               Bruiloften
             </Link>
@@ -339,7 +353,10 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
               disabled={!partner}
               className="font-sans text-sm"
             />
-            <p className="text-xs text-muted-foreground">Platte tekst; links worden klikbaar. De mail krijgt de huisstijl met logo en voettekst.</p>
+            <p className="text-xs text-muted-foreground">
+              Platte tekst; links worden klikbaar. De mail krijgt de huisstijl met logo en voettekst. De mail aan de partner staat als sjabloon onder Email Templates
+              en is hier niet te bewerken.
+            </p>
           </div>
 
           <div className="space-y-2">
