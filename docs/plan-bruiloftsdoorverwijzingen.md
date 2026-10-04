@@ -240,9 +240,11 @@ Vraag van Erwin: hoe ga je om met bruidsparen die zelf al contact hadden met
 de partner? Controleren kan alleen via de partner zelf; de regel is "wie het
 eerst aantoonbaar contact had, heeft de klant". Wat er is gebouwd:
 
-- De standaardmail vraagt de partner (in cc) om binnen vijf werkdagen te
-  melden als het bruidspaar al bekend was, met de datum van het eerste
-  contact. Blijft die melding uit, dan geldt de doorverwijzing.
+- De partner meldt binnen vijf werkdagen als het bruidspaar al bekend was,
+  met de datum van het eerste contact. Blijft die melding uit, dan geldt de
+  doorverwijzing. (Sinds 4 oktober staat die vraag niet meer in de mail aan
+  het bruidspaar, maar in een eigen mail aan de partner met een link; zie
+  "Mail aan de partner" hieronder.)
 - Op de doorverwijzing: "Melding partner" (geen melding / al bekend bij
   partner, met datum melding, datum eerste contact en toelichting). Bij
   "al bekend" is de vergoeding bij een boeking nul, met de melding als
@@ -255,6 +257,73 @@ eerst aantoonbaar contact had, heeft de klant". Wat er is gebouwd:
   en het intakeveld "Eerder contact volgens het bruidspaar".
 - **Afspraak met de partners** (Erwin): de vijf werkdagen staan alleen
   overeind als ze in de afspraak met Paal 50 en Seeduyn zijn vastgelegd.
+
+## Mail aan de partner en de "al bekend"-link (gebouwd 4 oktober)
+
+Opdracht van Erwin: de mail aan het bruidspaar krijgt een nieuwe tekst en de
+partner krijgt op hetzelfde moment een eigen mail met alle gegevens en een
+link om "al bekend" te melden.
+
+- **Mail aan het bruidspaar** (sjabloon `wedding_referral_customer`, onderwerp
+  "Uw bruiloft op Vlieland"): nieuwe tekst met de placeholders `voornaam`,
+  `trouwdatum`, `partner_naam`, `aantal_gasten` en `partner_email`; de
+  partner blijft in cc, de huisstijlvoettekst blijft. De aanhef gebruikt de
+  voornamen: "Anna & Bram de Vries" wordt "Anna en Bram". Zonder trouwdatum
+  of aantal gasten valt dat stukje uit de zin weg in plaats van leeg te
+  staan. **De migratie vervangt de bestaande tekst, ook als die in de admin
+  was aangepast.**
+- **Mail aan de partner** (nieuw sjabloon `wedding_referral_partner`, bij
+  Email Templates te bewerken): naar het doorverwijsadres van de partner
+  (anders het contactadres, anders het loginadres), zonder cc. Met naam,
+  e-mail, telefoon, gewenste datum, aantal gasten, overnachtingen en de
+  aanvraag zoals ingevuld. Lege velden (telefoon, datum, gasten,
+  overnachtingen) vallen weg. De overnachtingen komen uit de gekoppelde
+  logiesaanvraag van het project; bij een sales-inboxmail is er geen
+  verblijf bekend. De aanvraagtekst is bij een project de vrije tekst van de
+  klant plus de overige formuliervelden (organisatie, groepssituatie,
+  meerdere opgegeven data, wensen voor het logies); bij een sales-inboxmail
+  de volledige mailtekst plus organisatie, budget en bron uit de scan. De
+  interne notities van de admin gaan niet mee. De aanhef is de voornaam van
+  de contactpersoon van de partner, anders de naam van de partner. In
+  testmodus (preview) gaan beide mails naar het testadres.
+- **De mail wordt vastgelegd** bij de doorverwijzing, net als die aan het
+  bruidspaar (`partner_email_log_id`, "Mail bekijken" op de doorverwijzing).
+  Mislukt de partnermail, dan blijft de doorverwijzing staan en krijgt de
+  admin een waarschuwing; mislukt de mail aan het bruidspaar, dan komt er
+  geen doorverwijzing.
+- **De link** (`/doorverwijzing/:token`, zonder login): een geheim token per
+  doorverwijzing (`claim_token`, 122 bits). De pagina vraagt of het
+  bruidspaar al bekend was, met een verplicht datumveld voor het eerste
+  contact en een optionele opmerking. De datum moet echt zijn en op of vóór
+  de dag van doorverwijzing liggen; een latere datum betekent dat het
+  bruidspaar nog niet bekend was. De link werkt tot en met de vijfde
+  werkdag (Nederlandse tijd, feestdagen tellen niet mee) na de
+  doorverwijsmail, daarna toont de pagina dat hij verlopen is en
+  verandert er niets meer. Een tweede melding overschrijft niets. De mail
+  noemt de uiterste datum erbij.
+- **Wat een melding doet**: de doorverwijzing krijgt `partner_claim =
+  already_known` met datum eerste contact, opmerking, tijdstip van de
+  melding en herkomst "link", en het bureau krijgt een werkbanktaak. De
+  status blijft "doorverwezen". Een aparte status of "niet doorgegaan" is
+  bewust niet gekozen: het bruidspaar kan gewoon bij de partner boeken, en
+  "niet doorgegaan" zou dat in de aantallen per seizoen als mislukt
+  tellen. De boeking telt dus mee, met vergoeding nul en de melding als
+  reden. De factuurstatus blijft dan "n.v.t." (zie hieronder).
+- **"Bevestigd nieuw"** blijft berekend uit de datum doorverwezen plus vijf
+  werkdagen, zonder melding; dezelfde berekening bepaalt of de link nog
+  werkt (`supabase/functions/_shared/weddingReferralDates.ts`, gedeeld met de
+  admin). Er is dus geen cron en geen opgeslagen status die kan afwijken.
+- **Zichtbaar in de admin**: onder "Melding partner" staat of de partner via
+  de link of de admin het vastlegde (met tijdstip), of de link nog werkt of
+  verlopen is, en beide verzonden mails zijn te lezen. Wie de doorverwijzing
+  opslaat terwijl de partner net gemeld heeft, krijgt een melding en
+  overschrijft niets.
+- **Rechtgezet**: een boeking met vergoeding nul (al bekend) kreeg
+  factuurstatus "te factureren". Nu is dat "n.v.t." en toont het scherm
+  "Geen factuur: de vergoeding is nul".
+- **Beperking**: meldt de partner na een al vastgelegde boeking (binnen de
+  vijf werkdagen), dan past de vergoeding zich niet vanzelf aan; de
+  werkbanktaak wijst daarop.
 
 ## Partnerafspraken met akkoord in het portaal (gebouwd 29 september)
 

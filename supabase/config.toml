@@ -103,6 +103,10 @@ verify_jwt = false
 [functions.send-wedding-referral]
 verify_jwt = false
 
+# Pagina achter de "al bekend"-link in de partnermail (openbaar: de link met token is het bewijs).
+[functions.wedding-referral-claim]
+verify_jwt = false
+
 [functions.send-customer-accommodation-message]
 verify_jwt = false
 

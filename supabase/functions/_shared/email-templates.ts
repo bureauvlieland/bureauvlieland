@@ -13,7 +13,14 @@ export interface TemplateVariables {
  */
 export async function getRenderedTemplate(
   templateId: string,
-  variables: TemplateVariables
+  variables: TemplateVariables,
+  /**
+   * Optioneel: andere waarden voor het onderwerp. De waarden voor de tekst zijn
+   * HTML-ontsmet (`Anna &amp; Bram`), maar een onderwerp is platte tekst en mag
+   * dat niet bevatten. Zonder deze parameter krijgt het onderwerp dezelfde
+   * waarden als de tekst.
+   */
+  subjectVariables?: TemplateVariables
 ): Promise<{ subject: string; body: string } | null> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -33,7 +40,7 @@ export async function getRenderedTemplate(
     }
 
     // Replace all {{variable}} placeholders with actual values
-    const subject = replaceVariables(template.subject, variables);
+    const subject = replaceVariables(template.subject, subjectVariables ?? variables);
     const renderedBody = replaceVariables(template.body_html, variables);
 
     // Wrap in standard branded skeleton (header + footer from app_settings)
@@ -364,6 +371,7 @@ export const TemplateIds = {
 
   // Bruiloft doorverwezen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md)
   WEDDING_REFERRAL_CUSTOMER: "wedding_referral_customer",
+  WEDDING_REFERRAL_PARTNER: "wedding_referral_partner",
 } as const;
 
 /**

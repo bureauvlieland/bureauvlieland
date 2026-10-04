@@ -7,10 +7,12 @@ import {
   buildControlList,
   computeReferralFee,
   controlListCsv,
+  couplePrenames,
   effectiveWeddingDate,
   expiryDateFor,
   formatWeddingDate,
   isDueForAnonymization,
+  nextInvoiceStatus,
   partnerConfirmation,
   referralsToExpire,
   seasonOf,
@@ -59,6 +61,8 @@ const doorverwijzing = (extra: Partial<ReferralLike> = {}): ReferralLike => ({
   partner_claim_reported_at: null,
   partner_claim_first_contact_at: null,
   partner_claim_note: "",
+  partner_claim_submitted_at: null,
+  partner_claim_source: null,
   ...extra,
 });
 
@@ -281,13 +285,58 @@ describe("melding partner", () => {
     expect(uitkomst.ok && uitkomst.patch.fee_calculated_amount).toBe(550);
     expect(uitkomst.ok && uitkomst.patch.fee_amount).toBe(0);
     expect(uitkomst.ok && uitkomst.patch.fee_override_note).toBe("Al bekend bij partner, eerste contact 15 jan. 2026 (gemeld 9 mrt. 2026): geen vergoeding");
-    expect(uitkomst.ok && uitkomst.patch.invoice_status).toBe("to_invoice");
+    // Geen vergoeding, dus ook niets te factureren.
+    expect(uitkomst.ok && uitkomst.patch.invoice_status).toBe("not_applicable");
     expect(alreadyKnownFeeNote(doorverwijzing())).toBe("Al bekend bij partner: geen vergoeding");
   });
 
-  it("een handmatig vastgelegd bedrag met opmerking wint van de melding", () => {
+  it("een handmatig vastgelegd bedrag met opmerking wint van de melding, en dan is er wel een factuur", () => {
     const r = doorverwijzing({ final_day_guests: 80, partner_claim: "already_known", fee_amount: 100, fee_override_note: "Halve vergoeding afgesproken" });
     const uitkomst = applyStatusChange(r, "booked", staffels);
     expect(uitkomst.ok && uitkomst.patch.fee_amount).toBe(100);
+    expect(uitkomst.ok && uitkomst.patch.invoice_status).toBe("to_invoice");
+  });
+
+  it("zonder melding krijgt een boeking gewoon de staffelvergoeding en staat hij op te factureren", () => {
+    const r = doorverwijzing({ final_day_guests: 80 });
+    const uitkomst = applyStatusChange(r, "booked", staffels);
+    expect(uitkomst.ok && uitkomst.patch.fee_amount).toBe(550);
+    expect(uitkomst.ok && uitkomst.patch.fee_override_note).toBe("");
+    expect(uitkomst.ok && uitkomst.patch.invoice_status).toBe("to_invoice");
+  });
+
+  it("de factuurstatus volgt de vergoeding: nul is n.v.t., gefactureerd of betaald blijft staan", () => {
+    expect(nextInvoiceStatus("not_applicable", 350)).toBe("to_invoice");
+    expect(nextInvoiceStatus("to_invoice", 350)).toBe("to_invoice");
+    expect(nextInvoiceStatus("not_applicable", 0)).toBe("not_applicable");
+    expect(nextInvoiceStatus("to_invoice", 0)).toBe("not_applicable");
+    expect(nextInvoiceStatus("invoiced", 0)).toBe("invoiced");
+    expect(nextInvoiceStatus("paid", 350)).toBe("paid");
+  });
+
+  it("de termijn van de link en de markering 'bevestigd nieuw' volgen dezelfde vijf werkdagen", () => {
+    const r = doorverwijzing({ referred_at: "2026-09-28" });
+    // laatste dag: nog open; de dag erna: bevestigd nieuw (en dus is de link verlopen)
+    expect(partnerConfirmation(r, "2026-10-05").state).toBe("awaiting");
+    expect(partnerConfirmation(r, "2026-10-06").state).toBe("confirmed_new");
+    // een melding blijft staan, ook na de termijn
+    expect(partnerConfirmation({ ...r, partner_claim: "already_known" }, "2026-10-06").state).toBe("already_known");
+  });
+});
+
+describe("aanhef bruidspaar", () => {
+  it("gebruikt de voornamen, niet de volledige namen", () => {
+    expect(couplePrenames("Anna & Bram")).toBe("Anna en Bram");
+    expect(couplePrenames("Anna de Vries & Bram Jansen")).toBe("Anna en Bram");
+    expect(couplePrenames("Anna en Bram de Vries")).toBe("Anna en Bram");
+    expect(couplePrenames("Anna + Bram")).toBe("Anna en Bram");
+    expect(couplePrenames("Ilona Norbart")).toBe("Ilona");
+    expect(couplePrenames("  Sanne  ")).toBe("Sanne");
+  });
+
+  it("noemt bij meer dan twee namen ze allemaal en geeft leeg terug zonder naam", () => {
+    expect(couplePrenames("Anna, Bram & Chris")).toBe("Anna, Bram en Chris");
+    expect(couplePrenames("")).toBe("");
+    expect(couplePrenames("&")).toBe("");
   });
 });
