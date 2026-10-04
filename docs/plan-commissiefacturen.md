@@ -6,8 +6,9 @@ fasen; na fase 0 en 1 kan Erwin de commissiefacturen van 2026 verwerken.
 Voortgang (3 oktober 2026): fase 1 is gebouwd, behalve de duplicaatcontrole in
 de admin-registratie: die bestaat al (`useLikelyDuplicatePurchaseInvoice` in
 `AddPurchaseInvoiceDialog` met "Toch opslaan"), het plan ging daar uit van een
-verouderde situatie. Migratie `20261003120000` moet nog worden uitgerold; fase 0
-(dataopschoning) is nog niet gedaan.
+verouderde situatie. Migraties `20261003110000` (fase 0, defensief: doet niets
+als de data afwijkt) en `20261003120000` (fase 1) moeten nog worden uitgerold.
+De drie controles door Erwin uit fase 0 staan nog open.
 
 ## Samenvatting
 
