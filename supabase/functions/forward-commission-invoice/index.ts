@@ -73,6 +73,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Doorsturen kan pas als de factuur echt naar de partner is: een concept
+    // heeft nog geen PDF en mag nog gewijzigd of weggegooid worden.
+    if (!["sent", "forwarded"].includes(invoice.status)) {
+      return new Response(
+        JSON.stringify({ error: `Een factuur met status "${invoice.status}" kan niet worden doorgestuurd` }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: partner } = await supabase
       .from("partners")
       .select("name, kvk_number")
