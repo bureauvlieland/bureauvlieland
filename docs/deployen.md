@@ -80,6 +80,13 @@ een lijst functies en een schakelaar om migraties over te slaan. Vanaf een eigen
 machine werkt ook `npx supabase login`, `npx supabase link --project-ref <ref>`,
 `npx supabase functions deploy [naam]` en `npx supabase db push`.
 
+Faalt de migratiestap met "Found local migration files to be inserted before the
+last migration on remote database", dan is een migratie gemerged met een oudere
+datum dan de laatste in productie (twee branches naast elkaar). Alles erna blijft
+dan wachten. Start de workflow handmatig met de schakelaar *include_all* (zelfde
+als `supabase db push --include-all`); controleer eerst wat de achterliggende
+migratie doet, want die draait buiten de volgorde van de datums.
+
 De workflow gebruikt een vaste CLI-versie (`version:` bij `supabase/setup-cli`).
 Met `latest` vraagt de actie bij elke run de nieuwste release op bij de
 GitHub-API, en dat verzoek loopt zonder token geregeld tegen "rate limit
