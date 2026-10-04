@@ -39,6 +39,10 @@ on:
         description: "Migraties overslaan"
         type: boolean
         default: false
+      include_all:
+        description: "Migraties met een oudere datum dan de laatste in productie ook toepassen (db push --include-all). Alleen als een run faalt op 'Found local migration files to be inserted before the last migration'."
+        type: boolean
+        default: false
       delete_functions:
         description: "Deze functies van het project VERWIJDEREN (spatie-gescheiden; alleen voor functies die uit de repo zijn gehaald)"
         required: false
@@ -124,7 +128,12 @@ jobs:
             echo "Migraties overgeslagen: geen SUPABASE_DB_PASSWORD." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          supabase db push --project-ref "${{ steps.ref.outputs.ref }}" -p "$SUPABASE_DB_PASSWORD"
+          flags=""
+          if [ "${{ github.event.inputs.include_all }}" = "true" ]; then
+            flags="--include-all"
+            echo "::notice::db push --include-all: ook migraties met een oudere datum dan de laatste in productie worden toegepast."
+          fi
+          supabase db push --project-ref "${{ steps.ref.outputs.ref }}" -p "$SUPABASE_DB_PASSWORD" $flags
 
       - name: Samenvatting
         if: always()
@@ -136,5 +145,6 @@ jobs:
             echo "- Commit: \`${{ github.sha }}\`"
             echo "- Functies: ${{ github.event.inputs.functions || 'alle' }}"
             echo "- Migraties: ${{ github.event.inputs.skip_migrations == 'true' && 'overgeslagen' || 'toegepast (als wachtwoord aanwezig)' }}"
+            echo "- Migraties --include-all: ${{ github.event.inputs.include_all == 'true' && 'ja' || 'nee' }}"
             echo "- Verwijderd: ${{ github.event.inputs.delete_functions || 'niets' }}"
           } >> "$GITHUB_STEP_SUMMARY"
