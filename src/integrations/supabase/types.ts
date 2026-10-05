@@ -1497,7 +1497,9 @@ export type Database = {
           forwarded_to_accounting_at: string | null
           id: string
           invoice_date: string
-          invoice_number: string
+          finalized_at: string | null
+          finalized_by: string | null
+          invoice_number: string | null
           notes: string | null
           paid_at: string | null
           paid_by: string | null
@@ -1526,7 +1528,9 @@ export type Database = {
           forwarded_to_accounting_at?: string | null
           id?: string
           invoice_date?: string
-          invoice_number: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          invoice_number?: string | null
           notes?: string | null
           paid_at?: string | null
           paid_by?: string | null
@@ -1555,7 +1559,9 @@ export type Database = {
           forwarded_to_accounting_at?: string | null
           id?: string
           invoice_date?: string
-          invoice_number?: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          invoice_number?: string | null
           notes?: string | null
           paid_at?: string | null
           paid_by?: string | null
@@ -5182,9 +5188,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      delete_commission_invoice_draft: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
       expire_wedding_referrals: {
         Args: never
         Returns: number
+      }
+      finalize_commission_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: { id: string; invoice_number: string }[]
       }
       get_accommodation_quote_terms: {
         Args: { _quote_id: string }
@@ -5349,6 +5363,10 @@ export type Database = {
       program_request_exists: { Args: { _id: string }; Returns: boolean }
       program_request_is_recent: { Args: { _id: string }; Returns: boolean }
       resolve_cron_dispatches: { Args: never; Returns: number }
+      save_commission_invoice_draft: {
+        Args: { p_invoice_id: string | null; p_header: Json; p_lines: Json }
+        Returns: string
+      }
       scan_stale_pending_changes: { Args: never; Returns: number }
       selftest_autofix: { Args: never; Returns: Json }
       slugify: { Args: { value: string }; Returns: string }

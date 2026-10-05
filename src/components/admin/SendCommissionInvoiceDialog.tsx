@@ -24,8 +24,11 @@ interface SendCommissionInvoiceDialogProps {
   recipientName?: string | null;
   invoiceNumber: string;
   amountInclVat: number;
-  /** Async; resolves with the PDF blob to send. */
-  onGeneratePdf: () => Promise<Blob | null>;
+  /**
+   * Optioneel: levert de PDF die meegaat. Zonder deze functie gebruikt de
+   * verstuurfunctie de PDF die bij "Definitief maken" is opgeslagen.
+   */
+  onGeneratePdf?: () => Promise<Blob | null>;
   onSent?: () => void;
 }
 
@@ -41,6 +44,11 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
     reader.readAsDataURL(blob);
   });
 
+const defaultMessage = (recipientName: string | null | undefined, invoiceNumber: string) =>
+  `Beste ${recipientName || "partner"},\n\nIn de bijlage vindt u commissiefactuur ${invoiceNumber}. ` +
+  `Wij verzoeken u vriendelijk het bedrag binnen de op de factuur vermelde betaaltermijn over ` +
+  `te maken onder vermelding van het factuurnummer.\n\nMet vriendelijke groet,\nBureau Vlieland`;
+
 export const SendCommissionInvoiceDialog = ({
   isOpen,
   onClose,
@@ -54,22 +62,14 @@ export const SendCommissionInvoiceDialog = ({
 }: SendCommissionInvoiceDialogProps) => {
   const [recipient, setRecipient] = useState(defaultRecipient);
   const [subject, setSubject] = useState(`Commissiefactuur ${invoiceNumber} – Bureau Vlieland`);
-  const [message, setMessage] = useState(
-    `Beste ${recipientName || "partner"},\n\nIn de bijlage vindt u commissiefactuur ${invoiceNumber}. ` +
-      `Wij verzoeken u vriendelijk het bedrag binnen de op de factuur vermelde betaaltermijn over ` +
-      `te maken onder vermelding van het factuurnummer.\n\nMet vriendelijke groet,\nBureau Vlieland`
-  );
+  const [message, setMessage] = useState(defaultMessage(recipientName, invoiceNumber));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setRecipient(defaultRecipient);
       setSubject(`Commissiefactuur ${invoiceNumber} – Bureau Vlieland`);
-      setMessage(
-        `Beste ${recipientName || "partner"},\n\nIn de bijlage vindt u commissiefactuur ${invoiceNumber}. ` +
-          `Wij verzoeken u vriendelijk het bedrag binnen de op de factuur vermelde betaaltermijn over ` +
-          `te maken onder vermelding van het factuurnummer.\n\nMet vriendelijke groet,\nBureau Vlieland`
-      );
+      setMessage(defaultMessage(recipientName, invoiceNumber));
     }
   }, [isOpen, defaultRecipient, recipientName, invoiceNumber]);
 
@@ -80,16 +80,19 @@ export const SendCommissionInvoiceDialog = ({
     }
     setIsSubmitting(true);
     try {
-      const blob = await onGeneratePdf();
-      if (!blob) throw new Error("PDF kon niet worden gegenereerd");
-      const base64 = await blobToBase64(blob);
+      let pdfBase64: string | undefined;
+      if (onGeneratePdf) {
+        const blob = await onGeneratePdf();
+        if (!blob) throw new Error("PDF kon niet worden gegenereerd");
+        pdfBase64 = await blobToBase64(blob);
+      }
 
-      const { error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await supabase.functions.invoke(
         "send-commission-invoice-to-partner",
         {
           body: {
             commissionInvoiceId,
-            pdfBase64: base64,
+            ...(pdfBase64 ? { pdfBase64 } : {}),
             pdfFilename: `Commissiefactuur-${invoiceNumber}.pdf`,
             recipientEmail: recipient.trim(),
             customSubject: subject.trim() || undefined,
@@ -99,8 +102,12 @@ export const SendCommissionInvoiceDialog = ({
       );
 
       if (fnError) throw fnError;
-
-      toast.success(`Commissiefactuur verstuurd naar ${recipient}`);
+      const warnings = (data as { warnings?: string[] } | null)?.warnings;
+      if (warnings && warnings.length > 0) {
+        toast.warning(`Verstuurd, maar: ${warnings.join("; ")}`);
+      } else {
+        toast.success(`Commissiefactuur verstuurd naar ${recipient}`);
+      }
       onSent?.();
       onClose();
     } catch (error) {
@@ -124,8 +131,8 @@ export const SendCommissionInvoiceDialog = ({
             Verstuur commissiefactuur naar partner
           </DialogTitle>
           <DialogDescription>
-            De factuur-PDF wordt als bijlage met deze e-mail meegestuurd. De gekoppelde commissies
-            worden gemarkeerd als "Gefactureerd".
+            De factuur-PDF gaat als bijlage met deze e-mail mee. Opnieuw versturen mag; de
+            oorspronkelijke verzenddatum blijft staan.
           </DialogDescription>
         </DialogHeader>
 
