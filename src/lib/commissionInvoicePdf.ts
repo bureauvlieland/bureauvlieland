@@ -23,6 +23,18 @@ export interface CommissionPdfLine {
   eventDate: string | null;
   baseAmountExclVat: number;
   commissionPct: number;
+  /**
+   * Het opgeslagen regelbedrag. Gezet bij een PDF uit de database, zodat de
+   * PDF op de cent gelijk is aan wat er is opgeslagen (ook bij een creditnota
+   * met negatieve bedragen). Zonder dit wordt het bedrag berekend.
+   */
+  commissionAmount?: number;
+}
+
+export interface CommissionPdfTotals {
+  totalExclVat: number;
+  totalVat: number;
+  totalInclVat: number;
 }
 
 export interface CommissionPdfPartner {
@@ -44,6 +56,8 @@ export interface CommissionPdfInput {
   notes?: string | null;
   vatRate?: number;
   lines: CommissionPdfLine[];
+  /** De opgeslagen totalen van de factuurkop; zonder dit worden ze berekend. */
+  totals?: CommissionPdfTotals;
 }
 
 /** Label op de PDF van een factuur die nog geen nummer heeft. */
@@ -95,15 +109,26 @@ export function deliveryDateLabel(lines: Array<{ eventDate: string | null }>): s
   return `${formatDateNL(dates[0])} – ${formatDateNL(dates[dates.length - 1])}`;
 }
 
+/** Regelbedrag: opgeslagen als dat er is, anders berekend. */
+export function commissionPdfLineAmount(line: CommissionPdfLine): number {
+  return typeof line.commissionAmount === "number" ? line.commissionAmount : commissionAmountForLine(line);
+}
+
 export async function buildCommissionInvoicePdf(input: CommissionPdfInput): Promise<Blob> {
-  const totals = calculateCommissionInvoiceTotals(input.lines, input.vatRate);
+  const computed = calculateCommissionInvoiceTotals(input.lines, input.vatRate);
+  const totals = {
+    vatRate: computed.vatRate,
+    totalExclVat: input.totals?.totalExclVat ?? computed.totalExclVat,
+    totalVat: input.totals?.totalVat ?? computed.totalVat,
+    totalInclVat: input.totals?.totalInclVat ?? computed.totalInclVat,
+  };
 
   const rows: InvoiceLineRow[] = input.lines.map((l) => ({
     description: l.description,
     subDescription: l.reference ? `Ref: ${l.reference}` : undefined,
     qty: "1",
     unitPrice: `${formatCurrencyNL(l.baseAmountExclVat)} × ${l.commissionPct}%`,
-    amount: formatCurrencyNL(commissionAmountForLine(l)),
+    amount: formatCurrencyNL(commissionPdfLineAmount(l)),
   }));
   const categories: InvoiceCategory[] = [{ label: "Commissie", rows }];
 

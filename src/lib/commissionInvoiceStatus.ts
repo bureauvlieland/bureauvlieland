@@ -37,6 +37,9 @@ export const COMMISSION_INVOICE_STATUS_ORDER: CommissionInvoiceStatus[] = [
   "credited",
 ];
 
+/** Statussen waarin een factuur gecrediteerd kan worden. */
+export const CREDITABLE_STATUSES: CommissionInvoiceStatus[] = ["final", "sent", "forwarded", "paid"];
+
 /** Nummer zoals het scherm het toont: een concept heeft er nog geen. */
 export function commissionInvoiceLabel(invoice: {
   invoice_number: string | null;
@@ -60,12 +63,18 @@ export function commissionInvoiceActions(status: string) {
     forward: status === "sent",
     /** Betaald markeren; alleen na versturen of doorsturen. */
     markPaid: status === "sent" || status === "forwarded",
+    /** Creditnota maken; de bronnen komen weer vrij. Alleen voor definitieve facturen. */
+    credit: CREDITABLE_STATUSES.includes(status as CommissionInvoiceStatus),
   };
 }
 
-/** Telt alleen definitieve facturen mee in een totaal: een concept is nog niets. */
+
+/**
+ * Telt mee in het totaal: alles behalve concepten. Een gecrediteerde factuur
+ * en haar creditnota tellen allebei mee en heffen elkaar op.
+ */
 export function countsTowardsTotal(status: string): boolean {
-  return status !== "draft" && status !== "credited";
+  return status !== "draft";
 }
 
 export interface PartnerInvoiceDetails {

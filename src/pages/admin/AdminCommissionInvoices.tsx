@@ -23,6 +23,8 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,15 +66,10 @@ import {
   COMMISSION_INVOICE_STATUS_ORDER,
   commissionInvoiceActions,
   commissionInvoiceLabel,
-  commissionInvoicePdfPath,
   countsTowardsTotal,
   type CommissionInvoiceStatus,
 } from "@/lib/commissionInvoiceStatus";
-import {
-  buildCommissionInvoicePdf,
-  bureauFromSettings,
-  paymentTermFromSettings,
-} from "@/lib/commissionInvoicePdf";
+import { renderAndStoreCommissionInvoicePdf } from "@/lib/commissionInvoicePdfStorage";
 
 interface CommissionInvoice {
   id: string;
@@ -92,6 +89,9 @@ interface CommissionInvoice {
   sent_at: string | null;
   forwarded_to_accounting_at: string | null;
   paid_at: string | null;
+  /** Gezet op een creditnota: de factuur die hij crediteert. */
+  credits_invoice_id: string | null;
+  credit_reason: string | null;
   partner?: { id: string; name: string; email: string | null; contact_email: string | null } | null;
 }
 
@@ -111,6 +111,8 @@ export default function AdminCommissionInvoices() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sendTarget, setSendTarget] = useState<CommissionInvoice | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CommissionInvoice | null>(null);
+  const [creditTarget, setCreditTarget] = useState<CommissionInvoice | null>(null);
+  const [creditReason, setCreditReason] = useState("");
 
   const { data: partners } = useQuery({
     queryKey: ["partners-for-commission-invoice-filter"],
@@ -132,7 +134,7 @@ export default function AdminCommissionInvoices() {
         .select(`
           id, invoice_number, invoice_date, due_date, partner_id, recipient_name, recipient_email,
           amount_excl_vat, vat_amount, amount_incl_vat, status, pdf_path, notes, vat_rate,
-          sent_at, forwarded_to_accounting_at, paid_at,
+          sent_at, forwarded_to_accounting_at, paid_at, credits_invoice_id, credit_reason,
           partner:partners(id, name, email, contact_email)
         `)
         .order("invoice_date", { ascending: false })
@@ -147,6 +149,21 @@ export default function AdminCommissionInvoices() {
       return (data || []) as unknown as CommissionInvoice[];
     },
   });
+
+  /** Nummer van factuur-id, voor de verwijzingen tussen factuur en creditnota. */
+  const numberById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const inv of invoices || []) if (inv.invoice_number) map.set(inv.id, inv.invoice_number);
+    return map;
+  }, [invoices]);
+  /** Welke creditnota hoort bij welke gecrediteerde factuur. */
+  const creditNoteByOriginal = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const inv of invoices || []) {
+      if (inv.credits_invoice_id && inv.invoice_number) map.set(inv.credits_invoice_id, inv.invoice_number);
+    }
+    return map;
+  }, [invoices]);
 
   const stats = useMemo(() => {
     const all = invoices || [];
@@ -193,54 +210,7 @@ export default function AdminCommissionInvoices() {
     if (!invoice.invoice_number) return;
     setBusyId(invoice.id);
     try {
-      const [{ data: lines, error: linesError }, { data: partner, error: partnerError }] =
-        await Promise.all([
-          supabase
-            .from("commission_invoice_lines")
-            .select("description, reference_number, event_date, invoiced_amount_excl_vat, commission_percentage")
-            .eq("invoice_id", invoice.id)
-            .order("sort_order"),
-          supabase
-            .from("partners")
-            .select("id, name, address_street, address_postal, address_city")
-            .eq("id", invoice.partner_id)
-            .maybeSingle(),
-        ]);
-      if (linesError) throw linesError;
-      if (partnerError) throw partnerError;
-      if (!partner) throw new Error("Partner niet gevonden");
-
-      const invoiceDate = parseISO(invoice.invoice_date);
-      const dueDate = invoice.due_date ? parseISO(invoice.due_date) : invoiceDate;
-      const blob = await buildCommissionInvoicePdf({
-        bureau: bureauFromSettings(getSetting),
-        partner: { ...partner, name: invoice.recipient_name || partner.name },
-        invoiceNumber: invoice.invoice_number,
-        invoiceDate,
-        dueDate,
-        paymentTermDays: paymentTermFromSettings(getSetting),
-        notes: invoice.notes,
-        vatRate: Number(invoice.vat_rate) || undefined,
-        lines: (lines ?? []).map((l) => ({
-          description: l.description ?? "",
-          reference: l.reference_number,
-          eventDate: l.event_date,
-          baseAmountExclVat: Number(l.invoiced_amount_excl_vat) || 0,
-          commissionPct: Number(l.commission_percentage) || 0,
-        })),
-      });
-
-      const path = commissionInvoicePdfPath(invoice.partner_id, invoice.invoice_number);
-      const { error: uploadError } = await supabase.storage
-        .from("commission-invoices")
-        .upload(path, blob, { contentType: "application/pdf", upsert: true });
-      if (uploadError) throw uploadError;
-      const { error: pathError } = await supabase
-        .from("commission_invoices")
-        .update({ pdf_path: path })
-        .eq("id", invoice.id);
-      if (pathError) throw pathError;
-
+      await renderAndStoreCommissionInvoicePdf(invoice.id, getSetting);
       toast.success(`PDF van ${invoice.invoice_number} opnieuw gemaakt`);
       refresh();
     } catch (err) {
@@ -266,6 +236,46 @@ export default function AdminCommissionInvoices() {
     } catch (err) {
       reportError(err, { where: "AdminCommissionInvoices: deleteDraft" });
       toast.error(errorMessage(err, "Fout bij verwijderen"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /**
+   * Crediteren: de database maakt in één transactie een creditnota met eigen
+   * nummer en negatieve regels, zet de factuur op gecrediteerd en maakt de
+   * bronnen vrij. Daarna maakt de browser de PDF van de creditnota.
+   */
+  const creditInvoice = async () => {
+    const invoice = creditTarget;
+    const reason = creditReason.trim();
+    setCreditTarget(null);
+    setCreditReason("");
+    if (!invoice) return;
+    setBusyId(invoice.id);
+    try {
+      const { data, error } = await supabase.rpc("credit_commission_invoice", {
+        p_invoice_id: invoice.id,
+        p_reason: reason || null,
+      });
+      if (error) throw error;
+      const credit = Array.isArray(data) ? data[0] : data;
+      if (!credit?.id || !credit.invoice_number) throw new Error("Geen creditnota ontvangen");
+      try {
+        await renderAndStoreCommissionInvoicePdf(credit.id, getSetting);
+        toast.success(
+          `${invoice.invoice_number} gecrediteerd met ${credit.invoice_number}; de regels staan weer bij Te factureren`,
+        );
+      } catch (pdfError) {
+        reportError(pdfError, { where: "AdminCommissionInvoices: PDF van creditnota" });
+        toast.warning(
+          `${invoice.invoice_number} gecrediteerd met ${credit.invoice_number}, maar de PDF kon niet worden gemaakt. Gebruik "PDF opnieuw maken".`,
+        );
+      }
+      refresh();
+    } catch (err) {
+      reportError(err, { where: "AdminCommissionInvoices: creditInvoice" });
+      toast.error(errorMessage(err, "Fout bij crediteren"));
     } finally {
       setBusyId(null);
     }
@@ -304,26 +314,7 @@ export default function AdminCommissionInvoices() {
         .eq("id", invoice.id)
         .in("status", ["sent", "forwarded"]);
       if (error) throw error;
-
-      // Mark linked items / quotes as paid
-      const { data: lines } = await supabase
-        .from("commission_invoice_lines")
-        .select("item_id, quote_id")
-        .eq("invoice_id", invoice.id);
-      const itemIds = (lines || []).map((l) => l.item_id).filter((id): id is string => !!id);
-      const quoteIds = (lines || []).map((l) => l.quote_id).filter((id): id is string => !!id);
-      if (itemIds.length > 0) {
-        await supabase
-          .from("program_request_items")
-          .update({ commission_status: "paid" })
-          .in("id", itemIds);
-      }
-      if (quoteIds.length > 0) {
-        await supabase
-          .from("accommodation_quotes")
-          .update({ commission_status: "paid" })
-          .in("id", quoteIds);
-      }
+      // De bronnen (onderdelen, offertes) volgen via de databasetrigger.
 
       toast.success(`${invoice.invoice_number} gemarkeerd als betaald`);
       refresh();
@@ -549,7 +540,18 @@ export default function AdminCommissionInvoices() {
                     return (
                       <TableRow key={invoice.id}>
                         <TableCell className="font-medium">
-                          {commissionInvoiceLabel(invoice)}
+                          <div>{commissionInvoiceLabel(invoice)}</div>
+                          {invoice.credits_invoice_id && (
+                            <div className="text-xs font-normal text-muted-foreground">
+                              Creditnota bij {numberById.get(invoice.credits_invoice_id) ?? "factuur"}
+                            </div>
+                          )}
+                          {invoice.status === "credited" && (
+                            <div className="text-xs font-normal text-muted-foreground">
+                              Gecrediteerd{creditNoteByOriginal.has(invoice.id) ? ` met ${creditNoteByOriginal.get(invoice.id)}` : ""}
+                              {invoice.credit_reason ? ` · ${invoice.credit_reason}` : ""}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>{invoice.partner?.name || invoice.recipient_name}</TableCell>
                         <TableCell>
@@ -644,6 +646,17 @@ export default function AdminCommissionInvoices() {
                                 <Check className="h-4 w-4" />
                               </Button>
                             )}
+                            {actions.credit && !invoice.credits_invoice_id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setCreditTarget(invoice)}
+                                title="Crediteren"
+                                disabled={busy}
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -673,6 +686,39 @@ export default function AdminCommissionInvoices() {
           onSent={refresh}
         />
       )}
+
+      <AlertDialog open={!!creditTarget} onOpenChange={(open) => !open && setCreditTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Factuur {creditTarget?.invoice_number} crediteren?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Er komt een creditnota met een eigen nummer voor{" "}
+                  {formatCurrency(Number(creditTarget?.amount_incl_vat ?? 0))} incl. btw. De factuur zelf
+                  blijft bestaan als "Gecrediteerd" (de reeks blijft heel). De onderdelen en
+                  inkoopfacturen erop komen terug bij "Te factureren", zodat je een nieuwe factuur kunt
+                  maken.
+                </p>
+                <div className="space-y-1">
+                  <Label htmlFor="credit-reason">Reden (komt op de creditnota)</Label>
+                  <Textarea
+                    id="credit-reason"
+                    value={creditReason}
+                    onChange={(e) => setCreditReason(e.target.value)}
+                    rows={3}
+                    placeholder="Bijv. verkeerde grondslag voor het diner"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={creditInvoice}>Crediteren</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
