@@ -3,12 +3,18 @@
 Status: onderzoek en plan 3 oktober 2026, nog te beoordelen. Daarna bouwen in
 fasen; na fase 0 en 1 kan Erwin de commissiefacturen van 2026 verwerken.
 
-Voortgang (3 oktober 2026): fase 1 is gebouwd, behalve de duplicaatcontrole in
-de admin-registratie: die bestaat al (`useLikelyDuplicatePurchaseInvoice` in
-`AddPurchaseInvoiceDialog` met "Toch opslaan"), het plan ging daar uit van een
-verouderde situatie. Migraties `20261003110000` (fase 0, defensief: doet niets
-als de data afwijkt) en `20261003120000` (fase 1) moeten nog worden uitgerold.
-De drie controles door Erwin uit fase 0 staan nog open.
+Voortgang (5 oktober 2026): fase 0 en 1 zijn gebouwd en uitgerold (fase 1 op
+3 oktober, fase 0 op 4 oktober via een handmatige deploy met `include_all`,
+omdat de migratie een oudere datum heeft dan die van fase 1). De
+duplicaatcontrole in de admin-registratie bestond al
+(`useLikelyDuplicatePurchaseInvoice` in `AddPurchaseInvoiceDialog` met "Toch
+opslaan"). De drie controles door Erwin zijn gedaan; de uitkomst staat in
+migratie `20261005060000`: Fortuna 202600127 is geen fout (twee echte facturen
+met hetzelfde nummer, blijft zo), de hotelofferte van Zeezicht en Vlielandhotel
+gaan van 21 % naar 9 % (inkomend logies is altijd 9 %), en onderdelen in een
+geannuleerd project zonder prijs en zonder inkoopfactuur worden geannuleerd.
+Fase 2 deel 1 (concepten houden regels uit "Te factureren", statusbewaking)
+staat in PR 108.
 
 ## Samenvatting
 
