@@ -22,6 +22,7 @@ import {
   isPastDate,
   type TimeBucket,
 } from "@/lib/projectStatus";
+import { REFERRAL_STATUS_LABEL, type ReferralStatus } from "@/lib/weddingReferrals";
 import type { OverviewRow, RowKind } from "@/lib/getProjectsOverview";
 
 const KIND_META: Record<RowKind, { label: string; icon: React.ReactNode }> = {
@@ -139,6 +140,15 @@ function Row({ row }: { row: OverviewRow }) {
             {row.isNew && (
               <Badge className="h-4 bg-emerald-500 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-emerald-500">
                 Nieuw
+              </Badge>
+            )}
+            {row.referral && (
+              <Badge
+                variant="outline"
+                className="h-4 border-teal-300 bg-teal-100 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:border-teal-700 dark:bg-teal-900/40 dark:text-teal-300"
+                title={`Doorverwezen naar ${row.referral.partnerName} (${REFERRAL_STATUS_LABEL[row.referral.status as ReferralStatus] ?? row.referral.status})`}
+              >
+                Doorverwezen · {row.referral.partnerName}
               </Badge>
             )}
             {row.autoClosed && (
