@@ -31,6 +31,14 @@ export interface OverviewRow {
   quoteStatus?: string | null;
   /** Verloopdatum van de offerte (quote_valid_until). */
   quoteValidUntil?: Date | null;
+  /** Doorverwezen naar een partner (bruiloft, docs/plan-bruiloftsdoorverwijzingen.md); alleen voor projecten. */
+  referral?: OverviewReferral | null;
+}
+
+export interface OverviewReferral {
+  partnerName: string;
+  /** referred | booked | not_proceeded | expired */
+  status: string;
 }
 
 interface FetchOptions {
@@ -65,6 +73,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
     { data: accommodations, error: accError },
     { data: items },
     { data: accQuotes },
+    { data: referralRows },
+    { data: partnerRows },
   ] = await Promise.all([
     supabase
       .from("program_requests")
@@ -87,6 +97,13 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
     supabase
       .from("accommodation_quotes")
       .select("request_id, status"),
+    // Een mislukte opvraag (bijv. geen rechten) laat het overzicht gewoon zonder labels.
+    supabase
+      .from("wedding_referrals")
+      .select("request_id, partner_id, status, referred_at")
+      .not("request_id", "is", null)
+      .order("referred_at", { ascending: false }),
+    supabase.from("partners").select("id, name"),
   ]);
 
   if (progError) throw progError;
@@ -113,6 +130,8 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
     arr.push({ status: q.status });
     quotesByAcc.set(q.request_id, arr);
   });
+
+  const referralByRequest = referralsByRequest(referralRows, partnerRows);
 
   const rows: OverviewRow[] = [];
 
@@ -158,6 +177,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         snoozedUntil: toDate((program as any)?.snoozed_until ?? null),
         quoteStatus: (program as any)?.quote_status ?? null,
         quoteValidUntil: toDate((program as any)?.quote_valid_until ?? null),
+        referral: program ? referralByRequest.get(program.id) ?? null : null,
       });
 
     });
@@ -227,6 +247,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       snoozedUntil: toDate((prog as any).snoozed_until ?? null),
       quoteStatus: prog.quote_status ?? null,
       quoteValidUntil: toDate((prog as any).quote_valid_until ?? null),
+      referral: referralByRequest.get(prog.id) ?? null,
     });
 
   });
@@ -272,6 +293,26 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
   });
 
   return rows.sort(sortByEarliest);
+}
+
+interface ReferralQueryRow {
+  request_id: string | null;
+  partner_id: string;
+  status: string;
+}
+
+/** Per aanvraag de meest recente doorverwijzing (de query staat al op nieuw → oud). */
+export function referralsByRequest(
+  rows: ReferralQueryRow[] | null | undefined,
+  partners: { id: string; name: string }[] | null | undefined,
+): Map<string, OverviewReferral> {
+  const names = new Map((partners ?? []).map(p => [p.id, p.name]));
+  const map = new Map<string, OverviewReferral>();
+  rows?.forEach(r => {
+    if (!r.request_id || map.has(r.request_id)) return;
+    map.set(r.request_id, { partnerName: names.get(r.partner_id) ?? "partner", status: r.status });
+  });
+  return map;
 }
 
 function sortByEarliest(a: OverviewRow, b: OverviewRow): number {

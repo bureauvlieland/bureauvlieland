@@ -14,6 +14,7 @@ import { ProjectsListTable } from "@/components/admin/projecten/ProjectsListTabl
 import { RequestSizeStatsCard } from "@/components/admin/RequestSizeStatsCard";
 import { WeekPlanningView } from "@/components/admin/projecten/WeekPlanningView";
 import { fetchProjectsOverview, type RowKind } from "@/lib/getProjectsOverview";
+import { splitReferred } from "@/lib/projectsOverviewFilters";
 import { cn } from "@/lib/utils";
 
 type TabKey = "lijst" | "kalender" | "logies";
@@ -27,6 +28,7 @@ export default function AdminProjectsOverview() {
   const typeFilter = (params.get("type") as RowKind | "all") ?? "all";
   const archive = params.get("archief") === "1";
   const autoOnly = params.get("auto") === "1";
+  const referredOnly = params.get("doorverwezen") === "1";
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
@@ -51,9 +53,11 @@ export default function AdminProjectsOverview() {
 
   const filterRows = (rows: typeof projectRows | undefined) => {
     if (!rows) return [];
-    return rows.filter(r => {
-      if (!archive && ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
-      if (archive && !ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
+    return splitReferred(rows, referredOnly).visible.filter(r => {
+      if (!referredOnly) {
+        if (!archive && ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
+        if (archive && !ARCHIVE_STATUSES.has(r.derivedStatus)) return false;
+      }
       if (typeFilter !== "all" && r.kind !== typeFilter) return false;
       if (autoOnly && !r.autoClosed) return false;
       if (search.trim()) {
@@ -69,10 +73,15 @@ export default function AdminProjectsOverview() {
     });
   };
 
-  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search, autoOnly]);
-  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search, autoOnly]);
+  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search, autoOnly, referredOnly]);
+  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search, autoOnly, referredOnly]);
   const autoCount = useMemo(
     () => (tab === "logies" ? logiesRows : projectRows)?.filter(r => r.autoClosed).length ?? 0,
+    [tab, projectRows, logiesRows],
+  );
+
+  const referredCount = useMemo(
+    () => splitReferred((tab === "logies" ? logiesRows : projectRows) ?? [], false).referredCount,
     [tab, projectRows, logiesRows],
   );
 
@@ -174,6 +183,23 @@ export default function AdminProjectsOverview() {
                         autoOnly ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground",
                       )}>
                         {autoCount}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={referredOnly ? "default" : "outline"}
+                    onClick={() => setParam("doorverwezen", referredOnly ? null : "1")}
+                    className="gap-1.5"
+                    title="Bruiloften die naar een partner zijn doorverwezen staan niet in de lijst; hier zie je ze"
+                  >
+                    Doorverwezen
+                    {referredCount > 0 && (
+                      <span className={cn(
+                        "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                        referredOnly ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground",
+                      )}>
+                        {referredCount}
                       </span>
                     )}
                   </Button>
