@@ -15,15 +15,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
-const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
-
-/** Statussen waarin de factuur (opnieuw) naar de partner mag. */
-const SENDABLE_STATUSES = ["draft", "final", "sent"];
+/**
+ * Statussen waarin de factuur (opnieuw) naar de partner mag. Een concept
+ * heeft geen nummer en geen PDF; die wordt eerst definitief gemaakt.
+ */
+const SENDABLE_STATUSES = ["final", "sent"];
 
 interface RequestBody {
   commissionInvoiceId: string;
-  pdfBase64: string;
+  /**
+   * Optioneel: een vers gerenderde PDF. Ontbreekt hij, dan gaat de PDF mee
+   * die bij "Definitief maken" is opgeslagen (commission_invoices.pdf_path).
+   */
+  pdfBase64?: string;
   pdfFilename?: string;
   recipientEmail?: string;
   customSubject?: string;
@@ -42,6 +46,10 @@ const escapeHtml = (str: string) =>
     .replace(/'/g, "&#039;");
 
 export async function handler(req: Request): Promise<Response> {
+  // Bij aanroep gelezen, niet bij het laden van de module: dan werkt de
+  // test ook los van de andere testmodules die de sleutels zetten.
+  const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
+  const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
   let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -84,7 +92,7 @@ export async function handler(req: Request): Promise<Response> {
     const body = (await req.json()) as RequestBody;
     const origin = req.headers.get("origin") || "";
 
-    if (!body.commissionInvoiceId || !body.pdfBase64) {
+    if (!body.commissionInvoiceId) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -104,20 +112,15 @@ export async function handler(req: Request): Promise<Response> {
       });
     }
 
-    // Alleen een concept of definitieve factuur mag (opnieuw) verstuurd worden.
-    // Een betaalde, doorgestuurde, geannuleerde of gecrediteerde factuur terug
-    // op "verstuurd" zetten haalt de onderdelen weer uit "betaald".
+    // Alleen een definitieve of al verstuurde factuur mag (opnieuw) verstuurd
+    // worden. Een concept heeft nog geen nummer; een betaalde of doorgestuurde
+    // factuur terug op "verstuurd" zetten haalt de onderdelen uit "betaald".
     if (!SENDABLE_STATUSES.includes(invoice.status)) {
       return new Response(
         JSON.stringify({ error: `Een factuur met status "${invoice.status}" kan niet worden verstuurd` }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    const { data: lines } = await supabase
-      .from("commission_invoice_lines")
-      .select("*")
-      .eq("invoice_id", invoice.id);
 
     // Fetch partner for fallback email
     const { data: partner } = await supabase
@@ -138,17 +141,41 @@ export async function handler(req: Request): Promise<Response> {
 
     const recipientName = invoice.recipient_name || partner?.name || "Partner";
 
-    // Upload PDF to storage
-    const pdfBytes = Uint8Array.from(atob(body.pdfBase64), (c) => c.charCodeAt(0));
-    const pdfPath = `${invoice.partner_id}/${invoice.invoice_number}.pdf`;
-    const { error: uploadErr } = await supabase.storage
-      .from("commission-invoices")
-      .upload(pdfPath, pdfBytes, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-    if (uploadErr) {
-      console.error("Storage upload failed:", uploadErr);
+    // De PDF: vers meegestuurd (dan ook opslaan), anders de opgeslagen PDF
+    // van "Definitief maken".
+    let pdfBase64: string | null = body.pdfBase64 ?? null;
+    let pdfPath: string | null = invoice.pdf_path ?? null;
+    if (pdfBase64) {
+      const pdfBytes = Uint8Array.from(atob(pdfBase64), (c) => c.charCodeAt(0));
+      const newPath = `${invoice.partner_id}/${invoice.invoice_number}.pdf`;
+      const { error: uploadErr } = await supabase.storage
+        .from("commission-invoices")
+        .upload(newPath, pdfBytes, { contentType: "application/pdf", upsert: true });
+      if (uploadErr) {
+        console.error("Storage upload failed:", uploadErr);
+      } else {
+        pdfPath = newPath;
+      }
+    } else if (pdfPath) {
+      const { data: pdfBlob, error: downloadErr } = await supabase.storage
+        .from("commission-invoices")
+        .download(pdfPath);
+      if (downloadErr || !pdfBlob) {
+        console.error("Storage download failed:", downloadErr);
+        return new Response(
+          JSON.stringify({ error: "De opgeslagen PDF kon niet worden opgehaald; maak hem opnieuw" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const buf = new Uint8Array(await pdfBlob.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      pdfBase64 = btoa(bin);
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Geen PDF beschikbaar; maak de PDF eerst opnieuw" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // Compose email
@@ -208,7 +235,7 @@ export async function handler(req: Request): Promise<Response> {
         {
           ContentType: "application/pdf",
           Filename: body.pdfFilename || `Commissiefactuur-${invoice.invoice_number}.pdf`,
-          Base64Content: body.pdfBase64,
+          Base64Content: pdfBase64,
         },
       ],
     };
@@ -285,40 +312,8 @@ export async function handler(req: Request): Promise<Response> {
       .eq("id", invoice.id);
     check("Factuurstatus bijwerken", statusErr);
 
-    // Mark all linked items / quotes / losse inkoopfacturen as invoiced
-    const itemIds = (lines || []).filter((l) => l.item_id).map((l) => l.item_id as string);
-    const quoteIds = (lines || []).filter((l) => l.quote_id).map((l) => l.quote_id as string);
-    const purchaseInvoiceIds = (lines || [])
-      .filter((l) => l.purchase_invoice_id && !l.item_id && !l.quote_id)
-      .map((l) => l.purchase_invoice_id as string);
-
-    if (itemIds.length > 0) {
-      const { error } = await supabase
-        .from("program_request_items")
-        .update({
-          commission_status: "invoiced",
-          commission_invoiced_at: nowIso,
-        })
-        .in("id", itemIds);
-      check("Onderdelen markeren", error);
-    }
-    if (quoteIds.length > 0) {
-      const { error } = await supabase
-        .from("accommodation_quotes")
-        .update({
-          commission_status: "invoiced",
-          commission_invoiced_at: nowIso,
-        })
-        .in("id", quoteIds);
-      check("Logies-offertes markeren", error);
-    }
-    if (purchaseInvoiceIds.length > 0) {
-      const { error } = await supabase
-        .from("partner_purchase_invoices")
-        .update({ commission_invoiced_at: nowIso, commission_invoice_id: invoice.id })
-        .in("id", purchaseInvoiceIds);
-      check("Inkoopfacturen markeren", error);
-    }
+    // De bronnen (onderdelen, offertes, losse inkoopfacturen) zijn al bij
+    // "Definitief maken" op gefactureerd gezet (finalize_commission_invoice).
 
     // Log email
     await logEmail({

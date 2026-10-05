@@ -14,7 +14,20 @@ met hetzelfde nummer, blijft zo), de hotelofferte van Zeezicht en Vlielandhotel
 gaan van 21 % naar 9 % (inkomend logies is altijd 9 %), en onderdelen in een
 geannuleerd project zonder prijs en zonder inkoopfactuur worden geannuleerd.
 Fase 2 deel 1 (concepten houden regels uit "Te factureren", statusbewaking)
-staat in PR 108.
+is gemerged in PR 108. Fase 2 deel 2 (migratie `20261005120000`): een concept
+heeft geen nummer meer, het nummer komt bij "Definitief maken" uit een echte
+maandreeks (`commission_invoice_sequences`, met rijvergrendeling), de status
+`final` bestaat, een concept is te bewerken en te verwijderen vanuit het
+overzicht, en definitieve facturen zijn in de database bevroren (guards op kop
+en regels). Concept opslaan, definitief maken en concept verwijderen zijn
+databasefuncties (`save_commission_invoice_draft`,
+`finalize_commission_invoice`, `delete_commission_invoice_draft`) in plaats
+van de in fase 2 genoemde edge function: alleen zo veranderen kop, regels,
+nummer en bronnen in één transactie. Versturen en doorsturen blijven edge
+functions (die sturen mail). "Definitief maken" schrijft ook grondslag,
+percentage en bedrag terug naar het onderdeel en zet de bronnen op
+gefactureerd; versturen doet dat niet meer. Nog open uit fase 2: crediteren en
+`commission_invoice_id` als enige waarheid op de bronnen.
 
 ## Samenvatting
 
