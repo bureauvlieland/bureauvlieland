@@ -46,7 +46,7 @@ export const IGNORED_INVOICE_STATUSES = ["rejected", "archived"];
 
 const ITEM_COLUMNS =
   "id, request_id, provider_id, block_id, block_name, quoted_price, vat_rate, commission_percentage, " +
-  "commission_status, commission_basis, invoiced_number, invoiced_amount, " +
+  "commission_status, commission_basis, commission_invoice_id, invoiced_number, invoiced_amount, " +
   "status, block_type, proposed_date, commission_exempt, commission_exempt_reason, " +
   "commission_exempt_at, partner_dismissed_at";
 
@@ -117,7 +117,7 @@ export async function loadReconciliationInputs(
     .select(
       "id, partner_id, request_id, item_id, invoice_number, invoice_date, amount_excl_vat, " +
         "amount_incl_vat, commission_exempt, commission_exempt_reason, commission_exempt_at, " +
-        "status, created_at, commission_invoiced_at",
+        "status, created_at, commission_invoiced_at, commission_invoice_id",
     );
   if (partnerIdFilter) invoicesQuery = invoicesQuery.eq("partner_id", partnerIdFilter);
 
@@ -127,7 +127,7 @@ export async function loadReconciliationInputs(
     .select(
       "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
         "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
-        "purchase_invoice_id, " +
+        "purchase_invoice_id, commission_invoice_id, " +
         "commission_exempt, commission_exempt_reason, commission_exempt_at, " +
         "accommodation_requests!inner(id, reference_number, customer_name, customer_company, " +
         "arrival_date, departure_date, completion_status, completed_at)",
@@ -136,19 +136,10 @@ export async function loadReconciliationInputs(
     .eq("status", "selected");
   if (partnerIdFilter) quotesQuery = quotesQuery.eq("partner_id", partnerIdFilter);
 
-  // ── Commissiefacturen die nog niet verstuurd zijn ───────────────────────
-  // Hun regels horen niet meer bij "Te factureren": anders kan dezelfde
-  // selectie op een tweede factuur.
-  const draftLinesQuery = client
-    .from("commission_invoice_lines")
-    .select("item_id, quote_id, purchase_invoice_id, commission_invoices!inner(status)")
-    .in("commission_invoices.status", UNSENT_COMMISSION_INVOICE_STATUSES);
-
-  const [itemsRes, invoicesRes, quotesRes, draftLinesRes] = await Promise.all([
+  const [itemsRes, invoicesRes, quotesRes] = await Promise.all([
     itemsQuery,
     invoicesQuery,
     quotesQuery,
-    draftLinesQuery,
   ]);
 
   if (itemsRes.error) throw new Error(`program_request_items lookup failed: ${itemsRes.error.message}`);
@@ -156,17 +147,33 @@ export async function loadReconciliationInputs(
     throw new Error(`partner_purchase_invoices lookup failed: ${invoicesRes.error.message}`);
   }
   if (quotesRes.error) throw new Error(`accommodation_quotes lookup failed: ${quotesRes.error.message}`);
-  if (draftLinesRes.error) {
-    throw new Error(`commission_invoice_lines lookup failed: ${draftLinesRes.error.message}`);
-  }
 
-  const draftSourceIds = new Set<string>();
-  // deno-lint-ignore no-explicit-any
-  for (const line of (draftLinesRes.data ?? []) as any[]) {
-    for (const id of [line.item_id, line.quote_id, line.purchase_invoice_id]) {
-      if (id) draftSourceIds.add(id);
+  // ── Commissiefacturen die nog niet verstuurd zijn ───────────────────────
+  // commission_invoice_id op onderdeel, offerte en inkoopfactuur is de enige
+  // koppeling. Staat de bron op een concept of definitieve factuur, dan hoort
+  // hij niet meer bij "Te factureren": anders kan dezelfde selectie op een
+  // tweede factuur.
+  const linkedInvoiceIds = new Set<string>();
+  for (const rows of [itemsRes.data, invoicesRes.data, quotesRes.data]) {
+    // deno-lint-ignore no-explicit-any
+    for (const row of (rows ?? []) as any[]) {
+      if (row.commission_invoice_id) linkedInvoiceIds.add(row.commission_invoice_id);
     }
   }
+  const unsentInvoiceIds = new Set<string>();
+  if (linkedInvoiceIds.size > 0) {
+    const { data: linkedInvoices, error: linkedErr } = await client
+      .from("commission_invoices")
+      .select("id, status")
+      .in("id", [...linkedInvoiceIds]);
+    if (linkedErr) throw new Error(`commission_invoices lookup failed: ${linkedErr.message}`);
+    // deno-lint-ignore no-explicit-any
+    for (const inv of (linkedInvoices ?? []) as any[]) {
+      if (UNSENT_COMMISSION_INVOICE_STATUSES.includes(inv.status)) unsentInvoiceIds.add(inv.id);
+    }
+  }
+  const inDraft = (commissionInvoiceId: string | null | undefined) =>
+    !!commissionInvoiceId && unsentInvoiceIds.has(commissionInvoiceId);
 
   // deno-lint-ignore no-explicit-any
   const rawItems: any[] = itemsRes.data ?? [];
@@ -370,7 +377,7 @@ export async function loadReconciliationInputs(
       commission_exempt_reason: i.commission_exempt_reason ?? null,
       commission_exempt_at: i.commission_exempt_at ?? null,
       partner_dismissed: !!i.partner_dismissed_at,
-      in_commission_draft: draftSourceIds.has(i.id),
+      in_commission_draft: inDraft(i.commission_invoice_id),
     }));
 
   const partnerById = new Map<string, ReconPartnerInput>(
@@ -433,7 +440,7 @@ export async function loadReconciliationInputs(
       item_type: "accommodation" as const,
       commission_components: calculation.components.length > 0 ? calculation.components : null,
       purchase_invoice_applied: !!q.purchase_invoice_id,
-      in_commission_draft: draftSourceIds.has(q.id),
+      in_commission_draft: inDraft(q.commission_invoice_id),
       commission_exempt: q.commission_exempt ?? false,
       commission_exempt_reason: q.commission_exempt_reason ?? null,
       commission_exempt_at: q.commission_exempt_at ?? null,
@@ -463,7 +470,7 @@ export async function loadReconciliationInputs(
       commission_exempt_at: i.commission_exempt_at ?? null,
 
       commission_invoiced_at: i.commission_invoiced_at,
-      in_commission_draft: draftSourceIds.has(i.id),
+      in_commission_draft: inDraft(i.commission_invoice_id),
       created_at: i.created_at,
       allocated_item_ids: allocMap.get(i.id) ?? [],
       allocation_amounts: allocAmountMap.get(i.id) ?? null,

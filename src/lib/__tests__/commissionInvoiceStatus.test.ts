@@ -44,10 +44,17 @@ describe("commissionInvoiceActions", () => {
     expect(a.forward).toBe(false);
   });
 
-  it("betaald en gecrediteerd: niets meer", () => {
-    for (const status of ["paid", "credited"]) {
-      const a = commissionInvoiceActions(status);
-      expect(Object.values(a).some(Boolean)).toBe(false);
+  it("betaald: alleen nog crediteren; gecrediteerd: niets meer", () => {
+    const paid = commissionInvoiceActions("paid");
+    expect(paid.credit).toBe(true);
+    expect(Object.entries(paid).filter(([k]) => k !== "credit").some(([, v]) => v)).toBe(false);
+    expect(Object.values(commissionInvoiceActions("credited")).some(Boolean)).toBe(false);
+  });
+
+  it("crediteren kan vanaf definitief, nooit op een concept", () => {
+    expect(commissionInvoiceActions("draft").credit).toBe(false);
+    for (const status of ["final", "sent", "forwarded", "paid"]) {
+      expect(commissionInvoiceActions(status).credit).toBe(true);
     }
   });
 });
@@ -60,9 +67,9 @@ describe("commissionInvoiceLabel en totalen", () => {
     );
   });
 
-  it("concepten en creditnota's tellen niet mee in het totaal", () => {
+  it("concepten tellen niet mee in het totaal; gecrediteerde facturen en creditnota's wel (ze heffen elkaar op)", () => {
     expect(countsTowardsTotal("draft")).toBe(false);
-    expect(countsTowardsTotal("credited")).toBe(false);
+    expect(countsTowardsTotal("credited")).toBe(true);
     expect(countsTowardsTotal("final")).toBe(true);
     expect(countsTowardsTotal("paid")).toBe(true);
   });

@@ -209,6 +209,7 @@ export type Database = {
           commission_exempt_at: string | null
           commission_exempt_by: string | null
           commission_exempt_reason: string | null
+          commission_invoice_id: string | null
           commission_invoiced_at: string | null
           commission_percentage: number | null
           commission_status: string | null
@@ -264,6 +265,7 @@ export type Database = {
           commission_exempt_at?: string | null
           commission_exempt_by?: string | null
           commission_exempt_reason?: string | null
+          commission_invoice_id?: string | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
           commission_status?: string | null
@@ -319,6 +321,7 @@ export type Database = {
           commission_exempt_at?: string | null
           commission_exempt_by?: string | null
           commission_exempt_reason?: string | null
+          commission_invoice_id?: string | null
           commission_invoiced_at?: string | null
           commission_percentage?: number | null
           commission_status?: string | null
@@ -1497,6 +1500,10 @@ export type Database = {
           forwarded_to_accounting_at: string | null
           id: string
           invoice_date: string
+          credit_reason: string | null
+          credited_at: string | null
+          credited_by: string | null
+          credits_invoice_id: string | null
           finalized_at: string | null
           finalized_by: string | null
           invoice_number: string | null
@@ -1528,6 +1535,10 @@ export type Database = {
           forwarded_to_accounting_at?: string | null
           id?: string
           invoice_date?: string
+          credit_reason?: string | null
+          credited_at?: string | null
+          credited_by?: string | null
+          credits_invoice_id?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           invoice_number?: string | null
@@ -1559,6 +1570,10 @@ export type Database = {
           forwarded_to_accounting_at?: string | null
           id?: string
           invoice_date?: string
+          credit_reason?: string | null
+          credited_at?: string | null
+          credited_by?: string | null
+          credits_invoice_id?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           invoice_number?: string | null
@@ -3329,6 +3344,7 @@ export type Database = {
           commission_exempt_at: string | null
           commission_exempt_by: string | null
           commission_exempt_reason: string | null
+          commission_invoice_id: string | null
           commission_invoiced_at: string | null
           commission_notes: string | null
           commission_percentage: number | null
@@ -3447,6 +3463,7 @@ export type Database = {
           commission_exempt_at?: string | null
           commission_exempt_by?: string | null
           commission_exempt_reason?: string | null
+          commission_invoice_id?: string | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
           commission_percentage?: number | null
@@ -3565,6 +3582,7 @@ export type Database = {
           commission_exempt_at?: string | null
           commission_exempt_by?: string | null
           commission_exempt_reason?: string | null
+          commission_invoice_id?: string | null
           commission_invoiced_at?: string | null
           commission_notes?: string | null
           commission_percentage?: number | null
@@ -5187,6 +5205,10 @@ export type Database = {
           p_request_id: string
         }
         Returns: undefined
+      }
+      credit_commission_invoice: {
+        Args: { p_invoice_id: string; p_reason: string | null }
+        Returns: { id: string; invoice_number: string }[]
       }
       delete_commission_invoice_draft: {
         Args: { p_invoice_id: string }

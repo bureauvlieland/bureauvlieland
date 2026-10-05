@@ -118,3 +118,27 @@ Deno.test("logies-offerte krijgt commissiecomponenten per kamer en extra", async
   assertAlmostEquals(components[0].commissionAmount, 100, 0.01);
   assertAlmostEquals(components[1].commissionAmount, 15, 0.01);
 });
+
+Deno.test("bron op een concept- of definitieve commissiefactuur staat 'in concept'; op een verstuurde niet", async () => {
+  const client = fakeClient({
+    accommodation_quotes: [{ ...quote, commission_invoice_id: "ci-draft" }],
+    partners: [partner],
+    commission_invoices: [
+      { id: "ci-draft", status: "final" },
+      { id: "ci-sent", status: "sent" },
+    ],
+  });
+  const inputs = await loadReconciliationInputs(client, {});
+  assertEquals(inputs.items[0].in_commission_draft, true);
+
+  const sentClient = fakeClient({
+    accommodation_quotes: [{ ...quote, commission_invoice_id: "ci-sent" }],
+    partners: [partner],
+    commission_invoices: [{ id: "ci-sent", status: "sent" }],
+  });
+  const sentInputs = await loadReconciliationInputs(sentClient, {});
+  assertEquals(sentInputs.items[0].in_commission_draft, false);
+
+  const unlinked = await loadReconciliationInputs(fakeClient({ accommodation_quotes: [quote], partners: [partner] }), {});
+  assertEquals(unlinked.items[0].in_commission_draft, false);
+});

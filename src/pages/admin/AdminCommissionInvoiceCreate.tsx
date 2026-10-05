@@ -53,10 +53,8 @@ import {
   calculateCommissionInvoiceTotals,
   commissionAmountForLine,
 } from "@/lib/commissionInvoiceTotals";
-import {
-  checkPartnerInvoiceDetails,
-  commissionInvoicePdfPath,
-} from "@/lib/commissionInvoiceStatus";
+import { checkPartnerInvoiceDetails } from "@/lib/commissionInvoiceStatus";
+import { renderAndStoreCommissionInvoicePdf } from "@/lib/commissionInvoicePdfStorage";
 import {
   DRAFT_PDF_LABEL,
   buildCommissionInvoicePdf,
@@ -460,7 +458,6 @@ export default function AdminCommissionInvoiceCreate() {
    * de browser de PDF met dat nummer en zet hem in de opslag.
    */
   const finalize = async () => {
-    if (!partner) return;
     setFinalizeOpen(false);
     setIsFinalizing(true);
     try {
@@ -475,17 +472,8 @@ export default function AdminCommissionInvoiceCreate() {
       if (!invoiceNumber) throw new Error("Geen factuurnummer ontvangen");
 
       try {
-        const blob = await buildPdfBlob(invoiceNumber);
-        const path = commissionInvoicePdfPath(partner.id, invoiceNumber);
-        const { error: uploadError } = await supabase.storage
-          .from("commission-invoices")
-          .upload(path, blob, { contentType: "application/pdf", upsert: true });
-        if (uploadError) throw uploadError;
-        const { error: pathError } = await supabase
-          .from("commission_invoices")
-          .update({ pdf_path: path })
-          .eq("id", id);
-        if (pathError) throw pathError;
+        // Uit de database, zodat de PDF op de cent gelijk is aan wat is opgeslagen.
+        await renderAndStoreCommissionInvoicePdf(id, getSetting);
         toast.success(`Factuur ${invoiceNumber} is definitief. Verstuur hem vanuit het overzicht.`);
       } catch (pdfError) {
         // De factuur ís definitief; alleen de PDF ontbreekt. Het overzicht kan hem opnieuw maken.

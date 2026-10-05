@@ -13,8 +13,9 @@ migratie `20261005060000`: Fortuna 202600127 is geen fout (twee echte facturen
 met hetzelfde nummer, blijft zo), de hotelofferte van Zeezicht en Vlielandhotel
 gaan van 21 % naar 9 % (inkomend logies is altijd 9 %), en onderdelen in een
 geannuleerd project zonder prijs en zonder inkoopfactuur worden geannuleerd.
-Fase 2 deel 1 (concepten houden regels uit "Te factureren", statusbewaking)
-is gemerged in PR 108. Fase 2 deel 2 (migratie `20261005120000`): een concept
+Fase 2 is af (PR 108, 110 en de migratie `20261005150000`). Deel 1
+(concepten houden regels uit "Te factureren", statusbewaking) is gemerged in
+PR 108. Deel 2 (migratie `20261005120000`): een concept
 heeft geen nummer meer, het nummer komt bij "Definitief maken" uit een echte
 maandreeks (`commission_invoice_sequences`, met rijvergrendeling), de status
 `final` bestaat, een concept is te bewerken en te verwijderen vanuit het
@@ -25,9 +26,19 @@ databasefuncties (`save_commission_invoice_draft`,
 van de in fase 2 genoemde edge function: alleen zo veranderen kop, regels,
 nummer en bronnen in één transactie. Versturen en doorsturen blijven edge
 functions (die sturen mail). "Definitief maken" schrijft ook grondslag,
-percentage en bedrag terug naar het onderdeel en zet de bronnen op
-gefactureerd; versturen doet dat niet meer. Nog open uit fase 2: crediteren en
-`commission_invoice_id` als enige waarheid op de bronnen.
+percentage en bedrag terug naar het onderdeel; versturen doet dat niet meer.
+Deel 3 (migratie `20261005150000`): `commission_invoice_id` op onderdeel,
+offerte en losse inkoopfactuur is de enige koppeling (gezet bij "Concept
+opslaan", gewist bij verwijderen of crediteren; partners kunnen hem niet
+aanraken), en `commission_status` op de bron is afgeleid via een trigger op de
+factuurstatus (definitief → invoiced, betaald → paid, gecrediteerd → pending).
+Crediteren (`credit_commission_invoice`) maakt in één transactie een
+creditnota met eigen nummer en negatieve regels zonder bronkoppeling, zet de
+factuur op `credited` en maakt de bronnen vrij; de PDF van elke definitieve
+factuur of creditnota komt uit de opgeslagen kop en regels
+(`renderAndStoreCommissionInvoicePdf`), zodat PDF en database op de cent gelijk
+zijn. Daarmee is fase 2 compleet; fase 3 (presentatie) en fase 4 (dood hout)
+volgen.
 
 ## Samenvatting
 
