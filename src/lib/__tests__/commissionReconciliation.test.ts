@@ -8,6 +8,7 @@ import {
   isBillableRow,
   isExpectedRow,
   isUnknownBaseRow,
+  isInDraftRow,
   isArchivedRow,
   readinessForItem,
   exclVatFromIncl,
@@ -355,6 +356,43 @@ describe("readiness: datum voorbij", () => {
     expect(rows[0].readiness).toBe("unknown_base");
     expect(isBillableRow(rows[0])).toBe(false);
     expect(isUnknownBaseRow(rows[0])).toBe(true);
+  });
+});
+
+describe("conceptfactuur houdt regels uit te factureren", () => {
+  it("een onderdeel op een nog niet verstuurde factuur is niet meer te factureren", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ status: "executed", in_commission_draft: true })],
+      invoices: [],
+      projects,
+      partners,
+    });
+    expect(rows[0].inDraft).toBe(true);
+    expect(isBillableRow(rows[0])).toBe(false);
+    expect(isExpectedRow(rows[0])).toBe(false);
+    expect(isInDraftRow(rows[0])).toBe(true);
+  });
+
+  it("een losse inkoopfactuur op een concept is niet meer te factureren", () => {
+    const rows = buildReconciliationRows({
+      items: [],
+      invoices: [invoice({ request_id: "req-1", in_commission_draft: true })],
+      projects,
+      partners,
+    });
+    expect(isBillableRow(rows[0])).toBe(false);
+    expect(isInDraftRow(rows[0])).toBe(true);
+  });
+
+  it("zonder concept blijft de regel gewoon te factureren", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ status: "executed" })],
+      invoices: [],
+      projects,
+      partners,
+    });
+    expect(isBillableRow(rows[0])).toBe(true);
+    expect(isInDraftRow(rows[0])).toBe(false);
   });
 });
 

@@ -75,6 +75,11 @@ export interface ReconItemInput {
   /** De partner heeft gemeld dat dit onderdeel niet geleverd is. */
   partner_dismissed?: boolean;
   /**
+   * Staat op een commissiefactuur die nog niet is verstuurd (concept of
+   * definitief). De regel hoort dan niet meer bij "Te factureren".
+   */
+  in_commission_draft?: boolean;
+  /**
    * Logies: de offerte heeft extra's en het extra's-percentage van de partner
    * wijkt af van het logiespercentage. De werklijst laat de admin de regel
    * dan nalopen.
@@ -110,6 +115,8 @@ export interface ReconInvoiceInput {
   created_at?: string | null;
   /** Gezet zodra deze inkoopfactuur op een commissiefactuur is meegenomen. */
   commission_invoiced_at?: string | null;
+  /** Staat op een commissiefactuur die nog niet is verstuurd. */
+  in_commission_draft?: boolean;
   /** item_ids uit partner_purchase_invoice_allocations. */
   allocated_item_ids?: string[];
   /**
@@ -197,6 +204,8 @@ export interface ReconRow {
   hasMixedRates: boolean;
   /** De partner meldt: niet geleverd. */
   partnerDismissed?: boolean;
+  /** Staat op een nog niet verstuurde commissiefactuur (concept of definitief). */
+  inDraft?: boolean;
 }
 
 
@@ -287,6 +296,7 @@ export function readinessForItem(input: {
 
 /** Regels die nog gefactureerd moeten worden: uitgevoerd, niet commissievrij en niet afgehandeld. */
 export function isBillableRow(row: ReconRow): boolean {
+  if (row.inDraft) return false;
   if (row.readiness !== "billable") return false;
   if (row.commissionExempt) return false;
   if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
@@ -295,6 +305,7 @@ export function isBillableRow(row: ReconRow): boolean {
 
 /** Regels waarvoor we geen grondslag hebben: geen verkoopprijs en geen inkoopfactuur. */
 export function isUnknownBaseRow(row: ReconRow): boolean {
+  if (row.inDraft) return false;
   if (row.readiness !== "unknown_base") return false;
   if (row.commissionExempt) return false;
   if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
@@ -303,10 +314,19 @@ export function isUnknownBaseRow(row: ReconRow): boolean {
 
 /** Regels die nog moeten plaatsvinden: verwachte commissie, nog niet factureerbaar. */
 export function isExpectedRow(row: ReconRow): boolean {
+  if (row.inDraft) return false;
   if (row.readiness !== "expected") return false;
   if (row.commissionExempt) return false;
   if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
   return row.commissionPercentage > 0;
+}
+
+/** Regels die op een nog niet verstuurde commissiefactuur staan. */
+export function isInDraftRow(row: ReconRow): boolean {
+  if (!row.inDraft) return false;
+  if (row.commissionExempt) return false;
+  if (row.commissionStatus && COMMISSION_SETTLED_STATUSES.includes(row.commissionStatus)) return false;
+  return true;
 }
 
 /** Regels die de admin definitief buiten de commissieflow heeft gezet. */
@@ -596,6 +616,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         ? new Set(components.map((c) => c.commissionPct)).size > 1
         : false,
       partnerDismissed: item.partner_dismissed === true,
+      inDraft: item.in_commission_draft === true,
     });
   }
 
@@ -651,6 +672,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       ageDays: daysSince(inv.invoice_date ?? inv.created_at ?? null, now),
       commissionComponents: null,
       hasMixedRates: false,
+      inDraft: inv.in_commission_draft === true,
     });
   }
 

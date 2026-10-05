@@ -164,7 +164,8 @@ export default function AdminCommissionInvoices() {
           paid_at: new Date().toISOString(),
           paid_by: userId,
         })
-        .eq("id", invoice.id);
+        .eq("id", invoice.id)
+        .in("status", ["sent", "forwarded"]);
       if (error) throw error;
 
       // Mark linked items / quotes as paid
@@ -407,7 +408,7 @@ export default function AdminCommissionInvoices() {
                               <Download className="h-4 w-4" />
                             </Button>
                           )}
-                          {(invoice.status === "sent" || invoice.status === "draft") && (
+                          {invoice.status === "sent" && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -422,7 +423,7 @@ export default function AdminCommissionInvoices() {
                               )}
                             </Button>
                           )}
-                          {invoice.status !== "paid" && (
+                          {(invoice.status === "sent" || invoice.status === "forwarded") && (
                             <Button
                               variant="ghost"
                               size="icon"

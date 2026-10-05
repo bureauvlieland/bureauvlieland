@@ -38,6 +38,9 @@ export const SOLD_ITEM_STATUSES = [
 /** Onderdeelstatussen die nooit commissie opleveren, ook niet met een inkoopfactuur. */
 export const DEAD_ITEM_STATUSES = ["cancelled", "rejected", "declined"];
 
+/** Commissiefactuurstatussen waarin de factuur nog niet naar de partner is. */
+export const UNSENT_COMMISSION_INVOICE_STATUSES = ["draft", "final"];
+
 /** Inkoopfactuurstatussen die niet meetellen in de reconciliatie. */
 export const IGNORED_INVOICE_STATUSES = ["rejected", "archived"];
 
@@ -133,10 +136,19 @@ export async function loadReconciliationInputs(
     .eq("status", "selected");
   if (partnerIdFilter) quotesQuery = quotesQuery.eq("partner_id", partnerIdFilter);
 
-  const [itemsRes, invoicesRes, quotesRes] = await Promise.all([
+  // ── Commissiefacturen die nog niet verstuurd zijn ───────────────────────
+  // Hun regels horen niet meer bij "Te factureren": anders kan dezelfde
+  // selectie op een tweede factuur.
+  const draftLinesQuery = client
+    .from("commission_invoice_lines")
+    .select("item_id, quote_id, purchase_invoice_id, commission_invoices!inner(status)")
+    .in("commission_invoices.status", UNSENT_COMMISSION_INVOICE_STATUSES);
+
+  const [itemsRes, invoicesRes, quotesRes, draftLinesRes] = await Promise.all([
     itemsQuery,
     invoicesQuery,
     quotesQuery,
+    draftLinesQuery,
   ]);
 
   if (itemsRes.error) throw new Error(`program_request_items lookup failed: ${itemsRes.error.message}`);
@@ -144,6 +156,17 @@ export async function loadReconciliationInputs(
     throw new Error(`partner_purchase_invoices lookup failed: ${invoicesRes.error.message}`);
   }
   if (quotesRes.error) throw new Error(`accommodation_quotes lookup failed: ${quotesRes.error.message}`);
+  if (draftLinesRes.error) {
+    throw new Error(`commission_invoice_lines lookup failed: ${draftLinesRes.error.message}`);
+  }
+
+  const draftSourceIds = new Set<string>();
+  // deno-lint-ignore no-explicit-any
+  for (const line of (draftLinesRes.data ?? []) as any[]) {
+    for (const id of [line.item_id, line.quote_id, line.purchase_invoice_id]) {
+      if (id) draftSourceIds.add(id);
+    }
+  }
 
   // deno-lint-ignore no-explicit-any
   const rawItems: any[] = itemsRes.data ?? [];
@@ -347,6 +370,7 @@ export async function loadReconciliationInputs(
       commission_exempt_reason: i.commission_exempt_reason ?? null,
       commission_exempt_at: i.commission_exempt_at ?? null,
       partner_dismissed: !!i.partner_dismissed_at,
+      in_commission_draft: draftSourceIds.has(i.id),
     }));
 
   const partnerById = new Map<string, ReconPartnerInput>(
@@ -409,6 +433,7 @@ export async function loadReconciliationInputs(
       item_type: "accommodation" as const,
       commission_components: calculation.components.length > 0 ? calculation.components : null,
       purchase_invoice_applied: !!q.purchase_invoice_id,
+      in_commission_draft: draftSourceIds.has(q.id),
       commission_exempt: q.commission_exempt ?? false,
       commission_exempt_reason: q.commission_exempt_reason ?? null,
       commission_exempt_at: q.commission_exempt_at ?? null,
@@ -438,6 +463,7 @@ export async function loadReconciliationInputs(
       commission_exempt_at: i.commission_exempt_at ?? null,
 
       commission_invoiced_at: i.commission_invoiced_at,
+      in_commission_draft: draftSourceIds.has(i.id),
       created_at: i.created_at,
       allocated_item_ids: allocMap.get(i.id) ?? [],
       allocation_amounts: allocAmountMap.get(i.id) ?? null,

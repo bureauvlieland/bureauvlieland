@@ -18,6 +18,9 @@ const corsHeaders = {
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
+/** Statussen waarin de factuur (opnieuw) naar de partner mag. */
+const SENDABLE_STATUSES = ["draft", "final", "sent"];
+
 interface RequestBody {
   commissionInvoiceId: string;
   pdfBase64: string;
@@ -99,6 +102,16 @@ export async function handler(req: Request): Promise<Response> {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Alleen een concept of definitieve factuur mag (opnieuw) verstuurd worden.
+    // Een betaalde, doorgestuurde, geannuleerde of gecrediteerde factuur terug
+    // op "verstuurd" zetten haalt de onderdelen weer uit "betaald".
+    if (!SENDABLE_STATUSES.includes(invoice.status)) {
+      return new Response(
+        JSON.stringify({ error: `Een factuur met status "${invoice.status}" kan niet worden verstuurd` }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const { data: lines } = await supabase
@@ -251,39 +264,60 @@ export async function handler(req: Request): Promise<Response> {
       });
     }
 
-    // Update invoice status
-    await supabase
-      .from("commission_invoices")
-      .update({
-        status: "sent",
-        sent_at: new Date().toISOString(),
-        sent_by: user.id,
-        pdf_path: pdfPath,
-      })
-      .eq("id", invoice.id);
+    // Update invoice status. Bij opnieuw versturen blijft de oorspronkelijke
+    // verzenddatum staan.
+    const nowIso = new Date().toISOString();
+    const warnings: string[] = [];
+    const check = (label: string, error: { message: string } | null) => {
+      if (error) {
+        console.error(`[send-commission-invoice-to-partner] ${label}:`, error.message);
+        warnings.push(`${label}: ${error.message}`);
+      }
+    };
 
-    // Mark all linked items / quotes as 'invoiced'
+    const { error: statusErr } = await supabase
+      .from("commission_invoices")
+      .update(
+        invoice.status === "sent"
+          ? { pdf_path: pdfPath }
+          : { status: "sent", sent_at: nowIso, sent_by: user.id, pdf_path: pdfPath },
+      )
+      .eq("id", invoice.id);
+    check("Factuurstatus bijwerken", statusErr);
+
+    // Mark all linked items / quotes / losse inkoopfacturen as invoiced
     const itemIds = (lines || []).filter((l) => l.item_id).map((l) => l.item_id as string);
     const quoteIds = (lines || []).filter((l) => l.quote_id).map((l) => l.quote_id as string);
+    const purchaseInvoiceIds = (lines || [])
+      .filter((l) => l.purchase_invoice_id && !l.item_id && !l.quote_id)
+      .map((l) => l.purchase_invoice_id as string);
 
-    const nowIso = new Date().toISOString();
     if (itemIds.length > 0) {
-      await supabase
+      const { error } = await supabase
         .from("program_request_items")
         .update({
           commission_status: "invoiced",
           commission_invoiced_at: nowIso,
         })
         .in("id", itemIds);
+      check("Onderdelen markeren", error);
     }
     if (quoteIds.length > 0) {
-      await supabase
+      const { error } = await supabase
         .from("accommodation_quotes")
         .update({
           commission_status: "invoiced",
           commission_invoiced_at: nowIso,
         })
         .in("id", quoteIds);
+      check("Logies-offertes markeren", error);
+    }
+    if (purchaseInvoiceIds.length > 0) {
+      const { error } = await supabase
+        .from("partner_purchase_invoices")
+        .update({ commission_invoiced_at: nowIso, commission_invoice_id: invoice.id })
+        .in("id", purchaseInvoiceIds);
+      check("Inkoopfacturen markeren", error);
     }
 
     // Log email
@@ -307,7 +341,12 @@ export async function handler(req: Request): Promise<Response> {
     });
 
     return new Response(
-      JSON.stringify({ success: true, recipient: finalRecipient, pdfPath }),
+      JSON.stringify({
+        success: true,
+        recipient: finalRecipient,
+        pdfPath,
+        ...(warnings.length > 0 ? { warnings } : {}),
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
