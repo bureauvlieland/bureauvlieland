@@ -52,7 +52,24 @@ Grondslag onbekend, Gesplitst tarief, commissievrij met reden of "Verrekend
 door partner"); de grondslagkeuze alleen als beide bedragen bestaan, standaard
 inkoop; zoeken, sorteren (ouderdom, bedrag, partner) en het filter "alleen met
 inkoopfactuur". De regels staan in `src/lib/commissionWorklistView.ts` met
-tests. Deel 2 (Commissiefacturen) en fase 4 volgen.
+tests.
+
+Fase 3 deel 2 (Commissiefacturen, 7 oktober): het overzicht laadt alle
+facturen met hun regels in één keer en werkt verder in het geheugen. Tegels
+als filters (Concept, Definitief, Verstuurd, Doorgestuurd, Betaald, Te laat;
+"Te laat" is een zicht op openstaande facturen met een verstreken
+vervaldatum), het totaal alleen over definitieve facturen (creditnota's
+negatief). Per factuur een rij (`CommissionInvoiceRow`) met nummer of
+"Concept", status-pill, partner, factuur- en vervaldatum, bedrag, en
+tekstknoppen voor wat er nu kan (de volgende stap als `secondary`): Bewerken,
+Definitief maken (opent de bevestiging op de factuurpagina via
+`?finalize=1`), Versturen of Opnieuw versturen, Doorsturen naar Snelstart,
+Betaald, PDF of PDF opnieuw maken, Crediteren, Verwijderen. Uitklapbaar
+detail: de regels met totalen, de bronnen als links naar project,
+logiesaanvraag of inkoopfactuur, de mails uit `email_log` (aan wie, wanneer,
+afgeleverd of geopend) en de Snelstart-status. Zoeken op nummer, partner,
+klant en projectreferentie; de regels in `src/lib/commissionInvoiceView.ts`
+met tests. Daarmee is fase 3 compleet; fase 4 (dood hout) volgt.
 
 ## Samenvatting
 
