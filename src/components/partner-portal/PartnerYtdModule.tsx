@@ -35,7 +35,7 @@ export const PartnerYtdModule = ({
               </p>
               {pendingCommission > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  €{pendingCommission.toFixed(0)} commissie open
+                  €{pendingCommission.toFixed(0)} commissiefactuur open
                 </p>
               )}
             </div>

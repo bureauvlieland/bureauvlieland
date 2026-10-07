@@ -4,8 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/system";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  COMMISSION_INVOICE_STATUS_LABELS,
+  countsTowardsTotal,
+  type CommissionInvoiceStatus,
+} from "@/lib/commissionInvoiceStatus";
+import { OPEN_STATUSES, STATUS_PILL_TONE } from "@/lib/commissionInvoiceView";
+import { tabTotals } from "@/lib/commissionWorklistView";
+import type { ReconRow } from "@/lib/commissionReconciliation";
 import { Link } from "react-router-dom";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -85,31 +93,27 @@ const AdminFinancialDashboardContent = () => {
     },
   });
 
-  // Fetch items with commission data
-  const { data: commissionItems, isLoading: loadingCI } = useQuery({
-    queryKey: ["financial-commissions"],
+  // Commissiefacturen: de bron voor gefactureerde, openstaande en betaalde commissie.
+  const { data: commissionInvoices, isLoading: loadingCI } = useQuery({
+    queryKey: ["financial-commission-invoices"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("program_request_items")
-        .select("id, commission_status, commission_amount, provider_name, block_name, request_id")
-        .not("commission_status", "is", null)
-        .neq("commission_status", "not_applicable");
+        .from("commission_invoices")
+        .select("id, status, amount_excl_vat, amount_incl_vat, invoice_date, credits_invoice_id");
       if (error) throw error;
       return data || [];
     },
   });
 
-  // Fetch accommodation commissions
-  const { data: accommodationCommissions, isLoading: loadingAC } = useQuery({
-    queryKey: ["financial-accommodation-commissions"],
+  // De werklijst: wat er nog te factureren is, uit dezelfde reconciliatie als Commissies.
+  const { data: worklist, isLoading: loadingWL } = useQuery({
+    queryKey: ["commission-worklist", "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("accommodation_quotes")
-        .select("id, commission_status, commission_amount, accommodation_name, partner_id, request_id")
-        .not("commission_status", "is", null)
-        .neq("commission_status", "not_applicable");
+      const { data, error } = await supabase.functions.invoke("get-commission-reconciliation", {
+        body: { partnerId: null },
+      });
       if (error) throw error;
-      return data || [];
+      return data as { rows: ReconRow[] };
     },
   });
 
@@ -129,11 +133,11 @@ const AdminFinancialDashboardContent = () => {
     },
   });
 
-  const isLoading = loadingBI || loadingPI || loadingCI || loadingAC || loadingRFI;
+  const isLoading = loadingBI || loadingPI || loadingCI || loadingWL || loadingRFI;
 
   // KPIs
   const kpis = useMemo(() => {
-    if (!bureauInvoices || !purchaseInvoices || !commissionItems || !accommodationCommissions) {
+    if (!bureauInvoices || !purchaseInvoices || !commissionInvoices) {
       return null;
     }
 
@@ -141,29 +145,28 @@ const AdminFinancialDashboardContent = () => {
     const totalPurchased = purchaseInvoices.reduce((sum, i) => sum + (i.amount_excl_vat || 0), 0);
     const pendingPurchase = purchaseInvoices.filter(i => i.status === "pending").reduce((sum, i) => sum + (i.amount_excl_vat || 0), 0);
 
-    const allCommissions = [
-      ...commissionItems.map(c => ({ status: c.commission_status, amount: c.commission_amount || 0 })),
-      ...accommodationCommissions.map(c => ({ status: c.commission_status, amount: c.commission_amount || 0 })),
-    ];
-
-    const pendingCommission = allCommissions
-      .filter(c => c.status === "pending_confirmation" || c.status === "confirmed")
-      .reduce((sum, c) => sum + c.amount, 0);
-
-    const invoicedCommission = allCommissions
-      .filter(c => c.status === "invoiced")
-      .reduce((sum, c) => sum + c.amount, 0);
+    // Commissie ex btw: alles wat geen concept is (creditnota's tellen negatief mee),
+    // daarvan wat nog openstaat (verstuurd/doorgestuurd) en wat betaald is.
+    const amountOf = (status: (s: CommissionInvoiceStatus) => boolean) =>
+      commissionInvoices
+        .filter((i) => status(i.status as CommissionInvoiceStatus))
+        .reduce((sum, i) => sum + (Number(i.amount_excl_vat) || 0), 0);
+    const invoicedCommission = amountOf(countsTowardsTotal);
+    const openCommission = amountOf((status) => OPEN_STATUSES.includes(status));
+    const paidCommission = amountOf((status) => status === "paid");
+    const billableCommission = worklist ? tabTotals(worklist.rows).billable.amount : 0;
 
     return {
       totalInvoiced,
       totalPurchased,
       margin: totalInvoiced - totalPurchased,
       pendingPurchase,
-      pendingCommission,
       invoicedCommission,
-      totalCommission: pendingCommission + invoicedCommission,
+      openCommission,
+      paidCommission,
+      billableCommission,
     };
-  }, [bureauInvoices, purchaseInvoices, commissionItems, accommodationCommissions]);
+  }, [bureauInvoices, purchaseInvoices, commissionInvoices, worklist]);
 
   // Monthly chart data (last 12 months)
   const chartData = useMemo(() => {
@@ -196,25 +199,24 @@ const AdminFinancialDashboardContent = () => {
     return months;
   }, [bureauInvoices, purchaseInvoices]);
 
-  // Commission summary
+  // Commissie per factuurstatus (concepten tellen niet mee in het totaal, wel in het overzicht).
   const commissionSummary = useMemo(() => {
-    if (!commissionItems || !accommodationCommissions) return null;
+    if (!commissionInvoices) return null;
+    const order: CommissionInvoiceStatus[] = ["draft", "final", "sent", "forwarded", "paid", "credited"];
+    const grouped = new Map<CommissionInvoiceStatus, { count: number; total: number }>();
+    for (const invoice of commissionInvoices) {
+      const status = invoice.status as CommissionInvoiceStatus;
+      const entry = grouped.get(status) ?? { count: 0, total: 0 };
+      entry.count += 1;
+      entry.total += Number(invoice.amount_excl_vat) || 0;
+      grouped.set(status, entry);
+    }
+    return order
+      .filter((status) => grouped.has(status))
+      .map((status) => ({ status, ...grouped.get(status)! }));
+  }, [commissionInvoices]);
 
-    const all = [
-      ...commissionItems.map(c => ({ status: c.commission_status, amount: c.commission_amount || 0 })),
-      ...accommodationCommissions.map(c => ({ status: c.commission_status, amount: c.commission_amount || 0 })),
-    ];
-
-    const grouped: Record<string, { count: number; total: number }> = {};
-    all.forEach(({ status, amount }) => {
-      const s = status || "unknown";
-      if (!grouped[s]) grouped[s] = { count: 0, total: 0 };
-      grouped[s].count++;
-      grouped[s].total += amount;
-    });
-
-    return grouped;
-  }, [commissionItems, accommodationCommissions]);
+  const billableCount = worklist ? tabTotals(worklist.rows).billable.count : 0;
 
   if (isLoading) {
     return (
@@ -227,12 +229,6 @@ const AdminFinancialDashboardContent = () => {
       </div>
     );
   }
-
-  const commissionStatusLabels: Record<string, string> = {
-    pending_confirmation: "Te bevestigen",
-    confirmed: "Bevestigd",
-    invoiced: "Gefactureerd",
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -265,11 +261,11 @@ const AdminFinancialDashboardContent = () => {
           subtitle="omzet − inkoop"
         />
         <KPICard
-          label="Commissies"
-          value={formatCurrency(kpis?.totalCommission || 0)}
+          label="Commissie gefactureerd"
+          value={formatCurrency(kpis?.invoicedCommission || 0)}
           icon={HandCoins}
           color="text-amber-700"
-          subtitle={`${formatCurrency(kpis?.invoicedCommission || 0)} gefactureerd`}
+          subtitle={`${formatCurrency(kpis?.openCommission || 0)} open · ${formatCurrency(kpis?.billableCommission || 0)} te factureren`}
         />
       </div>
 
@@ -337,30 +333,42 @@ const AdminFinancialDashboardContent = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <HandCoins className="h-4 w-4" />
-              Commissie overzicht
+              Commissiefacturen
             </CardTitle>
-            <CardDescription className="text-xs">Totalen per status</CardDescription>
+            <CardDescription className="text-xs">Per status, excl. BTW. Creditnota's tellen negatief mee.</CardDescription>
           </CardHeader>
           <CardContent>
-            {commissionSummary && Object.keys(commissionSummary).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(commissionSummary)
-                  .filter(([key]) => key !== "not_applicable")
-                  .map(([status, data]) => (
-                    <div key={status} className="flex items-center justify-between p-2.5 rounded-lg border">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {commissionStatusLabels[status] || status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{data.count} items</span>
-                      </div>
-                      <span className="text-sm font-semibold">{formatCurrency(data.total)}</span>
+            <div className="space-y-3">
+              <Link
+                to="/admin/commissies"
+                className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Pill tone="warning">Te factureren</Pill>
+                  <span className="text-xs text-muted-foreground">{billableCount} regels in de werklijst</span>
+                </div>
+                <span className="text-sm font-semibold tabular-nums">{formatCurrency(kpis?.billableCommission || 0)}</span>
+              </Link>
+              {commissionSummary && commissionSummary.length > 0 ? (
+                commissionSummary.map(({ status, count, total }) => (
+                  <Link
+                    key={status}
+                    to="/admin/commissies/facturen"
+                    className="flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Pill tone={STATUS_PILL_TONE[status]}>{COMMISSION_INVOICE_STATUS_LABELS[status]}</Pill>
+                      <span className="text-xs text-muted-foreground">
+                        {count} {count === 1 ? "factuur" : "facturen"}
+                      </span>
                     </div>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">Geen commissiedata</p>
-            )}
+                    <span className="text-sm font-semibold tabular-nums">{formatCurrency(total)}</span>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nog geen commissiefacturen</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

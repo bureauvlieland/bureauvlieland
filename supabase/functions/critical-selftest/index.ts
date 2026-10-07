@@ -22,7 +22,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
-import { loadReconciliationInputs, IGNORED_INVOICE_STATUSES } from "../_shared/commissionReconciliationData.ts";
+import { loadReconciliationInputs } from "../_shared/commissionReconciliationData.ts";
 import { getCommissionRate } from "../_shared/commissionRates.ts";
 import { buildReconciliationRows, COMMISSION_FREE_PARTNER_IDS } from "../_shared/commissionReconciliation.ts";
 
@@ -482,7 +482,6 @@ Deno.serve(async (req) => {
             .select("partner_id, amount_excl_vat, status, commission_exempt");
           if (error) throw new Error(error.message);
           const raw = (invoices ?? [])
-            .filter((i) => !IGNORED_INVOICE_STATUSES.includes(i.status ?? ""))
             .filter((i) => i.commission_exempt !== true)
             .filter((i) => !COMMISSION_FREE_PARTNER_IDS.has(i.partner_id ?? ""))
             .filter((i) => (pctByPartner.get(i.partner_id ?? "") ?? 0) > 0)
