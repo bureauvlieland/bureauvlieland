@@ -37,8 +37,22 @@ creditnota met eigen nummer en negatieve regels zonder bronkoppeling, zet de
 factuur op `credited` en maakt de bronnen vrij; de PDF van elke definitieve
 factuur of creditnota komt uit de opgeslagen kop en regels
 (`renderAndStoreCommissionInvoicePdf`), zodat PDF en database op de cent gelijk
-zijn. Daarmee is fase 2 compleet; fase 3 (presentatie) en fase 4 (dood hout)
-volgen.
+zijn. Daarmee is fase 2 compleet.
+
+Fase 3 deel 1 (werklijst, 6 oktober): `CommissionWorklist` staat op het
+ontwerpsysteem. Tegels zijn de tabs (Te factureren, In concept, Verwacht,
+Afwijkingen, Zonder grondslag, Commissievrij, elk met aantal en bedrag);
+Gefactureerd en Betaald staan niet meer in de werklijst. "Afwijkingen" is een
+zicht op "Te factureren" (de regel blijft factureerbaar) met de uitleg dat de
+commissie over de inkoopfactuur gaat. Per partner een kop met totaal, oudste
+regel en één knop "Factuur maken (n regels)" (de selectie, anders alle regels);
+rijen per project met datum en ouderdom; per regel pills (Inkoopfactuur
+ontbreekt, Niet gekoppeld, Afwijking +€, Partner: niet geleverd, Verwacht,
+Grondslag onbekend, Gesplitst tarief, commissievrij met reden of "Verrekend
+door partner"); de grondslagkeuze alleen als beide bedragen bestaan, standaard
+inkoop; zoeken, sorteren (ouderdom, bedrag, partner) en het filter "alleen met
+inkoopfactuur". De regels staan in `src/lib/commissionWorklistView.ts` met
+tests. Deel 2 (Commissiefacturen) en fase 4 volgen.
 
 ## Samenvatting
 

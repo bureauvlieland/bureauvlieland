@@ -1,26 +1,26 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { Link, useNavigate } from "react-router-dom";
+import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
-  AlertTriangle,
-  Check,
-  FileText,
-  Link2,
   Archive,
   ArchiveRestore,
-  Link2Off,
+  Ban,
+  Clock,
+  FileText,
+  Hourglass,
   Loader2,
+  Scale,
   Search,
+  TrendingUp,
+  Link2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -31,26 +31,44 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { EmptyState, LoadingState, Notice, Pill } from "@/components/system";
 import { useToast } from "@/hooks/use-toast";
 import {
   basisAmountForBasis,
   commissionForBasis,
-  isArchivedRow,
-  isBillableRow,
-  isInDraftRow,
-  isUnknownBaseRow,
-  isExpectedRow,
   type CommissionBasis,
   type ReconRow,
 } from "@/lib/commissionReconciliation";
+import {
+  WORKLIST_EMPTY,
+  WORKLIST_SORT_LABELS,
+  WORKLIST_TABS,
+  WORKLIST_TAB_LABELS,
+  ageLabel,
+  canChooseBasis,
+  commissionExplanation,
+  groupWorklistRows,
+  matchesWorklistSearch,
+  rowPills,
+  rowsForTab,
+  tabTotals,
+  type WorklistSort,
+  type WorklistTab,
+} from "@/lib/commissionWorklistView";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(amount);
 
 const formatDate = (value: string | null) =>
-  value ? format(new Date(value), "d MMM yyyy", { locale: nl }) : "—";
+  value ? format(parseISO(value), "EEE d MMM yyyy", { locale: nl }) : "Geen datum";
 
 const TYPE_LABELS: Record<ReconRow["itemType"], string> = {
   activity: "Programma",
@@ -58,31 +76,14 @@ const TYPE_LABELS: Record<ReconRow["itemType"], string> = {
   purchase_invoice: "Losse inkoopfactuur",
 };
 
-type WorklistFilter = "billable" | "in_draft" | "unknown_base" | "expected" | "invoiced" | "paid" | "archived";
-
-const FILTER_LABELS: Record<WorklistFilter, string> = {
-  billable: "Te factureren",
-  in_draft: "In concept",
-  unknown_base: "Zonder grondslag",
-  expected: "Verwacht",
-  invoiced: "Gefactureerd",
-  paid: "Betaald",
-  archived: "Commissievrij / gearchiveerd",
+const TAB_ICONS: Record<WorklistTab, typeof Clock> = {
+  billable: FileText,
+  in_draft: Hourglass,
+  expected: Clock,
+  deviation: TrendingUp,
+  unknown_base: Scale,
+  exempt: Ban,
 };
-
-const FILTER_ORDER: WorklistFilter[] = ["billable", "in_draft", "unknown_base", "expected", "invoiced", "paid", "archived"];
-
-/** In welke filterbucket hoort deze regel? Precies één per regel. */
-export function bucketForRow(row: ReconRow): WorklistFilter {
-  if (isArchivedRow(row)) return "archived";
-  if (row.commissionStatus === "paid") return "paid";
-  if (row.commissionStatus === "invoiced") return "invoiced";
-  if (isInDraftRow(row)) return "in_draft";
-  if (isBillableRow(row)) return "billable";
-  if (isUnknownBaseRow(row)) return "unknown_base";
-  if (isExpectedRow(row)) return "expected";
-  return "archived";
-}
 
 interface CommissionWorklistProps {
   /** Optioneel: alleen regels van deze partner tonen. */
@@ -90,15 +91,19 @@ interface CommissionWorklistProps {
 }
 
 /**
- * Eén werklijst met alle gerealiseerde partnerregels (met of zonder inkoopfactuur)
- * plus losse inkoopfacturen. Per regel kiest de admin de commissiegrondslag.
+ * De commissiewerklijst: alle gerealiseerde partnerregels (met of zonder
+ * inkoopfactuur) plus losse inkoopfacturen, per partner en project. Tegels
+ * zijn de tabs; per partner één knop "Factuur maken"; per regel de pills die
+ * zeggen wat er aan de hand is.
  */
 export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<WorklistFilter>("billable");
+  const [tab, setTab] = useState<WorklistTab>("billable");
+  const [sort, setSort] = useState<WorklistSort>("age");
+  const [onlyWithInvoice, setOnlyWithInvoice] = useState(false);
   const [exemptDialogOpen, setExemptDialogOpen] = useState(false);
   const [exemptReason, setExemptReason] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -115,81 +120,42 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
     },
   });
 
-  const basisFor = (row: ReconRow): CommissionBasis =>
-    basisOverrides[row.key] ?? row.defaultBasis;
+  const basisFor = (row: ReconRow): CommissionBasis => basisOverrides[row.key] ?? row.defaultBasis;
 
-  const searched = useMemo(() => {
-    const all = data?.rows ?? [];
-    const term = search.trim().toLowerCase();
-    if (!term) return all;
-    return all.filter((row) =>
-      [row.label, row.partnerName, row.customerName, row.projectLabel, row.projectReference, row.invoiceNumber]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    );
-  }, [data?.rows, search]);
+  const allRows = useMemo(() => data?.rows ?? [], [data?.rows]);
+  const totals = useMemo(() => tabTotals(allRows, basisFor), [allRows, basisOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const counts = useMemo(() => {
-    const base: Record<WorklistFilter, number> = {
-      billable: 0,
-      in_draft: 0,
-      unknown_base: 0,
-      expected: 0,
-      invoiced: 0,
-      paid: 0,
-      archived: 0,
-    };
-    for (const row of searched) base[bucketForRow(row)] += 1;
-    return base;
-  }, [searched]);
+  const rows = useMemo(() => {
+    let list = rowsForTab(allRows, tab);
+    if (search.trim()) list = list.filter((row) => matchesWorklistSearch(row, search));
+    if (onlyWithInvoice) list = list.filter((row) => row.purchaseExclVat !== null);
+    return list;
+  }, [allRows, tab, search, onlyWithInvoice]);
 
-  const rows = useMemo(
-    () => searched.filter((row) => bucketForRow(row) === filter),
-    [searched, filter],
-  );
-
-  const groups = useMemo(() => {
-    const map = new Map<string, { partnerId: string; partnerName: string; rows: ReconRow[] }>();
-    for (const row of rows) {
-      const group = map.get(row.partnerId) ?? {
-        partnerId: row.partnerId,
-        partnerName: row.partnerName,
-        rows: [],
-      };
-      group.rows.push(row);
-      map.set(row.partnerId, group);
-    }
-    for (const group of map.values()) {
-      group.rows.sort((a, b) => {
-        const dateA = a.executionDate ?? a.invoiceDate ?? "";
-        const dateB = b.executionDate ?? b.invoiceDate ?? "";
-        return dateA.localeCompare(dateB);
-      });
-    }
-    return [...map.values()].sort((a, b) => a.partnerName.localeCompare(b.partnerName));
-  }, [rows]);
+  const groups = useMemo(() => groupWorklistRows(rows, sort, basisFor), [rows, sort, basisOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rowByKey = useMemo(() => new Map(rows.map((row) => [row.key, row])), [rows]);
-
   const selectedRows = useMemo(
     () => [...selected].map((key) => rowByKey.get(key)).filter((row): row is ReconRow => !!row),
     [selected, rowByKey],
   );
+  const selectedTotal = selectedRows.reduce((sum, row) => sum + commissionForBasis(row, basisFor(row)), 0);
 
-  const selectedTotal = selectedRows.reduce(
-    (sum, row) => sum + commissionForBasis(row, basisFor(row)),
-    0,
-  );
+  const changeTab = (next: WorklistTab) => {
+    setTab(next);
+    setSelected(new Set());
+  };
 
   const toggleRow = (key: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
-  const toggleGroup = (groupRows: ReconRow[]) => {
+  const toggleRows = (groupRows: ReconRow[]) => {
     const allSelected = groupRows.every((row) => selected.has(row.key));
     setSelected((prev) => {
       const next = new Set(prev);
@@ -197,14 +163,6 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
         if (allSelected) next.delete(row.key);
         else next.add(row.key);
       }
-      return next;
-    });
-  };
-
-  const setGroupBasis = (groupRows: ReconRow[], basis: CommissionBasis) => {
-    setBasisOverrides((prev) => {
-      const next = { ...prev };
-      for (const row of groupRows) next[row.key] = basis;
       return next;
     });
   };
@@ -230,7 +188,7 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
       toast({
         title: variables.exempt ? "Commissievrij gemarkeerd" : "Teruggezet in de werklijst",
         description: variables.exempt
-          ? `${result.updated} regel(s) gearchiveerd${result.todosClosed ? `, ${result.todosClosed} taak/taken gesloten` : ""}.`
+          ? `${result.updated} regel(s) commissievrij${result.todosClosed ? `, ${result.todosClosed} taak/taken gesloten` : ""}.`
           : `${result.updated} regel(s) weer actief.`,
       });
       setSelected(new Set());
@@ -244,9 +202,10 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
     },
   });
 
-  const createInvoice = () => {
-    if (selectedRows.length === 0) return;
-    const partnerIds = new Set(selectedRows.map((row) => row.partnerId));
+  /** Naar "Commissiefactuur maken" met precies deze regels. */
+  const createInvoice = (invoiceRows: ReconRow[]) => {
+    if (invoiceRows.length === 0) return;
+    const partnerIds = new Set(invoiceRows.map((row) => row.partnerId));
     if (partnerIds.size > 1) {
       toast({
         title: "Eén partner per factuur",
@@ -256,357 +215,343 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
       return;
     }
     const params = new URLSearchParams();
-    const itemIds = selectedRows.filter((r) => r.itemType === "activity" && r.itemId).map((r) => r.itemId!);
-    const quoteIds = selectedRows.filter((r) => r.itemType === "accommodation" && r.itemId).map((r) => r.itemId!);
-    const invoiceIds = selectedRows
+    const itemIds = invoiceRows.filter((r) => r.itemType === "activity" && r.itemId).map((r) => r.itemId as string);
+    const quoteIds = invoiceRows.filter((r) => r.itemType === "accommodation" && r.itemId).map((r) => r.itemId as string);
+    const invoiceIds = invoiceRows
       .filter((r) => r.itemType === "purchase_invoice" && r.invoiceId)
-      .map((r) => r.invoiceId!);
+      .map((r) => r.invoiceId as string);
     if (itemIds.length) params.set("itemIds", itemIds.join(","));
     if (quoteIds.length) params.set("quoteIds", quoteIds.join(","));
     if (invoiceIds.length) params.set("invoiceIds", invoiceIds.join(","));
-    const basisMap = selectedRows
-      .map((row) => `${row.itemId ?? row.invoiceId}:${basisFor(row)}`)
-      .join(",");
+    const basisMap = invoiceRows.map((row) => `${row.itemId ?? row.invoiceId}:${basisFor(row)}`).join(",");
     if (basisMap) params.set("basis", basisMap);
     // Grondslag meegeven zodat de factuurpagina kan waarschuwen bij afwijkingen.
-    const amountsMap = selectedRows
-      .map(
-        (row) =>
-          `${row.itemId ?? row.invoiceId}:${basisAmountForBasis(row, basisFor(row)).toFixed(2)}`,
-      )
+    const amountsMap = invoiceRows
+      .map((row) => `${row.itemId ?? row.invoiceId}:${basisAmountForBasis(row, basisFor(row)).toFixed(2)}`)
       .join(",");
     if (amountsMap) params.set("amounts", amountsMap);
-
     navigate(`/admin/commissies/factuur-maken?${params.toString()}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" />
-        Werklijst laden…
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingState label="Werklijst laden…" />;
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>Kon de werklijst niet laden: {(error as Error).message}</AlertDescription>
-      </Alert>
+      <Notice tone="danger" title="Kon de werklijst niet laden">
+        {(error as Error).message}
+      </Notice>
     );
   }
 
-  const missingInvoiceCount = rows.filter((row) => row.status === "missing_invoice").length;
-  const unlinkedCount = rows.filter((row) => row.itemType === "purchase_invoice").length;
-  const bucketTotal = rows.reduce((sum, row) => sum + commissionForBasis(row, basisFor(row)), 0);
+  const canInvoice = tab === "billable" || tab === "deviation";
+  const isFiltering = search.trim().length > 0 || onlyWithInvoice;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {FILTER_ORDER.map((key) => (
-          <Button
-            key={key}
-            size="sm"
-            variant={filter === key ? "default" : "outline"}
-            onClick={() => {
-              setFilter(key);
-              setSelected(new Set());
-            }}
-          >
-            {FILTER_LABELS[key]}
-            <Badge variant="secondary" className="ml-2">
-              {counts[key]}
-            </Badge>
-          </Button>
-        ))}
+    <div className="space-y-5">
+      {/* Tegels = tabs */}
+      <div role="tablist" aria-label="Commissiestatus" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {WORKLIST_TABS.map((key) => {
+          const active = key === tab;
+          const Icon = TAB_ICONS[key];
+          const total = totals[key];
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => changeTab(key)}
+              className={`rounded-lg border p-3 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4 ${
+                active ? "border-primary bg-accent-soft" : "bg-card hover:bg-muted"
+              }`}
+            >
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {WORKLIST_TAB_LABELS[key]}
+              </span>
+              <span className="mt-1 block text-2xl font-semibold tabular-nums text-foreground">{total.count}</span>
+              <span className="block text-xs text-muted-foreground">
+                {key === "exempt" ? "zonder commissie" : formatCurrency(total.amount)}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {FILTER_LABELS[filter]}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{rows.length}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Totale commissie in deze tab
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{formatCurrency(bucketTotal)}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Geselecteerd</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">
-            {selectedRows.length} ({formatCurrency(selectedTotal)})
-          </CardContent>
-        </Card>
-      </div>
-
-      {(missingInvoiceCount > 0 || unlinkedCount > 0) && (
-        <p className="text-sm text-muted-foreground">
-          In deze tab:{" "}
-          <strong>{missingInvoiceCount}</strong> regel(s) zonder inkoopfactuur ·{" "}
-          <strong>{unlinkedCount}</strong> losse inkoopfactuur/-facturen (nog te koppelen aan een
-          onderdeel of logies).
-        </p>
+      {tab === "deviation" && (
+        <Notice tone="info" title="Partner factureerde meer dan wij verkochten">
+          De commissie gaat over de inkoopfactuur, dus deze regels staan ook bij "Te factureren". Het
+          verschil is een signaal voor de nacalculatie van het project, niet voor de commissie.
+        </Notice>
+      )}
+      {tab === "unknown_base" && rows.length > 0 && (
+        <Notice tone="warning" title="Geen verkoopprijs en geen inkoopfactuur">
+          Deze regels zijn niet te factureren: er is niets om over te rekenen. Vul de prijs aan op het
+          onderdeel of registreer de inkoopfactuur van de partner.
+        </Notice>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Zoeken, sorteren, filteren */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Zoek op partner, klant, project of factuurnummer"
+            aria-label="Zoeken"
             className="pl-9"
           />
         </div>
-        {selected.size > 0 && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              {selected.size} geselecteerd · {formatCurrency(selectedTotal)} commissie
-            </span>
-            {filter === "billable" && (
-              <Button onClick={createInvoice}>
-                <FileText className="h-4 w-4 mr-2" />
-                Commissiefactuur maken
+        <Select value={sort} onValueChange={(value) => setSort(value as WorklistSort)}>
+          <SelectTrigger className="sm:w-56" aria-label="Sorteren">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(WORKLIST_SORT_LABELS) as WorklistSort[]).map((key) => (
+              <SelectItem key={key} value={key}>
+                {WORKLIST_SORT_LABELS[key]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Checkbox checked={onlyWithInvoice} onCheckedChange={(checked) => setOnlyWithInvoice(checked === true)} />
+          Alleen met inkoopfactuur
+        </label>
+      </div>
+
+      {/* Selectiebalk */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-accent-soft p-3">
+          <span className="text-sm text-foreground">
+            <strong>{selected.size}</strong> geselecteerd · {formatCurrency(selectedTotal)} commissie
+          </span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            {canInvoice && (
+              <Button onClick={() => createInvoice(selectedRows)}>
+                <FileText className="h-4 w-4" />
+                Factuur maken ({selected.size})
               </Button>
             )}
-            {filter === "archived" ? (
+            {tab === "exempt" ? (
               <Button
                 variant="outline"
                 disabled={exemptMutation.isPending}
                 onClick={() => exemptMutation.mutate({ exempt: false, reason: "" })}
               >
-                <ArchiveRestore className="h-4 w-4 mr-2" />
+                <ArchiveRestore className="h-4 w-4" />
                 Terugzetten
               </Button>
             ) : (
               <Button variant="outline" onClick={() => setExemptDialogOpen(true)}>
-                <Archive className="h-4 w-4 mr-2" />
+                <Archive className="h-4 w-4" />
                 Commissievrij markeren
               </Button>
             )}
+            <Button variant="ghost" onClick={() => setSelected(new Set())}>
+              Selectie wissen
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {groups.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Geen regels in "{FILTER_LABELS[filter]}".
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText />}
+          title={isFiltering ? "Niets gevonden" : WORKLIST_EMPTY[tab].title}
+          description={isFiltering ? "Geen regels die aan je zoekopdracht of filter voldoen." : WORKLIST_EMPTY[tab].description}
+          action={
+            isFiltering ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch("");
+                  setOnlyWithInvoice(false);
+                }}
+              >
+                Filters wissen
+              </Button>
+            ) : undefined
+          }
+        />
       )}
 
       {groups.map((group) => {
-        const groupTotal = group.rows.reduce(
-          (sum, row) => sum + commissionForBasis(row, basisFor(row)),
-          0,
-        );
-        const allSelected = group.rows.every((row) => selected.has(row.key));
+        const groupSelected = group.rows.filter((row) => selected.has(row.key));
+        const allSelected = groupSelected.length === group.rows.length;
+        const invoiceRows = groupSelected.length > 0 ? groupSelected : group.rows;
         return (
           <Card key={group.partnerId}>
-            <CardHeader className="flex flex-row items-center justify-between gap-4 pb-3">
-              <div className="flex items-center gap-3">
-                <Checkbox checked={allSelected} onCheckedChange={() => toggleGroup(group.rows)} />
-                <div>
-                  <CardTitle className="text-base">{group.partnerName}</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {group.rows.length} regel(s) · {formatCurrency(groupTotal)} commissie
-                  </p>
+            <CardContent className="p-0">
+              {/* Partnerkop */}
+              <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={allSelected ? true : groupSelected.length > 0 ? "indeterminate" : false}
+                    onCheckedChange={() => toggleRows(group.rows)}
+                    aria-label={`Alle regels van ${group.partnerName} selecteren`}
+                  />
+                  <div>
+                    <h3 className="font-semibold text-foreground">
+                      <Link to={`/admin/partners/${group.partnerId}`} className="hover:underline">
+                        {group.partnerName}
+                      </Link>
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {group.rows.length} regel{group.rows.length === 1 ? "" : "s"} ·{" "}
+                      {group.projects.length} project{group.projects.length === 1 ? "" : "en"}
+                      {group.maxAgeDays > 0 && ` · oudste ${ageLabel(group.maxAgeDays)}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 sm:text-right">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Commissie</p>
+                    <p className="text-xl font-semibold tabular-nums text-foreground">{formatCurrency(group.total)}</p>
+                  </div>
+                  {canInvoice && (
+                    <Button onClick={() => createInvoice(invoiceRows)}>
+                      <FileText className="h-4 w-4" />
+                      Factuur maken ({invoiceRows.length})
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Grondslag:</span>
-                <Button variant="outline" size="sm" onClick={() => setGroupBasis(group.rows, "sales")}>
-                  Verkoop
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setGroupBasis(group.rows, "purchase")}>
-                  Inkoop
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="w-10 p-3" />
-                      <th className="p-3 text-left">Onderdeel</th>
-                      <th className="p-3 text-left">Klant / project</th>
-                      <th className="p-3 text-left">Datum</th>
-                      <th className="p-3 text-left">Inkoopfactuur</th>
-                      <th className="p-3 text-right">Verkoop ex btw</th>
-                      <th className="p-3 text-right">Inkoop ex btw</th>
-                      <th className="p-3 text-center">Grondslag</th>
-                      <th className="p-3 text-right">Commissie</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.rows.map((row) => {
-                      const basis = basisFor(row);
-                      const commission = commissionForBasis(row, basis);
-                      const basisAmount = basisAmountForBasis(row, basis);
-                      return (
-                        <tr key={row.key} className="border-t hover:bg-muted/30">
-                          <td className="p-3">
+
+              {/* Projecten met hun regels */}
+              <div className="divide-y">
+                {group.projects.map((project) => (
+                  <div key={project.key} className="px-4 py-3">
+                    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                      <span className="font-medium text-foreground">{project.label}</span>
+                      {project.reference && <span className="text-muted-foreground">{project.reference}</span>}
+                      {project.customerName && project.customerName !== project.label && (
+                        <span className="text-muted-foreground">{project.customerName}</span>
+                      )}
+                      <span className="text-muted-foreground">
+                        {formatDate(project.date)}
+                        {project.ageDays !== null && project.ageDays > 0 && ` · ${ageLabel(project.ageDays)}`}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {project.rows.map((row) => {
+                        const basis = basisFor(row);
+                        const commission = commissionForBasis(row, basis);
+                        const pills = rowPills(row);
+                        return (
+                          <div
+                            key={row.key}
+                            className={`grid grid-cols-[auto_1fr] gap-3 rounded-md border p-3 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] lg:items-center ${
+                              selected.has(row.key) ? "border-primary bg-accent-soft/50" : "bg-card"
+                            }`}
+                          >
                             <Checkbox
                               checked={selected.has(row.key)}
                               onCheckedChange={() => toggleRow(row.key)}
+                              aria-label={`${row.label} selecteren`}
+                              className="mt-0.5"
                             />
-                          </td>
-                          <td className="p-3">
-                            <div className="font-medium">{row.label}</div>
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {TYPE_LABELS[row.itemType]}
-                            </Badge>
-                            {row.readiness === "expected" && (
-                              <Badge variant="secondary" className="mt-1 ml-1 text-xs">
-                                Verwacht
-                              </Badge>
-                            )}
-                            {row.hasMixedRates && (
-                              <Badge variant="outline" className="mt-1 ml-1 text-xs">
-                                Gesplitst tarief
-                              </Badge>
-                            )}
-                            {row.exemptReason && (
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                Commissievrij: {row.exemptReason}
-                              </div>
-                            )}
-                            {row.itemType === "purchase_invoice" && (
-                              <Button
-                                variant="link"
-                                size="sm"
-                                className="mt-1 block h-auto p-0 text-xs"
-                                onClick={() =>
-                                  navigate(
-                                    `/admin/inkoopfacturen?search=${encodeURIComponent(row.invoiceNumber ?? "")}`,
-                                  )
-                                }
-                              >
-                                Koppel aan onderdeel of logies
-                              </Button>
-                            )}
-                          </td>
-
-                          <td className="p-3">
-                            <div>{row.projectLabel ?? "—"}</div>
-                            {row.customerName && row.customerName !== row.projectLabel && (
-                              <div className="text-xs text-muted-foreground">{row.customerName}</div>
-                            )}
-                            {row.projectReference && (
-                              <div className="text-xs text-muted-foreground">{row.projectReference}</div>
-                            )}
-                          </td>
-                          <td className="p-3 whitespace-nowrap">
-                            {formatDate(row.executionDate ?? row.invoiceDate)}
-                          </td>
-                          <td className="p-3">
-                            {row.invoiceNumber ? (
-                              <span className="inline-flex items-center gap-1 text-xs">
-                                <Link2 className="h-3 w-3 text-emerald-600" />
-                                {row.invoiceNumber}
-                              </span>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center gap-1 text-xs text-amber-600">
-                                    <Link2Off className="h-3 w-3" />
-                                    Ontbreekt
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Nog geen inkoopfactuur geregistreerd — commissie loopt via verkoopwaarde.
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </td>
-                          <td className="p-3 text-right tabular-nums">
-                            {row.salesExclVat === null ? "—" : formatCurrency(row.salesExclVat)}
-                          </td>
-                          <td className="p-3 text-right tabular-nums">
-                            {row.purchaseExclVat === null ? (
-                              "—"
-                            ) : (
-                              <span
-                                className={
-                                  row.status === "deviation" ? "text-amber-600 font-medium" : undefined
-                                }
-                              >
-                                {formatCurrency(row.purchaseExclVat)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            <ToggleGroup
-                              type="single"
-                              size="sm"
-                              value={basis}
-                              onValueChange={(value) => {
-                                if (!value) return;
-                                setBasisOverrides((prev) => ({
-                                  ...prev,
-                                  [row.key]: value as CommissionBasis,
-                                }));
-                              }}
-                            >
-                              <ToggleGroupItem value="sales" className="px-2 text-xs">
-                                Verkoop
-                              </ToggleGroupItem>
-                              <ToggleGroupItem
-                                value="purchase"
-                                className="px-2 text-xs"
-                                disabled={row.purchaseExclVat === null}
-                              >
-                                Inkoop
-                              </ToggleGroupItem>
-                            </ToggleGroup>
-                          </td>
-                          <td className="p-3 text-right tabular-nums font-medium">
-                            {formatCurrency(commission)}
-                            {row.commissionComponents && row.hasMixedRates ? (
-                              <div className="text-xs text-muted-foreground">
-                                {row.commissionComponents.map((c, i) => (
-                                  <div key={`${c.kind}-${i}`}>
-                                    {c.commissionPct}% van {formatCurrency(c.baseExclVat)}
-                                  </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium text-foreground">{row.label}</span>
+                                <span className="text-xs text-muted-foreground">{TYPE_LABELS[row.itemType]}</span>
+                                {pills.map((pill) => (
+                                  <Pill key={pill.label} tone={pill.tone} title={pill.title}>
+                                    {pill.label}
+                                  </Pill>
                                 ))}
                               </div>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">
-                                {row.commissionPercentage}% van {formatCurrency(basisAmount)}
+                              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                                {row.invoiceNumber && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Link2 className="h-3 w-3" aria-hidden="true" />
+                                    Inkoopfactuur {row.invoiceNumber}
+                                    {row.invoiceDate && ` · ${formatDate(row.invoiceDate)}`}
+                                  </span>
+                                )}
+                                {row.itemType === "purchase_invoice" && (
+                                  <Link
+                                    to={`/admin/inkoopfacturen?search=${encodeURIComponent(row.invoiceNumber ?? "")}`}
+                                    className="underline"
+                                  >
+                                    Koppel aan onderdeel of logies
+                                  </Link>
+                                )}
                               </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </div>
+
+                            <div className="col-start-2 grid grid-cols-2 gap-x-4 text-sm lg:col-start-auto lg:text-right">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Verkoop ex btw</p>
+                                <p className="tabular-nums">
+                                  {row.salesExclVat === null ? "–" : formatCurrency(row.salesExclVat)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Inkoop ex btw</p>
+                                <p className="tabular-nums">
+                                  {row.purchaseExclVat === null ? "–" : formatCurrency(row.purchaseExclVat)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="col-start-2 lg:col-start-auto">
+                              {canChooseBasis(row) ? (
+                                <ToggleGroup
+                                  type="single"
+                                  size="sm"
+                                  value={basis}
+                                  aria-label="Grondslag"
+                                  onValueChange={(value) => {
+                                    if (!value) return;
+                                    setBasisOverrides((prev) => ({ ...prev, [row.key]: value as CommissionBasis }));
+                                  }}
+                                >
+                                  <ToggleGroupItem value="purchase" className="px-2 text-xs">
+                                    Inkoop
+                                  </ToggleGroupItem>
+                                  <ToggleGroupItem value="sales" className="px-2 text-xs">
+                                    Verkoop
+                                  </ToggleGroupItem>
+                                </ToggleGroup>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">
+                                  Grondslag: {basis === "purchase" ? "inkoop" : "verkoop"}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="col-start-2 lg:col-start-auto lg:min-w-28 lg:text-right">
+                              <p className="font-semibold tabular-nums text-foreground">{formatCurrency(commission)}</p>
+                              <p className="text-xs text-muted-foreground">{commissionExplanation(row, basis)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         );
       })}
 
+      {tab === "billable" && groups.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          De grondslag is de inkoopfactuur ex btw als die er is, anders onze verkoopwaarde ex btw. Per regel
+          aanpasbaar waar beide bestaan.
+        </p>
+      )}
+
       <Dialog open={exemptDialogOpen} onOpenChange={setExemptDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Commissievrij markeren</DialogTitle>
             <DialogDescription>
-              {selected.size} regel(s) verdwijnen uit de actieve lijst en blijven terugvindbaar
-              onder "Commissievrij / gearchiveerd". Openstaande commissietaken worden gesloten.
+              {selected.size} regel(s) verdwijnen uit de actieve lijst en blijven terugvindbaar onder
+              "Commissievrij". Openstaande commissietaken worden gesloten.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -626,20 +571,12 @@ export function CommissionWorklist({ partnerId }: CommissionWorklistProps) {
               disabled={exemptReason.trim().length < 3 || exemptMutation.isPending}
               onClick={() => exemptMutation.mutate({ exempt: true, reason: exemptReason.trim() })}
             >
-              {exemptMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {exemptMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Markeren
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {rows.length > 0 && filter === "billable" && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Check className="h-3 w-3" />
-          Standaard rekent de lijst met de inkoopfactuur wanneer die bekend is, anders met onze
-          verkoopwaarde. Per regel of per partner aanpasbaar.
-        </p>
-      )}
     </div>
   );
 }
