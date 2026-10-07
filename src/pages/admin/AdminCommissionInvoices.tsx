@@ -2,35 +2,21 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
-import { nl } from "date-fns/locale";
 import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  FileText,
+  Lock,
   Receipt,
   Search,
-  Mail,
-  Check,
-  Download,
-  Clock,
-  CheckCircle,
-  ArrowRight,
-  Euro,
-  FileText,
-  Loader2,
-  Lock,
-  Pencil,
-  RefreshCw,
-  Send,
-  Trash2,
-  Undo2,
 } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,14 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,204 +34,173 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EmptyState, LoadingState, Notice } from "@/components/system";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { reportError } from "@/lib/errorReporting";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { SendCommissionInvoiceDialog } from "@/components/admin/SendCommissionInvoiceDialog";
-import {
-  COMMISSION_INVOICE_STATUS_LABELS,
-  COMMISSION_INVOICE_STATUS_ORDER,
-  commissionInvoiceActions,
-  commissionInvoiceLabel,
-  countsTowardsTotal,
-  type CommissionInvoiceStatus,
-} from "@/lib/commissionInvoiceStatus";
+import { CommissionInvoiceRow } from "@/components/admin/commission-invoices/CommissionInvoiceRow";
 import { renderAndStoreCommissionInvoicePdf } from "@/lib/commissionInvoicePdfStorage";
-
-interface CommissionInvoice {
-  id: string;
-  invoice_number: string | null;
-  invoice_date: string;
-  due_date: string | null;
-  partner_id: string;
-  recipient_name: string;
-  recipient_email: string | null;
-  amount_excl_vat: number;
-  vat_amount: number;
-  amount_incl_vat: number;
-  status: CommissionInvoiceStatus;
-  pdf_path: string | null;
-  notes: string | null;
-  vat_rate: number;
-  sent_at: string | null;
-  forwarded_to_accounting_at: string | null;
-  paid_at: string | null;
-  /** Gezet op een creditnota: de factuur die hij crediteert. */
-  credits_invoice_id: string | null;
-  credit_reason: string | null;
-  partner?: { id: string; name: string; email: string | null; contact_email: string | null } | null;
-}
+import {
+  INVOICE_EMPTY,
+  INVOICE_TABS,
+  INVOICE_TAB_LABELS,
+  invoiceTabTotals,
+  invoicedTotal,
+  matchesInvoiceSearch,
+  sortInvoices,
+  type CommissionInvoiceView,
+  type InvoiceTab,
+} from "@/lib/commissionInvoiceView";
 
 const formatCurrency = (n: number) =>
-  `€${Number(n).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(Number(n) || 0);
 
 const errorMessage = (err: unknown, fallback: string) =>
   err instanceof Error && err.message ? err.message : fallback;
+
+const TAB_ICONS: Record<InvoiceTab, typeof Clock> = {
+  draft: FileText,
+  final: Lock,
+  sent: Clock,
+  forwarded: ArrowRight,
+  paid: CheckCircle,
+  overdue: AlertTriangle,
+};
+
+const INVOICE_SELECT = `
+  id, invoice_number, invoice_date, due_date, partner_id, recipient_name, recipient_email,
+  amount_excl_vat, vat_amount, amount_incl_vat, vat_rate, status, pdf_path, notes,
+  sent_at, forwarded_to_accounting_at, paid_at, finalized_at,
+  credits_invoice_id, credit_reason, credited_at,
+  partner:partners(id, name, email, contact_email),
+  lines:commission_invoice_lines(
+    id, item_id, quote_id, purchase_invoice_id, item_type, block_name, customer_label,
+    event_date, reference_number, invoiced_amount_excl_vat, commission_percentage,
+    commission_amount, description, sort_order
+  )
+`;
 
 export default function AdminCommissionInvoices() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { getSetting } = useAppSettings();
-  const [statusFilter, setStatusFilter] = useState<CommissionInvoiceStatus | "all">("all");
+  const [tab, setTab] = useState<InvoiceTab | "all">("all");
   const [partnerFilter, setPartnerFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [sendTarget, setSendTarget] = useState<CommissionInvoice | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<CommissionInvoice | null>(null);
-  const [creditTarget, setCreditTarget] = useState<CommissionInvoice | null>(null);
+  const [sendTarget, setSendTarget] = useState<CommissionInvoiceView | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CommissionInvoiceView | null>(null);
+  const [creditTarget, setCreditTarget] = useState<CommissionInvoiceView | null>(null);
   const [creditReason, setCreditReason] = useState("");
 
   const { data: partners } = useQuery({
     queryKey: ["partners-for-commission-invoice-filter"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("partners")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
+      const { data } = await supabase.from("partners").select("id, name").eq("is_active", true).order("name");
       return data || [];
     },
   });
 
-  const { data: invoices, isLoading } = useQuery<CommissionInvoice[]>({
-    queryKey: ["commission-invoices", statusFilter, partnerFilter, searchQuery],
+  // Alles in één keer: zo'n twintig facturen per seizoen, met hun regels, zodat
+  // tegels, zoeken en filters in het geheugen werken.
+  const { data: invoices, isLoading, error } = useQuery<CommissionInvoiceView[]>({
+    queryKey: ["commission-invoices"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("commission_invoices")
-        .select(`
-          id, invoice_number, invoice_date, due_date, partner_id, recipient_name, recipient_email,
-          amount_excl_vat, vat_amount, amount_incl_vat, status, pdf_path, notes, vat_rate,
-          sent_at, forwarded_to_accounting_at, paid_at, credits_invoice_id, credit_reason,
-          partner:partners(id, name, email, contact_email)
-        `)
+        .select(INVOICE_SELECT)
         .order("invoice_date", { ascending: false })
         .order("created_at", { ascending: false });
-
-      if (statusFilter !== "all") query = query.eq("status", statusFilter);
-      if (partnerFilter !== "all") query = query.eq("partner_id", partnerFilter);
-      if (searchQuery) query = query.ilike("invoice_number", `%${searchQuery}%`);
-
-      const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as CommissionInvoice[];
+      return ((data || []) as unknown as CommissionInvoiceView[]).map((invoice) => ({
+        ...invoice,
+        lines: [...(invoice.lines ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+      }));
     },
   });
+
+  const all = useMemo(() => invoices ?? [], [invoices]);
+  const totals = useMemo(() => invoiceTabTotals(all), [all]);
+  const grandTotal = useMemo(() => invoicedTotal(all), [all]);
+
+  const visible = useMemo(() => {
+    let list = all;
+    if (tab !== "all") list = list.filter((invoice) => (tab === "overdue" ? totalsIncludes(invoice, tab) : invoice.status === tab));
+    if (partnerFilter !== "all") list = list.filter((invoice) => invoice.partner_id === partnerFilter);
+    if (search.trim()) list = list.filter((invoice) => matchesInvoiceSearch(invoice, search));
+    return sortInvoices(list);
+  }, [all, tab, partnerFilter, search]);
 
   /** Nummer van factuur-id, voor de verwijzingen tussen factuur en creditnota. */
   const numberById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const inv of invoices || []) if (inv.invoice_number) map.set(inv.id, inv.invoice_number);
+    for (const inv of all) if (inv.invoice_number) map.set(inv.id, inv.invoice_number);
     return map;
-  }, [invoices]);
-  /** Welke creditnota hoort bij welke gecrediteerde factuur. */
+  }, [all]);
   const creditNoteByOriginal = useMemo(() => {
     const map = new Map<string, string>();
-    for (const inv of invoices || []) {
+    for (const inv of all) {
       if (inv.credits_invoice_id && inv.invoice_number) map.set(inv.credits_invoice_id, inv.invoice_number);
     }
     return map;
-  }, [invoices]);
-
-  const stats = useMemo(() => {
-    const all = invoices || [];
-    const count = (status: CommissionInvoiceStatus) => all.filter((i) => i.status === status).length;
-    return {
-      draft: count("draft"),
-      final: count("final"),
-      sent: count("sent"),
-      forwarded: count("forwarded"),
-      paid: count("paid"),
-      // Een concept is nog niets; alleen definitieve facturen tellen mee.
-      totalAmount: all
-        .filter((i) => countsTowardsTotal(i.status))
-        .reduce((sum, i) => sum + Number(i.amount_incl_vat || 0), 0),
-    };
-  }, [invoices]);
+  }, [all]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["commission-invoices"] });
-    queryClient.invalidateQueries({ queryKey: ["commission-reconciliation"] });
+    queryClient.invalidateQueries({ queryKey: ["commission-invoice-mails"] });
+    queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
     queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
   };
 
-  const downloadPdf = async (invoice: CommissionInvoice) => {
-    if (!invoice.pdf_path) {
-      toast.error("Geen PDF beschikbaar");
-      return;
-    }
-    const { data, error } = await supabase.storage
-      .from("commission-invoices")
-      .createSignedUrl(invoice.pdf_path, 60);
-    if (error || !data) {
-      toast.error("Fout bij ophalen PDF");
-      return;
-    }
-    window.open(data.signedUrl, "_blank");
-  };
-
-  /**
-   * De PDF opnieuw maken uit de opgeslagen regels. Nodig als het opslaan na
-   * "Definitief maken" mislukte; verder altijd hetzelfde resultaat.
-   */
-  const regeneratePdf = async (invoice: CommissionInvoice) => {
-    if (!invoice.invoice_number) return;
+  const withBusy = async (invoice: CommissionInvoiceView, where: string, fallback: string, work: () => Promise<void>) => {
     setBusyId(invoice.id);
     try {
-      await renderAndStoreCommissionInvoicePdf(invoice.id, getSetting);
-      toast.success(`PDF van ${invoice.invoice_number} opnieuw gemaakt`);
+      await work();
       refresh();
     } catch (err) {
-      reportError(err, { where: "AdminCommissionInvoices: regeneratePdf" });
-      toast.error(errorMessage(err, "Fout bij maken van de PDF"));
+      reportError(err, { where: `AdminCommissionInvoices: ${where}` });
+      toast.error(errorMessage(err, fallback));
     } finally {
       setBusyId(null);
     }
   };
+
+  const openPdf = async (invoice: CommissionInvoiceView) => {
+    if (!invoice.pdf_path) return;
+    const { data, error } = await supabase.storage.from("commission-invoices").createSignedUrl(invoice.pdf_path, 300);
+    if (error || !data) {
+      toast.error("Fout bij ophalen PDF");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const regeneratePdf = (invoice: CommissionInvoiceView) =>
+    withBusy(invoice, "regeneratePdf", "Fout bij maken van de PDF", async () => {
+      await renderAndStoreCommissionInvoicePdf(invoice.id, getSetting);
+      toast.success(`PDF van ${invoice.invoice_number} opnieuw gemaakt`);
+    });
 
   const deleteDraft = async () => {
     const invoice = deleteTarget;
     setDeleteTarget(null);
     if (!invoice) return;
-    setBusyId(invoice.id);
-    try {
-      const { error } = await supabase.rpc("delete_commission_invoice_draft", {
-        p_invoice_id: invoice.id,
-      });
+    await withBusy(invoice, "deleteDraft", "Fout bij verwijderen", async () => {
+      const { error } = await supabase.rpc("delete_commission_invoice_draft", { p_invoice_id: invoice.id });
       if (error) throw error;
       toast.success("Concept verwijderd; de regels staan weer bij Te factureren");
-      refresh();
-    } catch (err) {
-      reportError(err, { where: "AdminCommissionInvoices: deleteDraft" });
-      toast.error(errorMessage(err, "Fout bij verwijderen"));
-    } finally {
-      setBusyId(null);
-    }
+    });
   };
 
-  /**
-   * Crediteren: de database maakt in één transactie een creditnota met eigen
-   * nummer en negatieve regels, zet de factuur op gecrediteerd en maakt de
-   * bronnen vrij. Daarna maakt de browser de PDF van de creditnota.
-   */
   const creditInvoice = async () => {
     const invoice = creditTarget;
     const reason = creditReason.trim();
     setCreditTarget(null);
     setCreditReason("");
     if (!invoice) return;
-    setBusyId(invoice.id);
-    try {
+    await withBusy(invoice, "creditInvoice", "Fout bij crediteren", async () => {
       const { data, error } = await supabase.rpc("credit_commission_invoice", {
         p_invoice_id: invoice.id,
         p_reason: reason || null,
@@ -263,134 +210,37 @@ export default function AdminCommissionInvoices() {
       if (!credit?.id || !credit.invoice_number) throw new Error("Geen creditnota ontvangen");
       try {
         await renderAndStoreCommissionInvoicePdf(credit.id, getSetting);
-        toast.success(
-          `${invoice.invoice_number} gecrediteerd met ${credit.invoice_number}; de regels staan weer bij Te factureren`,
-        );
+        toast.success(`${invoice.invoice_number} gecrediteerd met ${credit.invoice_number}; de regels staan weer bij Te factureren`);
       } catch (pdfError) {
         reportError(pdfError, { where: "AdminCommissionInvoices: PDF van creditnota" });
         toast.warning(
           `${invoice.invoice_number} gecrediteerd met ${credit.invoice_number}, maar de PDF kon niet worden gemaakt. Gebruik "PDF opnieuw maken".`,
         );
       }
-      refresh();
-    } catch (err) {
-      reportError(err, { where: "AdminCommissionInvoices: creditInvoice" });
-      toast.error(errorMessage(err, "Fout bij crediteren"));
-    } finally {
-      setBusyId(null);
-    }
+    });
   };
 
-  const forwardToSnelstart = async (invoice: CommissionInvoice) => {
-    setBusyId(invoice.id);
-    try {
-      const { error } = await supabase.functions.invoke("forward-commission-invoice", {
-        body: { invoiceId: invoice.id },
-      });
+  const forwardToSnelstart = (invoice: CommissionInvoiceView) =>
+    withBusy(invoice, "forward", "Fout bij doorsturen", async () => {
+      const { error } = await supabase.functions.invoke("forward-commission-invoice", { body: { invoiceId: invoice.id } });
       if (error) throw error;
       toast.success(`${invoice.invoice_number} doorgestuurd naar Snelstart`);
-      refresh();
-    } catch (err) {
-      reportError(err, { where: "AdminCommissionInvoices" });
-      toast.error(errorMessage(err, "Fout bij doorsturen"));
-    } finally {
-      setBusyId(null);
-    }
-  };
+    });
 
-  const markAsPaid = async (invoice: CommissionInvoice) => {
-    setBusyId(invoice.id);
-    try {
+  const markAsPaid = (invoice: CommissionInvoiceView) =>
+    withBusy(invoice, "markAsPaid", "Fout bij markeren als betaald", async () => {
       const { data: session } = await supabase.auth.getSession();
-      const userId = session.session?.user.id;
-
       const { error } = await supabase
         .from("commission_invoices")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString(),
-          paid_by: userId,
-        })
+        .update({ status: "paid", paid_at: new Date().toISOString(), paid_by: session.session?.user.id })
         .eq("id", invoice.id)
         .in("status", ["sent", "forwarded"]);
       if (error) throw error;
       // De bronnen (onderdelen, offertes) volgen via de databasetrigger.
-
       toast.success(`${invoice.invoice_number} gemarkeerd als betaald`);
-      refresh();
-    } catch (err) {
-      reportError(err, { where: "AdminCommissionInvoices" });
-      toast.error("Fout bij markeren als betaald");
-    } finally {
-      setBusyId(null);
-    }
-  };
+    });
 
-  const getStatusBadge = (invoice: CommissionInvoice) => {
-    const label = COMMISSION_INVOICE_STATUS_LABELS[invoice.status] ?? invoice.status;
-    switch (invoice.status) {
-      case "draft":
-        return (
-          <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
-            <FileText className="h-3 w-3 mr-1" />
-            {label}
-          </Badge>
-        );
-      case "final":
-        return (
-          <Badge variant="outline" className="bg-slate-50 text-slate-900 border-slate-300">
-            <Lock className="h-3 w-3 mr-1" />
-            {label}
-          </Badge>
-        );
-      case "sent":
-        return (
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-            <Clock className="h-3 w-3 mr-1" />
-            {label}
-          </Badge>
-        );
-      case "forwarded":
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            <ArrowRight className="h-3 w-3 mr-1" />
-            {label}
-          </Badge>
-        );
-      case "paid":
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            {label}
-          </Badge>
-        );
-      case "credited":
-        return (
-          <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200">
-            <Undo2 className="h-3 w-3 mr-1" />
-            {label}
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{label}</Badge>;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="p-6 space-y-6">
-          <Skeleton className="h-10 w-64" />
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
-        </div>
-      </AdminLayout>
-    );
-  }
+  const isFiltering = search.trim().length > 0 || partnerFilter !== "all";
 
   return (
     <AdminLayout>
@@ -398,89 +248,72 @@ export default function AdminCommissionInvoices() {
         <title>Commissiefacturen | Admin | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
-      <div className="p-6 space-y-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="space-y-6 p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Receipt className="h-8 w-8" />
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
+              <Receipt className="h-7 w-7" aria-hidden="true" />
               Commissiefacturen
             </h1>
             <p className="text-muted-foreground">
-              Uitgaande facturen aan partners voor commissie
+              Uitgaande facturen aan partners voor commissie. Totaal zonder concepten:{" "}
+              <span className="font-medium tabular-nums text-foreground">{formatCurrency(grandTotal)}</span> incl. btw.
             </p>
           </div>
           <Button asChild variant="outline">
-            <Link to="/admin/commissies">Terug naar commissies</Link>
+            <Link to="/admin/commissies">Naar de werklijst</Link>
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Card className="border-slate-200">
-            <CardHeader className="pb-2">
-              <CardDescription>Concept</CardDescription>
-              <CardTitle className="text-2xl">{stats.draft}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-slate-300">
-            <CardHeader className="pb-2">
-              <CardDescription>Definitief</CardDescription>
-              <CardTitle className="text-2xl">{stats.final}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardHeader className="pb-2">
-              <CardDescription>Verstuurd</CardDescription>
-              <CardTitle className="text-2xl text-amber-700">{stats.sent}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardHeader className="pb-2">
-              <CardDescription>Doorgestuurd</CardDescription>
-              <CardTitle className="text-2xl text-blue-700">{stats.forwarded}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-green-200 bg-green-50/50">
-            <CardHeader className="pb-2">
-              <CardDescription>Betaald</CardDescription>
-              <CardTitle className="text-2xl text-green-700">{stats.paid}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Totaal incl. BTW (zonder concepten)</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-1">
-                <Euro className="h-5 w-5" />
-                {stats.totalAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+        {isLoading && <LoadingState label="Facturen laden…" />}
+        {error && (
+          <Notice tone="danger" title="Kon de facturen niet laden">
+            {(error as Error).message}
+          </Notice>
+        )}
 
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as CommissionInvoiceStatus | "all")}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Alle statussen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle statussen</SelectItem>
-                  {COMMISSION_INVOICE_STATUS_ORDER.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {COMMISSION_INVOICE_STATUS_LABELS[status]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {!isLoading && !error && (
+          <>
+            <div role="tablist" aria-label="Factuurstatus" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              {INVOICE_TABS.map((key) => {
+                const active = key === tab;
+                const Icon = TAB_ICONS[key];
+                const total = totals[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setTab(active ? "all" : key)}
+                    className={`rounded-lg border p-3 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4 ${
+                      active ? "border-primary bg-accent-soft" : "bg-card hover:bg-muted"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {INVOICE_TAB_LABELS[key]}
+                    </span>
+                    <span className="mt-1 block text-2xl font-semibold tabular-nums text-foreground">{total.count}</span>
+                    <span className="block text-xs text-muted-foreground">{formatCurrency(total.amount)}</span>
+                  </button>
+                );
+              })}
+            </div>
 
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Zoek op nummer, partner, klant of projectreferentie"
+                  aria-label="Zoeken"
+                  className="pl-9"
+                />
+              </div>
               <Select value={partnerFilter} onValueChange={setPartnerFilter}>
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger className="sm:w-60" aria-label="Partner">
                   <SelectValue placeholder="Alle partners" />
                 </SelectTrigger>
                 <SelectContent>
@@ -492,181 +325,66 @@ export default function AdminCommissionInvoices() {
                   ))}
                 </SelectContent>
               </Select>
-
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Zoek factuurnummer..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+              {tab !== "all" && (
+                <Button variant="ghost" onClick={() => setTab("all")}>
+                  Alle statussen
+                </Button>
+              )}
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Facturen</CardTitle>
-            <CardDescription>{invoices?.length || 0} facturen gevonden</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!invoices || invoices.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Geen commissiefacturen gevonden</p>
-                <p className="text-sm">
-                  Maak een commissiefactuur via de Commissies-pagina (tab "Te factureren").
-                </p>
-              </div>
+            {visible.length === 0 ? (
+              <EmptyState
+                icon={<Receipt />}
+                title={isFiltering ? "Niets gevonden" : tab === "all" ? "Nog geen commissiefacturen" : INVOICE_EMPTY[tab].title}
+                description={
+                  isFiltering
+                    ? "Geen facturen die aan je zoekopdracht of filter voldoen."
+                    : tab === "all"
+                      ? "Maak een factuur vanuit de werklijst op Commissies."
+                      : INVOICE_EMPTY[tab].description
+                }
+                action={
+                  isFiltering ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearch("");
+                        setPartnerFilter("all");
+                      }}
+                    >
+                      Filters wissen
+                    </Button>
+                  ) : undefined
+                }
+              />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Factuurnummer</TableHead>
-                    <TableHead>Partner</TableHead>
-                    <TableHead>Datum</TableHead>
-                    <TableHead className="text-right">Excl. BTW</TableHead>
-                    <TableHead className="text-right">Incl. BTW</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Acties</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((invoice) => {
-                    const actions = commissionInvoiceActions(invoice.status);
-                    const busy = busyId === invoice.id;
-                    return (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">
-                          <div>{commissionInvoiceLabel(invoice)}</div>
-                          {invoice.credits_invoice_id && (
-                            <div className="text-xs font-normal text-muted-foreground">
-                              Creditnota bij {numberById.get(invoice.credits_invoice_id) ?? "factuur"}
-                            </div>
-                          )}
-                          {invoice.status === "credited" && (
-                            <div className="text-xs font-normal text-muted-foreground">
-                              Gecrediteerd{creditNoteByOriginal.has(invoice.id) ? ` met ${creditNoteByOriginal.get(invoice.id)}` : ""}
-                              {invoice.credit_reason ? ` · ${invoice.credit_reason}` : ""}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{invoice.partner?.name || invoice.recipient_name}</TableCell>
-                        <TableCell>
-                          {format(parseISO(invoice.invoice_date), "EEE d MMM yyyy", { locale: nl })}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatCurrency(invoice.amount_excl_vat)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-semibold">
-                          {formatCurrency(invoice.amount_incl_vat)}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(invoice)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {busy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                            {actions.edit && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  navigate(`/admin/commissies/factuur-maken?invoiceId=${invoice.id}`)
-                                }
-                                title="Bewerken of definitief maken"
-                                disabled={busy}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {actions.delete && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeleteTarget(invoice)}
-                                title="Concept verwijderen"
-                                disabled={busy}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {invoice.pdf_path && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => downloadPdf(invoice)}
-                                title="Download PDF"
-                                disabled={busy}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {!invoice.pdf_path && invoice.invoice_number && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => regeneratePdf(invoice)}
-                                title="PDF opnieuw maken"
-                                disabled={busy}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {actions.send && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setSendTarget(invoice)}
-                                title={invoice.status === "sent" ? "Opnieuw versturen naar partner" : "Versturen naar partner"}
-                                disabled={busy || !invoice.pdf_path}
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {actions.forward && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => forwardToSnelstart(invoice)}
-                                title="Doorsturen naar Snelstart"
-                                disabled={busy}
-                              >
-                                <Mail className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {actions.markPaid && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => markAsPaid(invoice)}
-                                title="Markeer als betaald"
-                                disabled={busy}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {actions.credit && !invoice.credits_invoice_id && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setCreditTarget(invoice)}
-                                title="Crediteren"
-                                disabled={busy}
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {visible.length} factu{visible.length === 1 ? "ur" : "ren"}
+                  {tab !== "all" && ` · ${INVOICE_TAB_LABELS[tab]}`}
+                </p>
+                {visible.map((invoice) => (
+                  <CommissionInvoiceRow
+                    key={invoice.id}
+                    invoice={invoice}
+                    busy={busyId === invoice.id}
+                    numberById={numberById}
+                    creditNoteByOriginal={creditNoteByOriginal}
+                    onEdit={(inv) => navigate(`/admin/commissies/factuur-maken?invoiceId=${inv.id}`)}
+                    onFinalize={(inv) => navigate(`/admin/commissies/factuur-maken?invoiceId=${inv.id}&finalize=1`)}
+                    onDelete={setDeleteTarget}
+                    onSend={setSendTarget}
+                    onForward={forwardToSnelstart}
+                    onMarkPaid={markAsPaid}
+                    onCredit={setCreditTarget}
+                    onOpenPdf={openPdf}
+                    onRegeneratePdf={regeneratePdf}
+                  />
+                ))}
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </>
+        )}
       </div>
 
       {sendTarget && sendTarget.invoice_number && (
@@ -674,12 +392,7 @@ export default function AdminCommissionInvoices() {
           isOpen={!!sendTarget}
           onClose={() => setSendTarget(null)}
           commissionInvoiceId={sendTarget.id}
-          defaultRecipient={
-            sendTarget.recipient_email ||
-            sendTarget.partner?.contact_email ||
-            sendTarget.partner?.email ||
-            ""
-          }
+          defaultRecipient={sendTarget.recipient_email || sendTarget.partner?.contact_email || sendTarget.partner?.email || ""}
           recipientName={sendTarget.partner?.name || sendTarget.recipient_name}
           invoiceNumber={sendTarget.invoice_number}
           amountInclVat={Number(sendTarget.amount_incl_vat)}
@@ -694,11 +407,9 @@ export default function AdminCommissionInvoices() {
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  Er komt een creditnota met een eigen nummer voor{" "}
-                  {formatCurrency(Number(creditTarget?.amount_incl_vat ?? 0))} incl. btw. De factuur zelf
-                  blijft bestaan als "Gecrediteerd" (de reeks blijft heel). De onderdelen en
-                  inkoopfacturen erop komen terug bij "Te factureren", zodat je een nieuwe factuur kunt
-                  maken.
+                  Er komt een creditnota met een eigen nummer voor {formatCurrency(Number(creditTarget?.amount_incl_vat ?? 0))} incl.
+                  btw. De factuur zelf blijft bestaan als "Gecrediteerd" (de reeks blijft heel). De onderdelen en
+                  inkoopfacturen erop komen terug bij "Te factureren", zodat je een nieuwe factuur kunt maken.
                 </p>
                 <div className="space-y-1">
                   <Label htmlFor="credit-reason">Reden (komt op de creditnota)</Label>
@@ -726,9 +437,9 @@ export default function AdminCommissionInvoices() {
             <AlertDialogTitle>Concept verwijderen?</AlertDialogTitle>
             <AlertDialogDescription>
               Het concept voor {deleteTarget?.partner?.name || deleteTarget?.recipient_name} (
-              {formatCurrency(Number(deleteTarget?.amount_incl_vat ?? 0))} incl. btw) wordt weggegooid.
-              De onderdelen en inkoopfacturen erop komen terug bij "Te factureren". Er is nog geen
-              nummer uitgegeven, dus de reeks blijft heel.
+              {formatCurrency(Number(deleteTarget?.amount_incl_vat ?? 0))} incl. btw) wordt weggegooid. De onderdelen en
+              inkoopfacturen erop komen terug bij "Te factureren". Er is nog geen nummer uitgegeven, dus de reeks blijft
+              heel.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -739,4 +450,9 @@ export default function AdminCommissionInvoices() {
       </AlertDialog>
     </AdminLayout>
   );
+}
+
+/** Hoort deze factuur in de tegel? (Alleen nodig voor het zicht "Te laat".) */
+function totalsIncludes(invoice: CommissionInvoiceView, tab: InvoiceTab): boolean {
+  return invoiceTabTotals([invoice])[tab].count > 0;
 }

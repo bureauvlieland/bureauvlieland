@@ -130,6 +130,8 @@ export default function AdminCommissionInvoiceCreate() {
 
   /** Bestaand concept bewerken (vanuit het overzicht). */
   const invoiceIdParam = searchParams.get("invoiceId");
+  /** Vanuit het overzicht "Definitief maken": meteen de bevestiging tonen. */
+  const finalizeParam = searchParams.get("finalize") === "1";
   const itemIdsParam = searchParams.get("itemIds") || "";
   const quoteIdsParam = searchParams.get("quoteIds") || "";
   const invoiceIdsParam = searchParams.get("invoiceIds") || "";
@@ -331,6 +333,9 @@ export default function AdminCommissionInvoiceCreate() {
       }
       setNotes(invoice.notes ?? "");
       setSavedInvoiceId(invoice.id);
+      if (finalizeParam && (lineRows ?? []).length > 0 && checkPartnerInvoiceDetails(partnerData).blocking.length === 0) {
+        setFinalizeOpen(true);
+      }
     } catch (err) {
       reportError(err, { where: "AdminCommissionInvoiceCreate: Error loading draft" });
       toast.error("Fout bij laden van het concept");
