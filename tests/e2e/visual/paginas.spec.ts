@@ -39,7 +39,7 @@ const PAGES: { name: string; path: string; wachtOp?: string; maxHoogte?: number 
   { name: "klantportaal-overzicht", path: "/ontwerp/klantportaal?scherm=overzicht", wachtOp: "Welkom" },
   { name: "klantportaal-programma", path: "/ontwerp/klantportaal?scherm=programma", wachtOp: "Wadexcursie met gids" },
   { name: "klantportaal-logies", path: "/ontwerp/klantportaal?scherm=logies", wachtOp: "Hotel Zeezicht" },
-  { name: "klantportaal-akkoord", path: "/ontwerp/klantportaal?scherm=akkoord", wachtOp: "Akkoord" },
+  { name: "klantportaal-akkoord", path: "/ontwerp/klantportaal?scherm=akkoord", wachtOp: "Akkoord en voorwaarden" },
   { name: "klantportaal-deelnemers", path: "/ontwerp/klantportaal?scherm=deelnemers", wachtOp: "Deelnemersweergave" },
 ];
 

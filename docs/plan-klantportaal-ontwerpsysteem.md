@@ -571,8 +571,9 @@ bevestigde accommodatie, akkoord ontvangen, factuurgegevens onvolledig),
 getoond op `/ontwerp/klantportaal` (alleen buiten productie, met
 `?scherm=`), zonder opslaan. De visuele regressietest neemt daarvan
 overzicht, programma, logies, akkoord en de deelnemersweergave op, op
-desktop en telefoon, met lege fixtures; de referenties maakt de workflow
-"Visuele referenties vernieuwen". `docs/design-systeem.md` heeft een
+desktop en telefoon, met opgenomen fixtures voor de gedeelde
+instellingen; de referenties maakt de workflow "Visuele referenties
+vernieuwen". `docs/design-systeem.md` heeft een
 paragraaf "Klantportaal" (`PortalHead`, `PortalTabs`, `DayBar`,
 `ProgramItemCard`, `ParticipantItemCard`, de woordenlijsten en de vier
 tonen) en de borgingstabel en checklist noemen het portaal.
