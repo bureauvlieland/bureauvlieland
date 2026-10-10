@@ -1,7 +1,8 @@
 # Visuele regressie (fase 5, borging)
 
-Eén pagina per paginasoort van de publieke site, op desktop (1440) en
-telefoon (390), vergeleken met de referentie in `__snapshots__/`. Draait in
+Eén pagina per paginasoort van de publieke site en vijf schermen van het
+klantportaal, op desktop (1440) en telefoon (390), vergeleken met de
+referentie in `__snapshots__/`. Draait in
 CI (job "Visuele regressie") tegen de preview-build. Wijkt een pagina meer
 dan 1% van de pixels af, faalt de job en staan de verschillen in het
 artefact `visuele-regressie` (verwacht, werkelijk en het verschil naast
@@ -53,6 +54,11 @@ te beoordelen en maak nieuwe referenties via de workflow hierboven.
 - De boekmodule (`map-proxy`) zit niet in de opnames: de agenda en "Direct
   boekbaar" blijven in de test onzichtbaar, zodat de referentie niet met de
   echte agenda meebeweegt.
+- Het klantportaal wordt opgenomen op `/ontwerp/klantportaal` (alleen
+  buiten productie): één verzonnen programma uit
+  `src/content/demoKlantportaal.ts`, gekozen met `?scherm=overzicht`,
+  `programma`, `logies`, `akkoord` of `deelnemers`. De pagina haalt niets
+  op, dus de fixtures `klantportaal-*.har` zijn leeg; de acties doen niets.
 
 ## Vaste data
 
@@ -74,5 +80,7 @@ vernieuwen via de workflow.
 
 Voeg een regel toe aan `PAGES` in `paginas.spec.ts` (naam, pad en eventueel
 een tekst om op te wachten), neem de fixture op zoals hierboven en laat de
-workflow de referentie maken. Zie ook de checklist voor een nieuwe pagina
+workflow de referentie maken. Een scherm van het klantportaal krijgt een
+`?scherm=` op `/ontwerp/klantportaal` en een lege fixture (kopieer
+`klantportaal-overzicht.har`). Zie ook de checklist voor een nieuwe pagina
 in `docs/design-systeem.md`.

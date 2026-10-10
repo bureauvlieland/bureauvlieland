@@ -346,11 +346,11 @@ export const ProgramEditor = ({
 
                   {groupedBlocks.self_arranged.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
+                      <div className="flex items-center gap-2 text-sm font-medium text-warning-ink">
                         <Info className="h-4 w-4" />
                         <span>Zelf te regelen</span>
                       </div>
-                      <div className="space-y-2 ml-6 bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2">
+                      <div className="space-y-2 ml-6 bg-warning-soft rounded-lg p-2">
                         {renderBlockGroup(groupedBlocks.self_arranged, "self")}
                       </div>
                       <p className="text-xs text-muted-foreground ml-6">

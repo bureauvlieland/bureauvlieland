@@ -272,7 +272,7 @@ export const TemplateSelector = ({
                     availability.problems.length === 0
                       ? "text-muted-foreground"
                       : availability.closedCount > 0
-                        ? "text-amber-800 dark:text-amber-300"
+                        ? "text-warning-ink"
                         : "text-muted-foreground",
                   )}
                 >
@@ -294,7 +294,7 @@ export const TemplateSelector = ({
                       key={`${line.blockId}-${line.dateIso}`}
                       className={cn(
                         "text-xs flex items-start gap-1.5",
-                        line.full ? "text-amber-800 dark:text-amber-300" : "text-muted-foreground",
+                        line.full ? "text-warning-ink" : "text-muted-foreground",
                       )}
                     >
                       <CalendarCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -336,14 +336,14 @@ export const TemplateSelector = ({
         {/* Start empty option */}
         <Card
           className={cn(
-            "group relative overflow-hidden border-2 border-dashed border-primary/30 hover:border-primary hover:shadow-lg transition-all duration-300 cursor-pointer flex items-center justify-center bg-gradient-to-br from-primary/5 via-transparent to-accent/10",
+            "group relative overflow-hidden border-2 border-dashed border-primary/30 hover:border-primary hover:shadow-medium transition-all duration-300 cursor-pointer flex items-center justify-center bg-gradient-to-br from-primary/5 via-transparent to-accent/10",
             templates.length === 0 && "sm:col-span-2"
           )}
           onClick={onStartEmpty}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/15 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <CardContent className="relative z-10 p-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mx-auto mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+            <div className="w-16 h-16 rounded-lg bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mx-auto mb-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
               <Sparkles className="h-7 w-7 text-primary transition-transform duration-300 group-hover:scale-110" />
             </div>
             <h3 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors duration-200">{inspirationMode ? "Overslaan" : "Start leeg"}</h3>

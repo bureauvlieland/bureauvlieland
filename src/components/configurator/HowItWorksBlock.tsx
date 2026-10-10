@@ -24,7 +24,7 @@ interface HowItWorksBlockProps {
 
 export const HowItWorksBlock = ({ compact = false }: HowItWorksBlockProps) => {
   return (
-    <div className={`bg-muted/30 border border-border rounded-xl ${compact ? "p-4" : "p-6 md:p-8"} ${compact ? "mb-0" : "mb-8"}`}>
+    <div className={`bg-muted/30 border border-border rounded-lg ${compact ? "p-4" : "p-6 md:p-8"} ${compact ? "mb-0" : "mb-8"}`}>
       <h2 className={`${compact ? "text-base" : "text-xl"} font-display font-semibold text-center ${compact ? "mb-3" : "mb-6"}`}>
         Zo werkt het
       </h2>

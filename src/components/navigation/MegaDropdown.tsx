@@ -212,7 +212,7 @@ export const VoorWieMega = ({ onNavigate }: MegaDropdownProps) => {
   return (
     <div className="grid grid-cols-2 gap-6 p-6 min-w-[520px]">
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        <h3 className="text-eyebrow font-semibold uppercase text-muted-foreground mb-3">
           Voor bedrijven
         </h3>
         <div className="space-y-1">
@@ -232,7 +232,7 @@ export const VoorWieMega = ({ onNavigate }: MegaDropdownProps) => {
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        <h3 className="text-eyebrow font-semibold uppercase text-muted-foreground mb-3">
           Voor privé
         </h3>
         <div className="space-y-1">
