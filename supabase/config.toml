@@ -60,6 +60,9 @@ verify_jwt = false
 [functions.get-partner-dashboard]
 verify_jwt = false
 
+[functions.get-partner-commission-invoices]
+verify_jwt = false
+
 [functions.register-partner-invoice]
 verify_jwt = false
 

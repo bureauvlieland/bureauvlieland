@@ -15,6 +15,12 @@ import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRe
 import { RegisterCollectivePartnerInvoiceDialog, type CollectiveInvoiceSubmitPayload } from "@/components/partner-portal/RegisterCollectivePartnerInvoiceDialog";
 import { UploadInvoicePdfPartnerDialog } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
+import { PartnerCommissionInvoiceList } from "@/components/partner-portal/PartnerCommissionInvoiceList";
+import {
+  summarizePartnerCommissionInvoices,
+  type PartnerCommissionInvoice,
+  type PartnerCommissionInvoicesResponse,
+} from "@/lib/partnerCommissionInvoices";
 import { toast } from "sonner";
 import { 
   AlertCircle, 
@@ -69,6 +75,7 @@ const PartnerFinanceContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partnerToken, setPartnerToken] = useState<string | null>(null);
+  const [commissionInvoices, setCommissionInvoices] = useState<PartnerCommissionInvoice[]>([]);
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
@@ -86,6 +93,21 @@ const PartnerFinanceContent = () => {
     vatNumber: getSetting<string>("bureau_vat_number", ""),
     iban: getSetting<string>("bureau_iban", ""),
   };
+
+  // Commissiefacturen van het bureau aan deze partner (met tijdelijke PDF-links).
+  const fetchCommissionInvoices = useCallback(async (token: string) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-commission-invoices?token=${token}`,
+        { method: "GET", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } },
+      );
+      if (!response.ok) throw new Error(`Kon commissiefacturen niet laden (${response.status})`);
+      const body = (await response.json()) as PartnerCommissionInvoicesResponse;
+      setCommissionInvoices(body.invoices ?? []);
+    } catch (err) {
+      reportError(err, { where: "PartnerFinance: Error fetching commission invoices" });
+    }
+  }, []);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -159,10 +181,11 @@ const PartnerFinanceContent = () => {
       } finally {
         setIsLoading(false);
       }
+      void fetchCommissionInvoices(token);
     };
 
     fetchDashboard();
-  }, [navigate, searchParams]);
+  }, [navigate, searchParams, fetchCommissionInvoices]);
 
   // Refetch function for after invoice registration
   const refetchData = useCallback(async () => {
@@ -187,7 +210,8 @@ const PartnerFinanceContent = () => {
     } catch (err) {
       reportError(err, { where: "PartnerFinance: Error refetching dashboard" });
     }
-  }, [partnerToken]);
+    void fetchCommissionInvoices(partnerToken);
+  }, [partnerToken, fetchCommissionInvoices]);
 
   // Invoice registration handler
   const handleInvoiceRegister = async (
@@ -355,17 +379,10 @@ const PartnerFinanceContent = () => {
     toBeInvoicedItems.reduce((sum, i) => sum + getBillableAmount(i), 0) +
     toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
   
-  const totalCommission = 
-    invoicedItems.reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
-    invoicedAccommodations.reduce((sum, q) => sum + (q.commission_amount || 0), 0);
-  
-  const pendingCommission = 
-    invoicedItems.filter((i) => i.commission_status === "pending").reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
-    invoicedAccommodations.filter((q) => q.commission_status === "pending").reduce((sum, q) => sum + (q.commission_amount || 0), 0);
-  
-  const paidCommission = 
-    invoicedItems.filter((i) => i.commission_status === "paid").reduce((sum, i) => sum + (i.commission_amount || 0), 0) +
-    invoicedAccommodations.filter((q) => q.commission_status === "paid").reduce((sum, q) => sum + (q.commission_amount || 0), 0);
+  // Commissie: wat het bureau werkelijk factureerde (commissiefacturen), niet
+  // het snapshot op de onderdelen. Open en betaald zijn incl. btw, zoals de
+  // partner ze betaalt; gefactureerd is ex btw, zoals op de factuur.
+  const commissionTotals = summarizePartnerCommissionInvoices(commissionInvoices);
 
   // Calculate expected commission for items to be invoiced
   const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
@@ -449,10 +466,10 @@ const PartnerFinanceContent = () => {
                 <Receipt className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Commissie ({commissionPercentage})</p>
-                <p className="text-2xl font-bold">€{totalCommission.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-muted-foreground">Commissie gefactureerd ({commissionPercentage})</p>
+                <p className="text-2xl font-bold">€{commissionTotals.invoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
                 <p className="text-xs text-muted-foreground">
-                  €{paidCommission.toFixed(2)} betaald • €{pendingCommission.toFixed(2)} open
+                  €{commissionTotals.open.toFixed(2)} open • €{commissionTotals.paid.toFixed(2)} betaald
                   {totalExpectedCommission > 0 && (
                     <span className="text-amber-600"> • Verwacht: €{totalExpectedCommission.toFixed(2)}</span>
                   )}
@@ -483,6 +500,12 @@ const PartnerFinanceContent = () => {
               Gefactureerd
               {invoicedCount > 0 && (
                 <Badge variant="secondary" className="ml-2">{invoicedCount}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="commission" className="flex-1 sm:flex-none">
+              Commissiefacturen
+              {commissionTotals.count > 0 && (
+                <Badge variant="secondary" className="ml-2">{commissionTotals.count}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -649,6 +672,14 @@ const PartnerFinanceContent = () => {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="commission" className="mt-6">
+          <p className="mb-4 text-sm text-muted-foreground">
+            Facturen van Bureau Vlieland aan u voor de commissie over uw gefactureerde onderdelen.
+            De PDF-link is een uur geldig; ververs de pagina voor een nieuwe.
+          </p>
+          <PartnerCommissionInvoiceList invoices={commissionInvoices} />
         </TabsContent>
       </Tabs>
 

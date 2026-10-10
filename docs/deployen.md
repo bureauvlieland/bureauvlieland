@@ -184,6 +184,12 @@ stond van 6 tot 21 september op een `ReferenceError`). Laat een test de code
 echt uitvoeren, zoals `_shared/commissionReconciliationData.test.ts` met een
 nep-client doet, of draai `deno check` op de functie voordat je pusht.
 
+Een functie met een Deno-test importeert supabase-js via
+`https://esm.sh/@supabase/supabase-js@2`, niet via `npm:`: CI draait de tests
+zonder `deno install`, en een `npm:`-import zoekt dan vergeefs in
+`node_modules` ("Could not find @supabase/supabase-js in a node_modules
+folder", PR 115). In productie werken beide vormen.
+
 ## Valkuil: commissiefacturen zijn na "Definitief maken" bevroren
 
 Een commissiefactuur (`commission_invoices` met regels in
