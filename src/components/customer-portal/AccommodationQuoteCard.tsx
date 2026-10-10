@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { BedDouble, Clock, AlertTriangle, ExternalLink, FileText, ImageIcon, Mail, MapPin, Check, Navigation, X } from "lucide-react";
+import { BedDouble, ExternalLink, FileText, ImageIcon, Mail, MapPin, Check, Navigation, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/system";
 import { cn } from "@/lib/utils";
 import { transformImageUrl } from "@/lib/supabaseImage";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
@@ -103,9 +103,9 @@ export const AccommodationQuoteCard = ({
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="font-display text-xl font-medium leading-tight">{quote.accommodation_name}</h4>
               {isExpired ? (
-                <Badge variant="destructive" className="gap-1 text-xs"><AlertTriangle className="h-3 w-3" />Verlopen</Badge>
+                <Pill tone="danger">Verlopen</Pill>
               ) : (
-                <Badge variant="outline" className="gap-1 text-xs"><Clock className="h-3 w-3" />Geldig t/m {format(validUntil, "d MMM", { locale: nl })}</Badge>
+                <Pill tone="neutral">Geldig tot en met {format(validUntil, "d MMM", { locale: nl })}</Pill>
               )}
             </div>
             {quote.partner?.name && quote.partner.name !== quote.accommodation_name && (
@@ -124,17 +124,17 @@ export const AccommodationQuoteCard = ({
             {!facilityMatch.unknown && (facilityMatch.matched.length > 0 || facilityMatch.missing.length > 0) && (
               <div className="flex flex-wrap gap-1.5 pt-0.5 text-xs">
                 {facilityMatch.matched.map((label) => (
-                  <span key={label} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5"><Check className="h-3 w-3" />{label}</span>
+                  <Pill key={label} tone="success" size="sm"><Check className="h-3 w-3" aria-hidden="true" />{label}</Pill>
                 ))}
                 {facilityMatch.missing.map((label) => (
-                  <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2 py-0.5"><X className="h-3 w-3" />{label}</span>
+                  <Pill key={label} tone="neutral" size="sm"><X className="h-3 w-3" aria-hidden="true" />{label}</Pill>
                 ))}
               </div>
             )}
             {partner.highlights.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {partner.highlights.slice(0, 6).map((f, i) => (
-                  <Badge key={i} variant="secondary" className="font-normal">{f}</Badge>
+                  <Pill key={i} tone="neutral">{f}</Pill>
                 ))}
               </div>
             )}
@@ -154,7 +154,7 @@ export const AccommodationQuoteCard = ({
         {/* Kamers, verzorging, extra's */}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
-            <p className="uppercase text-eyebrow text-muted-foreground">Kamers</p>
+            <p className="text-xs font-medium text-muted-foreground">Kamers</p>
             {rooms.length > 0 ? rooms.map((room, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 {room.images[0] && (
@@ -177,20 +177,20 @@ export const AccommodationQuoteCard = ({
             )}
           </div>
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
-            <p className="uppercase text-eyebrow text-muted-foreground">Verzorging &amp; inbegrepen</p>
+            <p className="text-xs font-medium text-muted-foreground">Verzorging en inbegrepen</p>
             <p><strong>{board.label}</strong></p>
             {quote.board_notes && <p className="text-xs text-muted-foreground">{quote.board_notes}</p>}
             {includes.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {includes.slice(0, 5).map((item, idx) => (
-                  <Badge key={idx} variant="outline" className="font-normal text-xs">{String(item)}</Badge>
+                  <Pill key={idx} tone="neutral" size="sm">{String(item)}</Pill>
                 ))}
                 {includes.length > 5 && <span className="text-xs text-muted-foreground">+{includes.length - 5}</span>}
               </div>
             )}
           </div>
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
-            <p className="uppercase text-eyebrow text-muted-foreground">Extra's in deze offerte</p>
+            <p className="text-xs font-medium text-muted-foreground">Extra's in deze offerte</p>
             {extras.length === 0 ? (
               <p className="text-muted-foreground">Geen extra's aangeboden.</p>
             ) : (
@@ -206,8 +206,8 @@ export const AccommodationQuoteCard = ({
                     </div>
                   );
                 })}
-                {extras.length > 3 && <p className="text-xs text-muted-foreground">+{extras.length - 3} meer, zie details</p>}
-                <p className="text-xs text-muted-foreground">Optioneel; u kiest ze bij het bevestigen.</p>
+                {extras.length > 3 && <p className="text-xs text-muted-foreground">En nog {extras.length - 3}, zie de details.</p>}
+                <p className="text-xs text-muted-foreground">Optioneel. U kiest ze bij het bevestigen.</p>
               </>
             )}
           </div>

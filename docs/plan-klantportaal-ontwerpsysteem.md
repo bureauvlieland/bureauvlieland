@@ -512,6 +512,29 @@ gemaakt: dat raakt de productiedatabase en de mails; beoordelen kan met
 een bestaand programma. Blijft voor deel b: Overzicht, Logies, Praktisch;
 deel c: de deelnemersweergave, de beta-banner en de overige copy.
 
+*Deel b (Overzicht, Logies, Praktisch) gebouwd op 10 oktober, eigen PR.*
+Overzicht: foto's, welkom met de feiten, de stand als één `Notice` met de
+volgende stap en een werkende knop (naar het juiste tabblad), de drie
+stappen op de `Stepper` van het systeem, één primaire knop "Programma
+beoordelen" en delen als `outline`. De stappenlogica staat in
+`src/lib/customerPortalSteps.ts` (`portalSteps`, `currentPortalStep`,
+`nextPortalStep`, met tests) en wordt ook door `ProgramView` gebruikt;
+`ProgramStepper` (748 regels, met het percentage) is weg. Logies: per
+toestand één kaart met één `Pill` uit de woordenlijst (Aangevraagd, Kies
+uw logies, Gekozen, Bevestigd, Geen beschikbaarheid), zonder tint en
+zonder kaart-in-kaart: de gekozen accommodatie met prijs, verzorging en
+kamerindeling bovenaan, de acties (kamers en verzorging, datum of aantal,
+verblijfsoverzicht) als knoppen bij de kaart, en de informatie over de
+accommodatie (foto's, tekst, inbegrepen, adres en contact, kaart en route,
+voorwaarden) in één uitklapper; "Open in Google Maps" is `outline`; geen
+aanvraag is een `EmptyState` met één knop; verlopen is een `Notice`; de
+offertekaart gebruikt `Pill` in plaats van `Badge`. Praktisch: groep en
+wensen als sheet van onderen met `FormField`s en een `Notice`, de kaart
+met "Compleet" of "Aanvullen" en "Bewerken" als `outline`, tickets met een
+`Pill`, en "Programma bewaren" belooft wat de knoppen geven (Word en
+agenda). Blijft voor deel c: de deelnemersweergave, de beta-banner en de
+overige copy.
+
 **Fase 4: borging (1 dag).** De baseline per bestand en
 `DESIGN_DEBT_MAX` omlaag; de visuele test met een vaste opname van één
 programma (overzicht, programma, logies, akkoord, deelnemersweergave) op

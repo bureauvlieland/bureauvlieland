@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Notice, LinkCard } from "@/components/system";
+import { Notice, LinkCard, Pill } from "@/components/system";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { GuestDetailsCard } from "./GuestDetailsCard";
 import { ProgramPdfDownload } from "./ProgramPdfDownload";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
@@ -74,11 +73,8 @@ export const PracticalView = ({
     <div className="space-y-6">
       {/* Intro strip */}
       <Notice tone="info" title="Wat kunt u hier doen?">
-        <p>
-          Geef de gegevens van uw groep door (gasten, dieet, kamerindeling),
-          download tickets en bewaar uw programma als Word-document of in uw agenda.
-          Hier vindt u ook de contactgegevens van Bureau Vlieland.
-        </p>
+        Geef de gegevens van uw groep door, download tickets, bewaar uw programma als Word-document of in uw agenda, en vind
+        de contactgegevens van Bureau Vlieland.
       </Notice>
 
       {/* Situatie en vervoer, zoals in de wizard ingevuld */}
@@ -98,7 +94,7 @@ export const PracticalView = ({
               {sit.crossing && <p>Overtocht: {sit.crossing}</p>}
               {sit.bikes && <p>Fietsen: {sit.bikes}</p>}
               {sit.window && <p>Op het eiland: {sit.window}</p>}
-              <p className="text-xs pt-1">Klopt dit niet meer? Laat het ons weten via de chat of telefonisch.</p>
+              <p className="pt-1 text-xs">Klopt dit niet meer? Laat het ons weten via de chat of telefonisch.</p>
             </CardContent>
           </Card>
         );
@@ -133,7 +129,7 @@ export const PracticalView = ({
               viewer="customer"
               canUpload={true}
               title=""
-              emptyHint="Nog geen documenten. U kunt hier bijvoorbeeld een gastenlijst, kamerindeling (spreadsheet), of andere documenten uploaden."
+              emptyHint="Nog geen documenten. U kunt hier bijvoorbeeld een gastenlijst of kamerindeling uploaden."
             />
           </CardContent>
         </Card>
@@ -145,10 +141,10 @@ export const PracticalView = ({
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Ticket className="h-4 w-4 text-primary" />
-              Tickets & vouchers
-              <Badge variant="secondary" className="text-xs">
+              Tickets en vouchers
+              <Pill tone="neutral" size="sm">
                 {ticketItems.length}
-              </Badge>
+              </Pill>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -183,12 +179,12 @@ export const PracticalView = ({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
-            Programma downloaden
+            Programma bewaren
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Bewaar uw programma als Word-document of importeer het direct in uw agenda.
+          <p className="mb-4 text-sm text-muted-foreground">
+            Als Word-document om te delen of te printen, of als agendabestand voor uw eigen agenda.
           </p>
           <div className="flex flex-wrap gap-2">
             <ProgramPdfDownload
@@ -227,7 +223,7 @@ export const PracticalView = ({
               }}
             >
               <CalendarPlus className="h-4 w-4 mr-1.5" />
-              Agenda-export (.ics)
+              In uw agenda zetten (.ics)
             </Button>
           </div>
         </CardContent>
@@ -256,9 +252,8 @@ export const PracticalView = ({
             <Phone className="h-4 w-4 text-muted-foreground" />
             0562 700 208
           </a>
-          <p className="text-xs text-muted-foreground pt-2">
-            Tijdens uw verblijf op Vlieland zijn wij ook telefonisch bereikbaar voor
-            ondersteuning ter plekke.
+          <p className="pt-2 text-xs text-muted-foreground">
+            Tijdens uw verblijf op Vlieland zijn wij ook telefonisch bereikbaar voor hulp ter plekke.
           </p>
         </CardContent>
       </Card>

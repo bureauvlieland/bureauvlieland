@@ -16,7 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Container, EmptyState, Pill, Stepper, type StepperStep } from "@/components/system";
+import { Container, EmptyState, Pill, Stepper } from "@/components/system";
+import { currentPortalStep, portalSteps } from "@/lib/customerPortalSteps";
 import { useFloatingBar } from "@/hooks/useFloatingLayer";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { useProgramStatus } from "@/hooks/useProgramStatus";
@@ -314,14 +315,15 @@ export const ProgramView = ({
   });
 
   // Voortgang: drie stappen, de eerste die nog niet rond is licht op. Alles rond: geen band.
-  const steps: StepperStep[] = [
-    ...(isMultiDay ? [{ key: "lodging", label: "Logies" }] : []),
-    { key: "program", label: "Programma" },
-    { key: "accept", label: "Akkoord" },
-  ];
-  const lodgingDone = !isMultiDay || hasSelectedAccommodation;
-  const programDone = allConfirmed || isPostExecution;
-  const currentStep = isCancelled ? null : !lodgingDone ? "lodging" : !programDone ? "program" : !termsAccepted ? "accept" : null;
+  const steps = portalSteps(isMultiDay);
+  const currentStep = currentPortalStep({
+    isMultiDay,
+    hasSelectedAccommodation,
+    programDone: allConfirmed || isPostExecution,
+    termsAccepted,
+    billingComplete,
+    isCancelled,
+  });
 
   // De dagen: onderdelen op volgorde van tijd, de stand per dag voor de dagbalk en het dagtotaal.
   const dayCount = Math.max(selectedDates.length, 1);

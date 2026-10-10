@@ -1,17 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import { Sheet, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, Loader2, Users, UtensilsCrossed, BedDouble } from "lucide-react";
+import { FormField, Notice, ResponsiveSheetContent } from "@/components/system";
 
 interface EditGuestDetailsDialogProps {
   isOpen: boolean;
@@ -21,15 +13,16 @@ interface EditGuestDetailsDialogProps {
   initialRoomAssignment: string;
   showDietary: boolean;
   showRoomAssignment: boolean;
-  onSave: (updates: {
-    guest_names?: string | null;
-    dietary_notes?: string | null;
-    room_assignment?: string | null;
-  }) => Promise<boolean>;
+  onSave: (updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null }) => Promise<boolean>;
 }
 
 const MAX_LEN = 5000;
 
+/**
+ * Groep en wensen (klantportaal fase 3b): gastenlijst, dieet en
+ * kamerindeling als `FormField`s in een sheet die op een telefoon van
+ * onderen komt. Alleen de gewijzigde velden gaan naar de server.
+ */
 export const EditGuestDetailsDialog = ({
   isOpen,
   onClose,
@@ -58,110 +51,92 @@ export const EditGuestDetailsDialog = ({
     (showDietary && dietaryNotes !== initialDietaryNotes) ||
     (showRoomAssignment && roomAssignment !== initialRoomAssignment);
 
-  const handleSave = async () => {
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!hasChanges) return;
     setIsSubmitting(true);
-    const updates: {
-      guest_names?: string | null;
-      dietary_notes?: string | null;
-      room_assignment?: string | null;
-    } = {};
+    const updates: { guest_names?: string | null; dietary_notes?: string | null; room_assignment?: string | null } = {};
     if (guestNames !== initialGuestNames) updates.guest_names = guestNames || null;
     if (showDietary && dietaryNotes !== initialDietaryNotes) updates.dietary_notes = dietaryNotes || null;
     if (showRoomAssignment && roomAssignment !== initialRoomAssignment) updates.room_assignment = roomAssignment || null;
-
     const ok = await onSave(updates);
     setIsSubmitting(false);
     if (ok) onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(o) => !o && !isSubmitting && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Groep & wensen</DialogTitle>
-          <DialogDescription>
-            Vul hier de gastenlijst en eventuele wensen in. U kunt dit tot vlak voor aankomst bijwerken.
-          </DialogDescription>
-        </DialogHeader>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && !isSubmitting && onClose()}>
+      <ResponsiveSheetContent className="flex flex-col gap-0 overflow-y-auto sm:max-w-lg">
+        <form onSubmit={handleSave} className="flex min-h-0 flex-1 flex-col">
+          <SheetHeader className="text-left">
+            <SheetTitle>Groep en wensen</SheetTitle>
+            <SheetDescription>Vul de gastenlijst en uw wensen in. U kunt dit tot vlak voor aankomst bijwerken.</SheetDescription>
+          </SheetHeader>
 
-        <div className="space-y-5 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="guest-names" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Gastenlijst
-            </Label>
-            <Textarea
-              id="guest-names"
-              value={guestNames}
-              maxLength={MAX_LEN}
-              onChange={(e) => setGuestNames(e.target.value)}
-              placeholder={"Bijv.\nJan de Vries\nMarieke Bakker\n…"}
-              className="min-h-[120px]"
-            />
-            <p className="text-xs text-muted-foreground">
-              Vrij invulbaar — één naam per regel of gewoon een opsomming.
-            </p>
+          <div className="flex-1 space-y-5 py-5">
+            <FormField
+              label="Gastenlijst"
+              htmlFor="guest-names"
+              help="Eén naam per regel, of gewoon een opsomming."
+            >
+              <Textarea
+                value={guestNames}
+                maxLength={MAX_LEN}
+                onChange={(e) => setGuestNames(e.target.value)}
+                placeholder={"Jan de Vries\nMarieke Bakker"}
+                className="min-h-[120px]"
+              />
+            </FormField>
+
+            {showDietary && (
+              <FormField
+                label="Dieetwensen en allergieën"
+                htmlFor="dietary-notes"
+                help="Voor de lunch, het diner of de catering in uw programma."
+              >
+                <Textarea
+                  value={dietaryNotes}
+                  maxLength={MAX_LEN}
+                  onChange={(e) => setDietaryNotes(e.target.value)}
+                  placeholder="2 keer vegetarisch, 1 keer glutenvrij, Lisa heeft een notenallergie."
+                  className="min-h-[100px]"
+                />
+              </FormField>
+            )}
+
+            {showRoomAssignment && (
+              <FormField
+                label="Kamerindeling"
+                htmlFor="room-assignment"
+                help="Uw voorkeur; de accommodatie houdt er zo veel mogelijk rekening mee."
+              >
+                <Textarea
+                  value={roomAssignment}
+                  maxLength={MAX_LEN}
+                  onChange={(e) => setRoomAssignment(e.target.value)}
+                  placeholder={"Kamer 1: Jan en Marieke (tweepersoonsbed)\nKamer 2: Pieter en Sanne (twee eenpersoonsbedden)"}
+                  className="min-h-[100px]"
+                />
+              </FormField>
+            )}
+
+            <Notice tone="info">
+              Bureau Vlieland en de aanbieders houden alleen rekening met wat hier staat. Komen er gasten of wensen bij, werk het
+              dan hier bij.
+            </Notice>
           </div>
 
-          {showDietary && (
-            <div className="space-y-2">
-              <Label htmlFor="dietary-notes" className="flex items-center gap-2">
-                <UtensilsCrossed className="h-4 w-4" />
-                Dieetwensen & allergieën
-              </Label>
-              <Textarea
-                id="dietary-notes"
-                value={dietaryNotes}
-                maxLength={MAX_LEN}
-                onChange={(e) => setDietaryNotes(e.target.value)}
-                placeholder="Bijv. 2 x vegetarisch, 1 x glutenvrij, Jan eet geen vis, Lisa heeft notenallergie."
-                className="min-h-[100px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Alleen invullen als er catering, lunch of diner in het programma zit.
-              </p>
-            </div>
-          )}
-
-          {showRoomAssignment && (
-            <div className="space-y-2">
-              <Label htmlFor="room-assignment" className="flex items-center gap-2">
-                <BedDouble className="h-4 w-4" />
-                Kamerindeling (logies)
-              </Label>
-              <Textarea
-                id="room-assignment"
-                value={roomAssignment}
-                maxLength={MAX_LEN}
-                onChange={(e) => setRoomAssignment(e.target.value)}
-                placeholder={"Bijv.\nKamer 1: Jan & Marieke (1 tweepersoonsbed)\nKamer 2: Pieter & Sanne (2 eenpersoonsbedden)\n…"}
-                className="min-h-[100px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Voorkeur voor kamerverdeling — de accommodatie probeert hier zo veel mogelijk rekening mee te houden.
-              </p>
-            </div>
-          )}
-
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Bureau Vlieland en de aanbieders kunnen alleen rekening houden met wensen die hier zijn vermeld.
-              Vergeet ze niet aan te vullen of bij te werken als er nog gasten of wijzigingen bijkomen.
-            </AlertDescription>
-          </Alert>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Annuleren
-          </Button>
-          <Button onClick={handleSave} disabled={!hasChanges || isSubmitting}>
-            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Opslaan
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <SheetFooter className="gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Annuleren
+            </Button>
+            <Button type="submit" disabled={!hasChanges || isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isSubmitting ? "Opslaan…" : "Opslaan"}
+            </Button>
+          </SheetFooter>
+        </form>
+      </ResponsiveSheetContent>
+    </Sheet>
   );
 };
