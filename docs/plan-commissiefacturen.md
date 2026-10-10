@@ -86,9 +86,22 @@ verstuurde en doorgestuurde facturen aan die partner), omdat partners
 op een inkoopfactuur (`supplier_commission_excl_vat` vanuit
 `usePurchaseInvoices`) is weg; die kolom betekent alleen nog "door de
 leverancier verrekend" (Doeksen). De vijf functies moeten nog uit Supabase
-via `delete_functions` van de workflow "Deploy Supabase". Nog open uit fase 3:
-het partnerportaal (factuurregels lezen, commissiefacturen met PDF op
-Facturatie). Woordenlijst van de statussen: zie onder "Fase 4".
+via `delete_functions` van de workflow "Deploy Supabase". Woordenlijst van de
+statussen: zie onder "Fase 4".
+
+Partnerportaal (10 oktober, het laatste stuk van fase 3): op Facturatie staat
+een derde tabblad "Commissiefacturen" met de facturen van het bureau aan de
+partner (verstuurd, doorgestuurd, betaald, gecrediteerd; concepten en
+nog-niet-verstuurde facturen blijven intern), elk met status in partnertaal
+(Open, Te laat, Betaald, Gecrediteerd, Creditnota), bedrag, uitklapbare
+regels en de PDF. De gegevens komen uit de nieuwe edge function
+`get-partner-commission-invoices` (partner-token, service role, één uur
+geldige PDF-links uit de besloten bucket), met Deno-tests; de weergaveregels
+staan in `src/lib/partnerCommissionInvoices.ts` met tests. De tegel
+"Commissie" op Facturatie leest voortaan dezelfde facturen (gefactureerd ex
+btw, open en betaald incl. btw) in plaats van het snapshot op de onderdelen;
+"Verwacht" blijft de schatting over nog te factureren onderdelen. Daarmee is
+het hele plan uitgevoerd.
 
 ## Samenvatting
 
