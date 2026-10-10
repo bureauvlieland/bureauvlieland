@@ -1,8 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
-import { Notice, EmptyState } from "@/components/system";
+import { Notice, EmptyState, Pill } from "@/components/system";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Clock,
   MapPin,
@@ -120,8 +119,8 @@ export const TodayView = ({
         <CardContent className="py-5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <p className="uppercase text-eyebrow text-muted-foreground">
-                {isToday ? "Vandaag" : isUpcoming ? "Binnenkort" : "Programma-dag"}
+              <p className="text-xs font-medium text-muted-foreground">
+                {isToday ? "Vandaag" : isUpcoming ? "Binnenkort" : "Programmadag"}
               </p>
               <h2 className="text-xl font-semibold mt-0.5">
                 {todayDate
@@ -143,10 +142,9 @@ export const TodayView = ({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Badge variant="secondary" className="gap-1">
-                <Sparkles className="h-3 w-3" />
-                Dag {dayIdx + 1} / {selectedDates.length}
-              </Badge>
+              <Pill tone="neutral">
+                Dag {dayIdx + 1} van {selectedDates.length}
+              </Pill>
               <Button
                 variant="outline"
                 size="icon"
@@ -207,7 +205,7 @@ export const TodayView = ({
                     {/* Time column */}
                     <div className="text-center shrink-0 w-14">
                       <div className="text-lg font-semibold leading-none">
-                        {time || "—"}
+                        {time || "flex."}
                       </div>
                       {item.duration ? (
                         <div className="text-[10px] text-muted-foreground mt-1">
@@ -215,9 +213,9 @@ export const TodayView = ({
                         </div>
                       ) : null}
                       {isActive && (
-                        <Badge variant="default" className="mt-1 text-[10px] px-1 py-0">
+                        <Pill tone="brand" size="sm" className="mt-1">
                           Nu
-                        </Badge>
+                        </Pill>
                       )}
                       {isPast && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground mx-auto mt-1" />

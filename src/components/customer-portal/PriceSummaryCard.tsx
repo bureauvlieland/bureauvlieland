@@ -447,7 +447,7 @@ export const PriceSummaryCard = ({
                         </span>
                       )
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">nog geen prijs</span>
                     )}
                   </span>
                 </div>

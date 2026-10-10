@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { Pill } from "@/components/system";
 import { useCustomerProgram } from "@/hooks/useCustomerProgram";
 import { useEventMode } from "@/hooks/useEventMode";
 import { endOfDay, isBefore, parseISO } from "date-fns";
@@ -111,10 +111,10 @@ const ParticipantProgram = () => {
             <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
           </Link>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1 hidden sm:inline-flex">
-              <Users className="h-3 w-3" />
+            <Pill tone="neutral" className="hidden sm:inline-flex">
+              <Users className="mr-1 h-3 w-3" aria-hidden="true" />
               Deelnemersweergave
-            </Badge>
+            </Pill>
             <Button size="sm" variant="outline" onClick={() => setShowShare(true)} aria-label="Delen">
               <Share2 className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Delen</span>

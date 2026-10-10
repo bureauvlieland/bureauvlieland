@@ -1,7 +1,9 @@
 # Plan: het ontwerpsysteem in het klantportaal
 
 Status: onderzoek en voorstel, 1 oktober 2026; besluiten genomen door
-Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Vraag van
+Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Fase 0 tot en
+met 3 zijn gebouwd (1 en 10 oktober, zie de voortgang per fase); fase 4
+(borging) is nog te doen. Vraag van
 Erwin: breng de ontwerptaal van de site door in het klantportaal ("Uw
 programma", de vernieuwde klantomgeving), met de bruikbaarheid voorop; de
 dagtabs van een meerdaags programma zijn "niet heel duidelijk". De bouw
@@ -534,6 +536,22 @@ met "Compleet" of "Aanvullen" en "Bewerken" als `outline`, tickets met een
 `Pill`, en "Programma bewaren" belooft wat de knoppen geven (Word en
 agenda). Blijft voor deel c: de deelnemersweergave, de beta-banner en de
 overige copy.
+
+*Deel c (deelnemersweergave, banner, copy) gebouwd op 10 oktober, zelfde
+PR.* De deelnemersweergave (`ParticipantView`) staat op `PortalTabs` (vanaf
+`md`) en op een telefoon op de onderbalk `MobileBottomNav`, die nu echt
+de weergave schakelt (de pagina stuurde eerder een toestand aan die de
+weergave niet las); het programma is één doorlopende tijdlijn met de
+`DayBar` (plakkend, vinkje per dag, "vandaag" tijdens het verblijf) en
+dagkoppen "Donderdag 5 november · dag 1 van 2 · 4 onderdelen", met de
+nieuwe `ParticipantItemCard`: dezelfde opbouw als de onderdeelkaart van de
+klant (tijd met het soort tijd, titel, aanbieder en plek), zonder status,
+prijs en acties, alleen "Route" en de uitleg onder "Details". De eigen
+eyebrows en `Badge`s in Vandaag, Kaart en de deelnemerspagina zijn `Pill`s
+en gewone labels. De beta-banner is weg, met de instelling
+`portal_beta_banner_enabled` (migratie `20261010160000`). De
+gedachtestreepjes in de klantteksten zijn weg; wat overblijft staat in
+codecommentaar. Daarmee is fase 3 compleet; fase 4 (borging) volgt.
 
 **Fase 4: borging (1 dag).** De baseline per bestand en
 `DESIGN_DEBT_MAX` omlaag; de visuele test met een vaste opname van één

@@ -1,6 +1,6 @@
+import { Pill } from "@/components/system";
 import { useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MapPin } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import type { ProgramRequestItem } from "@/types/programRequest";
@@ -169,7 +169,7 @@ export const ProgramMap = ({
       {unpinned.length > 0 && (
         <Card>
           <CardContent className="py-3 space-y-1.5">
-            <p className="font-medium text-muted-foreground uppercase text-eyebrow">
+            <p className="text-xs font-medium text-muted-foreground">
               Zonder pin op de kaart
             </p>
             {unpinned.map((i) => (
@@ -178,9 +178,9 @@ export const ProgramMap = ({
                 className="flex items-center justify-between text-sm gap-3"
               >
                 <span className="truncate">{i.block_name}</span>
-                <Badge variant="outline" className="text-[10px] shrink-0">
-                  {i.location_address || i.provider_name || "—"}
-                </Badge>
+                <Pill tone="neutral" size="sm" className="shrink-0">
+                  {i.location_address || i.provider_name || "Locatie onbekend"}
+                </Pill>
               </div>
             ))}
           </CardContent>

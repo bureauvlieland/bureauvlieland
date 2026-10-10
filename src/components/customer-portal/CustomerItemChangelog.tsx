@@ -34,7 +34,7 @@ const fieldLabel = (f: string) => {
 };
 
 const fmt = (v: unknown): string => {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "leeg";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 };

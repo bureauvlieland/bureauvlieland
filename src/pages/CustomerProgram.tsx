@@ -25,7 +25,6 @@ import {
   ArrowLeft,
   AlertCircle,
   RefreshCw,
-  X,
   Sparkles,
   Share2,
 } from "lucide-react";
@@ -33,7 +32,6 @@ import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { TodayView } from "@/components/customer-portal/TodayView";
 import { ProgramMap } from "@/components/customer-portal/ProgramMap";
-import { MobileBottomNav, type BottomNavView } from "@/components/customer-portal/MobileBottomNav";
 import { InstallPwaBanner } from "@/components/customer-portal/InstallPwaBanner";
 import { ParticipantView } from "@/components/customer-portal/ParticipantView";
 import { ShareWithParticipantsDialog } from "@/components/customer-portal/ShareWithParticipantsDialog";
@@ -44,7 +42,6 @@ const CustomerProgram = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
-  const [betaBannerDismissed, setBetaBannerDismissed] = useState(false);
   const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">("splash");
   
   const {
@@ -501,27 +498,6 @@ const CustomerProgram = () => {
         </Container>
       </header>
 
-      {/* Beta banner */}
-      {appSettings.portal_beta_banner_enabled && !betaBannerDismissed && (
-        <Container size="full" className="pt-4">
-          <Notice tone="info">
-            <div className="flex items-start gap-3">
-              <p className="flex-1">
-                <strong>Nieuwe klantomgeving.</strong> U kijkt naar onze vernieuwde klantomgeving. Mocht u ergens tegenaan lopen, dan horen wij dat graag via{" "}
-                <a href="mailto:hallo@bureauvlieland.nl" className="underline font-medium">hallo@bureauvlieland.nl</a>.
-              </p>
-              <button
-                type="button"
-                onClick={() => setBetaBannerDismissed(true)}
-                className="shrink-0 rounded-sm p-1 hover:bg-info/10"
-                aria-label="Sluiten"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </Notice>
-        </Container>
-      )}
 
       {/* Deelnemersweergave: identiek aan wat deelnemers zien */}
       {eventMode.eventModeActive ? (
@@ -586,7 +562,7 @@ const CustomerProgram = () => {
       })()}
 
       <Container as="main" id="main-content" size="full" className="pt-8 pb-floating">
-        {/* Splash view — only for multi-day */}
+        {/* Overzicht: alleen voor een meerdaags programma */}
         {effectiveView === "splash" && (
           <CustomerPortalSplash
             program={program as any}
@@ -635,32 +611,7 @@ const CustomerProgram = () => {
       </>
       )}
 
-      {/* Extra bottom padding op mobile zodat content niet onder de bottom-nav valt */}
-      {isMobile && <div className="h-16" />}
-
-      {/* Mobile bottom nav — alleen tijdens event-modus */}
-      {isMobile && eventMode.eventModeActive && (
-        <MobileBottomNav
-          active={
-            (["today", "program", "map", "practical"].includes(effectiveView)
-              ? (effectiveView as BottomNavView)
-              : "today") as BottomNavView
-          }
-          onChange={(v) => handleNavigate(v)}
-          badges={{
-            program: getCustomerPortalStatus({
-              program: program as any,
-              items: program.items,
-              accommodationQuotes,
-              selectedDates,
-              hasAccommodationRequest: !!accommodation,
-              guestDetails,
-            }).customerActionsCount > 0,
-          }}
-        />
-      )}
-
-      {/* PWA install hint — alleen mobiel + event-modus */}
+      {/* Installatiehint: alleen op een telefoon in de evenementmodus */}
       {isMobile && eventMode.eventModeActive && (
         <InstallPwaBanner programToken={token} />
       )}

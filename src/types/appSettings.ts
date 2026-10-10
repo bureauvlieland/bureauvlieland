@@ -45,7 +45,6 @@ export interface AppSettingsMap {
   reminder_days_customer_quote: number;
   reminder_days_customer_request: number;
   reminder_email_enabled: boolean;
-  portal_beta_banner_enabled: boolean;
   bureau_central_surcharge_pp: number;
   tourist_tax_pp_per_day: number;
   nature_contribution_pp: number;

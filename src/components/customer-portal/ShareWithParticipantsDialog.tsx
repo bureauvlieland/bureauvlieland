@@ -109,7 +109,7 @@ export const ShareWithParticipantsDialog = ({
             Delen met deelnemers
           </DialogTitle>
           <DialogDescription>
-            Deelnemers krijgen een vereenvoudigde weergave van het programma — zonder facturatie of akkoordstappen.
+            Deelnemers krijgen een eenvoudige weergave van het programma, zonder facturatie of akkoord.
           </DialogDescription>
         </DialogHeader>
 
