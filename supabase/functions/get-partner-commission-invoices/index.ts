@@ -7,7 +7,7 @@
 // (één uur geldige) link naar de PDF mee. Alleen facturen die de partner ook
 // echt gekregen heeft: verstuurd, doorgestuurd, betaald of gecrediteerd.
 // Concepten en definitieve-maar-nog-niet-verstuurde facturen blijven intern.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
