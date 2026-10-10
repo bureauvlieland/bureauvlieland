@@ -2,6 +2,7 @@ import type { AccommodationQuote } from "@/types/accommodation";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { getProjectExecutionState, type ProjectExecutionState } from "@/lib/projectExecutionState";
 import { isBureauItem } from "@/lib/bureauItem";
+import { isBillingComplete } from "@/lib/billingDetails";
 
 export interface CustomerPortalProgramLike {
   terms_accepted_at?: string | null;
@@ -10,6 +11,7 @@ export interface CustomerPortalProgramLike {
   billing_address_postal?: string | null;
   billing_address_city?: string | null;
   billing_contact_name?: string | null;
+  billing_country?: string | null;
   quote_status?: string | null;
   selected_dates?: string[] | null;
   completion_status?: string | null;
@@ -220,13 +222,7 @@ export function getCustomerPortalStatus(args: {
     POST_EXECUTION_COMPLETION_STATUSES.has(program.completion_status ?? "");
 
   const termsAccepted = !!program.terms_accepted_at;
-  const billingComplete = !!(
-    program.billing_company_name &&
-    program.billing_address_street &&
-    program.billing_address_postal &&
-    program.billing_address_city &&
-    program.billing_contact_name
-  );
+  const billingComplete = isBillingComplete(program);
   const isMultiDay = selectedDates.length > 1;
   const hasSelectedAccommodation = accommodationQuotes.some((q) => q.status === "selected");
   const hasActiveAccommodation = hasSelectedAccommodation || !!args.hasAccommodationRequest;

@@ -487,6 +487,31 @@ Logies, Praktisch, Facturatie (met landveld) en Akkoord op de nieuwe
 schil; de deelnemersweergave op dezelfde dagbalk en kaart; de beta-banner
 weg.
 
+*Deel a (Facturatie en Akkoord) gebouwd op 10 oktober, eigen PR.* De
+facturatiedialoog is een `BillingDetailsSheet` op `ResponsiveSheetContent`
+(van onderen op een telefoon) met `FormField`s, een landveld en validatie
+per land: de regels voor postcode, btw-nummer en ondernemingsnummer (KvK,
+Belgisch ondernemingsnummer, Handelsregister, SIREN, Company number) staan
+in `src/lib/billingDetails.ts` met tests, fouten verschijnen bij het
+verlaten van het veld, en `isBillingComplete` is de ene bron voor
+"Compleet" (ook in `customerPortalStatus`). Migratie `20261010140000`
+voegt `billing_country` toe (ISO-2, standaard NL); de edge function, de
+mail aan Erwin en de factuur-pdf in de admin nemen het land mee als het
+niet Nederland is. De kaart met gegevens toont een `Pill` uit de
+woordenlijst (Aanvullen / Compleet), leeg is een `EmptyState` met één
+primaire knop. Akkoord: één `Notice` met de stand (u bent aan zet, de
+aanbieder is aan zet met de open onderdelen, of nog niet aan de orde), de
+ondertekenkaart zonder tint met de blokkade "eerst uw facturatiegegevens"
+als `Notice`, de naam als `FormField` en één primaire knop "Ondertekenen"
+of "Ondertekenen onder voorbehoud"; na ondertekenen een `SuccessScreen` in
+de pagina ("Uw boeking is definitief" of "Ondertekend onder voorbehoud"
+met de open onderdelen), de ondertekening met de voorwaarden als gewone
+kaart, en waar de facturen staan als `Notice`. De gedachtestreepjes in
+deze bestanden zijn weg. Het demoprogramma (besluit 7) is nog niet
+gemaakt: dat raakt de productiedatabase en de mails; beoordelen kan met
+een bestaand programma. Blijft voor deel b: Overzicht, Logies, Praktisch;
+deel c: de deelnemersweergave, de beta-banner en de overige copy.
+
 **Fase 4: borging (1 dag).** De baseline per bestand en
 `DESIGN_DEBT_MAX` omlaag; de visuele test met een vaste opname van één
 programma (overzicht, programma, logies, akkoord, deelnemersweergave) op

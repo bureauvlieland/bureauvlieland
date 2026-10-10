@@ -7,7 +7,7 @@ import { ChangeConfirmationDialog, type PendingChange } from "@/components/custo
 import { EditProgramDetailsDialog } from "@/components/customer-portal/EditProgramDetailsDialog";
 import { EditGuestDetailsDialog } from "@/components/customer-portal/EditGuestDetailsDialog";
 import { CancelRequestDialog } from "@/components/customer-portal/CancelRequestDialog";
-import { BillingDetailsDialog, type BillingDetails } from "@/components/customer-portal/BillingDetailsDialog";
+import { BillingDetailsSheet, type BillingDetails } from "@/components/customer-portal/BillingDetailsSheet";
 import { ProgramNavigation, type PortalView } from "@/components/customer-portal/ProgramNavigation";
 import { Container, Notice } from "@/components/system";
 import { EditAccommodationSetupDialog } from "@/components/shared/EditAccommodationSetupDialog";
@@ -744,7 +744,7 @@ const CustomerProgram = () => {
         />
       )}
 
-      <BillingDetailsDialog
+      <BillingDetailsSheet
         isOpen={showBillingDialog}
         onClose={() => setShowBillingDialog(false)}
         onSave={handleSaveBillingDetails}
@@ -755,6 +755,7 @@ const CustomerProgram = () => {
           billing_address_street: (program as any).billing_address_street || "",
           billing_address_postal: (program as any).billing_address_postal || "",
           billing_address_city: (program as any).billing_address_city || "",
+          billing_country: (program as { billing_country?: string | null }).billing_country || "NL",
           billing_contact_name: (program as any).billing_contact_name || "",
           billing_contact_email: (program as any).billing_contact_email || "",
           billing_reference: (program as any).billing_reference || "",

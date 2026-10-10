@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, Pencil, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText } from "lucide-react";
+import { Pill } from "@/components/system";
+import { isBillingComplete } from "@/lib/billingDetails";
 import { BillingDetailsCard } from "./BillingDetailsCard";
 import { PriceSummaryCard } from "./PriceSummaryCard";
 import type { ProgramRequestItem } from "@/types/programRequest";
@@ -15,6 +15,7 @@ interface CompactBillingSectionProps {
     billing_address_street?: string;
     billing_address_postal?: string;
     billing_address_city?: string;
+    billing_country?: string;
     billing_contact_name?: string;
     billing_contact_email?: string;
     billing_reference?: string;
@@ -56,13 +57,7 @@ export const CompactBillingSection = ({
   arrivalDate,
   revisionFeesTotal,
 }: CompactBillingSectionProps) => {
-  const billingComplete = !!(
-    program.billing_company_name &&
-    program.billing_address_street &&
-    program.billing_address_postal &&
-    program.billing_address_city &&
-    program.billing_contact_name
-  );
+  const billingComplete = isBillingComplete(program);
 
   const extrasOverride = selectedAccommodationQuote && accommodationExtrasByQuoteId
     ? accommodationExtrasByQuoteId[selectedAccommodationQuote.id]
@@ -71,22 +66,10 @@ export const CompactBillingSection = ({
   return (
     <div id="billing" className="scroll-mt-20 space-y-4">
       {/* Section header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Facturatie & Kosten</h2>
-        </div>
-        {billingComplete ? (
-          <div className="flex items-center gap-1.5 text-sm text-success">
-            <CheckCircle className="h-4 w-4" />
-            <span>Gegevens compleet</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-sm text-warning">
-            <AlertCircle className="h-4 w-4" />
-            <span>Gegevens invullen</span>
-          </div>
-        )}
+      <div className="flex flex-wrap items-center gap-2">
+        <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
+        <h2 className="text-lg font-semibold text-foreground">Facturatie en kosten</h2>
+        <Pill tone={billingComplete ? "success" : "warning"}>{billingComplete ? "Compleet" : "Aanvullen"}</Pill>
       </div>
 
       {/* Billing details card */}

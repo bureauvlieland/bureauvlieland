@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
-import { Notice } from "@/components/system";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Notice, SuccessScreen } from "@/components/system";
 import { AcceptTermsCard } from "./AcceptTermsCard";
 import { AcceptedTermsCard, type AcceptedTermsEntry } from "./AcceptedTermsCard";
 import { PaymentStatusCard } from "./PaymentStatusCard";
 import { PendingConfirmationExplainer } from "./PendingConfirmationExplainer";
-import { Info, CheckCircle2, Clock } from "lucide-react";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
 import { getUnconfirmedItemsForTerms } from "@/lib/customerPortalStatus";
@@ -30,17 +28,19 @@ interface AcceptViewProps {
   onOpenBilling: () => void;
 }
 
+/**
+ * Het tabblad Akkoord (klantportaal fase 3a): vóór ondertekenen één melding
+ * met de stand en de kaart om te ondertekenen; erna een `SuccessScreen` in
+ * de pagina, de ondertekening met de voorwaarden, en waar de facturen staan.
+ */
 export const AcceptView = ({
-  program,
   items,
-  numberOfPeople,
   selectedDates,
   termsAccepted,
   billingComplete,
   allConfirmed,
   canAcceptUnderReservation = false,
   accommodationQuotes,
-  invoicingMode,
   acceptedTerms,
   termsAcceptedAt,
   signatureName,
@@ -50,34 +50,48 @@ export const AcceptView = ({
 }: AcceptViewProps) => {
   const [showUnderReservation, setShowUnderReservation] = useState(false);
 
-  const unconfirmedItems = useMemo(
-    () => getUnconfirmedItemsForTerms(items),
-    [items],
-  );
-
+  const unconfirmedItems = useMemo(() => getUnconfirmedItemsForTerms(items), [items]);
   const hasPending = !allConfirmed && unconfirmedItems.length > 0;
   // Onder voorbehoud ondertekenen mag alleen als de klant zelf niets meer moet
   // doen (voorstel al goedgekeurd) en er enkel aanbieder-bevestigingen open staan.
   const maySignUnderReservation = hasPending && canAcceptUnderReservation;
   const signingUnderReservation = maySignUnderReservation && showUnderReservation;
+  const pendingNames = unconfirmedItems.map((item) => item.block_name).join(", ");
+
+  if (termsAccepted && termsAcceptedAt) {
+    return (
+      <div className="space-y-6">
+        <SuccessScreen
+          title={hasPending ? "Ondertekend onder voorbehoud" : "Uw boeking is definitief"}
+          intro={
+            hasPending
+              ? `${unconfirmedItems.length === 1 ? "Dit onderdeel wacht" : "Deze onderdelen wachten"} nog op de aanbieder: ${pendingNames}. Wij houden het voor u in de gaten en laten weten zodra het rond is.`
+              : "Alle onderdelen zijn bevestigd en de voorwaarden zijn ondertekend. Tot ziens op Vlieland."
+          }
+          className="py-4"
+        />
+        {acceptedTerms && acceptedTerms.length > 0 && (
+          <AcceptedTermsCard
+            termsAcceptedAt={termsAcceptedAt}
+            signatureName={signatureName ?? null}
+            signatureId={signatureId ?? null}
+            acceptedTerms={acceptedTerms}
+          />
+        )}
+        <PaymentStatusCard items={items} termsAcceptedAt={termsAcceptedAt} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Intro strip */}
-      <Notice tone="info" title="Wat kunt u hier doen?">
-          <p>
-            {termsAccepted
-              ? "Hier ziet u uw ondertekende akkoord en de status van betalingen. Het programma is bevestigd."
-              : allConfirmed
-              ? "Controleer uw facturatiegegevens en geef akkoord op de voorwaarden. Daarmee bevestigt u uw boeking definitief."
-              : canAcceptUnderReservation
-              ? "Eén of meer onderdelen wachten nog op bevestiging van de aanbieder. U kunt wachten tot alles rond is, of nu al ondertekenen onder voorbehoud."
-              : "Geef eerst uw akkoord op het voorstel in uw programma. Daarna kunt u hier de voorwaarden ondertekenen."}
-          </p>
-      </Notice>
-
-      {/* Uitleg openstaande bevestigingen */}
-      {!termsAccepted && hasPending && (
+      {allConfirmed ? (
+        <Notice tone={billingComplete ? "warning" : "info"} title="U bent aan zet">
+          {billingComplete
+            ? "Alles is bevestigd. Onderteken de voorwaarden om de boeking definitief te maken."
+            : "Alles is bevestigd. Vul eerst uw facturatiegegevens in, daarna kunt u ondertekenen."}
+        </Notice>
+      ) : hasPending ? (
         <PendingConfirmationExplainer
           items={unconfirmedItems}
           selectedDates={selectedDates}
@@ -85,67 +99,23 @@ export const AcceptView = ({
           customerApproved={canAcceptUnderReservation}
           onSignUnderReservation={() => setShowUnderReservation(true)}
         />
-      )}
-
-      {/* Akkoord */}
-      {!termsAccepted ? (
-        <div id="terms-section" className="scroll-mt-20">
-          {allConfirmed || signingUnderReservation ? (
-            <AcceptTermsCard
-              onAccept={onAcceptTerms}
-              isBillingComplete={billingComplete}
-              onOpenBilling={onOpenBilling}
-              items={items}
-              accommodationQuotes={accommodationQuotes}
-              selectedDates={selectedDates}
-              unconfirmedItems={allConfirmed ? [] : unconfirmedItems}
-            />
-          ) : null}
-        </div>
       ) : (
-        <>
-          {hasPending && (
-            <Card className="border-warning/40 bg-warning-soft/60">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-warning-ink" />
-                  Ondertekend onder voorbehoud
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>
-                  {unconfirmedItems.length === 1
-                    ? "Dit onderdeel wacht nog op bevestiging van de aanbieder:"
-                    : "Deze onderdelen wachten nog op bevestiging van de aanbieder:"}{" "}
-                  <span className="font-medium text-foreground">
-                    {unconfirmedItems.map((item) => item.block_name).join(", ")}
-                  </span>
-                  . Wij houden dit voor u in de gaten en laten weten zodra het rond is.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {acceptedTerms && acceptedTerms.length > 0 && termsAcceptedAt && (
-            <AcceptedTermsCard
-              termsAcceptedAt={termsAcceptedAt}
-              signatureName={signatureName ?? null}
-              signatureId={signatureId ?? null}
-              acceptedTerms={acceptedTerms}
-            />
-          )}
-        </>
+        <Notice tone="info" title="Nog niet aan de orde">
+          Geef eerst uw akkoord op het voorstel in uw programma. Daarna kunt u hier de voorwaarden ondertekenen.
+        </Notice>
       )}
 
-      {/* Betaalstatus */}
-      {termsAccepted && termsAcceptedAt && (
-        <PaymentStatusCard items={items} termsAcceptedAt={termsAcceptedAt} />
-      )}
-
-      {termsAccepted && !hasPending && (
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2">
-          <CheckCircle2 className="h-4 w-4 text-success" />
-          Uw boeking is definitief bevestigd.
+      {(allConfirmed || signingUnderReservation) && (
+        <div id="terms-section" className="scroll-mt-20">
+          <AcceptTermsCard
+            onAccept={onAcceptTerms}
+            isBillingComplete={billingComplete}
+            onOpenBilling={onOpenBilling}
+            items={items}
+            accommodationQuotes={accommodationQuotes}
+            selectedDates={selectedDates}
+            unconfirmedItems={allConfirmed ? [] : unconfirmedItems}
+          />
         </div>
       )}
     </div>
