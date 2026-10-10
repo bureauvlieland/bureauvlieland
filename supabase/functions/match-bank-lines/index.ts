@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { decideMatch, suggestionsForLine, type MatchCandidates } from '../_shared/bankMatching.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,12 +33,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Preload sales + purchase invoices + payment batches (unpaid)
+    // Openstaande kandidaten: verkoop- en commissiefacturen (inkomend),
+    // betaalbatches en inkoopfacturen (uitgaand). De matchregels zelf staan
+    // in _shared/bankMatching.ts.
     const { data: salesInvoices, error: salesErr } = await supabase
       .from('bureau_invoices')
       .select('id, invoice_number, amount_incl_vat, customer_name, paid_at')
       .is('bank_line_id', null);
     if (salesErr) throw new Error(`Verkoopfacturen laden mislukt: ${salesErr.message}`);
+    const { data: commissionInvoices, error: commissionErr } = await supabase
+      .from('commission_invoices')
+      .select('id, invoice_number, amount_incl_vat, status, credits_invoice_id')
+      .is('bank_line_id', null)
+      .is('credits_invoice_id', null)
+      .in('status', ['sent', 'forwarded']);
+    if (commissionErr) throw new Error(`Commissiefacturen laden mislukt: ${commissionErr.message}`);
     const { data: purchaseInvoices, error: purchaseErr } = await supabase
       .from('partner_purchase_invoices')
       .select('id, invoice_number, amount_incl_vat, partner_id, status')
@@ -50,82 +60,27 @@ Deno.serve(async (req) => {
       .is('bank_line_id', null);
     if (batchErr) throw new Error(`Betaalbatches laden mislukt: ${batchErr.message}`);
 
+    const candidates: MatchCandidates = {
+      sales: (salesInvoices ?? []).map((inv) => ({ type: 'sales', id: inv.id, reference: inv.invoice_number, amount: inv.amount_incl_vat })),
+      commission: (commissionInvoices ?? []).map((inv) => ({ type: 'commission', id: inv.id, reference: inv.invoice_number, amount: inv.amount_incl_vat })),
+      purchase: (purchaseInvoices ?? []).map((inv) => ({ type: 'purchase', id: inv.id, reference: inv.invoice_number, amount: inv.amount_incl_vat })),
+      batch: (batches ?? []).map((b) => ({ type: 'batch', id: b.id, reference: b.batch_reference, amount: b.total_amount })),
+    };
+
     let matchedCount = 0;
 
     for (const line of lines) {
-      const desc = `${line.description ?? ''} ${line.end_to_end_id ?? ''} ${line.remittance_info ?? ''}`.toUpperCase();
-      const amount = Math.abs(Number(line.amount));
-      const suggestions: any[] = [];
-
-      if (line.direction === 'in') {
-        for (const inv of salesInvoices ?? []) {
-          const num = (inv.invoice_number ?? '').toUpperCase();
-          const amtMatch = Math.abs(Number(inv.amount_incl_vat ?? 0) - amount) < 0.01;
-          const refMatch = num && desc.includes(num);
-          if (refMatch && amtMatch) {
-            suggestions.push({ type: 'sales', id: inv.id, label: inv.invoice_number, amount: inv.amount_incl_vat, confidence: 0.98 });
-          } else if (refMatch) {
-            suggestions.push({ type: 'sales', id: inv.id, label: inv.invoice_number, amount: inv.amount_incl_vat, confidence: 0.7 });
-          } else if (amtMatch) {
-            suggestions.push({ type: 'sales', id: inv.id, label: inv.invoice_number, amount: inv.amount_incl_vat, confidence: 0.5 });
-          }
-        }
-      } else {
-        // Outgoing — first try batches
-        for (const b of batches ?? []) {
-          const ref = (b.batch_reference ?? '').toUpperCase();
-          const amtMatch = Math.abs(Number(b.total_amount ?? 0) - amount) < 0.01;
-          const refMatch = ref && desc.includes(ref);
-          if (refMatch && amtMatch) {
-            suggestions.push({ type: 'batch', id: b.id, label: b.batch_reference, amount: b.total_amount, confidence: 0.98 });
-          } else if (refMatch) {
-            suggestions.push({ type: 'batch', id: b.id, label: b.batch_reference, amount: b.total_amount, confidence: 0.7 });
-          }
-        }
-        for (const inv of purchaseInvoices ?? []) {
-          const num = (inv.invoice_number ?? '').toUpperCase();
-          const amtMatch = Math.abs(Number(inv.amount_incl_vat ?? 0) - amount) < 0.01;
-          const refMatch = num && desc.includes(num);
-          if (refMatch && amtMatch) {
-            suggestions.push({ type: 'purchase', id: inv.id, label: inv.invoice_number, amount: inv.amount_incl_vat, confidence: 0.95 });
-          } else if (refMatch) {
-            suggestions.push({ type: 'purchase', id: inv.id, label: inv.invoice_number, amount: inv.amount_incl_vat, confidence: 0.6 });
-          } else if (amtMatch) {
-            suggestions.push({ type: 'purchase', id: inv.id, label: inv.invoice_number, amount: inv.amount_incl_vat, confidence: 0.4 });
-          }
-        }
-      }
-
-      suggestions.sort((a, b) => b.confidence - a.confidence);
-      const top = suggestions[0];
-
-      let status: string = 'unmatched';
-      let matchedType: string | null = null;
-      let matchedId: string | null = null;
-      let confidence: number | null = null;
-
-      if (top && top.confidence >= 0.95 && suggestions.filter(s => s.confidence >= 0.95).length === 1) {
-        status = 'suggested';
-        matchedType = top.type;
-        matchedId = top.id;
-        confidence = top.confidence;
-        matchedCount++;
-      } else if (suggestions.length > 1) {
-        status = 'ambiguous';
-      } else if (top) {
-        status = 'suggested';
-        matchedType = top.type;
-        matchedId = top.id;
-        confidence = top.confidence;
-      }
+      const suggestions = suggestionsForLine(line, candidates);
+      const decision = decideMatch(suggestions);
+      if (decision.automatic) matchedCount++;
 
       const { error: updErr } = await supabase
         .from('bank_statement_lines')
         .update({
-          status,
-          matched_invoice_type: matchedType,
-          matched_invoice_id: matchedId,
-          confidence,
+          status: decision.status,
+          matched_invoice_type: decision.matchedType,
+          matched_invoice_id: decision.matchedId,
+          confidence: decision.confidence,
           suggestions: suggestions.slice(0, 5),
         })
         .eq('id', line.id);

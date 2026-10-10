@@ -1,7 +1,8 @@
 # Plan: Commissies en commissiefacturen (`/admin/commissies`)
 
-Status: onderzoek en plan 3 oktober 2026, nog te beoordelen. Daarna bouwen in
-fasen; na fase 0 en 1 kan Erwin de commissiefacturen van 2026 verwerken.
+Status: onderzoek en plan 3 oktober 2026; alle fasen gebouwd en uitgerold
+tussen 3 en 10 oktober 2026 (zie Voortgang hieronder). Op 10 oktober is de
+bankmatching voor commissiefacturen toegevoegd (vervolgstap bij "Betaald").
 
 Voortgang (5 oktober 2026): fase 0 en 1 zijn gebouwd en uitgerold (fase 1 op
 3 oktober, fase 0 op 4 oktober via een handmatige deploy met `include_all`,
@@ -102,6 +103,15 @@ staan in `src/lib/partnerCommissionInvoices.ts` met tests. De tegel
 btw, open en betaald incl. btw) in plaats van het snapshot op de onderdelen;
 "Verwacht" blijft de schatting over nog te factureren onderdelen. Daarmee is
 het hele plan uitgevoerd.
+
+Bankmatching (10 oktober, migratie `20261010120000`): `match-bank-lines`
+kent bij inkomende regels ook de openstaande commissiefacturen (verstuurd of
+doorgestuurd, geen creditnota) op BVC-nummer en bedrag, met dezelfde
+zekerheden als verkoopfacturen. De matchregels staan nu in
+`_shared/bankMatching.ts` met Deno-tests. Bevestigen op Bankafschriften zet
+de factuur op betaald via de gewone statuswissel (de trigger neemt de
+bronregels mee) en zet `bank_line_id` op de factuur; Commissiefacturen toont
+"betaald … (gematcht op bankafschrift)".
 
 ## Samenvatting
 

@@ -390,7 +390,8 @@ export const CommissionInvoiceRow = ({
                   {invoice.forwarded_to_accounting_at
                     ? `doorgestuurd ${formatDateTime(invoice.forwarded_to_accounting_at)}`
                     : "nog niet doorgestuurd"}
-                  {invoice.paid_at && ` · betaald ${formatDate(invoice.paid_at)}`}
+                  {invoice.paid_at &&
+                    ` · betaald ${formatDate(invoice.paid_at)}${invoice.bank_line_id ? " (gematcht op bankafschrift)" : ""}`}
                 </p>
                 {invoice.notes && <p className="text-sm text-muted-foreground">Opmerking: {invoice.notes}</p>}
               </div>

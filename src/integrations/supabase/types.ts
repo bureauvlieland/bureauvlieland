@@ -1493,6 +1493,7 @@ export type Database = {
         Row: {
           amount_excl_vat: number
           amount_incl_vat: number
+          bank_line_id: string | null
           created_at: string
           created_by: string | null
           due_date: string | null
@@ -1528,6 +1529,7 @@ export type Database = {
         Insert: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          bank_line_id?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string | null
@@ -1563,6 +1565,7 @@ export type Database = {
         Update: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          bank_line_id?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string | null

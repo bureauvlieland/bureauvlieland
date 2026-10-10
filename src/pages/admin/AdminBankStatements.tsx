@@ -19,6 +19,7 @@ import {
   useConfirmMatch,
   useIgnoreLine,
   useBankPendingCount,
+  BANK_MATCH_TYPE_LABELS,
   type BankStatement,
   type BankStatementLine,
 } from "@/hooks/useBankStatements";
@@ -63,7 +64,7 @@ function MatchDialog({
                 <div className="font-medium text-sm">
                   {s.label}{" "}
                   <Badge variant="outline" className="ml-2 text-[10px]">
-                    {s.type === "sales" ? "Verkoop" : s.type === "purchase" ? "Inkoop" : "Batch"}
+                    {BANK_MATCH_TYPE_LABELS[s.type] ?? s.type}
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">
