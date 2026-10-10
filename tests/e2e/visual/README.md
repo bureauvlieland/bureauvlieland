@@ -57,8 +57,12 @@ te beoordelen en maak nieuwe referenties via de workflow hierboven.
 - Het klantportaal wordt opgenomen op `/ontwerp/klantportaal` (alleen
   buiten productie): één verzonnen programma uit
   `src/content/demoKlantportaal.ts`, gekozen met `?scherm=overzicht`,
-  `programma`, `logies`, `akkoord` of `deelnemers`. De pagina haalt niets
-  op, dus de fixtures `klantportaal-*.har` zijn leeg; de acties doen niets.
+  `programma`, `logies`, `akkoord` of `deelnemers`. Het programma zelf
+  komt niet uit de database, maar de pagina haalt wel de gedeelde data op
+  die het echte portaal ook gebruikt (`building_blocks`, `app_settings`,
+  `pricing_structures`); die staan in de fixtures `klantportaal-*.har`,
+  zodat bijvoorbeeld de natuurbijdrage en de organisatiefee kloppen. De
+  acties doen niets.
 
 ## Vaste data
 
@@ -81,6 +85,6 @@ vernieuwen via de workflow.
 Voeg een regel toe aan `PAGES` in `paginas.spec.ts` (naam, pad en eventueel
 een tekst om op te wachten), neem de fixture op zoals hierboven en laat de
 workflow de referentie maken. Een scherm van het klantportaal krijgt een
-`?scherm=` op `/ontwerp/klantportaal` en een lege fixture (kopieer
-`klantportaal-overzicht.har`). Zie ook de checklist voor een nieuwe pagina
+`?scherm=` op `/ontwerp/klantportaal`; neem de fixture op zoals
+hierboven. Zie ook de checklist voor een nieuwe pagina
 in `docs/design-systeem.md`.

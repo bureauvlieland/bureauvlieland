@@ -220,7 +220,9 @@ net als `/ontwerp`): één verzonnen programma uit
 bevestigde accommodatie, akkoord ontvangen, factuurgegevens nog
 onvolledig) met `?scherm=overzicht|programma|logies|praktisch|facturatie|akkoord|deelnemers`.
 Alle acties zijn uitgeschakeld en er wordt niets opgeslagen; de visuele
-test neemt vijf van deze schermen op.
+test neemt vijf van deze schermen op. De gedeelde instellingen
+(`app_settings`, `pricing_structures`) haalt de pagina wel op; in de test
+komen ze uit de fixtures.
 
 ## Zo controleer je een wijziging
 
