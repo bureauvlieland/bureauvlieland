@@ -219,6 +219,9 @@ via de databasefuncties (`save_commission_invoice_draft`,
 `delete_commission_invoice_draft`, `credit_commission_invoice`). Partners kunnen
 de kolom niet aanraken: de bestaande partner-guards weigeren elke wijziging
 (een kolom-`REVOKE` werkt niet tegen de tabelbrede `authenticated`-grant).
+Ook de bankmatching (Bankafschriften, type "Commissie") betaalt een factuur
+via diezelfde statuswissel `sent/forwarded → paid`, nooit met een losse
+`UPDATE` op de bronnen.
 
 De oude pro-forma-flow is in fase 4 van `docs/plan-commissiefacturen.md`
 verwijderd (`process-completed-items`, `confirm-partner-commission`,

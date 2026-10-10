@@ -17,6 +17,16 @@ export interface BankStatement {
   created_at: string;
 }
 
+/** Wat een bankregel kan koppelen: verkoop- of commissiefactuur (inkomend), inkoopfactuur of batch (uitgaand). */
+export type BankMatchType = "sales" | "purchase" | "batch" | "commission";
+
+export const BANK_MATCH_TYPE_LABELS: Record<BankMatchType, string> = {
+  sales: "Verkoop",
+  purchase: "Inkoop",
+  batch: "Batch",
+  commission: "Commissie",
+};
+
 export interface BankStatementLine {
   id: string;
   statement_id: string;
@@ -30,11 +40,11 @@ export interface BankStatementLine {
   description: string | null;
   end_to_end_id: string | null;
   status: "unmatched" | "suggested" | "ambiguous" | "confirmed" | "ignored";
-  matched_invoice_type: "sales" | "purchase" | "batch" | null;
+  matched_invoice_type: BankMatchType | null;
   matched_invoice_id: string | null;
   confidence: number | null;
   suggestions: Array<{
-    type: "sales" | "purchase" | "batch";
+    type: BankMatchType;
     id: string;
     label: string;
     amount: number;
@@ -160,7 +170,7 @@ export function useConfirmMatch() {
       invoiceId,
     }: {
       line: BankStatementLine;
-      type: "sales" | "purchase" | "batch";
+      type: BankMatchType;
       invoiceId: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -195,6 +205,19 @@ export function useConfirmMatch() {
           .from("payment_batches")
           .update({ bank_line_id: line.id, status: "paid" })
           .eq("id", invoiceId);
+      } else if (type === "commission") {
+        // Dezelfde statuswissel als "Betaald" op Commissiefacturen; de trigger
+        // zet de bronregels op betaald. Alleen vanaf verstuurd of doorgestuurd.
+        const { data, error } = await supabase
+          .from("commission_invoices")
+          .update({ bank_line_id: line.id, status: "paid", paid_at: nowIso, paid_by: user?.id ?? null })
+          .eq("id", invoiceId)
+          .in("status", ["sent", "forwarded"])
+          .select("id");
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error("Commissiefactuur staat niet meer open (al betaald of gecrediteerd)");
+        }
       }
     },
     onSuccess: () => {
@@ -204,6 +227,8 @@ export function useConfirmMatch() {
       qc.invalidateQueries({ queryKey: ["purchase-invoices"] });
       qc.invalidateQueries({ queryKey: ["bureau-invoices"] });
       qc.invalidateQueries({ queryKey: ["payment-batches"] });
+      qc.invalidateQueries({ queryKey: ["commission-invoices"] });
+      qc.invalidateQueries({ queryKey: ["commission-worklist"] });
       toast.success("Match bevestigd");
     },
     onError: (err: Error) => toast.error(err.message || "Fout bij bevestigen"),

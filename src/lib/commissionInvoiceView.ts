@@ -51,6 +51,8 @@ export interface CommissionInvoiceView {
   credits_invoice_id: string | null;
   credit_reason: string | null;
   credited_at: string | null;
+  /** Bankregel waarmee de betaling is gematcht (Bankafschriften). */
+  bank_line_id?: string | null;
   partner?: { id: string; name: string; email: string | null; contact_email: string | null } | null;
   lines: CommissionInvoiceLineView[];
 }

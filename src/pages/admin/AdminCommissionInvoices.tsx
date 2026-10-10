@@ -73,7 +73,7 @@ const INVOICE_SELECT = `
   id, invoice_number, invoice_date, due_date, partner_id, recipient_name, recipient_email,
   amount_excl_vat, vat_amount, amount_incl_vat, vat_rate, status, pdf_path, notes,
   sent_at, forwarded_to_accounting_at, paid_at, finalized_at,
-  credits_invoice_id, credit_reason, credited_at,
+  credits_invoice_id, credit_reason, credited_at, bank_line_id,
   partner:partners(id, name, email, contact_email),
   lines:commission_invoice_lines(
     id, item_id, quote_id, purchase_invoice_id, item_type, block_name, customer_label,
