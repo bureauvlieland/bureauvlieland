@@ -1,9 +1,9 @@
 # Plan: het ontwerpsysteem in het klantportaal
 
 Status: onderzoek en voorstel, 1 oktober 2026; besluiten genomen door
-Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Fase 0 tot en
-met 3 zijn gebouwd (1 en 10 oktober, zie de voortgang per fase); fase 4
-(borging) is nog te doen. Vraag van
+Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Alle fasen
+(0 tot en met 4) zijn gebouwd op 1 en 10 oktober, zie de voortgang per
+fase; het plan is afgerond. Vraag van
 Erwin: breng de ontwerptaal van de site door in het klantportaal ("Uw
 programma", de vernieuwde klantomgeving), met de bruikbaarheid voorop; de
 dagtabs van een meerdaags programma zijn "niet heel duidelijk". De bouw
@@ -559,6 +559,23 @@ programma (overzicht, programma, logies, akkoord, deelnemersweergave) op
 desktop en telefoon; een paragraaf "Klantportaal" in
 `docs/design-systeem.md` met `PortalHead`, `PortalTabs`, de dagbalk, de
 onderdeelkaart en de woordenlijst.
+
+*Gebouwd op 10 oktober.* De laatste dertig vindplaatsen van ontwerpschuld
+op de site (de navigatie, de configurator, de kaart, de chatwidget, Links
+en Sitemap: `rounded-xl`, Tailwind-schaduwen, amber en groen, eigen
+eyebrows) zijn opgeruimd; de baseline per bestand is leeg en
+`DESIGN_DEBT_MAX` staat op nul, dus elke nieuwe vindplaats laat CI falen.
+Het demoprogramma uit besluit 7 staat niet in de database maar in de code:
+`src/content/demoKlantportaal.ts` (twee dagen, vijf onderdelen, een
+bevestigde accommodatie, akkoord ontvangen, factuurgegevens onvolledig),
+getoond op `/ontwerp/klantportaal` (alleen buiten productie, met
+`?scherm=`), zonder opslaan. De visuele regressietest neemt daarvan
+overzicht, programma, logies, akkoord en de deelnemersweergave op, op
+desktop en telefoon, met lege fixtures; de referenties maakt de workflow
+"Visuele referenties vernieuwen". `docs/design-systeem.md` heeft een
+paragraaf "Klantportaal" (`PortalHead`, `PortalTabs`, `DayBar`,
+`ProgramItemCard`, `ParticipantItemCard`, de woordenlijsten en de vier
+tonen) en de borgingstabel en checklist noemen het portaal.
 
 Samen ongeveer 9 bouwdagen. Fase 0 en 1 kunnen in één week; fase 2 is de
 kern en verdient een eigen beoordeling op desktop en telefoon.

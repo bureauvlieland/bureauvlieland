@@ -186,10 +186,47 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
   foto's en staat het zoekveld direct onder de kop. Contact, Veelgestelde
   vragen, de funnelpagina's en 404 houden de rustige donkere band.
 
+## Klantportaal
+
+Het klantportaal ("Uw programma", `/programma/<token>`) en de
+deelnemersweergave staan op dezelfde tokens en componenten als de site,
+met `data-surface="portal"`. Wat er bovenop komt, staat in
+`src/components/customer-portal`:
+
+| Onderdeel | Gebruik | Niet |
+|---|---|---|
+| `PortalHead` via `TabHeader` | Elke tab begint met icoon, Fraunces-titel, één zin en één regel feiten; de configuratie per tab staat in `tabHeaderConfig.ts` | Eigen koppen per tab, hero-kaarten, percentages |
+| `PortalTabs` via `ProgramNavigation` | De plakkende tabbalk (Overzicht, Programma, Logies, Praktisch, Facturatie, Akkoord), met een `Pill` als er iets te doen is; op een telefoon één horizontale rij. De deelnemersweergave gebruikt dezelfde balk vanaf `md` en daaronder de onderbalk `MobileBottomNav` | Dagtabs, een tweede tabbalk, eigen `Badge`s |
+| `DayBar` | Eén doorlopende tijdlijn voor een meerdaags programma: de dagbalk plakt onder de tabbalk, springt naar de dagkop (`dag-<i>`, bij deelnemers `deelnemers-dag-<i>`), zet een vinkje bij een dag die klaar is en "vandaag" tijdens het verblijf. De dagkop zegt "Donderdag 5 november · dag 1 van 2 · 4 onderdelen" | Dagen als tabbladen, een programma per dag verbergen |
+| `ProgramItemCard` | De onderdeelkaart van de klant: tijd met het soort tijd, titel, aanbieder en plek, één status-`Pill`, de prijs en de acties (akkoord, andere tijd, verwijderen) in `outline`; details onder een uitklapper | Een tweede kaart voor de telefoon, knoppen in kleur, drie statussen per kaart |
+| `ParticipantItemCard` | Dezelfde opbouw zonder status, prijs en acties: alleen "Route" en de uitleg onder "Details" | Een eigen opmaak voor deelnemers |
+| `Stepper` in `CustomerPortalSplash` | Het overzicht toont de stappen uit `customerPortalSteps.ts` (`portalSteps`, `currentPortalStep`) met een `Notice` voor de volgende stap en één primaire knop | Percentages, drie losse lijstjes, aftellingen |
+| `Notice` en `SuccessScreen` | Stand van het akkoord, de betaling en de bevestiging; na ondertekenen een `SuccessScreen` | Gekleurde kaarten met eigen rand |
+| `ResponsiveSheetContent` met `FormField` | Factuurgegevens (`BillingDetailsSheet`), reisgegevens (`EditGuestDetailsDialog`) | `Dialog`s met losse `Label`s en rode `<p>`'s |
+
+De woorden komen uit één woordenlijst per onderwerp: `itemStatus.ts` voor
+onderdelen (`customerLabel`, `customerTone`), `projectStatus.ts` voor het
+programma, `customerPortalStatus.ts` voor de facturatie en het akkoord en
+`customerPortalSteps.ts` voor de volgende stap. De vier tonen betekenen
+altijd hetzelfde: `info` is "wacht op een ander" (de aanbieder, Bureau
+Vlieland), `warning` is "u bent aan zet", `success` is "geregeld" en
+`danger` is "kan niet" (niet beschikbaar, afgewezen). Een kaart draagt
+hoogstens één `Pill`; de uitleg staat in de `Notice` erboven of in de
+details, niet in een tweede pill.
+
+De referentie staat op `/ontwerp/klantportaal` (alleen buiten productie,
+net als `/ontwerp`): één verzonnen programma uit
+`src/content/demoKlantportaal.ts` (twee dagen, vijf onderdelen, een
+bevestigde accommodatie, akkoord ontvangen, factuurgegevens nog
+onvolledig) met `?scherm=overzicht|programma|logies|praktisch|facturatie|akkoord|deelnemers`.
+Alle acties zijn uitgeschakeld en er wordt niets opgeslagen; de visuele
+test neemt vijf van deze schermen op.
+
 ## Zo controleer je een wijziging
 
 1. Open `/ontwerp` op de preview: staan de knoppen, pills en koppen nog in
-   één lijn?
+   één lijn? Raakt de wijziging het klantportaal, open dan ook
+   `/ontwerp/klantportaal`.
 2. `bunx tsx scripts/check-design-debt.ts`: geen bestand boven zijn
    baseline, het totaal niet gestegen? Met `--list` zie je elke vindplaats.
 3. Klik de pagina's door die je hebt geraakt, op desktop en op een telefoon.
@@ -208,8 +245,8 @@ Vier poorten in CI houden het systeem heel; ze staan in
 |---|---|---|
 | Typecheck | `tsc -p tsconfig.app.json`, nul fouten | hard |
 | Lint en strict-mode | aantal problemen mag niet stijgen | `LINT_MAX`, `STRICT_MAX` in `.github/quality-baselines.env` |
-| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | per bestand hard via `.github/design-debt-baseline.json` (een bestand mag nooit boven zijn stand komen; een nieuw of schoon bestand blijft op nul), plus het totaal `DESIGN_DEBT_MAX` |
-| Visuele regressie | `tests/e2e/visual`: dertien paginasoorten op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
+| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | nul: `DESIGN_DEBT_MAX=0` en een lege `.github/design-debt-baseline.json` sinds klantportaal fase 4 (10 oktober 2026); een bestand met een vindplaats is dan een fout |
+| Visuele regressie | `tests/e2e/visual`: achttien schermen (dertien paginasoorten van de site en vijf schermen van het klantportaal op `/ontwerp/klantportaal`) op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
 
 De visuele test is deterministisch: de klok staat vast op 21 september
 2026, Supabase-antwoorden komen uit `tests/e2e/visual/fixtures/*.har`,
@@ -218,13 +255,15 @@ lettertypes komen van de site zelf (`public/fonts`, sinds fase 5 niet
 meer van Google Fonts). Hij toetst dus opmaak, typografie en kleur, niet
 de inhoud van de database.
 
-Na een opruimronde leg je de nieuwe stand vast met
-`bunx tsx scripts/check-design-debt.ts --write-baseline` en verlaag je
-`DESIGN_DEBT_MAX`; na een bedoelde visuele wijziging laat je de
+De ontwerpschuld staat op nul en blijft daar: `DESIGN_DEBT_MAX=0`, de
+baseline is leeg. Een nieuwe vindplaats laat CI falen; `--list` wijst hem
+aan. (`--write-baseline` bestaat nog voor het geval een bestand bewust
+even boven nul moet.) Na een bedoelde visuele wijziging laat je de
 referenties opnieuw maken door de workflow "Visuele referenties
-vernieuwen" (`tests/e2e/visual/README.md`). Het admin-, partner- en
-logiesportaal vallen buiten de ontwerpschuldtelling en de visuele test;
-ze erven de tokens en kunnen later per scherm worden bijgetrokken.
+vernieuwen" (`tests/e2e/visual/README.md`). Het klantportaal telt mee in
+de ontwerpschuld en de visuele test (via `/ontwerp/klantportaal`); het
+admin-, partner- en logiesportaal vallen erbuiten, erven de tokens en
+kunnen later per scherm worden bijgetrokken.
 
 ## Checklist voor een nieuwe pagina
 
@@ -254,6 +293,8 @@ ze erven de tokens en kunnen later per scherm worden bijgetrokken.
 7. Helmet met titel, beschrijving, canonical en og-tags; structured data
    waar die past (Service, FAQ via `FaqSection`, BreadcrumbList).
 8. Voeg de pagina toe aan `tests/e2e/visual/paginas.spec.ts` als het een
-   nieuwe paginasoort is, en neem de fixtures op.
+   nieuwe paginasoort is, en neem de fixtures op. Een nieuw scherm in het
+   klantportaal krijgt een `?scherm=` op `/ontwerp/klantportaal` met de
+   vaste data uit `src/content/demoKlantportaal.ts`.
 9. Controleer: typecheck, `check-design-debt.ts`, `/ontwerp`, de pagina op
    desktop en telefoon, en CI groen.

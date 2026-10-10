@@ -69,7 +69,7 @@ export const LogiesSuggestionBanner = ({
   };
 
   return (
-    <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+    <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-soft">
       <div className="flex items-start gap-3">
         <div className="bg-primary/15 rounded-full p-2 shrink-0">
           <Bed className="h-5 w-5 text-primary" />

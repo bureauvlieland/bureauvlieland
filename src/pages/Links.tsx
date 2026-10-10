@@ -113,7 +113,7 @@ const Links = () => {
         <img
           src="/email-logo.png"
           alt="Bureau Vlieland"
-          className="h-20 w-20 rounded-full bg-card object-contain p-2 shadow-md"
+          className="h-20 w-20 rounded-full bg-card object-contain p-2 shadow-medium"
           width={80}
           height={80}
         />
@@ -129,7 +129,7 @@ const Links = () => {
             <Link
               key={to}
               to={withUtm(to, searchParams)}
-              className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
+              className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
                 highlight
                   ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
                   : "border-border bg-card text-foreground hover:bg-accent"

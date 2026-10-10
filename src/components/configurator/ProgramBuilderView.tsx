@@ -406,7 +406,7 @@ export const ProgramBuilderView = ({
 
       {/* Prominent nudge: use a template as starting point */}
       {showTemplateBanner && (
-        <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
+        <div className="mb-6 relative overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
           <div className="flex items-start gap-3 sm:gap-4">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <BookOpen className="h-4 w-4" aria-hidden="true" />
@@ -459,7 +459,7 @@ export const ProgramBuilderView = ({
                     return (
                       <SortableItemCard key={item.blockId} item={item}>
                         <div className="space-y-2">
-                          <Card className={`flex gap-3 overflow-hidden transition-shadow ${isBikeBlock ? 'border-dashed border-primary/30 bg-primary/[0.03] hover:shadow-md' : 'hover:shadow-md'}`}>
+                          <Card className={`flex gap-3 overflow-hidden transition-shadow ${isBikeBlock ? 'border-dashed border-primary/30 bg-primary/[0.03] hover:shadow-medium' : 'hover:shadow-medium'}`}>
                             {hasImage && (
                               <div className="w-20 sm:w-28 shrink-0">
                                 <img src={image} alt={block.name} className="w-full h-full object-cover" loading="lazy" />

@@ -35,6 +35,12 @@ const PAGES: { name: string; path: string; wachtOp?: string; maxHoogte?: number 
   { name: "bouwsteen-detail", path: "/activiteit/zeehondentocht", wachtOp: "In het kort" },
   { name: "activiteiten-vlieland", path: "/activiteiten-vlieland", maxHoogte: 8000 },
   { name: "ontwerp", path: "/ontwerp" },
+  // Het klantportaal met een vast, verzonnen programma (src/content/demoKlantportaal.ts).
+  { name: "klantportaal-overzicht", path: "/ontwerp/klantportaal?scherm=overzicht", wachtOp: "Welkom" },
+  { name: "klantportaal-programma", path: "/ontwerp/klantportaal?scherm=programma", wachtOp: "Wadexcursie met gids" },
+  { name: "klantportaal-logies", path: "/ontwerp/klantportaal?scherm=logies", wachtOp: "Hotel Zeezicht" },
+  { name: "klantportaal-akkoord", path: "/ontwerp/klantportaal?scherm=akkoord", wachtOp: "Akkoord" },
+  { name: "klantportaal-deelnemers", path: "/ontwerp/klantportaal?scherm=deelnemers", wachtOp: "Deelnemersweergave" },
 ];
 
 const VASTE_TIJD = new Date("2026-09-21T12:00:00+02:00");

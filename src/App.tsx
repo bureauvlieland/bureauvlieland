@@ -66,6 +66,7 @@ const BookingStatus = lazy(() => import("./pages/BookingStatus"));
 
 const Sitemap = lazy(() => import("./pages/Sitemap"));
 const Ontwerp = lazy(() => import("./pages/Ontwerp"));
+const OntwerpKlantportaal = lazy(() => import("./pages/OntwerpKlantportaal"));
 const ConceptRecover = lazy(() => import("./pages/ConceptRecover"));
 
 // Lazy-loaded partner pages
@@ -322,6 +323,7 @@ const App = () => {
             <Route path="/admin/planning" element={<Navigate to="/admin/projecten?tab=kalender" replace />} />
             {/* Referentiepagina van het ontwerpsysteem, alleen buiten productie (previews en lokaal). */}
             {import.meta.env.MODE !== "production" && <Route path="/ontwerp" element={<Ontwerp />} />}
+            {import.meta.env.MODE !== "production" && <Route path="/ontwerp/klantportaal" element={<OntwerpKlantportaal />} />}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

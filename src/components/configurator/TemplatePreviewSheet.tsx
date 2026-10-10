@@ -142,7 +142,7 @@ export const TemplatePreviewSheet = ({
             <Separator className="my-6" />
 
             {availability && availability.problems.length > 0 && (
-              <p className="text-sm text-amber-800 dark:text-amber-300 mb-3">
+              <p className="text-sm text-warning-ink mb-3">
                 {availability.summary}. U kunt het programma gewoon gebruiken; in de programmastap stellen wij een alternatief voor.
               </p>
             )}

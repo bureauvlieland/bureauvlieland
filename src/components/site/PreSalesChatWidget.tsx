@@ -141,7 +141,7 @@ export const PreSalesChatWidget = () => {
       {/* Panel */}
       {open && (
         <div
-          className="fixed right-4 z-40 w-[min(380px,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="fixed right-4 z-40 w-[min(380px,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-border bg-card shadow-dramatic animate-in fade-in slide-in-from-bottom-4 duration-200"
           style={{
             bottom: "calc(6rem + var(--floating-offset, 0px))",
             maxHeight: "calc(100vh - 8rem - var(--floating-offset, 0px))",
@@ -244,7 +244,7 @@ export const PreSalesChatWidget = () => {
             )}
 
             <div className="pt-3 border-t border-border">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1 mb-2">
+              <p className="text-eyebrow font-semibold uppercase text-muted-foreground flex items-center gap-1 mb-2">
                 <HelpCircle className="h-3.5 w-3.5" /> Veelgestelde vragen
               </p>
               <ul className="space-y-1">

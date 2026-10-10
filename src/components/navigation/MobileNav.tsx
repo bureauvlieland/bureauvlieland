@@ -107,7 +107,7 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
           {openDropdown === "voorwie" && (
             <div className="pl-4 pb-2 space-y-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                <p className="text-eyebrow font-semibold uppercase text-muted-foreground mb-1">
                   Voor bedrijven
                 </p>
                 {navItems.voorBedrijvenItems.map((item) => (
@@ -117,7 +117,7 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
                 ))}
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                <p className="text-eyebrow font-semibold uppercase text-muted-foreground mb-1">
                   Voor privé
                 </p>
                 {navItems.voorPriveItems.map((item) => (

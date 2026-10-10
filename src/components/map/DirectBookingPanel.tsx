@@ -124,7 +124,7 @@ export const DirectBookingPanel = ({ bundle }: { bundle: BookableBundle }) => {
       )}
 
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <p className="text-eyebrow font-medium text-muted-foreground uppercase">
           Eerstvolgende data
         </p>
         <div className="flex flex-col gap-1.5">
