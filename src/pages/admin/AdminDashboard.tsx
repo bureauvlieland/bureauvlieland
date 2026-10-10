@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { PendingCommissionsCard } from "@/components/admin/PendingCommissionsCard";
 import { AdminUnavailabilityWidget } from "@/components/admin/AdminUnavailabilityWidget";
 import { LiveActivityFeed } from "@/components/admin/LiveActivityFeed";
 import { DailyActivitySummary } from "@/components/admin/DailyActivitySummary";
@@ -124,7 +123,6 @@ const AdminDashboardContent = () => {
         </div>
         <div className="space-y-4">
           <DailyActivitySummary />
-          <PendingCommissionsCard />
           <AdminUnavailabilityWidget />
           <MapBookingsWidget />
         </div>

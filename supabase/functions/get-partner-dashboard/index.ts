@@ -461,6 +461,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Open commissiefacturen van het bureau aan deze partner (verstuurd of
+    // doorgestuurd, nog niet betaald). Partners kunnen commission_invoices
+    // niet zelf lezen; dit is de bron voor "commissie open" op het dashboard.
+    const { data: openCommissionRows } = await supabase
+      .from("commission_invoices")
+      .select("id, amount_incl_vat, status")
+      .eq("partner_id", partner.id)
+      .in("status", ["sent", "forwarded"]);
+    const openCommissionInvoices = {
+      count: (openCommissionRows ?? []).length,
+      amountInclVat: (openCommissionRows ?? []).reduce(
+        (sum, row) => sum + (Number(row.amount_incl_vat) || 0),
+        0,
+      ),
+    };
+
     return new Response(
       JSON.stringify({
         partner: {
@@ -486,6 +502,7 @@ Deno.serve(async (req) => {
         },
         accommodationQuotes,
         accommodationSummary,
+        openCommissionInvoices,
         previousLastSeenAt,
         changesSinceLastSeen,
       }),

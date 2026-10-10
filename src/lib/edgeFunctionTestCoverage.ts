@@ -38,8 +38,6 @@ export interface EdgeFunctionCoverage {
 const TESTED: Record<string, "deno" | "e2e"> = {
   "auto-close-past-execution": "deno",
   "cancel-program-request": "deno",
-  "confirm-partner-commission": "deno",
-  "get-admin-commissions": "deno",
   "inbound-purchase-invoice": "e2e",
   "mailjet-event-webhook": "deno",
   "notify-partner-cancellation": "deno",
@@ -92,10 +90,6 @@ const REGISTRY: Row[] = [
   { name: "generate-payment-batch", category: "invoicing", critical: true },
   { name: "match-bank-lines", category: "invoicing", critical: true },
   { name: "parse-bank-statement", category: "invoicing", critical: false },
-  { name: "confirm-partner-commission", category: "invoicing", critical: true },
-  { name: "confirm-pending-commissions", category: "invoicing", critical: false },
-  { name: "update-commission-status", category: "invoicing", critical: true },
-  { name: "get-admin-commissions", category: "invoicing", critical: false },
   { name: "notify-partners-missing-invoice-pdf", category: "invoicing", critical: false },
 
   // ── Webhooks / inbound ──────────────────────────────────────────────────
@@ -162,7 +156,6 @@ const REGISTRY: Row[] = [
   { name: "update-partner-password-set", category: "workflow", critical: false },
   { name: "set-project-completion", category: "workflow", critical: true },
   { name: "set-project-ready-for-invoice", category: "workflow", critical: true },
-  { name: "process-completed-items", category: "workflow", critical: true },
   { name: "auto-close-past-execution", category: "workflow", critical: true },
   { name: "reconcile-admin-todos", category: "workflow", critical: false },
   { name: "cleanup-stale-todos", category: "workflow", critical: false },

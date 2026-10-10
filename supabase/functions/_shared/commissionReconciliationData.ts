@@ -41,9 +41,6 @@ export const DEAD_ITEM_STATUSES = ["cancelled", "rejected", "declined"];
 /** Commissiefactuurstatussen waarin de factuur nog niet naar de partner is. */
 export const UNSENT_COMMISSION_INVOICE_STATUSES = ["draft", "final"];
 
-/** Inkoopfactuurstatussen die niet meetellen in de reconciliatie. */
-export const IGNORED_INVOICE_STATUSES = ["rejected", "archived"];
-
 const ITEM_COLUMNS =
   "id, request_id, provider_id, block_id, block_name, quoted_price, vat_rate, commission_percentage, " +
   "commission_status, commission_basis, commission_invoice_id, invoiced_number, invoiced_amount, " +
@@ -216,7 +213,6 @@ export async function loadReconciliationInputs(
   const knownItemIds = new Set(rawItems.map((i) => i.id));
   const linkedItemIds = new Set<string>();
   for (const inv of rawInvoices) {
-    if (IGNORED_INVOICE_STATUSES.includes(inv.status ?? "")) continue;
     if (inv.item_id) linkedItemIds.add(inv.item_id);
     for (const id of allocMap.get(inv.id) ?? []) linkedItemIds.add(id);
   }
@@ -454,7 +450,6 @@ export async function loadReconciliationInputs(
   const allItems = [...items, ...accommodationItems];
 
   const invoices: ReconInvoiceInput[] = rawInvoices
-    .filter((i) => !IGNORED_INVOICE_STATUSES.includes(i.status ?? ""))
     .filter((i) => !i.request_id || !skipRequestIds.has(i.request_id))
     .map((i) => ({
       id: i.id,

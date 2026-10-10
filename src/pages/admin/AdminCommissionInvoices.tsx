@@ -151,7 +151,6 @@ export default function AdminCommissionInvoices() {
     queryClient.invalidateQueries({ queryKey: ["commission-invoices"] });
     queryClient.invalidateQueries({ queryKey: ["commission-invoice-mails"] });
     queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
-    queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
   };
 
   const withBusy = async (invoice: CommissionInvoiceView, where: string, fallback: string, work: () => Promise<void>) => {

@@ -69,7 +69,26 @@ detail: de regels met totalen, de bronnen als links naar project,
 logiesaanvraag of inkoopfactuur, de mails uit `email_log` (aan wie, wanneer,
 afgeleverd of geopend) en de Snelstart-status. Zoeken op nummer, partner,
 klant en projectreferentie; de regels in `src/lib/commissionInvoiceView.ts`
-met tests. Daarmee is fase 3 compleet; fase 4 (dood hout) volgt.
+met tests. Daarmee is fase 3 compleet.
+
+Fase 4 (dood hout, 7 oktober): de pro-forma-flow is weg
+(`process-completed-items`, `confirm-partner-commission`,
+`confirm-pending-commissions`, `PendingCommissionsCard`), net als
+`get-admin-commissions` en `update-commission-status` met de tabbladen
+Gefactureerd en Betaald, de "Verwacht"-weergave en de factuurdialoog op
+Commissies; die pagina is nu kop, partnerfilter en werklijst.
+`IGNORED_INVOICE_STATUSES` is weg. Het financieel dashboard leest commissie uit
+`commission_invoices` (gefactureerd, open, betaald, per status) en "te
+factureren" uit dezelfde reconciliatie als de werklijst; het partnerdashboard
+krijgt "commissiefactuur open" uit `get-partner-dashboard` (som van de
+verstuurde en doorgestuurde facturen aan die partner), omdat partners
+`commission_invoices` niet kunnen lezen. De snapshot-kopie van de commissie
+op een inkoopfactuur (`supplier_commission_excl_vat` vanuit
+`usePurchaseInvoices`) is weg; die kolom betekent alleen nog "door de
+leverancier verrekend" (Doeksen). De vijf functies moeten nog uit Supabase
+via `delete_functions` van de workflow "Deploy Supabase". Nog open uit fase 3:
+het partnerportaal (factuurregels lezen, commissiefacturen met PDF op
+Facturatie). Woordenlijst van de statussen: zie onder "Fase 4".
 
 ## Samenvatting
 
@@ -447,6 +466,21 @@ van het snapshot, zodat partner en bureau hetzelfde zien. Partners krijgen op
 Facturatie een lijst van hun commissiefacturen met PDF.
 
 ### Fase 4: dood hout (½ dag)
+
+Woordenlijst van de statussen zoals ze na fase 2 gelden:
+
+| Begrip | Betekenis |
+|---|---|
+| `commission_invoices.status = draft` | Concept: geen nummer, vrij te bewerken en te verwijderen; telt niet mee in totalen. Bronregels staan "In concept". |
+| `final` | Definitief: nummer uit de maandreeks, PDF opgeslagen, kop en regels bevroren; nog niet gemaild. |
+| `sent` | Verstuurd aan de partner (mail met PDF); opnieuw versturen wisselt de status niet. |
+| `forwarded` | Doorgestuurd naar Snelstart (mail met PDF aan de boekhouding). |
+| `paid` | Betaald door de partner; bronregels worden `paid`. |
+| `credited` | Gecrediteerd: er bestaat een creditnota (eigen nummer, negatieve regels, `credits_invoice_id` wijst terug); bronregels zijn weer vrij. |
+| `commission_invoice_id` op onderdeel, offerte of losse inkoopfactuur | De enige koppeling met een factuur; gezet bij "Concept opslaan", gewist bij verwijderen of crediteren. |
+| `commission_status` op de bron | Afgeleid door een trigger: `pending` (niet of niet meer gefactureerd), `invoiced`, `paid`, of `not_applicable` (commissievrij). `pending_confirmation` en `confirmed` bestaan niet meer. |
+| Werklijsttegels | Te factureren, In concept, Verwacht (project nog niet geweest), Afwijkingen (zicht op Te factureren: partner factureerde meer dan wij verkochten), Zonder grondslag, Commissievrij. |
+| `supplier_commission_excl_vat` op een inkoopfactuur | Alleen nog "door de leverancier verrekende commissie" (Doeksen, gezet door `finalize-collective-invoice`); niet langer een kopie van onze commissie. |
 
 - Weg: `process-completed-items`, `confirm-partner-commission`,
   `confirm-pending-commissions`, `PendingCommissionsCard`, de "expected"-tak van

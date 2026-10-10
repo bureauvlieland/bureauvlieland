@@ -195,6 +195,11 @@ export interface PartnerDashboardData {
     closed: number;
     total: number;
   };
+  /** Commissiefacturen van het bureau aan deze partner die nog openstaan (verstuurd of doorgestuurd). */
+  openCommissionInvoices?: {
+    count: number;
+    amountInclVat: number;
+  };
 }
 
 export interface PartnerAccommodationQuote {

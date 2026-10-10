@@ -143,9 +143,9 @@ const PartnerDashboardContent = () => {
     const ytdQuotes = (data.accommodationQuotes ?? [])
       .filter(q => q.status === "selected" && q.invoiced_date && new Date(q.invoiced_date).getFullYear() === y)
       .reduce((s, q) => s + (q.invoiced_amount || 0), 0);
-    const pending = data.items
-      .filter(i => i.commission_status === "pending")
-      .reduce((s, i) => s + (i.commission_amount || 0), 0);
+    // Open commissie = de commissiefacturen van het bureau die de partner nog
+    // moet betalen; komt uit get-partner-dashboard (commission_invoices).
+    const pending = data.openCommissionInvoices?.amountInclVat ?? 0;
     return { ytdRevenue: ytdItems + ytdQuotes, pendingCommission: pending };
   }, [data]);
 

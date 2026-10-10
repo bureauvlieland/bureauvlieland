@@ -168,37 +168,6 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           toast.error("Factuur opgeslagen, maar verdeling per onderdeel niet — controleer handmatig");
         }
       }
-      // Snapshot supplier commission on the invoice header based on linked item(s).
-      if (data?.id) {
-        try {
-          const itemIds: string[] = allocations && allocations.length > 0
-            ? Array.from(new Set(allocations.map((a: any) => a.item_id).filter(Boolean)))
-            : (invoiceData.item_id ? [invoiceData.item_id] : []);
-          if (itemIds.length > 0) {
-            const { data: items } = await supabase
-              .from("program_request_items")
-              .select("id, commission_amount")
-              .in("id", itemIds);
-            const commSum = (items || []).reduce(
-              (s: number, i: any) => s + Number(i.commission_amount || 0),
-              0,
-            );
-            if (commSum > 0) {
-              await supabase
-                .from("partner_purchase_invoices")
-                .update({
-                  supplier_commission_excl_vat: Number(commSum.toFixed(2)),
-                  supplier_commission_vat: Number((commSum * 0.21).toFixed(2)),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("id", data.id);
-            }
-          }
-        } catch (e) {
-          console.warn("Kon commissie-snapshot niet opslaan:", e);
-        }
-      }
-
       return data;
     },
     onSuccess: () => {

@@ -183,3 +183,42 @@ in een edge function valt dus pas op bij het draaien (de commissiecontrole
 stond van 6 tot 21 september op een `ReferenceError`). Laat een test de code
 echt uitvoeren, zoals `_shared/commissionReconciliationData.test.ts` met een
 nep-client doet, of draai `deno check` op de functie voordat je pusht.
+
+## Valkuil: commissiefacturen zijn na "Definitief maken" bevroren
+
+Een commissiefactuur (`commission_invoices` met regels in
+`commission_invoice_lines`) is alleen als concept vrij te bewerken. Zodra hij
+definitief is, bewaken twee triggers de tabel: `guard_commission_invoice_lifecycle`
+(geen verwijderen van een niet-concept, nummer onveranderlijk, alleen de
+overgangen `draft → final → sent → forwarded → paid` en `final/sent/forwarded →
+credited`, bedragen en ontvanger bevroren) en `guard_commission_invoice_lines_frozen`
+(regels van een definitieve factuur zijn onaantastbaar). Een datamigratie die
+"even" een bedrag of regel corrigeert op een definitieve factuur faalt daarom
+met een duidelijke melding. Dat is de bedoeling: corrigeer via `credit_commission_invoice`
+(creditnota plus nieuwe factuur), niet met een `UPDATE`.
+
+Het factuurnummer komt uit `commission_invoice_sequences` via
+`next_commission_invoice_number(datum)`: één rij per maand (`BVC-JJMM-NNNN`),
+vergrendeld met `INSERT … ON CONFLICT … FOR UPDATE`. Zet nooit handmatig een
+nummer in `invoice_number` en reset de reeks niet; een gat in de reeks is
+geen probleem, een dubbel nummer wel.
+
+De koppeling tussen factuur en bron is `commission_invoice_id` op
+`program_request_items`, `accommodation_quotes` en `partner_purchase_invoices`.
+`commission_status` op die bronnen is afgeleid: de trigger
+`sync_commission_sources_from_invoice` zet hem op `invoiced`, `paid` of terug
+op `pending` wanneer de factuurstatus verandert. Schrijf `commission_status`
+dus niet zelf in een migratie of edge function; zet of wis `commission_invoice_id`
+via de databasefuncties (`save_commission_invoice_draft`,
+`delete_commission_invoice_draft`, `credit_commission_invoice`). Partners kunnen
+de kolom niet aanraken: de bestaande partner-guards weigeren elke wijziging
+(een kolom-`REVOKE` werkt niet tegen de tabelbrede `authenticated`-grant).
+
+De oude pro-forma-flow is in fase 4 van `docs/plan-commissiefacturen.md`
+verwijderd (`process-completed-items`, `confirm-partner-commission`,
+`confirm-pending-commissions`, `get-admin-commissions`,
+`update-commission-status`). Verwijderen uit de repo haalt een functie niet
+uit Supabase; geef de namen mee aan de `delete_functions`-invoer van de
+workflow "Deploy Supabase" (zie boven). De statussen `pending_confirmation`
+en `confirmed` op `commission_status` komen niet meer voor; alleen `pending`,
+`invoiced`, `paid` en `not_applicable`.
