@@ -1,7 +1,9 @@
 # Plan: het ontwerpsysteem in het klantportaal
 
 Status: onderzoek en voorstel, 1 oktober 2026; besluiten genomen door
-Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Vraag van
+Erwin op 1 oktober 2026 (alle aanbevelingen, zie onderaan). Fase 0 tot en
+met 3 zijn gebouwd (1 en 10 oktober, zie de voortgang per fase); fase 4
+(borging) is nog te doen. Vraag van
 Erwin: breng de ontwerptaal van de site door in het klantportaal ("Uw
 programma", de vernieuwde klantomgeving), met de bruikbaarheid voorop; de
 dagtabs van een meerdaags programma zijn "niet heel duidelijk". De bouw
@@ -486,6 +488,70 @@ deelnemersweergave op `CustomerTimeline`, en de beta-banner.
 Logies, Praktisch, Facturatie (met landveld) en Akkoord op de nieuwe
 schil; de deelnemersweergave op dezelfde dagbalk en kaart; de beta-banner
 weg.
+
+*Deel a (Facturatie en Akkoord) gebouwd op 10 oktober, eigen PR.* De
+facturatiedialoog is een `BillingDetailsSheet` op `ResponsiveSheetContent`
+(van onderen op een telefoon) met `FormField`s, een landveld en validatie
+per land: de regels voor postcode, btw-nummer en ondernemingsnummer (KvK,
+Belgisch ondernemingsnummer, Handelsregister, SIREN, Company number) staan
+in `src/lib/billingDetails.ts` met tests, fouten verschijnen bij het
+verlaten van het veld, en `isBillingComplete` is de ene bron voor
+"Compleet" (ook in `customerPortalStatus`). Migratie `20261010140000`
+voegt `billing_country` toe (ISO-2, standaard NL); de edge function, de
+mail aan Erwin en de factuur-pdf in de admin nemen het land mee als het
+niet Nederland is. De kaart met gegevens toont een `Pill` uit de
+woordenlijst (Aanvullen / Compleet), leeg is een `EmptyState` met één
+primaire knop. Akkoord: één `Notice` met de stand (u bent aan zet, de
+aanbieder is aan zet met de open onderdelen, of nog niet aan de orde), de
+ondertekenkaart zonder tint met de blokkade "eerst uw facturatiegegevens"
+als `Notice`, de naam als `FormField` en één primaire knop "Ondertekenen"
+of "Ondertekenen onder voorbehoud"; na ondertekenen een `SuccessScreen` in
+de pagina ("Uw boeking is definitief" of "Ondertekend onder voorbehoud"
+met de open onderdelen), de ondertekening met de voorwaarden als gewone
+kaart, en waar de facturen staan als `Notice`. De gedachtestreepjes in
+deze bestanden zijn weg. Het demoprogramma (besluit 7) is nog niet
+gemaakt: dat raakt de productiedatabase en de mails; beoordelen kan met
+een bestaand programma. Blijft voor deel b: Overzicht, Logies, Praktisch;
+deel c: de deelnemersweergave, de beta-banner en de overige copy.
+
+*Deel b (Overzicht, Logies, Praktisch) gebouwd op 10 oktober, eigen PR.*
+Overzicht: foto's, welkom met de feiten, de stand als één `Notice` met de
+volgende stap en een werkende knop (naar het juiste tabblad), de drie
+stappen op de `Stepper` van het systeem, één primaire knop "Programma
+beoordelen" en delen als `outline`. De stappenlogica staat in
+`src/lib/customerPortalSteps.ts` (`portalSteps`, `currentPortalStep`,
+`nextPortalStep`, met tests) en wordt ook door `ProgramView` gebruikt;
+`ProgramStepper` (748 regels, met het percentage) is weg. Logies: per
+toestand één kaart met één `Pill` uit de woordenlijst (Aangevraagd, Kies
+uw logies, Gekozen, Bevestigd, Geen beschikbaarheid), zonder tint en
+zonder kaart-in-kaart: de gekozen accommodatie met prijs, verzorging en
+kamerindeling bovenaan, de acties (kamers en verzorging, datum of aantal,
+verblijfsoverzicht) als knoppen bij de kaart, en de informatie over de
+accommodatie (foto's, tekst, inbegrepen, adres en contact, kaart en route,
+voorwaarden) in één uitklapper; "Open in Google Maps" is `outline`; geen
+aanvraag is een `EmptyState` met één knop; verlopen is een `Notice`; de
+offertekaart gebruikt `Pill` in plaats van `Badge`. Praktisch: groep en
+wensen als sheet van onderen met `FormField`s en een `Notice`, de kaart
+met "Compleet" of "Aanvullen" en "Bewerken" als `outline`, tickets met een
+`Pill`, en "Programma bewaren" belooft wat de knoppen geven (Word en
+agenda). Blijft voor deel c: de deelnemersweergave, de beta-banner en de
+overige copy.
+
+*Deel c (deelnemersweergave, banner, copy) gebouwd op 10 oktober, zelfde
+PR.* De deelnemersweergave (`ParticipantView`) staat op `PortalTabs` (vanaf
+`md`) en op een telefoon op de onderbalk `MobileBottomNav`, die nu echt
+de weergave schakelt (de pagina stuurde eerder een toestand aan die de
+weergave niet las); het programma is één doorlopende tijdlijn met de
+`DayBar` (plakkend, vinkje per dag, "vandaag" tijdens het verblijf) en
+dagkoppen "Donderdag 5 november · dag 1 van 2 · 4 onderdelen", met de
+nieuwe `ParticipantItemCard`: dezelfde opbouw als de onderdeelkaart van de
+klant (tijd met het soort tijd, titel, aanbieder en plek), zonder status,
+prijs en acties, alleen "Route" en de uitleg onder "Details". De eigen
+eyebrows en `Badge`s in Vandaag, Kaart en de deelnemerspagina zijn `Pill`s
+en gewone labels. De beta-banner is weg, met de instelling
+`portal_beta_banner_enabled` (migratie `20261010160000`). De
+gedachtestreepjes in de klantteksten zijn weg; wat overblijft staat in
+codecommentaar. Daarmee is fase 3 compleet; fase 4 (borging) volgt.
 
 **Fase 4: borging (1 dag).** De baseline per bestand en
 `DESIGN_DEBT_MAX` omlaag; de visuele test met een vaste opname van één

@@ -142,7 +142,7 @@ export const HotelLocationMap = ({ lat, lng, label, address }: HotelLocationMapP
           {userPos ? "Locatie bijwerken" : "Toon route vanaf mijn locatie"}
         </Button>
         <a href={directionsUrl} target="_blank" rel="noreferrer">
-          <Button size="sm" variant="default">
+          <Button size="sm" variant="outline">
             <Navigation className="h-4 w-4 mr-2" />
             Open in Google Maps
           </Button>

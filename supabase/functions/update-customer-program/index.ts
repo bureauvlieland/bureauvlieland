@@ -50,6 +50,8 @@ interface BillingDetailsUpdate {
   billing_address_street: string;
   billing_address_postal: string;
   billing_address_city: string;
+  /** ISO 3166-1 alpha-2; ontbreekt bij oude clients, dan NL. */
+  billing_country?: string;
   billing_contact_name: string;
   billing_contact_email: string;
   billing_reference: string;
@@ -628,6 +630,7 @@ Deno.serve(async (req) => {
           billing_address_street: billingDetails.billing_address_street,
           billing_address_postal: billingDetails.billing_address_postal,
           billing_address_city: billingDetails.billing_address_city,
+          billing_country: /^[A-Za-z]{2}$/.test(billingDetails.billing_country ?? "") ? billingDetails.billing_country!.toUpperCase() : "NL",
           billing_contact_name: billingDetails.billing_contact_name,
           billing_contact_email: billingDetails.billing_contact_email,
           billing_reference: billingDetails.billing_reference,
@@ -1404,7 +1407,7 @@ Deno.serve(async (req) => {
             <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_company_name || "-")}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>KvK:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_kvk_number || "-")}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>BTW:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_vat_number || "-")}</td></tr>
-            <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}</td></tr>
+            <tr><td style="padding: 4px 0;"><strong>Adres:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_address_street || "-")}, ${sanitizeHtml(updatedProgram?.billing_address_postal || "")} ${sanitizeHtml(updatedProgram?.billing_address_city || "")}${updatedProgram?.billing_country && updatedProgram.billing_country !== "NL" ? ` (${sanitizeHtml(updatedProgram.billing_country)})` : ""}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Contactpersoon:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_name || "-")}</td></tr>
             <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(updatedProgram?.billing_contact_email || program.customer_email)}</td></tr>
             ${updatedProgram?.billing_reference ? `<tr><td style="padding: 4px 0;"><strong>Referentie:</strong></td><td>${sanitizeHtml(updatedProgram.billing_reference)}</td></tr>` : ""}

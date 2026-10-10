@@ -3710,6 +3710,7 @@ export type Database = {
           billing_address_street: string | null
           billing_company_name: string | null
           billing_contact_email: string | null
+          billing_country: string
           billing_contact_name: string | null
           billing_kvk_number: string | null
           billing_reference: string | null
@@ -3786,6 +3787,7 @@ export type Database = {
           billing_address_street?: string | null
           billing_company_name?: string | null
           billing_contact_email?: string | null
+          billing_country?: string
           billing_contact_name?: string | null
           billing_kvk_number?: string | null
           billing_reference?: string | null
@@ -3862,6 +3864,7 @@ export type Database = {
           billing_address_street?: string | null
           billing_company_name?: string | null
           billing_contact_email?: string | null
+          billing_country?: string
           billing_contact_name?: string | null
           billing_kvk_number?: string | null
           billing_reference?: string | null
