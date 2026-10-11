@@ -190,7 +190,9 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
 
 Het klantportaal ("Uw programma", `/programma/<token>`) en de
 deelnemersweergave staan op dezelfde tokens en componenten als de site,
-met `data-surface="portal"`. Wat er bovenop komt, staat in
+met `data-surface="public"` (de oranje actiekleur, besluit 4 van het
+klantportaalplan; alleen admin en partners zijn `portal`, blauw). Wat er
+bovenop komt, staat in
 `src/components/customer-portal`:
 
 | Onderdeel | Gebruik | Niet |
