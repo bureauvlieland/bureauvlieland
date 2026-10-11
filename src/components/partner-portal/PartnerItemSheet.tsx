@@ -55,6 +55,7 @@ import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBad
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
 import { PartnerCustomQuoteEditor } from "./PartnerCustomQuoteEditor";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
@@ -178,9 +179,6 @@ export const PartnerItemSheet = ({
     !item.invoiced_number &&
     item.status !== "cancelled" &&
     item.status !== "executed";
-
-  const formatEur = (n: number) =>
-    n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handleAcceptNewAdminPrice = async () => {
     if (adminTotal == null) return;
@@ -636,7 +634,7 @@ export const PartnerItemSheet = ({
                     <div className="flex items-center gap-2">
                       <Euro className="h-4 w-4 text-primary" />
                       <span className="font-semibold text-lg">
-                        €{adminTotal.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatEuro(adminTotal)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -657,7 +655,7 @@ export const PartnerItemSheet = ({
                         ) : (
                           <CheckCircle className="h-4 w-4 mr-2" />
                         )}
-                        Bevestig nieuwe prijs (€{formatEur(adminTotal)})
+                        Bevestig nieuwe prijs ({formatEuro(adminTotal)})
                       </Button>
                       <Button
                         variant="outline"
@@ -773,12 +771,12 @@ export const PartnerItemSheet = ({
                     <div className="flex items-center gap-2">
                       <Euro className="h-4 w-4 text-green-600" />
                       <span className="text-green-700 dark:text-green-400 font-semibold text-lg">
-                        €{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatEuro(item.quoted_price)}
                       </span>
                     </div>
                     {expectedCommission && !item.invoiced_number && (
                       <span className="text-xs text-muted-foreground">
-                        Commissie: €{expectedCommission.toFixed(2)}
+                        Commissie: {formatEuro(expectedCommission)}
                       </span>
                     )}
                   </div>
@@ -808,7 +806,7 @@ export const PartnerItemSheet = ({
                     <div className="flex items-center gap-2 text-sm">
                       <Euro className="h-4 w-4 text-amber-600" />
                       <span className="font-medium">Voorgestelde prijs:</span>
-                      <span>€{item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span>{formatEuro(item.quoted_price)}</span>
                     </div>
                   )}
                   {item.status_note && (
@@ -904,11 +902,11 @@ export const PartnerItemSheet = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Bedrag incl. BTW:</span>
-                        <span className="font-medium">€{inclVat.toFixed(2)}</span>
+                        <span className="font-medium">{formatEuro(inclVat)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Excl. BTW · BTW {vatRate}%:</span>
-                        <span>€{exclVat.toFixed(2)} · €{vatAmount.toFixed(2)}</span>
+                        <span>{formatEuro(exclVat)} · {formatEuro(vatAmount)}</span>
                       </div>
                       {item.invoiced_date && (
                         <div className="flex justify-between">
@@ -920,7 +918,7 @@ export const PartnerItemSheet = ({
                         <div className="pt-2 border-t">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Commissie ({item.commission_percentage}% over excl. BTW):</span>
-                            <span className="font-medium">€{item.commission_amount.toFixed(2)}</span>
+                            <span className="font-medium">{formatEuro(item.commission_amount)}</span>
                           </div>
                         </div>
                       )}

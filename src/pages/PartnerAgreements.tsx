@@ -41,7 +41,7 @@ function PartnerAgreementsContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Afspraken</h1>
         <p className="mt-1 text-sm text-muted-foreground">

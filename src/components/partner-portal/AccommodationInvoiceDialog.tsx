@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Euro, FileText, Calendar } from "lucide-react";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface AccommodationInvoiceDialogProps {
   isOpen: boolean;
@@ -96,7 +97,7 @@ export const AccommodationInvoiceDialog = ({
 
       toast({
         title: "Factuur geregistreerd",
-        description: `Commissie van €${data.commission.amount.toFixed(2)} wordt berekend`,
+        description: `Commissie van ${formatEuro(data.commission.amount)} wordt berekend`,
       });
 
       onSuccess();
@@ -141,11 +142,11 @@ export const AccommodationInvoiceDialog = ({
             </div>
             {parsedIncl > 0 && (
               <p className="text-xs text-muted-foreground">
-                Excl. BTW: €{parsedExcl.toFixed(2)} · BTW {rate}%: €{vatAmount.toFixed(2)}
+                Excl. BTW: {formatEuro(parsedExcl)} · BTW {rate}%: {formatEuro(vatAmount)}
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              Oorspronkelijk offertebedrag incl. BTW: €{initialIncl.toFixed(2)}
+              Oorspronkelijk offertebedrag incl. BTW: {formatEuro(initialIncl)}
             </p>
           </div>
 
@@ -183,7 +184,7 @@ export const AccommodationInvoiceDialog = ({
               <span className="text-muted-foreground">
                 Commissie ({commissionPercentage}% over excl. BTW):
               </span>
-              <span className="font-medium">€{calculatedCommission.toFixed(2)}</span>
+              <span className="font-medium">{formatEuro(calculatedCommission)}</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Bureau Vlieland factureert deze commissie na afloop van het verblijf.

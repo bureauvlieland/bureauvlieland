@@ -2,6 +2,7 @@ import { TrendingUp, ArrowRight } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { formatEuroRounded } from "@/lib/formatEuro";
 
 interface PartnerYtdModuleProps {
   ytdRevenue: number;
@@ -27,15 +28,11 @@ export const PartnerYtdModule = ({
             <div>
               <p className="text-sm text-muted-foreground">YTD Omzet</p>
               <p className="text-2xl font-bold">
-                €
-                {ytdRevenue.toLocaleString("nl-NL", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
+                {formatEuroRounded(ytdRevenue)}
               </p>
               {pendingCommission > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  €{pendingCommission.toFixed(0)} commissiefactuur open
+                  {formatEuroRounded(pendingCommission)} commissiefactuur open
                 </p>
               )}
             </div>

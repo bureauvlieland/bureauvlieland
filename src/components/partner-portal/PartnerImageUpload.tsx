@@ -86,8 +86,8 @@ export function PartnerImageUpload({
     } catch (err) {
       reportError(err, { where: "PartnerImageUpload: Upload error" });
       toast({
-        title: "Fout",
-        description: "Er ging iets mis bij het uploaden.",
+        title: "Foto niet geüpload",
+        description: "Er ging iets mis bij het uploaden. Probeer het opnieuw.",
         variant: "destructive",
       });
     } finally {

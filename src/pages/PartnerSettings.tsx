@@ -6,7 +6,7 @@ const PartnerSettings = () => {
   return (
     <PartnerLayout>
       <Helmet>
-        <title>Instellingen | Partner Portal | Bureau Vlieland</title>
+        <title>Instellingen | Partnerportaal | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 

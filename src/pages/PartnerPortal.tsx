@@ -27,7 +27,7 @@ const PartnerPortal = () => {
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
       <Helmet>
-        <title>Partner Portal | Bureau Vlieland</title>
+        <title>Werkbank | Partnerportaal | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
@@ -48,12 +48,12 @@ const PartnerPortal = () => {
               </div>
               <CardTitle className="text-2xl">Toegang gewijzigd</CardTitle>
               <CardDescription>
-                De Partner Portal werkt nu met een beveiligde login
+                Het partnerportaal werkt nu met een beveiligde login
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                Voor extra veiligheid hebben we de toegang tot de Partner Portal aangepast. 
+                Voor extra veiligheid hebben we de toegang tot het partnerportaal aangepast. 
                 Je kunt nu inloggen met je emailadres en wachtwoord.
               </p>
               

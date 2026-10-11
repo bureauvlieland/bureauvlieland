@@ -12,17 +12,27 @@ import { Label } from "@/components/ui/label";
 import { Upload, File, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { PartnerItem } from "@/types/partner";
 import { reportError } from "@/lib/errorReporting";
+import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
+
+/**
+ * Waar de pdf bij hoort: een onderdeel (activiteit) of een logiesofferte.
+ * Bij een onderdeel schrijft de partner het pad zelf (RLS); bij logies
+ * beschermt een trigger het veld, dus dat gaat via
+ * attach-accommodation-invoice-pdf met het partnertoken.
+ */
+export type UploadPdfTarget =
+  | { kind: "item"; item: PartnerItem }
+  | { kind: "accommodation"; quote: PartnerAccommodationQuote; partnerToken: string };
 
 interface UploadInvoicePdfPartnerDialogProps {
-  item: PartnerItem | null;
+  target: UploadPdfTarget | null;
   onClose: () => void;
   onUploaded?: () => void;
 }
 
 export function UploadInvoicePdfPartnerDialog({
-  item,
+  target,
   onClose,
   onUploaded,
 }: UploadInvoicePdfPartnerDialogProps) {
@@ -30,7 +40,11 @@ export function UploadInvoicePdfPartnerDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!item) return null;
+  if (!target) return null;
+  const label =
+    target.kind === "item"
+      ? { invoiceNumber: target.item.invoiced_number, subject: target.item.block_name }
+      : { invoiceNumber: target.quote.invoiced_number, subject: `logies ${target.quote.accommodation_name}` };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -52,45 +66,54 @@ export function UploadInvoicePdfPartnerDialog({
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !item) return;
+    if (!selectedFile || !target) return;
     setIsSubmitting(true);
     try {
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${item.provider_id}/${item.request_id}/${item.id}-${Date.now()}.${fileExt}`;
-
+      // De map is altijd de partner zelf: de opslagregels staan alleen uploads in de eigen map toe.
+      const fileName =
+        target.kind === "item"
+          ? `${target.item.provider_id}/${target.item.request_id}/${target.item.id}-${Date.now()}.pdf`
+          : `${target.quote.partner_id}/${target.quote.request_id}/${target.quote.id}-${Date.now()}.pdf`;
       const { error: uploadError } = await supabase.storage
         .from("partner-invoices")
         .upload(fileName, selectedFile);
       if (uploadError) throw uploadError;
 
-      // Update purchase invoice row (RLS: partner can update own)
-      const { error: invErr } = await supabase
-        .from("partner_purchase_invoices")
-        .update({ file_path: fileName, updated_at: new Date().toISOString() })
-        .eq("item_id", item.id)
-        .is("file_path", null);
-      if (invErr) throw invErr;
-
-      // Update item link
-      const { error: itemErr } = await supabase
-        .from("program_request_items")
-        .update({ invoiced_file_path: fileName, updated_at: new Date().toISOString() })
-        .eq("id", item.id);
-      if (itemErr) throw itemErr;
+      if (target.kind === "item") {
+        // Update purchase invoice row (RLS: partner can update own)
+        const { error: invErr } = await supabase
+          .from("partner_purchase_invoices")
+          .update({ file_path: fileName, updated_at: new Date().toISOString() })
+          .eq("item_id", target.item.id)
+          .is("file_path", null);
+        if (invErr) throw invErr;
+        // Update item link
+        const { error: itemErr } = await supabase
+          .from("program_request_items")
+          .update({ invoiced_file_path: fileName, updated_at: new Date().toISOString() })
+          .eq("id", target.item.id);
+        if (itemErr) throw itemErr;
+      } else {
+        const { data, error: attachErr } = await supabase.functions.invoke("attach-accommodation-invoice-pdf", {
+          body: { quoteId: target.quote.id, partnerToken: target.partnerToken, filePath: fileName },
+        });
+        if (attachErr) throw attachErr;
+        if (data?.error) throw new Error(data.error);
+      }
 
       toast.success("PDF toegevoegd aan factuur");
       onUploaded?.();
       handleClose();
     } catch (err) {
       reportError(err, { where: "UploadInvoicePdfPartnerDialog: Upload error" });
-      toast.error("Fout bij uploaden PDF");
+      toast.error(err instanceof Error && err.message ? `PDF niet toegevoegd: ${err.message}` : "PDF niet toegevoegd. Probeer het opnieuw.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={!!item} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={!!target} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -98,7 +121,7 @@ export function UploadInvoicePdfPartnerDialog({
             PDF toevoegen aan factuur
           </DialogTitle>
           <DialogDescription>
-            Factuur{item.invoiced_number ? ` ${item.invoiced_number}` : ""} voor {item.block_name}
+            Factuur{label.invoiceNumber ? ` ${label.invoiceNumber}` : ""} voor {label.subject}
           </DialogDescription>
         </DialogHeader>
 

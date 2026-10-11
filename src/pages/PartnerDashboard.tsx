@@ -174,7 +174,7 @@ const PartnerDashboardContent = () => {
   return (
     <div className="p-6 space-y-5">
       <Helmet>
-        <title>Partner Portal | Bureau Vlieland</title>
+        <title>Werkbank | Partnerportaal | Bureau Vlieland</title>
       </Helmet>
 
       <div className="flex flex-wrap items-end justify-between gap-3">

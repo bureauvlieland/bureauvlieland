@@ -334,7 +334,8 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
         
         <div className="flex-1 flex flex-col">
           {/* Mobile header */}
-          <header className="h-14 border-b flex items-center px-4 lg:hidden">
+          {/* Kopbalk alleen op een telefoon: vanaf md staat de zijbalk zelf in beeld (use-mobile, 768px). */}
+          <header className="h-14 border-b flex items-center px-4 md:hidden">
             {isImpersonating && (
               <Badge variant="outline" className="mr-2 bg-warning-soft text-warning border-warning/30">
                 <ShieldCheck className="h-3 w-3 sm:mr-1" />

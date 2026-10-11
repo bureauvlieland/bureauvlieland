@@ -121,7 +121,7 @@ const PartnerResetPassword = () => {
     } catch (err) {
       reportError(err, { where: "PartnerResetPassword: Password update error" });
       toast({
-        title: "Fout",
+        title: "Wachtwoord niet gewijzigd",
         description: "Kon wachtwoord niet wijzigen. Probeer het opnieuw.",
         variant: "destructive",
       });
@@ -205,7 +205,7 @@ const PartnerResetPassword = () => {
         clearTimeout(timeoutId);
         reportError(err, { where: "PartnerResetPassword: Resend reset error" });
         toast({
-          title: "Fout",
+          title: "Geen nieuwe link verstuurd",
           description: "Kon geen nieuwe link versturen. Neem contact op met Bureau Vlieland.",
           variant: "destructive",
         });

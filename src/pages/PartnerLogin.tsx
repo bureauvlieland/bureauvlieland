@@ -181,8 +181,8 @@ const PartnerLogin = () => {
       clearTimeout(timeoutId);
       reportError(err, { where: "PartnerLogin: Password reset error" });
       toast({
-        title: "Fout",
-        description: "Kon geen reset email verzenden. Probeer het opnieuw of neem contact op met Bureau Vlieland.",
+        title: "Geen e-mail verstuurd",
+        description: "Kon geen e-mail versturen om uw wachtwoord opnieuw in te stellen. Probeer het opnieuw of neem contact op met Bureau Vlieland.",
         variant: "destructive",
       });
     } finally {
@@ -214,7 +214,7 @@ const PartnerLogin = () => {
         <div className="w-full max-w-md">
           <Card>
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Partner Portal</CardTitle>
+              <CardTitle className="text-2xl">Partnerportaal</CardTitle>
               <CardDescription>
                 Log in om je aanvragen te beheren
               </CardDescription>

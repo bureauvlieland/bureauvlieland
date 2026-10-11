@@ -55,9 +55,7 @@ interface Props {
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
-
-const formatEur = (n: number) =>
-  n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { formatEuro } from "@/lib/formatEuro";
 
 export const PartnerProjectItemRow = ({
   item,
@@ -244,7 +242,7 @@ export const PartnerProjectItemRow = ({
               </span>
             )}
             {lineTotal != null && (
-              <span className="font-medium text-foreground">€{formatEur(lineTotal)}</span>
+              <span className="font-medium text-foreground">{formatEuro(lineTotal)}</span>
             )}
           </div>
         </div>
@@ -362,7 +360,7 @@ export const PartnerProjectItemRow = ({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex-1 text-sm">
               <p className="font-medium text-amber-900 dark:text-amber-200">
-                Nieuwe prijs voorgesteld: €{formatEur(adminTotal)}
+                Nieuwe prijs voorgesteld: {formatEuro(adminTotal)}
               </p>
               {item.admin_price_notes && (
                 <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">

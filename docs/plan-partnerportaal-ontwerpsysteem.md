@@ -1,7 +1,8 @@
 # Plan: het ontwerpsysteem in het partnerportaal
 
-Status: onderzoek en voorstel, 11 oktober 2026; wacht op de besluiten van
-Erwin (zie "Besluiten gevraagd"). Vraag van Erwin: na het klantportaal
+Status: onderzoek en voorstel, 11 oktober 2026; besluiten genomen door
+Erwin op 11 oktober 2026 (alle aanbevelingen, zie "Besluiten"). Fase 0
+gebouwd op 11 oktober (zie de voortgang per fase). Vraag van Erwin: na het klantportaal
 (`plan-klantportaal-ontwerpsysteem.md`, afgerond 10 oktober) het
 partnerportaal op het ontwerpsysteem brengen. De bouw volgt per fase, elke
 fase als eigen PR met preview.
@@ -403,6 +404,29 @@ Portal" wordt "Partnerportaal" in alle titels; de logiesfactuur krijgt
 pdf-upload zodat de banner "pdf ontbreekt" eerlijk telt; "Failed" en "Fout" als toasttitel worden
 Nederlandse zinnen; bedragen op één formatter.
 
+*Gebouwd op 11 oktober, eigen PR.* "Ga naar facturen" wijst naar
+`/partner/facturatie?tab=invoiced` (met `impersonate` als die er is) en
+de tabs van Facturatie staan in de URL. De menuknop heet "Menu" en de
+rail "Zijbalk in- of uitklappen" (`ui/sidebar.tsx`, dus ook in admin);
+de kopbalk van het partnerportaal verdwijnt vanaf `md`, waar de zijbalk
+zelf in beeld komt. Afspraken heeft dezelfde padding als de rest. Elke
+pagina heeft een `Helmet` en heet "… | Partnerportaal | Bureau Vlieland";
+de login en de oude token-landing zeggen "Partnerportaal". De
+logiesfactuur krijgt "PDF toevoegen" en "PDF ontbreekt" in Facturatie,
+net als een onderdeel; omdat de trigger
+`protect_partner_accommodation_quote_fields` het pad bij een
+partner-update terugzet, koppelt de nieuwe edge function
+`attach-accommodation-invoice-pdf` het (partnertoken, eigen map, factuur
+geregistreerd, bestand bestaat; negen Deno-tests). De uploaddialoog
+bedient beide soorten (`UploadPdfTarget`). Zeventien toasts met als
+titel "Fout" zeggen nu wat er niet lukte ("Offerte niet ingediend",
+"Gegevens niet opgeslagen"), en de drie "Failed"-terugvallen zijn
+Nederlands. Bedragen gaan door `formatEuro` in `src/lib/formatEuro.ts`
+("€ 1.234,56"; `formatEuroRounded` voor de jaarcijfers), op 46 plekken
+in 14 bestanden; de csv-export en de invoervelden houden hun eigen
+notatie. Bewust niet in fase 0: de bucket-namen en de kaartopmaak van
+Facturatie (fase 3).
+
 **Fase 1: fundament (2 dagen).** `usePartnerPortal()` als enige
 datalaag (sessie, impersonatie, `get-partner-dashboard`, `refetch`), de
 vier kopieën weg; `PartnerLayout` op de tokens met één breekpunt en de
@@ -485,6 +509,23 @@ echte partner (impersonatie) op desktop en telefoon.
 10. **Toastsysteem:** `useToast` (de site en het klantportaal) of
     sonner (de helft van het partnerportaal)? Aanbevolen `useToast`,
     omdat de rest van de code daarop staat.
+
+## Besluiten (genomen door Erwin, 11 oktober 2026)
+
+Alle tien aanbevelingen zijn overgenomen:
+
+1. De zijbalk blijft; geen `PortalTabs`.
+2. Blauw blijft de actiekleur van het partnerportaal.
+3. Eén reactieflow via de sheet; de rij toont de status en één knop.
+4. De projectpagina krijgt de dagindeling van de klant.
+5. Werkbank en Projecten worden twee routes; de jaarcijfers gaan naar
+   Facturatie.
+6. De u-vorm overal, ook in de tooltips.
+7. Instellingen en Profiel krijgen elk één opslaanknop.
+8. Een verzonnen partner in de code (`demoPartnerportaal.ts`) voor
+   previews en de visuele test; geen testpartner in productie.
+9. Eén factuurdialoog voor onderdelen en logies, met pdf voor allebei.
+10. `useToast` als het ene toastsysteem.
 
 ## Meetpunten
 

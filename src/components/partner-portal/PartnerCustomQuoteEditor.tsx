@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Loader2, FileText, Send } from "lucide-react";
 import { computeQuoteLineTotals, isValidLine, type QuoteLine } from "@/lib/customQuoteLines";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface Props {
   itemId: string;
@@ -208,7 +209,7 @@ export function PartnerCustomQuoteEditor({ itemId, partnerId, briefing, onSubmit
                 </div>
               </div>
               <div className="text-xs text-right text-muted-foreground">
-                Regeltotaal: €{(line.quantity * line.unit_price_incl_vat).toFixed(2).replace(".", ",")} incl.
+                Regeltotaal: {formatEuro(line.quantity * line.unit_price_incl_vat)} incl.
               </div>
             </div>
           ))}
@@ -218,15 +219,15 @@ export function PartnerCustomQuoteEditor({ itemId, partnerId, briefing, onSubmit
       <div className="rounded-lg border bg-muted/30 p-4 space-y-1 text-sm">
         <div className="flex justify-between">
           <span>Totaal excl. BTW</span>
-          <span>€{totals.excl_vat.toFixed(2).replace(".", ",")}</span>
+          <span>{formatEuro(totals.excl_vat)}</span>
         </div>
         <div className="flex justify-between text-muted-foreground">
           <span>BTW</span>
-          <span>€{totals.vat_amount.toFixed(2).replace(".", ",")}</span>
+          <span>{formatEuro(totals.vat_amount)}</span>
         </div>
         <div className="flex justify-between font-semibold text-base pt-1 border-t">
           <span>Totaal incl. BTW</span>
-          <span>€{totals.incl_vat.toFixed(2).replace(".", ",")}</span>
+          <span>{formatEuro(totals.incl_vat)}</span>
         </div>
       </div>
 

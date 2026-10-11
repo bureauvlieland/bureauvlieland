@@ -25,6 +25,7 @@ import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
 import { getItemLineTotal } from "@/lib/portalPricing";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 /** Te-factureren bedrag: partner-quote heeft voorrang, anders admin-inschatting × pers × dagen. */
 const getBillableAmount = (item: PartnerItem): number => {
@@ -340,7 +341,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
                         const label = isEstimatedAmount(it) ? "Geschat bedrag" : "Bevestigde prijs";
                         return (
                           <div className="text-xs text-muted-foreground">
-                            {label}: €{amt.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl. BTW
+                            {label}: {formatEuro(amt)} incl. BTW
                           </div>
                         );
                       })()}
@@ -366,19 +367,19 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             <div className="space-y-1 pt-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Subtotaal excl. BTW</span>
-                <span>€{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+                <span>{formatEuro(totalExcl)}</span>
               </div>
               {vatBreakdown.map((g) => (
                 <div key={g.rate} className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
-                    BTW {g.rate}% over €{g.excl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                    BTW {g.rate}% over {formatEuro(g.excl)}
                   </span>
-                  <span>€{g.vat.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+                  <span>{formatEuro(g.vat)}</span>
                 </div>
               ))}
               <div className="flex items-center justify-between text-sm pt-1 border-t mt-1">
                 <span className="font-semibold">Totaal incl. BTW</span>
-                <span className="font-semibold">€{totalIncl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+                <span className="font-semibold">{formatEuro(totalIncl)}</span>
               </div>
               <div className="text-xs text-muted-foreground pt-0.5">
                 Commissie wordt berekend over het bedrag excl. BTW.
@@ -418,7 +419,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Commissie Bureau Vlieland ({commissionPercentage}% over €{totalExcl.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} excl. BTW): <strong>€{commissionAmount.toFixed(2)}</strong>
+                Commissie Bureau Vlieland ({commissionPercentage}% over {formatEuro(totalExcl)} excl. BTW): <strong>{formatEuro(commissionAmount)}</strong>
                 <div className="text-muted-foreground text-sm">U ontvangt hiervoor een aparte factuur van Bureau Vlieland.</div>
               </AlertDescription>
             </Alert>
