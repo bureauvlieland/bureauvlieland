@@ -25,6 +25,7 @@ import { DismissProjectDialog } from "@/components/partner-portal/DismissProject
 import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partnerProjectDismiss";
 import { reportError } from "@/lib/errorReporting";
 import { isPartnerInvoicingReleased } from "@/lib/partnerInvoicing";
+import { formatEuro } from "@/lib/formatEuro";
 
 
 type Mode = "activities" | "accommodation";
@@ -215,7 +216,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       return true;
     } catch (e) {
       toast({
-        title: "Fout",
+        title: "Status niet bijgewerkt",
         description: e instanceof Error ? e.message : "Kon status niet bijwerken.",
         variant: "destructive",
       });
@@ -252,7 +253,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       );
       if (!response.ok) {
         const errData = await response.json().catch(() => ({} as any));
-        throw new Error(errData?.error || "Failed");
+        throw new Error(errData?.error || "Kon factuur niet registreren.");
       }
       const result = await response.json();
       await refetch();
@@ -260,7 +261,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       setSelectedItem(null);
       return { success: true, commission: result.commission };
     } catch (err: any) {
-      toast({ title: "Fout", description: err?.message || "Kon factuur niet registreren.", variant: "destructive" });
+      toast({ title: "Factuur niet geregistreerd", description: err?.message || "Probeer het opnieuw.", variant: "destructive" });
       return { success: false };
     }
 
@@ -318,7 +319,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       setShowQuoteSheet(false);
       return true;
     } catch {
-      toast({ title: "Fout", description: "Kon offerte niet indienen.", variant: "destructive" });
+      toast({ title: "Offerte niet ingediend", description: "Kon offerte niet indienen. Probeer het opnieuw.", variant: "destructive" });
       return false;
     }
   };
@@ -350,7 +351,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
       return true;
     } catch (err) {
       reportError(err, { where: "PartnerProject: Error declining quote" });
-      toast({ title: "Fout", description: "Kon aanvraag niet afwijzen.", variant: "destructive" });
+      toast({ title: "Aanvraag niet afgewezen", description: "Kon aanvraag niet afwijzen. Probeer het opnieuw.", variant: "destructive" });
       return false;
     }
   };
@@ -595,7 +596,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
                           return true;
                         } catch (e) {
                           toast({
-                            title: "Fout",
+                            title: "Status niet bijgewerkt",
                             description: e instanceof Error ? e.message : "Kon status niet bijwerken.",
                             variant: "destructive",
                           });
@@ -838,7 +839,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
                 <p className="text-sm">
                   Totaal:{" "}
                   <span className="font-medium">
-                    €{accommodationQuote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                    {formatEuro(accommodationQuote.price_total)}
                   </span>
                 </p>
               )}
@@ -882,7 +883,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
 const PartnerProject = ({ mode }: Props) => (
   <PartnerLayout>
     <Helmet>
-      <title>Project | Partner Portal | Bureau Vlieland</title>
+      <title>Project | Partnerportaal | Bureau Vlieland</title>
       <meta name="robots" content="noindex, nofollow" />
     </Helmet>
     <PartnerProjectContent mode={mode} />

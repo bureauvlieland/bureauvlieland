@@ -103,7 +103,7 @@ export const PartnerProfileForm = () => {
       toast({ title: "Profiel opgeslagen", description: "Uw bedrijfsprofiel is bijgewerkt." });
     } catch (err) {
       reportError(err, { where: "PartnerProfileForm: Error saving profile" });
-      toast({ title: "Fout", description: "Kon profiel niet opslaan.", variant: "destructive" });
+      toast({ title: "Profiel niet opgeslagen", description: "Kon profiel niet opslaan. Probeer het opnieuw.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }

@@ -195,3 +195,6 @@ verify_jwt = false
 
 [functions.dismiss-partner-invoice-item]
 verify_jwt = false
+
+[functions.attach-accommodation-invoice-pdf]
+verify_jwt = false

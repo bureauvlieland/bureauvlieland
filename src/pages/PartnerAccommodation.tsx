@@ -350,7 +350,7 @@ const PartnerAccommodationContent = () => {
     } catch (err) {
       reportError(err, { where: "PartnerAccommodation: Error submitting quote" });
       toast({
-        title: "Fout",
+        title: "Offerte niet ingediend",
         description: "Kon offerte niet indienen. Probeer het opnieuw.",
         variant: "destructive",
       });
@@ -393,7 +393,7 @@ const PartnerAccommodationContent = () => {
     } catch (err) {
       reportError(err, { where: "PartnerAccommodation: Error declining quote" });
       toast({
-        title: "Fout",
+        title: "Aanvraag niet verwerkt",
         description: "Kon aanvraag niet verwerken. Probeer het opnieuw.",
         variant: "destructive",
       });
@@ -670,7 +670,7 @@ const PartnerAccommodation = () => {
   return (
     <PartnerLayout>
       <Helmet>
-        <title>Logies Aanvragen | Partner Portal | Bureau Vlieland</title>
+        <title>Logies Aanvragen | Partnerportaal | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <PartnerAccommodationContent />

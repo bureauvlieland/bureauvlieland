@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 interface MissingPdfBannerProps {
   /** Aantal facturen zonder PDF (items + accommodaties samen). */
@@ -10,6 +10,8 @@ interface MissingPdfBannerProps {
 }
 
 export function MissingPdfBanner({ count, showCta = true }: MissingPdfBannerProps) {
+  const [searchParams] = useSearchParams();
+  const impersonate = searchParams.get("impersonate");
   if (count <= 0) return null;
   return (
     <div
@@ -31,7 +33,7 @@ export function MissingPdfBanner({ count, showCta = true }: MissingPdfBannerProp
       </div>
       {showCta && (
         <Button asChild size="sm" variant="destructive" className="shrink-0">
-          <Link to="/partner/financieel?missingPdf=1#gefactureerd">
+          <Link to={`/partner/facturatie?tab=invoiced${impersonate ? `&impersonate=${impersonate}` : ""}`}>
             Ga naar facturen
           </Link>
         </Button>

@@ -190,7 +190,7 @@ export const PartnerSettingsForm = () => {
     } catch (err) {
       reportError(err, { where: "PartnerSettingsForm: Error saving partner details" });
       toast({
-        title: "Fout",
+        title: "Gegevens niet opgeslagen",
         description: "Kon gegevens niet opslaan. Probeer het opnieuw.",
         variant: "destructive",
       });
@@ -231,7 +231,7 @@ export const PartnerSettingsForm = () => {
     } catch (err: any) {
       reportError(err, { where: "PartnerSettingsForm: Error changing password" });
       toast({
-        title: "Fout",
+        title: "Wachtwoord niet gewijzigd",
         description: err.message || "Kon wachtwoord niet wijzigen.",
         variant: "destructive",
       });

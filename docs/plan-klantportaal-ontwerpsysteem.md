@@ -668,6 +668,9 @@ Volgorde: fase 0 tot en met 4 zoals hierboven, elk als eigen PR.
 
 ## Bijlage: het partnerportaal, voor later
 
+*Vervolg: het eigen plan staat in `plan-partnerportaal-ontwerpsysteem.md`
+(11 oktober 2026); de tellingen hieronder zijn daar opnieuw gemeten.*
+
 Hetzelfde onderzoek is op het partnerportaal gedaan (16 pagina's en 40
 componenten, ruim 18.000 regels, alleen uit de code; een partnerlogin heb
 ik niet). Het valt buiten dit plan, maar de bevindingen en de richting

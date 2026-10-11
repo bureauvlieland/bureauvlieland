@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { RegisterCollectivePartnerInvoiceDialog, type CollectiveInvoiceSubmitPayload } from "@/components/partner-portal/RegisterCollectivePartnerInvoiceDialog";
-import { UploadInvoicePdfPartnerDialog } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
+import { UploadInvoicePdfPartnerDialog, type UploadPdfTarget } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { PartnerCommissionInvoiceList } from "@/components/partner-portal/PartnerCommissionInvoiceList";
 import {
@@ -42,6 +42,7 @@ import { getItemLineTotal } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { reportError } from "@/lib/errorReporting";
 import { canPartnerInvoiceItem, isPartnerInvoicingReleased } from "@/lib/partnerInvoicing";
+import { formatEuro } from "@/lib/formatEuro";
 
 /**
  * Bepaal het te-factureren bedrag voor een partner-item.
@@ -70,7 +71,7 @@ interface AccommodationQuoteWithInvoice extends PartnerAccommodationQuote {
 
 const PartnerFinanceContent = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<PartnerDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +79,7 @@ const PartnerFinanceContent = () => {
   const [commissionInvoices, setCommissionInvoices] = useState<PartnerCommissionInvoice[]>([]);
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
-  const [uploadPdfItem, setUploadPdfItem] = useState<PartnerItem | null>(null);
+  const [uploadPdfTarget, setUploadPdfTarget] = useState<UploadPdfTarget | null>(null);
   const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
   const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
   const [collectiveMode, setCollectiveMode] = useState<"upload" | "email">("upload");
@@ -246,7 +247,7 @@ const PartnerFinanceContent = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to register invoice");
+        throw new Error(errorData.error || "Kon factuur niet registreren.");
       }
 
       const result = await response.json();
@@ -290,7 +291,7 @@ const PartnerFinanceContent = () => {
       );
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || "Failed");
+        throw new Error(err.error || "Kon factuur niet registreren.");
       }
       toast.success(
         payload.viaEmail
@@ -406,6 +407,11 @@ const PartnerFinanceContent = () => {
     ? `${data.partner.commission_percentage}% / ${data.partner.accommodation_commission_percentage}%`
     : `${data.partner.commission_percentage}%`;
 
+  // De tab staat in de URL (?tab=to-invoice|invoiced|commission), zodat een
+  // link als "Ga naar facturen" op het juiste tabblad uitkomt.
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam === "invoiced" || tabParam === "commission" ? tabParam : "to-invoice";
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Facturatie Overzicht</h1>
@@ -433,7 +439,7 @@ const PartnerFinanceContent = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Totaal gefactureerd</p>
-                <p className="text-2xl font-bold">€{totalInvoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                <p className="text-2xl font-bold">{formatEuro(totalInvoiced)}</p>
               </div>
             </div>
           </CardContent>
@@ -447,7 +453,7 @@ const PartnerFinanceContent = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Nog te factureren</p>
-                <p className="text-2xl font-bold">€{totalToBeInvoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                <p className="text-2xl font-bold">{formatEuro(totalToBeInvoiced)}</p>
                 <p className="text-xs text-muted-foreground">
                   {toBeInvoicedItems.length > 0 && `${toBeInvoicedItems.length} activiteit${toBeInvoicedItems.length !== 1 ? "en" : ""}`}
                   {toBeInvoicedItems.length > 0 && toBeInvoicedAccommodations.length > 0 && " • "}
@@ -467,11 +473,11 @@ const PartnerFinanceContent = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Commissie gefactureerd ({commissionPercentage})</p>
-                <p className="text-2xl font-bold">€{commissionTotals.invoiced.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                <p className="text-2xl font-bold">{formatEuro(commissionTotals.invoiced)}</p>
                 <p className="text-xs text-muted-foreground">
-                  €{commissionTotals.open.toFixed(2)} open • €{commissionTotals.paid.toFixed(2)} betaald
+                  {formatEuro(commissionTotals.open)} open • {formatEuro(commissionTotals.paid)} betaald
                   {totalExpectedCommission > 0 && (
-                    <span className="text-amber-600"> • Verwacht: €{totalExpectedCommission.toFixed(2)}</span>
+                    <span className="text-amber-600"> • Verwacht: {formatEuro(totalExpectedCommission)}</span>
                   )}
                 </p>
               </div>
@@ -487,7 +493,15 @@ const PartnerFinanceContent = () => {
       />
 
       {/* Tabs for invoice status */}
-      <Tabs defaultValue="to-invoice" className="mt-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          const next = new URLSearchParams(searchParams);
+          next.set("tab", v);
+          setSearchParams(next, { replace: true });
+        }}
+        className="mt-6"
+      >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="to-invoice" className="flex-1 sm:flex-none">
@@ -583,7 +597,7 @@ const PartnerFinanceContent = () => {
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">Totaal te factureren</p>
                           <p className="text-lg font-bold">
-                            €{total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                            {formatEuro(total)}
                           </p>
                         </div>
                       </div>
@@ -602,7 +616,7 @@ const PartnerFinanceContent = () => {
                                 )}
                               </span>
                               <span className="font-medium whitespace-nowrap">
-                                €{amount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                                {formatEuro(amount)}
                               </span>
                             </div>
                           );
@@ -663,12 +677,17 @@ const PartnerFinanceContent = () => {
                   key={item.id}
                   item={item}
                   variant="invoiced"
-                  onUploadPdf={() => setUploadPdfItem(item)}
+                  onUploadPdf={() => setUploadPdfTarget({ kind: "item", item })}
                 />
               ))}
               {/* Invoiced accommodation items */}
               {invoicedAccommodations.map((quote) => (
-                <AccommodationInvoiceCard key={quote.id} quote={quote} variant="invoiced" />
+                <AccommodationInvoiceCard
+                  key={quote.id}
+                  quote={quote}
+                  variant="invoiced"
+                  onUploadPdf={partnerToken ? () => setUploadPdfTarget({ kind: "accommodation", quote, partnerToken }) : undefined}
+                />
               ))}
             </div>
           )}
@@ -707,8 +726,8 @@ const PartnerFinanceContent = () => {
       />
 
       <UploadInvoicePdfPartnerDialog
-        item={uploadPdfItem}
-        onClose={() => setUploadPdfItem(null)}
+        target={uploadPdfTarget}
+        onClose={() => setUploadPdfTarget(null)}
         onUploaded={refetchData}
       />
 
@@ -802,10 +821,10 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                   <p className="text-sm text-muted-foreground">
                     {estimated ? "Geschatte prijs" : "Bevestigde prijs"}
                   </p>
-                  <p className="font-semibold">€{billableAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  <p className="font-semibold">{formatEuro(billableAmount)}</p>
                   {expectedCommission !== null && (
                     <p className="text-xs text-amber-600">
-                      Verwachte commissie: €{expectedCommission.toFixed(2)}
+                      Verwachte commissie: {formatEuro(expectedCommission)}
                     </p>
                   )}
                 </div>
@@ -843,10 +862,10 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
                       </Badge>
                     )}
                   </div>
-                  <p className="font-semibold">€{item.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                  <p className="font-semibold">{formatEuro(item.invoiced_amount)}</p>
                   {item.commission_amount && item.commission_amount > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Commissie: €{item.commission_amount.toFixed(2)}
+                      Commissie: {formatEuro(item.commission_amount)}
                     </p>
                   )}
                 </div>
@@ -863,9 +882,10 @@ const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemC
 interface AccommodationInvoiceCardProps {
   quote: AccommodationQuoteWithInvoice;
   variant: "to-invoice" | "invoiced";
+  onUploadPdf?: () => void;
 }
 
-const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardProps) => {
+const AccommodationInvoiceCard = ({ quote, variant, onUploadPdf }: AccommodationInvoiceCardProps) => {
   const request = quote.accommodation_requests;
 
   // Calculate expected commission for "to-invoice" items
@@ -920,25 +940,47 @@ const AccommodationInvoiceCard = ({ quote, variant }: AccommodationInvoiceCardPr
             {variant === "to-invoice" ? (
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Offertebedrag</p>
-                <p className="font-semibold">€{quote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
+                <p className="font-semibold">{formatEuro(quote.price_total)}</p>
                 {expectedCommission !== null && (
                   <p className="text-xs text-amber-600">
-                    Verwachte commissie: €{expectedCommission.toFixed(2)}
+                    Verwachte commissie: {formatEuro(expectedCommission)}
                   </p>
                 )}
               </div>
             ) : (
-              <div className="text-right">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-3 w-3" />
-                  <span>{quote.invoiced_number}</span>
-                </div>
-                <p className="font-semibold">€{quote.invoiced_amount?.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>
-                {quote.commission_amount && quote.commission_amount > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Commissie: €{quote.commission_amount.toFixed(2)}
-                  </p>
+              <div className="flex items-center gap-3">
+                {!quote.invoiced_file_path && onUploadPdf && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={onUploadPdf}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    PDF toevoegen
+                  </Button>
                 )}
+                <div className="text-right">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-3 w-3" />
+                    <span>{quote.invoiced_number}</span>
+                    {!quote.invoiced_file_path && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-destructive text-destructive"
+                        title="Niet in behandeling: voeg de pdf toe"
+                      >
+                        PDF ontbreekt
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="font-semibold">{formatEuro(quote.invoiced_amount)}</p>
+                  {quote.commission_amount && quote.commission_amount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Commissie: {formatEuro(quote.commission_amount)}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -952,7 +994,7 @@ const PartnerFinance = () => {
   return (
     <PartnerLayout>
       <Helmet>
-        <title>Facturatie | Partner Portal | Bureau Vlieland</title>
+        <title>Facturatie | Partnerportaal | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <PartnerFinanceContent />

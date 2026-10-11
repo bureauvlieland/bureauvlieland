@@ -78,6 +78,7 @@ interface AccommodationRequest {
 
 import { AlertTriangle } from "lucide-react";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface AccommodationQuote {
   id: string;
@@ -289,7 +290,7 @@ export const PartnerAccommodationRequestCard = ({
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Uw offerte:</span>
             <span className="font-semibold">
-              €{quote.price_total.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+              {formatEuro(quote.price_total)}
             </span>
           </div>
         )}

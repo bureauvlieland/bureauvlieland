@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,7 +90,7 @@ const PartnerExtras = () => {
       });
     } catch (error) {
       toast({
-        title: "Fout",
+        title: "Extra niet verwijderd",
         description: "Kon de extra niet verwijderen.",
         variant: "destructive",
       });
@@ -130,6 +131,10 @@ const PartnerExtras = () => {
 
   return (
     <PartnerLayout>
+      <Helmet>
+        <title>Logies-extra's | Partnerportaal | Bureau Vlieland</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -44,6 +44,7 @@ import { roomSnapshotFromType } from "@/lib/accommodationQuotePresentation";
 import type { RoomConfiguration } from "@/types/accommodation";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface AccommodationRequest {
   id: string;
@@ -596,9 +597,9 @@ export const PartnerAccommodationQuoteSheet = ({
                     <span>Factuurnr:</span>
                     <span className="font-medium text-foreground">{existingQuote.invoiced_number}</span>
                     <span>Bedrag:</span>
-                    <span className="font-medium text-foreground">€{existingQuote.invoiced_amount?.toFixed(2)}</span>
+                    <span className="font-medium text-foreground">{formatEuro(existingQuote.invoiced_amount)}</span>
                     <span>Commissie ({existingQuote.commission_percentage}%):</span>
-                    <span className="font-medium text-foreground">€{existingQuote.commission_amount?.toFixed(2)}</span>
+                    <span className="font-medium text-foreground">{formatEuro(existingQuote.commission_amount)}</span>
                   </div>
                 </div>
               ) : (
@@ -1001,7 +1002,7 @@ export const PartnerAccommodationQuoteSheet = ({
                 </div>
                 {priceTotal && !isNaN(parseFloat(priceTotal)) && (
                   <p className="text-xs text-muted-foreground">
-                    = €{(parseFloat(priceTotal) / request.number_of_guests / nights).toFixed(2)} p.p.p.n.
+                    = {formatEuro(parseFloat(priceTotal) / request.number_of_guests / nights)} p.p.p.n.
                   </p>
                 )}
               </div>

@@ -20,6 +20,7 @@ import { Plus, Receipt, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface Props {
   partnerId: string;
@@ -124,7 +125,7 @@ export function PartnerPostChargesSection({ partnerId, requestId, accommodationR
                   <Badge variant={STATUS_VARIANT[c.status]}>{STATUS_LABEL[c.status]}</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  €{Number(c.amount_incl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })} incl.{" "}
+                  {formatEuro(Number(c.amount_incl_vat))} incl.{" "}
                   {c.vat_rate}% BTW
                   {c.service_date && (
                     <> · {format(parseISO(c.service_date), "d MMM yyyy", { locale: nl })}</>

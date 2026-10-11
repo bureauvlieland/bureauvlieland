@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } fro
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface PartnerMonthlyRevenueChartProps {
   items: PartnerItem[];
@@ -95,7 +96,7 @@ export const PartnerMonthlyRevenueChart = ({
               style={{ backgroundColor: entry.color }}
             />
             <span className="text-muted-foreground">{entry.name}:</span>
-            <span className="font-medium">€{entry.value.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</span>
+            <span className="font-medium">{formatEuro(entry.value)}</span>
           </div>
         ))}
       </div>
@@ -112,7 +113,7 @@ export const PartnerMonthlyRevenueChart = ({
           </CardTitle>
           {hasData && (
             <span className="text-sm text-muted-foreground">
-              Totaal: €{grandTotal.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+              Totaal: {formatEuro(grandTotal)}
             </span>
           )}
         </div>

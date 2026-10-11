@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 interface BillingDetails {
   billing_company_name?: string | null;
@@ -278,8 +279,7 @@ export const InvoiceRegistrationDialog = ({
                 <div className="pt-2 border-t border-primary/10 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Geoffreerde prijs:</span>
                   <Badge variant="secondary" className="text-base font-semibold">
-                    <Euro className="h-3 w-3 mr-1" />
-                    {item.quoted_price.toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
+                    {formatEuro(item.quoted_price)}
                   </Badge>
                 </div>
               )}
@@ -414,7 +414,7 @@ export const InvoiceRegistrationDialog = ({
               </div>
               {parsedAmountIncl > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Excl. BTW: €{parsedAmountExcl.toFixed(2)} · BTW {vatRate}%: €{vatAmount.toFixed(2)}
+                  Excl. BTW: {formatEuro(parsedAmountExcl)} · BTW {vatRate}%: {formatEuro(vatAmount)}
                 </p>
               )}
               {errors.amount && (
@@ -443,8 +443,8 @@ export const InvoiceRegistrationDialog = ({
               <AlertDescription>
                 <div className="space-y-1">
                   <p>
-                    <strong>Commissie Bureau Vlieland ({commissionPercentage}% over €{parsedAmountExcl.toFixed(2)} excl. BTW):</strong>{" "}
-                    €{commissionAmount.toFixed(2)}
+                    <strong>Commissie Bureau Vlieland ({commissionPercentage}% over {formatEuro(parsedAmountExcl)} excl. BTW):</strong>{" "}
+                    {formatEuro(commissionAmount)}
                   </p>
                   <p className="text-muted-foreground text-sm">
                     U ontvangt hiervoor een factuur van Bureau Vlieland.

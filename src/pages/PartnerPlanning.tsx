@@ -8,6 +8,7 @@ import { useMapActivities } from "@/hooks/useMapActivities";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -64,6 +65,10 @@ const PartnerPlanning = () => {
 
   return (
     <PartnerLayout>
+      <Helmet>
+        <title>Planning | Partnerportaal | Bureau Vlieland</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="p-4 md:p-6 space-y-4 max-w-7xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

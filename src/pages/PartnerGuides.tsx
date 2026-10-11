@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,6 +91,10 @@ const PartnerGuides = () => {
 
   return (
     <PartnerLayout>
+      <Helmet>
+        <title>Handleidingen | Partnerportaal | Bureau Vlieland</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Handleidingen</h1>

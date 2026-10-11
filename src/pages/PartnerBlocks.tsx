@@ -26,6 +26,7 @@ import type { MapActivityType } from "@/hooks/useMapActivities";
 import type { PartnerBuildingBlock } from "@/types/partner";
 import { calculateBlockCompleteness } from "@/lib/partnerCompleteness";
 import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
 
 const PartnerBlocksContent = () => {
   const navigate = useNavigate();
@@ -322,15 +323,15 @@ const formatBlockPrice = (block: PartnerBuildingBlock) => {
     const prices = tiers.map((t) => Number(t?.price)).filter((p) => Number.isFinite(p));
     if (prices.length === 0) return "Prijs op aanvraag";
     const min = Math.min(...prices);
-    return `vanaf €${min.toLocaleString("nl-NL", { minimumFractionDigits: 2 })} (staffel)`;
+    return `vanaf ${formatEuro(min)} (staffel)`;
   }
   if (!block.price_adult) return "Prijs op aanvraag";
-  const price = block.price_adult.toLocaleString("nl-NL", { minimumFractionDigits: 2 });
+  const price = formatEuro(block.price_adult);
   switch (block.price_type) {
-    case "per_person": return `€${price} p.p.`;
-    case "per_person_per_day": return `€${price} p.p.p.d.`;
-    case "total": return `€${price} totaal`;
-    default: return `€${price}`;
+    case "per_person": return `${price} p.p.`;
+    case "per_person_per_day": return `${price} p.p.p.d.`;
+    case "total": return `${price} totaal`;
+    default: return `${price}`;
   }
 };
 
@@ -427,7 +428,7 @@ const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
 const PartnerBlocks = () => (
   <PartnerLayout>
     <Helmet>
-      <title>Mijn Aanbod | Partner Portal | Bureau Vlieland</title>
+      <title>Mijn Aanbod | Partnerportaal | Bureau Vlieland</title>
       <meta name="robots" content="noindex, nofollow" />
     </Helmet>
     <PartnerBlocksContent />

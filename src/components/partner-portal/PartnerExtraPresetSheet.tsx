@@ -131,8 +131,8 @@ export function PartnerExtraPresetSheet({
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Fout",
-        description: "Er ging iets mis bij het opslaan.",
+        title: "Extra niet opgeslagen",
+        description: "Er ging iets mis bij het opslaan. Probeer het opnieuw.",
         variant: "destructive",
       });
     }

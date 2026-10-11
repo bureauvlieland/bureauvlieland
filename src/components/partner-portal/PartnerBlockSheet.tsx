@@ -533,7 +533,7 @@ export const PartnerBlockSheet = ({
     } catch (error) {
       reportError(error, { where: "PartnerBlockSheet: Error saving block" });
       toast({
-        title: "Fout",
+        title: "Wijzigingen niet opgeslagen",
         description: "Kon wijzigingen niet opslaan. Probeer het opnieuw.",
         variant: "destructive",
       });
