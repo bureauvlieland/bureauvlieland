@@ -5,6 +5,8 @@ import {
   isWithinTolerance,
   invoiceIsLinked,
   invoiceKey,
+  isRowlessItem,
+  worklistInvoiceCoverage,
   isBillableRow,
   isExpectedRow,
   isUnknownBaseRow,
@@ -131,6 +133,145 @@ describe("invoiceIsLinked", () => {
 
   it("meldt een factuur zonder enige koppeling", () => {
     expect(invoiceIsLinked(invoice(), new Set())).toBe(false);
+  });
+
+  it("telt een koppeling naar een regelloos onderdeel niet als koppeling", () => {
+    const rowless = new Set(["bureau-1"]);
+    expect(invoiceIsLinked(invoice({ item_id: "bureau-1" }), new Set(), rowless)).toBe(false);
+    expect(invoiceIsLinked(invoice({ allocated_item_ids: ["bureau-1"] }), new Set(), rowless)).toBe(false);
+    // Eén echte koppeling naast een regelloze is genoeg.
+    expect(invoiceIsLinked(invoice({ allocated_item_ids: ["bureau-1", "item-1"] }), new Set(), rowless)).toBe(true);
+  });
+});
+
+describe("isRowlessItem", () => {
+  it("herkent bureau- en zelf-geregelde onderdelen", () => {
+    expect(isRowlessItem({ block_type: "bureau" })).toBe(true);
+    expect(isRowlessItem({ block_type: "self_arranged" })).toBe(true);
+    expect(isRowlessItem({ block_type: "partner" })).toBe(false);
+    expect(isRowlessItem({ block_type: null })).toBe(false);
+  });
+});
+
+describe("inkoopfacturen aan bureau-regels", () => {
+  // Stortemelk 26013731 (€ 5.751,09) hing via vier allocaties alleen aan
+  // bureau-regels en verdween daardoor stil uit de werklijst.
+  it("laat een factuur die alleen aan een bureau-regel hangt als projectfactuur terugkomen", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ id: "bureau-1", block_type: "bureau", provider_id: "bureau" })],
+      invoices: [invoice({ item_id: "bureau-1", amount_excl_vat: 5751.09 })],
+      projects,
+      partners,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].key).toBe("invoice:inv-1");
+    expect(rows[0].status).toBe("match");
+    expect(rows[0].partnerId).toBe("oliva");
+    expect(rows[0].purchaseExclVat).toBeCloseTo(5751.09, 2);
+    expect(rows[0].purchaseCommission).toBeCloseTo(575.109, 3);
+  });
+
+  it("doet hetzelfde bij allocaties die alleen naar bureau-regels wijzen", () => {
+    const rows = buildReconciliationRows({
+      items: [
+        item({ id: "bureau-1", block_type: "bureau", provider_id: "bureau" }),
+        item({ id: "bureau-2", block_type: "bureau", provider_id: "bureau" }),
+      ],
+      invoices: [
+        invoice({
+          allocated_item_ids: ["bureau-1", "bureau-2"],
+          allocation_amounts: { "bureau-1": 600, "bureau-2": 400 },
+        }),
+      ],
+      projects,
+      partners,
+    });
+    expect(rows.map((r) => r.key)).toEqual(["invoice:inv-1"]);
+    expect(rows[0].purchaseExclVat).toBe(1000);
+  });
+
+  it("negeert een factuurnummer dat alleen op een bureau-regel staat", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ id: "bureau-1", block_type: "bureau", provider_id: "oliva", invoiced_number: "7" })],
+      invoices: [invoice({ invoice_number: "7" })],
+      projects,
+      partners,
+    });
+    expect(rows.map((r) => r.key)).toEqual(["invoice:inv-1"]);
+  });
+
+  it("houdt de factuur bij het echte onderdeel als er ook een partnerregel aan hangt", () => {
+    const rows = buildReconciliationRows({
+      items: [
+        item({ id: "item-1" }),
+        item({ id: "bureau-1", block_type: "bureau", provider_id: "bureau" }),
+      ],
+      invoices: [
+        invoice({
+          allocated_item_ids: ["item-1", "bureau-1"],
+          allocation_amounts: { "item-1": 700, "bureau-1": 300 },
+        }),
+      ],
+      projects,
+      partners,
+    });
+    expect(rows.map((r) => r.key)).toEqual(["item:item-1"]);
+    expect(rows[0].purchaseExclVat).toBe(700);
+  });
+
+  it("dekt de partneronderdelen zonder eigen factuur in hetzelfde project af", () => {
+    // Een factuur op een bureau-regel geldt als projectfactuur: de losse
+    // onderdelen van dezelfde partner tellen dan niet óók als "factuur ontbreekt".
+    const rows = buildReconciliationRows({
+      items: [
+        item({ id: "item-1" }),
+        item({ id: "bureau-1", block_type: "bureau", provider_id: "bureau" }),
+      ],
+      invoices: [invoice({ item_id: "bureau-1" })],
+      projects,
+      partners,
+    });
+    expect(rows.map((r) => r.key)).toEqual(["invoice:inv-1"]);
+  });
+});
+
+describe("worklistInvoiceCoverage", () => {
+  it("telt per factuur het bedrag dat in de werklijst terugkomt", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ id: "item-1" }), item({ id: "item-2" })],
+      invoices: [
+        // Verzamelfactuur van 1000 waarvan maar 900 is gealloceerd.
+        invoice({
+          id: "inv-1",
+          allocated_item_ids: ["item-1", "item-2"],
+          allocation_amounts: { "item-1": 500, "item-2": 400 },
+        }),
+        invoice({ id: "inv-2", invoice_number: "8", amount_excl_vat: 250 }),
+      ],
+      projects,
+      partners,
+    });
+    const covered = worklistInvoiceCoverage(rows);
+    expect(covered.get("inv-1")).toBe(900);
+    expect(covered.get("inv-2")).toBe(250);
+  });
+
+  it("laat vrijgestelde regels en regels zonder percentage buiten beschouwing", () => {
+    const rows = buildReconciliationRows({
+      items: [
+        item({ id: "item-1", commission_exempt: true }),
+        item({ id: "item-2", commission_percentage: 0 }),
+      ],
+      invoices: [
+        invoice({ id: "inv-1", item_id: "item-1" }),
+        invoice({ id: "inv-2", item_id: "item-2", invoice_number: "8" }),
+      ],
+      projects,
+      partners,
+    });
+    const covered = worklistInvoiceCoverage(rows);
+    expect(covered.has("inv-1")).toBe(false);
+    expect(covered.has("inv-2")).toBe(false);
   });
 });
 
