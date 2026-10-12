@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Helmet } from "react-helmet";
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
+import { PartnerYtdModule } from "@/components/partner-portal/PartnerYtdModule";
+import { usePartnerPortal, usePartnerCommissionInvoices } from "@/hooks/usePartnerPortal";
 import { PartnerMonthlyRevenueChart } from "@/components/partner-portal/PartnerMonthlyRevenueChart";
 import { ExportInvoicesButton } from "@/components/partner-portal/ExportInvoicesButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 import { getItemLineTotal } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { reportError } from "@/lib/errorReporting";
@@ -70,13 +70,9 @@ interface AccommodationQuoteWithInvoice extends PartnerAccommodationQuote {
 }
 
 const PartnerFinanceContent = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<PartnerDashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [partnerToken, setPartnerToken] = useState<string | null>(null);
-  const [commissionInvoices, setCommissionInvoices] = useState<PartnerCommissionInvoice[]>([]);
+  const { data, partnerToken, isLoading, error, refetch } = usePartnerPortal();
+  const { invoices: commissionInvoices, refetch: refetchCommissionInvoices } = usePartnerCommissionInvoices();
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<UploadPdfTarget | null>(null);
@@ -95,124 +91,10 @@ const PartnerFinanceContent = () => {
     iban: getSetting<string>("bureau_iban", ""),
   };
 
-  // Commissiefacturen van het bureau aan deze partner (met tijdelijke PDF-links).
-  const fetchCommissionInvoices = useCallback(async (token: string) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-commission-invoices?token=${token}`,
-        { method: "GET", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } },
-      );
-      if (!response.ok) throw new Error(`Kon commissiefacturen niet laden (${response.status})`);
-      const body = (await response.json()) as PartnerCommissionInvoicesResponse;
-      setCommissionInvoices(body.invoices ?? []);
-    } catch (err) {
-      reportError(err, { where: "PartnerFinance: Error fetching commission invoices" });
-    }
-  }, []);
-
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/partner/login");
-        return;
-      }
-
-      // Check if admin is impersonating
-      const impersonatePartnerId = searchParams.get("impersonate");
-      let token: string | null = null;
-
-      if (impersonatePartnerId) {
-        const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        
-        if (isAdmin) {
-          const { data: partner } = await supabase
-            .from("partners")
-            .select("partner_token")
-            .eq("id", impersonatePartnerId)
-            .single();
-
-          if (partner) {
-            token = partner.partner_token;
-          }
-        }
-      }
-
-      if (!token) {
-        const { data: partner, error: partnerError } = await supabase
-          .from("partners")
-          .select("*")
-          .eq("auth_user_id", session.user.id)
-          .eq("is_active", true)
-          .single();
-
-        if (partnerError || !partner) {
-          setError("Je account is niet gekoppeld aan een partner.");
-          setIsLoading(false);
-          return;
-        }
-
-        token = partner.partner_token;
-      }
-
-      setPartnerToken(token);
-
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Kon gegevens niet laden");
-        }
-
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      } catch (err) {
-        reportError(err, { where: "PartnerFinance: Error fetching dashboard" });
-        setError("Er is een fout opgetreden bij het laden van je gegevens.");
-      } finally {
-        setIsLoading(false);
-      }
-      void fetchCommissionInvoices(token);
-    };
-
-    fetchDashboard();
-  }, [navigate, searchParams, fetchCommissionInvoices]);
-
-  // Refetch function for after invoice registration
-  const refetchData = useCallback(async () => {
-    if (!partnerToken) return;
-    
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${partnerToken}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      }
-    } catch (err) {
-      reportError(err, { where: "PartnerFinance: Error refetching dashboard" });
-    }
-    void fetchCommissionInvoices(partnerToken);
-  }, [partnerToken, fetchCommissionInvoices]);
+  // Na een registratie of upload: dashboard en commissiefacturen opnieuw.
+  const refetchData = async () => {
+    await Promise.all([refetch(), refetchCommissionInvoices()]);
+  };
 
   // Invoice registration handler
   const handleInvoiceRegister = async (
@@ -312,28 +194,8 @@ const PartnerFinanceContent = () => {
 
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
-        <Skeleton className="h-64" />
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="p-6 text-center py-16">
-        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Fout</h1>
-        <p className="text-muted-foreground">{error || "Er is een fout opgetreden."}</p>
-      </div>
-    );
+  if (isLoading || error || !data) {
+    return <PartnerPage title="Facturatie" icon={<Receipt />} loading={isLoading} error={error ?? "Er is een fout opgetreden."} />;
   }
 
   // Helper function to calculate expected commission
@@ -412,9 +274,21 @@ const PartnerFinanceContent = () => {
   const tabParam = searchParams.get("tab");
   const activeTab = tabParam === "invoiced" || tabParam === "commission" ? tabParam : "to-invoice";
 
+  // Jaarcijfers (sinds fase 1 hier, niet meer op de werkbank).
+  const year = new Date().getFullYear();
+  const ytdRevenue =
+    data.items.filter((i) => i.invoiced_date && new Date(i.invoiced_date).getFullYear() === year).reduce((s, i) => s + (i.invoiced_amount || 0), 0) +
+    accommodationQuotes
+      .filter((q) => q.status === "selected" && q.invoiced_date && new Date(q.invoiced_date).getFullYear() === year)
+      .reduce((s, q) => s + (q.invoiced_amount || 0), 0);
+  const pendingCommission = data.openCommissionInvoices?.amountInclVat ?? 0;
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Facturatie Overzicht</h1>
+    <PartnerPage
+      title="Facturatie"
+      icon={<Receipt />}
+      description={`Uw facturen aan Bureau Vlieland en de commissiefacturen van het bureau aan u (commissie ${commissionPercentage}).`}
+    >
 
       {/* Banner voor ontbrekende PDF's */}
       {(() => {
@@ -487,10 +361,13 @@ const PartnerFinanceContent = () => {
       </div>
 
       {/* Monthly revenue chart */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
       <PartnerMonthlyRevenueChart 
         items={data.items} 
         accommodationQuotes={accommodationQuotes}
       />
+      <PartnerYtdModule ytdRevenue={ytdRevenue} pendingCommission={pendingCommission} />
+      </div>
 
       {/* Tabs for invoice status */}
       <Tabs
@@ -753,7 +630,7 @@ const PartnerFinanceContent = () => {
         bureauDetails={bureauDetails}
         onSubmit={handleCollectiveInvoiceRegister}
       />
-    </div>
+    </PartnerPage>
   );
 };
 
@@ -990,16 +867,12 @@ const AccommodationInvoiceCard = ({ quote, variant, onUploadPdf }: Accommodation
   );
 };
 
-const PartnerFinance = () => {
-  return (
-    <PartnerLayout>
-      <Helmet>
-        <title>Facturatie | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <PartnerFinanceContent />
-    </PartnerLayout>
-  );
-};
+const PartnerFinance = () => (
+  <PartnerLayout>
+    <PartnerFinanceContent />
+  </PartnerLayout>
+);
+
+export { PartnerFinanceContent };
 
 export default PartnerFinance;

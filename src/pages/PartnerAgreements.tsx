@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { Helmet } from "react-helmet";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { CheckCircle, ChevronDown, ChevronUp, Loader2, ScrollText } from "lucide-react";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { MarkdownText } from "@/components/shared/MarkdownText";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,22 +33,16 @@ function PartnerAgreementsContent() {
   const eerdere = useMemo(() => acceptances.filter((c) => !stand.some((s) => s.acceptance?.id === c.id)), [acceptances, stand]);
 
   if (partnerLaadt || isLoading) {
-    return (
-      <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Laden…
-      </div>
-    );
+    return <PartnerPage title="Afspraken" icon={<ScrollText />} size="content" loading />;
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Afspraken</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          De afspraken tussen Bureau Vlieland en {partner?.name ?? "uw bedrijf"}. Lees de tekst en geef akkoord; wij leggen vast wie akkoord gaf, wanneer, en op
-          welke versie.
-        </p>
-      </div>
+    <PartnerPage
+      title="Afspraken"
+      icon={<ScrollText />}
+      size="content"
+      description={`De afspraken tussen Bureau Vlieland en ${partner?.name ?? "uw bedrijf"}. Lees de tekst en geef akkoord; wij leggen vast wie akkoord gaf, wanneer en op welke versie.`}
+    >
 
       {stand.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Er zijn op dit moment geen afspraken die voor u gelden.</p>}
 
@@ -132,15 +126,12 @@ function PartnerAgreementsContent() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PartnerPage>
   );
 }
 
 const PartnerAgreements = () => (
   <PartnerLayout>
-    <Helmet>
-      <title>Afspraken – Partnerportaal</title>
-    </Helmet>
     <PartnerAgreementsContent />
   </PartnerLayout>
 );

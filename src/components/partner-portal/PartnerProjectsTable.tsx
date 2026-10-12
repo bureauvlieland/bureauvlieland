@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Activity, Hotel, Circle } from "lucide-react";
@@ -100,11 +100,14 @@ function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string })
     row.derivedStatus !== "afgerond" &&
     row.derivedStatus !== "geannuleerd";
   const navTo = `${row.href}${urlSuffix}`;
+  // "Terug" op de projectpagina komt hier terug, met tab, zoekterm en archief.
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`;
 
   return (
     <TableRow className={cn("cursor-pointer", row.isConcept && "opacity-60")}>
       <TableCell>
-        <Link to={navTo} className="block">
+        <Link to={navTo} state={{ from }} className="block">
           <div className="flex items-center gap-1.5">
             {overdue && <Circle className="h-2 w-2 fill-red-500 text-red-500" />}
             {row.earliestDate ? (
@@ -126,12 +129,12 @@ function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string })
         </Link>
       </TableCell>
       <TableCell>
-        <Link to={navTo} className="font-mono text-xs text-muted-foreground">
+        <Link to={navTo} state={{ from }} className="font-mono text-xs text-muted-foreground">
           {row.reference ?? "—"}
         </Link>
       </TableCell>
       <TableCell>
-        <Link to={navTo} className={cn("block font-medium", row.isConcept && "italic text-muted-foreground")}>
+        <Link to={navTo} state={{ from }} className={cn("block font-medium", row.isConcept && "italic text-muted-foreground")}>
           {row.customerLabel}
         </Link>
       </TableCell>

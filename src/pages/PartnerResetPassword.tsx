@@ -116,7 +116,7 @@ const PartnerResetPassword = () => {
       });
 
       setTimeout(() => {
-        navigate("/partner/dashboard");
+        navigate("/partner/werkbank");
       }, 2000);
     } catch (err) {
       reportError(err, { where: "PartnerResetPassword: Password update error" });

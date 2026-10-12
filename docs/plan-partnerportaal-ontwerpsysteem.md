@@ -2,7 +2,8 @@
 
 Status: onderzoek en voorstel, 11 oktober 2026; besluiten genomen door
 Erwin op 11 oktober 2026 (alle aanbevelingen, zie "Besluiten"). Fase 0
-gebouwd op 11 oktober (zie de voortgang per fase). Vraag van Erwin: na het klantportaal
+gebouwd op 11 oktober, fase 1 op 12 oktober (zie de voortgang per fase).
+Vraag van Erwin: na het klantportaal
 (`plan-klantportaal-ontwerpsysteem.md`, afgerond 10 oktober) het
 partnerportaal op het ontwerpsysteem brengen. De bouw volgt per fase, elke
 fase als eigen PR met preview.
@@ -441,6 +442,42 @@ tegenvoorstel, één offerte gevraagd, één factuur zonder pdf) en
 `?scherm=werkbank|projecten|project|logies|facturatie`. Het
 partnerportaal komt in de ontwerpschuldtelling met een baseline per
 bestand (de huidige stand), zodat de schuld vanaf hier alleen daalt.
+
+*Gebouwd op 12 oktober, eigen PR.* `PartnerLayout` zoekt de partner één
+keer op en zet hem in `PartnerPortalContext`; `usePartnerPortal()`
+(`src/hooks/usePartnerPortal.ts`) haalt `get-partner-dashboard` via
+react-query op, één keer per token en gedeeld door alle pagina's, met
+`refetch` na een actie; `usePartnerCommissionInvoices()` doet hetzelfde
+voor de commissiefacturen. De vier kopieën in Werkbank, Project,
+Facturatie en Planning zijn weg, net als `usePartnerDashboard`; Logies,
+Handleidingen en Afspraken lezen de partner uit de context. De schil is
+gesplitst in `PartnerShell` (zijbalk, kopbalk, inhoud) en `PartnerLayout`
+(login eromheen); de profielsterkte is een `Pill`, de zijbalk staat op de
+tokens. Elke pagina begint met `PartnerPage`
+(`src/components/partner-portal/PartnerPage.tsx`): de titel in de tab,
+`Container` op één breedte (`wide`, of `content`/`prose` voor
+formulieren) met één padding, `PortalHead` met icoon, titel, één zin en
+hoogstens één status, en `LoadingState` en een `Notice` voor laden en
+fouten in plaats van de eigen "Fout"-schermen. Werkbank en Projecten zijn
+twee routes (`/partner/werkbank`, `/partner/projecten`;
+`/partner/dashboard` stuurt door met behoud van `impersonate`); de rijen
+geven mee waar u vandaan kwam, zodat "Terug" met tab, zoekterm en
+archief terugkomt. De jaarcijfers staan bij Facturatie naast de
+maandgrafiek. De woordenlijsten staan klaar met 13 tests: `partnerTone`
+naast `partnerLabel` in `itemStatus.ts`, `partnerProjectStatus.ts`
+(`derivePartnerProjectStatus`, `derivePartnerAccommodationProjectStatus`)
+en `accommodationQuoteStatus.ts` (`partnerQuoteStatus`,
+`partnerQuoteTab`, `PARTNER_QUOTE_TABS`); de schermen gaan er in fase 2
+en 3 op. De referentiepagina `/ontwerp/partnerportaal` (alleen buiten
+productie) toont de verzonnen partner uit `src/content/demoPartnerportaal.ts`
+(Wadloopcentrum Vlieland, activiteiten en logies, twee projecten, een
+tegenvoorstel, een offerte gevraagd, een factuur zonder pdf, één open
+commissiefactuur) met `?scherm=werkbank|projecten|project|logies|facturatie`;
+`logies` is daar het logiesproject, want de logiespagina en het aanbod
+lezen hun eigen tabellen en komen in fase 3 en 4 op de referentie. Het
+partnerportaal telt mee in de ontwerpschuld: baseline per bestand (26
+bestanden, 380 vindplaatsen) en `DESIGN_DEBT_MAX=380`; vanaf hier mag een
+partnerbestand alleen omlaag.
 
 **Fase 2: werkbank, projecten en de projectpagina (3 dagen).** De
 werkbank op `Notice`, `Pill` en `EmptyState`; de projectentabel op de

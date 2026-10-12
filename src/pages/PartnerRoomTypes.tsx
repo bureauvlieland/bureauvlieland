@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, BedDouble, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, BedDouble, Package, DoorOpen } from "lucide-react";
 import { usePartnerRoomTypes, useDeletePartnerRoomType } from "@/hooks/usePartnerRoomTypes";
 import { PartnerRoomTypeSheet } from "@/components/partner-portal/PartnerRoomTypeSheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,24 +96,18 @@ export default function PartnerRoomTypes() {
 
   return (
     <PartnerLayout>
-      <Helmet>
-        <title>Kamersoorten | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <div className="p-6 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Kamersoorten</h1>
-            <p className="text-muted-foreground">
-              Beheer uw standaard kamersoorten voor logiesoffertes
-            </p>
-          </div>
+      <PartnerPage
+        title="Kamersoorten"
+        icon={<DoorOpen />}
+        size="content"
+        description="Uw kamersoorten met prijs en bezetting; een offerte bouwt u hiermee in een paar klikken op."
+        actions={
           <Button onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            Nieuw kamertype
+            Nieuwe kamersoort
           </Button>
-        </div>
+        }
+      >
 
         {/* Loading state */}
         {isLoading && (
@@ -242,7 +236,7 @@ export default function PartnerRoomTypes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </PartnerPage>
     </PartnerLayout>
   );
 }

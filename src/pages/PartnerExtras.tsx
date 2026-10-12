@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, UtensilsCrossed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { usePartnerExtraPresets, useDeletePartnerExtraPreset } from "@/hooks/usePartnerExtraPresets";
@@ -121,35 +121,24 @@ const PartnerExtras = () => {
   if (isLoading) {
     return (
       <PartnerLayout>
-        <div className="p-6 space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+        <PartnerPage title="Logies-extra's" icon={<UtensilsCrossed />} loading />
       </PartnerLayout>
     );
   }
 
   return (
     <PartnerLayout>
-      <Helmet>
-        <title>Logies-extra's | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Extra's</h1>
-            <p className="text-muted-foreground">
-              Beheer uw standaard extra diensten voor logiesoffertes
-            </p>
-          </div>
+      <PartnerPage
+        title="Logies-extra's"
+        icon={<UtensilsCrossed />}
+        description="Uw vaste extra's voor logiesoffertes, zoals ontbijt, fietsen of een borrel bij aankomst."
+        actions={
           <Button onClick={handleAddNew}>
             <Plus className="h-4 w-4 mr-2" />
-            Nieuwe Extra
+            Nieuwe extra
           </Button>
-        </div>
-
+        }
+      >
         {/* Content */}
         {presetsLoading ? (
           <div className="space-y-4">
@@ -226,7 +215,7 @@ const PartnerExtras = () => {
             </CardContent>
           </Card>
         )}
-      </div>
+      </PartnerPage>
 
       {/* Edit/Add Sheet */}
       <PartnerExtraPresetSheet

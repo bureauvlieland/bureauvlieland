@@ -126,7 +126,7 @@ const PartnerLogin = () => {
           description: "U bent succesvol ingelogd.",
         });
 
-        navigate("/partner/dashboard");
+        navigate("/partner/werkbank");
       }
     } catch (err) {
       reportError(err, { where: "PartnerLogin: Login error" });

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -169,27 +170,8 @@ const PartnerBlocksContent = () => {
     handleSheetClose();
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 text-center py-16">
-        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Fout</h1>
-        <p className="text-muted-foreground">{error}</p>
-      </div>
-    );
+  if (isLoading || error) {
+    return <PartnerPage title="Activiteiten" icon={<Package />} loading={isLoading} error={error} />;
   }
 
   const publishedBlocks = blocks.filter(b => b.status === "published");
@@ -197,17 +179,17 @@ const PartnerBlocksContent = () => {
   const conceptBlocks = blocks.filter(b => b.status === "concept");
 
   return (
-    <div className="p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Mijn Aanbod</h1>
-          <p className="text-muted-foreground">Beheer uw activiteiten en diensten</p>
-        </div>
+    <PartnerPage
+      title="Activiteiten"
+      icon={<Package />}
+      description="Uw aanbod zoals Bureau Vlieland het in programma's zet: wat u aanbiedt, voor welke prijs en met welke foto."
+      actions={
         <Button onClick={handleNewBlock}>
           <Plus className="h-4 w-4 mr-2" />
           Nieuw voorstel
         </Button>
-      </div>
+      }
+    >
 
       <div className="space-y-8">
         {blocks.length === 0 && !mapTenantSlug ? (
@@ -281,7 +263,7 @@ const PartnerBlocksContent = () => {
         prefillFromMap={prefillFromMap}
         mapTenantSlug={mapTenantSlug}
       />
-    </div>
+    </PartnerPage>
   );
 };
 

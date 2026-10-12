@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { Helmet } from "react-helmet";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, XCircle, FolderOpen, BedDouble } from "lucide-react";
 import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
+import { usePartnerPortal } from "@/hooks/usePartnerPortal";
 import { PartnerProjectItemRow } from "@/components/partner-portal/PartnerProjectItemRow";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
@@ -17,9 +18,8 @@ import { PartnerPostChargesSection } from "@/components/partner-portal/PartnerPo
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
+import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 import { cn } from "@/lib/utils";
 import { DismissProjectDialog } from "@/components/partner-portal/DismissProjectDialog";
 import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partnerProjectDismiss";
@@ -32,113 +32,27 @@ type Mode = "activities" | "accommodation";
 
 interface Props {
   mode: Mode;
+  /** Alleen voor de referentiepagina: het project zonder route-parameter. */
+  projectId?: string;
 }
 
-const PartnerProjectContent = ({ mode }: Props) => {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
+const PartnerProjectContent = ({ mode, projectId }: Props) => {
+  const location = useLocation();
+  const params = useParams<{ id: string }>();
+  const id = projectId ?? params.id;
   const { toast } = useToast();
-  const impersonate = searchParams.get("impersonate");
-  const urlSuffix = impersonate ? `?impersonate=${impersonate}` : "";
-
-  const [data, setData] = useState<PartnerDashboardData | null>(null);
-  const [partnerToken, setPartnerToken] = useState<string | null>(null);
-  const [partnerId, setPartnerId] = useState("");
-  const [partnerName, setPartnerName] = useState("");
-  const [partnerEmail, setPartnerEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, partner, partnerToken, urlSuffix, isLoading, error, refetch } = usePartnerPortal();
+  const partnerId = partner.id;
+  const partnerName = partner.name;
+  const partnerEmail = partner.email;
+  // "Terug" gaat naar waar u vandaan kwam (werkbank of projecten, met filters), anders naar de werkbank.
+  const backTo = (location.state as { from?: string } | null)?.from ?? `/partner/werkbank${urlSuffix}`;
 
   const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
   const [showDismissProject, setShowDismissProject] = useState(false);
-
-
-  const fetchDashboard = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/partner/login");
-      return;
-    }
-
-    let token: string | null = null;
-    let pName = "";
-    let pId = "";
-    let pEmail = "";
-
-    if (impersonate) {
-      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-      if (isAdmin) {
-        const { data: partner } = await supabase
-          .from("partners")
-          .select("id, partner_token, name, email")
-          .eq("id", impersonate)
-          .single();
-        if (partner) {
-          token = partner.partner_token;
-          pName = partner.name;
-          pId = partner.id;
-          pEmail = partner.email;
-        }
-      }
-    }
-
-    if (!token) {
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, partner_token, name, email")
-        .eq("auth_user_id", session.user.id)
-        .eq("is_active", true)
-        .single();
-      if (!partner) {
-        setError("Je account is niet gekoppeld aan een partner.");
-        setIsLoading(false);
-        return;
-      }
-      token = partner.partner_token;
-      pName = partner.name;
-      pId = partner.id;
-      pEmail = partner.email;
-    }
-
-    setPartnerToken(token);
-    setPartnerId(pId);
-    setPartnerName(pName);
-    setPartnerEmail(pEmail);
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        }
-      );
-      if (!response.ok) throw new Error("Kon project niet laden");
-      const dashboard = await response.json();
-      setData(dashboard);
-    } catch (err) {
-      reportError(err, { where: "PartnerProject" });
-      setError("Er is een fout opgetreden bij het laden.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, impersonate]);
-
-  const refetch = async () => {
-    setIsLoading(true);
-    await fetchDashboard();
-  };
 
   // Find project data
   const projectItems = useMemo<PartnerItem[]>(() => {
@@ -356,37 +270,15 @@ const PartnerProjectContent = ({ mode }: Props) => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 text-center">
-        <p className="text-destructive">{error}</p>
-        <Button onClick={() => navigate(`/partner/dashboard${urlSuffix}`)} className="mt-4">
-          Terug naar overzicht
-        </Button>
-      </div>
-    );
+  if (isLoading || error) {
+    return <PartnerPage title="Project" icon={mode === "activities" ? <FolderOpen /> : <BedDouble />} back={{ to: backTo }} loading={isLoading} error={error} />;
   }
 
   // ---------- Activities project ----------
   if (mode === "activities") {
     if (projectItems.length === 0) {
       return (
-        <div className="p-6 text-center">
-          <p className="text-muted-foreground">Project niet gevonden.</p>
-          <Button onClick={() => navigate(`/partner/dashboard${urlSuffix}`)} className="mt-4">
-            Terug naar overzicht
-          </Button>
-        </div>
+        <PartnerPage title="Project" icon={<FolderOpen />} back={{ to: backTo }} error="Dit project is niet gevonden of hoort niet bij uw account." />
       );
     }
 
@@ -405,30 +297,19 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
     return (
       <>
-        <div className="p-6 space-y-6 max-w-6xl">
-          <Link
-            to={`/partner/dashboard${urlSuffix}`}
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Terug naar overzicht
-          </Link>
-
-          {/* Header */}
-          <div>
-            <h1 className={cn("text-2xl font-bold", isConceptProject && "italic text-muted-foreground")}>
-              {customerLabel}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {arrival && format(parseISO(arrival), "EEE d MMM", { locale: nl })}
-              {departure && departure !== arrival && (
-                <> – {format(parseISO(departure), "EEE d MMM yyyy", { locale: nl })}</>
-              )}
-              {!departure || departure === arrival
-                ? ` ${arrival ? format(parseISO(arrival), "yyyy", { locale: nl }) : ""}`
-                : ""}
-            </p>
-          </div>
+        <PartnerPage
+          title={customerLabel}
+          icon={<FolderOpen />}
+          back={{ to: backTo }}
+          description={
+            arrival
+              ? departure && departure !== arrival
+                ? `${format(parseISO(arrival), "EEEE d MMMM", { locale: nl })} tot ${format(parseISO(departure), "EEEE d MMMM yyyy", { locale: nl })}`
+                : format(parseISO(arrival), "EEEE d MMMM yyyy", { locale: nl })
+              : "Nog geen datum"
+          }
+          status={isCancelledProject ? { label: "Geannuleerd", tone: "danger" } : isConceptProject ? { label: "Concept", tone: "neutral" } : null}
+        >
 
           {isConceptProject && (
             isCancelledProject ? (
@@ -633,8 +514,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
               </div>
             )}
           </div>
-        </div>
-
+        </PartnerPage>
 
         <PartnerItemSheet
           item={selectedItem}
@@ -698,12 +578,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
   // ---------- Accommodation project ----------
   if (!accommodationQuote) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-muted-foreground">Logiesaanvraag niet gevonden.</p>
-        <Button onClick={() => navigate(`/partner/dashboard${urlSuffix}`)} className="mt-4">
-          Terug naar overzicht
-        </Button>
-      </div>
+      <PartnerPage title="Logiesaanvraag" icon={<BedDouble />} back={{ to: backTo }} error="Deze logiesaanvraag is niet gevonden of hoort niet bij uw account." />
     );
   }
 
@@ -761,22 +636,12 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
   return (
     <>
-      <div className="p-6 space-y-6 max-w-6xl">
-        <Link
-          to={`/partner/dashboard${urlSuffix}`}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Terug naar overzicht
-        </Link>
-
-        <div>
-          <h1 className="text-2xl font-bold">{customerLabel}</h1>
-          <p className="text-muted-foreground mt-1">
-            {format(parseISO(req.arrival_date), "EEE d MMM", { locale: nl })} –{" "}
-            {format(parseISO(req.departure_date), "EEE d MMM yyyy", { locale: nl })}
-          </p>
-        </div>
+      <PartnerPage
+        title={customerLabel}
+        icon={<BedDouble />}
+        back={{ to: backTo }}
+        description={`${format(parseISO(req.arrival_date), "EEEE d MMMM", { locale: nl })} tot ${format(parseISO(req.departure_date), "EEEE d MMMM yyyy", { locale: nl })}`}
+      >
 
         <Card className="p-5 space-y-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
@@ -862,7 +727,7 @@ const PartnerProjectContent = ({ mode }: Props) => {
             />
           </div>
         </div>
-      </div>
+      </PartnerPage>
 
       <PartnerAccommodationQuoteSheet
         isOpen={showQuoteSheet}
@@ -882,12 +747,10 @@ const PartnerProjectContent = ({ mode }: Props) => {
 
 const PartnerProject = ({ mode }: Props) => (
   <PartnerLayout>
-    <Helmet>
-      <title>Project | Partnerportaal | Bureau Vlieland</title>
-      <meta name="robots" content="noindex, nofollow" />
-    </Helmet>
     <PartnerProjectContent mode={mode} />
   </PartnerLayout>
 );
+
+export { PartnerProjectContent };
 
 export default PartnerProject;

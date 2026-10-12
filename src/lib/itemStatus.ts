@@ -51,6 +51,12 @@ export interface ItemDisplayStatusInfo {
   actor: "partner" | "klant" | "bureau" | "geen";
   /** Toon van de pill in het klantportaal. */
   customerTone: CustomerStatusTone;
+  /**
+   * Toon van de pill in het partnerportaal (partnerportaal fase 1): `warning`
+   * de partner is aan zet, `info` wacht op de klant of het bureau, `success`
+   * geregeld, `danger` kan niet, `neutral` informatief.
+   */
+  partnerTone: CustomerStatusTone;
   /** Tailwind text-color (semantisch via tokens waar mogelijk) */
   color: string;
   /** Tailwind background-color */
@@ -77,6 +83,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "Bureau Vlieland wacht op jouw reactie: bevestig, stel een alternatief voor of meld dat je niet beschikbaar bent.",
     actor: "partner",
     customerTone: "info",
+    partnerTone: "warning",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "Clock",
@@ -90,6 +97,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "Dit onderdeel staat bij de klant ter goedkeuring.",
     actor: "klant",
     customerTone: "warning",
+    partnerTone: "info",
     color: "text-blue-700 dark:text-blue-400",
     bgColor: "bg-blue-100 dark:bg-blue-950/50",
     icon: "AlertCircle",
@@ -103,6 +111,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "De prijs is door Bureau Vlieland aangepast. De klant moet de nieuwe prijs nog goedkeuren.",
     actor: "klant",
     customerTone: "warning",
+    partnerTone: "info",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "AlertTriangle",
@@ -116,6 +125,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "De klant heeft dit onderdeel goedgekeurd. Bevestig of stel een alternatief voor.",
     actor: "partner",
     customerTone: "info",
+    partnerTone: "warning",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "Clock",
@@ -129,6 +139,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "De klant stelt een andere tijd voor. Ga akkoord met de klanttijd of stel een alternatief voor.",
     actor: "partner",
     customerTone: "info",
+    partnerTone: "warning",
     color: "text-purple-700 dark:text-purple-400",
     bgColor: "bg-purple-100 dark:bg-purple-950/50",
     icon: "AlertCircle",
@@ -142,6 +153,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "Bureau Vlieland regelt dit onderdeel zelf.",
     actor: "geen",
     customerTone: "success",
+    partnerTone: "info",
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
@@ -155,6 +167,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "De klant heeft akkoord gegeven. Reserveer dit definitief in je planning.",
     actor: "geen",
     customerTone: "success",
+    partnerTone: "warning",
     color: "text-green-700 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-950/50",
     icon: "CheckCircle",
@@ -169,6 +182,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "Dit onderdeel is uitgevoerd. Je kunt het factureren als dat nog niet is gebeurd.",
     actor: "geen",
     customerTone: "success",
+    partnerTone: "success",
     color: "text-emerald-700 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-950/50",
     icon: "CheckCircle2",
@@ -182,6 +196,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "Dit onderdeel is geannuleerd en telt niet meer mee in het programma.",
     actor: "geen",
     customerTone: "neutral",
+    partnerTone: "danger",
     color: "text-muted-foreground",
     bgColor: "bg-muted",
     icon: "Ban",
@@ -195,6 +210,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "Je hebt aangegeven niet beschikbaar te zijn. Bureau Vlieland zoekt een alternatief.",
     actor: "bureau",
     customerTone: "danger",
+    partnerTone: "danger",
     color: "text-red-700 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-950/50",
     icon: "XCircle",
@@ -208,6 +224,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "De klant regelt en betaalt dit onderdeel rechtstreeks bij jou, buiten Bureau Vlieland om.",
     actor: "klant",
     customerTone: "neutral",
+    partnerTone: "neutral",
     color: "text-amber-700 dark:text-amber-400",
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "ExternalLink",
@@ -221,6 +238,7 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     partnerTooltip: "De uitvoerdatum is verstreken en dit onderdeel is automatisch afgesloten. Controleer de status en factureer indien nodig.",
     actor: "geen",
     customerTone: "neutral",
+    partnerTone: "neutral",
     color: "text-slate-600 dark:text-slate-400",
     bgColor: "bg-slate-100 dark:bg-slate-900/50",
     icon: "Ban",

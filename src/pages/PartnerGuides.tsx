@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Helmet } from "react-helmet";
-import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
+import { usePartnerContext } from "@/lib/partnerPortalContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
+  BookOpen,
   UserPlus, 
   MessageSquare, 
   Calendar, 
@@ -30,78 +29,20 @@ interface PartnerCommissionData {
 }
 
 const PartnerGuides = () => {
-  const [searchParams] = useSearchParams();
-  const [partnerData, setPartnerData] = useState<PartnerCommissionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPartnerData = async () => {
-      try {
-        // Check for admin impersonation
-        const impersonateId = searchParams.get("impersonate");
-
-        if (impersonateId) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-            if (isAdmin) {
-              const { data } = await supabase
-                .from("partners")
-                .select("commission_percentage, accommodation_commission_percentage, partner_type")
-                .eq("id", impersonateId)
-                .single();
-              if (data) {
-                setPartnerData(data);
-                setIsLoading(false);
-                return;
-              }
-            }
-          }
-        }
-
-        // Regular partner: fetch via auth
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setIsLoading(false);
-          return;
-        }
-
-        const { data } = await supabase
-          .from("partners")
-          .select("commission_percentage, accommodation_commission_percentage, partner_type")
-          .eq("auth_user_id", session.user.id)
-          .eq("is_active", true)
-          .single();
-
-        if (data) {
-          setPartnerData(data);
-        }
-      } catch (error) {
-        reportError(error, { where: "PartnerGuides: Error fetching partner data" });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPartnerData();
-  }, [searchParams]);
+  const { partner } = usePartnerContext();
+  const partnerData = {
+    partner_type: partner.partner_type,
+    commission_percentage: partner.commission_percentage,
+    accommodation_commission_percentage: partner.accommodation_commission_percentage ?? null,
+  };
+  const isLoading = false;
 
   const isActivityPartner = partnerData?.partner_type === 'activity_provider' || partnerData?.partner_type === 'both' || (!partnerData?.partner_type);
   const isAccommodationPartner = partnerData?.partner_type === 'accommodation' || partnerData?.partner_type === 'both';
 
   return (
     <PartnerLayout>
-      <Helmet>
-        <title>Handleidingen | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <div className="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Handleidingen</h1>
-          <p className="text-muted-foreground mt-2">
-            Alles wat u moet weten over het werken met het Bureau Vlieland Partner Portaal
-          </p>
-        </div>
+      <PartnerPage title="Handleidingen" icon={<BookOpen />} size="content" description="Alles wat u moet weten over het werken met het partnerportaal van Bureau Vlieland.">
 
         {/* Aan de slag */}
         <Card className="mb-6">
@@ -884,7 +825,7 @@ const PartnerGuides = () => {
             </a>
           </p>
         </div>
-      </div>
+      </PartnerPage>
     </PartnerLayout>
   );
 };

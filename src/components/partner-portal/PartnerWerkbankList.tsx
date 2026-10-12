@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -181,6 +181,9 @@ export function PartnerWerkbankList({ data, onDismissed }: Props) {
   const impersonate = searchParams.get("impersonate");
   const urlSuffix = impersonate ? `?impersonate=${impersonate}` : "";
   const [dismissTarget, setDismissTarget] = useState<{ id: string; label: string } | null>(null);
+  // "Terug" op de projectpagina komt hier terug.
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`;
   const partnerToken = (data.partner as any).partner_token as string | undefined;
 
   const grouped = useMemo(() => {
@@ -228,7 +231,7 @@ export function PartnerWerkbankList({ data, onDismissed }: Props) {
                   key={`${row.bucket}-${row.id}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
                 >
-                  <Link to={`${row.href}${urlSuffix}`} className="min-w-0 flex-1">
+                  <Link to={`${row.href}${urlSuffix}`} state={{ from }} className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{row.itemLabel}</span>
                       {row.reference && (
@@ -259,7 +262,7 @@ export function PartnerWerkbankList({ data, onDismissed }: Props) {
                       Geen factuur
                     </Button>
                   )}
-                  <Link to={`${row.href}${urlSuffix}`} className="shrink-0">
+                  <Link to={`${row.href}${urlSuffix}`} state={{ from }} className="shrink-0">
                     <Button variant="ghost" size="sm">
                       Openen <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>

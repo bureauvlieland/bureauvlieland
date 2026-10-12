@@ -329,7 +329,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           .maybeSingle();
 
         if (roleError || !roleData) {
-          navigate("/partner/dashboard");
+          navigate("/partner/werkbank");
           return;
         }
 

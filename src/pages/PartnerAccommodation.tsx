@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Helmet } from "react-helmet";
+import { usePartnerPortal } from "@/hooks/usePartnerPortal";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { PartnerAccommodationRequestCard } from "@/components/partner-portal/PartnerAccommodationRequestCard";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
-import { AlertCircle, RefreshCw, BedDouble, Bell } from "lucide-react";
+import { RefreshCw, BedDouble } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { reportError } from "@/lib/errorReporting";
 
@@ -72,79 +71,22 @@ interface RequestWithQuote extends AccommodationRequest {
 }
 
 const PartnerAccommodationContent = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [requests, setRequests] = useState<RequestWithQuote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [partnerId, setPartnerId] = useState<string | null>(null);
-  const [partnerToken, setPartnerToken] = useState<string | null>(null);
-  const [partnerName, setPartnerName] = useState<string>("");
-  const [partnerEmail, setPartnerEmail] = useState<string>("");
-  const [partnerDescription, setPartnerDescription] = useState<string>("");
+  const { partner, partnerToken } = usePartnerPortal();
+  const partnerId = partner.id;
+  const partnerName = partner.name;
+  const partnerEmail = partner.contact_email || partner.email;
+  const partnerDescription = partner.accommodation_description || "";
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
-
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      navigate("/partner/login");
-      return;
-    }
-
-    // Check if admin is impersonating
-    const impersonatePartnerId = searchParams.get("impersonate");
-    let currentPartnerId: string | null = null;
-
-    if (impersonatePartnerId) {
-      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-      
-      if (isAdmin) {
-        currentPartnerId = impersonatePartnerId;
-      }
-    }
-
-    if (!currentPartnerId) {
-      // Get partner ID and token from auth
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, partner_token, name, email, contact_email, accommodation_description")
-        .eq("auth_user_id", session.user.id)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (!partner) {
-        setError("Je account is niet gekoppeld aan een partner.");
-        setIsLoading(false);
-        return;
-      }
-
-      currentPartnerId = partner.id;
-      setPartnerToken(partner.partner_token);
-      setPartnerName(partner.name);
-      setPartnerEmail(partner.contact_email || partner.email);
-      setPartnerDescription((partner as any).accommodation_description || "");
-    } else {
-      // Admin impersonating - fetch the partner token and name
-      const { data: impersonatedPartner } = await supabase
-        .from("partners")
-        .select("partner_token, name, email, contact_email, accommodation_description")
-        .eq("id", currentPartnerId)
-        .maybeSingle();
-      if (impersonatedPartner) {
-        setPartnerToken(impersonatedPartner.partner_token);
-        setPartnerName(impersonatedPartner.name);
-        setPartnerEmail(impersonatedPartner.contact_email || impersonatedPartner.email);
-        setPartnerDescription((impersonatedPartner as any).accommodation_description || "");
-      }
-    }
-
-    setPartnerId(currentPartnerId);
+    const currentPartnerId = partner.id;
 
     // Fetch quotes for this partner
     const { data: quotes, error: quotesError } = await supabase
@@ -231,7 +173,8 @@ const PartnerAccommodationContent = () => {
 
   useEffect(() => {
     fetchData();
-  }, [navigate, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partner.id]);
 
   const handleQuoteSubmit = async (quoteData: {
     accommodationName: string;
@@ -401,23 +344,8 @@ const PartnerAccommodationContent = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-32 w-full mb-6" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 text-center py-16">
-        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Fout</h1>
-        <p className="text-muted-foreground mb-6">{error}</p>
-      </div>
-    );
+  if (isLoading || error) {
+    return <PartnerPage title="Logies" icon={<BedDouble />} loading={isLoading} error={error} />;
   }
 
   // Tab filtering
@@ -431,31 +359,18 @@ const PartnerAccommodationContent = () => {
 
   return (
     <>
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <BedDouble className="h-6 w-6" />
-              Logies Aanvragen
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Bekijk en beantwoord logies aanvragen van Bureau Vlieland
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {pendingRequests.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                <Bell className="h-4 w-4" />
-                <span>{pendingRequests.length} nieuw</span>
-              </div>
-            )}
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Vernieuwen
-            </Button>
-          </div>
-        </div>
+      <PartnerPage
+        title="Logies"
+        icon={<BedDouble />}
+        description="Logiesaanvragen van Bureau Vlieland: beantwoord ze met een offerte en volg wat de klant kiest."
+        status={pendingRequests.length > 0 ? { label: `${pendingRequests.length} offerte${pendingRequests.length === 1 ? "" : "s"} gevraagd`, tone: "warning" } : null}
+        actions={
+          <Button onClick={fetchData} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Vernieuwen
+          </Button>
+        }
+      >
 
         {/* Tabs */}
         <Tabs defaultValue="pending" className="mt-8">
@@ -643,7 +558,7 @@ const PartnerAccommodationContent = () => {
             )}
           </TabsContent>
         </Tabs>
-      </div>
+      </PartnerPage>
 
       {/* Quote Sheet */}
       <PartnerAccommodationQuoteSheet
@@ -669,10 +584,6 @@ const PartnerAccommodationContent = () => {
 const PartnerAccommodation = () => {
   return (
     <PartnerLayout>
-      <Helmet>
-        <title>Logies Aanvragen | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <PartnerAccommodationContent />
     </PartnerLayout>
   );
