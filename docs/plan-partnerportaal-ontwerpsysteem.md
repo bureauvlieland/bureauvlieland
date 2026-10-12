@@ -619,6 +619,18 @@ neemt werkbank, projecten, project, logies en facturatie op via
 `PartnerItemCard`, de woordenlijsten); de bijlage in het
 klantportaalplan verwijst hierheen.
 
+*Gebouwd op 12 oktober, zelfde PR als fase 1 tot en met 4.* De visuele
+test neemt zes schermen van `/ontwerp/partnerportaal` op (werkbank,
+projecten, project, logies, logiesaanvragen, facturatie) op desktop en
+telefoon, met fixtures `partnerportaal-*.har` voor de gedeelde data; de
+referenties zijn gemaakt met dezelfde Chromium als CI. `DESIGN_DEBT_MAX`
+staat op nul met een lege baseline (sinds fase 4). De paragraaf
+"Partnerportaal" in `docs/design-systeem.md` beschrijft de schil,
+`PartnerPage`, `PortalTabs` met `embedded`, de kaarten, de sheets, de ene
+factuurdialoog, `PartnerAuthShell` en de vijf woordenlijsten; de tabel
+"Borging" en de checklist noemen het partnerportaal; de bijlage in het
+klantportaalplan verwijst hierheen.
+
 Samen ongeveer 12 bouwdagen; met de overlap tussen fase 0 en 1 in de
 praktijk 11. Fase 2 is de kern en verdient een eigen beoordeling met een
 echte partner (impersonatie) op desktop en telefoon.

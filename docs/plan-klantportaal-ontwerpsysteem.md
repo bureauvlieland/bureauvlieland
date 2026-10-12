@@ -669,7 +669,9 @@ Volgorde: fase 0 tot en met 4 zoals hierboven, elk als eigen PR.
 ## Bijlage: het partnerportaal, voor later
 
 *Vervolg: het eigen plan staat in `plan-partnerportaal-ontwerpsysteem.md`
-(11 oktober 2026); de tellingen hieronder zijn daar opnieuw gemeten.*
+(11 oktober 2026); de tellingen hieronder zijn daar opnieuw gemeten. Het
+is gebouwd op 12 oktober 2026 (fase 0 tot en met 5); de paragraaf
+"Partnerportaal" in `design-systeem.md` beschrijft de uitkomst.*
 
 Hetzelfde onderzoek is op het partnerportaal gedaan (16 pagina's en 40
 componenten, ruim 18.000 regels, alleen uit de code; een partnerlogin heb

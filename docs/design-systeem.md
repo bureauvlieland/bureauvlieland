@@ -226,11 +226,53 @@ test neemt vijf van deze schermen op. De gedeelde instellingen
 (`app_settings`, `pricing_structures`) haalt de pagina wel op; in de test
 komen ze uit de fixtures.
 
+## Partnerportaal
+
+Het partnerportaal (`/partner/…`, `src/components/partner-portal`) staat
+op dezelfde tokens en componenten als de site en het klantportaal, met
+`data-surface="portal"` (de blauwe actiekleur, besluit 2 van het
+partnerportaalplan: een werkomgeving, geen verkooppagina). De zijbalk
+blijft (besluit 1): partners werken op een desktop met veel pagina's.
+Wat er bovenop komt:
+
+| Onderdeel | Gebruik | Niet |
+|---|---|---|
+| `PartnerShell` en `PartnerLayout` | De zijbalk per partnertype uit `partnerMenu` (`partnerPortalView.ts`), de mobiele kop onder `md`, meekijken als beheerder zichtbaar; `PartnerLayout` doet de login en zet `PartnerPortalProvider` met `usePartnerPortal` als de enige datalaag | Eigen fetches per pagina, een tweede sessiecontrole |
+| `PartnerPage` | Elke pagina: de titel in de tab ("… | Partnerportaal | Bureau Vlieland"), `Container` (`wide`, of `content`/`prose` voor formulieren), `PortalHead` met icoon, Fraunces-titel, één zin en hoogstens één status, `back`, `loading` en `error` op dezelfde plek | Eigen koppen, `Helmet` per pagina, tellerkaarten |
+| `PortalTabs` met `embedded` | De tabbladen van Logies (`PARTNER_QUOTE_TABS`) en Facturatie, in de URL (`?tab=`), met een `Pill`-teller | `Tabs` uit `ui`, tabs in state |
+| `PartnerItemCard` en `PartnerAccommodationRequestCard` | De kaart van een onderdeel of een logiesaanvraag: tijd met het soort tijd, titel, één status-`Pill` uit de woordenlijst, feiten op één regel, wat er speelt als `Notice`, één primaire knop; reageren gebeurt in de sheet | Drie knoppen op de kaart, snelle acties naast de sheet, eigen `Badge`s |
+| `PartnerItemSheet`, `PartnerAccommodationQuoteSheet`, `PartnerBlockSheet` en de kleinere sheets | Op `ResponsiveSheetContent` (van onderen op een telefoon): kop met titel en `Pill`, scrollende body in `SheetSection`s op `FormField`, de reactie als `OptionCard`s, vaste voet met één primaire knop; na versturen een `SuccessScreen` in de sheet | Tabs in een sheet, uitgeschakelde formulieren als samenvatting (gebruik `FactList`), knoppen onderaan de scroll |
+| `InvoiceRegistrationDialog` | Eén factuurdialoog voor onderdelen en logies (`target`), met de pdf verplicht; regelt upload en registratie zelf en eindigt in een `SuccessScreen` | Twee dialogen, een factuur zonder pdf |
+| `DayBar` en de dagkoppen | De projectpagina gebruikt dezelfde dagindeling als de klant (`partner-dag-<i>`), met `FactList` en de klant in de zijkolom | Een platte lijst zonder dagen |
+| `PartnerAuthShell` | Inloggen, nieuw wachtwoord en de oude tokenroute: één smalle kaart, `FormField`, fouten inline als `Notice`, `SuccessScreen` zonder automatische doorverwijzing | De sitenavigatie om een inlogkaart, toasts voor formulierfouten |
+| `useToast` | Het ene toastsysteem van het portaal, alleen voor wat gelukt of mislukt is nadat de gebruiker iets deed | sonner, toasts voor validatie |
+
+De woorden komen uit één woordenlijst per onderwerp, in de u-vorm:
+`itemStatus.ts` voor onderdelen (`partnerLabel`, `partnerTone`,
+`partnerTooltip`), `partnerProjectStatus.ts` voor een project in de ogen
+van de partner, `accommodationQuoteStatus.ts` voor een logiesofferte
+(status, tab en de ene knop via `partnerQuoteAction`),
+`partnerBlockStatus.ts` voor het aanbod en `partnerWerkbank.ts` voor de
+werkbank en de belangrijkste volgende stap. De tonen betekenen hetzelfde
+als in het klantportaal: `warning` is "u bent aan zet", `info` "wacht op
+een ander", `success` "geregeld", `danger` "kan niet". "Aanbod" is het
+woord voor wat de partner aanbiedt, "activiteit" voor wat de klant boekt.
+Profiel en Instellingen zijn één formulier met één opslaanknop in een
+vaste voet (besluit 7).
+
+De referentie staat op `/ontwerp/partnerportaal` (alleen buiten
+productie): één verzonnen partner uit `src/content/demoPartnerportaal.ts`
+(Wadloopcentrum Vlieland, vijf onderdelen over twee projecten, twee
+logiesaanvragen, één commissiefactuur) met
+`?scherm=werkbank|projecten|project|logies|logiesaanvragen|facturatie|aanbod|handleidingen`.
+Alle acties zijn uitgeschakeld; de visuele test neemt zes van deze
+schermen op.
+
 ## Zo controleer je een wijziging
 
 1. Open `/ontwerp` op de preview: staan de knoppen, pills en koppen nog in
    één lijn? Raakt de wijziging het klantportaal, open dan ook
-   `/ontwerp/klantportaal`.
+   `/ontwerp/klantportaal`; het partnerportaal `/ontwerp/partnerportaal`.
 2. `bunx tsx scripts/check-design-debt.ts`: geen bestand boven zijn
    baseline, het totaal niet gestegen? Met `--list` zie je elke vindplaats.
 3. Klik de pagina's door die je hebt geraakt, op desktop en op een telefoon.
@@ -249,8 +291,8 @@ Vier poorten in CI houden het systeem heel; ze staan in
 |---|---|---|
 | Typecheck | `tsc -p tsconfig.app.json`, nul fouten | hard |
 | Lint en strict-mode | aantal problemen mag niet stijgen | `LINT_MAX`, `STRICT_MAX` in `.github/quality-baselines.env` |
-| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | nul: `DESIGN_DEBT_MAX=0` en een lege `.github/design-debt-baseline.json` sinds klantportaal fase 4 (10 oktober 2026); een bestand met een vindplaats is dan een fout |
-| Visuele regressie | `tests/e2e/visual`: achttien schermen (dertien paginasoorten van de site en vijf schermen van het klantportaal op `/ontwerp/klantportaal`) op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
+| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | nul: `DESIGN_DEBT_MAX=0` en een lege `.github/design-debt-baseline.json`; de site en het klantportaal sinds klantportaal fase 4 (10 oktober 2026), het partnerportaal sinds partnerportaal fase 4 (12 oktober 2026); een bestand met een vindplaats is dan een fout |
+| Visuele regressie | `tests/e2e/visual`: vierentwintig schermen (dertien paginasoorten van de site, vijf schermen van het klantportaal op `/ontwerp/klantportaal` en zes van het partnerportaal op `/ontwerp/partnerportaal`) op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
 
 De visuele test is deterministisch: de klok staat vast op 21 september
 2026, Supabase-antwoorden komen uit `tests/e2e/visual/fixtures/*.har`,
@@ -264,10 +306,11 @@ baseline is leeg. Een nieuwe vindplaats laat CI falen; `--list` wijst hem
 aan. (`--write-baseline` bestaat nog voor het geval een bestand bewust
 even boven nul moet.) Na een bedoelde visuele wijziging laat je de
 referenties opnieuw maken door de workflow "Visuele referenties
-vernieuwen" (`tests/e2e/visual/README.md`). Het klantportaal telt mee in
-de ontwerpschuld en de visuele test (via `/ontwerp/klantportaal`); het
-admin-, partner- en logiesportaal vallen erbuiten, erven de tokens en
-kunnen later per scherm worden bijgetrokken.
+vernieuwen" (`tests/e2e/visual/README.md`). Het klantportaal en het
+partnerportaal tellen mee in de ontwerpschuld en de visuele test (via
+`/ontwerp/klantportaal` en `/ontwerp/partnerportaal`); het admin- en het
+logiesportaal vallen erbuiten, erven de tokens en kunnen later per scherm
+worden bijgetrokken.
 
 ## Checklist voor een nieuwe pagina
 
@@ -299,6 +342,7 @@ kunnen later per scherm worden bijgetrokken.
 8. Voeg de pagina toe aan `tests/e2e/visual/paginas.spec.ts` als het een
    nieuwe paginasoort is, en neem de fixtures op. Een nieuw scherm in het
    klantportaal krijgt een `?scherm=` op `/ontwerp/klantportaal` met de
-   vaste data uit `src/content/demoKlantportaal.ts`.
+   vaste data uit `src/content/demoKlantportaal.ts`; in het partnerportaal
+   op `/ontwerp/partnerportaal` met `src/content/demoPartnerportaal.ts`.
 9. Controleer: typecheck, `check-design-debt.ts`, `/ontwerp`, de pagina op
    desktop en telefoon, en CI groen.

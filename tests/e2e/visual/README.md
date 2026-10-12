@@ -1,7 +1,8 @@
 # Visuele regressie (fase 5, borging)
 
-Eén pagina per paginasoort van de publieke site en vijf schermen van het
-klantportaal, op desktop (1440) en telefoon (390), vergeleken met de
+Eén pagina per paginasoort van de publieke site, vijf schermen van het
+klantportaal en zes van het partnerportaal, op desktop (1440) en telefoon
+(390), vergeleken met de
 referentie in `__snapshots__/`. Draait in
 CI (job "Visuele regressie") tegen de preview-build. Wijkt een pagina meer
 dan 1% van de pixels af, faalt de job en staan de verschillen in het
@@ -63,6 +64,18 @@ te beoordelen en maak nieuwe referenties via de workflow hierboven.
   `pricing_structures`); die staan in de fixtures `klantportaal-*.har`,
   zodat bijvoorbeeld de natuurbijdrage en de organisatiefee kloppen. De
   acties doen niets.
+- Het partnerportaal wordt opgenomen op `/ontwerp/partnerportaal` (alleen
+  buiten productie): één verzonnen partner uit
+  `src/content/demoPartnerportaal.ts` (Wadloopcentrum Vlieland, vijf
+  onderdelen over twee projecten, twee logiesaanvragen, één
+  commissiefactuur), gekozen met `?scherm=werkbank`, `projecten`,
+  `project`, `logies`, `logiesaanvragen`, `facturatie`, `aanbod` of
+  `handleidingen`. De zijbalk, de werkbank, de projectpagina (activiteiten
+  en logies), de logiespagina en de facturatie staan in de test; aanbod
+  en handleidingen niet. De pagina haalt alleen de gedeelde data op
+  (`building_blocks`, `app_settings`, en de chatstatus op de logiespagina);
+  die staan in de fixtures `partnerportaal-*.har`. De acties zijn
+  uitgeschakeld.
 
 ## Vaste data
 
@@ -87,4 +100,5 @@ een tekst om op te wachten), neem de fixture op zoals hierboven en laat de
 workflow de referentie maken. Een scherm van het klantportaal krijgt een
 `?scherm=` op `/ontwerp/klantportaal`; neem de fixture op zoals
 hierboven. Zie ook de checklist voor een nieuwe pagina
-in `docs/design-systeem.md`.
+in `docs/design-systeem.md`. Een scherm van het partnerportaal werkt net
+zo op `/ontwerp/partnerportaal`.
