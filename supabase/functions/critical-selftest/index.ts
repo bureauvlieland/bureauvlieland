@@ -24,7 +24,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { loadReconciliationInputs } from "../_shared/commissionReconciliationData.ts";
 import { getCommissionRate } from "../_shared/commissionRates.ts";
-import { buildReconciliationRows, COMMISSION_FREE_PARTNER_IDS } from "../_shared/commissionReconciliation.ts";
+import {
+  buildReconciliationRows,
+  COMMISSION_FREE_PARTNER_IDS,
+  worklistInvoiceCoverage,
+} from "../_shared/commissionReconciliation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -460,7 +464,7 @@ Deno.serve(async (req) => {
         "commission_worklist_coverage",
         "Commissiewerklijst dekt alle inkoopfacturen",
         "warning",
-        "Open /admin/commissies en vergelijk met Inkoopfacturen: een factuur valt buiten de werklijst (onderdeel geannuleerd, status of koppeling). Controleer loadReconciliationInputs.",
+        "Open de genoemde facturen onder Inkoopfacturen: elk hangt aan een onderdeel dat geen werklijstregel oplevert (geannuleerd, bureau-regel, ander project) of is maar deels gealloceerd. Koppel opnieuw, vul de allocatie aan, of markeer commissievrij met reden.",
         async () => {
           const inputs = await loadReconciliationInputs(admin);
           const rows = buildReconciliationRows({
@@ -470,31 +474,47 @@ Deno.serve(async (req) => {
             partners: inputs.partners,
             settings: inputs.settings,
           });
-          const worklist = rows
-            .filter((r) => !r.commissionExempt && r.commissionPercentage > 0)
-            .reduce((sum, r) => sum + (r.purchaseExclVat ?? 0), 0);
+          // Per factuur: welk bedrag komt in de werklijst terug? Zo noemt de
+          // melding meteen de factuurnummers in plaats van alleen twee totalen.
+          const covered = worklistInvoiceCoverage(rows);
 
-          const pctByPartner = new Map(
-            inputs.partners.map((p) => [p.id, getCommissionRate(p, "activity")]),
-          );
+          const partnerById = new Map(inputs.partners.map((p) => [p.id, p]));
           const { data: invoices, error } = await admin
             .from("partner_purchase_invoices")
-            .select("partner_id, amount_excl_vat, status, commission_exempt");
+            .select("id, partner_id, invoice_number, amount_excl_vat, status, commission_exempt");
           if (error) throw new Error(error.message);
-          const raw = (invoices ?? [])
+          const relevant = (invoices ?? [])
             .filter((i) => i.commission_exempt !== true)
             .filter((i) => !COMMISSION_FREE_PARTNER_IDS.has(i.partner_id ?? ""))
-            .filter((i) => (pctByPartner.get(i.partner_id ?? "") ?? 0) > 0)
-            .reduce((sum, i) => sum + (Number(i.amount_excl_vat) || 0), 0);
+            .filter((i) => getCommissionRate(partnerById.get(i.partner_id ?? ""), "activity") > 0);
 
-          const diff = Math.abs(raw - worklist);
-          const tolerance = Math.max(5, raw * 0.01);
-          if (diff > tolerance) {
-            throw new Error(
-              `Werklijst € ${worklist.toFixed(2)} tegenover € ${raw.toFixed(2)} aan inkoopfacturen ex btw (verschil € ${diff.toFixed(2)})`,
+          let raw = 0;
+          let missing = 0;
+          const gaps: string[] = [];
+          for (const inv of relevant) {
+            const amount = Number(inv.amount_excl_vat) || 0;
+            const inWorklist = covered.get(inv.id) ?? 0;
+            raw += amount;
+            const gap = amount - inWorklist;
+            if (Math.abs(gap) < 0.05) continue;
+            missing += gap;
+            const partner = partnerById.get(inv.partner_id ?? "")?.name ?? inv.partner_id ?? "onbekende partner";
+            const number = inv.invoice_number ?? "zonder nummer";
+            gaps.push(
+              inWorklist === 0
+                ? `${number} (${partner}, € ${amount.toFixed(2)}, ontbreekt volledig)`
+                : `${number} (${partner}, € ${gap.toFixed(2)} van € ${amount.toFixed(2)} niet in werklijst)`,
             );
           }
-          return `werklijst € ${worklist.toFixed(2)} ≈ inkoopfacturen € ${raw.toFixed(2)}`;
+
+          const tolerance = Math.max(5, raw * 0.01);
+          if (Math.abs(missing) > tolerance) {
+            throw new Error(
+              `€ ${missing.toFixed(2)} van € ${raw.toFixed(2)} aan inkoopfacturen ex btw ontbreekt in de werklijst: ${gaps.join("; ")}`,
+            );
+          }
+          const note = gaps.length > 0 ? ` (binnen tolerantie: ${gaps.join("; ")})` : "";
+          return `werklijst dekt € ${(raw - missing).toFixed(2)} van € ${raw.toFixed(2)} aan inkoopfacturen${note}`;
         },
       ),
     );

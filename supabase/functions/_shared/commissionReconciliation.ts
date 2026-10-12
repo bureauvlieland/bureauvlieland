@@ -206,6 +206,19 @@ export interface ReconRow {
   partnerDismissed?: boolean;
   /** Staat op een nog niet verstuurde commissiefactuur (concept of definitief). */
   inDraft?: boolean;
+  /**
+   * Inkoopfacturen die in `purchaseExclVat` meetellen, met per factuur het
+   * bedrag dat voor déze regel geldt (bij verzamelfacturen het gealloceerde
+   * deel). Hiermee is per factuur na te gaan of hij in de werklijst terugkomt.
+   */
+  purchaseInvoices?: ReconRowInvoice[];
+}
+
+/** Bijdrage van één inkoopfactuur aan een werklijstregel. */
+export interface ReconRowInvoice {
+  id: string;
+  invoiceNumber: string | null;
+  amountExclVat: number;
 }
 
 
@@ -387,16 +400,43 @@ export function isWithinTolerance(
 }
 
 /** Is deze factuur op enige manier aan een programma-onderdeel of logies-offerte gekoppeld? */
+/** Onderdelen die geen werklijstregel opleveren: bureau-regels en zelf geregeld werk. */
+export function isRowlessItem(item: Pick<ReconItemInput, "block_type">): boolean {
+  return item.block_type === "bureau" || item.block_type === "self_arranged";
+}
+
+/**
+ * Hangt de factuur aan een onderdeel dat een regel oplevert? Koppelingen naar
+ * onderdelen in `rowlessItemIds` tellen niet: die factuur moet als losse
+ * (project)factuur terugkomen, anders verdwijnt hij uit de werklijst.
+ */
 export function invoiceIsLinked(
   invoice: ReconInvoiceInput,
   itemsByInvoiceNumber: Set<string>,
+  rowlessItemIds: Set<string> = new Set(),
 ): boolean {
-  if (invoice.item_id) return true;
-  if ((invoice.allocated_item_ids?.length ?? 0) > 0) return true;
+  if (invoice.item_id && !rowlessItemIds.has(invoice.item_id)) return true;
+  if ((invoice.allocated_item_ids ?? []).some((id) => !rowlessItemIds.has(id))) return true;
   if (invoice.invoice_number && itemsByInvoiceNumber.has(invoiceKey(invoice.partner_id, invoice.invoice_number))) {
     return true;
   }
   return false;
+}
+
+/**
+ * Per inkoopfactuur het bedrag (ex btw) dat in de werklijst terugkomt: de som
+ * van de bijdragen aan regels met commissie (niet vrijgesteld, percentage > 0).
+ * Een factuur die ontbreekt in de uitkomst telt nergens mee.
+ */
+export function worklistInvoiceCoverage(rows: ReconRow[]): Map<string, number> {
+  const covered = new Map<string, number>();
+  for (const row of rows) {
+    if (row.commissionExempt || row.commissionPercentage <= 0) continue;
+    for (const inv of row.purchaseInvoices ?? []) {
+      covered.set(inv.id, (covered.get(inv.id) ?? 0) + inv.amountExclVat);
+    }
+  }
+  return covered;
 }
 
 export function invoiceKey(partnerId: string | null | undefined, invoiceNumber: string | null | undefined): string {
@@ -423,13 +463,24 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
   const partnerMap = new Map(input.partners.map((p) => [p.id, p]));
   const projectMap = new Map(input.projects.map((p) => [p.id, p]));
 
+  // Onderdelen die nooit een regel opleveren: bureau-regels en zelf geregeld
+  // werk. Een inkoopfactuur die alléén daaraan hangt (op maat ingevoerde
+  // kosten waar de partner toch voor factureert) mag niet als "gekoppeld"
+  // verdwijnen: hij valt terug op de projectregel in stap 2, net als een
+  // factuur zonder onderdeel. Zo viel € 9.071 aan Stortemelk- en
+  // Bagagevervoer-facturen stil uit de werklijst.
+  const rowlessItemIds = new Set<string>(
+    input.items.filter((i) => isRowlessItem(i)).map((i) => i.id),
+  );
+
   // Index: alle factuurnummers die aan een item hangen (voor koppelingsdetectie).
   const linkedInvoiceNumbers = new Set<string>();
   for (const item of input.items) {
-    if (item.invoiced_number) {
+    if (item.invoiced_number && !rowlessItemIds.has(item.id)) {
       linkedInvoiceNumbers.add(invoiceKey(item.provider_id, item.invoiced_number));
     }
   }
+  const isLinked = (inv: ReconInvoiceInput) => invoiceIsLinked(inv, linkedInvoiceNumbers, rowlessItemIds);
 
   // Index: facturen per item (via item_id, allocaties of factuurnummer).
   // Per koppeling bewaren we het bedrag dat voor díT item meetelt: bij
@@ -470,7 +521,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
   const projectLevelInvoiceKeys = new Set<string>();
   for (const inv of input.invoices) {
     if (!inv.request_id || inv.commission_exempt === true) continue;
-    if (invoiceIsLinked(inv, linkedInvoiceNumbers)) continue;
+    if (isLinked(inv)) continue;
     projectLevelInvoiceKeys.add(`${inv.partner_id ?? ""}::${inv.request_id}`);
   }
 
@@ -478,7 +529,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
   for (const item of input.items) {
     const partnerId = item.provider_id ?? "";
     if (!partnerId) continue;
-    if (item.block_type === "bureau" || item.block_type === "self_arranged") continue;
+    if (rowlessItemIds.has(item.id)) continue;
     if (
       item.request_id &&
       !item.invoiced_number &&
@@ -617,12 +668,17 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         : false,
       partnerDismissed: item.partner_dismissed === true,
       inDraft: item.in_commission_draft === true,
+      purchaseInvoices: activeInvoices.map((e) => ({
+        id: e.inv.id,
+        invoiceNumber: e.inv.invoice_number,
+        amountExclVat: e.amount ?? 0,
+      })),
     });
   }
 
   // ── 2. Regels vanuit de inkoopkant (facturen zonder koppeling) ──────────
   for (const inv of input.invoices) {
-    if (invoiceIsLinked(inv, linkedInvoiceNumbers)) continue;
+    if (isLinked(inv)) continue;
 
     const partnerId = inv.partner_id ?? "";
     const partner = partnerMap.get(partnerId);
@@ -673,6 +729,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionComponents: null,
       hasMixedRates: false,
       inDraft: inv.in_commission_draft === true,
+      purchaseInvoices: [{ id: inv.id, invoiceNumber: inv.invoice_number, amountExclVat: purchaseExcl ?? 0 }],
     });
   }
 
