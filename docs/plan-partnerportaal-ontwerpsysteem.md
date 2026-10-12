@@ -2,8 +2,8 @@
 
 Status: onderzoek en voorstel, 11 oktober 2026; besluiten genomen door
 Erwin op 11 oktober 2026 (alle aanbevelingen, zie "Besluiten"). Fase 0
-gebouwd op 11 oktober, fase 1 op 12 oktober (zie de voortgang per fase).
-Vraag van Erwin: na het klantportaal
+gebouwd op 11 oktober, fase 1 en 2 op 12 oktober (zie de voortgang per
+fase). Vraag van Erwin: na het klantportaal
 (`plan-klantportaal-ontwerpsysteem.md`, afgerond 10 oktober) het
 partnerportaal op het ontwerpsysteem brengen. De bouw volgt per fase, elke
 fase als eigen PR met preview.
@@ -488,6 +488,39 @@ projectpagina met `DayBar`, dagkoppen, `FactList` en `PartnerItemCard`;
 `FloatingStack` op een telefoon. Hiermee verdwijnt ruim een derde van
 de schuld (`PartnerItemSheet`, `PartnerProjectItemRow`,
 `PartnerProjectsTable`, `PartnerWerkbankList`).
+
+*Gebouwd op 12 oktober, zelfde PR als fase 1.* De werkbank begint met één
+`Notice` met de belangrijkste volgende stap ("2 aanvragen wachten op uw
+reactie", `werkbankHeadline` in `src/lib/partnerWerkbank.ts`, waar ook
+de rijen vandaan komen); de vier groepen hebben een `Pill`-teller, de
+hints zijn zonder gedachtestreepjes, leeg is een `EmptyState`. De drie
+banners (pdf ontbreekt, profiel, afspraken) zijn `Notice`s. De
+projectentabel toont de partnerwoordenlijst (`partnerStatus` op de rij,
+uit `partnerProjectStatus.ts`) als `Pill`, een verstreken datum als
+`Pill` `danger`, en wordt onder `md` een kaartlijst met dezelfde velden;
+de koppen heten Referentie, Personen, Soort, Onderdelen en Te doen. De
+projectpagina heeft de dagindeling van de klant: `DayBar` en dagkoppen
+("donderdag 5 november · dag 1 van 2 · 2 onderdelen van u") bij een
+meerdaags programma, de feiten als `FactList` naast de tijdlijn met de
+klant, de gastenlijst en de chat eronder, concept en annulering als
+`Notice`. De nieuwe `PartnerItemCard` heeft dezelfde opbouw als de kaart
+van de klant (tijd met het soort tijd: gewenst, uw voorstel, bevestigd,
+klant wil; titel; één `Pill` uit `partnerLabel` en `partnerTone`;
+personen, duur en plek; de prijs) en één knop "Reageren" die de sheet
+opent; alleen "Markeer uitgevoerd" en "Akkoord met de nieuwe prijs" zijn
+één klik op de kaart. `PartnerProjectItemRow` is weg. `PartnerItemSheet`
+is opnieuw opgebouwd op `ResponsiveSheetContent` (van onderen op een
+telefoon): kop met titel en één `Pill`, dan wat er speelt als `Notice`
+(tegenvoorstel van de klant, nieuwe prijs van het bureau met akkoord of
+eigen prijs, uw voorstel, afgewezen, wacht op de klant, instructie),
+de feiten één keer als `FactList`, de klant met gastenlijst en
+documenten, de omschrijving en de kaart ingeklapt onder "Over dit
+onderdeel", de factuur, en de reactie als drie `OptionCard`s
+(bevestigen, andere tijd of prijs, niet beschikbaar) met `FormField`s;
+onderaan een vaste voet met één primaire knop. De chat staat op een
+telefoon onder de onderdelen in plaats van in `FloatingStack`, omdat de
+algemene chatknop die stapel al gebruikt. Ontwerpschuld van 380 naar
+225; `DESIGN_DEBT_MAX=225`.
 
 **Fase 3: logies en facturatie (3 dagen).** De logiespagina en de
 aanvraagkaart op één woordenlijst, `Pill` en `Notice`; de offertesheet

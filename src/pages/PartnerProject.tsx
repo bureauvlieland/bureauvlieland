@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, XCircle, FolderOpen, BedDouble } from "lucide-react";
+import { Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, FolderOpen, BedDouble } from "lucide-react";
 import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -8,7 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { usePartnerPortal } from "@/hooks/usePartnerPortal";
-import { PartnerProjectItemRow } from "@/components/partner-portal/PartnerProjectItemRow";
+import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
+import { DayBar, type DayBarDay, type DayStatus } from "@/components/customer-portal/DayBar";
+import { EmptyState, FactList, Notice, Pill } from "@/components/system";
+import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
+import { OTHER_TURN_STATUSES, PARTNER_TURN_STATUSES } from "@/lib/partnerProjectStatus";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
 import { ProjectChatPanel } from "@/components/partner-portal/ProjectChatPanel";
@@ -17,7 +21,6 @@ import { BureauCentralBadge } from "@/components/partner-portal/BureauCentralBad
 import { PartnerPostChargesSection } from "@/components/partner-portal/PartnerPostChargesSection";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 import { cn } from "@/lib/utils";
@@ -41,7 +44,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
   const params = useParams<{ id: string }>();
   const id = projectId ?? params.id;
   const { toast } = useToast();
-  const { data, partner, partnerToken, urlSuffix, isLoading, error, refetch } = usePartnerPortal();
+  const { data, partner, partnerToken, urlSuffix, isLoading, error, refetch, isDemo } = usePartnerPortal();
   const partnerId = partner.id;
   const partnerName = partner.name;
   const partnerEmail = partner.email;
@@ -53,6 +56,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
   const [showDismissProject, setShowDismissProject] = useState(false);
+  const [activeDay, setActiveDay] = useState(0);
 
   // Find project data
   const projectItems = useMemo<PartnerItem[]>(() => {
@@ -89,41 +93,25 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
     );
   }, [data, mode, id]);
 
-  const updateItemStatus = async (
+  const postItemStatus = async (
+    itemId: string,
     status: string,
     statusNote?: string,
     quotedPrice?: number,
     quotedNotes?: string,
     proposedTime?: string,
-    proposedDate?: string
+    proposedDate?: string,
   ): Promise<boolean> => {
-    if (!partnerToken || !selectedItem) return false;
+    if (!partnerToken) return false;
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-partner-item-status`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            partnerToken,
-            itemId: selectedItem.id,
-            status,
-            statusNote,
-            quotedPrice,
-            quotedNotes,
-            proposedTime,
-            proposedDate,
-          }),
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-partner-item-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({ partnerToken, itemId, status, statusNote, quotedPrice, quotedNotes, proposedTime, proposedDate }),
+      });
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({} as Record<string, unknown>));
-        throw new Error(
-          (payload.details as string) || (payload.error as string) || "Kon status niet bijwerken.",
-        );
+        const payload = await response.json().catch(() => ({}) as Record<string, unknown>);
+        throw new Error((payload.details as string) || (payload.error as string) || "Kon status niet bijwerken.");
       }
       toast({ title: "Status bijgewerkt" });
       await refetch();
@@ -136,8 +124,10 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
       });
       return false;
     }
-
   };
+
+  const updateItemStatus = (status: string, statusNote?: string, quotedPrice?: number, quotedNotes?: string, proposedTime?: string, proposedDate?: string) =>
+    selectedItem ? postItemStatus(selectedItem.id, status, statusNote, quotedPrice, quotedNotes, proposedTime, proposedDate) : Promise.resolve(false);
 
   const handleInvoiceRegister = async (
     amount: number,
@@ -290,10 +280,53 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
     const departure = sorted[sorted.length - 1];
     const isConceptProject = projectItems.every((i) => i.is_concept);
     const isCancelledProject = !!req.cancelled_at || req.status === "cancelled";
-    const customerLabel = isConceptProject
-      ? "Aanvraag in voorbereiding"
-      : req.customer_company || req.customer_name;
+    const customerLabel = isConceptProject ? "Aanvraag in voorbereiding" : req.customer_company || req.customer_name;
     const isBureauCentral = req.invoicing_mode === "bureau_central";
+
+    // Dezelfde dagindeling als de klant: één tijdlijn met dagkoppen en een dagbalk.
+    const dayCount = Math.max(sorted.length, 1);
+    const timeOf = (i: PartnerItem) => i.confirmed_time || i.proposed_time || i.preferred_time || "99:99";
+    const days: (DayBarDay & { items: PartnerItem[] })[] = Array.from({ length: dayCount }, (_, index) => {
+      const items = projectItems.filter((i) => Math.min(i.day_index, dayCount - 1) === index).sort((a, b) => timeOf(a).localeCompare(timeOf(b)));
+      const statuses = items.map((i) => deriveItemDisplayStatusLoose(i, { audience: "partner" }));
+      const openCount = statuses.filter((st) => PARTNER_TURN_STATUSES.has(st)).length;
+      const waitingCount = statuses.filter((st) => OTHER_TURN_STATUSES.has(st)).length;
+      const status: DayStatus = items.length === 0 ? "empty" : openCount > 0 ? "open" : waitingCount > 0 ? "waiting" : "done";
+      return { index, date: sorted[index] ? parseISO(sorted[index]) : new Date(NaN), count: items.length, status, openCount, waitingCount, items };
+    });
+    const selectDay = (index: number) => {
+      setActiveDay(index);
+      document.getElementById(`partner-dag-${index}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    const facts = [
+      { label: "Personen", value: `${req.number_of_people}`, icon: Users },
+      ...(arrival && departure && departure !== arrival
+        ? [
+            { label: "Aankomst", value: format(parseISO(arrival), "EEEE d MMMM", { locale: nl }), icon: Calendar },
+            { label: "Vertrek", value: format(parseISO(departure), "EEEE d MMMM", { locale: nl }), icon: Calendar },
+          ]
+        : [{ label: "Datum", value: arrival ? format(parseISO(arrival), "EEEE d MMMM yyyy", { locale: nl }) : "Nog niet bekend", icon: Calendar }]),
+      ...(req.reference_number ? [{ label: "Referentie", value: req.reference_number }] : []),
+    ];
+
+    const renderItems = (items: PartnerItem[]) =>
+      items.map((item) => (
+        <PartnerItemCard
+          key={item.id}
+          item={item}
+          showDate={dayCount <= 1}
+          onOpen={() => {
+            setSelectedItem(item);
+            setShowSheet(true);
+          }}
+          onRegisterInvoice={() => {
+            setSelectedItem(item);
+            setShowInvoiceDialog(true);
+          }}
+          onStatusUpdate={(status, note, qPrice, qNotes) => postItemStatus(item.id, status, note, qPrice, qNotes)}
+        />
+      ));
 
     return (
       <>
@@ -309,209 +342,113 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
               : "Nog geen datum"
           }
           status={isCancelledProject ? { label: "Geannuleerd", tone: "danger" } : isConceptProject ? { label: "Concept", tone: "neutral" } : null}
+          actions={
+            !isConceptProject && canCloseProject ? (
+              <Button variant="outline" size="sm" onClick={() => setShowDismissProject(true)}>
+                <Archive className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                Project sluiten
+              </Button>
+            ) : undefined
+          }
         >
-
-          {isConceptProject && (
-            isCancelledProject ? (
-              <div className="flex gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-medium text-destructive">Deze aanvraag is geannuleerd</p>
-                  <p className="text-sm text-muted-foreground">
-                    Geannuleerd voordat Bureau Vlieland 'm aan je had vrijgegeven. Er is geen actie nodig.
-                  </p>
-                </div>
-              </div>
+          {isConceptProject &&
+            (isCancelledProject ? (
+              <Notice tone="danger" title="Deze aanvraag is geannuleerd">
+                <p>Geannuleerd voordat Bureau Vlieland hem aan u had vrijgegeven. U hoeft niets te doen.</p>
+              </Notice>
             ) : (
-              <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
-                <p className="font-medium">Concept — nog niet vrijgegeven door Bureau Vlieland</p>
-                <p className="mt-1">
-                  Deze aanvraag is in voorbereiding. Je kunt 'm vast bekijken; klantgegevens en acties komen
-                  pas vrij zodra Bureau Vlieland de aanvraag officieel naar je verstuurt.
-                </p>
-              </div>
-            )
-          )}
+              <Notice tone="info" title="Concept: nog niet vrijgegeven door Bureau Vlieland">
+                <p>Deze aanvraag is in voorbereiding. U kunt hem vast bekijken; de klantgegevens en de acties komen vrij zodra Bureau Vlieland de aanvraag naar u verstuurt.</p>
+              </Notice>
+            ))}
 
-          {/* Project info card */}
-          <Card className="p-5 space-y-4">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Aantal personen</p>
-                <p className="font-medium flex items-center gap-1.5">
-                  <Users className="h-4 w-4" />
-                  {req.number_of_people}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Aankomst</p>
-                <p className="font-medium flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  {arrival ? format(parseISO(arrival), "d MMM", { locale: nl }) : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Vertrek</p>
-                <p className="font-medium flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  {departure ? format(parseISO(departure), "d MMM", { locale: nl }) : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Referentie</p>
-                <p className="font-medium">{req.reference_number || "—"}</p>
-              </div>
-            </div>
-
-            {!isBureauCentral && !isConceptProject && (
-              <div className="grid sm:grid-cols-2 gap-3 text-sm border-t pt-4">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span>{customerLabel}</span>
-                </div>
-                {req.customer_email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${req.customer_email}`} className="hover:underline">
-                      {req.customer_email}
-                    </a>
-                  </div>
-                )}
-                {req.customer_phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${req.customer_phone}`} className="hover:underline">
-                      {req.customer_phone}
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {isBureauCentral && !isConceptProject && <BureauCentralBadge variant="compact" />}
-
-            {!isConceptProject && (
-              <GuestDetailsBlock
-                guestNames={req.guest_names}
-                dietaryNotes={req.dietary_notes}
-              />
-            )}
-
-          </Card>
-
-          {/* Items + chat in 2-col layout */}
-          <div className={cn("grid gap-6", !isConceptProject && "lg:grid-cols-[1fr_400px]")}>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold">Onderdelen ({projectItems.length})</h2>
-                {!isConceptProject && canCloseProject && (
-                  <Button variant="outline" size="sm" onClick={() => setShowDismissProject(true)}>
-                    <Archive className="h-4 w-4 mr-1.5" />
-                    Project sluiten
-                  </Button>
-                )}
-              </div>
-
+          <div className={cn("grid gap-6", !isConceptProject && "lg:grid-cols-[1fr_320px]")}>
+            <div className="space-y-4">
               {isConceptProject ? (
-                <Card className="divide-y">
+                <ul className="divide-y rounded-lg border bg-card">
                   {projectItems.map((item) => (
-                    <div key={item.id} className="flex items-start gap-3 p-4 opacity-70">
+                    <li key={item.id} className="flex items-start gap-3 p-4 opacity-70">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{item.block_name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {item.duration ?? "—"}
-                          {item.preferred_time && ` · voorkeur ${item.preferred_time}`}
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {[item.duration, item.preferred_time ? `voorkeur ${item.preferred_time}` : null].filter(Boolean).join(" · ")}
                         </p>
                       </div>
-                      <Badge
-                        variant={isCancelledProject ? "destructive" : "outline"}
-                        className={cn("shrink-0", !isCancelledProject && "border-dashed")}
-                      >
+                      <Pill tone={isCancelledProject ? "danger" : "neutral"} className="shrink-0">
                         {isCancelledProject ? "Geannuleerd" : "Concept"}
-                      </Badge>
-                    </div>
+                      </Pill>
+                    </li>
                   ))}
-                </Card>
+                </ul>
               ) : (
-                projectItems.map((item) => (
-                  <PartnerProjectItemRow
-                    key={item.id}
-                    item={item}
-                    onStatusUpdate={async (status, note, qPrice, qNotes, pTime, pDate) => {
-                      setSelectedItem(item);
-                      return await (async () => {
-                        if (!partnerToken) return false;
-                        try {
-                          const response = await fetch(
-                            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-partner-item-status`,
-                            {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-                              },
-                              body: JSON.stringify({
-                                partnerToken,
-                                itemId: item.id,
-                                status,
-                                statusNote: note,
-                                quotedPrice: qPrice,
-                                quotedNotes: qNotes,
-                                proposedTime: pTime,
-                                proposedDate: pDate,
-                              }),
-                            }
-                          );
-                          if (!response.ok) {
-                            const payload = await response
-                              .json()
-                              .catch(() => ({} as Record<string, unknown>));
-                            throw new Error(
-                              (payload.details as string) ||
-                                (payload.error as string) ||
-                                "Kon status niet bijwerken.",
-                            );
-                          }
-                          toast({ title: "Status bijgewerkt" });
-                          await refetch();
-                          return true;
-                        } catch (e) {
-                          toast({
-                            title: "Status niet bijgewerkt",
-                            description: e instanceof Error ? e.message : "Kon status niet bijwerken.",
-                            variant: "destructive",
-                          });
-                          return false;
-                        }
-
-                      })();
-                    }}
-                    onRegisterInvoice={() => {
-                      setSelectedItem(item);
-                      setShowInvoiceDialog(true);
-                    }}
-                    onOpenDetails={() => {
-                      setSelectedItem(item);
-                      setShowSheet(true);
-                    }}
-                  />
-                ))
-              )}
-              {!isConceptProject && id && partnerId && (
-                <PartnerPostChargesSection partnerId={partnerId} requestId={id} />
+                <>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="font-display text-xl font-medium">Uw onderdelen ({projectItems.length})</h2>
+                  </div>
+                  {dayCount > 1 && <DayBar days={days} activeIndex={activeDay} onSelect={selectDay} className="top-0" />}
+                  {dayCount > 1 ? (
+                    days.map((day) => (
+                      <section key={day.index} id={`partner-dag-${day.index}`} aria-labelledby={`partner-dag-${day.index}-kop`} className="scroll-mt-24 space-y-3">
+                        <div>
+                          <h3 id={`partner-dag-${day.index}-kop`} className="font-display text-lg font-medium leading-tight">
+                            {Number.isNaN(day.date.getTime()) ? `Dag ${day.index + 1}` : format(day.date, "EEEE d MMMM", { locale: nl })}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            dag {day.index + 1} van {dayCount} · {day.count === 1 ? "1 onderdeel van u" : `${day.count} onderdelen van u`}
+                          </p>
+                        </div>
+                        {day.items.length > 0 ? renderItems(day.items) : <EmptyState title="Geen onderdelen van u op deze dag" />}
+                      </section>
+                    ))
+                  ) : (
+                    renderItems(days[0].items)
+                  )}
+                  {id && partnerId && !isDemo && <PartnerPostChargesSection partnerId={partnerId} requestId={id} />}
+                </>
               )}
             </div>
 
-
             {!isConceptProject && (
-              <div className="lg:sticky lg:top-6 lg:self-start">
-                <ProjectChatPanel
-                  partnerId={partnerId}
-                  partnerName={partnerName}
-                  partnerEmail={partnerEmail}
-                  requestId={id}
-                />
-              </div>
+              <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+                <FactList items={facts} />
+                <div className="rounded-lg border bg-card p-4 text-sm">
+                  <h3 className="mb-2 font-medium">Klant</h3>
+                  {isBureauCentral ? (
+                    <BureauCentralBadge variant="compact" />
+                  ) : (
+                    <ul className="space-y-1.5">
+                      <li className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        {customerLabel}
+                      </li>
+                      {req.customer_email && (
+                        <li className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          <a href={`mailto:${req.customer_email}`} className="hover:underline">
+                            {req.customer_email}
+                          </a>
+                        </li>
+                      )}
+                      {req.customer_phone && (
+                        <li className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          <a href={`tel:${req.customer_phone}`} className="hover:underline">
+                            {req.customer_phone}
+                          </a>
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                  <div className="mt-3 border-t pt-3">
+                    <GuestDetailsBlock guestNames={req.guest_names} dietaryNotes={req.dietary_notes} />
+                  </div>
+                </div>
+                {isDemo ? (
+                  <EmptyState icon={<MessageSquare />} title="Berichten met Bureau Vlieland" description="In deze referentie staan geen berichten." />
+                ) : (
+                  <ProjectChatPanel partnerId={partnerId} partnerName={partnerName} partnerEmail={partnerEmail} requestId={id} />
+                )}
+              </aside>
             )}
           </div>
         </PartnerPage>

@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { buildPartnerOverviewRows, ARCHIVE_STATUSES, type PartnerRowKind } from "@/lib/getPartnerProjectsOverview";
 import type { PartnerDashboardData } from "@/types/partner";
 import { countMissingPdf } from "@/lib/partnerPortalView";
+import { buildWerkbankRows, summarizeWerkbank, werkbankHeadline } from "@/lib/partnerWerkbank";
+import { Notice } from "@/components/system";
 
 export type DashboardTab = "werkbank" | "projecten";
 
@@ -27,6 +29,17 @@ const WerkbankBanners = ({ data, isDemo, partnerId }: { data: PartnerDashboardDa
       {completeness && <PartnerCompletenessBanner completeness={completeness} />}
       {!isDemo && <PartnerAgreementsBanner />}
     </>
+  );
+};
+
+/** De belangrijkste volgende stap in één zin (regel 2: de volgende stap staat op één plek). */
+const WerkbankHeadline = ({ data }: { data: PartnerDashboardData }) => {
+  const headline = useMemo(() => werkbankHeadline(summarizeWerkbank(buildWerkbankRows(data))), [data]);
+  if (!headline) return null;
+  return (
+    <Notice tone={headline.tone} title={headline.title}>
+      <p>{headline.text}</p>
+    </Notice>
   );
 };
 
@@ -52,6 +65,7 @@ export const PartnerWerkbankContent = () => {
     >
       {data && (
         <>
+          <WerkbankHeadline data={data} />
           <WerkbankBanners data={data} isDemo={isDemo} partnerId={partner.id} />
           <PartnerWerkbankList data={data} onDismissed={() => void refetch()} />
         </>

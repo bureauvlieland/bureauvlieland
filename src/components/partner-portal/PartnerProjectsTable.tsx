@@ -2,170 +2,220 @@ import { useMemo } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Activity, Hotel, Circle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Activity, Hotel, Users } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EmptyState, Pill } from "@/components/system";
 import { cn } from "@/lib/utils";
-import {
-  DERIVED_STATUS_LABEL,
-  DERIVED_STATUS_TONE,
-  TIME_BUCKET_LABEL,
-  getTimeBucket,
-  isPastDate,
-  type TimeBucket,
-} from "@/lib/projectStatus";
+import { TIME_BUCKET_LABEL, getTimeBucket, isPastDate, type TimeBucket } from "@/lib/projectStatus";
 import type { PartnerOverviewRow } from "@/lib/getPartnerProjectsOverview";
 
+/**
+ * Alle projecten van de partner in tijdsvakken (partnerportaal fase 2): vanaf
+ * `md` een tabel, daaronder een kaartlijst met dezelfde velden. De status
+ * komt uit de woordenlijst van de partner (`partnerProjectStatus.ts`), een
+ * verstreken datum is een `Pill`.
+ */
 const BUCKET_ORDER: TimeBucket[] = ["overdue", "this_week", "this_month", "later", "no_date"];
 
 interface Props {
   rows: PartnerOverviewRow[];
 }
 
+const isOverdue = (row: PartnerOverviewRow) =>
+  !row.isConcept && isPastDate(row.earliestDate) && row.derivedStatus !== "afgerond" && row.derivedStatus !== "geannuleerd";
+
 export function PartnerProjectsTable({ rows }: Props) {
   const [searchParams] = useSearchParams();
   const impersonate = searchParams.get("impersonate");
   const urlSuffix = impersonate ? `?impersonate=${impersonate}` : "";
+  // "Terug" op de projectpagina komt hier terug, met tab, zoekterm en archief.
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`;
 
   const grouped = useMemo(() => {
     const map = new Map<TimeBucket, PartnerOverviewRow[]>();
-    rows.forEach(r => {
+    rows.forEach((r) => {
       const b = getTimeBucket(r.earliestDate);
       const arr = map.get(b) ?? [];
       arr.push(r);
       map.set(b, arr);
     });
-    return BUCKET_ORDER.filter(b => map.has(b)).map(b => ({ bucket: b, items: map.get(b)! }));
+    return BUCKET_ORDER.filter((b) => map.has(b)).map((b) => ({ bucket: b, items: map.get(b)! }));
   }, [rows]);
 
   if (rows.length === 0) {
-    return (
-      <div className="rounded-lg border bg-card p-12 text-center text-sm text-muted-foreground">
-        Geen projecten gevonden.
-      </div>
-    );
+    return <EmptyState title="Geen projecten gevonden" description="Pas de zoekterm of de filters aan, of kijk in het archief." />;
   }
 
   return (
-    <div className="rounded-lg border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[150px]">Datum</TableHead>
-            <TableHead className="w-[120px]">Ref</TableHead>
-            <TableHead>Klant</TableHead>
-            <TableHead className="w-[70px] text-center">Pers.</TableHead>
-            <TableHead className="w-[110px]">Type</TableHead>
-            <TableHead className="w-[170px]">Status</TableHead>
-            <TableHead className="w-[100px] text-center">Items</TableHead>
-            <TableHead className="w-[110px] text-center">Actie</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {grouped.map(({ bucket, items }) => (
-            <Group key={bucket} bucket={bucket} items={items} urlSuffix={urlSuffix} />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      {/* Vanaf md: de tabel */}
+      <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[150px]">Datum</TableHead>
+              <TableHead className="w-[120px]">Referentie</TableHead>
+              <TableHead>Klant</TableHead>
+              <TableHead className="w-[90px] text-center">Personen</TableHead>
+              <TableHead className="w-[110px]">Soort</TableHead>
+              <TableHead className="w-[200px]">Status</TableHead>
+              <TableHead className="w-[100px] text-center">Onderdelen</TableHead>
+              <TableHead className="w-[90px] text-center">Te doen</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {grouped.map(({ bucket, items }) => (
+              <Group key={bucket} bucket={bucket} items={items} urlSuffix={urlSuffix} from={from} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Onder md: een kaartlijst */}
+      <div className="space-y-6 md:hidden">
+        {grouped.map(({ bucket, items }) => (
+          <section key={bucket} aria-label={TIME_BUCKET_LABEL[bucket]}>
+            <p className="mb-2 text-eyebrow font-medium uppercase text-muted-foreground">
+              {TIME_BUCKET_LABEL[bucket]} <span className="normal-case">({items.length})</span>
+            </p>
+            <ul className="space-y-2">
+              {items.map((row) => (
+                <li key={`${row.kind}-${row.id}`}>
+                  <RowCard row={row} urlSuffix={urlSuffix} from={from} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </>
   );
 }
 
-function Group({ bucket, items, urlSuffix }: { bucket: TimeBucket; items: PartnerOverviewRow[]; urlSuffix: string }) {
+function Group({ bucket, items, urlSuffix, from }: { bucket: TimeBucket; items: PartnerOverviewRow[]; urlSuffix: string; from: string }) {
   return (
     <>
       <TableRow className="bg-muted/40 hover:bg-muted/40">
-        <TableCell colSpan={8} className="py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <TableCell colSpan={8} className="py-1.5 text-eyebrow font-medium uppercase text-muted-foreground">
           {TIME_BUCKET_LABEL[bucket]} <span className="ml-2 font-normal normal-case">({items.length})</span>
         </TableCell>
       </TableRow>
-      {items.map(row => (
-        <Row key={`${row.kind}-${row.id}`} row={row} urlSuffix={urlSuffix} />
+      {items.map((row) => (
+        <Row key={`${row.kind}-${row.id}`} row={row} urlSuffix={urlSuffix} from={from} />
       ))}
     </>
   );
 }
 
-function Row({ row, urlSuffix }: { row: PartnerOverviewRow; urlSuffix: string }) {
-  const overdue =
-    !row.isConcept &&
-    isPastDate(row.earliestDate) &&
-    row.derivedStatus !== "afgerond" &&
-    row.derivedStatus !== "geannuleerd";
+const KindPill = ({ kind }: { kind: PartnerOverviewRow["kind"] }) => (
+  <Pill tone="neutral" size="sm">
+    {kind === "accommodation" ? <Hotel className="h-3 w-3" aria-hidden="true" /> : <Activity className="h-3 w-3" aria-hidden="true" />}
+    {kind === "accommodation" ? "Logies" : "Programma"}
+  </Pill>
+);
+
+const StatusPill = ({ row }: { row: PartnerOverviewRow }) =>
+  row.isConcept && row.derivedStatus !== "geannuleerd" ? (
+    <Pill tone="neutral" size="sm">
+      Concept, nog niet vrijgegeven
+    </Pill>
+  ) : (
+    <Pill tone={row.partnerStatus.tone} size="sm">
+      {row.partnerStatus.label}
+    </Pill>
+  );
+
+function Row({ row, urlSuffix, from }: { row: PartnerOverviewRow; urlSuffix: string; from: string }) {
+  const overdue = isOverdue(row);
   const navTo = `${row.href}${urlSuffix}`;
-  // "Terug" op de projectpagina komt hier terug, met tab, zoekterm en archief.
-  const location = useLocation();
-  const from = `${location.pathname}${location.search}`;
+  const link = (children: React.ReactNode, className?: string) => (
+    <Link to={navTo} state={{ from }} className={cn("block", className)}>
+      {children}
+    </Link>
+  );
 
   return (
     <TableRow className={cn("cursor-pointer", row.isConcept && "opacity-60")}>
       <TableCell>
-        <Link to={navTo} state={{ from }} className="block">
-          <div className="flex items-center gap-1.5">
-            {overdue && <Circle className="h-2 w-2 fill-red-500 text-red-500" />}
-            {row.earliestDate ? (
-              <span className={cn("text-sm font-medium", overdue && "text-red-600")}>
-                {format(row.earliestDate, "d MMM", { locale: nl })}
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">geen datum</span>
-            )}
-            {row.durationDays > 1 && (
-              <span className="text-xs text-muted-foreground">· {row.durationDays} dgn</span>
-            )}
-          </div>
-          {row.earliestDate && (
-            <div className="text-[10px] text-muted-foreground">
-              {format(row.earliestDate, "EEEE yyyy", { locale: nl })}
+        {link(
+          <>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {row.earliestDate ? (
+                <span className="text-sm font-medium">{format(row.earliestDate, "d MMM", { locale: nl })}</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">geen datum</span>
+              )}
+              {row.durationDays > 1 && <span className="text-xs text-muted-foreground">· {row.durationDays} dagen</span>}
+              {overdue && (
+                <Pill tone="danger" size="sm">
+                  verstreken
+                </Pill>
+              )}
             </div>
-          )}
-        </Link>
+            {row.earliestDate && <div className="text-[11px] text-muted-foreground">{format(row.earliestDate, "EEEE yyyy", { locale: nl })}</div>}
+          </>,
+        )}
       </TableCell>
-      <TableCell>
-        <Link to={navTo} state={{ from }} className="font-mono text-xs text-muted-foreground">
-          {row.reference ?? "—"}
-        </Link>
-      </TableCell>
-      <TableCell>
-        <Link to={navTo} state={{ from }} className={cn("block font-medium", row.isConcept && "italic text-muted-foreground")}>
-          {row.customerLabel}
-        </Link>
-      </TableCell>
+      <TableCell>{link(row.reference ?? "", "font-mono text-xs text-muted-foreground")}</TableCell>
+      <TableCell>{link(row.customerLabel, cn("font-medium", row.isConcept && "italic text-muted-foreground"))}</TableCell>
       <TableCell className="text-center text-sm">{row.numberOfPeople}</TableCell>
       <TableCell>
-        <Badge variant="outline" className="gap-1 font-normal">
-          {row.kind === "accommodation" ? <Hotel className="h-3 w-3" /> : <Activity className="h-3 w-3" />}
-          {row.kind === "accommodation" ? "Logies" : "Programma"}
-        </Badge>
+        <KindPill kind={row.kind} />
       </TableCell>
       <TableCell>
-        {row.isConcept && row.derivedStatus !== "geannuleerd" ? (
-          <Badge variant="outline" className="font-normal border-dashed">
-            Concept — nog niet vrijgegeven
-          </Badge>
-        ) : (
-          <Badge className={cn("font-normal", DERIVED_STATUS_TONE[row.derivedStatus])} variant="secondary">
-            {DERIVED_STATUS_LABEL[row.derivedStatus]}
-          </Badge>
-        )}
+        <StatusPill row={row} />
       </TableCell>
       <TableCell className="text-center text-sm text-muted-foreground">{row.itemCount}</TableCell>
       <TableCell className="text-center">
-        {row.isConcept ? (
-          <span className="text-xs text-muted-foreground">—</span>
-        ) : row.actionCount > 0 ? (
-          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{row.actionCount}</Badge>
+        {!row.isConcept && row.actionCount > 0 ? (
+          <Pill tone="warning" size="sm">
+            {row.actionCount}
+          </Pill>
         ) : (
-          <span className="text-xs text-muted-foreground">—</span>
+          <span className="sr-only">niets</span>
         )}
       </TableCell>
     </TableRow>
+  );
+}
+
+function RowCard({ row, urlSuffix, from }: { row: PartnerOverviewRow; urlSuffix: string; from: string }) {
+  const overdue = isOverdue(row);
+  return (
+    <Link
+      to={`${row.href}${urlSuffix}`}
+      state={{ from }}
+      className={cn("block rounded-lg border bg-card p-4 transition-colors duration-base hover:bg-muted/40", row.isConcept && "opacity-60")}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={cn("font-medium", row.isConcept && "italic text-muted-foreground")}>{row.customerLabel}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {row.earliestDate ? format(row.earliestDate, "EEEE d MMMM yyyy", { locale: nl }) : "Geen datum"}
+            {row.durationDays > 1 && ` · ${row.durationDays} dagen`}
+            {row.reference && ` · ${row.reference}`}
+          </p>
+        </div>
+        {!row.isConcept && row.actionCount > 0 && (
+          <Pill tone="warning" size="sm" className="shrink-0">
+            {row.actionCount} te doen
+          </Pill>
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <StatusPill row={row} />
+        <KindPill kind={row.kind} />
+        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <Users className="h-3 w-3" aria-hidden="true" />
+          {row.numberOfPeople}
+        </span>
+        {overdue && (
+          <Pill tone="danger" size="sm">
+            verstreken
+          </Pill>
+        )}
+      </div>
+    </Link>
   );
 }

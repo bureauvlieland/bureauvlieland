@@ -38,21 +38,20 @@ const STATUSES: Record<PartnerProjectStatusKey, Omit<PartnerProjectStatus, "key"
 export const partnerProjectStatusInfo = (key: PartnerProjectStatusKey): PartnerProjectStatus => ({ key, ...STATUSES[key] });
 
 /** Statussen van een onderdeel waarbij de partner aan zet is. */
-const PARTNER_TURN: ReadonlySet<ItemDisplayStatus> = new Set([
+export const PARTNER_TURN_STATUSES: ReadonlySet<ItemDisplayStatus> = new Set([
   "wacht_op_partner",
   "tegenvoorstel_klant",
   "klant_akkoord_wacht_partner",
   "geaccepteerd",
 ]);
 /** Statussen waarbij de klant of het bureau aan zet is. */
-const OTHER_TURN: ReadonlySet<ItemDisplayStatus> = new Set(["wacht_op_klant", "prijs_gewijzigd", "klant_akkoord_bureau"]);
+export const OTHER_TURN_STATUSES: ReadonlySet<ItemDisplayStatus> = new Set(["wacht_op_klant", "prijs_gewijzigd", "klant_akkoord_bureau"]);
 
 export interface PartnerProjectItemInput {
   status: string;
   invoiced_number?: string | null;
   partner_dismissed_at?: string | null;
   is_concept?: boolean;
-  [key: string]: unknown;
 }
 
 export interface PartnerProjectRequestInput {
@@ -80,8 +79,8 @@ export function derivePartnerProjectStatus(items: PartnerProjectItemInput[], req
     const allCancelled = display.every((d) => d.status === "geannuleerd" || d.status === "niet_beschikbaar");
     return partnerProjectStatusInfo(allCancelled ? "geannuleerd" : "afgesloten");
   }
-  if (live.some((d) => PARTNER_TURN.has(d.status))) return partnerProjectStatusInfo("wacht_op_u");
-  if (live.some((d) => OTHER_TURN.has(d.status))) return partnerProjectStatusInfo("wacht_op_klant");
+  if (live.some((d) => PARTNER_TURN_STATUSES.has(d.status))) return partnerProjectStatusInfo("wacht_op_u");
+  if (live.some((d) => OTHER_TURN_STATUSES.has(d.status))) return partnerProjectStatusInfo("wacht_op_klant");
 
   const executed = live.filter((d) => d.status === "uitgevoerd");
   if (executed.length === live.length) {

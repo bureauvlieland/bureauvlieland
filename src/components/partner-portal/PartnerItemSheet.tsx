@@ -1,90 +1,66 @@
-import { useState, useMemo } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { useEffect, useMemo, useState } from "react";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Building2,
-  Mail,
-  Phone,
-  Users,
-  Calendar,
-  Clock,
-  Timer,
-  Euro,
-  CheckCircle,
-  XCircle,
-  MessageSquare,
-  FileText,
-  Hourglass,
-  Loader2,
-  RefreshCw,
-  Hash,
-  Play,
-} from "lucide-react";
+import { FactList, FormField, Notice, OptionCard, OptionGroup, Pill, ResponsiveSheetContent } from "@/components/system";
+import { ArrowLeftRight, Building2, Calendar, CheckCircle, Clock, Euro, FileText, Loader2, Mail, MessageSquare, Phone, Play, Timer, Users, XCircle } from "lucide-react";
 import { CopyReferenceButton } from "./CopyReferenceButton";
 import { BureauCentralBadge } from "./BureauCentralBadge";
 import { PartnerLocationMap } from "./PartnerLocationMap";
+import { PartnerCustomQuoteEditor } from "./PartnerCustomQuoteEditor";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import type { PartnerItem } from "@/types/partner";
 import { GuestDetailsDisplay } from "@/components/shared/GuestDetailsDisplay";
 import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
-import { 
-  generateTimeSlots, 
-  getBlockedTimeSlotsFromPartnerItems, 
+import {
+  generateTimeSlots,
+  getBlockedTimeSlotsFromPartnerItems,
   isTimeSlotBlocked,
   minutesToTime,
   formatDurationWindow,
-
-  type PartnerConflictItem 
+  formatTimeHHmm,
+  type PartnerConflictItem,
 } from "@/lib/timeUtils";
-import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel, getPriceTypeSuffix } from "@/lib/portalPricing";
-import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
-import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
+import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel } from "@/lib/portalPricing";
+import { itemDisplayStatusConfig, deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
-import { PartnerCustomQuoteEditor } from "./PartnerCustomQuoteEditor";
 import { formatEuro } from "@/lib/formatEuro";
+import { usePartnerContext } from "@/lib/partnerPortalContext";
 
+/**
+ * De sheet van één onderdeel (partnerportaal fase 2, regel 3: één reactie
+ * per onderdeel). Van boven naar beneden: wat er nu speelt (één `Notice`),
+ * de feiten één keer, de klant, de reactie als drie `OptionCard`s met de
+ * bijbehorende velden, en onderaan één primaire knop in een vaste voet.
+ * Op een telefoon komt de sheet van onderen.
+ */
 interface PartnerItemSheetProps {
   item: PartnerItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onStatusUpdate: (
-    status: string, 
-    note?: string, 
-    quotedPrice?: number, 
-    quotedNotes?: string,
-    proposedTime?: string,
-    proposedDate?: string
-  ) => Promise<boolean>;
+  onStatusUpdate: (status: string, note?: string, quotedPrice?: number, quotedNotes?: string, proposedTime?: string, proposedDate?: string) => Promise<boolean>;
   onRegisterInvoice: () => void;
   commissionPercentage: number;
 }
 
-const _STATUS_CONFIG_REMOVED = null;
-
 type ResponseType = "confirmed" | "alternative" | "unavailable";
 
-export const PartnerItemSheet = ({
-  item,
-  isOpen,
-  onClose,
-  onStatusUpdate,
-  onRegisterInvoice,
-}: PartnerItemSheetProps) => {
-  const [showResponseForm, setShowResponseForm] = useState(false);
+const selectClass =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+const CATEGORY_LABEL: Record<string, string> = {
+  activity: "Activiteit",
+  catering: "Catering",
+  accommodation: "Logies",
+  transport: "Vervoer",
+  workshop: "Workshop",
+};
+
+export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegisterInvoice }: PartnerItemSheetProps) => {
+  const { demo } = usePartnerContext();
+  const isDemo = Boolean(demo);
   const [responseType, setResponseType] = useState<ResponseType>("confirmed");
   const [quotedPrice, setQuotedPrice] = useState("");
   const [quotedNotes, setQuotedNotes] = useState("");
@@ -94,20 +70,18 @@ export const PartnerItemSheet = ({
   const [noteError, setNoteError] = useState("");
   const [timeError, setTimeError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Mini-flow voor "tegenvoorstel" op een admin-prijswijziging
+  // Eigen prijs voorstellen op een prijswijziging van Bureau Vlieland
   const [showPriceCounterForm, setShowPriceCounterForm] = useState(false);
   const [priceCounterValue, setPriceCounterValue] = useState("");
   const [priceCounterNotes, setPriceCounterNotes] = useState("");
   const [priceCounterError, setPriceCounterError] = useState("");
 
-  // Calculate blocked time slots from sibling items on same day (includes other partners)
+  // Bezette tijden op dezelfde dag (ook van andere aanbieders)
   const blockedTimeSlots = useMemo(() => {
     if (!item || !item.sibling_items) return [];
-    
-    // Filter sibling items to same day, convert to conflict format
     const sameDayItems: PartnerConflictItem[] = item.sibling_items
-      .filter(s => s.day_index === item.day_index && s.id !== item.id)
-      .map(s => ({
+      .filter((s) => s.day_index === item.day_index && s.id !== item.id)
+      .map((s) => ({
         id: s.id,
         day_index: s.day_index,
         block_name: s.block_name,
@@ -117,15 +91,11 @@ export const PartnerItemSheet = ({
         duration: s.duration,
         status: s.status,
       }));
-    
     return getBlockedTimeSlotsFromPartnerItems(sameDayItems, item.day_index, item.id);
   }, [item]);
 
-  // Generate available time slots (exclude blocked ones, but always include preferred_time)
   const availableTimeSlots = useMemo(() => {
-    const allSlots = generateTimeSlots();
-    const filtered = allSlots.filter(time => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
-    // Always allow the customer's preferred time so the partner can confirm it
+    const filtered = generateTimeSlots().filter((time) => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
     if (item?.preferred_time && !filtered.includes(item.preferred_time)) {
       filtered.push(item.preferred_time);
       filtered.sort();
@@ -133,150 +103,137 @@ export const PartnerItemSheet = ({
     return filtered;
   }, [blockedTimeSlots, item?.duration, item?.preferred_time]);
 
-  if (!item) return null;
+  const request = item?.program_requests;
+  const effectivePeopleForItem = item ? (item.override_people ?? request!.number_of_people) : 0;
+  const numberOfDaysForItem = request ? getNumberOfDays(request.selected_dates) : 1;
+  const adminTotal =
+    item && item.admin_price_override != null
+      ? item.admin_price_override * (isPerPersonItem(item) ? effectivePeopleForItem : 1) * (isPerDayItem(item) ? numberOfDaysForItem : 1)
+      : null;
 
-  const request = item.program_requests;
+  // Voorinvullen zodra de sheet opengaat: bij een eigen voorstel de eigen
+  // waarden, bij een tegenvoorstel van de klant zijn tijd, anders de gewenste
+  // tijd en de prijs van Bureau Vlieland.
+  useEffect(() => {
+    if (!isOpen || !item) return;
+    setPriceError("");
+    setNoteError("");
+    setTimeError("");
+    setShowPriceCounterForm(false);
+    setPriceCounterError("");
+    if (item.status === "alternative") {
+      setResponseType("alternative");
+      setQuotedPrice(item.quoted_price ? item.quoted_price.toString().replace(".", ",") : "");
+      setQuotedNotes(item.quoted_notes ?? "");
+      setProposedTime(item.proposed_time ?? "");
+      setStatusNote(item.status_note ?? "");
+    } else if (item.status === "counter_proposed") {
+      setResponseType("confirmed");
+      setQuotedPrice(item.quoted_price ? item.quoted_price.toString().replace(".", ",") : "");
+      setQuotedNotes(item.quoted_notes ?? "");
+      setProposedTime(item.customer_counter_time ?? "");
+      setStatusNote("");
+    } else {
+      setResponseType("confirmed");
+      setQuotedPrice(adminTotal != null ? adminTotal.toFixed(2).replace(".", ",") : "");
+      setQuotedNotes("");
+      setProposedTime(item.preferred_time ?? "");
+      setStatusNote("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, item?.id]);
+
+  if (!item || !request) return null;
+
   const dates = request.selected_dates || [];
   const activityDate = dates[item.day_index];
-  const displayStatus = deriveItemDisplayStatusLoose(item, {
-    programPeople: request.number_of_people ?? 0,
-    numberOfDays: dates.length || 1,
-  });
+  const displayStatus = deriveItemDisplayStatusLoose(item, { programPeople: request.number_of_people ?? 0, numberOfDays: dates.length || 1, audience: "partner" });
+  const statusInfo = itemDisplayStatusConfig[displayStatus];
 
-  // Calculate effective status (same as dashboard logic)
   const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
-  const effectiveStatus = (item.status === "confirmed" && hasCustomerAccepted) ? "accepted" : item.status;
-
-  // Can invoice once customer signed the terms or the bureau released invoicing
   const canInvoice = canPartnerInvoiceItem(item, request);
-
-  // Waiting for customer terms (or bureau release) before invoicing
   const awaitingTerms = isAwaitingInvoicingRelease(item, request);
-
-  // Can respond if pending, alternative, or counter_proposed status
-  const isCustomQuote = !!(item as any).is_custom_quote;
+  const isCustomQuote = !!item.is_custom_quote;
   const canRespond = !isCustomQuote && (item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed");
+  const canMarkExecuted = (item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number;
 
-  // ===== Open admin price change detection =====
-  const effectivePeopleForItem = item.override_people ?? request.number_of_people;
-  const numberOfDaysForItem = getNumberOfDays(request.selected_dates);
-  const isPerPersonPriceType = isPerPersonItem(item);
-  const isPerDayPriceType = isPerDayItem(item);
-  // Admin-totaal: ALTIJD via centrale berekening (incl. dagvermenigvuldiger voor p.p.p.d.)
-  const adminTotal = item.admin_price_override != null
-    ? item.admin_price_override
-        * (isPerPersonPriceType ? effectivePeopleForItem : 1)
-        * (isPerDayPriceType ? numberOfDaysForItem : 1)
-    : null;
-  // Helper checkt zowel timestamp als materieel bedragverschil — pure timestamp-aanrakingen
-  // (bv. "Synchroniseer"-knop) tellen niet als open wijziging.
-  const hasOpenAdminPriceChange =
-    !!item.quoted_price && // alleen relevant als er al eerder een bevestigde prijs was
-    detectOpenAdminPriceChange(item as any, effectivePeopleForItem, numberOfDaysForItem);
-  // Partner mag akkoord/tegenvoorstel doen zolang er nog geen factuur is en het item niet geannuleerd is
-  const canAcknowledgePriceChange =
-    hasOpenAdminPriceChange &&
-    !item.invoiced_number &&
-    item.status !== "cancelled" &&
-    item.status !== "executed";
+  const hasOpenAdminPriceChange = !!item.quoted_price && detectOpenAdminPriceChange(item as never, effectivePeopleForItem, numberOfDaysForItem);
+  const canAcknowledgePriceChange = hasOpenAdminPriceChange && !item.invoiced_number && item.status !== "cancelled" && item.status !== "executed";
+
+  const isBureauCentral = request.invoicing_mode === "bureau_central";
+  // De tijd zoals de klant hem nu ziet, met het soort tijd
+  const counterTime = item.status === "counter_proposed" ? item.customer_counter_time : null;
+  const timeKind = counterTime
+    ? { time: formatTimeHHmm(counterTime), kind: "de klant wil liever" }
+    : item.confirmed_time
+      ? { time: formatTimeHHmm(item.confirmed_time), kind: "bevestigd" }
+      : item.proposed_time
+        ? { time: formatTimeHHmm(item.proposed_time), kind: "uw voorstel" }
+        : item.preferred_time
+          ? { time: formatTimeHHmm(item.preferred_time), kind: "gewenst door de klant" }
+          : { time: null, kind: "flexibel" };
+  const expectedCommission = item.quoted_price ? (item.quoted_price / 1.21) * ((item.commission_percentage ?? 10) / 100) : null;
+
+  const parsePrice = (value: string) => {
+    const parsed = parseFloat(value.replace(",", ".").trim());
+    return !value.trim() || isNaN(parsed) || parsed <= 0 ? null : parsed;
+  };
 
   const handleAcceptNewAdminPrice = async () => {
     if (adminTotal == null) return;
     setIsSubmitting(true);
-    const ok = await onStatusUpdate(
-      "acknowledge_price_change",
-      undefined,
-      adminTotal,
-      "Akkoord met prijswijziging Bureau Vlieland",
-      undefined,
-      undefined,
-    );
+    const ok = await onStatusUpdate("acknowledge_price_change", undefined, adminTotal, "Akkoord met prijswijziging Bureau Vlieland");
     setIsSubmitting(false);
     if (ok) onClose();
   };
 
   const handleSubmitPriceCounter = async () => {
-    setPriceCounterError("");
-    const normalized = priceCounterValue.replace(",", ".").trim();
-    const parsed = parseFloat(normalized);
-    if (!normalized || isNaN(parsed) || parsed <= 0) {
-      setPriceCounterError("Vul een geldige prijs in (groter dan 0).");
+    const parsed = parsePrice(priceCounterValue);
+    if (parsed == null) {
+      setPriceCounterError("Vul een prijs in die groter is dan nul.");
       return;
     }
     setIsSubmitting(true);
-    const ok = await onStatusUpdate(
-      "acknowledge_price_change",
-      undefined,
-      parsed,
-      priceCounterNotes || undefined,
-      undefined,
-      undefined,
-    );
+    const ok = await onStatusUpdate("acknowledge_price_change", undefined, parsed, priceCounterNotes || undefined);
     setIsSubmitting(false);
-    if (ok) {
-      setShowPriceCounterForm(false);
-      setPriceCounterValue("");
-      setPriceCounterNotes("");
-      onClose();
-    }
+    if (ok) onClose();
   };
 
   const handleSubmitResponse = async () => {
-    // Validate based on response type
     let hasError = false;
-
-    // Time is required only for alternative
     if (responseType === "alternative") {
       if (!proposedTime) {
-        setTimeError("Tijd is verplicht");
+        setTimeError("Kies een tijd.");
         hasError = true;
       } else if (isTimeSlotBlocked(proposedTime, item.duration || null, blockedTimeSlots)) {
-        setTimeError("Deze tijd conflicteert met een andere activiteit");
+        setTimeError("Op deze tijd staat al een ander onderdeel.");
         hasError = true;
       }
-    }
-
-    if (responseType === "confirmed") {
-      const priceValue = parseFloat(quotedPrice.replace(",", "."));
-      if (!quotedPrice || isNaN(priceValue) || priceValue <= 0) {
-        setPriceError("Vul een geldige prijs in");
-        hasError = true;
-      }
-    }
-
-    if (responseType === "alternative") {
       if (!statusNote.trim()) {
-        setNoteError("Toelichting is verplicht bij een alternatief voorstel");
+        setNoteError("Leg de klant kort uit wat u voorstelt.");
         hasError = true;
       }
     }
-
+    if (responseType === "confirmed" && parsePrice(quotedPrice) == null) {
+      setPriceError("Vul de totaalprijs in.");
+      hasError = true;
+    }
     if (hasError) return;
 
     setIsSubmitting(true);
-    
-    const priceValue = quotedPrice ? parseFloat(quotedPrice.replace(",", ".")) : undefined;
-    const validPrice = priceValue && !isNaN(priceValue) && priceValue > 0 ? priceValue : undefined;
-
-    // For confirmed: use preferred_time automatically; for alternative: use form value
-    const effectiveProposedTime = responseType === "confirmed" 
-      ? (item.preferred_time || undefined) 
-      : (proposedTime || undefined);
-
+    const validPrice = parsePrice(quotedPrice) ?? undefined;
+    // Bevestigen gebeurt op de tijd die de klant vroeg (of liever wil); een alternatief op de gekozen tijd.
+    const effectiveProposedTime = responseType === "confirmed" ? counterTime || item.preferred_time || undefined : proposedTime || undefined;
     const success = await onStatusUpdate(
       responseType,
       responseType === "confirmed" ? undefined : statusNote || undefined,
       validPrice,
       quotedNotes || undefined,
       effectiveProposedTime,
-      undefined // proposedDate not used in current UI
+      undefined,
     );
-    
     setIsSubmitting(false);
-    if (success) {
-      resetForm();
-      onClose();
-    }
+    if (success) onClose();
   };
 
   const handleMarkExecuted = async () => {
@@ -286,979 +243,410 @@ export const PartnerItemSheet = ({
     if (success) onClose();
   };
 
-  const resetForm = () => {
-    setShowResponseForm(false);
-    setResponseType("confirmed");
-    setQuotedPrice("");
-    setQuotedNotes("");
-    setProposedTime("");
-    setStatusNote("");
-    setPriceError("");
-    setNoteError("");
-    setTimeError("");
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  // Pre-fill form when editing alternative or responding to counter-proposal
-  const handleOpenResponseForm = () => {
-    if (item.status === "alternative") {
-      setResponseType("alternative");
-      if (item.quoted_price) setQuotedPrice(item.quoted_price.toString().replace(".", ","));
-      if (item.quoted_notes) setQuotedNotes(item.quoted_notes);
-      if (item.proposed_time) setProposedTime(item.proposed_time);
-      if (item.status_note) setStatusNote(item.status_note);
-    } else if (item.status === "counter_proposed") {
-      // Pre-fill with existing price and set time to customer's proposed time
-      setResponseType("confirmed");
-      if (item.quoted_price) setQuotedPrice(item.quoted_price.toString().replace(".", ","));
-      if (item.quoted_notes) setQuotedNotes(item.quoted_notes);
-      if (item.customer_counter_time) setProposedTime(item.customer_counter_time);
-    } else {
-      // Default: pre-fill proposedTime with preferred_time for alternative
-      if (item.preferred_time) setProposedTime(item.preferred_time);
-      // Pre-fill price from admin override if available — gebruik centraal berekend totaal
-      if (item.admin_price_override && !quotedPrice && adminTotal != null) {
-        setQuotedPrice(adminTotal.toFixed(2).replace(".", ","));
-      }
-    }
-    setShowResponseForm(true);
-  };
-
-  // Get confirmed/effective time
-  const effectiveTime = item.confirmed_time || item.proposed_time || item.preferred_time;
-  const timeLabel = item.confirmed_time 
-    ? "Bevestigde tijd" 
-    : item.proposed_time 
-      ? "Voorgestelde tijd" 
-      : "Gewenste tijd";
-
-  // Check if customer modified (version > 1)
-  const isModifiedByCustomer = item.version > 1;
-
-  // Calculate expected commission
-  const calculateExpectedCommission = () => {
-    if (!item.quoted_price) return null;
-    const vatRate = 21;
-    const amountExclVat = item.quoted_price / (1 + vatRate / 100);
-    const commissionRate = item.commission_percentage ?? 10;
-    return amountExclVat * (commissionRate / 100);
-  };
-  const expectedCommission = calculateExpectedCommission();
+  const facts = [
+    { label: "Datum", value: activityDate ? format(parseISO(activityDate), "EEEE d MMMM yyyy", { locale: nl }) : `Dag ${item.day_index + 1}`, icon: Calendar },
+    { label: "Tijd", value: timeKind.time ? `${formatDurationWindow(timeKind.time, item.duration) ?? timeKind.time} (${timeKind.kind})` : "Flexibel", icon: Clock },
+    ...(item.duration ? [{ label: "Duur", value: item.duration, icon: Timer }] : []),
+    {
+      label: "Personen",
+      value:
+        item.override_people != null && item.override_people !== request.number_of_people
+          ? `${item.override_people} (van ${request.number_of_people} in de hele groep)`
+          : `${request.number_of_people}`,
+      icon: Users,
+    },
+    ...(item.quoted_price && item.status !== "alternative"
+      ? [
+          {
+            label: "Uw prijs",
+            value: `${formatEuro(item.quoted_price)} incl. btw${expectedCommission && !item.invoiced_number ? ` · commissie ${formatEuro(expectedCommission)}` : ""}`,
+            icon: Euro,
+          },
+        ]
+      : adminTotal != null
+        ? [{ label: "Verwachte prijs", value: `${formatEuro(adminTotal)} · ${getPriceBreakdownLabel(item, request.number_of_people, numberOfDaysForItem)}`, icon: Euro }]
+        : item.price_indication
+          ? [{ label: "Indicatie uit de configurator", value: item.price_indication, icon: Euro }]
+          : []),
+  ];
 
   return (
-    <Sheet open={isOpen} onOpenChange={handleClose}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <div className="flex items-center gap-2 flex-wrap">
-            <SheetTitle className="text-xl">{item.block_name}</SheetTitle>
-            <ItemDisplayStatusBadge status={displayStatus} audience="partner" />
-            {isModifiedByCustomer && (
-              <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Gewijzigd (v{item.version})
-              </Badge>
-            )}
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveSheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+        <SheetHeader className="space-y-1 border-b px-6 py-4 text-left">
+          <SheetTitle className="font-display text-display-md font-medium leading-tight">{item.block_name}</SheetTitle>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Pill tone={statusInfo.partnerTone} size="md" title={statusInfo.partnerTooltip}>
+              {statusInfo.partnerLabel}
+            </Pill>
+            {item.version > 1 && <Pill tone="neutral">Gewijzigd (v{item.version})</Pill>}
+            {isCustomQuote && <Pill tone="brand">Maatwerk</Pill>}
           </div>
-          <SheetDescription className="flex items-center gap-2">
-            <span>{item.block_category}</span>
+          <SheetDescription className="flex flex-wrap items-center gap-x-2 text-sm">
+            <span>{CATEGORY_LABEL[item.block_category] ?? item.block_category}</span>
             {request.reference_number && (
-              <>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-mono text-xs">
-                  <Hash className="h-3 w-3" />
-                  {request.reference_number}
-                  <CopyReferenceButton reference={request.reference_number} />
-                </span>
-              </>
+              <span className="inline-flex items-center gap-1 font-mono text-xs">
+                {request.reference_number}
+                <CopyReferenceButton reference={request.reference_number} />
+              </span>
             )}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          {/* Cancellation alert */}
+        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+          {/* Wat er nu speelt */}
           {item.status === "cancelled" && (
-            <div className="flex gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-medium text-destructive">Deze aanvraag is geannuleerd</p>
-                {request.cancellation_reason ? (
-                  <p className="text-sm text-muted-foreground">
-                    Reden: {request.cancellation_reason}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Het programma is geannuleerd door de klant.
-                  </p>
-                )}
-              </div>
-            </div>
+            <Notice tone="danger" title="Deze aanvraag is geannuleerd">
+              <p>{request.cancellation_reason ? `Reden: ${request.cancellation_reason}` : "Het programma is geannuleerd door de klant."}</p>
+            </Notice>
           )}
-          {/* Bureau Central badge - show when invoicing_mode is bureau_central */}
-          {request.invoicing_mode === "bureau_central" && (
-            <BureauCentralBadge variant="full" />
+          {isBureauCentral && <BureauCentralBadge variant="full" />}
+          {item.status === "counter_proposed" && (
+            <Notice
+              tone="warning"
+              title={`De klant wil liever ${formatTimeHHmm(item.customer_counter_time) ?? item.customer_counter_time ?? "een andere tijd"}`}
+              icon={<ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
+            >
+              {item.proposed_time && <p>Uw voorstel was {formatTimeHHmm(item.proposed_time)}.</p>}
+              {item.customer_counter_note && <p>"{item.customer_counter_note}"</p>}
+              <p>Ga akkoord met deze tijd of stel een andere tijd voor.</p>
+            </Notice>
           )}
-
-          {/* Customer section */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Klant</h3>
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <div className="flex items-center gap-2 font-medium">
-                <Building2 className="h-4 w-4" />
-                {request.customer_company || request.customer_name}
-              </div>
-              <div className="grid gap-2 text-sm text-muted-foreground">
-                {request.invoicing_mode !== "bureau_central" && (
-                  <>
-                    <a href={`mailto:${request.customer_email}`} className="flex items-center gap-2 hover:text-foreground">
-                      <Mail className="h-3 w-3" />
-                      {request.customer_email}
-                    </a>
-                    <a href={`tel:${request.customer_phone}`} className="flex items-center gap-2 hover:text-foreground">
-                      <Phone className="h-3 w-3" />
-                      {request.customer_phone}
-                    </a>
-                  </>
-                )}
-                <div className="flex items-center gap-2">
-                  <Users className="h-3 w-3" />
-                  {request.number_of_people} personen
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {(request.guest_names || (item.block_category === "catering" && request.dietary_notes)) && (
-            <div className="bg-muted/30 rounded-lg p-4 border">
-              <GuestDetailsDisplay
-                guestNames={request.guest_names ?? null}
-                dietaryNotes={request.dietary_notes ?? null}
-                roomAssignment={null}
-                showDietary={item.block_category === "catering"}
-                showRoomAssignment={false}
-                updatedAt={request.guest_details_updated_at ?? null}
-              />
-            </div>
-          )}
-
-          <div className="bg-muted/20 rounded-lg p-3 border">
-            <ProjectDocumentsPanel
-              programRequestId={request.id}
-              viewer="partner"
-              canUpload={false}
-              compact
-              title="Documenten van Bureau/klant"
-              emptyHint="Geen documenten gedeeld."
-            />
-          </div>
-
-          {isCustomQuote && (item.status === "pending" || item.status === "alternative") && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Maatwerk-offerte opstellen
-                </h3>
-                <PartnerCustomQuoteEditor
-                  itemId={item.id}
-                  partnerId={item.provider_id}
-                  briefing={(item as any).custom_briefing || item.customer_notes}
-                  onSubmitted={async (total, notes) => {
-                    return await onStatusUpdate("confirmed", undefined, total, notes || undefined);
-                  }}
-                />
-              </div>
-            </>
-          )}
-
-          <Separator />
-
-
-
-          {/* Details section */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Details</h3>
-            <div className="grid gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {activityDate
-                    ? format(parseISO(activityDate), "EEE d MMMM yyyy", { locale: nl })
-                    : `Dag ${item.day_index + 1}`}
-                </span>
-              </div>
-              {effectiveTime && (
-                <div className="flex items-center gap-2">
-                  <Clock className={cn(
-                    "h-4 w-4",
-                    item.confirmed_time ? "text-green-600" : "text-muted-foreground"
-                  )} />
-                  <span className={cn(item.confirmed_time && "font-medium text-green-700 dark:text-green-400")}>
-                    {effectiveTime}
-                  </span>
-                  <Badge variant="outline" className={cn(
-                    "text-xs py-0 px-1.5",
-                    item.confirmed_time 
-                      ? "border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30" 
-                      : "border-muted text-muted-foreground"
-                  )}>
-                    {timeLabel}
-                  </Badge>
-                </div>
-              )}
-              {item.duration && (
-                <div className="flex items-center gap-2">
-                  <Timer className="h-4 w-4 text-muted-foreground" />
-                  <span>{item.duration}</span>
-                </div>
-              )}
-              {item.override_people != null && item.override_people !== request.number_of_people && (
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    <span className="font-medium text-foreground">{item.override_people} deelnemers</span>
-                    <span className="text-muted-foreground"> (van {request.number_of_people} in de hele groep)</span>
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Activity description — same omschrijving as customer ziet */}
-          {(item.block_short_description || item.block_description) && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Omschrijving van de activiteit
-                </h3>
-                {(activityDate || item.duration || effectiveTime) && (
-                  <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span className="font-medium text-foreground">
-                      {activityDate
-                        ? format(parseISO(activityDate), "EEE d MMM yyyy", { locale: nl })
-                        : `Dag ${item.day_index + 1}`}
-                    </span>
-                    {formatDurationWindow(effectiveTime, item.duration) && (
-                      <>
-                        <span aria-hidden="true">·</span>
-                        <Timer className="h-3.5 w-3.5" />
-                        <span>{formatDurationWindow(effectiveTime, item.duration)}</span>
-                      </>
-                    )}
-                  </p>
-                )}
-                <div className="bg-muted/30 border rounded-lg p-3 space-y-2">
-
-                  {item.block_short_description && (
-                    <p className="text-sm font-medium leading-relaxed">
-                      {item.block_short_description}
-                    </p>
-                  )}
-                  {item.block_description && (
-                    <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                      {item.block_description}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground italic pt-1">
-                    Dit is dezelfde tekst die de klant in zijn portaal ziet.
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {(item.location_address || (item.location_lat !== null && item.location_lng !== null)) && (
-            <PartnerLocationMap
-              lat={item.location_lat}
-              lng={item.location_lng}
-              label={item.block_name}
-              address={item.location_address}
-              isVisible={isOpen}
-            />
-          )}
-
-          {/* Partner instructions — operationele instructie van Bureau Vlieland */}
-          {item.partner_instructions && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Instructie van Bureau Vlieland</h3>
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
-                  <p className="text-sm whitespace-pre-wrap">{item.partner_instructions}</p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Admin price notes / Toelichting Bureau Vlieland */}
-          {item.admin_price_notes && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Toelichting Bureau Vlieland</h3>
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                  <p className="text-sm">{item.admin_price_notes}</p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Admin price override - expected price */}
-          {item.admin_price_override !== null && item.admin_price_override !== undefined && adminTotal !== null && (() => {
-            const ack = item.partner_price_change_acknowledged_at ?? item.quoted_at;
-            const isOpenChange = !!item.admin_price_override_updated_at &&
-              (!ack || new Date(item.admin_price_override_updated_at).getTime() > new Date(ack).getTime()) &&
-              !!item.quoted_price; // alleen tonen als er al een eerdere bevestiging was
-            const breakdown = getPriceBreakdownLabel(item, request.number_of_people, numberOfDaysForItem);
-            const overrideMatchesGroup = item.override_people && item.override_people !== request.number_of_people;
-            return (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {isOpenChange ? "Nieuwe prijs van Bureau Vlieland" : "Verwachte prijs"}
-                  </h3>
-                  {isOpenChange && (
-                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3">
-                      <p className="text-sm text-amber-800 dark:text-amber-300">
-                        Bureau Vlieland heeft de prijs aangepast. Bevestig de nieuwe prijs of pas hem aan via je reactie.
-                      </p>
-                    </div>
-                  )}
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Euro className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-lg">
-                        {formatEuro(adminTotal)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {breakdown}{overrideMatchesGroup ? " (afwijkend aantal voor dit onderdeel)" : ""} · Bevestig of pas aan bij je reactie.
-                    </p>
-                  </div>
-
-                  {/* Actie-knoppen voor open prijswijziging */}
-                  {canAcknowledgePriceChange && !showPriceCounterForm && adminTotal != null && (
-                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                      <Button
-                        onClick={handleAcceptNewAdminPrice}
-                        disabled={isSubmitting}
-                        className="flex-1"
-                      >
-                        {isSubmitting ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                        )}
-                        Bevestig nieuwe prijs ({formatEuro(adminTotal)})
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowPriceCounterForm(true);
-                          setPriceCounterValue(adminTotal.toFixed(2).replace(".", ","));
-                        }}
-                        disabled={isSubmitting}
-                        className="flex-1"
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Eigen prijs voorstellen
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Mini-form voor eigen tegenprijs */}
-                  {canAcknowledgePriceChange && showPriceCounterForm && (
-                    <div className="border rounded-lg p-3 space-y-3 bg-background">
-                      <div className="space-y-2">
-                        <Label htmlFor="priceCounterValue" className="flex items-center gap-1">
-                          <Euro className="h-4 w-4" />
-                          Jouw totaalprijs (incl. BTW) *
-                        </Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-                          <Input
-                            id="priceCounterValue"
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="0,00"
-                            value={priceCounterValue}
-                            onChange={(e) => {
-                              setPriceCounterValue(e.target.value);
-                              setPriceCounterError("");
-                            }}
-                            className={cn("pl-7", priceCounterError && "border-destructive")}
-                          />
-                        </div>
-                        {priceCounterError && (
-                          <p className="text-sm text-destructive">{priceCounterError}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          Totaalprijs voor {effectivePeopleForItem} personen.
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="priceCounterNotes">Toelichting (optioneel)</Label>
-                        <Textarea
-                          id="priceCounterNotes"
-                          placeholder="Bijv. 'Inclusief extra materiaal' of een korte uitleg waarom je een ander bedrag hanteert."
-                          value={priceCounterNotes}
-                          onChange={(e) => setPriceCounterNotes(e.target.value)}
-                          rows={2}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSubmitPriceCounter}
-                          disabled={isSubmitting}
-                          className="flex-1"
-                        >
-                          {isSubmitting ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Voorstel versturen
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowPriceCounterForm(false);
-                            setPriceCounterError("");
-                          }}
-                          disabled={isSubmitting}
-                        >
-                          Annuleren
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Bureau Vlieland ontvangt je voorstel en koppelt terug bij de klant.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
-            );
-          })()}
-
-          {/* Price indication (from configurator) */}
-          {item.price_indication && !item.admin_price_override && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Indicatieve prijs</h3>
-                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
-                  <span className="text-blue-700 dark:text-blue-400 font-medium">{item.price_indication}</span>
-                  <p className="text-xs text-muted-foreground mt-1">Dit is de prijs die de klant zag in de configurator.</p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Quoted price (if confirmed) */}
-          {item.quoted_price && item.status !== "alternative" && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Bevestigde prijs</h3>
-                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Euro className="h-4 w-4 text-green-600" />
-                      <span className="text-green-700 dark:text-green-400 font-semibold text-lg">
-                        {formatEuro(item.quoted_price)}
-                      </span>
-                    </div>
-                    {expectedCommission && !item.invoiced_number && (
-                      <span className="text-xs text-muted-foreground">
-                        Commissie: {formatEuro(expectedCommission)}
-                      </span>
-                    )}
-                  </div>
-                  {item.quoted_notes && (
-                    <p className="text-sm text-muted-foreground">{item.quoted_notes}</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Alternative proposal details */}
-          {item.status === "alternative" && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Uw alternatief voorstel</h3>
-                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 space-y-2">
-                  {item.proposed_time && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-amber-600" />
-                      <span className="font-medium">Voorgestelde tijd:</span>
-                      <span>{item.proposed_time}</span>
-                    </div>
-                  )}
-                  {item.quoted_price && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Euro className="h-4 w-4 text-amber-600" />
-                      <span className="font-medium">Voorgestelde prijs:</span>
-                      <span>{formatEuro(item.quoted_price)}</span>
-                    </div>
-                  )}
-                  {item.status_note && (
-                    <p className="text-sm text-amber-800 dark:text-amber-300 mt-2">{item.status_note}</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Customer counter proposal */}
-          {item.status === "counter_proposed" && item.customer_counter_time && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tegenvoorstel van klant</h3>
-                <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium">Uw voorstel was:</span>
-                    <span>{item.proposed_time || "niet opgegeven"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400">
-                    <Clock className="h-4 w-4" />
-                    <span>Klant wil liever:</span>
-                    <span>{item.customer_counter_time}</span>
-                  </div>
-                  {item.customer_counter_note && (
-                    <p className="text-sm text-purple-800 dark:text-purple-300 mt-2 italic">
-                      "{item.customer_counter_note}"
-                    </p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {item.customer_notes && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Opmerking klant</h3>
-                <p className="text-sm bg-muted/30 rounded-lg p-3">{item.customer_notes}</p>
-              </div>
-            </>
-          )}
-
-          {/* Status note for unavailable */}
-          {item.status === "unavailable" && item.status_note && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Uw reactie</h3>
-                <p className="text-sm bg-destructive/10 rounded-lg p-3 text-destructive">
-                  {item.status_note}
-                </p>
-              </div>
-            </>
-          )}
-
-          {/* Awaiting customer terms notice */}
-          {awaitingTerms && (
-            <>
-              <Separator />
-              <div className="bg-muted/50 border rounded-lg p-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Hourglass className="h-4 w-4" />
-                  <span className="font-medium">Wacht op klantbevestiging</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  De klant moet eerst de voorwaarden accepteren, of Bureau Vlieland geeft het project vrij voor facturatie. Daarna kun je factureren.
-                </p>
-              </div>
-            </>
-          )}
-
-          {/* Invoice details */}
-          {item.invoiced_number && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Factuur</h3>
-                {(() => {
-                  const vatRate = Number(item.vat_rate ?? 0);
-                  const exclVat = Number(item.invoiced_amount ?? 0);
-                  const vatAmount = Math.round(exclVat * (vatRate / 100) * 100) / 100;
-                  const inclVat = Math.round((exclVat + vatAmount) * 100) / 100;
-                  return (
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Factuurnummer:</span>
-                        <span className="font-medium">{item.invoiced_number}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bedrag incl. BTW:</span>
-                        <span className="font-medium">{formatEuro(inclVat)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Excl. BTW · BTW {vatRate}%:</span>
-                        <span>{formatEuro(exclVat)} · {formatEuro(vatAmount)}</span>
-                      </div>
-                      {item.invoiced_date && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Datum:</span>
-                          <span>{format(parseISO(item.invoiced_date), "d MMM yyyy", { locale: nl })}</span>
-                        </div>
-                      )}
-                      {item.commission_amount && item.commission_amount > 0 && (
-                        <div className="pt-2 border-t">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Commissie ({item.commission_percentage}% over excl. BTW):</span>
-                            <span className="font-medium">{formatEuro(item.commission_amount)}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            </>
-          )}
-
-          <Separator />
-
-          {/* Quick Actions */}
-          <div className="space-y-3">
-            {/* Email/phone links - hidden for bureau_central */}
-            {request.invoicing_mode !== "bureau_central" && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="flex-1"
-                  asChild
-                >
-                  <a href={`mailto:${request.customer_email}?subject=Betreft: ${item.block_name} - ${request.reference_number || request.customer_company || request.customer_name}`}>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Email klant
-                  </a>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="flex-1"
-                  asChild
-                >
-                  <a href={`tel:${request.customer_phone}`}>
-                    <Phone className="h-4 w-4 mr-2" />
-                    Bellen
-                  </a>
-                </Button>
-              </div>
-            )}
-
-            {/* Can respond: show response button or form */}
-            {canRespond && !showResponseForm && (
-              <Button 
-                onClick={handleOpenResponseForm} 
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {item.status === "alternative" ? (
-                  <>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Voorstel aanpassen
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Reageren op aanvraag
-                  </>
-                )}
-              </Button>
-            )}
-
-            {/* Response form with radio group */}
-            {canRespond && showResponseForm && (
-              <div className="space-y-4 border rounded-lg p-4">
-                <RadioGroup 
-                  value={responseType} 
-                  onValueChange={(v) => {
-                    setResponseType(v as ResponseType);
-                    setPriceError("");
-                    setNoteError("");
-                  }} 
-                  className="space-y-3"
-                >
-                  {/* Confirm option */}
-                  <div className={cn(
-                    "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
-                    responseType === "confirmed" ? "bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800" : "hover:bg-muted/50"
-                  )}>
-                    <RadioGroupItem value="confirmed" id="confirmed" className="mt-1" />
-                    <Label htmlFor="confirmed" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="font-medium">Bevestigen</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        De activiteit kan plaatsvinden zoals aangevraagd
-                      </p>
-                    </Label>
-                  </div>
-
-                  {/* Alternative option */}
-                  <div className={cn(
-                    "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
-                    responseType === "alternative" ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800" : "hover:bg-muted/50"
-                  )}>
-                    <RadioGroupItem value="alternative" id="alternative" className="mt-1" />
-                    <Label htmlFor="alternative" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-amber-600" />
-                        <span className="font-medium">Alternatief voorstellen</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Stel een andere tijd of aanpassing voor
-                      </p>
-                    </Label>
-                  </div>
-
-                  {/* Unavailable option */}
-                  <div className={cn(
-                    "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
-                    responseType === "unavailable" ? "bg-destructive/10 border-destructive/30" : "hover:bg-muted/50"
-                  )}>
-                    <RadioGroupItem value="unavailable" id="unavailable" className="mt-1" />
-                    <Label htmlFor="unavailable" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-destructive" />
-                        <span className="font-medium">Niet beschikbaar</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        De activiteit kan niet plaatsvinden
-                      </p>
-                    </Label>
-                  </div>
-                </RadioGroup>
-
-                {/* Conditional fields based on response type */}
-                {responseType === "confirmed" && (
-                  <div className="space-y-4 pt-2">
-                    {/* Read-only preferred time */}
-                    <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium">Gewenste tijd:</span>
-                        <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-                          {item.preferred_time || "Niet opgegeven"}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        U bevestigt de activiteit op de gewenste tijd van de klant.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="quotedPrice" className="flex items-center gap-1">
-                        <Euro className="h-4 w-4" />
-                        Totaalprijs (incl. BTW) *
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-                        <Input
-                          id="quotedPrice"
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          value={quotedPrice}
-                          onChange={(e) => {
-                            setQuotedPrice(e.target.value);
-                            setPriceError("");
-                          }}
-                          className={cn("pl-7", priceError && "border-destructive")}
-                        />
-                      </div>
-                      {priceError && <p className="text-sm text-destructive">{priceError}</p>}
-                      <p className="text-xs text-muted-foreground">
-                        Prijs voor {request.number_of_people} personen
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="quotedNotes">Toelichting (optioneel)</Label>
-                      <Textarea
-                        id="quotedNotes"
-                        placeholder="Bijv. 'Inclusief materialen'"
-                        value={quotedNotes}
-                        onChange={(e) => setQuotedNotes(e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {responseType === "alternative" && (
-                  <div className="space-y-4 pt-2">
-                    {/* Blocked time slots - show actual end times without buffer */}
-                    {blockedTimeSlots.length > 0 && (
-                      <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                          <Clock className="h-4 w-4 inline mr-1" />
-                          Bezette tijden op dag {item.day_index + 1}:
-                        </p>
-                        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                          {blockedTimeSlots.map(slot => {
-                            // Calculate actual end time without 30-min buffer
-                            const actualEndMinutes = slot.endMinutes - 30;
-                            const actualEndTime = minutesToTime(actualEndMinutes);
-                            return (
-                              <li key={slot.itemId}>
-                                {slot.startTime} – {actualEndTime}: {slot.itemName}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
-                          Er wordt 30 min marge aangehouden tussen activiteiten.
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label htmlFor="proposedTimeAlt" className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        Voorgestelde tijd *
-                      </Label>
-                      <select
-                        id="proposedTimeAlt"
-                        value={proposedTime}
-                        onChange={(e) => {
-                          setProposedTime(e.target.value);
-                          setTimeError("");
-                        }}
-                        className={cn(
-                          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          timeError && "border-destructive"
-                        )}
-                      >
-                        <option value="">Selecteer een tijd...</option>
-                        {availableTimeSlots.map(time => (
-                          <option key={time} value={time}>{time}</option>
-                        ))}
-                      </select>
-                      {timeError && <p className="text-sm text-destructive">{timeError}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="quotedPriceAlt" className="flex items-center gap-1">
-                        <Euro className="h-4 w-4" />
-                        Alternatieve prijs (optioneel)
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-                        <Input
-                          id="quotedPriceAlt"
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          value={quotedPrice}
-                          onChange={(e) => setQuotedPrice(e.target.value)}
-                          className="pl-7"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Optioneel: vul in als de prijs afwijkt
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="statusNote">Toelichting *</Label>
-                      <Textarea
-                        id="statusNote"
-                        placeholder="Bijv. 'Beschikbaar op 14:00 in plaats van 10:00, of op een andere datum'"
-                        value={statusNote}
-                        onChange={(e) => {
-                          setStatusNote(e.target.value);
-                          setNoteError("");
-                        }}
-                        rows={3}
-                        className={cn(noteError && "border-destructive")}
-                      />
-                      {noteError && <p className="text-sm text-destructive">{noteError}</p>}
-                    </div>
-                  </div>
-                )}
-
-                {responseType === "unavailable" && (
-                  <div className="space-y-4 pt-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="unavailableNote">Reden (optioneel)</Label>
-                      <Textarea
-                        id="unavailableNote"
-                        placeholder="Bijv. 'Volgeboekt op deze datum'"
-                        value={statusNote}
-                        onChange={(e) => setStatusNote(e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    onClick={handleSubmitResponse} 
-                    disabled={isSubmitting} 
-                    className="flex-1"
-                  >
-                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Versturen
+          {canAcknowledgePriceChange && adminTotal != null && (
+            <Notice tone="warning" title={`Bureau Vlieland stelt een nieuwe prijs voor: ${formatEuro(adminTotal)}`}>
+              <p>
+                {getPriceBreakdownLabel(item, request.number_of_people, numberOfDaysForItem)}
+                {item.admin_price_notes ? `. ${item.admin_price_notes}` : ""}
+              </p>
+              {!showPriceCounterForm ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" onClick={handleAcceptNewAdminPrice} disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+                    Akkoord met {formatEuro(adminTotal)}
                   </Button>
-                  <Button 
-                    onClick={resetForm} 
+                  <Button
+                    size="sm"
                     variant="outline"
                     disabled={isSubmitting}
+                    onClick={() => {
+                      setShowPriceCounterForm(true);
+                      setPriceCounterValue(adminTotal.toFixed(2).replace(".", ","));
+                    }}
                   >
-                    Annuleren
+                    Eigen prijs voorstellen
                   </Button>
                 </div>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  <FormField label="Uw totaalprijs (incl. btw)" htmlFor="priceCounterValue" required error={priceCounterError} help={`Totaalprijs voor ${effectivePeopleForItem} personen.`} leading={<Euro />}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={priceCounterValue}
+                      onChange={(e) => {
+                        setPriceCounterValue(e.target.value);
+                        setPriceCounterError("");
+                      }}
+                    />
+                  </FormField>
+                  <FormField label="Toelichting" htmlFor="priceCounterNotes" help="Bureau Vlieland ontvangt uw voorstel en koppelt terug bij de klant.">
+                    <Textarea placeholder="Bijvoorbeeld: inclusief extra materiaal" value={priceCounterNotes} onChange={(e) => setPriceCounterNotes(e.target.value)} rows={2} />
+                  </FormField>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={handleSubmitPriceCounter} disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                      Voorstel versturen
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowPriceCounterForm(false)} disabled={isSubmitting}>
+                      Annuleren
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Notice>
+          )}
+          {item.status === "alternative" && (
+            <Notice tone="info" title="Uw voorstel wacht op de klant">
+              <p>
+                {item.proposed_time && <>Tijd {formatTimeHHmm(item.proposed_time)}</>}
+                {item.proposed_time && item.quoted_price && <>, </>}
+                {item.quoted_price && <>prijs {formatEuro(item.quoted_price)}</>}
+                {item.status_note && <>. {item.status_note}</>}
+              </p>
+            </Notice>
+          )}
+          {item.status === "unavailable" && item.status_note && (
+            <Notice tone="danger" title="U heeft dit onderdeel afgewezen">
+              <p>{item.status_note}</p>
+            </Notice>
+          )}
+          {awaitingTerms && (
+            <Notice tone="info" title="Wacht op de klant">
+              <p>De klant moet eerst de voorwaarden tekenen, of Bureau Vlieland geeft het project vrij. Daarna kunt u factureren.</p>
+            </Notice>
+          )}
+          {item.partner_instructions && (
+            <Notice tone="info" title="Instructie van Bureau Vlieland">
+              <p className="whitespace-pre-wrap">{item.partner_instructions}</p>
+            </Notice>
+          )}
+
+          {/* De feiten, één keer */}
+          <FactList items={facts} />
+
+          {/* De klant */}
+          <section className="space-y-2" aria-labelledby="sheet-klant">
+            <h3 id="sheet-klant" className="text-sm font-medium">
+              Klant
+            </h3>
+            <div className="space-y-1 text-sm">
+              <p className="flex items-center gap-2 font-medium">
+                <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                {request.customer_company || request.customer_name}
+              </p>
+              {!isBureauCentral && (
+                <>
+                  <a href={`mailto:${request.customer_email}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                    <Mail className="h-4 w-4" aria-hidden="true" />
+                    {request.customer_email}
+                  </a>
+                  <a href={`tel:${request.customer_phone}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                    <Phone className="h-4 w-4" aria-hidden="true" />
+                    {request.customer_phone}
+                  </a>
+                </>
+              )}
+            </div>
+            {(request.guest_names || (item.block_category === "catering" && request.dietary_notes)) && (
+              <div className="rounded-lg border p-3">
+                <GuestDetailsDisplay
+                  guestNames={request.guest_names ?? null}
+                  dietaryNotes={request.dietary_notes ?? null}
+                  roomAssignment={null}
+                  showDietary={item.block_category === "catering"}
+                  showRoomAssignment={false}
+                  updatedAt={request.guest_details_updated_at ?? null}
+                />
               </div>
             )}
+            {!isDemo && (
+              <div className="rounded-lg border p-3">
+                <ProjectDocumentsPanel programRequestId={request.id} viewer="partner" canUpload={false} compact title="Documenten van Bureau Vlieland en de klant" emptyHint="Geen documenten gedeeld." />
+              </div>
+            )}
+          </section>
 
-            {/* Accepted: Mark as executed (geblokkeerd zolang er een open prijswijziging is) */}
-            {(item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number && (
-              <div className="space-y-2">
-                <Button
-                  onClick={handleMarkExecuted}
-                  className="w-full"
-                  variant="secondary"
-                  disabled={isSubmitting || hasOpenAdminPriceChange}
-                >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                  Markeer als uitgevoerd
-                </Button>
-                {hasOpenAdminPriceChange && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400 text-center">
-                    Reageer eerst op de nieuwe prijs van Bureau Vlieland.
+          {/* Omschrijving en plek, ingeklapt */}
+          {(item.block_short_description || item.block_description || item.customer_notes || item.admin_price_notes || item.location_address || item.location_lat !== null) && (
+            <details className="group rounded-lg border">
+              <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-primary">Over dit onderdeel</summary>
+              <div className="space-y-3 border-t px-3 py-3 text-sm">
+                {item.block_short_description && <p className="font-medium">{item.block_short_description}</p>}
+                {item.block_description && <p className="whitespace-pre-line text-muted-foreground">{item.block_description}</p>}
+                {(item.block_short_description || item.block_description) && <p className="text-xs italic text-muted-foreground">Dit is dezelfde tekst die de klant in het portaal ziet.</p>}
+                {item.customer_notes && (
+                  <p>
+                    <span className="font-medium">Wens van de klant: </span>
+                    {item.customer_notes}
                   </p>
                 )}
+                {item.admin_price_notes && (
+                  <p>
+                    <span className="font-medium">Toelichting van Bureau Vlieland: </span>
+                    {item.admin_price_notes}
+                  </p>
+                )}
+                {(item.location_address || (item.location_lat !== null && item.location_lng !== null)) && (
+                  <PartnerLocationMap lat={item.location_lat} lng={item.location_lng} label={item.block_name} address={item.location_address} isVisible={isOpen} />
+                )}
               </div>
-            )}
+            </details>
+          )}
 
-            {/* Executed: Register invoice */}
-            {canInvoice && (
-              <Button onClick={onRegisterInvoice} className="w-full">
-                <FileText className="h-4 w-4 mr-2" />
-                Factuur registreren
-              </Button>
-            )}
-          </div>
+          {/* Factuur */}
+          {item.invoiced_number &&
+            (() => {
+              const vatRate = Number(item.vat_rate ?? 0);
+              const exclVat = Number(item.invoiced_amount ?? 0);
+              const vatAmount = Math.round(exclVat * (vatRate / 100) * 100) / 100;
+              const inclVat = Math.round((exclVat + vatAmount) * 100) / 100;
+              return (
+                <FactList
+                  items={[
+                    { label: "Factuurnummer", value: item.invoiced_number, icon: FileText },
+                    { label: "Bedrag", value: `${formatEuro(inclVat)} incl. btw (${formatEuro(exclVat)} excl., btw ${vatRate}% ${formatEuro(vatAmount)})` },
+                    ...(item.invoiced_date ? [{ label: "Datum", value: format(parseISO(item.invoiced_date), "d MMMM yyyy", { locale: nl }) }] : []),
+                    ...(item.commission_amount && item.commission_amount > 0
+                      ? [{ label: "Commissie", value: `${formatEuro(item.commission_amount)} (${item.commission_percentage}% over het bedrag excl. btw)` }]
+                      : []),
+                  ]}
+                />
+              );
+            })()}
+
+          {/* Maatwerk: de offerte zelf opstellen */}
+          {isCustomQuote && (item.status === "pending" || item.status === "alternative") && (
+            <section className="space-y-2">
+              <h3 className="text-sm font-medium">Maatwerkofferte opstellen</h3>
+              <PartnerCustomQuoteEditor
+                itemId={item.id}
+                partnerId={item.provider_id}
+                briefing={item.custom_briefing || item.customer_notes}
+                onSubmitted={async (total, notes) => onStatusUpdate("confirmed", undefined, total, notes || undefined)}
+              />
+            </section>
+          )}
+
+          {/* De reactie: drie keuzes, één formulier */}
+          {canRespond && (
+            <section className="space-y-4" aria-labelledby="sheet-reactie">
+              <h3 id="sheet-reactie" className="text-sm font-medium">
+                Uw reactie
+              </h3>
+              <OptionGroup name="reactie" columns={1}>
+                <OptionCard
+                  selected={responseType === "confirmed"}
+                  onSelect={() => {
+                    setResponseType("confirmed");
+                    setPriceError("");
+                    setNoteError("");
+                  }}
+                  icon={<CheckCircle />}
+                  title={counterTime ? `Akkoord met ${formatTimeHHmm(counterTime)}` : "Bevestigen"}
+                  description={counterTime ? "U bevestigt het onderdeel op de tijd die de klant liever wil." : "Het onderdeel kan zoals gevraagd."}
+                />
+                <OptionCard
+                  selected={responseType === "alternative"}
+                  onSelect={() => {
+                    setResponseType("alternative");
+                    setPriceError("");
+                  }}
+                  icon={<MessageSquare />}
+                  title="Andere tijd of prijs voorstellen"
+                  description="U stelt een andere tijd voor, met een toelichting; de klant beslist."
+                />
+                <OptionCard
+                  selected={responseType === "unavailable"}
+                  onSelect={() => {
+                    setResponseType("unavailable");
+                    setPriceError("");
+                    setNoteError("");
+                  }}
+                  icon={<XCircle />}
+                  title="Niet beschikbaar"
+                  description="Het onderdeel kan niet op deze dag."
+                />
+              </OptionGroup>
+
+              {responseType === "confirmed" && (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    U bevestigt op {counterTime ? formatTimeHHmm(counterTime) : item.preferred_time ? formatTimeHHmm(item.preferred_time) : "een nog af te stemmen tijd"}.
+                  </p>
+                  <FormField label="Totaalprijs (incl. btw)" htmlFor="quotedPrice" required error={priceError} help={`Prijs voor ${effectivePeopleForItem} personen.`} leading={<Euro />}>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={quotedPrice}
+                      onChange={(e) => {
+                        setQuotedPrice(e.target.value);
+                        setPriceError("");
+                      }}
+                    />
+                  </FormField>
+                  <FormField label="Toelichting" htmlFor="quotedNotes">
+                    <Textarea placeholder="Bijvoorbeeld: inclusief materialen" value={quotedNotes} onChange={(e) => setQuotedNotes(e.target.value)} rows={2} />
+                  </FormField>
+                </div>
+              )}
+
+              {responseType === "alternative" && (
+                <div className="space-y-3">
+                  {blockedTimeSlots.length > 0 && (
+                    <Notice tone="info" title={`Bezette tijden op dag ${item.day_index + 1}`}>
+                      <ul className="list-disc pl-5">
+                        {blockedTimeSlots.map((slot) => (
+                          <li key={slot.itemId}>
+                            {slot.startTime} tot {minutesToTime(slot.endMinutes - 30)}: {slot.itemName}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-1 text-xs">Tussen twee onderdelen zit een half uur.</p>
+                    </Notice>
+                  )}
+                  <FormField label="Voorgestelde tijd" htmlFor="proposedTimeAlt" required error={timeError}>
+                    <select
+                      value={proposedTime}
+                      onChange={(e) => {
+                        setProposedTime(e.target.value);
+                        setTimeError("");
+                      }}
+                      className={selectClass}
+                    >
+                      <option value="">Kies een tijd</option>
+                      {availableTimeSlots.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField label="Andere prijs (incl. btw)" htmlFor="quotedPriceAlt" help="Alleen als de prijs afwijkt." leading={<Euro />}>
+                    <Input type="text" inputMode="decimal" placeholder="0,00" value={quotedPrice} onChange={(e) => setQuotedPrice(e.target.value)} />
+                  </FormField>
+                  <FormField label="Toelichting voor de klant" htmlFor="statusNote" required error={noteError}>
+                    <Textarea
+                      placeholder="Bijvoorbeeld: om 10:00 zit de vorige groep er nog; 14:00 past beter."
+                      value={statusNote}
+                      onChange={(e) => {
+                        setStatusNote(e.target.value);
+                        setNoteError("");
+                      }}
+                      rows={3}
+                    />
+                  </FormField>
+                </div>
+              )}
+
+              {responseType === "unavailable" && (
+                <FormField label="Reden" htmlFor="unavailableNote" help="De klant en Bureau Vlieland zien deze reden.">
+                  <Textarea placeholder="Bijvoorbeeld: volgeboekt op deze datum" value={statusNote} onChange={(e) => setStatusNote(e.target.value)} rows={2} />
+                </FormField>
+              )}
+            </section>
+          )}
         </div>
-      </SheetContent>
+
+        {/* Vaste voet: één primaire knop */}
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t bg-background px-6 py-3">
+          <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Sluiten
+          </Button>
+          {canRespond ? (
+            <Button onClick={handleSubmitResponse} disabled={isSubmitting} variant={responseType === "unavailable" ? "destructive" : "default"}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              {responseType === "confirmed" ? "Bevestigen" : responseType === "alternative" ? "Voorstel versturen" : "Niet beschikbaar melden"}
+            </Button>
+          ) : (
+            <>
+              {canMarkExecuted && (
+                <Button variant={canInvoice ? "outline" : "default"} onClick={handleMarkExecuted} disabled={isSubmitting || hasOpenAdminPriceChange} title={hasOpenAdminPriceChange ? "Reageer eerst op de nieuwe prijs van Bureau Vlieland." : undefined}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-2 h-4 w-4" aria-hidden="true" />}
+                  Markeer als uitgevoerd
+                </Button>
+              )}
+              {canInvoice && (
+                <Button onClick={onRegisterInvoice}>
+                  <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Factuur registreren
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 };
