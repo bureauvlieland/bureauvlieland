@@ -1,41 +1,29 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
 import { looksLikeProjectReference } from "@/lib/purchaseInvoiceDuplicateRules";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { Loader2, Info, Receipt, Building2, Mail, Upload, File as FileIcon, X } from "lucide-react";
+import { FormField, Notice, Pill } from "@/components/system";
+import { Loader2, Mail, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
-import { getItemLineTotal } from "@/lib/portalPricing";
+import { getPartnerBillableAmount, isPartnerEstimatedAmount } from "@/lib/partnerBillableAmount";
 import { reportError } from "@/lib/errorReporting";
 import { formatEuro } from "@/lib/formatEuro";
+import { cn } from "@/lib/utils";
 
-/** Te-factureren bedrag: partner-quote heeft voorrang, anders admin-inschatting × pers × dagen. */
-const getBillableAmount = (item: PartnerItem): number => {
-  const people = item.program_requests.number_of_people || 1;
-  const days = Math.max((item.program_requests.selected_dates || []).length, 1);
-  return getItemLineTotal(item as unknown as Parameters<typeof getItemLineTotal>[0], people, days) ?? 0;
-};
-const isEstimatedAmount = (item: PartnerItem): boolean =>
-  item.quoted_price == null && item.admin_price_override != null;
-
+/**
+ * De verzamelfactuur: meerdere onderdelen van één project, één
+ * factuurnummer en één pdf (partnerportaal fase 3: op `FormField` en
+ * `Notice`). In e-mailmodus bevestigt de partner dat de factuur naar de
+ * inkoopinbox is gemaild; de pdf is dan niet verplicht.
+ */
 interface BureauDetails {
   companyName?: string;
   legalName?: string;
@@ -45,10 +33,6 @@ interface BureauDetails {
   kvkNumber?: string;
   vatNumber?: string;
   iban?: string;
-  /** @deprecated administratie-mail wordt niet meer in dit dialoog getoond */
-  email?: string;
-  /** @deprecated los adresveld; gebruik street + postalCode + city */
-  address?: string;
 }
 
 export interface CollectiveInvoiceSubmitPayload {
@@ -63,173 +47,104 @@ export interface CollectiveInvoiceSubmitPayload {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  /** All eligible items in this project (same request_id). */
+  /** Alle onderdelen van dit project die te factureren zijn. */
   projectItems: PartnerItem[];
-  /** Initially-selected item ids. */
   initialSelectedIds: string[];
   commissionPercentage: number;
   bureauDetails?: BureauDetails | null;
-  /** "upload" = PDF verplicht; "email" = partner bevestigt verzending naar inkoop@. */
+  /** `upload`: pdf verplicht; `email`: de partner bevestigt de verzending naar de inkoopinbox. */
   mode?: "upload" | "email";
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
 
-const INKOOP_INBOX = PURCHASE_INVOICE_INBOX;
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
+const parseAmount = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
 
-export const RegisterCollectivePartnerInvoiceDialog = ({
-  isOpen,
-  onClose,
-  projectItems,
-  initialSelectedIds,
-  commissionPercentage,
-  bureauDetails,
-  mode = "upload",
-  onSubmit,
-}: Props) => {
+export const RegisterCollectivePartnerInvoiceDialog = ({ isOpen, onClose, projectItems, initialSelectedIds, commissionPercentage, bureauDetails, mode = "upload", onSubmit }: Props) => {
   const isEmailMode = mode === "email";
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [notes, setNotes] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { getItemVatRate } = useItemVatRates(projectItems);
 
   useEffect(() => {
     if (!isOpen) return;
-    const ids = new Set(initialSelectedIds);
-    setSelectedIds(ids);
-    const initialAmounts: Record<string, string> = {};
+    setSelectedIds(new Set(initialSelectedIds));
+    const initial: Record<string, string> = {};
     for (const it of projectItems) {
-      const amt = getBillableAmount(it);
-      initialAmounts[it.id] = amt > 0 ? amt.toFixed(2).replace(".", ",") : "";
+      const amt = getPartnerBillableAmount(it);
+      initial[it.id] = amt > 0 ? amt.toFixed(2).replace(".", ",") : "";
     }
-    setAmounts(initialAmounts);
+    setAmounts(initial);
     setInvoiceNumber("");
     setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
     setNotes("");
-    setSelectedFile(null);
+    setFile(null);
     setErrors({});
   }, [isOpen, initialSelectedIds, projectItems]);
 
   const project = projectItems[0]?.program_requests;
   const customerLabel = project?.customer_company || project?.customer_name || "";
 
-  const parseAmt = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
-
-  const { totalIncl, totalExcl } = useMemo(() => {
+  /** Geselecteerde regels per btw-tarief, plus de totalen. */
+  const { totalIncl, totalExcl, vatBreakdown } = useMemo(() => {
+    const groups = new Map<number, { excl: number; vat: number }>();
     let incl = 0;
     let excl = 0;
     for (const id of selectedIds) {
       const item = projectItems.find((p) => p.id === id);
-      const inclAmt = parseAmt(amounts[id] || "");
-      incl += inclAmt;
+      const inclAmt = parseAmount(amounts[id] || "");
+      if (inclAmt <= 0) continue;
       const rate = item ? getItemVatRate(item) : 21;
-      excl += calculateFromInclVat(inclAmt, rate).amountExclVat;
+      const breakdown = calculateFromInclVat(inclAmt, rate);
+      incl += breakdown.amountInclVat;
+      excl += breakdown.amountExclVat;
+      const cur = groups.get(rate) || { excl: 0, vat: 0 };
+      cur.excl += breakdown.amountExclVat;
+      cur.vat += breakdown.vatAmount;
+      groups.set(rate, cur);
     }
-    return { totalIncl: +incl.toFixed(2), totalExcl: +excl.toFixed(2) };
+    return {
+      totalIncl: +incl.toFixed(2),
+      totalExcl: +excl.toFixed(2),
+      vatBreakdown: [...groups.entries()].sort(([a], [b]) => a - b).map(([rate, v]) => ({ rate, excl: +v.excl.toFixed(2), vat: +v.vat.toFixed(2) })),
+    };
   }, [selectedIds, amounts, projectItems, getItemVatRate]);
 
   const commissionAmount = +((totalExcl * commissionPercentage) / 100).toFixed(2);
 
-  const bureauInfo = {
-    companyName: bureauDetails?.companyName || "Bureau Vlieland",
-    legalName: bureauDetails?.legalName || bureauDetails?.companyName || "Bureau Vlieland B.V.",
-    street: bureauDetails?.street || "",
-    postalCode: bureauDetails?.postalCode || "",
-    city: bureauDetails?.city || bureauDetails?.address || "Vlieland",
-    kvkNumber: bureauDetails?.kvkNumber || "",
-    vatNumber: bureauDetails?.vatNumber || "",
-    iban: bureauDetails?.iban || "",
-  };
-  const addressLine = [bureauInfo.street, [bureauInfo.postalCode, bureauInfo.city].filter(Boolean).join("  ")]
+  const bureauName = bureauDetails?.legalName || bureauDetails?.companyName || "Bureau Vlieland";
+  const bureauAddress = [bureauDetails?.street, [bureauDetails?.postalCode, bureauDetails?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const bureauRegistration = [bureauDetails?.kvkNumber ? `KvK ${bureauDetails.kvkNumber}` : null, bureauDetails?.vatNumber ? `btw ${bureauDetails.vatNumber}` : null, bureauDetails?.iban ? `IBAN ${bureauDetails.iban}` : null]
     .filter(Boolean)
-    .join(", ");
-
-  /** Geselecteerde regels gegroepeerd per BTW-tarief: { rate -> { excl, vat, incl } } */
-  const vatBreakdown = useMemo(() => {
-    const groups = new Map<number, { excl: number; vat: number; incl: number }>();
-    for (const id of selectedIds) {
-      const item = projectItems.find((p) => p.id === id);
-      const inclAmt = parseAmt(amounts[id] || "");
-      if (inclAmt <= 0) continue;
-      const rate = item ? getItemVatRate(item) : 21;
-      const { amountExclVat, vatAmount, amountInclVat } = calculateFromInclVat(inclAmt, rate);
-      const cur = groups.get(rate) || { excl: 0, vat: 0, incl: 0 };
-      cur.excl += amountExclVat;
-      cur.vat += vatAmount;
-      cur.incl += amountInclVat;
-      groups.set(rate, cur);
-    }
-    return Array.from(groups.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([rate, v]) => ({
-        rate,
-        excl: +v.excl.toFixed(2),
-        vat: +v.vat.toFixed(2),
-        incl: +v.incl.toFixed(2),
-      }));
-  }, [selectedIds, amounts, projectItems, getItemVatRate]);
+    .join(" · ");
 
   const toggleItem = (id: string) => {
     const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelectedIds(next);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.type !== "application/pdf") {
-      toast.error("Alleen PDF-bestanden zijn toegestaan");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Bestand is te groot (max 10MB)");
-      return;
-    }
-    setSelectedFile(file);
-  };
-
-  const uploadFile = async (firstItem: PartnerItem): Promise<string | null> => {
-    if (!selectedFile) return null;
-    setIsUploading(true);
-    try {
-      const ext = selectedFile.name.split(".").pop();
-      const path = `${firstItem.provider_id}/${firstItem.request_id}/collective-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("partner-invoices").upload(path, selectedFile);
-      if (error) {
-        reportError(error, { where: "RegisterCollectivePartnerInvoiceDialog" });
-        toast.error("Fout bij uploaden van PDF");
-        return null;
-      }
-      return path;
-    } finally {
-      setIsUploading(false);
-    }
   };
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (selectedIds.size === 0) e.items = "Selecteer minimaal 1 onderdeel";
+    if (selectedIds.size === 0) e.items = "Kies minstens één onderdeel.";
     for (const id of selectedIds) {
-      if (parseAmt(amounts[id] || "") <= 0) {
-        e[`amount-${id}`] = "Vul een geldig bedrag in";
-      }
+      if (parseAmount(amounts[id] || "") <= 0) e[`amount-${id}`] = "Vul een geldig bedrag in.";
     }
-    if (!invoiceNumber.trim()) e.invoiceNumber = "Factuurnummer is verplicht";
-    else if (!isValidInvoiceNumberInput(invoiceNumber))
-      e.invoiceNumber = "Vul het echte factuurnummer in (minimaal \u00e9\u00e9n cijfer, geen 'nvt' of '-')";
-    else if (looksLikeProjectReference(invoiceNumber))
-      e.invoiceNumber = "Dit is ons projectnummer, niet uw factuurnummer. Vul het nummer in dat op uw eigen factuur staat.";
-    if (!invoiceDate) e.invoiceDate = "Factuurdatum is verplicht";
-    // In e-mailmodus is de PDF optioneel — partner mailt 'm naar de inkoop-inbox.
-    if (!isEmailMode && !selectedFile) e.file = "PDF van de factuur is verplicht";
+    if (!invoiceNumber.trim()) e.invoiceNumber = "Het factuurnummer is verplicht.";
+    else if (!isValidInvoiceNumberInput(invoiceNumber)) e.invoiceNumber = "Vul het echte factuurnummer in: minimaal één cijfer, geen 'nvt' of '-'.";
+    else if (looksLikeProjectReference(invoiceNumber)) e.invoiceNumber = "Dit is ons projectnummer, niet uw factuurnummer. Vul het nummer in dat op uw eigen factuur staat.";
+    if (!invoiceDate) e.invoiceDate = "De factuurdatum is verplicht.";
+    if (!isEmailMode && !file) e.file = "De pdf van de factuur is verplicht.";
+    else if (file && file.type !== "application/pdf") e.file = "Alleen een pdf is toegestaan.";
+    else if (file && file.size > MAX_PDF_BYTES) e.file = "Het bestand is te groot (maximaal 10 MB).";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -238,34 +153,27 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
     if (!validate()) return;
     const firstItem = projectItems.find((i) => selectedIds.has(i.id)) || projectItems[0];
     if (!firstItem) return;
-
     setIsSubmitting(true);
     try {
       let filePath: string | undefined;
-      if (selectedFile) {
-        const uploaded = await uploadFile(firstItem);
-        if (!uploaded) {
-          setErrors({ file: "Upload van PDF is mislukt" });
+      if (file) {
+        const path = `${firstItem.provider_id}/${firstItem.request_id}/collective-${Date.now()}.pdf`;
+        const { error } = await supabase.storage.from("partner-invoices").upload(path, file);
+        if (error) {
+          reportError(error, { where: "RegisterCollectivePartnerInvoiceDialog" });
+          setErrors({ file: "De pdf kon niet worden geüpload. Probeer het opnieuw." });
           return;
         }
-        filePath = uploaded;
+        filePath = path;
       }
-      const emailNoteSuffix = `Factuur verzonden via e-mail naar ${INKOOP_INBOX}`;
-      const combinedNotes = isEmailMode
-        ? [notes?.trim(), emailNoteSuffix].filter(Boolean).join(" — ")
-        : notes || undefined;
+      const emailNote = `Factuur verzonden via e-mail naar ${PURCHASE_INVOICE_INBOX}`;
+      const combinedNotes = isEmailMode ? [notes.trim(), emailNote].filter(Boolean).join(" | ") : notes.trim() || undefined;
       const payload: CollectiveInvoiceSubmitPayload = {
-        items: Array.from(selectedIds).map((id) => {
+        items: [...selectedIds].map((id) => {
           const item = projectItems.find((p) => p.id === id);
-          const incl = parseAmt(amounts[id] || "");
           const rate = item ? getItemVatRate(item) : 21;
-          const breakdown = calculateFromInclVat(incl, rate);
-          return {
-            itemId: id,
-            amount: breakdown.amountExclVat,
-            amountInclVat: breakdown.amountInclVat,
-            vatRate: rate,
-          };
+          const breakdown = calculateFromInclVat(parseAmount(amounts[id] || ""), rate);
+          return { itemId: id, amount: breakdown.amountExclVat, amountInclVat: breakdown.amountInclVat, vatRate: rate };
         }),
         invoicedNumber: invoiceNumber.trim(),
         invoicedDate: invoiceDate,
@@ -274,9 +182,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
         viaEmail: isEmailMode,
       };
       const res = await onSubmit(payload);
-      if (!res.success) {
-        setErrors({ submit: "Er is een fout opgetreden bij het registreren" });
-      }
+      if (!res.success) setErrors({ submit: "Kon de factuur niet registreren. Probeer het opnieuw." });
     } finally {
       setIsSubmitting(false);
     }
@@ -286,204 +192,134 @@ export const RegisterCollectivePartnerInvoiceDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isEmailMode ? <Mail className="h-5 w-5" /> : <Receipt className="h-5 w-5" />}
-            {isEmailMode ? "Markeer als gefactureerd via e-mail" : "Verzamelfactuur registreren"}
+            {isEmailMode ? <Mail className="h-5 w-5" aria-hidden="true" /> : <Receipt className="h-5 w-5" aria-hidden="true" />}
+            {isEmailMode ? "Gefactureerd via e-mail" : "Verzamelfactuur registreren"}
           </DialogTitle>
           <DialogDescription>
-            Project {project?.reference_number || ""} — {customerLabel}
+            {project?.reference_number ? `Project ${project.reference_number} · ` : ""}
+            {customerLabel}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3 text-sm">
-            <div>
-              <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
-                <Building2 className="h-4 w-4" /> Facturatiegegevens
-              </div>
-              <div className="mt-1 space-y-0.5 text-foreground">
-                <div className="font-medium">{bureauInfo.legalName}</div>
-                {addressLine && <div className="text-muted-foreground">{addressLine}</div>}
-                <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
-                  {bureauInfo.kvkNumber && <span>KvK: {bureauInfo.kvkNumber}</span>}
-                  {bureauInfo.vatNumber && <span>BTW: {bureauInfo.vatNumber}</span>}
-                  {bureauInfo.iban && <span>IBAN: {bureauInfo.iban}</span>}
-                </div>
-              </div>
-            </div>
+        <div className="space-y-4">
+          <Notice tone="info" title={`Factureer aan ${bureauName}`}>
+            {bureauAddress && <p>{bureauAddress}</p>}
+            {bureauRegistration && <p>{bureauRegistration}</p>}
+          </Notice>
 
-
-          </div>
-
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label>Onderdelen op deze factuur (bedragen incl. BTW)</Label>
-            <div className="rounded-md border divide-y">
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Onderdelen op deze factuur, bedragen incl. btw</legend>
+            <ul className="divide-y rounded-md border">
               {projectItems.map((it) => {
                 const checked = selectedIds.has(it.id);
+                const billable = getPartnerBillableAmount(it);
+                const amountError = errors[`amount-${it.id}`];
                 return (
-                  <div key={it.id} className="flex items-center gap-3 p-3">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleItem(it.id)}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{it.block_name}</div>
-                      {(() => {
-                        const amt = getBillableAmount(it);
-                        if (!amt) return null;
-                        const label = isEstimatedAmount(it) ? "Geschat bedrag" : "Bevestigde prijs";
-                        return (
-                          <div className="text-xs text-muted-foreground">
-                            {label}: {formatEuro(amt)} incl. BTW
-                          </div>
-                        );
-                      })()}
-                    </div>
+                  <li key={it.id} className="flex items-center gap-3 p-3">
+                    <input id={`verzamel-${it.id}`} type="checkbox" checked={checked} onChange={() => toggleItem(it.id)} className="h-4 w-4 accent-primary" />
+                    <label htmlFor={`verzamel-${it.id}`} className="min-w-0 flex-1 cursor-pointer">
+                      <span className="block truncate font-medium">{it.block_name}</span>
+                      {billable > 0 && (
+                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                          {formatEuro(billable)} incl. btw
+                          {isPartnerEstimatedAmount(it) && <Pill tone="warning" size="sm">inschatting</Pill>}
+                        </span>
+                      )}
+                    </label>
                     <div className="w-32">
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">€</span>
-                        <Input
-                          disabled={!checked}
-                          value={amounts[it.id] || ""}
-                          onChange={(e) => setAmounts({ ...amounts, [it.id]: e.target.value })}
-                          placeholder="0,00"
-                          inputMode="decimal"
-                          className={`pl-7 ${errors[`amount-${it.id}`] ? "border-destructive" : ""}`}
-                        />
-                      </div>
+                      <Input
+                        aria-label={`Bedrag voor ${it.block_name}`}
+                        aria-invalid={amountError ? true : undefined}
+                        disabled={!checked}
+                        value={amounts[it.id] || ""}
+                        onChange={(e) => setAmounts({ ...amounts, [it.id]: e.target.value })}
+                        placeholder="0,00"
+                        inputMode="decimal"
+                        className={cn(amountError && "border-destructive")}
+                      />
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
-            {errors.items && <p className="text-sm text-destructive">{errors.items}</p>}
-            <div className="space-y-1 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Subtotaal excl. BTW</span>
-                <span>{formatEuro(totalExcl)}</span>
+            </ul>
+            {errors.items && <p className="text-sm font-medium text-destructive">{errors.items}</p>}
+            {Object.keys(errors).some((k) => k.startsWith("amount-")) && <p className="text-sm font-medium text-destructive">Vul bij elk gekozen onderdeel een geldig bedrag in.</p>}
+            <dl className="space-y-1 pt-2 text-sm">
+              <div className="flex items-center justify-between">
+                <dt>Subtotaal excl. btw</dt>
+                <dd>{formatEuro(totalExcl)}</dd>
               </div>
               {vatBreakdown.map((g) => (
                 <div key={g.rate} className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    BTW {g.rate}% over {formatEuro(g.excl)}
-                  </span>
-                  <span>{formatEuro(g.vat)}</span>
+                  <dt>
+                    Btw {g.rate}% over {formatEuro(g.excl)}
+                  </dt>
+                  <dd>{formatEuro(g.vat)}</dd>
                 </div>
               ))}
-              <div className="flex items-center justify-between text-sm pt-1 border-t mt-1">
-                <span className="font-semibold">Totaal incl. BTW</span>
-                <span className="font-semibold">{formatEuro(totalIncl)}</span>
+              <div className="mt-1 flex items-center justify-between border-t pt-1 font-semibold">
+                <dt>Totaal incl. btw</dt>
+                <dd>{formatEuro(totalIncl)}</dd>
               </div>
-              <div className="text-xs text-muted-foreground pt-0.5">
-                Commissie wordt berekend over het bedrag excl. BTW.
-              </div>
-            </div>
+            </dl>
+          </fieldset>
 
-          </div>
-
-          <Separator />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="invoiceNumber">Factuurnummer *</Label>
-              <Input
-                id="invoiceNumber"
-                placeholder="Bijv. FA-2026-0042"
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                className={errors.invoiceNumber ? "border-destructive" : ""}
-              />
-              {errors.invoiceNumber && <p className="text-sm text-destructive">{errors.invoiceNumber}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="invoiceDate">Factuurdatum *</Label>
-              <Input
-                id="invoiceDate"
-                type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                className={errors.invoiceDate ? "border-destructive" : ""}
-              />
-              {errors.invoiceDate && <p className="text-sm text-destructive">{errors.invoiceDate}</p>}
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Factuurnummer" htmlFor="collectiveInvoiceNumber" required error={errors.invoiceNumber}>
+              <Input placeholder="Bijvoorbeeld FA-2026-0042" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+            </FormField>
+            <FormField label="Factuurdatum" htmlFor="collectiveInvoiceDate" required error={errors.invoiceDate}>
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+            </FormField>
           </div>
 
           {commissionPercentage > 0 && totalExcl > 0 && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Commissie Bureau Vlieland ({commissionPercentage}% over {formatEuro(totalExcl)} excl. BTW): <strong>{formatEuro(commissionAmount)}</strong>
-                <div className="text-muted-foreground text-sm">U ontvangt hiervoor een aparte factuur van Bureau Vlieland.</div>
-              </AlertDescription>
-            </Alert>
+            <Notice tone="info" title={`Commissie Bureau Vlieland: ${formatEuro(commissionAmount)}`}>
+              <p>
+                {commissionPercentage}% over {formatEuro(totalExcl)} excl. btw. U ontvangt hiervoor een aparte factuur van Bureau Vlieland.
+              </p>
+            </Notice>
           )}
 
           {isEmailMode && (
-            <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
-              <Mail className="h-4 w-4" />
-              <AlertDescription className="space-y-1">
-                <div className="font-medium text-amber-900 dark:text-amber-200">
-                  Je bevestigt dat je factuur {invoiceNumber ? <strong>#{invoiceNumber}</strong> : "(vul nummer hierboven in)"} per e-mail hebt verzonden naar{" "}
-                  <a href={`mailto:${INKOOP_INBOX}`} className="underline font-medium">{INKOOP_INBOX}</a>.
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  De PDF hoeft hieronder niet nog een keer geüpload te worden — wij koppelen 'm automatisch vanuit de inkoop-inbox aan deze registratie.
-                </div>
-              </AlertDescription>
-            </Alert>
+            <Notice tone="warning" title="U bevestigt dat u de factuur heeft gemaild">
+              <p>
+                Factuur {invoiceNumber.trim() ? invoiceNumber.trim() : "(vul het nummer hierboven in)"} is per e-mail verzonden naar{" "}
+                <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="font-medium underline">
+                  {PURCHASE_INVOICE_INBOX}
+                </a>
+                . Wij koppelen de pdf vanuit de inbox aan deze registratie; hieronder uploaden hoeft dan niet.
+              </p>
+            </Notice>
           )}
-          <div className="space-y-2">
-            <Label>PDF van de factuur {isEmailMode ? "(optioneel)" : "*"}</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            {selectedFile ? (
-              <div className="flex items-center justify-between gap-2 rounded-md border p-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-sm truncate">{selectedFile.name}</span>
-                </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" />
-                {isEmailMode ? "PDF uploaden (optioneel)" : "PDF uploaden (verplicht)"}
-              </Button>
-            )}
-            {errors.file && <p className="text-sm text-destructive">{errors.file}</p>}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Opmerkingen (optioneel)</Label>
-            <Textarea id="notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
+          <FormField label="Pdf van de factuur" htmlFor="collectiveInvoicePdf" required={!isEmailMode} error={errors.file} help="Maximaal 10 MB.">
+            <Input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </FormField>
 
-          {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
+          <FormField label="Opmerkingen" htmlFor="collectiveInvoiceNotes">
+            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </FormField>
+
+          {errors.submit && (
+            <Notice tone="danger" title="Niet geregistreerd">
+              <p>{errors.submit}</p>
+            </Notice>
+          )}
+
+          <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+              Annuleren
+            </Button>
+            <Button onClick={() => void handleSubmit()} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isEmailMode ? "Verzending bevestigen" : "Factuur registreren"}
+            </Button>
+          </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting || isUploading}>
-            Annuleren
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
-            {(isSubmitting || isUploading) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEmailMode ? "Bevestig verzending" : "Factuur registreren"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

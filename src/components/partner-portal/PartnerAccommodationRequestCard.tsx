@@ -1,53 +1,28 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { format, differenceInDays } from "date-fns";
+import { differenceInDays, format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import {
-  Calendar,
-  Users,
-  MapPin,
-  Euro,
-  Hotel,
-  Home,
-  Building2,
-  Tent,
-  HelpCircle,
-  Clock,
-  Check,
-  X,
-  Send,
-  Eye,
-  MessageSquare,
-  FileText,
-  Loader2,
-} from "lucide-react";
-import { LOCATION_PREFERENCES, BUDGET_RANGES, ACCOMMODATION_TYPES } from "@/types/accommodation";
+import { Building2, Calendar, FileText, Loader2, MessageSquare, Moon, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Notice, Pill } from "@/components/system";
+import { ACCOMMODATION_TYPES, BUDGET_RANGES, LOCATION_PREFERENCES } from "@/types/accommodation";
 import { PartnerAccommodationChatSheet } from "./PartnerAccommodationChatSheet";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
+import { reportError } from "@/lib/errorReporting";
+import { formatEuro } from "@/lib/formatEuro";
+import { partnerQuoteAction, partnerQuoteStatus } from "@/lib/accommodationQuoteStatus";
+import { usePartnerContext } from "@/lib/partnerPortalContext";
+import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
+import { cn } from "@/lib/utils";
 
-const QUOTE_STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Te beantwoorden", variant: "secondary" },
-  submitted: { label: "Offerte verstuurd", variant: "default" },
-  selected: { label: "Geaccepteerd", variant: "default" },
-  rejected: { label: "Niet gekozen", variant: "secondary" },
-  expired: { label: "Verlopen", variant: "destructive" },
-  declined: { label: "Afgewezen", variant: "destructive" },
-  cancelled: { label: "Geannuleerd", variant: "outline" },
-};
-
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  hotel: <Hotel className="h-4 w-4" />,
-  vacation_home: <Home className="h-4 w-4" />,
-  group_accommodation: <Building2 className="h-4 w-4" />,
-  camping: <Tent className="h-4 w-4" />,
-  no_preference: <HelpCircle className="h-4 w-4" />,
-};
-
+/**
+ * De logiesaanvraag als kaart (partnerportaal fase 3): dezelfde opbouw als
+ * de onderdeelkaart. Titel, één status-`Pill` uit de woordenlijst
+ * (`partnerQuoteStatus`), de feiten op één regel, wat er nu speelt als
+ * `Notice`, en één primaire knop. Reageren gebeurt in de offertesheet; de
+ * kaart opent die.
+ */
 interface AccommodationRequest {
   id: string;
   customer_name: string;
@@ -76,10 +51,6 @@ interface AccommodationRequest {
   linked_program_id?: string | null;
 }
 
-import { AlertTriangle } from "lucide-react";
-import { reportError } from "@/lib/errorReporting";
-import { formatEuro } from "@/lib/formatEuro";
-
 interface AccommodationQuote {
   id: string;
   status: string;
@@ -92,27 +63,20 @@ interface AccommodationQuote {
 interface PartnerAccommodationRequestCardProps {
   request: AccommodationRequest;
   quote: AccommodationQuote | null;
-  onSubmitQuote: () => void;
-  invoicingMode?: string | null;
+  /** Opent de offertesheet: indienen, aanpassen, verlengen of alleen bekijken. */
+  onOpen: () => void;
   partnerId: string;
   partnerName: string;
   partnerEmail: string;
   partnerToken?: string | null;
 }
 
-export const PartnerAccommodationRequestCard = ({
-  request,
-  quote,
-  onSubmitQuote,
-  invoicingMode,
-  partnerId,
-  partnerName,
-  partnerEmail,
-  partnerToken,
-}: PartnerAccommodationRequestCardProps) => {
+export const PartnerAccommodationRequestCard = ({ request, quote, onOpen, partnerId, partnerName, partnerEmail, partnerToken }: PartnerAccommodationRequestCardProps) => {
   const [showChat, setShowChat] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
+  // Op de referentiepagina wordt niets opgehaald.
+  const isDemo = Boolean(usePartnerContext().demo);
 
   const handleDownloadProgram = async () => {
     if (!request.linked_program_id || !partnerToken) return;
@@ -122,11 +86,12 @@ export const PartnerAccommodationRequestCard = ({
         body: { request_id: request.linked_program_id, partner_token: partnerToken },
       });
       if (error) throw error;
-      const blob = data instanceof Blob
-        ? data
-        : new Blob([data as ArrayBuffer], {
-            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          });
+      const blob =
+        data instanceof Blob
+          ? data
+          : new Blob([data as ArrayBuffer], {
+              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            });
       const fileName = `Programma-${request.customer_company || request.customer_name}.docx`.replace(/\s+/g, "-");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -137,240 +102,130 @@ export const PartnerAccommodationRequestCard = ({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({ title: "Programma gedownload", description: "Het programma is opgeslagen als .docx." });
-    } catch (err: any) {
+    } catch (err) {
       reportError(err, { where: "PartnerAccommodationRequestCard: docx download error" });
-      toast({
-        title: "Download mislukt",
-        description: err?.message ?? "Kon het programma niet downloaden.",
-        variant: "destructive",
-      });
+      toast({ title: "Download mislukt", description: err instanceof Error && err.message ? err.message : "Kon het programma niet downloaden.", variant: "destructive" });
     } finally {
       setIsDownloading(false);
     }
   };
-  const nights = differenceInDays(new Date(request.departure_date), new Date(request.arrival_date));
-  const statusConfig = QUOTE_STATUS_CONFIG[quote?.status || "pending"];
-  const typeConfig = ACCOMMODATION_TYPES.find(t => t.value === request.accommodation_type);
-  const locationLabels = request.location_preference
-    .map(loc => LOCATION_PREFERENCES.find(l => l.value === loc)?.label)
-    .filter(Boolean);
-  const budgetLabel = BUDGET_RANGES.find(b => b.value === request.budget_range)?.label;
 
-  const isNew = !quote?.submitted_at && 
-    new Date(request.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+  const status = partnerQuoteStatus(quote?.status);
+  const customerLabel = request.customer_company || request.customer_name;
+  const nights = Math.max(1, differenceInDays(parseISO(request.departure_date), parseISO(request.arrival_date)));
+  const typeLabel = ACCOMMODATION_TYPES.find((t) => t.value === request.accommodation_type)?.label;
+  const locationLabels = request.location_preference.map((loc) => LOCATION_PREFERENCES.find((l) => l.value === loc)?.label).filter(Boolean) as string[];
+  const budgetLabel = BUDGET_RANGES.find((b) => b.value === request.budget_range)?.label;
+  const isNew = !quote?.submitted_at && new Date(request.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+  const closed = status.key === "declined" || status.key === "cancelled" || status.key === "not_selected";
 
-  const canSubmit = quote?.status === "pending";
-  const canEdit = quote?.status === "submitted";
-  const isSelected = quote?.status === "selected";
-  const isRejected = quote?.status === "rejected";
+  const dates = `${format(parseISO(request.arrival_date), "EEE d MMM", { locale: nl })} tot ${format(parseISO(request.departure_date), "EEE d MMM yyyy", { locale: nl })}`;
+  const wishes = [...locationLabels, budgetLabel].filter(Boolean) as string[];
+
+  // Eén primaire knop per status (regel 3: de kaart opent de sheet).
+  const primary = partnerQuoteAction(quote?.status);
 
   return (
-    <Card className={`relative transition-all ${isNew ? "ring-2 ring-primary/50" : ""}`}>
-      {isNew && (
-        <Badge className="absolute -top-2 -right-2 bg-primary">Nieuw</Badge>
+    <article
+      id={`logies-${request.id}`}
+      className={cn("flex flex-col rounded-lg border bg-card p-4 transition-colors duration-base", status.tone === "warning" && "border-warning/40", closed && "opacity-70")}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="break-words text-base font-medium leading-snug">{customerLabel}</h3>
+          {request.customer_company && <p className="text-sm text-muted-foreground">{request.customer_name}</p>}
+        </div>
+        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+          {isNew && <Pill tone="brand">Nieuw</Pill>}
+          <Pill tone={status.tone} title={status.hint}>
+            {status.label}
+          </Pill>
+        </div>
+      </div>
+
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        <li className="inline-flex items-center gap-1">
+          <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+          {dates}
+        </li>
+        <li className="inline-flex items-center gap-1">
+          <Moon className="h-3.5 w-3.5" aria-hidden="true" />
+          {nights === 1 ? "1 nacht" : `${nights} nachten`}
+        </li>
+        <li className="inline-flex items-center gap-1">
+          <Users className="h-3.5 w-3.5" aria-hidden="true" />
+          {request.number_of_guests} personen
+        </li>
+        {request.room_count ? (
+          <li className="inline-flex items-center gap-1">
+            <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
+            ongeveer {request.room_count} kamers
+          </li>
+        ) : null}
+      </ul>
+      {(typeLabel || wishes.length > 0) && <p className="mt-1 text-sm text-muted-foreground">{[typeLabel, ...wishes].filter(Boolean).join(" · ")}</p>}
+      {request.special_requests && <p className="mt-2 text-sm">{request.special_requests}</p>}
+      {quote?.submitted_at && quote.price_total > 0 && (
+        <p className="mt-2 text-sm">
+          <span className="font-semibold">{formatEuro(quote.price_total)}</span>
+          <span className="ml-1 text-xs text-muted-foreground">uw offerte · geldig tot {format(parseISO(quote.valid_until), "d MMMM yyyy", { locale: nl })}</span>
+        </p>
       )}
-      
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              {TYPE_ICONS[request.accommodation_type]}
-              {request.customer_company || request.customer_name}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {request.customer_name}
-            </p>
-          </div>
-          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-        </div>
-      </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Key details */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>
-              {format(new Date(request.arrival_date), "EEE d MMM yyyy", { locale: nl })} - {" "}
-              {format(new Date(request.departure_date), "EEE d MMM yyyy", { locale: nl })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>{nights} nachten</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span>{request.number_of_guests} personen</span>
-          </div>
-          {request.room_count && (
-            <div className="flex items-center gap-2 text-sm">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span>±{request.room_count} kamers</span>
-            </div>
-          )}
-        </div>
-
-        {/* Type */}
-        {typeConfig && (
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{typeConfig.icon}</span>
-            <span className="text-sm font-medium">{typeConfig.label}</span>
-          </div>
-        )}
-
-        {/* Location & Budget */}
-        <div className="flex flex-wrap gap-2">
-          {locationLabels.map((label, i) => (
-            <Badge key={i} variant="outline" className="text-xs">
-              <MapPin className="h-3 w-3 mr-1" />
-              {label}
-            </Badge>
-          ))}
-          {budgetLabel && (
-            <Badge variant="outline" className="text-xs">
-              <Euro className="h-3 w-3 mr-1" />
-              {budgetLabel}
-            </Badge>
-          )}
-        </div>
-
-        {/* Special requests preview */}
-        {request.special_requests && (
-          <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded line-clamp-2">
-            {request.special_requests}
-          </div>
-        )}
-
+      <div className="mt-3 space-y-3">
         {request.room_assignment && (
-          <div className="text-sm bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
-            <p className="text-xs font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">Kamerindeling van de klant</p>
-            <p className="text-blue-900 dark:text-blue-200 whitespace-pre-wrap">{request.room_assignment}</p>
-          </div>
+          <Notice tone="info" title="Kamerindeling van de klant">
+            <p className="whitespace-pre-wrap">{request.room_assignment}</p>
+          </Notice>
         )}
-
         {request.program_dietary_notes && (
-          <div className="text-sm bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-2 rounded">
-            <p className="text-xs font-medium text-amber-800 dark:text-amber-300 uppercase tracking-wider mb-1">Dieetwensen & allergieën</p>
-            <p className="text-amber-900 dark:text-amber-200 whitespace-pre-wrap">{request.program_dietary_notes}</p>
-          </div>
+          <Notice tone="warning" title="Dieetwensen en allergieën">
+            <p className="whitespace-pre-wrap">{request.program_dietary_notes}</p>
+          </Notice>
         )}
-
         {request.program_guest_names && (
-          <div className="text-sm bg-muted/50 p-2 rounded">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Gastenlijst</p>
-            <p className="whitespace-pre-wrap">{request.program_guest_names}</p>
-          </div>
+          <details className="rounded-md border bg-muted/30 text-sm">
+            <summary className="cursor-pointer px-3 py-2 font-medium">Gastenlijst</summary>
+            <p className="whitespace-pre-wrap border-t px-3 py-2">{request.program_guest_names}</p>
+          </details>
         )}
-
-        <ProjectDocumentsPanel
-          accommodationRequestId={request.id}
-          viewer="partner"
-          canUpload={false}
-          compact
-          title="Documenten van Bureau/klant"
-          emptyHint="Geen documenten gedeeld."
-        />
-        {quote?.status === "pending" && quote?.reset_reason && (
-          <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-amber-800 dark:text-amber-300">Wijziging ontvangen</p>
-              <p className="text-amber-700 dark:text-amber-400 mt-0.5">
-                {quote.reset_reason}. Pas uw offerte aan en dien deze opnieuw in.
-              </p>
-            </div>
-          </div>
+        {status.key === "requested" && quote?.reset_reason && (
+          <Notice tone="warning" title="Wijziging ontvangen">
+            <p>{quote.reset_reason}. Pas uw offerte aan en dien hem opnieuw in.</p>
+          </Notice>
         )}
-
-        <Separator />
-
-        {/* Quote info if submitted */}
-        {quote?.submitted_at && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Uw offerte:</span>
-            <span className="font-semibold">
-              {formatEuro(quote.price_total)}
-            </span>
-          </div>
+        {status.key === "expired" && (
+          <Notice tone="warning" title="De geldigheid is verstreken">
+            <p>Verleng de offerte en hij staat weer open voor de klant.</p>
+          </Notice>
         )}
-
-        {/* Status-specific message */}
-        {isSelected && (
-          <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg space-y-2">
-            <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium text-sm">
-              <Check className="h-4 w-4" />
-              <span>Uw offerte is geaccepteerd!</span>
-            </div>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p>Bureau Vlieland verzorgt centraal de facturatie aan de klant. Na afloop van het verblijf:</p>
-              <ol className="list-decimal list-inside space-y-0.5 text-xs">
-                <li>Stuur uw factuur (voor de geoffreerde prijs) naar invoices@reply.bureauvlieland.nl (of upload in het partnerportaal)</li>
-                <li>Registreer de factuur hier in het portaal</li>
-                <li>Bureau Vlieland factureert de klant en verrekent de commissie met u</li>
-              </ol>
-            </div>
-          </div>
+        {status.key === "selected" && (
+          <Notice tone="success" title="De klant heeft uw offerte gekozen">
+            <p>Bureau Vlieland factureert de klant. Na het verblijf stuurt u uw factuur naar {PURCHASE_INVOICE_INBOX} of registreert u hem onder Facturatie; het bureau verrekent de commissie.</p>
+          </Notice>
         )}
+        {(status.key === "not_selected" || status.key === "declined" || status.key === "cancelled") && <p className="text-sm text-muted-foreground">{status.hint}</p>}
+        {!isDemo && <ProjectDocumentsPanel accommodationRequestId={request.id} viewer="partner" canUpload={false} compact title="Documenten van Bureau Vlieland en de klant" emptyHint="Geen documenten gedeeld." />}
+      </div>
 
-        {isRejected && (
-          <div className="flex items-center gap-2 p-2 bg-red-50 text-red-700 rounded-lg text-sm">
-            <X className="h-4 w-4" />
-            <span>De klant heeft een andere accommodatie gekozen.</span>
-          </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button size="sm" variant={primary.variant} onClick={onOpen}>
+          {primary.label}
+        </Button>
+        {quote && (
+          <Button variant="ghost" size="sm" onClick={() => setShowChat(true)}>
+            <MessageSquare className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Berichten
+          </Button>
         )}
-
-        {quote?.status === "declined" && (
-          <div className="flex items-center gap-2 p-2 bg-muted text-muted-foreground rounded-lg text-sm">
-            <X className="h-4 w-4" />
-            <span>U heeft deze aanvraag afgewezen.</span>
-          </div>
+        {status.key === "selected" && request.linked_program_id && partnerToken && (
+          <Button variant="ghost" size="sm" onClick={handleDownloadProgram} disabled={isDownloading}>
+            {isDownloading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <FileText className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+            Programma (.docx)
+          </Button>
         )}
+      </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          {canSubmit && (
-            <Button onClick={onSubmitQuote} className="flex-1">
-              <Send className="h-4 w-4 mr-2" />
-              Offerte indienen
-            </Button>
-          )}
-          {canEdit && (
-            <Button onClick={onSubmitQuote} variant="outline" className="flex-1">
-              <Eye className="h-4 w-4 mr-2" />
-              Bekijken / Aanpassen
-            </Button>
-          )}
-          {(isSelected || isRejected || quote?.status === "declined") && (
-            <Button onClick={onSubmitQuote} variant="ghost" className="flex-1">
-              <Eye className="h-4 w-4 mr-2" />
-              Details bekijken
-            </Button>
-          )}
-          {quote && (
-            <Button variant="ghost" size="icon" onClick={() => setShowChat(true)} title="Berichten">
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          )}
-          {isSelected && request.linked_program_id && partnerToken && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleDownloadProgram}
-              disabled={isDownloading}
-              title="Download programma (.docx)"
-            >
-              {isDownloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileText className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-        </div>
-      </CardContent>
-
-      {/* Chat Sheet */}
       {quote && (
         <PartnerAccommodationChatSheet
           open={showChat}
@@ -380,9 +235,9 @@ export const PartnerAccommodationRequestCard = ({
           partnerId={partnerId}
           partnerName={partnerName}
           partnerEmail={partnerEmail}
-          referenceLabel={`Logiesaanvraag ${request.customer_company || request.customer_name}`}
+          referenceLabel={`Logiesaanvraag ${customerLabel}`}
         />
       )}
-    </Card>
+    </article>
   );
 };

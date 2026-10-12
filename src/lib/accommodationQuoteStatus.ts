@@ -49,6 +49,20 @@ export function partnerQuoteStatus(rawStatus: string | null | undefined): Partne
   return { key, ...STATUSES[key] };
 }
 
+/** De ene knop op de aanvraagkaart en de projectpagina: wat de partner nu kan doen. */
+export function partnerQuoteAction(rawStatus: string | null | undefined): { label: string; variant: "default" | "outline" | "ghost" } {
+  switch (partnerQuoteStatusKey(rawStatus)) {
+    case "requested":
+      return { label: "Offerte indienen", variant: "default" };
+    case "expired":
+      return { label: "Verlengen", variant: "default" };
+    case "submitted":
+      return { label: "Bekijken of aanpassen", variant: "outline" };
+    default:
+      return { label: "Alle gegevens", variant: "ghost" };
+  }
+}
+
 /** De tabs op de logiespagina, in deze volgorde. */
 export type PartnerQuoteTab = "gevraagd" | "wacht" | "verlopen" | "gekozen" | "afgerond";
 

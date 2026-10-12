@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, FolderOpen, BedDouble } from "lucide-react";
+import { Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, FolderOpen, BedDouble, FileText } from "lucide-react";
 import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
-import { format, parseISO } from "date-fns";
+import { differenceInDays, format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
@@ -13,6 +13,8 @@ import { DayBar, type DayBarDay, type DayStatus } from "@/components/customer-po
 import { EmptyState, FactList, Notice, Pill } from "@/components/system";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { OTHER_TURN_STATUSES, PARTNER_TURN_STATUSES } from "@/lib/partnerProjectStatus";
+import { partnerQuoteAction, partnerQuoteStatus } from "@/lib/accommodationQuoteStatus";
+import { ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
 import { ProjectChatPanel } from "@/components/partner-portal/ProjectChatPanel";
@@ -129,48 +131,6 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
   const updateItemStatus = (status: string, statusNote?: string, quotedPrice?: number, quotedNotes?: string, proposedTime?: string, proposedDate?: string) =>
     selectedItem ? postItemStatus(selectedItem.id, status, statusNote, quotedPrice, quotedNotes, proposedTime, proposedDate) : Promise.resolve(false);
 
-  const handleInvoiceRegister = async (
-    amount: number,
-    invoiceNumber: string,
-    date: string,
-    notes?: string
-  ) => {
-    if (!partnerToken || !selectedItem) return { success: false };
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            partnerToken,
-            itemId: selectedItem.id,
-            invoicedAmount: amount,
-            invoicedNumber: invoiceNumber,
-            invoicedDate: date,
-            notes,
-          }),
-        }
-      );
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({} as any));
-        throw new Error(errData?.error || "Kon factuur niet registreren.");
-      }
-      const result = await response.json();
-      await refetch();
-      setShowInvoiceDialog(false);
-      setSelectedItem(null);
-      return { success: true, commission: result.commission };
-    } catch (err: any) {
-      toast({ title: "Factuur niet geregistreerd", description: err?.message || "Probeer het opnieuw.", variant: "destructive" });
-      return { success: false };
-    }
-
-  };
-
   const handleQuoteSubmit = async (quoteData: any) => {
     if (!accommodationQuote) return false;
     try {
@@ -218,9 +178,8 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
         } as any)
         .eq("id", accommodationQuote.id);
       if (error) throw error;
-      toast({ title: "Offerte ingediend" });
+      // De sheet blijft open met de bevestiging.
       await refetch();
-      setShowQuoteSheet(false);
       return true;
     } catch {
       toast({ title: "Offerte niet ingediend", description: "Kon offerte niet indienen. Probeer het opnieuw.", variant: "destructive" });
@@ -247,11 +206,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({
-        title: data?.alternativeDates ? "Alternatieve datums verstuurd" : "Aanvraag afgewezen",
-      });
       await refetch();
-      setShowQuoteSheet(false);
       return true;
     } catch (err) {
       reportError(err, { where: "PartnerProject: Error declining quote" });
@@ -484,29 +439,34 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
 
 
         <InvoiceRegistrationDialog
-          isOpen={showInvoiceDialog}
+          target={
+            showInvoiceDialog && selectedItem
+              ? {
+                  kind: "item",
+                  item: selectedItem,
+                  billingDetails: isPartnerInvoicingReleased(selectedItem.program_requests)
+                    ? {
+                        billing_company_name: selectedItem.program_requests.billing_company_name,
+                        billing_kvk_number: selectedItem.program_requests.billing_kvk_number,
+                        billing_vat_number: selectedItem.program_requests.billing_vat_number,
+                        billing_address_street: selectedItem.program_requests.billing_address_street,
+                        billing_address_postal: selectedItem.program_requests.billing_address_postal,
+                        billing_address_city: selectedItem.program_requests.billing_address_city,
+                        billing_contact_name: selectedItem.program_requests.billing_contact_name,
+                        billing_contact_email: selectedItem.program_requests.billing_contact_email,
+                        billing_reference: selectedItem.program_requests.billing_reference,
+                      }
+                    : null,
+                }
+              : null
+          }
           onClose={() => {
             setShowInvoiceDialog(false);
             setSelectedItem(null);
           }}
-          onSubmit={handleInvoiceRegister}
-          item={selectedItem}
+          partnerToken={partnerToken ?? ""}
           commissionPercentage={data?.partner.commission_percentage ?? 0}
-          billingDetails={
-            selectedItem && isPartnerInvoicingReleased(selectedItem.program_requests)
-              ? {
-                  billing_company_name: selectedItem.program_requests.billing_company_name,
-                  billing_kvk_number: selectedItem.program_requests.billing_kvk_number,
-                  billing_vat_number: selectedItem.program_requests.billing_vat_number,
-                  billing_address_street: selectedItem.program_requests.billing_address_street,
-                  billing_address_postal: selectedItem.program_requests.billing_address_postal,
-                  billing_address_city: selectedItem.program_requests.billing_address_city,
-                  billing_contact_name: selectedItem.program_requests.billing_contact_name,
-                  billing_contact_email: selectedItem.program_requests.billing_contact_email,
-                  billing_reference: selectedItem.program_requests.billing_reference,
-                }
-              : null
-          }
+          onRegistered={refetch}
         />
       </>
     );
@@ -571,6 +531,16 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
     },
   };
 
+  const quoteStatus = partnerQuoteStatus(accommodationQuote.status);
+  const quoteAction = partnerQuoteAction(accommodationQuote.status);
+  const nights = Math.max(1, differenceInDays(parseISO(req.departure_date), parseISO(req.arrival_date)));
+  const accommodationFacts = [
+    { label: "Verblijf", value: `${nights === 1 ? "1 nacht" : `${nights} nachten`}, ${req.number_of_guests} personen`, icon: Users },
+    { label: "Soort", value: ACCOMMODATION_TYPES.find((t) => t.value === req.accommodation_type)?.label ?? req.accommodation_type, icon: BedDouble },
+    ...(req.room_count ? [{ label: "Kamers", value: `ongeveer ${req.room_count}`, icon: Building2 }] : []),
+    { label: "Facturatie", value: isBureauCentral ? "Via Bureau Vlieland" : "Rechtstreeks aan de klant", icon: FileText },
+  ];
+
   return (
     <>
       <PartnerPage
@@ -578,91 +548,103 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
         icon={<BedDouble />}
         back={{ to: backTo }}
         description={`${format(parseISO(req.arrival_date), "EEEE d MMMM", { locale: nl })} tot ${format(parseISO(req.departure_date), "EEEE d MMMM yyyy", { locale: nl })}`}
+        status={{ label: quoteStatus.label, tone: quoteStatus.tone }}
       >
-
-        <Card className="p-5 space-y-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Gasten</p>
-              <p className="font-medium flex items-center gap-1.5">
-                <Users className="h-4 w-4" />
-                {req.number_of_guests}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Aankomst</p>
-              <p className="font-medium">{format(parseISO(req.arrival_date), "d MMM", { locale: nl })}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Vertrek</p>
-              <p className="font-medium">{format(parseISO(req.departure_date), "d MMM", { locale: nl })}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Type</p>
-              <p className="font-medium">{req.accommodation_type}</p>
-            </div>
-          </div>
-
-          {isBureauCentral && <BureauCentralBadge variant="compact" />}
-
-          <GuestDetailsBlock
-            guestNames={req.program_guest_names ?? null}
-            roomAssignment={req.room_assignment ?? null}
-            dietaryNotes={req.program_dietary_notes ?? req.special_requests}
-          />
-
-        </Card>
-
-        <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Offerte</h2>
-            <Card className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="font-medium">{accommodationQuote.accommodation_name}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Status:{" "}
-                    {{
-                      pending: "Nieuw — actie vereist",
-                      submitted: "Verstuurd naar klant",
-                      selected: "Gekozen door klant",
-                      rejected: "Niet gekozen",
-                      declined: "Door u afgewezen",
-                      expired: "Verlopen",
-                    }[accommodationQuote.status] || accommodationQuote.status}
-                  </p>
+            <h2 className="font-display text-xl font-medium">Uw offerte</h2>
+            <article className={cn("rounded-lg border bg-card p-4", quoteStatus.tone === "warning" && "border-warning/40")}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="break-words text-base font-medium leading-snug">{accommodationQuote.accommodation_name || partnerName}</h3>
+                  {accommodationQuote.description && <p className="mt-0.5 text-sm text-muted-foreground">{accommodationQuote.description}</p>}
                 </div>
-                <Button onClick={() => setShowQuoteSheet(true)} size="sm">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Openen
-                </Button>
+                <Pill tone={quoteStatus.tone} title={quoteStatus.hint} className="shrink-0">
+                  {quoteStatus.label}
+                </Pill>
               </div>
               {accommodationQuote.price_total > 0 && (
-                <p className="text-sm">
-                  Totaal:{" "}
-                  <span className="font-medium">
-                    {formatEuro(accommodationQuote.price_total)}
+                <p className="mt-2 text-sm">
+                  <span className="font-semibold">{formatEuro(accommodationQuote.price_total)}</span>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    {accommodationQuote.price_includes_vat ? "inclusief" : "exclusief"} btw · geldig tot {format(parseISO(accommodationQuote.valid_until), "d MMMM yyyy", { locale: nl })}
                   </span>
                 </p>
               )}
-            </Card>
+              <div className="mt-3 space-y-3">
+                {quoteStatus.key === "requested" && (
+                  <Notice tone="warning" title="Bureau Vlieland wacht op uw offerte">
+                    <p>Vul de prijs en de kamers in, of laat weten dat u geen plek heeft.</p>
+                  </Notice>
+                )}
+                {quoteStatus.key === "expired" && (
+                  <Notice tone="warning" title="De geldigheid is verstreken">
+                    <p>Verleng de offerte en hij staat weer open voor de klant.</p>
+                  </Notice>
+                )}
+                {quoteStatus.key === "selected" && (
+                  <Notice tone="success" title="De klant heeft uw offerte gekozen">
+                    <p>
+                      {accommodationQuote.invoiced_number
+                        ? `Factuur ${accommodationQuote.invoiced_number} is geregistreerd.`
+                        : "Na het verblijf registreert u uw factuur met de pdf; Bureau Vlieland verrekent de commissie."}
+                    </p>
+                  </Notice>
+                )}
+                {(quoteStatus.key === "submitted" || quoteStatus.key === "not_selected" || quoteStatus.key === "declined" || quoteStatus.key === "cancelled") && (
+                  <p className="text-sm text-muted-foreground">{quoteStatus.hint}</p>
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button size="sm" variant={quoteAction.variant} onClick={() => setShowQuoteSheet(true)}>
+                  {quoteAction.label}
+                </Button>
+              </div>
+            </article>
 
-            {accommodationQuote.status === "selected" && partnerId && (
-              <PartnerPostChargesSection
-                partnerId={partnerId}
-                accommodationRequestId={req.id}
-              />
+            {accommodationQuote.status === "selected" && partnerId && !isDemo && <PartnerPostChargesSection partnerId={partnerId} accommodationRequestId={req.id} />}
+          </div>
+
+          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+            <FactList items={accommodationFacts} />
+            <div className="rounded-lg border bg-card p-4 text-sm">
+              <h3 className="mb-2 font-medium">Klant</h3>
+              {isBureauCentral ? (
+                <BureauCentralBadge variant="compact" />
+              ) : (
+                <ul className="space-y-1.5">
+                  <li className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    {customerLabel}
+                  </li>
+                  {req.customer_email && (
+                    <li className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      <a href={`mailto:${req.customer_email}`} className="hover:underline">
+                        {req.customer_email}
+                      </a>
+                    </li>
+                  )}
+                  {req.customer_phone && (
+                    <li className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      <a href={`tel:${req.customer_phone}`} className="hover:underline">
+                        {req.customer_phone}
+                      </a>
+                    </li>
+                  )}
+                </ul>
+              )}
+              <div className="mt-3 border-t pt-3">
+                <GuestDetailsBlock guestNames={req.program_guest_names ?? null} roomAssignment={req.room_assignment ?? null} dietaryNotes={req.program_dietary_notes ?? req.special_requests} />
+              </div>
+            </div>
+            {isDemo ? (
+              <EmptyState icon={<MessageSquare />} title="Berichten met Bureau Vlieland" description="In deze referentie staan geen berichten." />
+            ) : (
+              <ProjectChatPanel partnerId={partnerId} partnerName={partnerName} partnerEmail={partnerEmail} accommodationId={req.id} />
             )}
-          </div>
-
-          <div className="lg:sticky lg:top-6 lg:self-start">
-            <ProjectChatPanel
-              partnerId={partnerId}
-              partnerName={partnerName}
-              partnerEmail={partnerEmail}
-              accommodationId={req.id}
-            />
-          </div>
+          </aside>
         </div>
       </PartnerPage>
 

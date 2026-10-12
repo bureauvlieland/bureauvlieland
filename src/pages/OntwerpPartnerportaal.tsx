@@ -5,6 +5,7 @@ import { PartnerPortalProvider } from "@/components/partner-portal/PartnerPortal
 import { PartnerProjectenContent, PartnerWerkbankContent } from "@/pages/PartnerDashboard";
 import { PartnerProjectContent } from "@/pages/PartnerProject";
 import { PartnerFinanceContent } from "@/pages/PartnerFinance";
+import { PartnerAccommodationContent } from "@/pages/PartnerAccommodation";
 import { DEMO_COMMISSION_INVOICES, DEMO_DASHBOARD, DEMO_PARTNER } from "@/content/demoPartnerportaal";
 
 /**
@@ -12,12 +13,12 @@ import { DEMO_COMMISSION_INVOICES, DEMO_DASHBOARD, DEMO_PARTNER } from "@/conten
  * (partnerportaal fase 1). Bestaat alleen buiten productie, net als
  * /ontwerp en /ontwerp/klantportaal, en wordt de bron voor de visuele
  * regressietest: `?scherm=` kiest werkbank, projecten, project (een
- * activiteitenproject), logies (een logiesproject) of facturatie. Alle
- * acties zijn uitgeschakeld; er wordt niets opgehaald of opgeslagen. De
- * logiespagina en het aanbod lezen hun eigen tabellen en komen in fase 3
- * en 4 op deze referentie.
+ * activiteitenproject), logies (een logiesproject), logiesaanvragen (de
+ * logiespagina, sinds fase 3) of facturatie. Alle acties zijn
+ * uitgeschakeld; er wordt niets opgehaald of opgeslagen. Het aanbod leest
+ * zijn eigen tabellen en komt in fase 4 op deze referentie.
  */
-const SCHERMEN = ["werkbank", "projecten", "project", "logies", "facturatie"] as const;
+const SCHERMEN = ["werkbank", "projecten", "project", "logies", "logiesaanvragen", "facturatie"] as const;
 type Scherm = (typeof SCHERMEN)[number];
 
 const noop = () => undefined;
@@ -30,6 +31,8 @@ const Scherm = ({ scherm }: { scherm: Scherm }) => {
       return <PartnerProjectContent mode="activities" projectId="demo-project-scherp" />;
     case "logies":
       return <PartnerProjectContent mode="accommodation" projectId="demo-logies-scherp" />;
+    case "logiesaanvragen":
+      return <PartnerAccommodationContent />;
     case "facturatie":
       return <PartnerFinanceContent />;
     default:

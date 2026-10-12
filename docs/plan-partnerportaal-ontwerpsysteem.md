@@ -530,6 +530,43 @@ kaart. Facturatie met `FactList`, de maandgrafiek op de tokens, tabs in
 de URL, één factuurdialoog voor onderdelen en logies, de verzamelfactuur
 op `FormField`; de jaarcijfers van de werkbank hierheen.
 
+*Gebouwd op 12 oktober, zelfde PR als fase 1 en 2.* De logiespagina heeft
+de vijf tabbladen uit `PARTNER_QUOTE_TABS` in de URL (`?tab=`) op
+`PortalTabs` (nieuw: `embedded`, voor in een pagina die al een
+`Container` heeft), een `Pill`-teller per tabblad, en per tabblad een
+eigen `EmptyState`. De aanvraagkaart heeft dezelfde opbouw als de
+onderdeelkaart: titel, één `Pill` uit `partnerQuoteStatus`, de feiten op
+één regel, wat er speelt als `Notice` (wijziging ontvangen, verlopen,
+gekozen met de drie stappen), en één knop uit `partnerQuoteAction`
+("Offerte indienen", "Verlengen", "Bekijken of aanpassen", "Alle
+gegevens"); de projectpagina in logiesmodus gebruikt dezelfde kaart,
+`FactList` en zijkolom als de activiteitenpagina. De offertesheet is van
+1.264 naar ruim 600 regels: kop met `Pill`, wat er speelt als `Notice`
+(verlengen zit in de `Notice` zelf), de aanvraag als `FactList`, de
+reactie als drie `OptionCard`s, het formulier in secties (Accommodatie,
+Kamers, Verzorging als `OptionCard`s, Prijs, Extra's, Inbegrepen,
+Voorwaarden en geldigheid, Bijlagen, Toelichting) op `FormField`, een
+vaste voet met één primaire knop, en na versturen een `SuccessScreen`
+in de sheet zelf (de pagina sluit hem niet meer). Een gekozen, niet
+gekozen of afgewezen offerte staat er als samenvatting (`FactList`), niet
+als uitgeschakeld formulier. Facturatie: de drie tellerkaarten en
+`PartnerYtdModule` zijn één `FactList` "In het kort" naast de
+maandgrafiek, die op `currentColor` en de tokens staat met een eigen
+legenda; de tabbladen op `PortalTabs` in de URL; elke factuur dezelfde
+kaart met `Pill`s (Commissie open, gefactureerd, betaald; Pdf ontbreekt;
+inschatting); leeg is `EmptyState`, de mailtip een `Notice`. Er is nog
+één factuurdialoog (`InvoiceRegistrationDialog` met een `target` voor
+een onderdeel of logies) op `FormField`, met de pdf verplicht voor
+beide; hij regelt de upload en de registratie zelf
+(`register-partner-invoice`, of `register-accommodation-invoice` plus
+`attach-accommodation-invoice-pdf`) en eindigt in een `SuccessScreen`.
+`AccommodationInvoiceDialog` is weg; een logies die nog te factureren is
+heeft nu ook op Facturatie een knop. De verzamelfactuur staat op
+`FormField` en `Notice`. Het te-factureren bedrag komt uit
+`src/lib/partnerBillableAmount.ts`. De referentiepagina heeft een scherm
+`logiesaanvragen` (de logiespagina op de demogegevens). Ontwerpschuld van
+225 naar 113; `DESIGN_DEBT_MAX=113`.
+
 **Fase 4: aanbod, planning en account (2 dagen).** `PartnerBlockSheet`,
 de kamersoort- en extra-sheets op `ResponsiveSheetContent` en
 `FormField`; de aanbodpagina's op `PortalHead`, `Pill` en `EmptyState`;
