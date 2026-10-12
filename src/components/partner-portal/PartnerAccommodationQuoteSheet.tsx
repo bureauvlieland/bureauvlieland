@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { formatEuro } from "@/lib/formatEuro";
 import { partnerQuoteStatus } from "@/lib/accommodationQuoteStatus";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
+import { SheetSection } from "./SheetSection";
 
 /**
  * De offertesheet van een logiesaanvraag (partnerportaal fase 3). Dezelfde
@@ -142,15 +143,6 @@ const DONE_TEXT: Record<Done, { title: string; intro: string }> = {
   extended: { title: "Geldigheid verlengd", intro: "Uw offerte staat weer open voor de klant." },
 };
 
-const Section = ({ title, help, children }: { title: string; help?: string; children: ReactNode }) => (
-  <section className="space-y-3">
-    <div>
-      <h3 className="font-medium">{title}</h3>
-      {help && <p className="text-xs text-muted-foreground">{help}</p>}
-    </div>
-    {children}
-  </section>
-);
 
 export const PartnerAccommodationQuoteSheet = ({
   isOpen,
@@ -569,16 +561,16 @@ export const PartnerAccommodationQuoteSheet = ({
 
               {canSubmit && responseType === "submit_quote" && (
                 <div className="space-y-6">
-                  <Section title="Accommodatie">
+                  <SheetSection title="Accommodatie">
                     <FormField label="Naam" htmlFor="accommodationName" required>
                       <Input value={accommodationName} onChange={(e) => setAccommodationName(e.target.value)} maxLength={100} />
                     </FormField>
                     <FormField label="Omschrijving" htmlFor="description">
                       <Textarea placeholder="Korte beschrijving van de accommodatie." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={1000} />
                     </FormField>
-                  </Section>
+                  </SheetSection>
 
-                  <Section title="Kamers" help="Kies bij voorkeur een van uw kamertypes: de klant ziet dan de foto's, bedden en faciliteiten van die kamer. Handmatig invullen kan ook.">
+                  <SheetSection title="Kamers" help="Kies bij voorkeur een van uw kamertypes: de klant ziet dan de foto's, bedden en faciliteiten van die kamer. Handmatig invullen kan ook.">
                     {partnerRoomTypes.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {partnerRoomTypes.map((roomType) => (
@@ -619,9 +611,9 @@ export const PartnerAccommodationQuoteSheet = ({
                       <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
                       Kamer handmatig toevoegen
                     </Button>
-                  </Section>
+                  </SheetSection>
 
-                  <Section title="Verzorging" help={requestBoardPreference ? `Voorkeur van de klant: ${getBoardLabel(requestBoardPreference)}.` : "Verplicht: zo weet de klant of ontbijt of pension in de prijs zit."}>
+                  <SheetSection title="Verzorging" help={requestBoardPreference ? `Voorkeur van de klant: ${getBoardLabel(requestBoardPreference)}.` : "Verplicht: zo weet de klant of ontbijt of pension in de prijs zit."}>
                     <OptionGroup name="Verzorging" columns={2}>
                       {BOARD_TYPES.map((board) => (
                         <OptionCard
@@ -642,9 +634,9 @@ export const PartnerAccommodationQuoteSheet = ({
                         <Textarea placeholder="Bijvoorbeeld: driegangendiner op dag 2." value={boardNotes} onChange={(e) => setBoardNotes(e.target.value)} rows={2} maxLength={500} />
                       </FormField>
                     )}
-                  </Section>
+                  </SheetSection>
 
-                  <Section title="Prijs">
+                  <SheetSection title="Prijs">
                     <FormField label="Totaalprijs" htmlFor="priceTotal" required leading={<Euro />} help={pricePerPersonPerNight != null ? `${formatEuro(pricePerPersonPerNight)} per persoon per nacht` : "Voor het hele verblijf, alle kamers samen."}>
                       <Input type="number" placeholder="0,00" value={priceTotal} onChange={(e) => setPriceTotal(e.target.value)} step="0.01" min="0" />
                     </FormField>
@@ -657,32 +649,32 @@ export const PartnerAccommodationQuoteSheet = ({
                         <Input type="number" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
                       </FormField>
                     </div>
-                  </Section>
+                  </SheetSection>
 
                   {existingQuote && !isDemo && (
-                    <Section title="Extra's" help="Losse opties die de klant erbij kan kiezen.">
+                    <SheetSection title="Extra's" help="Losse opties die de klant erbij kan kiezen.">
                       <QuoteExtrasList quoteId={existingQuote.id} numberOfGuests={request.number_of_guests} partnerId={partnerId} />
-                    </Section>
+                    </SheetSection>
                   )}
 
-                  <Section title="Inbegrepen">
+                  <SheetSection title="Inbegrepen">
                     <OptionGroup name="Inbegrepen" selection="multiple" columns={3}>
                       {INCLUDE_OPTIONS.map((item) => (
                         <OptionCard key={item} selection="multiple" selected={includes.includes(item)} onSelect={() => toggleInclude(item)} title={item} align="center" />
                       ))}
                     </OptionGroup>
-                  </Section>
+                  </SheetSection>
 
-                  <Section title="Voorwaarden en geldigheid">
+                  <SheetSection title="Voorwaarden en geldigheid">
                     <FormField label="Voorwaarden en annulering" htmlFor="conditions">
                       <Textarea placeholder="Eventuele voorwaarden of annuleringsbeleid." value={conditions} onChange={(e) => setConditions(e.target.value)} rows={3} maxLength={1000} />
                     </FormField>
                     <FormField label="Offerte geldig tot" htmlFor="validUntil">
                       <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} min={format(new Date(), "yyyy-MM-dd")} />
                     </FormField>
-                  </Section>
+                  </SheetSection>
 
-                  <Section title="Bijlagen" help="Alleen nodig als u iets anders wilt laten zien dan de galerij van uw profiel, bijvoorbeeld de vleugel of het huisje dat u aanbiedt.">
+                  <SheetSection title="Bijlagen" help="Alleen nodig als u iets anders wilt laten zien dan de galerij van uw profiel, bijvoorbeeld de vleugel of het huisje dat u aanbiedt.">
                     {!isDemo && <PartnerImageUpload partnerId={partnerId} images={quoteImages} onImagesChange={setQuoteImages} storagePath={`quotes/${request.id}`} maxImages={6} label="" />}
                     <FormField label="Link naar uw offerte" htmlFor="quoteExternalUrl" help="Uw eigen offerte, boekingssysteem of prijsopgave.">
                       <Input type="url" placeholder="https://" value={quoteExternalUrl} onChange={(e) => setQuoteExternalUrl(e.target.value)} />
@@ -696,13 +688,13 @@ export const PartnerAccommodationQuoteSheet = ({
                         Nu bijgevoegd: {existingQuote.quote_attachment_filename}
                       </p>
                     )}
-                  </Section>
+                  </SheetSection>
 
-                  <Section title="Toelichting voor de klant">
+                  <SheetSection title="Toelichting voor de klant">
                     <FormField label="Toelichting" htmlFor="partnerNotes" help="De klant ziet deze tekst bij uw offerte.">
                       <Textarea placeholder="Bijvoorbeeld: parkeren bij de haven, late check-in mogelijk." value={partnerNotes} onChange={(e) => setPartnerNotes(e.target.value)} rows={2} maxLength={500} />
                     </FormField>
-                  </Section>
+                  </SheetSection>
                 </div>
               )}
             </>

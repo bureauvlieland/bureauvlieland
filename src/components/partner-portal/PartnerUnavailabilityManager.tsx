@@ -1,25 +1,23 @@
-import { useState, useEffect } from "react";
-import { format, parseISO, isBefore } from "date-fns";
+import { useCallback, useEffect, useState } from "react";
+import { format, isBefore, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { EmptyState, FormField, LoadingState } from "@/components/system";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { 
-  CalendarOff, 
-  CalendarIcon, 
-  Plus, 
-  Trash2, 
-  Loader2,
-} from "lucide-react";
+import { CalendarIcon, CalendarOff, Loader2, Plus, Trash2 } from "lucide-react";
 import { reportError } from "@/lib/errorReporting";
 
+/**
+ * Periodes waarin de partner niet beschikbaar is (partnerportaal fase 4):
+ * een sectie op Instellingen met een eigen lijst en een klein formulier
+ * op `FormField`; leeg is een `EmptyState`.
+ */
 interface UnavailabilityPeriod {
   id: string;
   partner_id: string;
@@ -33,73 +31,83 @@ interface PartnerUnavailabilityManagerProps {
   partnerId: string;
 }
 
+const periodLabel = (p: UnavailabilityPeriod) => `${format(parseISO(p.start_date), "d MMM", { locale: nl })} tot ${format(parseISO(p.end_date), "d MMM yyyy", { locale: nl })}`;
+
+const DateButton = ({ id, value, placeholder, onSelect, disabled }: { id: string; value?: Date; placeholder: string; onSelect: (d?: Date) => void; disabled: (d: Date) => boolean }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button id={id} type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground")}>
+        <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+        {value ? format(value, "d MMMM yyyy", { locale: nl }) : placeholder}
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-auto p-0" align="start">
+      <Calendar mode="single" selected={value} onSelect={onSelect} disabled={disabled} initialFocus className="pointer-events-auto p-3" />
+    </PopoverContent>
+  </Popover>
+);
+
 export const PartnerUnavailabilityManager = ({ partnerId }: PartnerUnavailabilityManagerProps) => {
+  const { toast } = useToast();
   const [periods, setPeriods] = useState<UnavailabilityPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Form state
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchPeriods = async () => {
+  const fetchPeriods = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("partner_unavailability")
-        .select("*")
-        .eq("partner_id", partnerId)
-        .order("start_date", { ascending: true });
-
-      if (error) throw error;
+      const { data, error: fetchError } = await supabase.from("partner_unavailability").select("*").eq("partner_id", partnerId).order("start_date", { ascending: true });
+      if (fetchError) throw fetchError;
       setPeriods(data || []);
     } catch (err) {
       reportError(err, { where: "PartnerUnavailabilityManager: Error fetching unavailability" });
-      toast.error("Kon beschikbaarheid niet laden");
+      toast({ title: "Beschikbaarheid niet geladen", description: "Kon de periodes niet laden.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [partnerId, toast]);
 
   useEffect(() => {
-    if (partnerId) {
-      fetchPeriods();
-    }
-  }, [partnerId]);
+    if (partnerId) void fetchPeriods();
+  }, [partnerId, fetchPeriods]);
+
+  const resetForm = () => {
+    setIsAdding(false);
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setReason("");
+    setError(null);
+  };
 
   const handleAddPeriod = async () => {
     if (!startDate || !endDate) {
-      toast.error("Selecteer een begin- en einddatum");
+      setError("Kies een begin- en einddatum.");
       return;
     }
-
     if (isBefore(endDate, startDate)) {
-      toast.error("Einddatum moet na begindatum liggen");
+      setError("De einddatum moet na de begindatum liggen.");
       return;
     }
-
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("partner_unavailability").insert({
+      const { error: insertError } = await supabase.from("partner_unavailability").insert({
         partner_id: partnerId,
         start_date: format(startDate, "yyyy-MM-dd"),
         end_date: format(endDate, "yyyy-MM-dd"),
         reason: reason.trim() || null,
       });
-
-      if (error) throw error;
-
-      toast.success("Periode toegevoegd");
-      setIsAdding(false);
-      setStartDate(undefined);
-      setEndDate(undefined);
-      setReason("");
+      if (insertError) throw insertError;
+      toast({ title: "Periode toegevoegd" });
+      resetForm();
       await fetchPeriods();
     } catch (err) {
       reportError(err, { where: "PartnerUnavailabilityManager: Error adding period" });
-      toast.error("Kon periode niet toevoegen");
+      toast({ title: "Periode niet toegevoegd", description: "Probeer het opnieuw.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -108,18 +116,13 @@ export const PartnerUnavailabilityManager = ({ partnerId }: PartnerUnavailabilit
   const handleDeletePeriod = async (id: string) => {
     setDeletingId(id);
     try {
-      const { error } = await supabase
-        .from("partner_unavailability")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast.success("Periode verwijderd");
+      const { error: deleteError } = await supabase.from("partner_unavailability").delete().eq("id", id);
+      if (deleteError) throw deleteError;
+      toast({ title: "Periode verwijderd" });
       await fetchPeriods();
     } catch (err) {
       reportError(err, { where: "PartnerUnavailabilityManager: Error deleting period" });
-      toast.error("Kon periode niet verwijderen");
+      toast({ title: "Periode niet verwijderd", description: "Probeer het opnieuw.", variant: "destructive" });
     } finally {
       setDeletingId(null);
     }
@@ -129,189 +132,91 @@ export const PartnerUnavailabilityManager = ({ partnerId }: PartnerUnavailabilit
   const futurePeriods = periods.filter((p) => !isBefore(parseISO(p.end_date), now));
   const pastPeriods = periods.filter((p) => isBefore(parseISO(p.end_date), now));
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <Skeleton className="h-5 w-48" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <CalendarOff className="h-5 w-5 text-muted-foreground" />
+    <section className="space-y-3 rounded-lg border bg-card p-4" aria-labelledby="niet-beschikbaar-kop">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 id="niet-beschikbaar-kop" className="font-medium">
             Niet beschikbaar
-          </CardTitle>
-          {!isAdding && (
-            <Button variant="outline" size="sm" onClick={() => setIsAdding(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Periode toevoegen
-            </Button>
-          )}
+          </h3>
+          <p className="text-xs text-muted-foreground">In deze periodes stuurt Bureau Vlieland u geen aanvragen.</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        {/* Add form */}
-        {isAdding && (
-          <div className="border rounded-lg p-4 mb-4 bg-muted/30">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Begindatum</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "d MMMM yyyy", { locale: nl }) : "Kies datum"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={setStartDate}
-                      disabled={(date) => isBefore(date, new Date())}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>Einddatum</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "d MMMM yyyy", { locale: nl }) : "Kies datum"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      disabled={(date) => isBefore(date, startDate || new Date())}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <Label>Reden (optioneel)</Label>
-              <Textarea
-                placeholder="Bijv. Vakantie, onderhoud boot, etc."
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                rows={2}
-              />
-            </div>
-            <div className="flex gap-2 mt-4">
-              <Button onClick={handleAddPeriod} disabled={isSaving || !startDate || !endDate}>
-                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Opslaan
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setIsAdding(false);
-                  setStartDate(undefined);
-                  setEndDate(undefined);
-                  setReason("");
-                }}
-              >
-                Annuleren
-              </Button>
-            </div>
-          </div>
+        {!isAdding && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsAdding(true)}>
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Periode toevoegen
+          </Button>
         )}
+      </div>
 
-        {/* List of periods */}
-        {periods.length === 0 && !isAdding ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <CalendarOff className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Geen geblokkeerde periodes</p>
-            <p className="text-xs mt-1">Voeg een periode toe wanneer je niet beschikbaar bent</p>
+      {isAdding && (
+        <div className="space-y-4 rounded-md border bg-muted/30 p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="periode-begin">Begindatum</Label>
+              <DateButton id="periode-begin" value={startDate} placeholder="Kies een datum" onSelect={setStartDate} disabled={(date) => isBefore(date, new Date())} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="periode-einde">Einddatum</Label>
+              <DateButton id="periode-einde" value={endDate} placeholder="Kies een datum" onSelect={setEndDate} disabled={(date) => isBefore(date, startDate || new Date())} />
+            </div>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {futurePeriods.map((period) => (
-              <div
-                key={period.id}
-                className="flex items-center justify-between p-3 border rounded-lg bg-card"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center">
-                    <CalendarOff className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">
-                      {format(parseISO(period.start_date), "d MMM", { locale: nl })} -{" "}
-                      {format(parseISO(period.end_date), "d MMM yyyy", { locale: nl })}
-                    </p>
-                    {period.reason && (
-                      <p className="text-xs text-muted-foreground">{period.reason}</p>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeletePeriod(period.id)}
-                  disabled={deletingId === period.id}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  {deletingId === period.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            ))}
+          <FormField label="Reden" htmlFor="periode-reden" error={error}>
+            <Textarea placeholder="Bijvoorbeeld vakantie of onderhoud aan de boot." value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
+          </FormField>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => void handleAddPeriod()} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
+              Periode opslaan
+            </Button>
+            <Button type="button" variant="ghost" onClick={resetForm}>
+              Annuleren
+            </Button>
+          </div>
+        </div>
+      )}
 
-            {/* Past periods (collapsed) */}
-            {pastPeriods.length > 0 && (
-              <div className="pt-2 border-t mt-4">
-                <p className="text-xs text-muted-foreground mb-2">Verlopen periodes</p>
-                {pastPeriods.slice(0, 3).map((period) => (
-                  <div
-                    key={period.id}
-                    className="flex items-center justify-between p-2 rounded text-sm text-muted-foreground"
-                  >
-                    <span>
-                      {format(parseISO(period.start_date), "d MMM", { locale: nl })} -{" "}
-                      {format(parseISO(period.end_date), "d MMM yyyy", { locale: nl })}
+      {isLoading ? (
+        <LoadingState label="Periodes laden" />
+      ) : periods.length === 0 && !isAdding ? (
+        <EmptyState icon={<CalendarOff />} title="Geen geblokkeerde periodes" description="Voeg een periode toe wanneer u niet beschikbaar bent." />
+      ) : (
+        <>
+          {futurePeriods.length > 0 && (
+            <ul className="space-y-2">
+              {futurePeriods.map((period) => (
+                <li key={period.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-warning-soft text-warning-ink">
+                      <CalendarOff className="h-4 w-4" aria-hidden="true" />
                     </span>
-                    {period.reason && <span className="text-xs">{period.reason}</span>}
+                    <div>
+                      <p className="text-sm font-medium">{periodLabel(period)}</p>
+                      {period.reason && <p className="text-xs text-muted-foreground">{period.reason}</p>}
+                    </div>
                   </div>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => void handleDeletePeriod(period.id)} disabled={deletingId === period.id} aria-label="Periode verwijderen" className="text-destructive hover:text-destructive">
+                    {deletingId === period.id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {pastPeriods.length > 0 && (
+            <div className="border-t pt-3">
+              <p className="mb-1 text-xs text-muted-foreground">Verlopen periodes</p>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {pastPeriods.slice(0, 3).map((period) => (
+                  <li key={period.id} className="flex items-center justify-between gap-2">
+                    <span>{periodLabel(period)}</span>
+                    {period.reason && <span className="text-xs">{period.reason}</span>}
+                  </li>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 };

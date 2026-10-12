@@ -9,8 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { AlertTriangle } from "lucide-react";
+import { FormField, Notice } from "@/components/system";
 import { toast } from "@/hooks/use-toast";
 import { validateDismissReason } from "@/lib/partnerInvoiceDismiss";
 
@@ -85,33 +84,20 @@ export function DismissProjectDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 flex gap-2">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-          <div>
-            Al gefactureerde onderdelen en onderdelen die nog uw reactie vragen blijven staan. Bureau
-            Vlieland ziet uw toelichting in het projectdossier en kan het project heropenen.
-          </div>
-        </div>
+        <Notice tone="warning">
+          <p>Al gefactureerde onderdelen en onderdelen die nog uw reactie vragen blijven staan. Bureau Vlieland ziet uw toelichting in het projectdossier en kan het project heropenen.</p>
+        </Notice>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="dismiss-project-reason">Reden</Label>
-          <Textarea
-            id="dismiss-project-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Bijv. opdracht afgerond en gefactureerd buiten de portal om."
-            rows={3}
-            maxLength={500}
-          />
-          <div className="text-xs text-muted-foreground text-right">{reason.length}/500</div>
-        </div>
+        <FormField label="Reden" htmlFor="dismiss-project-reason" required help={`${reason.length} van 500 tekens`}>
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Bijvoorbeeld: opdracht afgerond en buiten het portaal om gefactureerd." rows={3} maxLength={500} />
+        </FormField>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Annuleren
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Sluiten…" : "Project sluiten"}
+            {submitting ? "Bezig met sluiten" : "Project sluiten"}
           </Button>
         </DialogFooter>
       </DialogContent>

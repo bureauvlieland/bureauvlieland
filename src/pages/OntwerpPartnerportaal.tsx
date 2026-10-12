@@ -6,6 +6,8 @@ import { PartnerProjectenContent, PartnerWerkbankContent } from "@/pages/Partner
 import { PartnerProjectContent } from "@/pages/PartnerProject";
 import { PartnerFinanceContent } from "@/pages/PartnerFinance";
 import { PartnerAccommodationContent } from "@/pages/PartnerAccommodation";
+import { PartnerBlocksContent } from "@/pages/PartnerBlocks";
+import { PartnerGuidesContent } from "@/pages/PartnerGuides";
 import { DEMO_COMMISSION_INVOICES, DEMO_DASHBOARD, DEMO_PARTNER } from "@/content/demoPartnerportaal";
 
 /**
@@ -14,11 +16,11 @@ import { DEMO_COMMISSION_INVOICES, DEMO_DASHBOARD, DEMO_PARTNER } from "@/conten
  * /ontwerp en /ontwerp/klantportaal, en wordt de bron voor de visuele
  * regressietest: `?scherm=` kiest werkbank, projecten, project (een
  * activiteitenproject), logies (een logiesproject), logiesaanvragen (de
- * logiespagina, sinds fase 3) of facturatie. Alle acties zijn
- * uitgeschakeld; er wordt niets opgehaald of opgeslagen. Het aanbod leest
- * zijn eigen tabellen en komt in fase 4 op deze referentie.
+ * logiespagina, sinds fase 3), facturatie, aanbod (leeg, sinds fase 4) of
+ * handleidingen. Alle acties zijn uitgeschakeld; er wordt niets opgehaald
+ * of opgeslagen.
  */
-const SCHERMEN = ["werkbank", "projecten", "project", "logies", "logiesaanvragen", "facturatie"] as const;
+const SCHERMEN = ["werkbank", "projecten", "project", "logies", "logiesaanvragen", "facturatie", "aanbod", "handleidingen"] as const;
 type Scherm = (typeof SCHERMEN)[number];
 
 const noop = () => undefined;
@@ -35,6 +37,10 @@ const Scherm = ({ scherm }: { scherm: Scherm }) => {
       return <PartnerAccommodationContent />;
     case "facturatie":
       return <PartnerFinanceContent />;
+    case "aanbod":
+      return <PartnerBlocksContent />;
+    case "handleidingen":
+      return <PartnerGuidesContent />;
     default:
       return <PartnerWerkbankContent />;
   }

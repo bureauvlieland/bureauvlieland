@@ -47,10 +47,11 @@ describe("robots.txt — privé-routes zijn disallowed", () => {
 });
 
 const NOINDEX_PAGES = [
-  "src/pages/PartnerPortal.tsx",
+  // De partnerpagina's zetten de noindex in hun gedeelde schil (partnerportaal fase 4).
+  "src/components/partner-portal/PartnerAuthShell.tsx",
   "src/pages/ParticipantProgram.tsx",
   "src/pages/AccommodationQuotes.tsx",
-  "src/pages/PartnerBlocks.tsx",
+  "src/components/partner-portal/PartnerPage.tsx",
   "src/pages/CustomerProgram.tsx",
 ];
 

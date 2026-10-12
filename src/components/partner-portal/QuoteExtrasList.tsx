@@ -186,7 +186,7 @@ export function QuoteExtrasList({ quoteId, numberOfGuests, partnerId, readOnly =
           <AlertDialogHeader>
             <AlertDialogTitle>Extra verwijderen?</AlertDialogTitle>
             <AlertDialogDescription>
-              Weet je zeker dat je "{deletingExtra?.name}" wilt verwijderen?
+              Weet u zeker dat u "{deletingExtra?.name}" wilt verwijderen?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

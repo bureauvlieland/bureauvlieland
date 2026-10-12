@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Loader2, FileText, Send } from "lucide-react";
 import { computeQuoteLineTotals, isValidLine, type QuoteLine } from "@/lib/customQuoteLines";
 import { reportError } from "@/lib/errorReporting";
@@ -76,7 +76,7 @@ export function PartnerCustomQuoteEditor({ itemId, partnerId, briefing, onSubmit
   const handleSubmit = async () => {
     const valid = lines.filter((l) => isValidLine(l));
     if (valid.length === 0) {
-      toast.error("Voeg minimaal één geldige regel toe");
+      toast({ title: "Voeg minimaal één geldige regel toe", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -105,10 +105,10 @@ export function PartnerCustomQuoteEditor({ itemId, partnerId, briefing, onSubmit
 
       // De trigger updatet quoted_price. Nu status naar bevestigd via bestaande flow.
       const ok = await onSubmitted(totals.incl_vat, notes);
-      if (ok) toast.success("Offerte ingediend bij Bureau Vlieland");
+      if (ok) toast({ title: "Offerte ingediend bij Bureau Vlieland" });
     } catch (e: any) {
       reportError(e, { where: "PartnerCustomQuoteEditor" });
-      toast.error("Kon offerte niet opslaan", { description: e?.message });
+      toast({ title: "Kon offerte niet opslaan", description: e?.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }

@@ -61,7 +61,7 @@ export const ProjectChatPanel = ({
           )}
           {!isLoading && messages.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Nog geen berichten over dit project. Stel hier je vraag aan Bureau Vlieland.
+              Nog geen berichten over dit project. Stel hier uw vraag aan Bureau Vlieland.
             </p>
           )}
           {messages.map((msg, idx) => {

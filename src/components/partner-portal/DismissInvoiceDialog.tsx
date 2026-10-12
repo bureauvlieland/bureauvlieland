@@ -9,8 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { AlertTriangle } from "lucide-react";
+import { FormField, Notice } from "@/components/system";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { validateDismissReason } from "@/lib/partnerInvoiceDismiss";
@@ -77,41 +76,26 @@ export function DismissInvoiceDialog({
     <Dialog open={open} onOpenChange={(o) => !submitting && onOpenChange(o)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Geen factuur — sluiten</DialogTitle>
+          <DialogTitle>Sluiten zonder factuur</DialogTitle>
           <DialogDescription>
-            U verwijdert <span className="font-medium">{itemLabel}</span> uit uw werkbank. Gebruik dit
-            als u voor dit onderdeel geen factuur (meer) stuurt — bijvoorbeeld omdat het buiten Bureau
-            Vlieland om is afgehandeld, gratis was, of niet is doorgegaan.
+            U haalt <span className="font-medium">{itemLabel}</span> van uw werkbank. Gebruik dit als u voor dit onderdeel geen factuur (meer) stuurt, bijvoorbeeld omdat het buiten Bureau Vlieland om is afgehandeld, gratis was of niet is doorgegaan.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 flex gap-2">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-          <div>
-            Bureau Vlieland ziet uw toelichting in het projectdossier. Bij twijfel kan admin het item
-            heropenen zodat u er alsnog een factuur voor kunt registreren.
-          </div>
-        </div>
+        <Notice tone="warning">
+          <p>Bureau Vlieland ziet uw toelichting in het projectdossier en kan het onderdeel heropenen, zodat u er alsnog een factuur voor registreert.</p>
+        </Notice>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="dismiss-reason">Reden</Label>
-          <Textarea
-            id="dismiss-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Bijv. gratis proefsessie, direct met klant afgerekend, niet doorgegaan…"
-            rows={4}
-            maxLength={500}
-          />
-          <div className="text-xs text-muted-foreground text-right">{reason.length}/500</div>
-        </div>
+        <FormField label="Reden" htmlFor="dismiss-reason" required help={`${reason.length} van 500 tekens`}>
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Bijvoorbeeld: gratis proefsessie, direct met de klant afgerekend, niet doorgegaan." rows={4} maxLength={500} />
+        </FormField>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Annuleren
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Sluiten…" : "Sluiten"}
+            {submitting ? "Bezig met sluiten" : "Sluiten"}
           </Button>
         </DialogFooter>
       </DialogContent>

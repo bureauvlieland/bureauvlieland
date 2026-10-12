@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Upload, File, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { reportError } from "@/lib/errorReporting";
 import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 
@@ -50,11 +50,11 @@ export function UploadInvoicePdfPartnerDialog({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type !== "application/pdf") {
-      toast.error("Alleen PDF-bestanden zijn toegestaan");
+      toast({ title: "Alleen PDF-bestanden zijn toegestaan", variant: "destructive" });
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Bestand is te groot (max 10MB)");
+      toast({ title: "Bestand is te groot (max 10MB)", variant: "destructive" });
       return;
     }
     setSelectedFile(file);
@@ -101,12 +101,12 @@ export function UploadInvoicePdfPartnerDialog({
         if (data?.error) throw new Error(data.error);
       }
 
-      toast.success("PDF toegevoegd aan factuur");
+      toast({ title: "PDF toegevoegd aan factuur" });
       onUploaded?.();
       handleClose();
     } catch (err) {
       reportError(err, { where: "UploadInvoicePdfPartnerDialog: Upload error" });
-      toast.error(err instanceof Error && err.message ? `PDF niet toegevoegd: ${err.message}` : "PDF niet toegevoegd. Probeer het opnieuw.");
+      toast({ title: err instanceof Error && err.message ? `PDF niet toegevoegd: ${err.message}` : "PDF niet toegevoegd. Probeer het opnieuw.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }

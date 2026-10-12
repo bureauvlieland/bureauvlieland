@@ -13,7 +13,7 @@ import { UploadInvoicePdfPartnerDialog, type UploadPdfTarget } from "@/component
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { PartnerCommissionInvoiceList } from "@/components/partner-portal/PartnerCommissionInvoiceList";
 import { summarizePartnerCommissionInvoices } from "@/lib/partnerCommissionInvoices";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { CheckCircle2, FileText, Mail, Receipt, Upload } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -112,14 +112,14 @@ const PartnerFinanceContent = () => {
         const err = await response.json().catch(() => ({}) as { error?: string });
         throw new Error(err.error || "Kon de factuur niet registreren.");
       }
-      toast.success(payload.viaEmail ? "Bedankt, we koppelen uw mail zodra hij binnen is" : payload.items.length > 1 ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd` : "Factuur geregistreerd");
+      toast({ title: payload.viaEmail ? "Bedankt, we koppelen uw mail zodra hij binnen is" : payload.items.length > 1 ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd` : "Factuur geregistreerd" });
       setCollectiveRequestId(null);
       setCollectiveInitialIds([]);
       await refetchData();
       return { success: true };
     } catch (err) {
       reportError(err, { where: "PartnerFinance: Error registering collective invoice" });
-      toast.error(err instanceof Error && err.message ? err.message : "Kon de factuur niet registreren.");
+      toast({ title: err instanceof Error && err.message ? err.message : "Kon de factuur niet registreren.", variant: "destructive" });
       return { success: false };
     }
   };

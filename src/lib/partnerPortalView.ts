@@ -35,7 +35,7 @@ export function partnerMenu(partner: Pick<PartnerInfo, "partner_type" | "map_ten
     { title: "Werkbank", url: `/partner/werkbank${urlSuffix}`, icon: ClipboardList },
     { title: "Projecten", url: `/partner/projecten${urlSuffix}`, icon: LayoutDashboard },
     ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
-    ...(isActivityPartner ? [{ title: "Activiteiten", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
+    ...(isActivityPartner ? [{ title: "Aanbod", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
     ...(isAccommodationPartner
       ? [
           { title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble },

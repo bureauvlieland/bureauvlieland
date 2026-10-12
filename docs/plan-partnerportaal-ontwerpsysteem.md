@@ -579,6 +579,38 @@ uitroeptekens weg, "Export CSV" wordt "Exporteren (csv)", "aanbod" als
 het ene woord voor wat de partner aanbiedt en "activiteit" voor wat de
 klant boekt, één toastsysteem.
 
+*Gebouwd op 12 oktober, zelfde PR als fase 1 tot en met 3.* De
+aanbodpagina heet Aanbod (ook in het menu) en zet het aanbod in drie
+groepen op één woordenlijst (`partnerBlockStatus`: wacht op goedkeuring,
+goedgekeurd, gepubliceerd), elke rij één knop met een `Pill` en "Kan
+beter" als `Pill` `warning`; Kamersoorten en Logies-extra's lezen de
+partner uit `usePartnerPortal`, tonen één lijst met `EmptyState` en
+`LoadingState`. De drie sheets (aanbod, kamersoort, extra) staan op
+`ResponsiveSheetContent` met kop, scrollende body in secties
+(`SheetSection`, gedeeld met de offertesheet) op `FormField`, en een
+vaste voet; de bouwsteensheet heeft geen tabs meer maar de secties
+Algemeen, Prijs, Locatie en koppelingen, Foto, met de fouten bij het veld
+en wat er speelt als `Notice`; faciliteiten en de prijssoort zijn
+`OptionCard`s. De planning staat op de tonen: de status van een onderdeel
+uit `partnerLabel` en `partnerTone` (in de weekkolom een gekleurde stip
+met de tekst voor hulptechnologie), de legenda op de tokens, geen emoji.
+Profiel en Instellingen zijn één formulier in secties met één
+opslaanknop in een vaste voet; de onderdelen met een eigen actie
+(niet-beschikbare periodes, voorwaarden als twee `OptionCard`s, wachtwoord
+op `strongPasswordSchema`) staan eronder, de commissie als `FactList`,
+meekijken als beheerder als `Notice`. Afspraken op `Pill`, `Notice` en
+`EmptyState` met de telling in de kop. Inloggen, nieuw wachtwoord en de
+oude tokenroute delen `PartnerAuthShell`; de velden op `FormField`, de
+fouten inline als `Notice`, de bevestiging als `SuccessScreen` zonder
+automatische doorverwijzing. De handleidingen zijn herschreven op het
+portaal zoals het nu is (werkbank, projecten, aanbod, facturatie), in de
+u-vorm, als één lijst onderwerpen met uitklapbare vragen en `Notice`.
+Copy: de tooltips in `itemStatus.ts` en alle partnerteksten in de u-vorm,
+gedachtestreepjes en uitroeptekens weg, "Exporteren (csv)", sonner weg
+uit het partnerportaal (één toastsysteem: `useToast`). Ontwerpschuld van
+113 naar nul: `DESIGN_DEBT_MAX=0` en een lege baseline; de referentiepagina
+heeft de schermen `aanbod` en `handleidingen` erbij.
+
 **Fase 5: borging (1 dag).** De baseline per bestand voor het
 partnerportaal leeg, `DESIGN_DEBT_MAX` blijft nul; de visuele test
 neemt werkbank, projecten, project, logies en facturatie op via

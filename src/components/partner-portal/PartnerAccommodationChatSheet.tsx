@@ -67,7 +67,7 @@ export function PartnerAccommodationChatSheet({
       <SheetContent className="flex flex-col w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="text-base">
-            Berichten — Bureau Vlieland
+            Berichten met Bureau Vlieland
           </SheetTitle>
           {referenceLabel && (
             <p className="text-sm text-muted-foreground">{referenceLabel}</p>
