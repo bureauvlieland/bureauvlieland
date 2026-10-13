@@ -105,7 +105,11 @@ export function calculateAdminInvoicingTotals(
   const natureContribution = isExcluded("nature_contribution")
     ? 0
     : settings.natureContributionPerPerson * request.number_of_people;
-  const accommodationTotal = Number(request.selected_accommodation_total ?? 0);
+  // Logies die de accommodatie rechtstreeks aan de klant factureert staat niet
+  // op onze factuur en telt dus ook niet mee in de grondslag voor de opslag.
+  const accommodationTotal = isExcluded("accommodation")
+    ? 0
+    : Number(request.selected_accommodation_total ?? 0);
 
   // Organisatiefee + opslag centrale facturatie: via de fee-engine wanneer een
   // (gesnapshotte) structuur beschikbaar is, anders de oude scalar-logica.

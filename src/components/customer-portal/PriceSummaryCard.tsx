@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
+import { isFeeExcluded } from "@/lib/excludedFees";
 import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 import { computeAutomaticFees } from "@/lib/customerFeeTotals";
 import type { FeeStructureSet } from "@/types/pricing";
@@ -179,10 +180,14 @@ export const PriceSummaryCard = ({
     // Automatische posten — respecteert per-project uitsluitingen (excluded_fees).
     // Grondslag voor de opslag centrale facturatie: alle doorbelaste
     // partnerkosten incl. logies en logies-extra's.
+    // Factureert de accommodatie rechtstreeks aan de klant, dan staan kamer en
+    // extra's niet op onze factuur en tellen ze nergens mee.
+    const accommodationBilledDirectly = isFeeExcluded(excludedFees, "accommodation");
+    const billableAccommodationExtras = accommodationBilledDirectly ? [] : accommodationExtras;
     const partnerCostsTotal =
       pricedLines.reduce((s, l) => s + (l.effectivePrice ?? 0), 0) +
-      (selectedAccommodationQuote?.price_total || 0) +
-      accommodationExtras.reduce((s, e) => s + calculateExtraTotal(e), 0);
+      (accommodationBilledDirectly ? 0 : selectedAccommodationQuote?.price_total || 0) +
+      billableAccommodationExtras.reduce((s, e) => s + calculateExtraTotal(e), 0);
 
     const fees = computeAutomaticFees({
       numberOfPeople,
@@ -205,12 +210,12 @@ export const PriceSummaryCard = ({
     const standardVatRate = getVatRate("standard");
 
     // Accommodation
-    const accommodationTotal = selectedAccommodationQuote?.price_total || 0;
+    const accommodationTotal = accommodationBilledDirectly ? 0 : selectedAccommodationQuote?.price_total || 0;
     // Keep accommodation VAT aligned with admin FinancialOverviewCard and lodging invoicing flow.
     const accommodationVatRate = 9;
 
     // Accommodation extras (breakfast, lunch, diner, etc.)
-    const extrasWithTotals = accommodationExtras.map((extra) => {
+    const extrasWithTotals = billableAccommodationExtras.map((extra) => {
       const total = calculateExtraTotal(extra);
       return { extra, total };
     });
@@ -276,6 +281,7 @@ export const PriceSummaryCard = ({
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
       accommodationPartnerName: selectedAccommodationQuote?.partner?.name || "",
       hasAccommodation: !!selectedAccommodationQuote,
+      accommodationBilledDirectly,
       extrasWithTotals,
       accommodationExtrasTotal,
       allVatLines,
@@ -310,7 +316,11 @@ export const PriceSummaryCard = ({
                   <span className="text-xs ml-1 opacity-70">(incl. extra's)</span>
                 )}
               </span>
-              <span>€{formatPrice(summary.accommodationTotal + summary.accommodationExtrasTotal)}</span>
+              {summary.accommodationBilledDirectly ? (
+                <span className="text-xs text-muted-foreground">rechtstreeks via de accommodatie</span>
+              ) : (
+                <span>€{formatPrice(summary.accommodationTotal + summary.accommodationExtrasTotal)}</span>
+              )}
             </div>
           )}
           {pricedActivityLines.length > 0 && (
@@ -387,13 +397,22 @@ export const PriceSummaryCard = ({
                   <BedDouble className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-sm font-medium">Logies: {summary.accommodationName}</span>
                 </div>
-                <span className="text-sm font-medium whitespace-nowrap ml-4">
-                  €{formatPrice(summary.accommodationTotal)}
-                </span>
+                {summary.accommodationBilledDirectly ? (
+                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">rechtstreeks via de accommodatie</span>
+                ) : (
+                  <span className="text-sm font-medium whitespace-nowrap ml-4">
+                    €{formatPrice(summary.accommodationTotal)}
+                  </span>
+                )}
               </div>
               {summary.accommodationPartnerName && (
                 <p className="text-xs text-muted-foreground ml-6 mt-0.5">
                   {summary.accommodationPartnerName}
+                </p>
+              )}
+              {summary.accommodationBilledDirectly && (
+                <p className="text-xs text-muted-foreground ml-6 mt-0.5">
+                  De accommodatie factureert het logies rechtstreeks aan u; het staat niet op de factuur van Bureau Vlieland.
                 </p>
               )}
               {summary.extrasWithTotals.length > 0 && (

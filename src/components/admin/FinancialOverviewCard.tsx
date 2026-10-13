@@ -114,14 +114,17 @@ export const FinancialOverviewCard = ({
   const coordinationFee = effectiveCoordinationFee;
 
   const coordVatRate = getVatRate("standard");
-  const accommodationExtrasTotal = accommodationExtras.reduce(
+  // Logies die de accommodatie rechtstreeks aan de klant factureert staat niet
+  // op onze factuur: kamer én extra's vallen dan weg.
+  const accommodationExcluded = isExcluded("accommodation");
+  const effectiveAccommodationExtras = accommodationExcluded ? [] : accommodationExtras;
+  const accommodationExtrasTotal = effectiveAccommodationExtras.reduce(
     (sum, extra) => sum + calculateExtraTotal(extra),
     0,
   );
-  const resolvedAccommodationBaseTotal = Math.max(
-    0,
-    accommodationBaseTotal ?? (accommodationTotal - accommodationExtrasTotal),
-  );
+  const resolvedAccommodationBaseTotal = accommodationExcluded
+    ? 0
+    : Math.max(0, accommodationBaseTotal ?? (accommodationTotal - accommodationExtrasTotal));
   const accommodationGrandTotal = resolvedAccommodationBaseTotal + accommodationExtrasTotal;
 
   const formatCurrency = (amount: number) =>
@@ -231,7 +234,7 @@ export const FinancialOverviewCard = ({
   }
 
   // Accommodation extras use their own configured VAT rates
-  accommodationExtras.forEach((extra) => {
+  effectiveAccommodationExtras.forEach((extra) => {
     const extraTotal = calculateExtraTotal(extra);
     const extraVatRate = Number(extra.vat_rate ?? accommodationVatRate);
     addToGroup(
@@ -398,21 +401,29 @@ export const FinancialOverviewCard = ({
             })}
 
             {/* Accommodation */}
-            {(resolvedAccommodationBaseTotal > 0 || accommodationExtras.length > 0) && (
+            {(resolvedAccommodationBaseTotal > 0 || effectiveAccommodationExtras.length > 0) && (
               <>
                 {resolvedAccommodationBaseTotal > 0 && (
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm group">
                     <div className="flex items-center gap-2">
                       <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="truncate max-w-[200px]">Logies{accommodationName ? `: ${accommodationName}` : ""}</span>
                     </div>
-                    <span className="font-medium tabular-nums">{formatCurrency(resolvedAccommodationBaseTotal)}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium tabular-nums">{formatCurrency(resolvedAccommodationBaseTotal)}</span>
+                      {onToggleFee && (
+                        <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                          title="Verwijder van factuur (de accommodatie factureert rechtstreeks aan de klant)" onClick={() => onToggleFee("accommodation", true)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
                 {(() => {
                   // Bundel extras met identieke omschrijving + prijs + BTW
                   const groups = new Map<string, { name: string; count: number; total: number; firstId: string }>();
-                  for (const extra of accommodationExtras) {
+                  for (const extra of effectiveAccommodationExtras) {
                     const key = `${extra.name}|${extra.unit_price}|${extra.vat_rate}|${extra.pricing_type}`;
                     const lineTotal = calculateExtraTotal(extra);
                     const existing = groups.get(key);

@@ -23,7 +23,7 @@ describe("isFeeExcluded", () => {
   });
 
   it("elke ExcludableFeeKey heeft een NL label (voor UI)", () => {
-    for (const key of ["tourist_tax", "nature_contribution", "central_surcharge", "coordination_fee"] as const) {
+    for (const key of ["tourist_tax", "nature_contribution", "central_surcharge", "coordination_fee", "accommodation"] as const) {
       expect(EXCLUDABLE_FEE_LABELS[key]).toBeTruthy();
     }
   });
