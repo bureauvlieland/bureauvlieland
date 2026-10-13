@@ -1,6 +1,6 @@
 # Visuele regressie (fase 5, borging)
 
-Eén pagina per paginasoort van de publieke site, vijf schermen van het
+Eén pagina per paginasoort van de publieke site, zes schermen van het
 klantportaal en zes van het partnerportaal, op desktop (1440) en telefoon
 (390), vergeleken met de
 referentie in `__snapshots__/`. Draait in
@@ -58,7 +58,9 @@ te beoordelen en maak nieuwe referenties via de workflow hierboven.
 - Het klantportaal wordt opgenomen op `/ontwerp/klantportaal` (alleen
   buiten productie): één verzonnen programma uit
   `src/content/demoKlantportaal.ts`, gekozen met `?scherm=overzicht`,
-  `programma`, `logies`, `akkoord` of `deelnemers`. Het programma zelf
+  `programma`, `logies`, `akkoord` of `deelnemers`, plus een losse
+  logiesaanvraag zonder programma met `?scherm=logiesaanvraag` (de pagina
+  `/mijn-logies`). Het programma zelf
   komt niet uit de database, maar de pagina haalt wel de gedeelde data op
   die het echte portaal ook gebruikt (`building_blocks`, `app_settings`,
   `pricing_structures`); die staan in de fixtures `klantportaal-*.har`,

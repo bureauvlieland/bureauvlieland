@@ -22,14 +22,13 @@ const listAll = process.argv.includes("--list");
 const writeBaseline = process.argv.includes("--write-baseline");
 const BASELINE_PATH = resolve(root, ".github/design-debt-baseline.json");
 
-// Publieke site, klantportaal en (sinds partnerportaal fase 1) het
+// Publieke site, klantportaal (met de losse logiesaanvraag) en het
 // partnerportaal, met een baseline per bestand die alleen omlaag mag.
-// Admin- en logiesportaal volgen later.
+// Het adminportaal volgt later.
 const INCLUDE = ["src/pages", "src/components"];
 const EXCLUDE = [
   "src/pages/admin",
   "src/components/admin",
-  "src/components/accommodation-portal",
   "src/components/ui",
   "src/components/system",
   "src/pages/Ontwerp.tsx",

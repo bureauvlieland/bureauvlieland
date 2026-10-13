@@ -216,13 +216,24 @@ Vlieland), `warning` is "u bent aan zet", `success` is "geregeld" en
 hoogstens één `Pill`; de uitleg staat in de `Notice` erboven of in de
 details, niet in een tweede pill.
 
+De losse logiesaanvraag zonder programma (`/mijn-logies/<token>`, uit de
+mails over een logiesaanvraag) staat op dezelfde schil, dezelfde
+`TabHeader` en dezelfde `AccommodationSection` als het tabblad Logies;
+`AccommodationQuotesView` in `src/pages/AccommodationQuotes.tsx` is de
+hele pagina. Logies kiezen gaat in `SelectQuoteDialog`, een
+`ResponsiveSheetContent` met de voorwaarden, één akkoordvinkje en de naam
+als handtekening in een `FormField`. Omdat de chatfuncties een
+programmatoken eisen, heeft de losse aanvraag geen berichten aan de
+accommodatie.
+
 De referentie staat op `/ontwerp/klantportaal` (alleen buiten productie,
 net als `/ontwerp`): één verzonnen programma uit
 `src/content/demoKlantportaal.ts` (twee dagen, vijf onderdelen, een
 bevestigde accommodatie, akkoord ontvangen, factuurgegevens nog
-onvolledig) met `?scherm=overzicht|programma|logies|praktisch|facturatie|akkoord|deelnemers`.
-Alle acties zijn uitgeschakeld en er wordt niets opgeslagen; de visuele
-test neemt vijf van deze schermen op. De gedeelde instellingen
+onvolledig) met `?scherm=overzicht|programma|logies|praktisch|facturatie|akkoord|deelnemers`,
+en een tweede verzonnen logiesaanvraag zonder programma met twee offertes
+op `?scherm=logiesaanvraag`. Alle acties zijn uitgeschakeld en er wordt
+niets opgeslagen; de visuele test neemt zes van deze schermen op. De gedeelde instellingen
 (`app_settings`, `pricing_structures`) haalt de pagina wel op; in de test
 komen ze uit de fixtures.
 
@@ -291,8 +302,8 @@ Vier poorten in CI houden het systeem heel; ze staan in
 |---|---|---|
 | Typecheck | `tsc -p tsconfig.app.json`, nul fouten | hard |
 | Lint en strict-mode | aantal problemen mag niet stijgen | `LINT_MAX`, `STRICT_MAX` in `.github/quality-baselines.env` |
-| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | nul: `DESIGN_DEBT_MAX=0` en een lege `.github/design-debt-baseline.json`; de site en het klantportaal sinds klantportaal fase 4 (10 oktober 2026), het partnerportaal sinds partnerportaal fase 4 (12 oktober 2026); een bestand met een vindplaats is dan een fout |
-| Visuele regressie | `tests/e2e/visual`: vierentwintig schermen (dertien paginasoorten van de site, vijf schermen van het klantportaal op `/ontwerp/klantportaal` en zes van het partnerportaal op `/ontwerp/partnerportaal`) op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
+| Ontwerpschuld | `scripts/check-design-debt.ts`: losse paletkleuren, `text-white`, knop-overrides, `rounded-xl`+, Tailwind-schaduwen, `hsl(var(--…))`, eigen eyebrows | nul: `DESIGN_DEBT_MAX=0` en een lege `.github/design-debt-baseline.json`; de site en het klantportaal sinds klantportaal fase 4 (10 oktober 2026), het partnerportaal sinds partnerportaal fase 4 (12 oktober 2026), de losse logiesaanvraag sinds 13 oktober 2026; een bestand met een vindplaats is dan een fout |
+| Visuele regressie | `tests/e2e/visual`: vijfentwintig schermen (dertien paginasoorten van de site, zes schermen van het klantportaal op `/ontwerp/klantportaal`, waaronder de losse logiesaanvraag, en zes van het partnerportaal op `/ontwerp/partnerportaal`) op desktop (1440) en telefoon (390), vergeleken met `__snapshots__` (maximaal 1% van de pixels anders), plus geen horizontale overloop, geen paginafouten en de lettertypes geladen | referenties in de repo, gemaakt door de workflow "Visuele referenties vernieuwen" met dezelfde Chromium als CI |
 
 De visuele test is deterministisch: de klok staat vast op 21 september
 2026, Supabase-antwoorden komen uit `tests/e2e/visual/fixtures/*.har`,
@@ -306,11 +317,11 @@ baseline is leeg. Een nieuwe vindplaats laat CI falen; `--list` wijst hem
 aan. (`--write-baseline` bestaat nog voor het geval een bestand bewust
 even boven nul moet.) Na een bedoelde visuele wijziging laat je de
 referenties opnieuw maken door de workflow "Visuele referenties
-vernieuwen" (`tests/e2e/visual/README.md`). Het klantportaal en het
-partnerportaal tellen mee in de ontwerpschuld en de visuele test (via
-`/ontwerp/klantportaal` en `/ontwerp/partnerportaal`); het admin- en het
-logiesportaal vallen erbuiten, erven de tokens en kunnen later per scherm
-worden bijgetrokken.
+vernieuwen" (`tests/e2e/visual/README.md`). Het klantportaal (met de
+losse logiesaanvraag op `/mijn-logies`) en het partnerportaal tellen mee
+in de ontwerpschuld en de visuele test (via `/ontwerp/klantportaal` en
+`/ontwerp/partnerportaal`); alleen het adminportaal valt erbuiten, erft de
+tokens en kan later per scherm worden bijgetrokken.
 
 ## Checklist voor een nieuwe pagina
 
