@@ -41,6 +41,7 @@ import {
   type BureauInvoiceForForward,
 } from "@/components/admin/ForwardBureauInvoiceDialog";
 import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
+import { isFeeExcluded } from "@/lib/excludedFees";
 import { usePricingStructures, useRevisionCharges } from "@/hooks/usePricing";
 import { resolveFeeStructure } from "@/lib/feeEngine";
 import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
@@ -58,6 +59,7 @@ interface ProgramRequest {
   number_of_people: number;
   selected_dates: string[];
   linked_accommodation_id: string | null;
+  excluded_fees?: string[] | null;
   invoicing_mode: string | null;
   billing_company_name: string | null;
   billing_contact_name: string | null;
@@ -209,9 +211,15 @@ const AdminInvoicePreview = () => {
   const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
 
   // Accommodation state
-  const [accommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
-  const [accommodationExtras, setAccommodationExtras] = useState<AccommodationExtraData[]>([]);
+  const [loadedAccommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
+  const [loadedAccommodationExtras, setAccommodationExtras] = useState<AccommodationExtraData[]>([]);
   const [accommodationNights, setAccommodationNights] = useState(0);
+  // Factureert de accommodatie rechtstreeks aan de klant ("Uitgesloten van
+  // factuur" in het Financieel Overzicht), dan staan kamer en extra's niet op
+  // deze factuur.
+  const accommodationExcluded = isFeeExcluded(request?.excluded_fees, "accommodation");
+  const accommodationQuote = accommodationExcluded ? null : loadedAccommodationQuote;
+  const accommodationExtras = accommodationExcluded ? [] : loadedAccommodationExtras;
 
   // Form state
   const [invoiceNumber, setInvoiceNumber] = useState("");

@@ -94,6 +94,15 @@ describe("calculateAdminInvoicingTotals", () => {
     expect(r.centralSurcharge).toBe(0.5 * 10);
   });
 
+  it("excluded_fees 'accommodation' haalt het logies van de factuur", () => {
+    const r = calculateAdminInvoicingTotals(
+      makeRequest({ selected_accommodation_total: 800, excluded_fees: ["accommodation"] }),
+      baseSettings,
+    );
+    expect(r.accommodationTotal).toBe(0);
+    expect(r.grandTotalInclVat).toBe(50 + 51.6 + 10);
+  });
+
   it("accommodatie-totaal wordt opgeteld", () => {
     const r = calculateAdminInvoicingTotals(
       makeRequest({ selected_accommodation_total: 800 }),

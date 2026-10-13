@@ -6,13 +6,16 @@ export type ExcludableFeeKey =
   | "tourist_tax"
   | "nature_contribution"
   | "central_surcharge"
-  | "coordination_fee";
+  | "coordination_fee"
+  /** Logies rechtstreeks door de accommodatie aan de klant gefactureerd. */
+  | "accommodation";
 
 export const EXCLUDABLE_FEE_LABELS: Record<ExcludableFeeKey, string> = {
   tourist_tax: "Toeristenbelasting",
   nature_contribution: "Natuurbijdrage",
   central_surcharge: "Opslag centrale facturatie",
   coordination_fee: "Coördinatiefee",
+  accommodation: "Logies (rechtstreeks door de accommodatie gefactureerd)",
 };
 
 export function isFeeExcluded(

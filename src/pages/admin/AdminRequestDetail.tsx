@@ -672,7 +672,11 @@ const AdminRequestDetail = () => {
   const effectiveCentralSurcharge = feeExcluded("central_surcharge") ? 0 : centralSurcharge;
   const accommodationBaseTotal = selectedAccommodationQuote?.price_total ?? 0;
   const accommodationExtrasTotal = calculateExtrasTotal(accommodationExtras);
-  const accommodationTotal = accommodationBaseTotal + accommodationExtrasTotal;
+  // Logies die de accommodatie rechtstreeks aan de klant factureert staat niet
+  // op onze factuur en telt niet mee in totaal en openstaand.
+  const accommodationTotal = feeExcluded("accommodation")
+    ? 0
+    : accommodationBaseTotal + accommodationExtrasTotal;
 
   const bureauInvoicedAmount = request ? calculateProjectGrandTotal({
     items,

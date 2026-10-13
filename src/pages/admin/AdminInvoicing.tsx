@@ -266,10 +266,12 @@ const AdminInvoicing = () => {
     const touristTaxTotal = isExcluded("tourist_tax") ? 0 : settings.tourist_tax_pp_per_day * request.number_of_people * numberOfDays;
     const natureTotal = isExcluded("nature_contribution") ? 0 : settings.nature_contribution_pp * request.number_of_people;
     addToGroup(0, touristTaxTotal + natureTotal);
-    addToGroup(getVatRate("accommodation"), Number(request.selected_accommodation_base_total ?? 0));
-    (request.selected_accommodation_extras ?? []).forEach((extra) => {
-      addToGroup(Number(extra.vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
-    });
+    if (!isExcluded("accommodation")) {
+      addToGroup(getVatRate("accommodation"), Number(request.selected_accommodation_base_total ?? 0));
+      (request.selected_accommodation_extras ?? []).forEach((extra) => {
+        addToGroup(Number(extra.vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
+      });
+    }
 
     const vatGroupsList = Object.entries(vatGroups)
       .map(([rate, value]) => ({ rate: Number(rate), exclVat: value.exclVat, vatAmount: value.vatAmount }))

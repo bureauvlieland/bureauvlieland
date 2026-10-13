@@ -50,3 +50,25 @@ voor dertig.
 - Server-side paginering: het aantal actieve projecten is overzichtelijk.
 - Wijzigen van de facturatielogica of totalen (`adminInvoicingTotals.ts`
   blijft ongemoeid).
+
+## Logies buiten de factuur (13 oktober 2026)
+
+Soms rekent de accommodatie het logies rechtstreeks met de klant af (BV-2602-0005,
+Strandhotel Seeduyn). Het bureau factureert dan alleen het programma en stuurt het
+hotel een commissiefactuur. Daarvoor is `accommodation` een vijfde sleutel in
+`program_requests.excluded_fees` (`src/lib/excludedFees.ts`), naast
+toeristenbelasting, natuurbijdrage, opslag en coördinatiefee:
+
+- Financieel Overzicht op het project: het kruisje bij de logiesregel haalt
+  kamer en extra's van de factuur; terugzetten via "Uitgesloten van factuur".
+- Totalen (`adminInvoicingTotals.ts`), factuurvoorbeeld en PDF, het
+  facturatie-overzicht en de btw-uitsplitsing laten het logies weg; het telt
+  ook niet mee in de grondslag voor de opslag centrale facturatie.
+- Klantportaal: de logiesregel blijft staan met "rechtstreeks via de
+  accommodatie" in plaats van een bedrag.
+- Voltooiingsstatus (`recalculate_program_completion_status`, migratie
+  `20261013100000`) rekent het openstaande bedrag zonder logies.
+- De commissie op het logies verandert niet: die loopt via de logiesofferte en
+  de inkoopfactuur van de accommodatie in de commissiewerklijst.
+
+De migratie zet de sleutel meteen op BV-2602-0005.
