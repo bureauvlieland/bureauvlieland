@@ -63,4 +63,5 @@ export const EMAIL_TYPE_LABELS: Record<string, string> = {
   project_email: 'Project e-mail',
   wedding_referral_customer: 'Doorverwijzing bruiloft (bruidspaar)',
   wedding_referral_partner: 'Doorverwijzing bruiloft (partner)',
+  wedding_referral_claim_bureau: 'Doorverwijzing bruiloft (melding partner aan bureau)',
 };
