@@ -1354,9 +1354,16 @@ const AdminRequestDetail = () => {
     // Force-mode wanneer klant nog niet formeel akkoord is, óf wanneer het
     // item al eerder is verzonden (dan is dit een herinnering / herversturen).
     const needsForce = phase !== "klaar_voor_partner";
+    const isReminder = phase === "verstuurd";
     if (phase === "wacht_op_klant") {
       const ok = window.confirm(
         `De klant heeft het programma nog niet formeel akkoord. Toch "${item.block_name}" naar de partner sturen?`,
+      );
+      if (!ok) return;
+    } else if (isReminder) {
+      const partnerLabel = item.provider_name ? ` naar ${item.provider_name}` : " naar de partner";
+      const ok = window.confirm(
+        `Herinnering${partnerLabel} sturen over "${item.block_name}"? De partner krijgt de openstaande aanvraag opnieuw gemaild.`,
       );
       if (!ok) return;
     }
@@ -1370,11 +1377,15 @@ const AdminRequestDetail = () => {
         },
       });
       if (error) throw error;
-      toast.success(data?.message || `"${item.block_name}" verstuurd naar partner`);
+      toast.success(
+        isReminder
+          ? `Herinnering voor "${item.block_name}" verstuurd${item.provider_name ? ` naar ${item.provider_name}` : ""}`
+          : data?.message || `"${item.block_name}" verstuurd naar partner`,
+      );
       fetchRequestData();
     } catch (err) {
       console.error("Error sending single item:", err);
-      toast.error("Fout bij versturen naar partner");
+      toast.error(isReminder ? "Fout bij versturen van herinnering" : "Fout bij versturen naar partner");
     }
   };
 
@@ -2759,11 +2770,18 @@ const AdminRequestDetail = () => {
                                                 };
                                               } else if (
                                                 phase === "verstuurd" &&
-                                                (displayStatus === "wacht_op_klant" || displayStatus === "wacht_op_partner")
+                                                (displayStatus === "wacht_op_klant" ||
+                                                  displayStatus === "wacht_op_partner" ||
+                                                  displayStatus === "klant_akkoord_wacht_partner" ||
+                                                  displayStatus === "tegenvoorstel_klant")
                                               ) {
+                                                // De aanvraag is al naar de partner gestuurd, maar die heeft nog
+                                                // niet bevestigd (ook ná klantakkoord of bij een tegenvoorstel).
+                                                // Een herinnering verstuurt dezelfde aanvraag opnieuw met
+                                                // "Herinnering:" in het onderwerp.
                                                 action = {
                                                   icon: BellRing,
-                                                  title: "Herinner — stuur dit onderdeel opnieuw naar de partner",
+                                                  title: "Herinner partner — de aanvraag is verstuurd maar nog niet bevestigd",
                                                   onClick: () => handleSendSingleItemToPartner(item),
                                                   className: "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100",
                                                 };
