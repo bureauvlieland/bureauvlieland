@@ -303,8 +303,8 @@ link om "al bekend" te melden.
   noemt de uiterste datum erbij.
 - **Wat een melding doet**: de doorverwijzing krijgt `partner_claim =
   already_known` met datum eerste contact, opmerking, tijdstip van de
-  melding en herkomst "link", en het bureau krijgt een werkbanktaak. De
-  status blijft "doorverwezen". Een aparte status of "niet doorgegaan" is
+  melding en herkomst "link", en het bureau krijgt een werkbanktaak én een
+  mail (sinds 13 oktober, zie hieronder). De status blijft "doorverwezen". Een aparte status of "niet doorgegaan" is
   bewust niet gekozen: het bruidspaar kan gewoon bij de partner boeken, en
   "niet doorgegaan" zou dat in de aantallen per seizoen als mislukt
   tellen. De boeking telt dus mee, met vergoeding nul en de melding als
@@ -324,6 +324,29 @@ link om "al bekend" te melden.
 - **Beperking**: meldt de partner na een al vastgelegde boeking (binnen de
   vijf werkdagen), dan past de vergoeding zich niet vanzelf aan; de
   werkbanktaak wijst daarop.
+
+## Bureaumail bij een "al bekend"-melding (gebouwd 13 oktober)
+
+Vraag van Erwin: een melding van de partner leverde alleen een werkbanktaak
+op; geen mail, niets in het berichtencentrum en niets in de Communicatie-tab
+van het project. Nu stuurt `wedding-referral-claim` na de taak ook een mail
+aan het bureau (`hallo@`), naar het voorbeeld van de logies-alert
+(`_shared/lodging-bureau-alert.ts`):
+
+- Onderwerp "Al bekend gemeld — {partner} over {bruidspaar} ({projectnummer})",
+  met partner, bruidspaar, klant, datum doorverwijzing, datum eerste contact
+  volgens de partner, datum melding en de opmerking; knoppen naar
+  Bruiloften en naar het project. In testmodus (de pagina draait niet op
+  bureauvlieland.nl) gaat hij naar het testadres met [TEST].
+- Gelogd in `email_log` als `wedding_referral_claim_bureau` op het project
+  en de partner: daarmee staat hij in het berichtencentrum en in de
+  Communicatie-tab van het dossier. Bij een project komt hij ook in
+  `project_communications`, zodat de Communicatie-tab in de Werkbank (die
+  alleen het dossier leest) hem ook toont. Eén mail per doorverwijzing
+  (idempotentiesleutel op de doorverwijzing).
+- Mislukt de mail, dan blijven de melding en de taak staan en staat de mail
+  als "failed" in het e-maillog; de partner merkt er niets van.
+- De werkbanktaak blijft leidend; de mail is een extra signaal.
 
 ## Partnerafspraken met akkoord in het portaal (gebouwd 29 september)
 

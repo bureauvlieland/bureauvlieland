@@ -11,11 +11,19 @@
 // beoordelingspagina. De link werkt tot en met de vijfde werkdag (Nederlandse
 // tijd) na de doorverwijsmail; daarna is hij verlopen en verandert er niets
 // meer. Een melding legt "al bekend" vast op de doorverwijzing; de vergoeding
-// valt dan weg (zie src/lib/weddingReferrals.ts) en het bureau krijgt een taak.
+// valt dan weg (zie src/lib/weddingReferrals.ts) en het bureau krijgt een taak
+// én een mail (naar het voorbeeld van _shared/lodging-bureau-alert.ts), zodat
+// de melding niet blijft liggen tot iemand de Werkbank opent. De mail wordt
+// gelogd op het project en de partner en, bij een project, in het
+// communicatiedossier.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { amsterdamDate, claimDeadline, formatIsoDateNL, isClaimWindowOpen, isValidIsoDate } from "../_shared/weddingReferralDates.ts";
+import { sendMailjet, type MailjetMessage, type SendMailjetResult } from "../_shared/mailjet-send.ts";
+import { logEmail, type EmailLogEntry } from "../_shared/email-logger.ts";
+import { getPortalBaseUrl, getRecipientEmail, getSubjectPrefix, sanitizeHtml } from "../_shared/email-templates.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,6 +109,148 @@ export interface Db {
 export interface ClaimContext {
   db: Db;
   now: Date;
+  /** Verstuurt de bureaumail; in de test een stub. */
+  send: (message: MailjetMessage, idempotencyKey: string) => Promise<SendMailjetResult>;
+  /** Legt de bureaumail vast in email_log. */
+  log: (entry: EmailLogEntry) => Promise<void>;
+  /** Origin van de pagina (testmodus: ander adres en [TEST] in het onderwerp). */
+  origin?: string;
+}
+
+/** email_type van de bureaumail; ook het label in src/types/projectCommunication.ts. */
+export const BUREAU_MAIL_TYPE = "wedding_referral_claim_bureau";
+
+export interface BureauMailInput {
+  referral: Pick<ClaimRow, "id" | "request_id" | "partner_id" | "couple_names" | "referred_at">;
+  partnerName: string;
+  firstContactAt: string;
+  reportedAt: string;
+  note: string;
+  project: { reference_number: string | null; customer_name: string } | null;
+  origin?: string;
+}
+
+export function bureauMailSubject(input: Pick<BureauMailInput, "partnerName" | "referral" | "project" | "origin">): string {
+  const ref = input.project?.reference_number ? ` (${input.project.reference_number})` : "";
+  return `${getSubjectPrefix(input.origin)}Al bekend gemeld — ${input.partnerName || "Partner"} over ${input.referral.couple_names}${ref}`;
+}
+
+function rij(label: string, value: string): string {
+  return `<tr>
+    <td style="padding:6px 0; color:#64748b; font-size:14px;">${sanitizeHtml(label)}</td>
+    <td style="padding:6px 0; text-align:right; font-size:14px;"><strong>${sanitizeHtml(value)}</strong></td>
+  </tr>`;
+}
+
+export function bureauMailHtml(input: BureauMailInput): string {
+  const base = getPortalBaseUrl(input.origin);
+  const rijen = [
+    input.project?.reference_number ? rij("Project", input.project.reference_number) : "",
+    input.project ? rij("Klant", input.project.customer_name) : "",
+    rij("Bruidspaar", input.referral.couple_names),
+    rij("Partner", input.partnerName || "Partner"),
+    rij("Doorverwezen op", formatIsoDateNL(input.referral.referred_at)),
+    rij("Eerste contact volgens de partner", formatIsoDateNL(input.firstContactAt)),
+    rij("Gemeld op", formatIsoDateNL(input.reportedAt)),
+  ]
+    .filter(Boolean)
+    .join("");
+  const opmerking = input.note
+    ? `<p style="margin:16px 0 0; padding:12px 14px; background:#f8fafc; border-left:3px solid #0F4C5C; border-radius:4px; font-size:14px; white-space:pre-wrap;">
+        <strong>Opmerking van de partner:</strong><br>${sanitizeHtml(input.note)}
+      </p>`
+    : "";
+  const projectKnop = input.referral.request_id
+    ? `<a href="${base}/admin/aanvragen/${input.referral.request_id}" style="color:#0F4C5C; margin-left:16px;">Open het project</a>`
+    : "";
+  return `<div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; color:#0f172a;">
+    <h2 style="color:#0F4C5C; margin-bottom:4px;">Partner meldt: bruidspaar was al bekend</h2>
+    <p style="margin:0 0 16px; color:#64748b; font-size:14px;">Interne melding via de link in de partnermail — geen actie voor de klant of partner. Er staat ook een taak in de Werkbank.</p>
+    <table style="width:100%; border-collapse:collapse; background:#f8fafc; border-radius:8px; padding:8px;">
+      ${rijen}
+    </table>
+    ${opmerking}
+    <p style="margin:16px 0 0; font-size:14px;">Bekijk de doorverwijzing onder Bruiloften. Bij een boeking is de vergoeding dan nul.</p>
+    <p style="margin:24px 0;">
+      <a href="${base}/admin/bruiloften" style="background:#0F4C5C; color:#ffffff; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block;">
+        Bekijk de doorverwijzing
+      </a>${projectKnop}
+    </p>
+  </div>`;
+}
+
+/**
+ * De bureaumail: versturen, loggen en bij een project in het communicatiedossier
+ * zetten. Faalt nooit hard: de melding van de partner is dan al vastgelegd en
+ * de taak staat er; een mislukte mail staat als "failed" in het e-maillog.
+ */
+async function mailBureau(ctx: ClaimContext, input: BureauMailInput): Promise<void> {
+  const subject = bureauMailSubject(input);
+  const html = bureauMailHtml(input);
+  const to = getRecipientEmail(GENERAL_CONTACT_EMAIL, input.origin);
+  const idempotencyKey = `wedding-referral-claim-bureau-${input.referral.id}`;
+  const message: MailjetMessage = {
+    From: { Email: GENERAL_CONTACT_EMAIL, Name: "Bureau Vlieland" },
+    To: [{ Email: to, Name: "Bureau Vlieland" }],
+    Subject: subject,
+    HTMLPart: html,
+  };
+  const metadata = {
+    template_name: BUREAU_MAIL_TYPE,
+    actor: "partner → bureau (bruidspaar al bekend gemeld)",
+    referral_id: input.referral.id,
+    partner_name: input.partnerName,
+    idempotency_key: idempotencyKey,
+  };
+
+  let result: SendMailjetResult;
+  try {
+    result = await ctx.send(message, idempotencyKey);
+  } catch (error) {
+    result = { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+
+  await ctx.log({
+    email_type: BUREAU_MAIL_TYPE,
+    subject,
+    recipient_email: to,
+    recipient_name: "Bureau Vlieland",
+    related_request_id: input.referral.request_id ?? undefined,
+    related_partner_id: input.referral.partner_id,
+    status: result.ok ? "sent" : "failed",
+    error_message: result.ok ? undefined : result.error,
+    mailjet_message_id: result.ok ? (result.messageId ?? undefined) : undefined,
+    sent_by: "system",
+    html_body: html,
+    from_email: GENERAL_CONTACT_EMAIL,
+    idempotency_key: idempotencyKey,
+    metadata: result.ok ? metadata : { ...metadata, failure: true },
+  });
+  if (!result.ok) console.error("wedding-referral-claim: bureaumail niet verstuurd:", result.error);
+
+  // Ook in het communicatiedossier, zodat de Communicatie-tab in de Werkbank
+  // (die alleen project_communications leest) de melding toont.
+  if (result.ok && input.referral.request_id) {
+    const { error } = await ctx.db.from("project_communications").insert({
+      request_id: input.referral.request_id,
+      accommodation_id: null,
+      communication_type: "email_out",
+      direction: "outbound",
+      subject,
+      content: [
+        `${input.partnerName || "De partner"} meldt via de link dat ${input.referral.couple_names} al bekend was.`,
+        `Eerste contact volgens de partner: ${formatIsoDateNL(input.firstContactAt)}.`,
+        input.note ? `Opmerking: ${input.note}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      contact_name: "Bureau Vlieland",
+      contact_email: to,
+      logged_by: null,
+      communication_date: ctx.now.toISOString(),
+    });
+    if (error) console.error("wedding-referral-claim: communicatiedossier niet bijgewerkt:", error.message);
+  }
 }
 
 export type ClaimResult = { status: number; body: Record<string, unknown> };
@@ -183,6 +333,26 @@ export async function handleClaim(input: ClaimInput, ctx: ClaimContext): Promise
   });
   if (todoError) console.error("wedding-referral-claim: taak niet aangemaakt:", todoError.message);
 
+  // En een mail aan het bureau, gelogd op het project en de partner.
+  let project: BureauMailInput["project"] = null;
+  if (row.request_id) {
+    const { data: projectRij } = await ctx.db
+      .from("program_requests")
+      .select("reference_number, customer_name")
+      .eq("id", row.request_id)
+      .maybeSingle();
+    project = (projectRij as BureauMailInput["project"]) ?? null;
+  }
+  await mailBureau(ctx, {
+    referral: row,
+    partnerName,
+    firstContactAt: eerstContact,
+    reportedAt: vandaag,
+    note: input.note,
+    project,
+    origin: ctx.origin,
+  });
+
   return { status: 200, body: { view: toView(gemeld, partnerName, "reported") } };
 }
 
@@ -196,7 +366,14 @@ export async function handler(req: Request): Promise<Response> {
     if (!parsed.success) return json(400, { error: "invalid_request" });
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const result = await handleClaim(parsed.data, { db: supabase as unknown as Db, now: new Date() });
+    const result = await handleClaim(parsed.data, {
+      db: supabase as unknown as Db,
+      now: new Date(),
+      send: (message, idempotencyKey) =>
+        sendMailjet({ messages: [message], source: "wedding-referral-claim", idempotencyKey, checkSuppression: false }),
+      log: logEmail,
+      origin: req.headers.get("origin") ?? undefined,
+    });
     return json(result.status, result.body);
   } catch (error) {
     console.error("Error in wedding-referral-claim:", error);
