@@ -65,7 +65,7 @@ export const PartnerLocationMap = ({ lat, lng, label, address, isVisible }: Part
       <div className="flex items-start gap-2">
         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Locatie</p>
+          <p className="text-eyebrow font-medium uppercase text-primary">Locatie</p>
           <p className="font-medium text-foreground break-words">{address ?? label}</p>
         </div>
       </div>

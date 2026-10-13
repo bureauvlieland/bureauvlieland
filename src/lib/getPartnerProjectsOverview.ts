@@ -1,4 +1,5 @@
 import type { DerivedStatus } from "@/lib/projectStatus";
+import { derivePartnerAccommodationProjectStatus, derivePartnerProjectStatus, type PartnerProjectStatus } from "@/lib/partnerProjectStatus";
 import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
 import type {
   PartnerItem,
@@ -19,6 +20,8 @@ export interface PartnerOverviewRow {
   endDate: Date | null;
   durationDays: number;
   derivedStatus: DerivedStatus;
+  /** De status in de woorden van de partner (partnerportaal fase 1/2). */
+  partnerStatus: PartnerProjectStatus;
   itemCount: number;
   actionCount: number;       // items the partner has to do something with
   termsAccepted: boolean;
@@ -108,6 +111,7 @@ export function buildPartnerOverviewRows(
         ? Math.max(1, Math.round((end.getTime() - earliest.getTime()) / 86400000) + 1)
         : Math.max(1, dates.length || 1),
       derivedStatus,
+      partnerStatus: derivePartnerProjectStatus(items, req),
       itemCount: items.length,
       actionCount,
       termsAccepted: !!req.terms_accepted_at,
@@ -136,6 +140,7 @@ export function buildPartnerOverviewRows(
         ? Math.max(1, Math.round((departure.getTime() - arrival.getTime()) / 86400000))
         : 1,
       derivedStatus,
+      partnerStatus: derivePartnerAccommodationProjectStatus(q),
       itemCount: 1,
       actionCount,
       termsAccepted: false,

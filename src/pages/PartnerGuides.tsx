@@ -1,892 +1,499 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Helmet } from "react-helmet";
-import { supabase } from "@/integrations/supabase/client";
+import type { ReactNode } from "react";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
+import { usePartnerContext } from "@/lib/partnerPortalContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  UserPlus, 
-  MessageSquare, 
-  Calendar, 
-  Receipt, 
-  HelpCircle,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  BedDouble,
-  BarChart3,
-  FileText,
-  CreditCard,
-  Package,
-} from "lucide-react";
-import { reportError } from "@/lib/errorReporting";
+import { Notice } from "@/components/system";
+import { BedDouble, BookOpen, Calendar, ClipboardList, HelpCircle, MessageSquare, Package, Receipt, UserPlus } from "lucide-react";
+import { GENERAL_CONTACT_EMAIL, PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 
-interface PartnerCommissionData {
-  commission_percentage: number;
-  accommodation_commission_percentage: number | null;
-  partner_type: string | null;
+/**
+ * Handleidingen (partnerportaal fase 4): één lijst van onderwerpen met
+ * uitklapbare vragen, op de koppen en de `Notice` van het ontwerpsysteem.
+ * De tekst beschrijft het portaal zoals het nu is (werkbank, projecten,
+ * aanbod, facturatie) in de u-vorm.
+ */
+interface Topic {
+  id: string;
+  title: string;
+  intro: string;
+  icon: ReactNode;
+  items: { id: string; question: string; answer: ReactNode }[];
 }
 
-const PartnerGuides = () => {
-  const [searchParams] = useSearchParams();
-  const [partnerData, setPartnerData] = useState<PartnerCommissionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const Steps = ({ items }: { items: ReactNode[] }) => (
+  <ol className="list-decimal space-y-1.5 pl-5">
+    {items.map((item, i) => (
+      <li key={i}>{item}</li>
+    ))}
+  </ol>
+);
 
-  useEffect(() => {
-    const fetchPartnerData = async () => {
-      try {
-        // Check for admin impersonation
-        const impersonateId = searchParams.get("impersonate");
+const Points = ({ items }: { items: ReactNode[] }) => (
+  <ul className="list-disc space-y-1.5 pl-5">
+    {items.map((item, i) => (
+      <li key={i}>{item}</li>
+    ))}
+  </ul>
+);
 
-        if (impersonateId) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-            if (isAdmin) {
-              const { data } = await supabase
-                .from("partners")
-                .select("commission_percentage, accommodation_commission_percentage, partner_type")
-                .eq("id", impersonateId)
-                .single();
-              if (data) {
-                setPartnerData(data);
-                setIsLoading(false);
-                return;
-              }
-            }
-          }
-        }
+export const PartnerGuidesContent = () => {
+  const { partner } = usePartnerContext();
+  const isActivityPartner = partner.partner_type === "activity_provider" || partner.partner_type === "both" || !partner.partner_type;
+  const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
+  const activityCommission = `${partner.commission_percentage ?? 10}%`;
+  const accommodationCommission = `${partner.accommodation_commission_percentage ?? 10}%`;
 
-        // Regular partner: fetch via auth
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setIsLoading(false);
-          return;
-        }
-
-        const { data } = await supabase
-          .from("partners")
-          .select("commission_percentage, accommodation_commission_percentage, partner_type")
-          .eq("auth_user_id", session.user.id)
-          .eq("is_active", true)
-          .single();
-
-        if (data) {
-          setPartnerData(data);
-        }
-      } catch (error) {
-        reportError(error, { where: "PartnerGuides: Error fetching partner data" });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPartnerData();
-  }, [searchParams]);
-
-  const isActivityPartner = partnerData?.partner_type === 'activity_provider' || partnerData?.partner_type === 'both' || (!partnerData?.partner_type);
-  const isAccommodationPartner = partnerData?.partner_type === 'accommodation' || partnerData?.partner_type === 'both';
+  const topics: Topic[] = [
+    {
+      id: "start",
+      title: "Aan de slag",
+      intro: "De eerste stappen om uw account in te richten.",
+      icon: <UserPlus />,
+      items: [
+        {
+          id: "activeren",
+          question: "Account activeren",
+          answer: (
+            <>
+              <p>U kunt op twee manieren voor het eerst inloggen.</p>
+              <Points
+                items={[
+                  <>
+                    <strong>Direct inloggen</strong> met het e-mailadres en het wachtwoord dat u van Bureau Vlieland heeft gekregen. Uw account wordt bij de eerste login geactiveerd.
+                  </>,
+                  <>
+                    <strong>Via de activatielink</strong> in de uitnodigingsmail, waarmee u zelf een wachtwoord kiest.
+                  </>,
+                ]}
+              />
+              <Notice tone="info">
+                <p>De activatielink is 24 uur geldig. Direct inloggen kan altijd.</p>
+              </Notice>
+            </>
+          ),
+        },
+        {
+          id: "voorwaarden",
+          question: "Algemene voorwaarden instellen",
+          answer: (
+            <>
+              <p>Voordat klanten uw aanbod boeken, kiest u onder Instellingen hoe uw voorwaarden worden getoond.</p>
+              <Points
+                items={[
+                  <>
+                    <strong>Eigen voorwaarden</strong>: upload een pdf.
+                  </>,
+                  <>
+                    <strong>Standaardvoorwaarden</strong> van Bureau Vlieland voor partneraanbod.
+                  </>,
+                ]}
+              />
+              <Notice tone="info" title="Waarom dit belangrijk is">
+                <p>Bij elke boeking gaat de klant akkoord met uw voorwaarden. Dat is een bindende afspraak en wordt vastgelegd.</p>
+              </Notice>
+            </>
+          ),
+        },
+        {
+          id: "wachtwoord",
+          question: "Wachtwoord vergeten of wijzigen",
+          answer: (
+            <>
+              <p>Een nieuw wachtwoord kiest u onder Instellingen. Bent u het kwijt, dan vraagt u op de inlogpagina een nieuwe aan.</p>
+              <Steps items={["Ga naar de inlogpagina.", "Vul uw e-mailadres in.", 'Kies "Wachtwoord vergeten?".', "U ontvangt een e-mail met een link om een nieuw wachtwoord in te stellen."]} />
+              <Notice tone="info">
+                <p>De link in de e-mail is een uur geldig.</p>
+              </Notice>
+            </>
+          ),
+        },
+        {
+          id: "gegevens",
+          question: "Bedrijfsgegevens bijwerken",
+          answer: (
+            <>
+              <p>Houd uw gegevens bij voor een juiste facturatie. Dat doet u onder Instellingen.</p>
+              <Points items={["Adres, voor de correspondentie en de commissiefacturen.", "KvK-nummer en IBAN, die Bureau Vlieland voor u beheert.", "Tenaamstelling van uw bankrekening.", "Contactpersoon voor boekingen, als dat iemand anders is."]} />
+            </>
+          ),
+        },
+      ],
+    },
+    {
+      id: "werkbank",
+      title: "Werkbank en projecten",
+      intro: "Waar u ziet wat er van u wordt verwacht.",
+      icon: <ClipboardList />,
+      items: [
+        {
+          id: "werkbank",
+          question: "De werkbank",
+          answer: (
+            <>
+              <p>De werkbank begint met de belangrijkste volgende stap en zet daaronder uw taken per fase bij elkaar.</p>
+              <Points
+                items={[
+                  <>
+                    <strong>Beoordelen</strong>: aanvragen die op uw reactie wachten.
+                  </>,
+                  <>
+                    <strong>Wijzigingen</strong>: een klant die een andere tijd voorstelt.
+                  </>,
+                  <>
+                    <strong>Inplannen</strong>: bevestigde onderdelen die eraan komen.
+                  </>,
+                  <>
+                    <strong>Factureren</strong>: uitgevoerde onderdelen zonder factuur.
+                  </>,
+                ]}
+              />
+              <p>Is alles gedaan, dan ziet u dat ook.</p>
+            </>
+          ),
+        },
+        {
+          id: "projecten",
+          question: "Projecten",
+          answer: (
+            <>
+              <p>Onder Projecten staan al uw aanvragen, gesorteerd op de eerstvolgende datum, met de status in uw woorden: wacht op uw reactie, wacht op de klant, bevestigd, te factureren, gefactureerd. Zoeken kan op naam, bedrijf of referentie; afgeronde en geannuleerde projecten staan in het archief.</p>
+            </>
+          ),
+        },
+        {
+          id: "referentie",
+          question: "Referentienummer en versie",
+          answer: (
+            <>
+              <p>Elk project heeft een referentienummer als BV-2601-0001. Vermeld het op uw factuur; zo verwerken wij hem snel. Wijzigt de klant iets, dan ziet u een versienummer bij het onderdeel.</p>
+            </>
+          ),
+        },
+        {
+          id: "planning",
+          question: "Planning",
+          answer: <p>Onder Planning staan de onderdelen van Bureau Vlieland per week naast de boekingen uit uw eigen agenda in MijnActiviteitenplanner, als die gekoppeld is.</p>,
+        },
+      ],
+    },
+    {
+      id: "aanvragen",
+      title: "Aanvragen beantwoorden",
+      intro: "Hoe u reageert op een onderdeel in een programma.",
+      icon: <MessageSquare />,
+      items: [
+        {
+          id: "nieuw",
+          question: "Een nieuwe aanvraag",
+          answer: (
+            <>
+              <p>Zet Bureau Vlieland uw aanbod in een programma, dan krijgt u een e-mail en staat het onderdeel op uw werkbank onder Beoordelen, met datum, gewenste tijd, aantal personen en de wensen van de klant.</p>
+            </>
+          ),
+        },
+        {
+          id: "bevestigen",
+          question: "Bevestigen",
+          answer: (
+            <>
+              <p>Open het onderdeel en kies Bevestigen. U vult in:</p>
+              <Points
+                items={[
+                  <>
+                    <strong>Totaalprijs incl. btw</strong> voor het aantal personen, als die afwijkt van de inschatting.
+                  </>,
+                  <>
+                    <strong>Tijd</strong>, als u een ander tijdstip voorstelt.
+                  </>,
+                  <>
+                    <strong>Toelichting</strong> voor de klant.
+                  </>,
+                ]}
+              />
+              <p>De klant ziet uw bevestiging in zijn programma. De verwachte commissie ({activityCommission}) staat er vast bij.</p>
+              <Notice tone="warning">
+                <p>Na bevestiging wijzigt u de datum of tijd niet meer zelf; neem daarvoor contact op met Bureau Vlieland.</p>
+              </Notice>
+            </>
+          ),
+        },
+        {
+          id: "alternatief",
+          question: "Een andere tijd of prijs voorstellen",
+          answer: (
+            <>
+              <p>Past het gevraagde tijdstip niet, kies dan Andere tijd of prijs en vul uw voorstel in. De klant kan het aannemen of een tegenvoorstel doen; u hoort het op de werkbank onder Wijzigingen.</p>
+            </>
+          ),
+        },
+        {
+          id: "niet-beschikbaar",
+          question: "Niet beschikbaar melden",
+          answer: (
+            <>
+              <p>Kies Niet beschikbaar en geef kort de reden. Bureau Vlieland zoekt dan een alternatief voor de klant.</p>
+              <Notice tone="info" title="Tip">
+                <p>Blokkeer periodes waarin u er niet bent onder Instellingen; dan krijgt u in die periode geen aanvragen.</p>
+              </Notice>
+            </>
+          ),
+        },
+      ],
+    },
+    {
+      id: "beschikbaarheid",
+      title: "Beschikbaarheid",
+      intro: "Periodes waarin u geen aanvragen wilt.",
+      icon: <Calendar />,
+      items: [
+        {
+          id: "periodes",
+          question: "Een periode blokkeren",
+          answer: (
+            <>
+              <Steps items={["Ga naar Instellingen, onderdeel Niet beschikbaar.", "Kies Periode toevoegen.", "Kies de begin- en einddatum en geef eventueel een reden, zoals vakantie.", "Sla de periode op."]} />
+              <p>In die periode stuurt Bureau Vlieland u geen aanvragen. Verwijderen kan met het prullenbakje.</p>
+            </>
+          ),
+        },
+      ],
+    },
+    ...(isActivityPartner
+      ? [
+          {
+            id: "aanbod",
+            title: "Aanbod",
+            intro: "Wat u aanbiedt en hoe het in de programma's komt.",
+            icon: <Package />,
+            items: [
+              {
+                id: "overzicht",
+                question: "Uw aanbod",
+                answer: <p>Onder Aanbod staat alles wat u aanbiedt, in drie groepen: gepubliceerd, goedgekeurd en wacht op goedkeuring. Klik op een regel om de gegevens te bewerken.</p>,
+              },
+              {
+                id: "toevoegen",
+                question: "Een activiteit voorstellen",
+                answer: (
+                  <>
+                    <Steps items={["Kies Nieuwe activiteit.", "Vul naam, beschrijving, duur en het aantal personen in.", "Vul de prijs in: per persoon, per persoon per dag, een totaalprijs of een staffel op groepsgrootte, incl. of excl. btw.", "Dien het voorstel in; na het opslaan kunt u een foto toevoegen."]} />
+                    <Notice tone="warning">
+                      <p>Een nieuwe activiteit wacht eerst op goedkeuring van Bureau Vlieland en is tot die tijd niet zichtbaar voor klanten.</p>
+                    </Notice>
+                  </>
+                ),
+              },
+              {
+                id: "status",
+                question: "De status van uw aanbod",
+                answer: (
+                  <Points
+                    items={[
+                      <>
+                        <strong>Wacht op goedkeuring</strong>: Bureau Vlieland beoordeelt uw voorstel.
+                      </>,
+                      <>
+                        <strong>Goedgekeurd</strong>: beschikbaar voor maatwerk en offertes, nog niet op de site.
+                      </>,
+                      <>
+                        <strong>Gepubliceerd</strong>: zichtbaar voor klanten op de site. Publiceren doet Bureau Vlieland; de inhoud blijft van u.
+                      </>,
+                    ]}
+                  />
+                ),
+              },
+              {
+                id: "map",
+                question: "Koppelen aan MijnActiviteitenplanner",
+                answer: <p>Werkt u met MijnActiviteitenplanner, dan ziet u onder uw aanbod ook de activiteiten uit die agenda. Koppel ze aan een activiteit bij Bureau Vlieland: dan is het aanbod direct boekbaar en volgen foto, tekst en duur elke nacht uw agenda. De prijs voor groepen blijft van u.</p>,
+              },
+            ],
+          } satisfies Topic,
+        ]
+      : []),
+    {
+      id: "facturatie",
+      title: "Facturatie",
+      intro: "Aan wie u factureert en hoe de commissie werkt.",
+      icon: <Receipt />,
+      items: [
+        {
+          id: "model",
+          question: "Aan wie stuur ik mijn factuur?",
+          answer: (
+            <>
+              <p>Altijd aan Bureau Vlieland, nooit rechtstreeks aan de klant. Bureau Vlieland factureert de klant en verrekent de commissie met u.</p>
+              <Steps
+                items={[
+                  <>
+                    Registreer uw factuur onder Facturatie met de pdf, of mail de pdf naar <strong>{PURCHASE_INVOICE_INBOX}</strong>.
+                  </>,
+                  "Bureau Vlieland factureert de klant en stuurt u een commissiefactuur.",
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "commissie",
+          question: "Commissie",
+          answer: (
+            <>
+              <p>
+                Bureau Vlieland rekent commissie over het gefactureerde bedrag <strong>excl. btw</strong>: {isActivityPartner ? `${activityCommission} op onderdelen` : ""}
+                {isActivityPartner && isAccommodationPartner ? " en " : ""}
+                {isAccommodationPartner ? `${accommodationCommission} op logies` : ""}. De verwachte commissie ziet u al zodra u een prijs opgeeft.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: "registreren",
+          question: "Een factuur registreren",
+          answer: (
+            <>
+              <Steps items={["Ga naar Facturatie, tabblad Nog te factureren.", "Kies bij het project Factuur registreren; meerdere onderdelen van één project gaan op één verzamelfactuur.", "Vul het factuurnummer, het bedrag incl. btw en de datum in en voeg de pdf toe.", "Heeft u de factuur al gemaild, kies dan Gefactureerd via e-mail."]} />
+              <Notice tone="info" title="Tip">
+                <p>Vermeld het referentienummer van het project op uw factuur.</p>
+              </Notice>
+            </>
+          ),
+        },
+        {
+          id: "overzicht",
+          question: "Het overzicht",
+          answer: <p>Onder Facturatie ziet u in het kort wat u heeft gefactureerd, wat nog openstaat en welke commissie Bureau Vlieland rekende, met de omzet per maand en de commissiefacturen van het bureau aan u met pdf.</p>,
+        },
+        {
+          id: "betaling",
+          question: "Commissiefacturen van Bureau Vlieland",
+          answer: <p>Bureau Vlieland stuurt u per e-mail een commissiefactuur over uw gefactureerde onderdelen, met een betaaltermijn van veertien dagen. De factuur staat ook onder Facturatie, tabblad Commissiefacturen.</p>,
+        },
+      ],
+    },
+    ...(isAccommodationPartner
+      ? [
+          {
+            id: "logies",
+            title: "Logies",
+            intro: "Offertes voor groepen die overnachten.",
+            icon: <BedDouble />,
+            items: [
+              {
+                id: "offerte",
+                question: "Een offerte indienen",
+                answer: (
+                  <>
+                    <Steps items={["Open de aanvraag onder Logies, tabblad Offerte gevraagd.", "Kies Offerte indienen.", "Kies de kamers, de verzorging en de prijs, en wat er is inbegrepen.", "Verstuur de offerte; Bureau Vlieland beoordeelt hem en stuurt hem door naar de klant."]} />
+                  </>
+                ),
+              },
+              {
+                id: "wijzigen",
+                question: "Een offerte aanpassen of verlengen",
+                answer: <p>Zolang de klant nog niet heeft gekozen, kunt u de offerte aanpassen onder Wacht op de klant. Is de geldigheid verstreken, dan verlengt u hem onder Verlopen.</p>,
+              },
+              {
+                id: "kamersoorten",
+                question: "Kamersoorten",
+                answer: (
+                  <>
+                    <p>Leg uw kamersoorten één keer vast onder Kamersoorten: naam, oppervlakte, bedden, maximaal personen, faciliteiten, foto's en een richtprijs. In een offerte voegt u ze dan met één klik toe.</p>
+                  </>
+                ),
+              },
+              {
+                id: "extras",
+                question: "Logies-extra's",
+                answer: <p>Onder Logies-extra's legt u vaste extra's vast, zoals lunch, diner of parkeren, met prijs per persoon of een vast bedrag en het btw-tarief. Over extra's geldt dezelfde commissie als over logies ({accommodationCommission}).</p>,
+              },
+            ],
+          } satisfies Topic,
+        ]
+      : []),
+    {
+      id: "vragen",
+      title: "Veelgestelde vragen",
+      intro: "Wat partners ons vaak vragen.",
+      icon: <HelpCircle />,
+      items: [
+        {
+          id: "per-ongeluk",
+          question: "Ik heb per ongeluk een aanvraag afgewezen",
+          answer: (
+            <p>
+              Neem direct contact op via <a href={`mailto:${GENERAL_CONTACT_EMAIL}`} className="font-medium text-primary underline">{GENERAL_CONTACT_EMAIL}</a>. Vaak kan de afwijzing nog worden teruggedraaid, afhankelijk van of de klant al bericht heeft gehad.
+            </p>
+          ),
+        },
+        {
+          id: "percentage",
+          question: "Kan mijn commissiepercentage worden aangepast?",
+          answer: <p>Het percentage spreekt u af met Bureau Vlieland. Neem contact op als u erover wilt praten.</p>,
+        },
+        {
+          id: "annulering",
+          question: "Wat gebeurt er als de klant annuleert?",
+          answer: <Points items={["U krijgt direct een e-mail.", "Het onderdeel krijgt de status Geannuleerd.", "Eventuele annuleringskosten lopen via Bureau Vlieland.", "Over geannuleerde boekingen rekenen wij geen commissie."]} />,
+        },
+        {
+          id: "wijziging",
+          question: "Kan een bevestigde boeking nog worden gewijzigd?",
+          answer: (
+            <p>
+              Wijzigingen na bevestiging lopen via Bureau Vlieland. Mail naar <a href={`mailto:${GENERAL_CONTACT_EMAIL}`} className="font-medium text-primary underline">{GENERAL_CONTACT_EMAIL}</a> of bel 0562 700 208.
+            </p>
+          ),
+        },
+        {
+          id: "maatwerk",
+          question: "Wat is een maatwerkprogramma?",
+          answer: <p>Naast programma's die klanten zelf samenstellen, maakt Bureau Vlieland ook programma's op maat. Voor u werkt het hetzelfde: u krijgt een aanvraag in het portaal en reageert zoals altijd.</p>,
+        },
+      ],
+    },
+  ];
 
   return (
-    <PartnerLayout>
-      <Helmet>
-        <title>Handleidingen | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <div className="p-4 md:p-6 lg:p-8 max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Handleidingen</h1>
-          <p className="text-muted-foreground mt-2">
-            Alles wat u moet weten over het werken met het Bureau Vlieland Partner Portaal
+      <PartnerPage title="Handleidingen" icon={<BookOpen />} size="content" description="Alles wat u moet weten over het werken met het partnerportaal van Bureau Vlieland.">
+        {topics.map((topic) => (
+          <section key={topic.id} aria-labelledby={`hulp-${topic.id}`} className="rounded-lg border bg-card p-4 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-primary [&_svg]:h-5 [&_svg]:w-5" aria-hidden="true">
+                {topic.icon}
+              </span>
+              <div>
+                <h2 id={`hulp-${topic.id}`} className="font-display text-xl font-medium">
+                  {topic.title}
+                </h2>
+                <p className="text-sm text-muted-foreground">{topic.intro}</p>
+              </div>
+            </div>
+            <Accordion type="single" collapsible className="mt-2 w-full">
+              {topic.items.map((item) => (
+                <AccordionItem key={item.id} value={item.id}>
+                  <AccordionTrigger className="text-left">{item.question}</AccordionTrigger>
+                  <AccordionContent className="space-y-3 text-muted-foreground [&_strong]:text-foreground">{item.answer}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+        ))}
+
+        <Notice tone="info" title="Nog vragen?">
+          <p>
+            Mail naar <a href={`mailto:${GENERAL_CONTACT_EMAIL}`} className="font-medium underline">{GENERAL_CONTACT_EMAIL}</a> of bel <a href="tel:0562700208" className="font-medium underline">0562 700 208</a>.
           </p>
-        </div>
-
-        {/* Aan de slag */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary" />
-              Aan de slag
-            </CardTitle>
-            <CardDescription>
-              De eerste stappen om uw account in te richten
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="account-activeren">
-                <AccordionTrigger>Account activeren</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    U kunt op twee manieren inloggen op het Partner Portaal:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>
-                      <strong>Direct inloggen</strong> — Gebruik het e-mailadres en wachtwoord dat u van Bureau Vlieland heeft ontvangen (formaat: <code className="bg-muted px-1 rounded">Vlieland-XXXX</code>). Uw account wordt automatisch geactiveerd bij de eerste login.
-                    </li>
-                    <li>
-                      <strong>Via activatielink</strong> — Klik op "Account Activeren" in de uitnodigingsmail om een eigen wachtwoord in te stellen.
-                    </li>
-                  </ol>
-                  <p className="text-sm bg-muted p-3 rounded-lg">
-                    <strong>Let op:</strong> De activatielink in de e-mail is 24 uur geldig. U kunt altijd direct inloggen met de verstrekte inloggegevens.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="voorwaarden-instellen">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  Algemene voorwaarden instellen
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Voordat klanten uw diensten kunnen boeken, dient u uw algemene voorwaarden in te stellen. Ga naar <strong>Instellingen</strong> en kies uit twee opties:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>
-                      <strong>Eigen voorwaarden uploaden</strong> — Upload een PDF met uw eigen algemene voorwaarden.
-                    </li>
-                    <li>
-                      <strong>Standaardvoorwaarden accepteren</strong> — Gebruik de <em>Standaardvoorwaarden Partneraanbod Bureau Vlieland</em>.
-                    </li>
-                  </ul>
-                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800 text-sm">
-                    <strong>Waarom is dit belangrijk?</strong> Bij elke boeking worden uw voorwaarden aan de klant getoond ter acceptatie. Dit vormt een juridisch bindende overeenkomst en is essentieel voor de audit-trail.
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="wachtwoord-wijzigen">
-                <AccordionTrigger>Wachtwoord vergeten of wijzigen</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Wilt u uw wachtwoord wijzigen? Dit kunt u doen via de wachtwoord reset functie:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Ga naar de <strong>Partner Login</strong> pagina</li>
-                    <li>Vul uw emailadres in</li>
-                    <li>Klik op "Wachtwoord vergeten?"</li>
-                    <li>U ontvangt een email met een link om een nieuw wachtwoord in te stellen</li>
-                  </ol>
-                  <p className="text-sm bg-muted p-3 rounded-lg">
-                    <strong>Let op:</strong> De reset link in de email is 1 uur geldig.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="bedrijfsgegevens">
-                <AccordionTrigger>Bedrijfsgegevens bijwerken</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Houd uw gegevens up-to-date voor een correcte facturatie:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li><strong>Adresgegevens:</strong> Voor correspondentie en commissiefacturen</li>
-                    <li><strong>KvK-nummer:</strong> Verplicht voor zakelijke transacties</li>
-                    <li><strong>Bankgegevens:</strong> IBAN en tenaamstelling</li>
-                    <li><strong>Contactpersoon boekingen:</strong> Naam en telefoonnummer voor directe communicatie</li>
-                  </ul>
-                  <p className="text-sm">
-                    Deze gegevens kunt u aanpassen via <strong>Instellingen</strong>.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        {/* Dashboard */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Dashboard
-            </CardTitle>
-            <CardDescription>
-              Uw overzichtspagina met alle belangrijke informatie op één plek
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="actiebanner">
-                <AccordionTrigger>Actiebanner</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Bovenaan uw dashboard ziet u een actiebanner die aangeeft of er openstaande taken zijn:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li><strong>Nieuwe aanvragen</strong> — Aanvragen die wachten op uw reactie</li>
-                    <li><strong>Tegenvoorstellen</strong> — Klanten die een tegenvoorstel hebben gedaan op uw alternatief</li>
-                    <li><strong>Te factureren</strong> — Afgeronde activiteiten waarvoor nog geen factuur is geregistreerd</li>
-                  </ul>
-                  <p>
-                    Als er geen acties nodig zijn, toont de banner een groene melding "Alles up-to-date".
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="statistiekknoppen">
-                <AccordionTrigger>Statistiekknoppen</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Onder de actiebanner vindt u klikbare statistiekknoppen die het aantal items per status tonen. Klik op een knop om direct naar het betreffende overzicht of de bijbehorende pagina te navigeren.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="gecombineerd-overzicht">
-                <AccordionTrigger>Gecombineerd overzicht</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Alle activiteiten en logiesaanvragen worden gecombineerd in één lijst, automatisch gesorteerd op urgentie. Items die uw aandacht vereisen staan bovenaan.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="agenda">
-                <AccordionTrigger>Agenda</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    De agendawidget toont de komende 14 dagen met bevestigde en geaccepteerde items in chronologische volgorde. Zo heeft u altijd zicht op wat er binnenkort gepland staat.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="ytd-module">
-                <AccordionTrigger>YTD-module (Jaar-tot-datum)</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Onderaan het dashboard vindt u de YTD-module met:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li><strong>Totale omzet</strong> — Uw cumulatieve omzet van het lopende jaar</li>
-                    <li><strong>Openstaande commissie</strong> — Commissie die nog door Bureau Vlieland gefactureerd wordt</li>
-                  </ul>
-                  <p>
-                    Klik op "Facturatie" om naar het volledige financiële overzicht te gaan.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        {/* Aanvragen verwerken */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              Aanvragen verwerken
-            </CardTitle>
-            <CardDescription>
-              Hoe u reageert op binnenkomende aanvragen van klanten
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="nieuwe-aanvraag">
-                <AccordionTrigger>Nieuwe aanvraag ontvangen</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Wanneer een klant uw diensten selecteert, ontvangt u:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>Een e-mailnotificatie met een samenvatting</li>
-                    <li>Een melding op uw dashboard met "Actie vereist"</li>
-                  </ul>
-                  <p>
-                    De aanvraag bevat alle relevante details: datum, tijdstip, aantal personen en eventuele speciale wensen.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="referentienummer">
-                <AccordionTrigger>Referentienummer en versie</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Elke aanvraag heeft een uniek referentienummer in het formaat <code className="bg-muted px-1 rounded">#BV-JJMM-NNNN</code> (bijv. #BV-2601-0001).
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>Het referentienummer is zichtbaar in de aanvraagdetails en kan met de <strong>kopieerknop</strong> worden gekopieerd</li>
-                    <li>Vermeld dit nummer altijd op uw factuur voor eenvoudige verwerking</li>
-                    <li>Bij wijzigingen door de klant verschijnt een <strong>versie-indicator</strong>, zodat u kunt zien dat er iets is gewijzigd</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="bevestigen">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  Aanvraag bevestigen
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Bij het bevestigen van een aanvraag geeft u de volgende informatie op:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li><strong>Prijs (excl. BTW)</strong> — Het bedrag dat u aan de klant factureert, exclusief BTW</li>
-                    <li><strong>Voorkeurstijd/datum</strong> — Optioneel, als u een specifiek tijdstip wilt voorstellen</li>
-                    <li><strong>Toelichting</strong> — Eventuele opmerkingen bij uw bevestiging</li>
-                  </ul>
-                  <p>
-                    Na bevestiging ontvangt de klant direct een bevestigingsmail en wordt de activiteit in hun programma gemarkeerd als "Bevestigd".
-                  </p>
-                  <div className="bg-muted p-3 rounded-lg text-sm">
-                    <strong>Verwachte commissie:</strong> Bij de bevestiging wordt een voorberekening van de commissie getoond op basis van uw opgegeven prijs en uw commissiepercentage ({isLoading ? '...' : `${partnerData?.commission_percentage ?? 10}%`}).
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-800 text-sm">
-                    <strong>Let op:</strong> Na bevestiging kunt u de datum/tijd niet meer wijzigen. 
-                    Neem bij wijzigingen contact op met Bureau Vlieland.
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="alternatief">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                  Alternatief voorstellen
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Als het gevraagde tijdstip niet mogelijk is, kunt u een alternatief voorstellen:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Klik op "Alternatief voorstellen"</li>
-                    <li>Kies een andere datum en/of tijdstip</li>
-                    <li>Voeg eventueel een toelichting toe</li>
-                    <li>De klant ontvangt een mail met uw voorstel</li>
-                  </ol>
-                  <p>
-                    De klant kan uw voorstel accepteren of een tegenvoorstel doen. U ontvangt hiervan bericht.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="afwijzen">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  Niet beschikbaar melden
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Als u in de gevraagde periode niet beschikbaar bent, kunt u dit aangeven:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Klik op "Niet beschikbaar"</li>
-                    <li>Voeg een korte reden toe (optioneel)</li>
-                    <li>De klant en Bureau Vlieland worden geïnformeerd</li>
-                  </ol>
-                  <p className="text-sm">
-                    <strong>Tip:</strong> Voorkom onnodige afwijzingen door uw beschikbaarheid vooraf bij te werken.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="tegenvoorstel">
-                <AccordionTrigger>Reageren op tegenvoorstel</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Wanneer een klant uw alternatief niet accepteert, kunnen zij een tegenvoorstel doen. 
-                    U ontvangt hiervan een melding en kunt op dezelfde manier reageren:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>Bevestigen (als het nieuwe voorstel past)</li>
-                    <li>Nieuw alternatief voorstellen</li>
-                    <li>Aangeven dat u niet beschikbaar bent</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        {/* Beschikbaarheid beheren */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Beschikbaarheid beheren
-            </CardTitle>
-            <CardDescription>
-              Periodes blokkeren waarin u niet beschikbaar bent
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="periodes-instellen">
-                <AccordionTrigger>Niet-beschikbare periodes instellen</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    U kunt vooraf periodes blokkeren waarin u niet beschikbaar bent:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Ga naar <strong>Overzicht</strong> op uw dashboard</li>
-                    <li>Scroll naar "Beschikbaarheid"</li>
-                    <li>Klik op "Periode toevoegen"</li>
-                    <li>Selecteer de start- en einddatum</li>
-                    <li>Voeg eventueel een reden toe (bijv. "Vakantie")</li>
-                  </ol>
-                  <p>
-                    Tijdens geblokkeerde periodes worden er geen aanvragen naar u doorgestuurd.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="periodes-verwijderen">
-                <AccordionTrigger>Geblokkeerde periode verwijderen</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Plannen gewijzigd? U kunt een geblokkeerde periode eenvoudig verwijderen:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Ga naar uw beschikbaarheidsoverzicht</li>
-                    <li>Zoek de periode die u wilt verwijderen</li>
-                    <li>Klik op het prullenbak-icoon</li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        {/* Mijn Aanbod (voor activiteitenpartners) */}
-        {isActivityPartner && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                Mijn Aanbod
-              </CardTitle>
-              <CardDescription>
-                Beheer uw activiteiten en bouwblokken
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="aanbod-overzicht">
-                  <AccordionTrigger>Overzicht van uw aanbod</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Via <strong>Mijn Blokken</strong> in het menu vindt u een overzicht van al uw activiteiten en bouwblokken. Elk blok toont de status, prijs en eventuele seizoensnotities.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="aanbod-toevoegen">
-                  <AccordionTrigger>Nieuw blok toevoegen</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      U kunt zelf nieuwe activiteiten voorstellen:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Klik op "Blok toevoegen"</li>
-                      <li>Vul de details in:
-                        <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                          <li><strong>Naam en omschrijving</strong></li>
-                          <li><strong>Duur</strong> (bijv. 1,5 uur)</li>
-                          <li><strong>Prijs</strong> — per persoon of vast bedrag, exclusief BTW</li>
-                          <li><strong>Min/max personen</strong></li>
-                          <li><strong>Seizoensnotities</strong> (optioneel)</li>
-                        </ul>
-                      </li>
-                    </ol>
-                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-800 text-sm">
-                      <strong>Let op:</strong> Nieuwe blokken krijgen de status "Concept" en worden pas zichtbaar voor klanten nadat Bureau Vlieland ze heeft beoordeeld en goedgekeurd.
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="aanbod-status">
-                  <AccordionTrigger>Status van uw blokken</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Elk blok doorloopt drie statussen:
-                    </p>
-                    <ul className="list-disc list-inside space-y-2 ml-2">
-                      <li><strong>Concept</strong> — Uw voorstel wordt beoordeeld door Bureau Vlieland</li>
-                      <li><strong>Actief</strong> — Goedgekeurd, beschikbaar voor maatwerk en offertes</li>
-                      <li><strong>Gepubliceerd</strong> — Zichtbaar voor klanten in de configurator</li>
-                    </ul>
-                    <p className="text-sm">
-                      Publicatie is een bevoegdheid van Bureau Vlieland. U kunt uw blokken inhoudelijk bijwerken zolang ze actief zijn.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Facturatie */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" />
-              Facturatie
-            </CardTitle>
-            <CardDescription>
-              Het commissiemodel, facturatiemodellen en hoe u facturen registreert
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="facturatiemodel">
-                <AccordionTrigger className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                  Facturatiemodel
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Bureau Vlieland verzorgt centraal de facturatie aan de klant. Jij factureert nooit rechtstreeks aan de eindklant.
-                  </p>
-                  <div className="bg-muted p-3 rounded-lg">
-                    <p className="font-medium">Hoe werkt het?</p>
-                    <ol className="list-decimal list-inside text-sm mt-2 space-y-1">
-                      <li>Je registreert je factuur (voor de geoffreerde prijs) in het partnerportaal, of mailt de PDF naar <strong>invoices@reply.bureauvlieland.nl</strong></li>
-                      <li>Bureau Vlieland factureert de klant en verrekent de commissie met jou</li>
-                    </ol>
-                  </div>
-
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="commissiemodel">
-                <AccordionTrigger>Commissiepercentages</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Bureau Vlieland rekent commissie over het door u gefactureerde bedrag <strong>exclusief BTW</strong>:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
-                    {isLoading ? (
-                      <>
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                      </>
-                    ) : (
-                      <>
-                        {isActivityPartner && (
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium">Activiteiten</span>
-                            <span className="text-lg font-bold text-primary">
-                              {partnerData?.commission_percentage ?? 10}%
-                            </span>
-                          </div>
-                        )}
-                        {isAccommodationPartner && (
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium">Logies</span>
-                            <span className="text-lg font-bold text-primary">
-                              {partnerData?.accommodation_commission_percentage ?? 10}%
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <p className="text-sm">
-                    De <strong>verwachte commissie</strong> is alvast zichtbaar bij elke aanvraag zodra u een prijs heeft opgegeven, zodat u vooraf inzicht heeft in de kosten.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="factuur-registreren">
-                <AccordionTrigger>Factuur registreren</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Na afloop van een activiteit registreert u de factuur in het portaal:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>Open de betreffende aanvraag</li>
-                    <li>Klik op "Factuur registreren"</li>
-                    <li>Voer het factuurnummer en bedrag exclusief BTW in</li>
-                    <li>Upload eventueel een kopie van de factuur</li>
-                  </ol>
-                  <div className="bg-muted p-3 rounded-lg text-sm space-y-2">
-                    <p>
-                      Stuur uw factuur naar <strong>invoices@reply.bureauvlieland.nl</strong> of upload deze direct bij het registreren in het portaal — nooit rechtstreeks naar de klant.
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800 text-sm">
-                    <strong>Tip:</strong> Vermeld het referentienummer (bijv. #BV-2501-0001) op uw factuur 
-                    voor eenvoudige verwerking.
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="commissie-overzicht">
-                <AccordionTrigger>Overzicht commissies</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Via <strong>Facturatie</strong> in het menu heeft u inzicht in:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>Openstaande commissies (nog te factureren door Bureau Vlieland)</li>
-                    <li>Gefactureerde commissies (reeds afgerekend)</li>
-                    <li>Jaar-tot-datum (YTD) statistieken</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="uitbetaling">
-                <AccordionTrigger>Uitbetaling door Bureau Vlieland</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Bureau Vlieland verstuurt periodiek commissiefacturen naar partners. 
-                    Het betalingsproces verloopt als volgt:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 ml-2">
-                    <li>U ontvangt een commissiefactuur per e-mail</li>
-                    <li>De factuur bevat een overzicht van alle afgeronde activiteiten</li>
-                    <li>Betaaltermijn: 14 dagen</li>
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        {/* Logies (voor logiespartners) */}
-        {isAccommodationPartner && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BedDouble className="h-5 w-5 text-primary" />
-                Logies
-              </CardTitle>
-              <CardDescription>
-                Voor partners die accommodatie aanbieden
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="offerte-indienen">
-                  <AccordionTrigger>Offerte indienen</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Wanneer Bureau Vlieland een logiesaanvraag naar u doorstuurt:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Bekijk de aanvraagdetails (aantal gasten, data, wensen)</li>
-                      <li>Klik op "Offerte indienen"</li>
-                      <li>Vul de totaalprijs en eventuele voorwaarden in</li>
-                      <li>Voeg een omschrijving toe van wat inbegrepen is</li>
-                      <li>De klant ontvangt uw offerte in het klantportaal</li>
-                    </ol>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="offerte-wijzigen">
-                  <AccordionTrigger>Offerte wijzigen</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Zolang de klant uw offerte nog niet heeft geaccepteerd, kunt u deze aanpassen:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Open de aanvraag in het Logies-overzicht</li>
-                      <li>Klik op "Offerte bewerken"</li>
-                      <li>Pas de prijs of voorwaarden aan</li>
-                      <li>De klant ziet automatisch de bijgewerkte offerte</li>
-                    </ol>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="kamersoorten">
-                  <AccordionTrigger>Kamersoorten configureren</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Configureer uw standaard kamertypes eenmalig, zodat u deze snel kunt hergebruiken bij het opstellen van offertes:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Ga naar <strong>Kamersoorten</strong> in het menu</li>
-                      <li>Klik op "Kamersoort toevoegen"</li>
-                      <li>Vul de details in:
-                        <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                          <li>Naam (bijv. "Tweepersoonskamer Superior")</li>
-                          <li>Oppervlakte in m²</li>
-                          <li>Bedconfiguratie</li>
-                          <li>Maximale bezetting</li>
-                          <li>Faciliteiten (WiFi, TV, balkon, etc.)</li>
-                          <li>Richtprijs per nacht</li>
-                        </ul>
-                      </li>
-                    </ol>
-                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-800 text-sm">
-                      <strong>Voordeel:</strong> Bij het indienen van een offerte kunt u met één klik een kamersoort toevoegen. 
-                      Alle gegevens worden automatisch overgenomen.
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="extra-diensten">
-                  <AccordionTrigger>Extra diensten beheren</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Naast kamers kunt u extra diensten aanbieden zoals catering of parkeerplaatsen:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Ga naar <strong>Extra's</strong> in het menu</li>
-                      <li>Maak sjablonen aan voor veelgebruikte diensten:
-                        <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                          <li>Naam en omschrijving</li>
-                          <li>Prijs per persoon of vast bedrag</li>
-                          <li>BTW-tarief (9% of 21%)</li>
-                          <li>Categorie (F&B, Faciliteiten, Transport, Overig)</li>
-                        </ul>
-                      </li>
-                    </ol>
-                    <p>
-                      Bij het opstellen van een offerte kunt u deze sjablonen selecteren en direct toevoegen aan de offerte.
-                    </p>
-                    <div className="bg-muted p-3 rounded-lg text-sm">
-                      <strong>Commissie:</strong> Over extra diensten geldt hetzelfde commissiepercentage als over logies 
-                      ({isLoading ? '...' : `${partnerData?.accommodation_commission_percentage ?? 10}%`}).
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="kamerindeling">
-                  <AccordionTrigger>Kamerindeling opgeven in offerte</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground space-y-3">
-                    <p>
-                      Bij uw offerte specificeert u de kamerindeling:
-                    </p>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Selecteer kamers uit uw vooraf ingestelde kamersoorten, óf</li>
-                      <li>Voer handmatig een kamertype, aantal en prijs in</li>
-                    </ol>
-                    <p className="text-sm">
-                      Dit helpt de klant een weloverwogen keuze te maken tussen verschillende offertes.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Veelgestelde vragen */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-primary" />
-              Veelgestelde vragen
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="faq-facturatiemodel">
-                <AccordionTrigger>Aan wie stuur ik mijn factuur?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Altijd naar Bureau Vlieland — nooit rechtstreeks aan de eindklant. Bureau Vlieland verzorgt centraal de facturatie aan de klant en verrekent vervolgens de commissie met u.
-                  </p>
-                  <p>
-                    Stuur uw factuur (voor de geoffreerde prijs) naar <strong>invoices@reply.bureauvlieland.nl</strong>, of registreer + upload deze direct in het partnerportaal. Vermeld het referentienummer van het project voor snelle verwerking.
-                  </p>
-
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="faq-beschikbaarheid">
-                <AccordionTrigger>Hoe kan ik mijn beschikbaarheid beheren?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <p>
-                    Via de beschikbaarheidsmanager op uw dashboard kunt u periodes blokkeren (bijv. vakantie, onderhoud). Ga naar <strong>Overzicht</strong> en scroll naar "Beschikbaarheid" om periodes toe te voegen of te verwijderen. Tijdens geblokkeerde periodes ontvangt u geen nieuwe aanvragen.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="faq-afwijzing">
-                <AccordionTrigger>Wat als ik per ongeluk een aanvraag afwijs?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <p>
-                    Neem direct contact op met Bureau Vlieland via{" "}
-                    <a href="mailto:erwin@bureauvlieland.nl" className="text-primary underline">
-                      erwin@bureauvlieland.nl
-                    </a>
-                    . In sommige gevallen kan de afwijzing ongedaan worden gemaakt, 
-                    afhankelijk van of de klant al geïnformeerd is.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="faq-commissie">
-                <AccordionTrigger>Kan ik mijn commissiepercentage laten aanpassen?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <p>
-                    Commissiepercentages worden vastgesteld in overleg met Bureau Vlieland. 
-                    Neem contact op als u hierover wilt spreken.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="faq-annulering">
-                <AccordionTrigger>Wat gebeurt er als de klant annuleert?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Bij annulering door de klant:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 ml-2">
-                    <li>U ontvangt direct een melding via e-mail</li>
-                    <li>De aanvraag wordt gemarkeerd als "Geannuleerd"</li>
-                    <li>Eventuele annuleringskosten verlopen via Bureau Vlieland</li>
-                    <li>Over geannuleerde boekingen wordt geen commissie berekend</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="faq-wijziging">
-                <AccordionTrigger>Kan een bevestigde boeking nog gewijzigd worden?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <p>
-                    Wijzigingen na bevestiging verlopen via Bureau Vlieland. 
-                    Neem contact op via{" "}
-                    <a href="mailto:erwin@bureauvlieland.nl" className="text-primary underline">
-                      erwin@bureauvlieland.nl
-                    </a>{" "}
-                    of bel 0562 700 208.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="faq-maatwerk">
-                <AccordionTrigger>Wat zijn maatwerk programma's?</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-3">
-                  <p>
-                    Naast programma's die klanten zelf samenstellen via de configurator, 
-                    maakt Bureau Vlieland ook maatwerk programma's op verzoek van klanten.
-                  </p>
-                  <p>
-                    De werkwijze voor u als partner blijft hetzelfde: u ontvangt een aanvraag 
-                    via het portaal en reageert zoals gebruikelijk.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        {/* Contact footer */}
-        <div className="mt-8 p-6 bg-muted rounded-lg text-center">
-          <h3 className="font-semibold mb-2">Nog vragen?</h3>
-          <p className="text-muted-foreground text-sm">
-            Neem contact op via{" "}
-            <a href="mailto:erwin@bureauvlieland.nl" className="text-primary underline">
-              erwin@bureauvlieland.nl
-            </a>{" "}
-            of bel{" "}
-            <a href="tel:0562452090" className="text-primary underline">
-              0562 700 208
-            </a>
-          </p>
-        </div>
-      </div>
-    </PartnerLayout>
+        </Notice>
+      </PartnerPage>
   );
 };
+
+const PartnerGuides = () => (
+  <PartnerLayout>
+    <PartnerGuidesContent />
+  </PartnerLayout>
+);
 
 export default PartnerGuides;

@@ -1,18 +1,25 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Building2, Save, KeyRound, ShieldCheck, CreditCard, UserCircle, CalendarOff } from "lucide-react";
+import { FactList, FormField, LoadingState, Notice } from "@/components/system";
+import { KeyRound, Loader2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerTermsUpload } from "./PartnerTermsUpload";
 import { PartnerUnavailabilityManager } from "./PartnerUnavailabilityManager";
+import { SheetSection } from "./SheetSection";
+import { PASSWORD_RULES_HINT, strongPasswordSchema } from "@/lib/passwordPolicy";
 import { reportError } from "@/lib/errorReporting";
 
-
+/**
+ * Instellingen (partnerportaal fase 4, besluit 7): één formulier in secties
+ * op `FormField` met één opslaanknop in een vaste voet (bedrijf, contact,
+ * bank, beschikbaarheid, accommodatie). Daaronder de onderdelen met een
+ * eigen actie: niet-beschikbare periodes, de commissie als `FactList`, de
+ * voorwaarden en het wachtwoord.
+ */
 interface PartnerDetails {
   id: string;
   name: string;
@@ -37,6 +44,20 @@ interface PartnerDetails {
   accommodation_description: string | null;
 }
 
+const EMPTY_FORM = {
+  name: "",
+  contact_email: "",
+  phone: "",
+  address_street: "",
+  address_postal: "",
+  address_city: "",
+  bank_account_name: "",
+  booking_contact_name: "",
+  booking_contact_phone: "",
+  availability_notes: "",
+  accommodation_description: "",
+};
+
 export const PartnerSettingsForm = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -45,129 +66,71 @@ export const PartnerSettingsForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
-  
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    contact_email: "",
-    phone: "",
-    kvk_number: "",
-    address_street: "",
-    address_postal: "",
-    address_city: "",
-    bank_iban: "",
-    bank_account_name: "",
-    booking_contact_name: "",
-    booking_contact_phone: "",
-    availability_notes: "",
-    accommodation_description: "",
-  });
-
-
-  // Password form state
-  const [passwordData, setPasswordData] = useState({
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [passwordData, setPasswordData] = useState({ newPassword: "", confirmPassword: "" });
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
   const fetchPartner = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Check if admin is impersonating
     const impersonatePartnerId = searchParams.get("impersonate");
-    
+    let query = supabase.from("partners").select("*");
+    let impersonating = false;
     if (impersonatePartnerId) {
       const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-      
       if (isAdmin) {
-        const { data, error } = await supabase
-          .from("partners")
-          .select("*")
-          .eq("id", impersonatePartnerId)
-          .single();
-
-        if (data && !error) {
-          setPartner(data as unknown as PartnerDetails);
-            setFormData({
-              name: data.name || "",
-              contact_email: (data as any).contact_email || "",
-              phone: data.phone || "",
-              kvk_number: data.kvk_number || "",
-              address_street: data.address_street || "",
-              address_postal: data.address_postal || "",
-              address_city: data.address_city || "",
-              bank_iban: (data as any).bank_iban || "",
-              bank_account_name: (data as any).bank_account_name || "",
-              booking_contact_name: (data as any).booking_contact_name || "",
-              booking_contact_phone: (data as any).booking_contact_phone || "",
-              availability_notes: (data as any).availability_notes || "",
-              accommodation_description: (data as any).accommodation_description || "",
-            });
-          setIsImpersonating(true);
-        }
-        setIsLoading(false);
-        return;
+        query = query.eq("id", impersonatePartnerId);
+        impersonating = true;
       }
     }
+    if (!impersonating) query = query.eq("auth_user_id", session.user.id).eq("is_active", true);
 
-    // Regular partner flow
-    const { data, error } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("auth_user_id", session.user.id)
-      .eq("is_active", true)
-      .single();
-
+    const { data, error } = await query.single();
     if (data && !error) {
-      setPartner(data as unknown as PartnerDetails);
+      const details = data as unknown as PartnerDetails;
+      setPartner(details);
       setFormData({
-        name: data.name || "",
-        contact_email: (data as any).contact_email || "",
-        phone: data.phone || "",
-        kvk_number: data.kvk_number || "",
-        address_street: data.address_street || "",
-        address_postal: data.address_postal || "",
-        address_city: data.address_city || "",
-        bank_iban: (data as any).bank_iban || "",
-        bank_account_name: (data as any).bank_account_name || "",
-        booking_contact_name: (data as any).booking_contact_name || "",
-        booking_contact_phone: (data as any).booking_contact_phone || "",
-        availability_notes: (data as any).availability_notes || "",
-        accommodation_description: (data as any).accommodation_description || "",
+        name: details.name || "",
+        contact_email: details.contact_email || "",
+        phone: details.phone || "",
+        address_street: details.address_street || "",
+        address_postal: details.address_postal || "",
+        address_city: details.address_city || "",
+        bank_account_name: details.bank_account_name || "",
+        booking_contact_name: details.booking_contact_name || "",
+        booking_contact_phone: details.booking_contact_phone || "",
+        availability_notes: details.availability_notes || "",
+        accommodation_description: details.accommodation_description || "",
       });
+      setIsImpersonating(impersonating);
     }
     setIsLoading(false);
   }, [searchParams]);
 
   useEffect(() => {
-    fetchPartner();
+    void fetchPartner();
   }, [fetchPartner]);
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const handleChange = (field: keyof typeof EMPTY_FORM, value: string) => setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handlePasswordChange = (field: string, value: string) => {
-    setPasswordData(prev => ({ ...prev, [field]: value }));
-    setPasswordErrors(prev => ({ ...prev, [field]: "" }));
-  };
-
-  const handleSaveDetails = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!partner) return;
+    if (!formData.name.trim()) {
+      setNameError("De bedrijfsnaam is verplicht.");
+      return;
+    }
     setIsSaving(true);
-
     try {
-      // Let op: bank_iban, bic en kvk_number worden om veiligheidsredenen
-      // centraal door Bureau Vlieland beheerd (RLS blokkeert self-update).
-      // Wijzigingen op die velden lopen via de bureau-medewerker, niet via
-      // dit formulier.
+      // IBAN en KvK-nummer beheert Bureau Vlieland centraal (RLS blokkeert een eigen wijziging).
       const { error } = await supabase
         .from("partners")
         .update({
-          name: formData.name,
+          name: formData.name.trim(),
           contact_email: formData.contact_email || null,
           phone: formData.phone || null,
           address_street: formData.address_street || null,
@@ -178,486 +141,166 @@ export const PartnerSettingsForm = () => {
           booking_contact_phone: formData.booking_contact_phone || null,
           availability_notes: formData.availability_notes || null,
           accommodation_description: formData.accommodation_description || null,
-        } as any)
+        })
         .eq("id", partner.id);
-
       if (error) throw error;
-
-      toast({
-        title: "Gegevens opgeslagen",
-        description: "Uw bedrijfsgegevens zijn bijgewerkt.",
-      });
+      toast({ title: "Instellingen opgeslagen" });
     } catch (err) {
       reportError(err, { where: "PartnerSettingsForm: Error saving partner details" });
-      toast({
-        title: "Gegevens niet opgeslagen",
-        description: "Kon gegevens niet opslaan. Probeer het opnieuw.",
-        variant: "destructive",
-      });
+      toast({ title: "Instellingen niet opgeslagen", description: "Kon de gegevens niet opslaan. Probeer het opnieuw.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleChangePassword = async () => {
-    // Validate
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
     const errors: Record<string, string> = {};
-    if (passwordData.newPassword.length < 6) {
-      errors.newPassword = "Wachtwoord moet minimaal 6 tekens zijn";
-    }
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      errors.confirmPassword = "Wachtwoorden komen niet overeen";
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setPasswordErrors(errors);
-      return;
-    }
+    const parsed = strongPasswordSchema.safeParse(passwordData.newPassword);
+    if (!parsed.success) errors.newPassword = parsed.error.errors[0]?.message ?? "Kies een sterker wachtwoord.";
+    if (passwordData.newPassword !== passwordData.confirmPassword) errors.confirmPassword = "De wachtwoorden komen niet overeen.";
+    setPasswordErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setIsChangingPassword(true);
-
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword,
-      });
-
+      const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
       if (error) throw error;
-
       setPasswordData({ newPassword: "", confirmPassword: "" });
-      toast({
-        title: "Wachtwoord gewijzigd",
-        description: "Uw wachtwoord is succesvol bijgewerkt.",
-      });
-    } catch (err: any) {
+      toast({ title: "Wachtwoord gewijzigd" });
+    } catch (err) {
       reportError(err, { where: "PartnerSettingsForm: Error changing password" });
-      toast({
-        title: "Wachtwoord niet gewijzigd",
-        description: err.message || "Kon wachtwoord niet wijzigen.",
-        variant: "destructive",
-      });
+      toast({ title: "Wachtwoord niet gewijzigd", description: err instanceof Error && err.message ? err.message : "Kon het wachtwoord niet wijzigen.", variant: "destructive" });
     } finally {
       setIsChangingPassword(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingState label="Instellingen laden" />;
+  if (!partner) return null;
 
-  if (!partner) {
-    return null;
-  }
+  const isAccommodation = partner.partner_type === "accommodation" || partner.partner_type === "both";
+  const isActivity = !partner.partner_type || partner.partner_type === "activity_provider" || partner.partner_type === "both";
 
   return (
-    <div className="space-y-6">
-      {/* Admin impersonation notice */}
+    <div className="space-y-10">
       {isImpersonating && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-amber-800">
-            <ShieldCheck className="h-5 w-5" />
-            <span className="font-medium">U bekijkt dit als admin</span>
-          </div>
-          <p className="text-sm text-amber-700 mt-1">
-            Wijzigingen die u maakt worden direct opgeslagen voor deze partner.
-          </p>
-        </div>
+        <Notice tone="warning" title="U kijkt mee als beheerder">
+          <p>Wijzigingen worden direct opgeslagen voor deze partner.</p>
+        </Notice>
       )}
 
-      {/* Company details */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            <CardTitle>Bedrijfsgegevens</CardTitle>
-          </div>
-          <CardDescription>
-            Deze gegevens worden gebruikt voor communicatie en facturatie.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Bedrijfsnaam *</Label>
+      <form onSubmit={(e) => void handleSave(e)} className="space-y-8">
+        <SheetSection title="Bedrijf" help="Voor de communicatie en de facturen.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Bedrijfsnaam" htmlFor="inst-naam" required error={nameError}>
               <Input
-                id="name"
                 value={formData.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="Naam van uw bedrijf"
+                onChange={(e) => {
+                  handleChange("name", e.target.value);
+                  setNameError(null);
+                }}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Login e-mailadres</Label>
-              <Input
-                id="email"
-                value={partner.email}
-                disabled
-                className="bg-muted"
-              />
-              <p className="text-xs text-muted-foreground">
-                Dit adres wordt gebruikt voor inloggen. Neem contact op met Bureau Vlieland om het te wijzigen.
-              </p>
-            </div>
+            </FormField>
+            <FormField label="KvK-nummer" htmlFor="inst-kvk" help="Beheert Bureau Vlieland; neem contact op om het te wijzigen.">
+              <Input value={partner.kvk_number ?? ""} readOnly disabled />
+            </FormField>
           </div>
+          <FormField label="Straat en huisnummer" htmlFor="inst-straat">
+            <Input value={formData.address_street} onChange={(e) => handleChange("address_street", e.target.value)} />
+          </FormField>
+          <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
+            <FormField label="Postcode" htmlFor="inst-postcode">
+              <Input value={formData.address_postal} onChange={(e) => handleChange("address_postal", e.target.value)} maxLength={7} />
+            </FormField>
+            <FormField label="Plaats" htmlFor="inst-plaats">
+              <Input value={formData.address_city} onChange={(e) => handleChange("address_city", e.target.value)} />
+            </FormField>
+          </div>
+        </SheetSection>
 
-          <div className="space-y-2">
-            <Label htmlFor="contact_email">Contactadres voor notificaties</Label>
-            <Input
-              id="contact_email"
-              type="email"
-              value={formData.contact_email}
-              onChange={(e) => handleChange("contact_email", e.target.value)}
-              placeholder="Optioneel — standaard wordt het loginadres gebruikt"
-            />
-            <p className="text-xs text-muted-foreground">
-              Als ingevuld, worden aanvraagnotificaties naar dit adres gestuurd in plaats van het loginadres.
-            </p>
+        <SheetSection title="Contact">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="E-mailadres om in te loggen" htmlFor="inst-login" help="Neem contact op met Bureau Vlieland om dit te wijzigen.">
+              <Input value={partner.email} readOnly disabled />
+            </FormField>
+            <FormField label="E-mailadres voor berichten" htmlFor="inst-contact" help="Leeg: berichten gaan naar het inlogadres.">
+              <Input type="email" value={formData.contact_email} onChange={(e) => handleChange("contact_email", e.target.value)} />
+            </FormField>
+            <FormField label="Telefoonnummer" htmlFor="inst-telefoon">
+              <Input value={formData.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="06 12345678" />
+            </FormField>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Contactpersoon voor boekingen" htmlFor="inst-boeking-naam" help="Alleen als dat iemand anders is.">
+              <Input value={formData.booking_contact_name} onChange={(e) => handleChange("booking_contact_name", e.target.value)} />
+            </FormField>
+            <FormField label="Telefoonnummer contactpersoon" htmlFor="inst-boeking-telefoon">
+              <Input value={formData.booking_contact_phone} onChange={(e) => handleChange("booking_contact_phone", e.target.value)} placeholder="06 12345678" />
+            </FormField>
+          </div>
+        </SheetSection>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefoonnummer</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                placeholder="06-12345678"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="kvk_number">KvK-nummer</Label>
-              <Input
-                id="kvk_number"
-                value={formData.kvk_number}
-                placeholder="12345678"
-                maxLength={8}
-                readOnly
-                disabled
-              />
-              <p className="text-xs text-muted-foreground">
-                KvK-nummer wordt centraal beheerd. Neem contact op met Bureau Vlieland om dit te wijzigen.
-              </p>
-            </div>
+        <SheetSection title="Bank" help="Voor de verrekening van de commissie.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="IBAN" htmlFor="inst-iban" help="Beheert Bureau Vlieland om fraude te voorkomen; neem contact op om het te wijzigen.">
+              <Input value={partner.bank_iban ?? ""} readOnly disabled placeholder="NL00 BANK 0000 0000 00" />
+            </FormField>
+            <FormField label="Tenaamstelling" htmlFor="inst-tenaamstelling">
+              <Input value={formData.bank_account_name} onChange={(e) => handleChange("bank_account_name", e.target.value)} />
+            </FormField>
           </div>
+        </SheetSection>
 
-          <div className="space-y-2">
-            <Label htmlFor="address_street">Straat en huisnummer</Label>
-            <Input
-              id="address_street"
-              value={formData.address_street}
-              onChange={(e) => handleChange("address_street", e.target.value)}
-              placeholder="Voorbeeldstraat 123"
-            />
-          </div>
+        <SheetSection title="Beschikbaarheid" help="Openingstijden, seizoen of andere opmerkingen voor Bureau Vlieland.">
+          <FormField label="Toelichting" htmlFor="inst-beschikbaarheid">
+            <Textarea value={formData.availability_notes} onChange={(e) => handleChange("availability_notes", e.target.value)} placeholder="Bijvoorbeeld: april tot en met oktober, dagelijks van 10.00 tot 18.00 uur, maandag gesloten." rows={3} />
+          </FormField>
+        </SheetSection>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address_postal">Postcode</Label>
-              <Input
-                id="address_postal"
-                value={formData.address_postal}
-                onChange={(e) => handleChange("address_postal", e.target.value)}
-                placeholder="1234 AB"
-                maxLength={7}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address_city">Plaats</Label>
-              <Input
-                id="address_city"
-                value={formData.address_city}
-                onChange={(e) => handleChange("address_city", e.target.value)}
-                placeholder="Amsterdam"
-              />
-            </div>
-          </div>
+        {isAccommodation && (
+          <SheetSection title="Accommodatie" help="Deze tekst staat vooraf ingevuld in elke nieuwe logiesofferte.">
+            <FormField label="Omschrijving" htmlFor="inst-accommodatie">
+              <Textarea value={formData.accommodation_description} onChange={(e) => handleChange("accommodation_description", e.target.value)} placeholder="Bijvoorbeeld: familiehotel aan het strand met twintig kamers en een eigen restaurant, inclusief ontbijt." rows={4} />
+            </FormField>
+          </SheetSection>
+        )}
 
-          <div className="pt-2">
-            <Button onClick={handleSaveDetails} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Opslaan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="sticky bottom-0 flex justify-end border-t bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+            Instellingen opslaan
+          </Button>
+        </div>
+      </form>
 
-      {/* Bank details */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            <CardTitle>Bankgegevens</CardTitle>
-          </div>
-          <CardDescription>
-            Voor commissie-uitbetalingen door Bureau Vlieland.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="bank_iban">IBAN</Label>
-              <Input
-                id="bank_iban"
-                value={formData.bank_iban}
-                placeholder="NL00 BANK 0000 0000 00"
-                readOnly
-                disabled
-              />
-              <p className="text-xs text-muted-foreground">
-                IBAN wordt centraal beheerd om fraude te voorkomen. Neem contact op met Bureau Vlieland om dit in te stellen of te wijzigen.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bank_account_name">Tenaamstelling</Label>
-              <Input
-                id="bank_account_name"
-                value={formData.bank_account_name}
-                onChange={(e) => handleChange("bank_account_name", e.target.value)}
-                placeholder="Bedrijfsnaam B.V."
-              />
-            </div>
-          </div>
-          <div className="pt-2">
-            <Button onClick={handleSaveDetails} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Opslaan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Booking contact */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <UserCircle className="h-5 w-5 text-primary" />
-            <CardTitle>Contactpersoon Boekingen</CardTitle>
-          </div>
-          <CardDescription>
-            Contactpersoon voor vragen over specifieke boekingen (indien afwijkend van hoofdcontact).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="booking_contact_name">Naam</Label>
-              <Input
-                id="booking_contact_name"
-                value={formData.booking_contact_name}
-                onChange={(e) => handleChange("booking_contact_name", e.target.value)}
-                placeholder="Jan Jansen"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="booking_contact_phone">Telefoonnummer</Label>
-              <Input
-                id="booking_contact_phone"
-                value={formData.booking_contact_phone}
-                onChange={(e) => handleChange("booking_contact_phone", e.target.value)}
-                placeholder="06-12345678"
-              />
-            </div>
-          </div>
-          <div className="pt-2">
-            <Button onClick={handleSaveDetails} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Opslaan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Unavailability blocking */}
       <PartnerUnavailabilityManager partnerId={partner.id} />
 
-      {/* Availability notes */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CalendarOff className="h-5 w-5 text-primary" />
-            <CardTitle>Beschikbaarheid notities</CardTitle>
-          </div>
-          <CardDescription>
-            Notities over openingstijden, seizoensgebonden beschikbaarheid of andere opmerkingen.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="availability_notes">Algemene notities</Label>
-            <Textarea
-              id="availability_notes"
-              value={formData.availability_notes}
-              onChange={(e) => handleChange("availability_notes", e.target.value)}
-              placeholder="Bijv. 'April t/m oktober, dagelijks van 10:00-18:00. Gesloten op maandag.'"
-              rows={3}
-            />
-          </div>
-          <div className="pt-2">
-            <Button onClick={handleSaveDetails} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Opslaan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Accommodation description - only for accommodation partners */}
-      {(partner.partner_type === 'accommodation' || partner.partner_type === 'both') && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <CardTitle>Accommodatie omschrijving</CardTitle>
-            </div>
-            <CardDescription>
-              Standaard omschrijving van uw accommodatie die wordt gebruikt bij offertes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="accommodation_description">Omschrijving</Label>
-              <Textarea
-                id="accommodation_description"
-                value={formData.accommodation_description}
-                onChange={(e) => handleChange("accommodation_description", e.target.value)}
-                placeholder="Bijv. 'Gezellig familiehotel direct aan het strand met 20 kamers en eigen restaurant. Inclusief uitgebreid ontbijtbuffet.'"
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">
-                Deze tekst wordt automatisch ingevuld bij nieuwe logiesoffertes.
-              </p>
-            </div>
-            <div className="pt-2">
-              <Button onClick={handleSaveDetails} disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Opslaan
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Commission info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Commissie</CardTitle>
-          <CardDescription>
-            Overzicht van uw commissiepercentage.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            {/* Show activities commission if partner is activity provider or both */}
-            {(!partner.partner_type || partner.partner_type === 'activity_provider' || partner.partner_type === 'both') && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Activiteiten</span>
-                <span className="text-xl font-bold">{partner.commission_percentage}%</span>
-              </div>
-            )}
-            {/* Show accommodation commission if partner is accommodation or both */}
-            {(partner.partner_type === 'accommodation' || partner.partner_type === 'both') && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Logies</span>
-                <span className="text-xl font-bold">{partner.accommodation_commission_percentage ?? 10}%</span>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground pt-2 border-t">
-              Neem contact op met Bureau Vlieland om dit percentage aan te passen.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Partner Terms PDF Upload */}
-      <PartnerTermsUpload
-        partnerId={partner.id}
-        termsPdfPath={partner.terms_pdf_path}
-        termsUploadedAt={partner.terms_uploaded_at}
-        usesDefaultTerms={partner.uses_default_terms ?? false}
-        onUpdate={fetchPartner}
+      <FactList
+        title="Commissie"
+        summary="Neem contact op met Bureau Vlieland om een percentage aan te passen."
+        items={[...(isActivity ? [{ label: "Activiteiten", value: `${partner.commission_percentage}%` }] : []), ...(isAccommodation ? [{ label: "Logies", value: `${partner.accommodation_commission_percentage ?? 10}%` }] : [])]}
       />
 
-      {/* Password change - only show for non-impersonating */}
-      {!isImpersonating && (
-        <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-primary" />
-            <CardTitle>Wachtwoord wijzigen</CardTitle>
-          </div>
-          <CardDescription>
-            Kies een nieuw wachtwoord voor je account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Nieuw wachtwoord</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={passwordData.newPassword}
-                onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
-                placeholder="Minimaal 6 tekens"
-              />
-              {passwordErrors.newPassword && (
-                <p className="text-xs text-destructive">{passwordErrors.newPassword}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Bevestig wachtwoord</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={(e) => handlePasswordChange("confirmPassword", e.target.value)}
-                placeholder="Herhaal wachtwoord"
-              />
-              {passwordErrors.confirmPassword && (
-                <p className="text-xs text-destructive">{passwordErrors.confirmPassword}</p>
-              )}
-            </div>
-          </div>
+      <PartnerTermsUpload partnerId={partner.id} termsPdfPath={partner.terms_pdf_path} termsUploadedAt={partner.terms_uploaded_at} usesDefaultTerms={partner.uses_default_terms ?? false} onUpdate={fetchPartner} />
 
-          <div className="pt-2">
-            <Button 
-              onClick={handleChangePassword} 
-              disabled={isChangingPassword || !passwordData.newPassword}
-              variant="outline"
-            >
-              {isChangingPassword ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <KeyRound className="h-4 w-4 mr-2" />
-              )}
+      {!isImpersonating && (
+        <form onSubmit={(e) => void handleChangePassword(e)} className="space-y-4">
+          <SheetSection title="Wachtwoord" help={PASSWORD_RULES_HINT}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Nieuw wachtwoord" htmlFor="inst-wachtwoord" error={passwordErrors.newPassword}>
+                <Input type="password" autoComplete="new-password" value={passwordData.newPassword} onChange={(e) => setPasswordData((p) => ({ ...p, newPassword: e.target.value }))} />
+              </FormField>
+              <FormField label="Herhaal het wachtwoord" htmlFor="inst-wachtwoord-herhaal" error={passwordErrors.confirmPassword}>
+                <Input type="password" autoComplete="new-password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData((p) => ({ ...p, confirmPassword: e.target.value }))} />
+              </FormField>
+            </div>
+            <Button type="submit" variant="outline" disabled={isChangingPassword || !passwordData.newPassword}>
+              {isChangingPassword ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="mr-1.5 h-4 w-4" aria-hidden="true" />}
               Wachtwoord wijzigen
             </Button>
-          </div>
-          </CardContent>
-        </Card>
+          </SheetSection>
+        </form>
       )}
     </div>
   );

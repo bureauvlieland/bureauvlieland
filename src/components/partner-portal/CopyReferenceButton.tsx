@@ -35,10 +35,11 @@ export const CopyReferenceButton = ({
       onClick={handleCopy}
       className={cn(
         "h-6 w-6 p-0",
-        copied && "text-green-600",
+        copied && "text-success",
         className
       )}
-      title={copied ? "Gekopieerd!" : "Kopieer referentienummer"}
+      title={copied ? "Gekopieerd" : "Kopieer referentienummer"}
+      aria-label={copied ? "Gekopieerd" : "Kopieer referentienummer"}
     >
       {copied ? (
         <Check className="h-3.5 w-3.5" />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -11,180 +11,60 @@ import {
   ArrowRight,
   XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EmptyState, Pill } from "@/components/system";
+import { buildWerkbankRows, BUCKET_ORDER, type Bucket, type WerkbankRow } from "@/lib/partnerWerkbank";
 import type {
   PartnerItem,
   PartnerAccommodationQuote,
   PartnerDashboardData,
 } from "@/types/partner";
-import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
 import { DismissInvoiceDialog } from "./DismissInvoiceDialog";
-import { canPartnerDismissInvoiceItem } from "@/lib/partnerInvoiceDismiss";
-import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
-import { formatDurationWindow, getEffectiveTime } from "@/lib/timeUtils";
 
 interface Props {
   data: PartnerDashboardData;
   onDismissed?: () => void;
 }
 
-type Bucket = "review" | "changes" | "schedule" | "invoice";
 
-interface WerkbankRow {
-  id: string;
-  bucket: Bucket;
-  href: string;
-  reference: string | null;
-  customerLabel: string;
-  date: Date | null;
-  itemLabel: string;
-  timeLabel?: string | null;
-  hint: string;
-  dismissable?: boolean;
-}
 
-const BUCKET_META: Record<Bucket, { label: string; description: string; icon: React.ReactNode; tone: string }> = {
+const BUCKET_META: Record<Bucket, { label: string; description: string; icon: React.ReactNode }> = {
   review: {
     label: "Beoordelen",
     description: "Nieuwe aanvragen die op uw reactie wachten.",
-    icon: <Clock className="h-4 w-4" />,
-    tone: "text-amber-700",
+    icon: <Clock className="h-4 w-4" aria-hidden="true" />,
   },
   changes: {
     label: "Wijzigingen",
     description: "Bureau Vlieland of de klant heeft de aanvraag aangepast.",
-    icon: <AlertTriangle className="h-4 w-4" />,
-    tone: "text-orange-700",
+    icon: <AlertTriangle className="h-4 w-4" aria-hidden="true" />,
   },
   schedule: {
     label: "Inplannen",
-    description: "Bevestigd door de klant — datum/tijd vastleggen.",
-    icon: <CalendarCheck className="h-4 w-4" />,
-    tone: "text-blue-700",
+    description: "Bevestigd door de klant: leg datum en tijd vast.",
+    icon: <CalendarCheck className="h-4 w-4" aria-hidden="true" />,
   },
   invoice: {
     label: "Factureren",
-    description: "Uitgevoerd — factuur registreren of sluiten als er geen factuur volgt.",
-    icon: <Receipt className="h-4 w-4" />,
-    tone: "text-emerald-700",
+    description: "Uitgevoerd: registreer uw factuur, of sluit het onderdeel als er geen factuur volgt.",
+    icon: <Receipt className="h-4 w-4" aria-hidden="true" />,
   },
 };
 
-const BUCKET_ORDER: Bucket[] = ["review", "changes", "schedule", "invoice"];
 
-function buildRows(data: PartnerDashboardData): WerkbankRow[] {
-  const rows: WerkbankRow[] = [];
-
-  data.items.forEach(i => {
-    if (i.is_concept) return;
-    if (i.invoiced_number || i.status === "invoiced") return;
-    if ((i as any).partner_dismissed_at) return;
-    const req = i.program_requests;
-    if (req.cancelled_at || req.status === "cancelled" || i.status === "cancelled" || i.status === "unavailable") return;
-
-    const customerLabel = req.customer_company || req.customer_name;
-    const dates = (req.selected_dates || []) as string[];
-    const dateStr = dates[i.day_index] || dates[0];
-    const date = dateStr ? new Date(dateStr) : null;
-    const base = {
-      id: i.id,
-      href: `/partner/project/${req.id}`,
-      reference: req.reference_number ?? null,
-      customerLabel,
-      date,
-      itemLabel: i.block_name,
-      timeLabel: formatDurationWindow(getEffectiveTime(i as any), (i as any).duration),
-    };
-
-    if (i.status === "counter_proposed") {
-      const wanted = (i as any).customer_counter_time;
-      rows.push({
-        ...base,
-        bucket: "review",
-        hint: wanted
-          ? `De klant wil liever ${wanted} — ga akkoord of stel een andere tijd voor.`
-          : "De klant stelt een andere tijd voor — reageer.",
-      });
-      return;
-    }
-    if (i.status === "pending") {
-      rows.push({ ...base, bucket: "review", hint: "Beoordeel deze aanvraag." });
-      return;
-    }
-
-    // Skip further buckets once uitgevoerd/gefactureerd staat vast, behalve invoice.
-    const effPeople = i.override_people ?? req.number_of_people ?? 1;
-    const numDays = getNumberOfDays(dates);
-    if (!i.executed_at && i.status !== "executed" && hasOpenAdminPriceChange(i as any, effPeople, numDays)) {
-      rows.push({ ...base, bucket: "changes", hint: "Bureau Vlieland heeft de prijs/aantallen aangepast." });
-      return;
-    }
-
-    const customerOk = i.customer_accepted_at || i.customer_approved_at;
-    const isConfirmed = i.status === "confirmed" || i.status === "accepted";
-    if (isConfirmed && customerOk && !i.executed_at && req.terms_accepted_at) {
-      if (!i.confirmed_time && !i.proposed_time) {
-        rows.push({ ...base, bucket: "schedule", hint: "Plan tijd in en bevestig." });
-        return;
-      }
-    }
-
-    const canInvoice = canPartnerInvoiceItem(i, req);
-    if (canInvoice) {
-      const dismissable = canPartnerDismissInvoiceItem({
-        status: i.status,
-        invoiced_number: i.invoiced_number ?? null,
-        partner_dismissed_at: (i as any).partner_dismissed_at ?? null,
-      });
-      rows.push({ ...base, bucket: "invoice", hint: "Registreer uw factuur.", dismissable });
-    }
-  });
-
-  (data.accommodationQuotes ?? []).forEach(q => {
-    const r = q.accommodation_requests;
-    if (q.status === "cancelled" || q.status === "rejected" || q.status === "declined" || r.status === "cancelled")
-      return;
-    if (q.invoiced_number || q.status === "invoiced" || q.status === "executed") return;
-    const customerLabel = r.customer_company || r.customer_name;
-    const date = r.arrival_date ? new Date(r.arrival_date) : null;
-    const base = {
-      id: q.id,
-      href: `/partner/logies/${r.id}`,
-      reference: (r as any).reference_number ?? null,
-      customerLabel,
-      date,
-      itemLabel: q.accommodation_name || "Logiesaanvraag",
-    };
-
-    if (q.status === "pending") {
-      rows.push({ ...base, bucket: "review", hint: "Beoordeel deze logiesaanvraag." });
-      return;
-    }
-
-    if (q.status === "selected" && !q.invoiced_number) {
-      rows.push({ ...base, bucket: "invoice", hint: "Registreer factuur voor logies." });
-    }
-  });
-
-  return rows.sort((a, b) => {
-    if (!a.date && !b.date) return 0;
-    if (!a.date) return 1;
-    if (!b.date) return -1;
-    return a.date.getTime() - b.date.getTime();
-  });
-}
 
 export function PartnerWerkbankList({ data, onDismissed }: Props) {
   const [searchParams] = useSearchParams();
   const impersonate = searchParams.get("impersonate");
   const urlSuffix = impersonate ? `?impersonate=${impersonate}` : "";
   const [dismissTarget, setDismissTarget] = useState<{ id: string; label: string } | null>(null);
-  const partnerToken = (data.partner as any).partner_token as string | undefined;
+  // "Terug" op de projectpagina komt hier terug.
+  const location = useLocation();
+  const from = `${location.pathname}${location.search}`;
+  const partnerToken = (data.partner as { partner_token?: string }).partner_token;
 
   const grouped = useMemo(() => {
-    const rows = buildRows(data);
+    const rows = buildWerkbankRows(data);
     const map = new Map<Bucket, WerkbankRow[]>();
     rows.forEach(r => {
       const arr = map.get(r.bucket) ?? [];
@@ -197,13 +77,11 @@ export function PartnerWerkbankList({ data, onDismissed }: Props) {
   const total = grouped.reduce((s, g) => s + g.items.length, 0);
   if (total === 0) {
     return (
-      <Card className="p-12 text-center">
-        <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
-        <h3 className="text-lg font-semibold">Geen openstaande acties</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Alles staat in de wacht bij de klant of Bureau Vlieland.
-        </p>
-      </Card>
+      <EmptyState
+        icon={<CheckCircle2 />}
+        title="Niets te doen"
+        description="Alles staat in de wacht bij de klant of bij Bureau Vlieland. U hoort het zodra er iets van u wordt verwacht."
+      />
     );
   }
 
@@ -213,60 +91,58 @@ export function PartnerWerkbankList({ data, onDismissed }: Props) {
         if (items.length === 0) return null;
         const meta = BUCKET_META[bucket];
         return (
-          <section key={bucket}>
-            <div className="mb-2 flex items-baseline justify-between">
+          <section key={bucket} aria-labelledby={`werkbank-${bucket}`}>
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <div className="flex items-center gap-2">
-                <span className={meta.tone}>{meta.icon}</span>
-                <h2 className="text-base font-semibold">{meta.label}</h2>
-                <Badge variant="secondary">{items.length}</Badge>
+                <span className="text-primary">{meta.icon}</span>
+                <h2 id={`werkbank-${bucket}`} className="text-base font-medium">
+                  {meta.label}
+                </h2>
+                <Pill tone="warning" size="sm">
+                  {items.length}
+                </Pill>
               </div>
               <p className="text-xs text-muted-foreground">{meta.description}</p>
             </div>
-            <Card className="divide-y">
-              {items.map(row => (
-                <div
-                  key={`${row.bucket}-${row.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
-                >
-                  <Link to={`${row.href}${urlSuffix}`} className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{row.itemLabel}</span>
-                      {row.reference && (
-                        <span className="font-mono text-[11px] text-muted-foreground">{row.reference}</span>
-                      )}
+            <ul className="divide-y rounded-lg border bg-card">
+              {items.map((row) => (
+                <li key={`${row.bucket}-${row.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors duration-base hover:bg-muted/40">
+                  <Link to={`${row.href}${urlSuffix}`} state={{ from }} className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="font-medium">{row.itemLabel}</span>
+                      {row.reference && <span className="font-mono text-[11px] text-muted-foreground">{row.reference}</span>}
                     </div>
-                    <div className="text-xs text-muted-foreground truncate">
+                    <div className="truncate text-xs text-muted-foreground">
                       {row.customerLabel}
                       {row.date && ` · ${format(row.date, "EEE d MMM", { locale: nl })}`}
                       {row.timeLabel && ` · ${row.timeLabel}`}
                     </div>
-
-                    <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">{row.hint}</div>
                   </Link>
                   {row.bucket === "invoice" && row.dismissable && partnerToken && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      className="shrink-0 text-muted-foreground"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         setDismissTarget({ id: row.id, label: row.itemLabel });
                       }}
-                      title="Geen factuur — sluiten"
+                      title="Geen factuur: sluiten"
                     >
-                      <XCircle className="mr-1 h-3.5 w-3.5" />
+                      <XCircle className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                       Geen factuur
                     </Button>
                   )}
-                  <Link to={`${row.href}${urlSuffix}`} className="shrink-0">
-                    <Button variant="ghost" size="sm">
-                      Openen <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </Link>
-                </div>
+                  <Button asChild variant="ghost" size="sm" className="shrink-0">
+                    <Link to={`${row.href}${urlSuffix}`} state={{ from }}>
+                      Openen <ArrowRight className="ml-1 h-3 w-3" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                </li>
               ))}
-            </Card>
+            </ul>
           </section>
         );
       })}

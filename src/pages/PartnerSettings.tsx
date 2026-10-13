@@ -1,27 +1,14 @@
-import { Helmet } from "react-helmet";
+import { Settings } from "lucide-react";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { PartnerSettingsForm } from "@/components/partner-portal/PartnerSettingsForm";
 
-const PartnerSettings = () => {
-  return (
-    <PartnerLayout>
-      <Helmet>
-        <title>Instellingen | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Instellingen</h1>
-          <p className="text-muted-foreground">
-            Beheer uw account- en bedrijfsgegevens.
-          </p>
-        </div>
-
-        <PartnerSettingsForm />
-      </div>
-    </PartnerLayout>
-  );
-};
+const PartnerSettings = () => (
+  <PartnerLayout>
+    <PartnerPage title="Instellingen" icon={<Settings />} size="prose" description="Uw bedrijfs-, bank- en contactgegevens, uw beschikbaarheid en uw wachtwoord.">
+      <PartnerSettingsForm />
+    </PartnerPage>
+  </PartnerLayout>
+);
 
 export default PartnerSettings;

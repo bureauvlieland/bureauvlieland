@@ -1,153 +1,179 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Helmet } from "react-helmet";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertCircle,
-  Package,
-  Plus,
-  Edit,
-  Users,
-  Clock,
-  Euro,
-  CheckCircle,
-  FileEdit,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { EmptyState, Pill } from "@/components/system";
+import { Clock, Euro, Package, Plus, Users } from "lucide-react";
 import { PartnerBlockSheet, type PrefillFromMap } from "@/components/partner-portal/PartnerBlockSheet";
 import { MapOfferOverview } from "@/components/partner-portal/MapOfferOverview";
 import type { MapActivityType } from "@/hooks/useMapActivities";
+import { usePartnerPortal } from "@/hooks/usePartnerPortal";
 import type { PartnerBuildingBlock } from "@/types/partner";
 import { calculateBlockCompleteness } from "@/lib/partnerCompleteness";
+import { PARTNER_BLOCK_GROUPS, partnerBlockStatus } from "@/lib/partnerBlockStatus";
 import { reportError } from "@/lib/errorReporting";
 import { formatEuro } from "@/lib/formatEuro";
+import { cn } from "@/lib/utils";
+
+/**
+ * Aanbod (partnerportaal fase 4): wat de partner aanbiedt, in drie groepen
+ * op één woordenlijst (`partnerBlockStatus`), elke rij met één `Pill`, en
+ * daaronder het aanbod in MijnActiviteitenplanner. "Aanbod" is het woord
+ * voor wat de partner aanbiedt; "activiteit" voor wat de klant boekt.
+ */
+const BLOCK_SELECT = `
+  id, name, description, short_description, category, block_type,
+  duration, price_adult, price_adult_note, price_type,
+  price_child, price_child_note, price_child_min_age, price_child_max_age,
+  price_pet, price_pet_note,
+  min_people, max_people, is_published, is_active, status,
+  image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
+  seasonal_notes, tags, location_lat, location_lng, location_address,
+  external_url, price_display_override, sort_order, map_activity_type_id,
+  price_extras
+`;
+
+const formatBlockPrice = (block: PartnerBuildingBlock) => {
+  if (block.price_type === "tiered_total") {
+    const extras = (block.price_extras ?? {}) as Record<string, unknown>;
+    const tiers = (Array.isArray(extras.tiers) ? extras.tiers : []) as Array<{ price?: number }>;
+    const prices = tiers.map((t) => Number(t?.price)).filter((p) => Number.isFinite(p));
+    if (prices.length === 0) return "Prijs op aanvraag";
+    return `vanaf ${formatEuro(Math.min(...prices))} (staffel)`;
+  }
+  if (!block.price_adult) return "Prijs op aanvraag";
+  const price = formatEuro(block.price_adult);
+  switch (block.price_type) {
+    case "per_person":
+      return `${price} p.p.`;
+    case "per_person_per_day":
+      return `${price} p.p.p.d.`;
+    case "total":
+      return `${price} totaal`;
+    default:
+      return price;
+  }
+};
+
+const peopleLabel = (block: PartnerBuildingBlock) => {
+  if (block.min_people && block.max_people) return `${block.min_people} tot ${block.max_people} personen`;
+  if (block.min_people) return `vanaf ${block.min_people} personen`;
+  if (block.max_people) return `tot ${block.max_people} personen`;
+  return null;
+};
+
+const BlockRow = ({ block, onEdit }: { block: PartnerBuildingBlock; onEdit: (block: PartnerBuildingBlock) => void }) => {
+  const status = partnerBlockStatus(block.status);
+  const isFromMap = typeof block.map_activity_type_id === "number";
+  const completeness = calculateBlockCompleteness(block as never);
+  const needsImprovement = completeness.score < 70 && status.key !== "concept";
+  const people = peopleLabel(block);
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onEdit(block)}
+        className={cn(
+          "flex w-full flex-col gap-3 rounded-lg border bg-card p-3 text-left transition-colors duration-fast hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:flex-row sm:items-center",
+          status.tone === "warning" && "border-warning/40",
+        )}
+      >
+        <img src={block.image_url || "/placeholder.svg"} alt="" className="h-14 w-20 shrink-0 rounded-md bg-muted object-cover" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="truncate font-medium">{block.name}</span>
+            {isFromMap && (
+              <Pill tone="brand" size="sm" title="Gekoppeld aan MijnActiviteitenplanner">
+                MAP
+              </Pill>
+            )}
+          </div>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <Euro className="h-3 w-3" aria-hidden="true" />
+              {formatBlockPrice(block)}
+            </span>
+            {block.duration && (
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {block.duration}
+              </span>
+            )}
+            {people && (
+              <span className="inline-flex items-center gap-1">
+                <Users className="h-3 w-3" aria-hidden="true" />
+                {people}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0 sm:justify-end">
+          {needsImprovement && (
+            <Pill tone="warning" size="sm" title={`${completeness.score}% compleet: ${completeness.missing.join(", ")}`}>
+              Kan beter ({completeness.score}%)
+            </Pill>
+          )}
+          <Pill tone={status.tone} title={status.hint}>
+            {status.label}
+          </Pill>
+        </div>
+      </button>
+    </li>
+  );
+};
 
 const PartnerBlocksContent = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { partner, isDemo } = usePartnerPortal();
+  const partnerId = partner.id;
+  const mapTenantSlug = partner.map_tenant_slug ?? null;
   const [blocks, setBlocks] = useState<PartnerBuildingBlock[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [partnerId, setPartnerId] = useState<string | null>(null);
-  const [mapTenantSlug, setMapTenantSlug] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<PartnerBuildingBlock | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [isNewBlock, setIsNewBlock] = useState(false);
   const [prefillFromMap, setPrefillFromMap] = useState<PrefillFromMap | null>(null);
 
-  const BLOCK_SELECT = `
-    id, name, description, short_description, category, block_type,
-    duration, price_adult, price_adult_note, price_type,
-    price_child, price_child_note, price_child_min_age, price_child_max_age,
-    price_pet, price_pet_note,
-    min_people, max_people, is_published, is_active, status,
-    image_url, image_asset, is_from_price, price_includes_vat, vat_rate,
-    seasonal_notes, tags, location_lat, location_lng, location_address,
-    external_url, price_display_override, sort_order, map_activity_type_id,
-    price_extras
-  `;
+  const fetchBlocks = useCallback(async () => {
+    if (isDemo) {
+      setBlocks([]);
+      setIsLoading(false);
+      return;
+    }
+    const { data, error: blocksError } = await supabase.from("building_blocks").select(BLOCK_SELECT).eq("provider_id", partnerId).order("name");
+    if (blocksError) {
+      reportError(blocksError, { where: "PartnerBlocks: Error fetching blocks" });
+      setError("Kon uw aanbod niet laden.");
+    } else {
+      setBlocks((data || []) as PartnerBuildingBlock[]);
+    }
+    setIsLoading(false);
+  }, [partnerId, isDemo]);
 
   useEffect(() => {
-    const fetchBlocks = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    void fetchBlocks();
+  }, [fetchBlocks]);
 
-      if (!session) {
-        navigate("/partner/login");
-        return;
-      }
-
-      const impersonatePartnerId = searchParams.get("impersonate");
-      let currentPartnerId: string | null = null;
-
-      if (impersonatePartnerId) {
-        const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        if (isAdmin) currentPartnerId = impersonatePartnerId;
-      }
-
-      if (!currentPartnerId) {
-        const { data: partner, error: partnerError } = await supabase
-          .from("partners")
-          .select("id, map_tenant_slug")
-          .eq("auth_user_id", session.user.id)
-          .eq("is_active", true)
-          .single();
-
-        if (partnerError || !partner) {
-          setError("Uw account is niet gekoppeld aan een partner.");
-          setIsLoading(false);
-          return;
-        }
-
-        currentPartnerId = partner.id;
-        setMapTenantSlug(partner.map_tenant_slug);
-      } else {
-        const { data: partner } = await supabase
-          .from("partners")
-          .select("map_tenant_slug")
-          .eq("id", currentPartnerId)
-          .maybeSingle();
-        setMapTenantSlug(partner?.map_tenant_slug ?? null);
-      }
-
-      setPartnerId(currentPartnerId);
-
-      const { data: blocksData, error: blocksError } = await supabase
-        .from("building_blocks")
-        .select(BLOCK_SELECT)
-        .eq("provider_id", currentPartnerId)
-        .order("name");
-
-      if (blocksError) {
-        reportError(blocksError, { where: "PartnerBlocks: Error fetching blocks" });
-        setError("Kon uw aanbod niet laden.");
-        setIsLoading(false);
-        return;
-      }
-
-      setBlocks((blocksData || []) as PartnerBuildingBlock[]);
-      setIsLoading(false);
-    };
-
-    fetchBlocks();
-  }, [navigate, searchParams]);
-
-  const handleEditBlock = (block: PartnerBuildingBlock) => {
+  const openSheet = (block: PartnerBuildingBlock | null, prefill: PrefillFromMap | null = null) => {
     setSelectedBlock(block);
-    setIsNewBlock(false);
-    setPrefillFromMap(null);
+    setIsNewBlock(block === null);
+    setPrefillFromMap(prefill);
     setShowSheet(true);
   };
 
-  const handleNewBlock = () => {
-    setSelectedBlock(null);
-    setIsNewBlock(true);
-    setPrefillFromMap(null);
-    setShowSheet(true);
-  };
-
-  const handleEnrichFromMap = (type: MapActivityType) => {
-    setSelectedBlock(null);
-    setIsNewBlock(true);
-    setPrefillFromMap({
+  const handleEnrichFromMap = (type: MapActivityType) =>
+    openSheet(null, {
       map_activity_type_id: type.Id,
       name: type.Name,
       description: type.Description ?? null,
       duration_hours: type.Duration,
       price_per_person: null,
       max_persons: null,
-      external_url: mapTenantSlug
-        ? `https://boeking.mijnactiviteitenplanner.nl/${mapTenantSlug}`
-        : null,
+      external_url: mapTenantSlug ? `https://boeking.mijnactiviteitenplanner.nl/${mapTenantSlug}` : null,
       image_ref: type.Image,
     });
-    setShowSheet(true);
-  };
 
   const handleSheetClose = () => {
     setShowSheet(false);
@@ -157,282 +183,72 @@ const PartnerBlocksContent = () => {
   };
 
   const handleBlockSaved = async () => {
-    if (!partnerId) return;
-
-    const { data: blocksData } = await supabase
-      .from("building_blocks")
-      .select(BLOCK_SELECT)
-      .eq("provider_id", partnerId)
-      .order("name");
-
-    setBlocks((blocksData || []) as PartnerBuildingBlock[]);
+    await fetchBlocks();
     handleSheetClose();
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 text-center py-16">
-        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Fout</h1>
-        <p className="text-muted-foreground">{error}</p>
-      </div>
-    );
-  }
-
-  const publishedBlocks = blocks.filter(b => b.status === "published");
-  const activeBlocks = blocks.filter(b => b.status === "active");
-  const conceptBlocks = blocks.filter(b => b.status === "concept");
+  const groups = PARTNER_BLOCK_GROUPS.map((key) => ({ status: partnerBlockStatus(key), blocks: blocks.filter((b) => partnerBlockStatus(b.status).key === key) })).filter((g) => g.blocks.length > 0);
 
   return (
-    <div className="p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Mijn Aanbod</h1>
-          <p className="text-muted-foreground">Beheer uw activiteiten en diensten</p>
-        </div>
-        <Button onClick={handleNewBlock}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nieuw voorstel
+    <PartnerPage
+      title="Aanbod"
+      icon={<Package />}
+      description="Wat u aanbiedt, zoals Bureau Vlieland het in programma's zet: naam, prijs, duur en foto."
+      actions={
+        <Button onClick={() => openSheet(null)} disabled={isDemo}>
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+          Nieuwe activiteit
         </Button>
-      </div>
-
-      <div className="space-y-8">
-        {blocks.length === 0 && !mapTenantSlug ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-lg font-medium mb-2">Nog geen aanbod</h2>
-              <p className="text-muted-foreground mb-4">
-                U hebt nog geen activiteiten of diensten toegevoegd.
-              </p>
-              <Button onClick={handleNewBlock}>
-                <Plus className="h-4 w-4 mr-2" />
-                Eerste activiteit toevoegen
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {publishedBlocks.length > 0 && (
-              <BlockSection
-                icon={<CheckCircle className="h-4 w-4 text-green-600" />}
-                title="Gepubliceerd"
-                count={publishedBlocks.length}
-                blocks={publishedBlocks}
-                onEdit={handleEditBlock}
-              />
-            )}
-
-            {activeBlocks.length > 0 && (
-              <BlockSection
-                icon={<ShieldCheck className="h-4 w-4 text-blue-600" />}
-                title="Goedgekeurd"
-                count={activeBlocks.length}
-                description="Beschikbaar voor maatwerk-offertes, nog niet publiek zichtbaar."
-                blocks={activeBlocks}
-                onEdit={handleEditBlock}
-                status="active"
-              />
-            )}
-
-            {conceptBlocks.length > 0 && (
-              <BlockSection
-                icon={<FileEdit className="h-4 w-4 text-amber-600" />}
-                title="Wacht op goedkeuring"
-                count={conceptBlocks.length}
-                blocks={conceptBlocks}
-                onEdit={handleEditBlock}
-                status="concept"
-              />
-            )}
-          </>
-        )}
-
-        {mapTenantSlug && partnerId && (
-          <MapOfferOverview
-            tenantSlug={mapTenantSlug}
-            partnerId={partnerId}
-            onOffer={handleEnrichFromMap}
-            refreshKey={blocks.map((b) => `${b.id}:${b.map_activity_type_id ?? ""}`).join(",")}
-          />
-        )}
-      </div>
-
-      <PartnerBlockSheet
-        isOpen={showSheet}
-        onClose={handleSheetClose}
-        block={selectedBlock}
-        isNew={isNewBlock}
-        partnerId={partnerId || ""}
-        onSaved={handleBlockSaved}
-        prefillFromMap={prefillFromMap}
-        mapTenantSlug={mapTenantSlug}
-      />
-    </div>
-  );
-};
-
-interface BlockSectionProps {
-  icon: React.ReactNode;
-  title: string;
-  count: number;
-  description?: string;
-  blocks: PartnerBuildingBlock[];
-  onEdit: (block: PartnerBuildingBlock) => void;
-  status?: string;
-}
-
-const BlockSection = ({ icon, title, count, description, blocks, onEdit, status }: BlockSectionProps) => (
-  <div>
-    <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-2">
-      {icon}
-      {title} ({count})
-    </h2>
-    {description && <p className="text-xs text-muted-foreground mb-3">{description}</p>}
-    <div className={description ? "space-y-2" : "space-y-2 mt-3"}>
-      {blocks.map((block) => (
-        <BlockRow key={block.id} block={block} onEdit={onEdit} status={status} />
-      ))}
-    </div>
-  </div>
-);
-
-interface BlockRowProps {
-  block: PartnerBuildingBlock;
-  onEdit: (block: PartnerBuildingBlock) => void;
-  status?: string;
-}
-
-const formatBlockPrice = (block: PartnerBuildingBlock) => {
-  if (block.price_type === "tiered_total") {
-    const extras = (block.price_extras ?? {}) as Record<string, unknown>;
-    const tiers = (Array.isArray(extras.tiers) ? extras.tiers : []) as Array<{ price?: number }>;
-    const prices = tiers.map((t) => Number(t?.price)).filter((p) => Number.isFinite(p));
-    if (prices.length === 0) return "Prijs op aanvraag";
-    const min = Math.min(...prices);
-    return `vanaf ${formatEuro(min)} (staffel)`;
-  }
-  if (!block.price_adult) return "Prijs op aanvraag";
-  const price = formatEuro(block.price_adult);
-  switch (block.price_type) {
-    case "per_person": return `${price} p.p.`;
-    case "per_person_per_day": return `${price} p.p.p.d.`;
-    case "total": return `${price} totaal`;
-    default: return `${price}`;
-  }
-};
-
-const BlockRow = ({ block, onEdit, status }: BlockRowProps) => {
-  const isDraft = status === "concept";
-  const isActive = status === "active";
-  const isFromMap = typeof block.map_activity_type_id === "number";
-  const img = block.image_url || "/placeholder.svg";
-  const blockCompleteness = calculateBlockCompleteness(block as any);
-  const needsImprovement = blockCompleteness.score < 70;
-
-  return (
-    <Card
-      className="cursor-pointer hover:bg-muted/40 transition-colors"
-      onClick={() => onEdit(block)}
+      }
+      loading={isLoading}
+      error={error}
     >
-      <CardContent className="p-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <img
-              src={img}
-              alt={block.name}
-              className="h-14 w-20 rounded-md object-cover shrink-0 bg-muted"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium truncate">{block.name}</span>
-                {isFromMap && (
-                  <Badge variant="outline" className="gap-1 text-xs font-normal border-accent/40 text-accent-foreground bg-accent/10">
-                    <Sparkles className="h-3 w-3" />
-                    MAP
-                  </Badge>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-                <span className="flex items-center gap-1">
-                  <Euro className="h-3 w-3" />
-                  {formatBlockPrice(block)}
-                </span>
-                {block.duration && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {block.duration}
-                  </span>
-                )}
-                {(block.min_people || block.max_people) && (
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {block.min_people && block.max_people
-                      ? `${block.min_people}-${block.max_people}`
-                      : block.min_people
-                      ? `min. ${block.min_people}`
-                      : `max. ${block.max_people}`}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
-            {needsImprovement && !isDraft && (
-              <Badge
-                variant="outline"
-                className="bg-accent/10 text-accent-foreground border-accent/40 font-normal gap-1"
-                title={`${blockCompleteness.score}% compleet — ${blockCompleteness.missing.join(", ")}`}
-              >
-                <Sparkles className="h-3 w-3" />
-                Kan beter ({blockCompleteness.score}%)
-              </Badge>
-            )}
-            {isDraft && (
-              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-normal">
-                Wacht op goedkeuring
-              </Badge>
-            )}
-            {isActive && (
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 font-normal">
-                Goedgekeurd
-              </Badge>
-            )}
-            {!isDraft && !isActive && (
-              <Badge className="bg-green-600 font-normal">Gepubliceerd</Badge>
-            )}
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(block); }}>
-              <Edit className="h-4 w-4" />
+      {blocks.length === 0 ? (
+        <EmptyState
+          icon={<Package />}
+          title="Nog geen aanbod"
+          description="Stel uw eerste activiteit voor; Bureau Vlieland beoordeelt hem en zet hem in de programma's."
+          action={
+            <Button onClick={() => openSheet(null)} disabled={isDemo}>
+              <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+              Eerste activiteit toevoegen
             </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          }
+        />
+      ) : (
+        groups.map((group) => (
+          <section key={group.status.key} aria-labelledby={`aanbod-${group.status.key}`} className="space-y-3">
+            <div>
+              <h2 id={`aanbod-${group.status.key}`} className="flex items-center gap-2 font-display text-xl font-medium">
+                {group.status.label}
+                <Pill tone={group.status.tone}>{group.blocks.length}</Pill>
+              </h2>
+              <p className="text-sm text-muted-foreground">{group.status.hint}</p>
+            </div>
+            <ul className="space-y-2">
+              {group.blocks.map((block) => (
+                <BlockRow key={block.id} block={block} onEdit={(b) => openSheet(b)} />
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
+
+      {mapTenantSlug && !isDemo && (
+        <MapOfferOverview tenantSlug={mapTenantSlug} partnerId={partnerId} onOffer={handleEnrichFromMap} refreshKey={blocks.map((b) => `${b.id}:${b.map_activity_type_id ?? ""}`).join(",")} />
+      )}
+
+      <PartnerBlockSheet isOpen={showSheet} onClose={handleSheetClose} block={selectedBlock} isNew={isNewBlock} partnerId={partnerId} onSaved={handleBlockSaved} prefillFromMap={prefillFromMap} mapTenantSlug={mapTenantSlug} />
+    </PartnerPage>
   );
 };
-
 
 const PartnerBlocks = () => (
   <PartnerLayout>
-    <Helmet>
-      <title>Mijn Aanbod | Partnerportaal | Bureau Vlieland</title>
-      <meta name="robots" content="noindex, nofollow" />
-    </Helmet>
     <PartnerBlocksContent />
   </PartnerLayout>
 );
+
+export { PartnerBlocksContent };
 
 export default PartnerBlocks;

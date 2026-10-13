@@ -3,8 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Visuele regressie van het ontwerpsysteem: één pagina per paginasoort, op
- * desktop en telefoon, vergeleken met de referentie in __snapshots__.
+ * Visuele regressie van het ontwerpsysteem: één pagina per paginasoort en
+ * de schermen van het klant- en partnerportaal, op desktop en telefoon,
+ * vergeleken met de referentie in __snapshots__.
  *
  * Deterministisch gemaakt door:
  * - de klok vast te zetten (datumafhankelijke aanroepen, zoals de agenda);
@@ -41,6 +42,13 @@ const PAGES: { name: string; path: string; wachtOp?: string; maxHoogte?: number 
   { name: "klantportaal-logies", path: "/ontwerp/klantportaal?scherm=logies", wachtOp: "Hotel Zeezicht" },
   { name: "klantportaal-akkoord", path: "/ontwerp/klantportaal?scherm=akkoord", wachtOp: "Akkoord en voorwaarden" },
   { name: "klantportaal-deelnemers", path: "/ontwerp/klantportaal?scherm=deelnemers", wachtOp: "Deelnemersweergave" },
+  // Het partnerportaal met een vaste, verzonnen partner (src/content/demoPartnerportaal.ts).
+  { name: "partnerportaal-werkbank", path: "/ontwerp/partnerportaal?scherm=werkbank", wachtOp: "Vernieuwen" },
+  { name: "partnerportaal-projecten", path: "/ontwerp/partnerportaal?scherm=projecten", wachtOp: "Archief" },
+  { name: "partnerportaal-project", path: "/ontwerp/partnerportaal?scherm=project", wachtOp: "Uw onderdelen" },
+  { name: "partnerportaal-logies", path: "/ontwerp/partnerportaal?scherm=logies", wachtOp: "Uw offerte" },
+  { name: "partnerportaal-logiesaanvragen", path: "/ontwerp/partnerportaal?scherm=logiesaanvragen", wachtOp: "Scherp in Veiligheid" },
+  { name: "partnerportaal-facturatie", path: "/ontwerp/partnerportaal?scherm=facturatie", wachtOp: "In het kort" },
 ];
 
 const VASTE_TIJD = new Date("2026-09-21T12:00:00+02:00");

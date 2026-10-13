@@ -1,43 +1,31 @@
-import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Link, useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/system";
 
 interface MissingPdfBannerProps {
-  /** Aantal facturen zonder PDF (items + accommodaties samen). */
+  /** Aantal facturen zonder pdf (onderdelen en logies samen). */
   count: number;
-  /** Toon de knop "Ga naar facturen" (uit op de financieel-pagina zelf). */
+  /** Toon de knop "Ga naar facturen" (uit op de facturatiepagina zelf). */
   showCta?: boolean;
 }
 
+/** Zolang een geregistreerde factuur geen pdf heeft, kan het bureau hem niet verwerken (partnerportaal fase 2: een Notice). */
 export function MissingPdfBanner({ count, showCta = true }: MissingPdfBannerProps) {
   const [searchParams] = useSearchParams();
   const impersonate = searchParams.get("impersonate");
   if (count <= 0) return null;
+  const meervoud = count !== 1;
   return (
-    <div
-      role="alert"
-      className="rounded-lg border-2 border-destructive/40 bg-destructive/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
-    >
-      <div className="flex items-start gap-3 flex-1">
-        <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
-        <div className="space-y-1">
-          <p className="font-semibold text-destructive">
-            Actie vereist — {count} factu{count === 1 ? "ur" : "ren"} zonder PDF
-          </p>
-          <p className="text-sm text-foreground/80">
-            We kunnen je factu{count === 1 ? "ur" : "ren"} niet in behandeling nemen en
-            niet doorsturen naar onze boekhouding zolang de PDF-bijlage ontbreekt.
-            Voeg de PDF{count === 1 ? "" : "'s"} nu toe via Facturatie → Gefactureerd.
-          </p>
-        </div>
-      </div>
+    <Notice tone="danger" title={`${count} factu${meervoud ? "ren" : "ur"} zonder pdf`}>
+      <p>
+        Zonder de pdf kunnen wij uw factu{meervoud ? "ren" : "ur"} niet in behandeling nemen en niet doorsturen naar onze boekhouding. Voeg de pdf
+        {meervoud ? "'s" : ""} toe onder Facturatie, tabblad Gefactureerd.
+      </p>
       {showCta && (
-        <Button asChild size="sm" variant="destructive" className="shrink-0">
-          <Link to={`/partner/facturatie?tab=invoiced${impersonate ? `&impersonate=${impersonate}` : ""}`}>
-            Ga naar facturen
-          </Link>
+        <Button asChild size="sm" variant="outline" className="mt-2">
+          <Link to={`/partner/facturatie?tab=invoiced${impersonate ? `&impersonate=${impersonate}` : ""}`}>Naar de facturen</Link>
         </Button>
       )}
-    </div>
+    </Notice>
   );
 }

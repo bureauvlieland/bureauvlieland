@@ -9,10 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Clock, Link2, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Clock, Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pill } from "@/components/system";
+import { partnerBlockStatus } from "@/lib/partnerBlockStatus";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useMapActivityTypes,
@@ -41,12 +42,6 @@ const mapImageUrl = (ref: string | null) =>
   ref
     ? `https://portal.mijnactiviteitenplanner.nl/File/Get?reference=${encodeURIComponent(ref)}`
     : null;
-
-const STATUS_LABEL: Record<string, string> = {
-  published: "gepubliceerd",
-  active: "goedgekeurd",
-  concept: "wacht op goedkeuring",
-};
 
 /**
  * Het volledige aanbod van een partner in MijnActiviteitenplanner, met per
@@ -128,19 +123,15 @@ export const MapOfferOverview = ({
 
   return (
     <div>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-accent" />
-        {onOffer
-          ? "Uw activiteiten in MijnActiviteitenplanner"
-          : "Activiteiten in MijnActiviteitenplanner"}
+      <h2 className="flex flex-wrap items-center gap-2 font-display text-xl font-medium">
+        {onOffer ? "Uw aanbod in MijnActiviteitenplanner" : "Activiteiten in MijnActiviteitenplanner"}
         {!isLoading && !isError && (
-          <span className="font-normal normal-case tracking-normal">
-            · {sorted.length} {sorted.length === 1 ? "type" : "types"},{" "}
-            {linkedCount} aangeboden bij Bureau Vlieland
-          </span>
+          <Pill tone="neutral">
+            {linkedCount} van {sorted.length} aangeboden
+          </Pill>
         )}
       </h2>
-      <p className="text-xs text-muted-foreground mb-3">
+      <p className="mb-3 text-sm text-muted-foreground">
         {onOffer
           ? "Kies wat u via Bureau Vlieland aan groepen wilt aanbieden: als nieuwe activiteit, of gekoppeld aan een activiteit die u hier al heeft. Een gekoppelde activiteit is direct boekbaar in uw MAP-agenda en volgt elke nacht de foto, tekst en duur uit MAP; de prijs voor groepen bepaalt u samen met het bureau."
           : "Per activiteitstype staat of het als bouwsteen bij Bureau Vlieland is aangeboden. Koppelen kan de partner zelf in zijn portaal, of via de bouwsteen (MAP-activiteit kiezen)."}
@@ -197,21 +188,13 @@ export const MapOfferOverview = ({
                             {type.Name}
                           </span>
                           {linked ? (
-                            <Badge
-                              variant="secondary"
-                              className="gap-1 font-normal text-xs"
-                            >
-                              <Link2 className="h-3 w-3" />
-                              Aangeboden
-                              {linked.status && STATUS_LABEL[linked.status]
-                                ? ` · ${STATUS_LABEL[linked.status]}`
-                                : ""}
-                            </Badge>
+                            <Pill tone={partnerBlockStatus(linked.status).tone} size="sm" title={partnerBlockStatus(linked.status).hint}>
+                              Aangeboden · {partnerBlockStatus(linked.status).label.toLowerCase()}
+                            </Pill>
                           ) : (
-                            <Badge className="bg-accent text-accent-foreground gap-1 font-normal text-xs">
-                              <Sparkles className="h-3 w-3" />
+                            <Pill tone="brand" size="sm">
                               Nog niet aangeboden
-                            </Badge>
+                            </Pill>
                           )}
                         </div>
                         <div className="flex items-center gap-x-3 text-xs text-muted-foreground mt-0.5 min-w-0">

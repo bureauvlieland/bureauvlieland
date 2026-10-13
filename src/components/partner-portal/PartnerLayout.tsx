@@ -1,215 +1,128 @@
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  SidebarProvider, 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
-  SidebarGroupContent, 
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarMenu, 
-  SidebarMenuItem, 
+  SidebarMenu,
+  SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
-  useSidebar
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { 
-  LayoutDashboard, 
-  Settings, 
-  LogOut, 
-  Building2,
-  Menu,
-  ShieldCheck,
-  Receipt,
-  Package,
-  BookOpen,
-  BedDouble,
-  UtensilsCrossed,
-  DoorOpen,
-  CalendarDays,
-  UserCircle,
-  ClipboardList,
-  ScrollText,
-} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { LoadingState, Pill } from "@/components/system";
+import { LogOut, Building2, Menu, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo.png";
 import { ChatWidget } from "@/components/chat/ChatWidget";
-import { Progress } from "@/components/ui/progress";
 import { usePartnerCompleteness } from "@/hooks/usePartnerCompleteness";
+import { partnerMenu, profileStrengthTone } from "@/lib/partnerPortalView";
+import { PartnerPortalProvider } from "./PartnerPortalContext";
+import { impersonateSuffix, type PartnerInfo } from "@/lib/partnerPortalContext";
 
-interface PartnerLayoutProps {
-  children: ReactNode;
-}
+export { type PartnerInfo };
 
-interface PartnerInfo {
-  id: string;
-  name: string;
-  email: string;
-  partner_token: string;
-  commission_percentage: number;
-  partner_type: string | null;
-  map_tenant_slug: string | null;
-}
+const PARTNER_COLUMNS = "id, name, email, contact_email, partner_token, commission_percentage, accommodation_commission_percentage, partner_type, map_tenant_slug, accommodation_description";
 
-const PartnerProfileStrength = ({ partnerId, urlSuffix }: { partnerId: string; urlSuffix: string }) => {
+const PartnerProfileStrength = ({ score, urlSuffix }: { score: number; urlSuffix: string }) => (
+  <Link to={`/partner/profiel${urlSuffix}`} className="block">
+    <div className="mb-1 flex items-center justify-between text-xs">
+      <span className="text-muted-foreground">Profiel</span>
+      <Pill tone={profileStrengthTone(score)} size="sm">
+        {score}% compleet
+      </Pill>
+    </div>
+    <Progress value={score} className="h-1.5" />
+    {score < 80 && <p className="mt-1 text-xs text-muted-foreground">Vul uw profiel aan voor meer boekingen.</p>}
+  </Link>
+);
+
+/** Haalt de profielsterkte op; alleen in het echte portaal, niet op de referentiepagina. */
+const LiveProfileStrength = ({ partnerId, urlSuffix }: { partnerId: string; urlSuffix: string }) => {
   const { completeness } = usePartnerCompleteness({ partnerId });
   if (!completeness) return null;
-  const tone =
-    completeness.score >= 80
-      ? "text-emerald-700"
-      : completeness.score >= 50
-        ? "text-amber-700"
-        : "text-rose-700";
-  return (
-    <Link to={`/partner/profiel${urlSuffix}`} className="block group">
-      <div className="flex items-center justify-between text-xs mb-1">
-        <span className="text-muted-foreground">Profielsterkte</span>
-        <span className={`font-semibold ${tone}`}>{completeness.score}%</span>
-      </div>
-      <Progress value={completeness.score} className="h-1.5" />
-      {completeness.score < 80 && (
-        <p className="text-[10px] text-muted-foreground mt-1 group-hover:text-primary">
-          Tip: vul profiel verder aan voor meer boekingen →
-        </p>
-      )}
-    </Link>
-  );
+  return <PartnerProfileStrength score={completeness.score} urlSuffix={urlSuffix} />;
 };
 
-const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: PartnerInfo; onLogout: () => void; isImpersonating?: boolean }) => {
+interface PartnerSidebarProps {
+  partner: PartnerInfo;
+  urlSuffix: string;
+  isImpersonating: boolean;
+  onLogout: () => void;
+  profileStrength?: ReactNode;
+}
+
+const PartnerSidebar = ({ partner, urlSuffix, isImpersonating, onLogout, profileStrength }: PartnerSidebarProps) => {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-
-  // Preserve impersonate param in URLs
-  const impersonateParam = searchParams.get("impersonate");
-  const urlSuffix = impersonateParam ? `?impersonate=${impersonateParam}` : "";
-
-  // Check if partner handles activities or accommodation
-  const isActivityPartner = partner.partner_type === "activity_provider" || partner.partner_type === "both" || !partner.partner_type;
-  const isAccommodationPartner = partner.partner_type === "accommodation" || partner.partner_type === "both";
-  const hasMapIntegration = !!partner.map_tenant_slug;
-
-  type MenuItem = { title: string; url: string; icon: typeof LayoutDashboard };
-
-  const werkItems: MenuItem[] = [
-    { title: "Werkbank", url: `/partner/dashboard${urlSuffix}`, icon: ClipboardList },
-    { title: "Projecten", url: `/partner/dashboard${impersonateParam ? `?impersonate=${impersonateParam}&tab=projecten` : "?tab=projecten"}`, icon: LayoutDashboard },
-    ...(hasMapIntegration ? [{ title: "Planning", url: `/partner/planning${urlSuffix}`, icon: CalendarDays }] : []),
-    ...(isActivityPartner ? [{ title: "Activiteiten", url: `/partner/aanbod${urlSuffix}`, icon: Package }] : []),
-    ...(isAccommodationPartner ? [
-      { title: "Logies", url: `/partner/logies${urlSuffix}`, icon: BedDouble },
-      { title: "Kamersoorten", url: `/partner/kamersoorten${urlSuffix}`, icon: DoorOpen },
-      { title: "Logies-extra's", url: `/partner/extras${urlSuffix}`, icon: UtensilsCrossed },
-    ] : []),
-  ];
-
-  const adminItems: MenuItem[] = [
-    { title: "Facturatie", url: `/partner/facturatie${urlSuffix}`, icon: Receipt },
-  ];
-
-  const accountItems: MenuItem[] = [
-    { title: "Mijn profiel", url: `/partner/profiel${urlSuffix}`, icon: UserCircle },
-    { title: "Instellingen", url: `/partner/instellingen${urlSuffix}`, icon: Settings },
-    { title: "Handleidingen", url: `/partner/handleidingen${urlSuffix}`, icon: BookOpen },
-    { title: "Afspraken", url: `/partner/afspraken${urlSuffix}`, icon: ScrollText },
-  ];
-
-  // Pad + optionele tab-param check zodat Werkbank/Projecten apart actief zijn.
-  const currentTab = searchParams.get("tab");
-  const isActive = (url: string) => {
-    const [path, query] = url.split("?");
-    if (location.pathname !== path) return false;
-    if (path === "/partner/dashboard") {
-      const target = new URLSearchParams(query ?? "").get("tab");
-      const active = currentTab ?? "werkbank";
-      return (target ?? "werkbank") === active;
-    }
-    return true;
-  };
-
-  const renderGroup = (label: string, items: MenuItem[]) => (
-    <SidebarGroup>
-      {!collapsed && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive(item.url)}
-                tooltip={item.title}
-              >
-                <Link to={item.url}>
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
+  const groups = partnerMenu(partner, urlSuffix);
+  const isActive = (url: string) => location.pathname === url.split("?")[0];
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <div className="p-4 border-b">
-        <Link to={`/partner/dashboard${urlSuffix}`} className="flex items-center gap-2">
+      <div className="border-b p-4">
+        <Link to={`/partner/werkbank${urlSuffix}`} className="flex items-center gap-2">
           {!collapsed && <img src={logoImage} alt="Bureau Vlieland" className="h-8" />}
           {collapsed && (
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-soft">
               <Building2 className="h-4 w-4 text-primary" />
             </div>
           )}
         </Link>
       </div>
-
-      <SidebarContent className="flex flex-col h-[calc(100vh-65px)]">
-        {/* Admin impersonation banner */}
+      <SidebarContent className="flex h-[calc(100vh-65px)] flex-col">
         {isImpersonating && !collapsed && (
-          <div className="p-3 bg-warning-soft border-b border-warning/30">
+          <div className="border-b border-warning/30 bg-warning-soft p-3">
             <div className="flex items-center gap-2 text-warning-foreground">
               <ShieldCheck className="h-4 w-4 text-warning" />
               <span className="text-xs font-medium">Admin weergave</span>
             </div>
           </div>
         )}
-
-        {/* Partner info */}
         {!collapsed && (
-          <div className="p-4 border-b space-y-3">
+          <div className="space-y-3 border-b p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft">
                 <Building2 className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="font-medium truncate">{partner.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{partner.email}</p>
+                <p className="truncate font-medium">{partner.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{partner.email}</p>
               </div>
             </div>
-            <PartnerProfileStrength partnerId={partner.id} urlSuffix={urlSuffix} />
+            {profileStrength}
           </div>
         )}
-
         <div className="flex-1">
-          {renderGroup("Werk", werkItems)}
-          {renderGroup("Administratie", adminItems)}
-          {renderGroup("Account", accountItems)}
+          {groups.map((group) => (
+            <SidebarGroup key={group.label}>
+              {!collapsed && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                        <Link to={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </div>
-
-        {/* Logout/Back button at bottom */}
-        <div className="p-4 border-t mt-auto">
-          <Button 
-            onClick={onLogout} 
-            variant="ghost" 
-            className={collapsed ? "w-full p-2" : "w-full justify-start"}
-          >
+        <div className="mt-auto border-t p-4">
+          <Button onClick={onLogout} variant="ghost" className={collapsed ? "w-full p-2" : "w-full justify-start"}>
             <LogOut className="h-4 w-4" />
             {!collapsed && <span className="ml-2">{isImpersonating ? "Terug naar admin" : "Uitloggen"}</span>}
           </Button>
@@ -219,6 +132,53 @@ const PartnerSidebar = ({ partner, onLogout, isImpersonating }: { partner: Partn
   );
 };
 
+interface PartnerShellProps {
+  partner: PartnerInfo;
+  urlSuffix: string;
+  isImpersonating: boolean;
+  onLogout: () => void;
+  profileStrength?: ReactNode;
+  children: ReactNode;
+}
+
+/**
+ * De schil van het partnerportaal zonder authenticatie: zijbalk, de
+ * kopbalk op een telefoon en de inhoud. `PartnerLayout` zet er de login
+ * omheen; de referentiepagina `/ontwerp/partnerportaal` gebruikt de schil
+ * direct met een verzonnen partner.
+ */
+export const PartnerShell = ({ partner, urlSuffix, isImpersonating, onLogout, profileStrength, children }: PartnerShellProps) => (
+  <SidebarProvider>
+    <div className="flex min-h-screen w-full">
+      <PartnerSidebar partner={partner} urlSuffix={urlSuffix} isImpersonating={isImpersonating} onLogout={onLogout} profileStrength={profileStrength} />
+      <div className="flex flex-1 flex-col">
+        {/* Kopbalk alleen op een telefoon: vanaf md staat de zijbalk zelf in beeld (use-mobile, 768px). */}
+        <header className="flex h-14 items-center border-b px-4 md:hidden">
+          {isImpersonating && (
+            <Pill tone="warning" size="sm" className="mr-2">
+              <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only sm:not-sr-only">Admin</span>
+            </Pill>
+          )}
+          <SidebarTrigger>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SidebarTrigger>
+          <Link to={`/partner/werkbank${urlSuffix}`} className="ml-2">
+            <img src={logoImage} alt="Bureau Vlieland" className="h-6" />
+          </Link>
+        </header>
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    </div>
+  </SidebarProvider>
+);
+
+interface PartnerLayoutProps {
+  children: ReactNode;
+}
+
 export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -227,31 +187,20 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const impersonate = searchParams.get("impersonate");
+  const urlSuffix = impersonateSuffix(impersonate);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         navigate("/partner/login");
         return;
       }
-
-      // Check if admin is impersonating a partner
-      const impersonatePartnerId = searchParams.get("impersonate");
-      
-      if (impersonatePartnerId) {
-        // Verify user is an admin
+      if (impersonate) {
         const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        
         if (isAdmin) {
-          // Fetch the impersonated partner
-          const { data: partnerData, error } = await supabase
-            .from("partners")
-            .select("id, name, email, partner_token, commission_percentage, partner_type, map_tenant_slug")
-            .eq("id", impersonatePartnerId)
-            .single();
-
+          const { data: partnerData, error } = await supabase.from("partners").select(PARTNER_COLUMNS).eq("id", impersonate).single();
           if (error || !partnerData) {
             toast({
               title: "Partner niet gevonden",
@@ -261,120 +210,71 @@ export const PartnerLayout = ({ children }: PartnerLayoutProps) => {
             navigate("/admin/partners");
             return;
           }
-
           setPartner(partnerData);
           setIsImpersonating(true);
           setIsLoading(false);
           return;
         }
       }
-
-      // Regular partner login flow
       const { data: partnerData, error } = await supabase
         .from("partners")
-        .select("id, name, email, partner_token, commission_percentage, partner_type, map_tenant_slug")
+        .select(PARTNER_COLUMNS)
         .eq("auth_user_id", session.user.id)
         .eq("is_active", true)
         .single();
-
       if (error || !partnerData) {
         navigate("/partner/login");
         return;
       }
-
       setPartner(partnerData);
       setIsLoading(false);
     };
-
     checkAuth();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        navigate("/partner/login");
-      }
+      if (event === "SIGNED_OUT") navigate("/partner/login");
     });
-
     return () => subscription.unsubscribe();
-  }, [navigate, searchParams, toast]);
+  }, [navigate, impersonate, toast]);
 
   const handleLogout = async () => {
     if (isImpersonating) {
-      // Admin impersonating - just go back to admin
       navigate("/admin/partners");
       return;
     }
-    
     await supabase.auth.signOut();
-    toast({
-      title: "Uitgelogd",
-      description: "U bent succesvol uitgelogd.",
-    });
+    toast({ title: "Uitgelogd", description: "U bent uitgelogd." });
     navigate("/partner/login");
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="space-y-4 w-full max-w-md px-4">
-          <Skeleton className="h-8 w-48 mx-auto" />
-          <Skeleton className="h-32 w-full" />
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <LoadingState label="Partnerportaal laden…" />
       </div>
     );
   }
+  if (!partner) return null;
 
-  if (!partner) {
-    return null;
-  }
+  const accommodationRequestId = location.pathname.match(/^\/partner\/logies\/([^/]+)/)?.[1];
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <PartnerSidebar partner={partner} onLogout={handleLogout} isImpersonating={isImpersonating} />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Mobile header */}
-          {/* Kopbalk alleen op een telefoon: vanaf md staat de zijbalk zelf in beeld (use-mobile, 768px). */}
-          <header className="h-14 border-b flex items-center px-4 md:hidden">
-            {isImpersonating && (
-              <Badge variant="outline" className="mr-2 bg-warning-soft text-warning border-warning/30">
-                <ShieldCheck className="h-3 w-3 sm:mr-1" />
-                <span className="hidden sm:inline">Admin</span>
-              </Badge>
-            )}
-            <SidebarTrigger>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SidebarTrigger>
-            <Link to={`/partner/dashboard${searchParams.get("impersonate") ? `?impersonate=${searchParams.get("impersonate")}` : ""}`} className="ml-2">
-              <img src={logoImage} alt="Bureau Vlieland" className="h-6" />
-            </Link>
-          </header>
-
-          {/* Main content */}
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </div>
-
-        {/* Chat Widget */}
+    <PartnerPortalProvider value={{ partner, isImpersonating, urlSuffix }}>
+      <PartnerShell
+        partner={partner}
+        urlSuffix={urlSuffix}
+        isImpersonating={isImpersonating}
+        onLogout={handleLogout}
+        profileStrength={<LiveProfileStrength partnerId={partner.id} urlSuffix={urlSuffix} />}
+      >
+        {children}
         <ChatWidget
           source="partner_portal"
           sourcePartnerId={partner.id}
           visitorName={partner.name}
           visitorEmail={partner.email}
-          accommodationRequestId={
-            (() => {
-              const m = location.pathname.match(/^\/partner\/logies\/([^/]+)/);
-              return m ? m[1] : undefined;
-            })()
-          }
+          accommodationRequestId={accommodationRequestId}
         />
-
-      </div>
-    </SidebarProvider>
+      </PartnerShell>
+    </PartnerPortalProvider>
   );
 };
-
-export { type PartnerInfo };

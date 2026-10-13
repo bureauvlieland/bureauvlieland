@@ -128,7 +128,7 @@ export const PartnerCustomerMessagesPanel = ({
             </div>
           ) : messages.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nog geen berichten met deze klant. Stuur een bericht — dat komt direct bij de klant aan en wordt hier ook gelogd.
+              Nog geen berichten met deze klant. Een bericht komt direct bij de klant aan en blijft hier bewaard.
             </p>
           ) : (
             messages.map((m) => {

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { Plus, Receipt, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -83,9 +83,9 @@ export function PartnerPostChargesSection({ partnerId, requestId, accommodationR
   const handleDelete = async (id: string) => {
     if (!confirm("Deze regel verwijderen?")) return;
     const { error } = await supabase.from("partner_post_charges" as never).delete().eq("id", id);
-    if (error) toast.error("Verwijderen mislukt");
+    if (error) toast({ title: "Verwijderen mislukt", variant: "destructive" });
     else {
-      toast.success("Verwijderd");
+      toast({ title: "Verwijderd" });
       fetch();
     }
   };
@@ -191,9 +191,9 @@ function AddPostChargeDialog({
   }, [open]);
 
   const handleSave = async () => {
-    if (!description.trim()) return toast.error("Omschrijving is verplicht");
+    if (!description.trim()) return toast({ title: "Omschrijving is verplicht", variant: "destructive" });
     const parsed = parseFloat(amount.replace(",", "."));
-    if (isNaN(parsed) || parsed <= 0) return toast.error("Voer een geldig bedrag in");
+    if (isNaN(parsed) || parsed <= 0) return toast({ title: "Voer een geldig bedrag in", variant: "destructive" });
 
     setSaving(true);
     const { error } = await supabase.from("partner_post_charges" as never).insert({
@@ -210,10 +210,10 @@ function AddPostChargeDialog({
     setSaving(false);
     if (error) {
       reportError(error, { where: "PartnerPostChargesSection" });
-      toast.error("Opslaan mislukt");
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
       return;
     }
-    toast.success("Ingediend bij Bureau Vlieland");
+    toast({ title: "Ingediend bij Bureau Vlieland" });
     onOpenChange(false);
     onCreated();
   };

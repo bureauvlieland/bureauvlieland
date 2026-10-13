@@ -67,12 +67,14 @@ const BookingStatus = lazy(() => import("./pages/BookingStatus"));
 const Sitemap = lazy(() => import("./pages/Sitemap"));
 const Ontwerp = lazy(() => import("./pages/Ontwerp"));
 const OntwerpKlantportaal = lazy(() => import("./pages/OntwerpKlantportaal"));
+const OntwerpPartnerportaal = lazy(() => import("./pages/OntwerpPartnerportaal"));
 const ConceptRecover = lazy(() => import("./pages/ConceptRecover"));
 
 // Lazy-loaded partner pages
 const PartnerPortal = lazy(() => import("./pages/PartnerPortal"));
 const PartnerLogin = lazy(() => import("./pages/PartnerLogin"));
 const PartnerDashboard = lazy(() => import("./pages/PartnerDashboard"));
+const PartnerDashboardRedirect = lazy(() => import("./pages/PartnerDashboard").then((m) => ({ default: m.PartnerDashboardRedirect })));
 const PartnerFinance = lazy(() => import("./pages/PartnerFinance"));
 const PartnerBlocks = lazy(() => import("./pages/PartnerBlocks"));
 const PartnerSettings = lazy(() => import("./pages/PartnerSettings"));
@@ -253,7 +255,9 @@ const App = () => {
             <Route path="/partner" element={<Navigate to="/partner/login" replace />} />
             <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/:token" element={<PartnerPortal />} />
-            <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/dashboard" element={<PartnerDashboardRedirect />} />
+            <Route path="/partner/werkbank" element={<PartnerDashboard tab="werkbank" />} />
+            <Route path="/partner/projecten" element={<PartnerDashboard tab="projecten" />} />
             <Route path="/partner/project/:id" element={<PartnerProject mode="activities" />} />
             <Route path="/partner/logies/:id" element={<PartnerProject mode="accommodation" />} />
             <Route path="/partner/profiel" element={<PartnerProfile />} />
@@ -324,6 +328,7 @@ const App = () => {
             {/* Referentiepagina van het ontwerpsysteem, alleen buiten productie (previews en lokaal). */}
             {import.meta.env.MODE !== "production" && <Route path="/ontwerp" element={<Ontwerp />} />}
             {import.meta.env.MODE !== "production" && <Route path="/ontwerp/klantportaal" element={<OntwerpKlantportaal />} />}
+            {import.meta.env.MODE !== "production" && <Route path="/ontwerp/partnerportaal" element={<OntwerpPartnerportaal />} />}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

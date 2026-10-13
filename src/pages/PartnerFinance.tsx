@@ -1,84 +1,75 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Helmet } from "react-helmet";
+import { useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
+import { usePartnerPortal, usePartnerCommissionInvoices } from "@/hooks/usePartnerPortal";
 import { PartnerMonthlyRevenueChart } from "@/components/partner-portal/PartnerMonthlyRevenueChart";
 import { ExportInvoicesButton } from "@/components/partner-portal/ExportInvoicesButton";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InvoiceRegistrationDialog } from "@/components/partner-portal/InvoiceRegistrationDialog";
+import { EmptyState, FactList, Notice, Pill, PortalTabs, type PillTone, type PortalTab } from "@/components/system";
+import { InvoiceRegistrationDialog, type InvoiceTarget } from "@/components/partner-portal/InvoiceRegistrationDialog";
 import { RegisterCollectivePartnerInvoiceDialog, type CollectiveInvoiceSubmitPayload } from "@/components/partner-portal/RegisterCollectivePartnerInvoiceDialog";
 import { UploadInvoicePdfPartnerDialog, type UploadPdfTarget } from "@/components/partner-portal/UploadInvoicePdfPartnerDialog";
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { PartnerCommissionInvoiceList } from "@/components/partner-portal/PartnerCommissionInvoiceList";
-import {
-  summarizePartnerCommissionInvoices,
-  type PartnerCommissionInvoice,
-  type PartnerCommissionInvoicesResponse,
-} from "@/lib/partnerCommissionInvoices";
-import { toast } from "sonner";
-import { 
-  AlertCircle, 
-  TrendingUp, 
-  Clock, 
-  CheckCircle, 
-  Receipt, 
-  Calendar,
-  Building2,
-  FileText,
-  BedDouble,
-  Upload,
-  Mail,
-} from "lucide-react";
+import { summarizePartnerCommissionInvoices } from "@/lib/partnerCommissionInvoices";
+import { toast } from "@/hooks/use-toast";
+import { CheckCircle2, FileText, Mail, Receipt, Upload } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import type { PartnerItem, PartnerDashboardData, PartnerAccommodationQuote } from "@/types/partner";
-import { getItemLineTotal } from "@/lib/portalPricing";
+import type { PartnerItem, PartnerAccommodationQuote } from "@/types/partner";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { reportError } from "@/lib/errorReporting";
-import { canPartnerInvoiceItem, isPartnerInvoicingReleased } from "@/lib/partnerInvoicing";
+import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
+import { getPartnerBillableAmount, isPartnerEstimatedAmount } from "@/lib/partnerBillableAmount";
+import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { formatEuro } from "@/lib/formatEuro";
 
 /**
- * Bepaal het te-factureren bedrag voor een partner-item.
- * Valt terug op admin_price_override × pers × dagen wanneer de partner zelf nog
- * geen `quoted_price` heeft ingevuld maar de admin-inschatting bij bevestiging
- * is overgenomen. Sluit aan op de helper uit `portalPricing.ts` die zowel
- * klantportaal als admin-financiën gebruiken.
+ * Facturatie (partnerportaal fase 3): de cijfers als `FactList` "In het
+ * kort" naast de maandgrafiek, de drie tabbladen in de URL op `PortalTabs`,
+ * elke factuur als dezelfde kaart met `Pill`s, en één factuurdialoog voor
+ * onderdelen en logies. De jaarcijfers staan sinds fase 1 hier.
  */
-const getBillableAmount = (item: PartnerItem): number => {
-  const people = item.program_requests.number_of_people || 1;
-  const days = Math.max((item.program_requests.selected_dates || []).length, 1);
-  // getItemLineTotal is structureel compatibel (gebruikt alleen prijsvelden)
-  return getItemLineTotal(item as unknown as Parameters<typeof getItemLineTotal>[0], people, days) ?? 0;
-};
-const isEstimatedAmount = (item: PartnerItem): boolean =>
-  item.quoted_price == null && item.admin_price_override != null;
+type FinanceTab = "to-invoice" | "invoiced" | "commission";
 
-interface AccommodationQuoteWithInvoice extends PartnerAccommodationQuote {
-  invoiced_amount: number | null;
-  invoiced_number: string | null;
-  invoiced_date: string | null;
-  commission_percentage: number | null;
-  commission_amount: number | null;
-  commission_status: string | null;
-}
+const COMMISSION_PILL: Record<string, { label: string; tone: PillTone }> = {
+  pending: { label: "Commissie open", tone: "warning" },
+  invoiced: { label: "Commissie gefactureerd", tone: "info" },
+  paid: { label: "Commissie betaald", tone: "success" },
+};
+
+/** Dezelfde kaart voor een onderdeel en voor logies, te factureren of gefactureerd. */
+const InvoiceCard = ({ title, kind, meta, pills, amount, amountLabel, note, actions }: { title: string; kind: string; meta: string; pills?: ReactNode; amount: number | null; amountLabel: string; note?: ReactNode; actions?: ReactNode }) => (
+  <article className="rounded-lg border bg-card p-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <h3 className="font-medium">{title}</h3>
+          <Pill tone="neutral" size="sm">
+            {kind}
+          </Pill>
+          {pills}
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">{meta}</p>
+      </div>
+      <div className="flex items-center justify-between gap-3 sm:justify-end sm:text-right">
+        <div>
+          <p className="font-semibold tabular-nums">{formatEuro(amount)}</p>
+          <p className="text-xs text-muted-foreground">{amountLabel}</p>
+          {note}
+        </div>
+        {actions}
+      </div>
+    </div>
+  </article>
+);
 
 const PartnerFinanceContent = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<PartnerDashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [partnerToken, setPartnerToken] = useState<string | null>(null);
-  const [commissionInvoices, setCommissionInvoices] = useState<PartnerCommissionInvoice[]>([]);
-  const [selectedItem, setSelectedItem] = useState<PartnerItem | null>(null);
-  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const { data, partnerToken, isLoading, error, refetch, isDemo } = usePartnerPortal();
+  const { invoices: commissionInvoices, refetch: refetchCommissionInvoices } = usePartnerCommissionInvoices();
+  const [invoiceTarget, setInvoiceTarget] = useState<InvoiceTarget | null>(null);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<UploadPdfTarget | null>(null);
   const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
   const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
@@ -95,641 +86,315 @@ const PartnerFinanceContent = () => {
     iban: getSetting<string>("bureau_iban", ""),
   };
 
-  // Commissiefacturen van het bureau aan deze partner (met tijdelijke PDF-links).
-  const fetchCommissionInvoices = useCallback(async (token: string) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-commission-invoices?token=${token}`,
-        { method: "GET", headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } },
-      );
-      if (!response.ok) throw new Error(`Kon commissiefacturen niet laden (${response.status})`);
-      const body = (await response.json()) as PartnerCommissionInvoicesResponse;
-      setCommissionInvoices(body.invoices ?? []);
-    } catch (err) {
-      reportError(err, { where: "PartnerFinance: Error fetching commission invoices" });
-    }
-  }, []);
-
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/partner/login");
-        return;
-      }
-
-      // Check if admin is impersonating
-      const impersonatePartnerId = searchParams.get("impersonate");
-      let token: string | null = null;
-
-      if (impersonatePartnerId) {
-        const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-        
-        if (isAdmin) {
-          const { data: partner } = await supabase
-            .from("partners")
-            .select("partner_token")
-            .eq("id", impersonatePartnerId)
-            .single();
-
-          if (partner) {
-            token = partner.partner_token;
-          }
-        }
-      }
-
-      if (!token) {
-        const { data: partner, error: partnerError } = await supabase
-          .from("partners")
-          .select("*")
-          .eq("auth_user_id", session.user.id)
-          .eq("is_active", true)
-          .single();
-
-        if (partnerError || !partner) {
-          setError("Je account is niet gekoppeld aan een partner.");
-          setIsLoading(false);
-          return;
-        }
-
-        token = partner.partner_token;
-      }
-
-      setPartnerToken(token);
-
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${token}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Kon gegevens niet laden");
-        }
-
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      } catch (err) {
-        reportError(err, { where: "PartnerFinance: Error fetching dashboard" });
-        setError("Er is een fout opgetreden bij het laden van je gegevens.");
-      } finally {
-        setIsLoading(false);
-      }
-      void fetchCommissionInvoices(token);
-    };
-
-    fetchDashboard();
-  }, [navigate, searchParams, fetchCommissionInvoices]);
-
-  // Refetch function for after invoice registration
-  const refetchData = useCallback(async () => {
-    if (!partnerToken) return;
-    
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-partner-dashboard?token=${partnerToken}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      }
-    } catch (err) {
-      reportError(err, { where: "PartnerFinance: Error refetching dashboard" });
-    }
-    void fetchCommissionInvoices(partnerToken);
-  }, [partnerToken, fetchCommissionInvoices]);
-
-  // Invoice registration handler
-  const handleInvoiceRegister = async (
-    amount: number,
-    invoiceNumber: string,
-    date: string,
-    notes?: string
-  ): Promise<{ success: boolean; commission?: { percentage: number; amount: number } }> => {
-    if (!selectedItem || !partnerToken) {
-      return { success: false };
-    }
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            partnerToken,
-            itemId: selectedItem.id,
-            invoicedAmount: amount,
-            invoicedNumber: invoiceNumber,
-            invoicedDate: date,
-            notes,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Kon factuur niet registreren.");
-      }
-
-      const result = await response.json();
-      toast.success("Factuur succesvol geregistreerd");
-      setShowInvoiceDialog(false);
-      setSelectedItem(null);
-      await refetchData();
-      return { success: true, commission: result.commission };
-    } catch (err: any) {
-      reportError(err, { where: "PartnerFinance: Error registering invoice" });
-      toast.error(err?.message || "Er is een fout opgetreden bij het registreren van de factuur");
-      return { success: false };
-    }
-
+  // Na een registratie of upload: dashboard en commissiefacturen opnieuw.
+  const refetchData = async () => {
+    await Promise.all([refetch(), refetchCommissionInvoices()]);
   };
 
-  // Collective (verzamelfactuur) registration: multiple items, one PDF, one invoice nr.
-  const handleCollectiveInvoiceRegister = async (
-    payload: CollectiveInvoiceSubmitPayload
-  ): Promise<{ success: boolean }> => {
+  // Verzamelfactuur: meerdere onderdelen, één pdf, één factuurnummer.
+  const handleCollectiveInvoiceRegister = async (payload: CollectiveInvoiceSubmitPayload): Promise<{ success: boolean }> => {
     if (!partnerToken) return { success: false };
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            partnerToken,
-            items: payload.items,
-            invoicedNumber: payload.invoicedNumber,
-            invoicedDate: payload.invoicedDate,
-            notes: payload.notes,
-            filePath: payload.filePath,
-            viaEmail: payload.viaEmail,
-          }),
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        body: JSON.stringify({
+          partnerToken,
+          items: payload.items,
+          invoicedNumber: payload.invoicedNumber,
+          invoicedDate: payload.invoicedDate,
+          notes: payload.notes,
+          filePath: payload.filePath,
+          viaEmail: payload.viaEmail,
+        }),
+      });
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || "Kon factuur niet registreren.");
+        const err = await response.json().catch(() => ({}) as { error?: string });
+        throw new Error(err.error || "Kon de factuur niet registreren.");
       }
-      toast.success(
-        payload.viaEmail
-          ? "Bedankt — we koppelen je mail zodra hij binnen is"
-          : payload.items.length > 1
-            ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd`
-            : "Factuur geregistreerd"
-      );
+      toast({ title: payload.viaEmail ? "Bedankt, we koppelen uw mail zodra hij binnen is" : payload.items.length > 1 ? `Verzamelfactuur met ${payload.items.length} onderdelen geregistreerd` : "Factuur geregistreerd" });
       setCollectiveRequestId(null);
       setCollectiveInitialIds([]);
       await refetchData();
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
       reportError(err, { where: "PartnerFinance: Error registering collective invoice" });
-      toast.error(err?.message || "Er is een fout opgetreden bij het registreren van de factuur");
+      toast({ title: err instanceof Error && err.message ? err.message : "Kon de factuur niet registreren.", variant: "destructive" });
       return { success: false };
     }
-
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
-        <Skeleton className="h-64" />
-      </div>
-    );
+  if (isLoading || error || !data) {
+    return <PartnerPage title="Facturatie" icon={<Receipt />} loading={isLoading} error={error ?? "Er is een fout opgetreden."} />;
   }
 
-  if (error || !data) {
-    return (
-      <div className="p-6 text-center py-16">
-        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Fout</h1>
-        <p className="text-muted-foreground">{error || "Er is een fout opgetreden."}</p>
-      </div>
-    );
-  }
+  const activityCommission = data.partner.commission_percentage;
+  const accommodationCommission = data.partner.accommodation_commission_percentage ?? 10;
 
-  // Helper function to calculate expected commission
-  const calculateExpectedActivityCommission = (quotedPrice: number, itemCommissionPercentage?: number | null) => {
-    const vatRate = 21; // Activities use 21% VAT
-    const amountExclVat = quotedPrice / (1 + vatRate / 100);
-    const commissionRate = itemCommissionPercentage ?? data.partner.commission_percentage;
-    return amountExclVat * (commissionRate / 100);
+  const expectedActivityCommission = (amountInclVat: number, itemCommissionPercentage?: number | null) => (amountInclVat / 1.21) * ((itemCommissionPercentage ?? activityCommission) / 100);
+  const expectedAccommodationCommission = (q: PartnerAccommodationQuote) => {
+    const vat = q.vat_rate ?? 9;
+    const excl = (q.price_includes_vat ?? true) ? q.price_total / (1 + vat / 100) : q.price_total;
+    return excl * ((q.commission_percentage ?? accommodationCommission) / 100);
   };
 
-  const calculateExpectedAccommodationCommission = (
-    priceTotal: number, 
-    priceIncludesVat: boolean | null, 
-    vatRate: number | null,
-    quoteCommissionPercentage?: number | null
-  ) => {
-    const vat = vatRate ?? 9; // Accommodations use 9% VAT by default
-    const amountExclVat = (priceIncludesVat ?? true) 
-      ? priceTotal / (1 + vat / 100)
-      : priceTotal;
-    const commissionRate = quoteCommissionPercentage ?? data.partner.accommodation_commission_percentage ?? 10;
-    return amountExclVat * (commissionRate / 100);
-  };
-
-  // Calculate financial metrics for activities
   const invoicedItems = data.items.filter((i) => i.invoiced_number !== null);
-  // Show both "accepted" and "executed" items as "to be invoiced" once customer has accepted terms
-  // Also include "confirmed" items where customer has accepted (effectiveStatus = accepted)
   const toBeInvoicedItems = data.items.filter((i) => canPartnerInvoiceItem(i, i.program_requests));
-  
-  // Calculate financial metrics for accommodations
-  const accommodationQuotes = (data.accommodationQuotes || []) as AccommodationQuoteWithInvoice[];
+  const accommodationQuotes = data.accommodationQuotes || [];
   const invoicedAccommodations = accommodationQuotes.filter((q) => q.invoiced_number !== null);
-  const toBeInvoicedAccommodations = accommodationQuotes.filter(
-    (q) => q.status === "selected" && !q.invoiced_number
-  );
+  const toBeInvoicedAccommodations = accommodationQuotes.filter((q) => q.status === "selected" && !q.invoiced_number);
 
-  // Combined totals
-  const totalInvoiced = 
-    invoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0) +
-    invoicedAccommodations.reduce((sum, q) => sum + (q.invoiced_amount || 0), 0);
-  
-  const totalToBeInvoiced = 
-    toBeInvoicedItems.reduce((sum, i) => sum + getBillableAmount(i), 0) +
-    toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
-  
-  // Commissie: wat het bureau werkelijk factureerde (commissiefacturen), niet
-  // het snapshot op de onderdelen. Open en betaald zijn incl. btw, zoals de
-  // partner ze betaalt; gefactureerd is ex btw, zoals op de factuur.
+  const totalInvoiced = invoicedItems.reduce((sum, i) => sum + (i.invoiced_amount || 0), 0) + invoicedAccommodations.reduce((sum, q) => sum + (q.invoiced_amount || 0), 0);
+  const totalToBeInvoiced = toBeInvoicedItems.reduce((sum, i) => sum + getPartnerBillableAmount(i), 0) + toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
+  // Commissie: wat het bureau werkelijk factureerde (commissiefacturen), niet het snapshot op de onderdelen.
   const commissionTotals = summarizePartnerCommissionInvoices(commissionInvoices);
-
-  // Calculate expected commission for items to be invoiced
-  const expectedActivityCommission = toBeInvoicedItems.reduce((sum, i) => {
-    const amount = getBillableAmount(i);
-    if (!amount) return sum;
-    return sum + calculateExpectedActivityCommission(amount, i.commission_percentage);
-  }, 0);
-
-  const expectedAccommodationCommission = toBeInvoicedAccommodations.reduce((sum, q) => {
-    if (!q.price_total) return sum;
-    return sum + calculateExpectedAccommodationCommission(q.price_total, q.price_includes_vat, q.vat_rate, q.commission_percentage);
-  }, 0);
-
-  const totalExpectedCommission = expectedActivityCommission + expectedAccommodationCommission;
+  const totalExpectedCommission =
+    toBeInvoicedItems.reduce((sum, i) => sum + (getPartnerBillableAmount(i) ? expectedActivityCommission(getPartnerBillableAmount(i), i.commission_percentage) : 0), 0) +
+    toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total ? expectedAccommodationCommission(q) : 0), 0);
 
   const toBeInvoicedCount = toBeInvoicedItems.length + toBeInvoicedAccommodations.length;
   const invoicedCount = invoicedItems.length + invoicedAccommodations.length;
+  const missingPdf = invoicedItems.filter((i) => !i.invoiced_file_path).length + invoicedAccommodations.filter((q) => !q.invoiced_file_path).length;
+  const commissionLabel = data.partner.accommodation_commission_percentage ? `${activityCommission}% op onderdelen, ${accommodationCommission}% op logies` : `${activityCommission}%`;
 
-  // Determine commission percentage display
-  const commissionPercentage = data.partner.accommodation_commission_percentage 
-    ? `${data.partner.commission_percentage}% / ${data.partner.accommodation_commission_percentage}%`
-    : `${data.partner.commission_percentage}%`;
+  // Jaarcijfers (sinds fase 1 hier, niet meer op de werkbank).
+  const year = new Date().getFullYear();
+  const inYear = (date: string | null) => !!date && new Date(date).getFullYear() === year;
+  const ytdRevenue = invoicedItems.filter((i) => inYear(i.invoiced_date)).reduce((s, i) => s + (i.invoiced_amount || 0), 0) + invoicedAccommodations.filter((q) => inYear(q.invoiced_date)).reduce((s, q) => s + (q.invoiced_amount || 0), 0);
+  const openCommission = data.openCommissionInvoices;
 
-  // De tab staat in de URL (?tab=to-invoice|invoiced|commission), zodat een
-  // link als "Ga naar facturen" op het juiste tabblad uitkomt.
+  // De tab staat in de URL (?tab=to-invoice|invoiced|commission), zodat "Ga naar facturen" op het juiste tabblad uitkomt.
   const tabParam = searchParams.get("tab");
-  const activeTab = tabParam === "invoiced" || tabParam === "commission" ? tabParam : "to-invoice";
+  const activeTab: FinanceTab = tabParam === "invoiced" || tabParam === "commission" ? tabParam : "to-invoice";
+  const setTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "to-invoice") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
+  const tabs: PortalTab[] = [
+    { key: "to-invoice", label: "Nog te factureren", badge: toBeInvoicedCount > 0 ? { label: String(toBeInvoicedCount), tone: "warning" } : null },
+    { key: "invoiced", label: "Gefactureerd", badge: invoicedCount > 0 ? { label: String(invoicedCount), tone: "neutral" } : null },
+    { key: "commission", label: "Commissiefacturen", badge: commissionTotals.count > 0 ? { label: String(commissionTotals.count), tone: openCommission?.count ? "warning" : "neutral" } : null },
+  ];
+
+  const parts = [toBeInvoicedItems.length > 0 ? `${toBeInvoicedItems.length} ${toBeInvoicedItems.length === 1 ? "onderdeel" : "onderdelen"}` : null, toBeInvoicedAccommodations.length > 0 ? `${toBeInvoicedAccommodations.length} logies` : null].filter(Boolean);
+  const facts = [
+    { label: "Gefactureerd", value: `${formatEuro(totalInvoiced)}${invoicedCount > 0 ? ` (${invoicedCount} ${invoicedCount === 1 ? "factuur" : "facturen"})` : ""}` },
+    { label: "Nog te factureren", value: toBeInvoicedCount > 0 ? `${formatEuro(totalToBeInvoiced)} (${parts.join(", ")})` : "Niets" },
+    { label: "Commissie", value: `${commissionLabel}: ${formatEuro(commissionTotals.invoiced)} gefactureerd, ${formatEuro(commissionTotals.open)} open, ${formatEuro(commissionTotals.paid)} betaald` },
+    ...(totalExpectedCommission > 0 ? [{ label: "Verwachte commissie", value: `${formatEuro(totalExpectedCommission)} over wat u nog factureert` }] : []),
+    { label: `Omzet ${year}`, value: formatEuro(ytdRevenue) },
+    ...(openCommission?.count ? [{ label: "Open commissiefactuur", value: `${formatEuro(openCommission.amountInclVat)} (${openCommission.count === 1 ? "1 factuur" : `${openCommission.count} facturen`})` }] : []),
+  ];
+
+  const projectGroups = Object.entries(
+    toBeInvoicedItems.reduce<Record<string, PartnerItem[]>>((acc, it) => {
+      (acc[it.request_id] ||= []).push(it);
+      return acc;
+    }, {}),
+  );
+
+  const openCollective = (requestId: string, items: PartnerItem[], mode: "upload" | "email") => {
+    setCollectiveMode(mode);
+    setCollectiveRequestId(requestId);
+    setCollectiveInitialIds(items.map((i) => i.id));
+  };
+
+  const accommodationTarget = (q: PartnerAccommodationQuote): InvoiceTarget => ({
+    kind: "accommodation",
+    quoteId: q.id,
+    partnerId: q.partner_id,
+    requestId: q.request_id,
+    accommodationName: q.accommodation_name,
+    customerLabel: q.accommodation_requests.customer_company || q.accommodation_requests.customer_name,
+    stayLabel: `${format(parseISO(q.accommodation_requests.arrival_date), "d MMM", { locale: nl })} tot ${format(parseISO(q.accommodation_requests.departure_date), "d MMM yyyy", { locale: nl })}`,
+    priceTotal: q.price_total,
+    priceIncludesVat: q.price_includes_vat ?? true,
+    vatRate: Number(q.vat_rate ?? 9),
+  });
+
+  const pdfButton = (onClick: () => void) => (
+    <Button size="sm" variant="outline" onClick={onClick} disabled={isDemo}>
+      <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
+      Pdf toevoegen
+    </Button>
+  );
+  const commissionPill = (status: string | null) => (status && COMMISSION_PILL[status] ? <Pill tone={COMMISSION_PILL[status].tone} size="sm">{COMMISSION_PILL[status].label}</Pill> : null);
+  const missingPdfPill = <Pill tone="danger" size="sm" title="Niet in behandeling: voeg de pdf toe">Pdf ontbreekt</Pill>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Facturatie Overzicht</h1>
+    <PartnerPage title="Facturatie" icon={<Receipt />} description="Uw facturen aan Bureau Vlieland en de commissiefacturen van het bureau aan u." status={missingPdf > 0 ? { label: missingPdf === 1 ? "1 pdf ontbreekt" : `${missingPdf} pdf's ontbreken`, tone: "danger" } : null}>
+      {missingPdf > 0 && <MissingPdfBanner count={missingPdf} showCta={false} />}
 
-      {/* Banner voor ontbrekende PDF's */}
-      {(() => {
-        const missing =
-          invoicedItems.filter((i) => !i.invoiced_file_path).length +
-          invoicedAccommodations.filter((q) => !q.invoiced_file_path).length;
-        return missing > 0 ? (
-          <div className="mb-6">
-            <MissingPdfBanner count={missing} showCta={false} />
-          </div>
-        ) : null;
-      })()}
-
-
-      {/* Financial Summary Cards */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Totaal gefactureerd</p>
-                <p className="text-2xl font-bold">{formatEuro(totalInvoiced)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Nog te factureren</p>
-                <p className="text-2xl font-bold">{formatEuro(totalToBeInvoiced)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {toBeInvoicedItems.length > 0 && `${toBeInvoicedItems.length} activiteit${toBeInvoicedItems.length !== 1 ? "en" : ""}`}
-                  {toBeInvoicedItems.length > 0 && toBeInvoicedAccommodations.length > 0 && " • "}
-                  {toBeInvoicedAccommodations.length > 0 && `${toBeInvoicedAccommodations.length} logies`}
-                  {toBeInvoicedCount === 0 && "0 items"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                <Receipt className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Commissie gefactureerd ({commissionPercentage})</p>
-                <p className="text-2xl font-bold">{formatEuro(commissionTotals.invoiced)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatEuro(commissionTotals.open)} open • {formatEuro(commissionTotals.paid)} betaald
-                  {totalExpectedCommission > 0 && (
-                    <span className="text-amber-600"> • Verwacht: {formatEuro(totalExpectedCommission)}</span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <PartnerMonthlyRevenueChart items={data.items} accommodationQuotes={accommodationQuotes} />
+        <FactList title="In het kort" items={facts} />
       </div>
 
-      {/* Monthly revenue chart */}
-      <PartnerMonthlyRevenueChart 
-        items={data.items} 
-        accommodationQuotes={accommodationQuotes}
-      />
+      <PortalTabs tabs={tabs} current={activeTab} onChange={setTab} label="Facturatie" embedded />
 
-      {/* Tabs for invoice status */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => {
-          const next = new URLSearchParams(searchParams);
-          next.set("tab", v);
-          setSearchParams(next, { replace: true });
-        }}
-        className="mt-6"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="to-invoice" className="flex-1 sm:flex-none">
-              Nog te factureren
-              {toBeInvoicedCount > 0 && (
-                <Badge variant="secondary" className="ml-2">{toBeInvoicedCount}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="invoiced" className="flex-1 sm:flex-none">
-              Gefactureerd
-              {invoicedCount > 0 && (
-                <Badge variant="secondary" className="ml-2">{invoicedCount}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="commission" className="flex-1 sm:flex-none">
-              Commissiefacturen
-              {commissionTotals.count > 0 && (
-                <Badge variant="secondary" className="ml-2">{commissionTotals.count}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-          <div className="flex gap-2">
-            <ExportInvoicesButton 
-              items={toBeInvoicedItems} 
-              accommodationQuotes={toBeInvoicedAccommodations}
-              variant="to-invoice"
-            />
-            <ExportInvoicesButton 
-              items={invoicedItems} 
-              accommodationQuotes={invoicedAccommodations}
-              variant="invoiced"
-            />
+      {activeTab === "to-invoice" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">Per project één factuur; de pdf gaat direct naar de boekhouding.</p>
+            <ExportInvoicesButton items={toBeInvoicedItems} accommodationQuotes={toBeInvoicedAccommodations} variant="to-invoice" />
           </div>
-        </div>
-
-        <TabsContent value="to-invoice" className="mt-6">
           {toBeInvoicedCount === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                <p className="text-lg font-medium">Alles gefactureerd!</p>
-                <p className="text-muted-foreground">Er zijn geen items die nog gefactureerd moeten worden.</p>
-              </CardContent>
-            </Card>
+            <EmptyState icon={<CheckCircle2 />} title="Alles is gefactureerd" description="Er staat niets meer open om te factureren." />
           ) : (
-            <div className="space-y-4">
-              {/* Inbox tip banner */}
-              <Alert>
-                <Mail className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Tip:</strong> je kunt je factuur ook gewoon mailen naar{" "}
-                  <a href="mailto:invoices@reply.bureauvlieland.nl" className="underline font-medium">
-                    invoices@reply.bureauvlieland.nl
-                  </a>{" "}
-                  — Bureau Vlieland verwerkt 'm dan automatisch (PDF wordt ingelezen en gekoppeld aan je project).
-                </AlertDescription>
-              </Alert>
+            <>
+              <Notice tone="info" title="Mailen kan ook">
+                <p>
+                  Stuur uw factuur naar{" "}
+                  <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="font-medium underline">
+                    {PURCHASE_INVOICE_INBOX}
+                  </a>
+                  . Bureau Vlieland leest de pdf in en koppelt hem aan uw project.
+                </p>
+              </Notice>
 
-              {/* Activities grouped per project — partner factureert per project één verzamelfactuur */}
-              {Object.entries(
-                toBeInvoicedItems.reduce<Record<string, PartnerItem[]>>((acc, it) => {
-                  (acc[it.request_id] ||= []).push(it);
-                  return acc;
-                }, {})
-              ).map(([requestId, items]) => {
+              {projectGroups.map(([requestId, items]) => {
                 const project = items[0].program_requests;
-                const total = items.reduce((s, i) => s + getBillableAmount(i), 0);
+                const total = items.reduce((s, i) => s + getPartnerBillableAmount(i), 0);
                 return (
-                  <Card key={requestId}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold">
-                              {project.customer_company || project.customer_name}
-                            </h3>
-                            {project.reference_number && (
-                              <Badge variant="outline" className="text-xs">
-                                {project.reference_number}
-                              </Badge>
-                            )}
-                            <Badge variant="secondary" className="text-xs">
-                              {items.length} onderdeel{items.length !== 1 ? "en" : ""}
-                            </Badge>
-                          </div>
-                          {project.selected_dates?.[0] && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(parseISO(project.selected_dates[0]), "d MMM yyyy", { locale: nl })}
-                            </div>
+                  <article key={requestId} className="space-y-3 rounded-lg border bg-card p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <h3 className="font-medium">{project.customer_company || project.customer_name}</h3>
+                          {project.reference_number && (
+                            <Pill tone="neutral" size="sm">
+                              {project.reference_number}
+                            </Pill>
                           )}
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Totaal te factureren</p>
-                          <p className="text-lg font-bold">
-                            {formatEuro(total)}
-                          </p>
-                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {items.length === 1 ? "1 onderdeel" : `${items.length} onderdelen`}
+                          {project.selected_dates?.[0] && ` · ${format(parseISO(project.selected_dates[0]), "d MMMM yyyy", { locale: nl })}`}
+                        </p>
                       </div>
-                      <div className="rounded-md border divide-y text-sm">
-                        {items.map((it) => {
-                          const amount = getBillableAmount(it);
-                          const estimated = isEstimatedAmount(it);
-                          return (
-                            <div key={it.id} className="flex items-center justify-between p-2 gap-2">
-                              <span className="truncate flex items-center gap-2">
-                                {it.block_name}
-                                {estimated && (
-                                  <Badge variant="outline" className="text-[10px] py-0 px-1 text-amber-700 border-amber-300">
-                                    inschatting
-                                  </Badge>
-                                )}
-                              </span>
-                              <span className="font-medium whitespace-nowrap">
-                                {formatEuro(amount)}
-                              </span>
-                            </div>
-                          );
-                        })}
+                      <div className="sm:text-right">
+                        <p className="font-semibold tabular-nums">{formatEuro(total)}</p>
+                        <p className="text-xs text-muted-foreground">te factureren, incl. btw</p>
                       </div>
-                      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setCollectiveMode("email");
-                            setCollectiveRequestId(requestId);
-                            setCollectiveInitialIds(items.map((i) => i.id));
-                          }}
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Gefactureerd via e-mail
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setCollectiveMode("upload");
-                            setCollectiveRequestId(requestId);
-                            setCollectiveInitialIds(items.map((i) => i.id));
-                          }}
-                        >
-                          <Receipt className="h-4 w-4 mr-2" />
-                          {items.length > 1 ? "Verzamelfactuur registreren" : "Factuur registreren"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <ul className="divide-y rounded-md border text-sm">
+                      {items.map((it) => (
+                        <li key={it.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate">{it.block_name}</span>
+                            {isPartnerEstimatedAmount(it) && (
+                              <Pill tone="warning" size="sm">
+                                inschatting
+                              </Pill>
+                            )}
+                          </span>
+                          <span className="whitespace-nowrap font-medium tabular-nums">{formatEuro(getPartnerBillableAmount(it))}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openCollective(requestId, items, "email")} disabled={isDemo}>
+                        <Mail className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                        Gefactureerd via e-mail
+                      </Button>
+                      <Button size="sm" onClick={() => openCollective(requestId, items, "upload")} disabled={isDemo}>
+                        <Receipt className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                        {items.length > 1 ? "Verzamelfactuur registreren" : "Factuur registreren"}
+                      </Button>
+                    </div>
+                  </article>
                 );
               })}
 
-              {/* Accommodation items to invoice */}
-              {toBeInvoicedAccommodations.map((quote) => (
-                <AccommodationInvoiceCard key={quote.id} quote={quote} variant="to-invoice" />
+              {toBeInvoicedAccommodations.map((q) => (
+                <InvoiceCard
+                  key={q.id}
+                  title={q.accommodation_name}
+                  kind="Logies"
+                  meta={`${q.accommodation_requests.customer_company || q.accommodation_requests.customer_name} · ${format(parseISO(q.accommodation_requests.arrival_date), "d MMM", { locale: nl })} tot ${format(parseISO(q.accommodation_requests.departure_date), "d MMM yyyy", { locale: nl })}`}
+                  amount={q.price_total}
+                  amountLabel="offertebedrag"
+                  note={q.price_total ? <p className="text-xs text-muted-foreground">verwachte commissie {formatEuro(expectedAccommodationCommission(q))}</p> : undefined}
+                  actions={
+                    <Button size="sm" onClick={() => setInvoiceTarget(accommodationTarget(q))} disabled={isDemo || !partnerToken}>
+                      <Receipt className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                      Factuur registreren
+                    </Button>
+                  }
+                />
               ))}
-            </div>
+            </>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="invoiced" className="mt-6">
+      {activeTab === "invoiced" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">Uw geregistreerde facturen, met de commissie die Bureau Vlieland erover rekent.</p>
+            <ExportInvoicesButton items={invoicedItems} accommodationQuotes={invoicedAccommodations} variant="invoiced" />
+          </div>
           {invoicedCount === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg font-medium">Nog geen facturen</p>
-                <p className="text-muted-foreground">U hebt nog geen facturen geregistreerd.</p>
-              </CardContent>
-            </Card>
+            <EmptyState icon={<FileText />} title="Nog geen facturen" description="U heeft nog geen facturen geregistreerd." />
           ) : (
-            <div className="space-y-4">
-              {/* Invoiced activity items */}
-              {invoicedItems.map((item) => (
-                <InvoiceItemCard
-                  key={item.id}
-                  item={item}
-                  variant="invoiced"
-                  onUploadPdf={() => setUploadPdfTarget({ kind: "item", item })}
+            <>
+              {invoicedItems.map((item) => {
+                const request = item.program_requests;
+                const activityDate = (request.selected_dates || [])[item.day_index];
+                return (
+                  <InvoiceCard
+                    key={item.id}
+                    title={item.block_name}
+                    kind="Onderdeel"
+                    meta={`${request.customer_company || request.customer_name}${activityDate ? ` · ${format(parseISO(activityDate), "d MMM yyyy", { locale: nl })}` : ""}`}
+                    pills={
+                      <>
+                        {commissionPill(item.commission_status)}
+                        {!item.invoiced_file_path && missingPdfPill}
+                      </>
+                    }
+                    amount={item.invoiced_amount}
+                    amountLabel={`factuur ${item.invoiced_number}`}
+                    note={item.commission_amount ? <p className="text-xs text-muted-foreground">commissie {formatEuro(item.commission_amount)}</p> : undefined}
+                    actions={!item.invoiced_file_path ? pdfButton(() => setUploadPdfTarget({ kind: "item", item })) : undefined}
+                  />
+                );
+              })}
+              {invoicedAccommodations.map((q) => (
+                <InvoiceCard
+                  key={q.id}
+                  title={q.accommodation_name}
+                  kind="Logies"
+                  meta={`${q.accommodation_requests.customer_company || q.accommodation_requests.customer_name} · ${format(parseISO(q.accommodation_requests.arrival_date), "d MMM", { locale: nl })} tot ${format(parseISO(q.accommodation_requests.departure_date), "d MMM yyyy", { locale: nl })}`}
+                  pills={
+                    <>
+                      {commissionPill(q.commission_status)}
+                      {!q.invoiced_file_path && missingPdfPill}
+                    </>
+                  }
+                  amount={q.invoiced_amount}
+                  amountLabel={`factuur ${q.invoiced_number}`}
+                  note={q.commission_amount ? <p className="text-xs text-muted-foreground">commissie {formatEuro(q.commission_amount)}</p> : undefined}
+                  actions={!q.invoiced_file_path && partnerToken ? pdfButton(() => setUploadPdfTarget({ kind: "accommodation", quote: q, partnerToken })) : undefined}
                 />
               ))}
-              {/* Invoiced accommodation items */}
-              {invoicedAccommodations.map((quote) => (
-                <AccommodationInvoiceCard
-                  key={quote.id}
-                  quote={quote}
-                  variant="invoiced"
-                  onUploadPdf={partnerToken ? () => setUploadPdfTarget({ kind: "accommodation", quote, partnerToken }) : undefined}
-                />
-              ))}
-            </div>
+            </>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="commission" className="mt-6">
-          <p className="mb-4 text-sm text-muted-foreground">
-            Facturen van Bureau Vlieland aan u voor de commissie over uw gefactureerde onderdelen.
-            De PDF-link is een uur geldig; ververs de pagina voor een nieuwe.
-          </p>
+      {activeTab === "commission" && (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Facturen van Bureau Vlieland aan u voor de commissie over uw gefactureerde onderdelen. De pdf-link is een uur geldig; ververs de pagina voor een nieuwe.</p>
           <PartnerCommissionInvoiceList invoices={commissionInvoices} />
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
-      {/* Invoice Registration Dialog */}
-      <InvoiceRegistrationDialog
-        isOpen={showInvoiceDialog}
-        onClose={() => {
-          setShowInvoiceDialog(false);
-          setSelectedItem(null);
-        }}
-        onSubmit={handleInvoiceRegister}
-        item={selectedItem}
-        commissionPercentage={data.partner.commission_percentage}
-        billingDetails={selectedItem && isPartnerInvoicingReleased(selectedItem.program_requests) ? {
-          billing_company_name: selectedItem.program_requests.billing_company_name,
-          billing_kvk_number: selectedItem.program_requests.billing_kvk_number,
-          billing_vat_number: selectedItem.program_requests.billing_vat_number,
-          billing_address_street: selectedItem.program_requests.billing_address_street,
-          billing_address_postal: selectedItem.program_requests.billing_address_postal,
-          billing_address_city: selectedItem.program_requests.billing_address_city,
-          billing_contact_name: selectedItem.program_requests.billing_contact_name,
-          billing_contact_email: selectedItem.program_requests.billing_contact_email,
-          billing_reference: selectedItem.program_requests.billing_reference,
-        } : null}
-      />
+      <InvoiceRegistrationDialog target={invoiceTarget} onClose={() => setInvoiceTarget(null)} partnerToken={partnerToken ?? ""} commissionPercentage={invoiceTarget?.kind === "accommodation" ? accommodationCommission : activityCommission} onRegistered={refetchData} />
 
-      <UploadInvoicePdfPartnerDialog
-        target={uploadPdfTarget}
-        onClose={() => setUploadPdfTarget(null)}
-        onUploaded={refetchData}
-      />
+      <UploadInvoicePdfPartnerDialog target={uploadPdfTarget} onClose={() => setUploadPdfTarget(null)} onUploaded={refetchData} />
 
       <RegisterCollectivePartnerInvoiceDialog
         isOpen={!!collectiveRequestId}
@@ -738,268 +403,23 @@ const PartnerFinanceContent = () => {
           setCollectiveInitialIds([]);
           setCollectiveMode("upload");
         }}
-        projectItems={
-          collectiveRequestId
-            ? data.items.filter(
-                (i) =>
-                  i.request_id === collectiveRequestId &&
-                  canPartnerInvoiceItem(i, i.program_requests)
-              )
-            : []
-        }
+        projectItems={collectiveRequestId ? data.items.filter((i) => i.request_id === collectiveRequestId && canPartnerInvoiceItem(i, i.program_requests)) : []}
         initialSelectedIds={collectiveInitialIds}
-        commissionPercentage={data.partner.commission_percentage}
+        commissionPercentage={activityCommission}
         mode={collectiveMode}
         bureauDetails={bureauDetails}
         onSubmit={handleCollectiveInvoiceRegister}
       />
-    </div>
+    </PartnerPage>
   );
 };
 
-interface InvoiceItemCardProps {
-  item: PartnerItem;
-  variant: "to-invoice" | "invoiced";
-  onInvoice?: () => void;
-  onUploadPdf?: () => void;
-}
+const PartnerFinance = () => (
+  <PartnerLayout>
+    <PartnerFinanceContent />
+  </PartnerLayout>
+);
 
-const InvoiceItemCard = ({ item, variant, onInvoice, onUploadPdf }: InvoiceItemCardProps) => {
-  const request = item.program_requests;
-  const dates = request.selected_dates || [];
-  const activityDate = dates[item.day_index];
-
-  const billableAmount = getBillableAmount(item);
-  const estimated = isEstimatedAmount(item);
-
-  // Calculate expected commission for "to-invoice" items
-  const calculateExpectedCommission = () => {
-    if (variant !== "to-invoice" || !billableAmount) return null;
-
-    const vatRate = 21; // Activities use 21% VAT
-    const amountExclVat = billableAmount / (1 + vatRate / 100);
-    const commissionPercentage = item.commission_percentage ?? 15;
-    return amountExclVat * (commissionPercentage / 100);
-  };
-
-  const expectedCommission = calculateExpectedCommission();
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-medium">{item.block_name}</h3>
-              <Badge variant="outline" className="text-xs">Activiteit</Badge>
-              {variant === "invoiced" && item.commission_status && (
-                <Badge variant={item.commission_status === "paid" ? "default" : "outline"} className="text-xs">
-                  {item.commission_status === "pending" && "Commissie open"}
-                  {item.commission_status === "invoiced" && "Commissie gefactureerd"}
-                  {item.commission_status === "paid" && "Commissie betaald"}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Building2 className="h-3 w-3" />
-                {request.customer_company || request.customer_name}
-              </div>
-              {activityDate && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {format(parseISO(activityDate), "d MMM yyyy", { locale: nl })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {variant === "to-invoice" ? (
-              <>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">
-                    {estimated ? "Geschatte prijs" : "Bevestigde prijs"}
-                  </p>
-                  <p className="font-semibold">{formatEuro(billableAmount)}</p>
-                  {expectedCommission !== null && (
-                    <p className="text-xs text-amber-600">
-                      Verwachte commissie: {formatEuro(expectedCommission)}
-                    </p>
-                  )}
-                </div>
-                {onInvoice && (
-                  <Button onClick={onInvoice} size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Factureren
-                  </Button>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-3">
-                {!item.invoiced_file_path && onUploadPdf && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/10"
-                    onClick={onUploadPdf}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    PDF toevoegen
-                  </Button>
-                )}
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <FileText className="h-3 w-3" />
-                    <span>{item.invoiced_number}</span>
-                    {!item.invoiced_file_path && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-destructive text-destructive"
-                        title="Niet in behandeling — voeg PDF toe"
-                      >
-                        PDF ontbreekt
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="font-semibold">{formatEuro(item.invoiced_amount)}</p>
-                  {item.commission_amount && item.commission_amount > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Commissie: {formatEuro(item.commission_amount)}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-interface AccommodationInvoiceCardProps {
-  quote: AccommodationQuoteWithInvoice;
-  variant: "to-invoice" | "invoiced";
-  onUploadPdf?: () => void;
-}
-
-const AccommodationInvoiceCard = ({ quote, variant, onUploadPdf }: AccommodationInvoiceCardProps) => {
-  const request = quote.accommodation_requests;
-
-  // Calculate expected commission for "to-invoice" items
-  const calculateExpectedCommission = () => {
-    if (variant !== "to-invoice" || !quote.price_total) return null;
-    
-    const vatRate = quote.vat_rate ?? 9; // Accommodations use 9% VAT by default
-    const amountExclVat = (quote.price_includes_vat ?? true)
-      ? quote.price_total / (1 + vatRate / 100)
-      : quote.price_total;
-    
-    const commissionPercentage = quote.commission_percentage ?? 10;
-    const commissionAmount = amountExclVat * (commissionPercentage / 100);
-    
-    return commissionAmount;
-  };
-
-  const expectedCommission = calculateExpectedCommission();
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-medium">{quote.accommodation_name}</h3>
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <BedDouble className="h-3 w-3" />
-                Logies
-              </Badge>
-              {variant === "invoiced" && quote.commission_status && (
-                <Badge variant={quote.commission_status === "paid" ? "default" : "outline"} className="text-xs">
-                  {quote.commission_status === "pending" && "Commissie open"}
-                  {quote.commission_status === "invoiced" && "Commissie gefactureerd"}
-                  {quote.commission_status === "paid" && "Commissie betaald"}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Building2 className="h-3 w-3" />
-                {request.customer_company || request.customer_name}
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(parseISO(request.arrival_date), "EEE d MMM", { locale: nl })} - {format(parseISO(request.departure_date), "EEE d MMM yyyy", { locale: nl })}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {variant === "to-invoice" ? (
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Offertebedrag</p>
-                <p className="font-semibold">{formatEuro(quote.price_total)}</p>
-                {expectedCommission !== null && (
-                  <p className="text-xs text-amber-600">
-                    Verwachte commissie: {formatEuro(expectedCommission)}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                {!quote.invoiced_file_path && onUploadPdf && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/10"
-                    onClick={onUploadPdf}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    PDF toevoegen
-                  </Button>
-                )}
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <FileText className="h-3 w-3" />
-                    <span>{quote.invoiced_number}</span>
-                    {!quote.invoiced_file_path && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-destructive text-destructive"
-                        title="Niet in behandeling: voeg de pdf toe"
-                      >
-                        PDF ontbreekt
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="font-semibold">{formatEuro(quote.invoiced_amount)}</p>
-                  {quote.commission_amount && quote.commission_amount > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Commissie: {formatEuro(quote.commission_amount)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const PartnerFinance = () => {
-  return (
-    <PartnerLayout>
-      <Helmet>
-        <title>Facturatie | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      <PartnerFinanceContent />
-    </PartnerLayout>
-  );
-};
+export { PartnerFinanceContent };
 
 export default PartnerFinance;

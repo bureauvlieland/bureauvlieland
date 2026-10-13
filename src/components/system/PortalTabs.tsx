@@ -25,10 +25,12 @@ interface PortalTabsProps {
   /** Naam van de balk voor hulptechnologie. */
   label?: string;
   sticky?: boolean;
+  /** In een pagina die al een `Container` heeft (partnerportaal): geen eigen breedte en padding. */
+  embedded?: boolean;
   className?: string;
 }
 
-export const PortalTabs = ({ tabs, current, onChange, label = "Navigatie", sticky = true, className }: PortalTabsProps) => {
+export const PortalTabs = ({ tabs, current, onChange, label = "Navigatie", sticky = true, embedded = false, className }: PortalTabsProps) => {
   const listRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ left: false, right: false });
 
@@ -82,7 +84,7 @@ export const PortalTabs = ({ tabs, current, onChange, label = "Navigatie", stick
         className,
       )}
     >
-      <Container size="full" className="relative">
+      <Container size="full" className={cn("relative", embedded && "px-0 sm:px-0 lg:px-0")}>
         <div
           ref={listRef}
           role="tablist"
@@ -117,14 +119,16 @@ export const PortalTabs = ({ tabs, current, onChange, label = "Navigatie", stick
         <div
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-4 w-8 bg-gradient-to-r from-background to-transparent transition-opacity duration-fast sm:left-6 lg:left-8",
+            "pointer-events-none absolute inset-y-0 w-8 bg-gradient-to-r from-background to-transparent transition-opacity duration-fast",
+            embedded ? "left-0" : "left-4 sm:left-6 lg:left-8",
             overflow.left ? "opacity-100" : "opacity-0",
           )}
         />
         <div
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-4 w-8 bg-gradient-to-l from-background to-transparent transition-opacity duration-fast sm:right-6 lg:right-8",
+            "pointer-events-none absolute inset-y-0 w-8 bg-gradient-to-l from-background to-transparent transition-opacity duration-fast",
+            embedded ? "right-0" : "right-4 sm:right-6 lg:right-8",
             overflow.right ? "opacity-100" : "opacity-0",
           )}
         />

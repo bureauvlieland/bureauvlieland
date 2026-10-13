@@ -1,13 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Globe, MapPin, Sparkles, X, Plus, FileText, Image as ImageIcon, Search, ListChecks } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { FormField, LoadingState, Notice, OptionCard, OptionGroup, Pill } from "@/components/system";
+import { Globe, Loader2, Plus, Save, Search, X } from "lucide-react";
 import { FACILITIES } from "@/types/accommodation";
 import { PartnerLocationMap } from "./PartnerLocationMap";
 import { validCoordinates } from "@/lib/accommodationQuotePresentation";
@@ -15,7 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PartnerImageUpload } from "./PartnerImageUpload";
 import { reportError } from "@/lib/errorReporting";
+import { SheetSection } from "./SheetSection";
 
+/**
+ * Mijn profiel (partnerportaal fase 4, besluit 7): één formulier in secties
+ * op `FormField`, met één opslaanknop in een vaste voet. Wat de klant ziet
+ * in programma's en offertes: tekst, kenmerken, locatie, faciliteiten en
+ * foto's.
+ */
 export const PartnerProfileForm = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -39,19 +43,18 @@ export const PartnerProfileForm = () => {
   const [isGeocoding, setIsGeocoding] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
 
     const impersonatePartnerId = searchParams.get("impersonate");
-    let query = supabase.from("partners").select("id, partner_type, about_text, website_url, location_description, location_lat, location_lng, gallery_images, highlight_features, facilities, check_in_time, check_out_time, address_street, address_postal, address_city");
-
+    let query = supabase
+      .from("partners")
+      .select("id, partner_type, about_text, website_url, location_description, location_lat, location_lng, gallery_images, highlight_features, facilities, check_in_time, check_out_time, address_street, address_postal, address_city");
     if (impersonatePartnerId) {
       const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-      if (isAdmin) {
-        query = query.eq("id", impersonatePartnerId);
-      } else {
-        query = query.eq("auth_user_id", session.user.id).eq("is_active", true);
-      }
+      query = isAdmin ? query.eq("id", impersonatePartnerId) : query.eq("auth_user_id", session.user.id).eq("is_active", true);
     } else {
       query = query.eq("auth_user_id", session.user.id).eq("is_active", true);
     }
@@ -76,10 +79,11 @@ export const PartnerProfileForm = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    fetchProfile();
+    void fetchProfile();
   }, [fetchProfile]);
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!partnerId) return;
     setIsSaving(true);
     try {
@@ -98,12 +102,11 @@ export const PartnerProfileForm = () => {
           check_out_time: checkOutTime || null,
         })
         .eq("id", partnerId);
-
       if (error) throw error;
-      toast({ title: "Profiel opgeslagen", description: "Uw bedrijfsprofiel is bijgewerkt." });
+      toast({ title: "Profiel opgeslagen" });
     } catch (err) {
       reportError(err, { where: "PartnerProfileForm: Error saving profile" });
-      toast({ title: "Profiel niet opgeslagen", description: "Kon profiel niet opslaan. Probeer het opnieuw.", variant: "destructive" });
+      toast({ title: "Profiel niet opgeslagen", description: "Kon het profiel niet opslaan. Probeer het opnieuw.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -116,17 +119,10 @@ export const PartnerProfileForm = () => {
       setNewFeature("");
     }
   };
+  const removeFeature = (index: number) => setHighlightFeatures(highlightFeatures.filter((_, i) => i !== index));
+  const toggleFacility = (value: string) => setFacilities((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
 
-  const removeFeature = (index: number) => {
-    setHighlightFeatures(highlightFeatures.filter((_, i) => i !== index));
-  };
-
-  const toggleFacility = (value: string) => {
-    setFacilities((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
-  };
-
-  // Coördinaten opzoeken op het adres uit de instellingen, zodat niemand ze
-  // hoeft over te tikken (en er geen "532964885" meer ontstaat).
+  // Coördinaten opzoeken op het adres uit de instellingen, zodat niemand ze hoeft over te tikken.
   const handleGeocode = async () => {
     if (!address) return;
     setIsGeocoding(true);
@@ -134,7 +130,7 @@ export const PartnerProfileForm = () => {
       const { data, error } = await supabase.functions.invoke("geocode-address", { body: { address } });
       const hit = !error && data && typeof data.lat === "number" ? validCoordinates(data.lat, data.lng) : null;
       if (!hit) {
-        toast({ title: "Adres niet gevonden", description: "Vul de coördinaten handmatig in of pas het adres aan bij Instellingen.", variant: "destructive" });
+        toast({ title: "Adres niet gevonden", description: "Vul de coördinaten zelf in of pas het adres aan bij Instellingen.", variant: "destructive" });
         return;
       }
       setLocationLat(hit.lat.toFixed(7));
@@ -149,229 +145,111 @@ export const PartnerProfileForm = () => {
   };
 
   const previewCoords = validCoordinates(locationLat, locationLng);
+  const coordsInvalid = (locationLat || locationLng) && !previewCoords;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
+  if (isLoading) return <LoadingState label="Profiel laden" />;
   if (!partnerId) return null;
 
   return (
-    <div className="space-y-6">
-      {/* About text */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            <CardTitle>Over uw bedrijf</CardTitle>
-          </div>
-          <CardDescription>
-            Vertel klanten over uw bedrijf. Deze tekst verschijnt bij programma's en offertes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="about_text">Bedrijfsbeschrijving</Label>
-            <Textarea
-              id="about_text"
-              value={aboutText}
-              onChange={(e) => setAboutText(e.target.value)}
-              placeholder="Beschrijf uw bedrijf, wat u uniek maakt, uw geschiedenis en visie..."
-              rows={5}
-            />
-          </div>
+    <form onSubmit={(e) => void handleSave(e)} className="space-y-8">
+      <SheetSection title="Over uw bedrijf" help="Deze tekst staat bij uw aanbod in programma's en offertes.">
+        <FormField label="Bedrijfsbeschrijving" htmlFor="profiel-over">
+          <Textarea value={aboutText} onChange={(e) => setAboutText(e.target.value)} placeholder="Wat u doet, wat u bijzonder maakt, uw geschiedenis." rows={5} />
+        </FormField>
+        <FormField label="Website" htmlFor="profiel-website" leading={<Globe />}>
+          <Input type="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://www.uwbedrijf.nl" />
+        </FormField>
+      </SheetSection>
 
-          <div className="space-y-2">
-            <Label htmlFor="website_url">Website</Label>
-            <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="website_url"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                placeholder="https://www.uwbedrijf.nl"
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Highlights / USPs */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle>Kenmerken & USP's</CardTitle>
-          </div>
-          <CardDescription>
-            Voeg kernwoorden toe die uw bedrijf kenmerken (bijv. "Zeezicht", "Duurzaam", "Groepskortingen").
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+      <SheetSection title="Kenmerken" help="Korte kernwoorden die uw bedrijf typeren, zoals zeezicht, duurzaam of groepskorting.">
+        {highlightFeatures.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
             {highlightFeatures.map((feature, i) => (
-              <Badge key={i} variant="secondary" className="gap-1 pl-3 pr-1 py-1">
-                {feature}
-                <button type="button" onClick={() => removeFeature(i)} className="ml-1 hover:text-destructive">
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
+              <li key={`${feature}-${i}`}>
+                <Pill tone="neutral" className="gap-1 pr-1">
+                  {feature}
+                  <button type="button" onClick={() => removeFeature(i)} className="rounded-full p-0.5 hover:text-destructive" aria-label={`${feature} verwijderen`}>
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                </Pill>
+              </li>
             ))}
-          </div>
-          <div className="flex gap-2">
+          </ul>
+        )}
+        <div className="flex gap-2">
+          <FormField label="Nieuw kenmerk" htmlFor="profiel-kenmerk" className="flex-1">
             <Input
               value={newFeature}
               onChange={(e) => setNewFeature(e.target.value)}
-              placeholder="Nieuw kenmerk toevoegen..."
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
+              placeholder="Bijvoorbeeld zeezicht"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addFeature();
+                }
+              }}
             />
-            <Button type="button" variant="outline" size="icon" onClick={addFeature} disabled={!newFeature.trim()}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </FormField>
+          <Button type="button" variant="outline" size="icon" onClick={addFeature} disabled={!newFeature.trim()} aria-label="Kenmerk toevoegen" className="mt-6">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </SheetSection>
 
-      {/* Location */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            <CardTitle>Locatie</CardTitle>
-          </div>
-          <CardDescription>
-            Beschrijf waar uw bedrijf zich bevindt. Coördinaten worden gebruikt voor kaartweergave.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="location_description">Locatiebeschrijving</Label>
-            <Textarea
-              id="location_description"
-              value={locationDescription}
-              onChange={(e) => setLocationDescription(e.target.value)}
-              placeholder="Bijv. 'Direct aan het strand, 5 minuten lopen vanaf de veerboot...'"
-              rows={2}
-            />
-          </div>
-          {address && (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border bg-muted/30 p-3">
-              <p className="text-sm flex-1"><span className="text-muted-foreground">Adres uit uw instellingen:</span> {address}</p>
-              <Button type="button" variant="outline" size="sm" onClick={handleGeocode} disabled={isGeocoding}>
-                {isGeocoding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+      <SheetSection title="Locatie" help="De coördinaten zetten uw bedrijf op de kaart bij een programma.">
+        <FormField label="Waar u zit" htmlFor="profiel-locatie">
+          <Textarea value={locationDescription} onChange={(e) => setLocationDescription(e.target.value)} placeholder="Bijvoorbeeld: direct aan het strand, vijf minuten lopen van de veerboot." rows={2} />
+        </FormField>
+        {address && (
+          <Notice tone="info" title="Adres uit uw instellingen">
+            <p>{address}</p>
+            <div className="mt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => void handleGeocode()} disabled={isGeocoding}>
+                {isGeocoding ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Search className="mr-1.5 h-4 w-4" aria-hidden="true" />}
                 Zet op de kaart
               </Button>
             </div>
-          )}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="location_lat">Breedtegraad</Label>
-              <Input
-                id="location_lat"
-                type="number"
-                step="any"
-                value={locationLat}
-                onChange={(e) => setLocationLat(e.target.value)}
-                placeholder="53.2956"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location_lng">Lengtegraad</Label>
-              <Input
-                id="location_lng"
-                type="number"
-                step="any"
-                value={locationLng}
-                onChange={(e) => setLocationLng(e.target.value)}
-                placeholder="5.0666"
-              />
-            </div>
-          </div>
-          {(locationLat || locationLng) && !previewCoords && (
-            <p className="text-sm text-destructive">Deze coördinaten kloppen niet (breedtegraad tussen -90 en 90, lengtegraad tussen -180 en 180). Gebruik "Zet op de kaart".</p>
-          )}
-          {previewCoords && (
-            <PartnerLocationMap lat={previewCoords.lat} lng={previewCoords.lng} label="Uw locatie" address={address || null} isVisible />
-          )}
-        </CardContent>
-      </Card>
+          </Notice>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Breedtegraad" htmlFor="profiel-lat" error={coordsInvalid ? "Tussen -90 en 90." : undefined}>
+            <Input type="number" step="any" value={locationLat} onChange={(e) => setLocationLat(e.target.value)} placeholder="53.2956" />
+          </FormField>
+          <FormField label="Lengtegraad" htmlFor="profiel-lng" error={coordsInvalid ? "Tussen -180 en 180." : undefined}>
+            <Input type="number" step="any" value={locationLng} onChange={(e) => setLocationLng(e.target.value)} placeholder="5.0666" />
+          </FormField>
+        </div>
+        {previewCoords && <PartnerLocationMap lat={previewCoords.lat} lng={previewCoords.lng} label="Uw locatie" address={address || null} isVisible />}
+      </SheetSection>
 
       {isAccommodation && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5 text-primary" />
-              <CardTitle>Faciliteiten en tijden</CardTitle>
-            </div>
-            <CardDescription>
-              Klanten geven bij hun aanvraag aan welke faciliteiten ze belangrijk vinden. Wat u hier aanvinkt,
-              wordt bij uw offerte vergeleken met die wensen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {FACILITIES.map((facility) => (
-                <div key={facility.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`facility-${facility.value}`}
-                    checked={facilities.includes(facility.value)}
-                    onCheckedChange={() => toggleFacility(facility.value)}
-                  />
-                  <Label htmlFor={`facility-${facility.value}`} className="text-sm font-normal cursor-pointer">
-                    {facility.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="check_in_time">Inchecken vanaf</Label>
-                <Input id="check_in_time" type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="check_out_time">Uitchecken tot</Label>
-                <Input id="check_out_time" type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <SheetSection title="Faciliteiten en tijden" help="Klanten geven bij hun aanvraag aan wat ze belangrijk vinden; dit wordt bij uw offerte met hun wensen vergeleken.">
+          <OptionGroup name="Faciliteiten" selection="multiple" columns={3}>
+            {FACILITIES.map((facility) => (
+              <OptionCard key={facility.value} selection="multiple" selected={facilities.includes(facility.value)} onSelect={() => toggleFacility(facility.value)} title={facility.label} />
+            ))}
+          </OptionGroup>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Inchecken vanaf" htmlFor="profiel-incheck">
+              <Input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} />
+            </FormField>
+            <FormField label="Uitchecken tot" htmlFor="profiel-uitcheck">
+              <Input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} />
+            </FormField>
+          </div>
+        </SheetSection>
       )}
 
-      {/* Photo gallery */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5 text-primary" />
-            <CardTitle>Fotogalerij</CardTitle>
-          </div>
-          <CardDescription>
-            Upload foto's van uw bedrijf. De eerste foto wordt als hoofdafbeelding gebruikt.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PartnerImageUpload
-            partnerId={partnerId}
-            images={galleryImages}
-            onImagesChange={setGalleryImages}
-            storagePath="gallery"
-            maxImages={8}
-            label=""
-          />
-        </CardContent>
-      </Card>
+      <SheetSection title="Foto's" help="De eerste foto is de hoofdfoto; maximaal acht.">
+        <PartnerImageUpload partnerId={partnerId} images={galleryImages} onImagesChange={setGalleryImages} storagePath="gallery" maxImages={8} label="" />
+      </SheetSection>
 
-      {/* Save */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving} size="lg">
-          {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+      <div className="sticky bottom-0 flex justify-end border-t bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="mr-1.5 h-4 w-4" aria-hidden="true" />}
           Profiel opslaan
         </Button>
       </div>
-    </div>
+    </form>
   );
 };

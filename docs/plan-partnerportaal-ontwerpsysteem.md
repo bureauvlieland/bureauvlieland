@@ -2,7 +2,8 @@
 
 Status: onderzoek en voorstel, 11 oktober 2026; besluiten genomen door
 Erwin op 11 oktober 2026 (alle aanbevelingen, zie "Besluiten"). Fase 0
-gebouwd op 11 oktober (zie de voortgang per fase). Vraag van Erwin: na het klantportaal
+gebouwd op 11 oktober, fase 1 en 2 op 12 oktober (zie de voortgang per
+fase). Vraag van Erwin: na het klantportaal
 (`plan-klantportaal-ontwerpsysteem.md`, afgerond 10 oktober) het
 partnerportaal op het ontwerpsysteem brengen. De bouw volgt per fase, elke
 fase als eigen PR met preview.
@@ -442,6 +443,42 @@ tegenvoorstel, één offerte gevraagd, één factuur zonder pdf) en
 partnerportaal komt in de ontwerpschuldtelling met een baseline per
 bestand (de huidige stand), zodat de schuld vanaf hier alleen daalt.
 
+*Gebouwd op 12 oktober, eigen PR.* `PartnerLayout` zoekt de partner één
+keer op en zet hem in `PartnerPortalContext`; `usePartnerPortal()`
+(`src/hooks/usePartnerPortal.ts`) haalt `get-partner-dashboard` via
+react-query op, één keer per token en gedeeld door alle pagina's, met
+`refetch` na een actie; `usePartnerCommissionInvoices()` doet hetzelfde
+voor de commissiefacturen. De vier kopieën in Werkbank, Project,
+Facturatie en Planning zijn weg, net als `usePartnerDashboard`; Logies,
+Handleidingen en Afspraken lezen de partner uit de context. De schil is
+gesplitst in `PartnerShell` (zijbalk, kopbalk, inhoud) en `PartnerLayout`
+(login eromheen); de profielsterkte is een `Pill`, de zijbalk staat op de
+tokens. Elke pagina begint met `PartnerPage`
+(`src/components/partner-portal/PartnerPage.tsx`): de titel in de tab,
+`Container` op één breedte (`wide`, of `content`/`prose` voor
+formulieren) met één padding, `PortalHead` met icoon, titel, één zin en
+hoogstens één status, en `LoadingState` en een `Notice` voor laden en
+fouten in plaats van de eigen "Fout"-schermen. Werkbank en Projecten zijn
+twee routes (`/partner/werkbank`, `/partner/projecten`;
+`/partner/dashboard` stuurt door met behoud van `impersonate`); de rijen
+geven mee waar u vandaan kwam, zodat "Terug" met tab, zoekterm en
+archief terugkomt. De jaarcijfers staan bij Facturatie naast de
+maandgrafiek. De woordenlijsten staan klaar met 13 tests: `partnerTone`
+naast `partnerLabel` in `itemStatus.ts`, `partnerProjectStatus.ts`
+(`derivePartnerProjectStatus`, `derivePartnerAccommodationProjectStatus`)
+en `accommodationQuoteStatus.ts` (`partnerQuoteStatus`,
+`partnerQuoteTab`, `PARTNER_QUOTE_TABS`); de schermen gaan er in fase 2
+en 3 op. De referentiepagina `/ontwerp/partnerportaal` (alleen buiten
+productie) toont de verzonnen partner uit `src/content/demoPartnerportaal.ts`
+(Wadloopcentrum Vlieland, activiteiten en logies, twee projecten, een
+tegenvoorstel, een offerte gevraagd, een factuur zonder pdf, één open
+commissiefactuur) met `?scherm=werkbank|projecten|project|logies|facturatie`;
+`logies` is daar het logiesproject, want de logiespagina en het aanbod
+lezen hun eigen tabellen en komen in fase 3 en 4 op de referentie. Het
+partnerportaal telt mee in de ontwerpschuld: baseline per bestand (26
+bestanden, 380 vindplaatsen) en `DESIGN_DEBT_MAX=380`; vanaf hier mag een
+partnerbestand alleen omlaag.
+
 **Fase 2: werkbank, projecten en de projectpagina (3 dagen).** De
 werkbank op `Notice`, `Pill` en `EmptyState`; de projectentabel op de
 tokens met de partnerwoordenlijst en een kaartlijst onder `md`; de
@@ -452,6 +489,39 @@ projectpagina met `DayBar`, dagkoppen, `FactList` en `PartnerItemCard`;
 de schuld (`PartnerItemSheet`, `PartnerProjectItemRow`,
 `PartnerProjectsTable`, `PartnerWerkbankList`).
 
+*Gebouwd op 12 oktober, zelfde PR als fase 1.* De werkbank begint met één
+`Notice` met de belangrijkste volgende stap ("2 aanvragen wachten op uw
+reactie", `werkbankHeadline` in `src/lib/partnerWerkbank.ts`, waar ook
+de rijen vandaan komen); de vier groepen hebben een `Pill`-teller, de
+hints zijn zonder gedachtestreepjes, leeg is een `EmptyState`. De drie
+banners (pdf ontbreekt, profiel, afspraken) zijn `Notice`s. De
+projectentabel toont de partnerwoordenlijst (`partnerStatus` op de rij,
+uit `partnerProjectStatus.ts`) als `Pill`, een verstreken datum als
+`Pill` `danger`, en wordt onder `md` een kaartlijst met dezelfde velden;
+de koppen heten Referentie, Personen, Soort, Onderdelen en Te doen. De
+projectpagina heeft de dagindeling van de klant: `DayBar` en dagkoppen
+("donderdag 5 november · dag 1 van 2 · 2 onderdelen van u") bij een
+meerdaags programma, de feiten als `FactList` naast de tijdlijn met de
+klant, de gastenlijst en de chat eronder, concept en annulering als
+`Notice`. De nieuwe `PartnerItemCard` heeft dezelfde opbouw als de kaart
+van de klant (tijd met het soort tijd: gewenst, uw voorstel, bevestigd,
+klant wil; titel; één `Pill` uit `partnerLabel` en `partnerTone`;
+personen, duur en plek; de prijs) en één knop "Reageren" die de sheet
+opent; alleen "Markeer uitgevoerd" en "Akkoord met de nieuwe prijs" zijn
+één klik op de kaart. `PartnerProjectItemRow` is weg. `PartnerItemSheet`
+is opnieuw opgebouwd op `ResponsiveSheetContent` (van onderen op een
+telefoon): kop met titel en één `Pill`, dan wat er speelt als `Notice`
+(tegenvoorstel van de klant, nieuwe prijs van het bureau met akkoord of
+eigen prijs, uw voorstel, afgewezen, wacht op de klant, instructie),
+de feiten één keer als `FactList`, de klant met gastenlijst en
+documenten, de omschrijving en de kaart ingeklapt onder "Over dit
+onderdeel", de factuur, en de reactie als drie `OptionCard`s
+(bevestigen, andere tijd of prijs, niet beschikbaar) met `FormField`s;
+onderaan een vaste voet met één primaire knop. De chat staat op een
+telefoon onder de onderdelen in plaats van in `FloatingStack`, omdat de
+algemene chatknop die stapel al gebruikt. Ontwerpschuld van 380 naar
+225; `DESIGN_DEBT_MAX=225`.
+
 **Fase 3: logies en facturatie (3 dagen).** De logiespagina en de
 aanvraagkaart op één woordenlijst, `Pill` en `Notice`; de offertesheet
 op `ResponsiveSheetContent` met `FormField`, secties, vaste voet en
@@ -459,6 +529,43 @@ op `ResponsiveSheetContent` met `FormField`, secties, vaste voet en
 kaart. Facturatie met `FactList`, de maandgrafiek op de tokens, tabs in
 de URL, één factuurdialoog voor onderdelen en logies, de verzamelfactuur
 op `FormField`; de jaarcijfers van de werkbank hierheen.
+
+*Gebouwd op 12 oktober, zelfde PR als fase 1 en 2.* De logiespagina heeft
+de vijf tabbladen uit `PARTNER_QUOTE_TABS` in de URL (`?tab=`) op
+`PortalTabs` (nieuw: `embedded`, voor in een pagina die al een
+`Container` heeft), een `Pill`-teller per tabblad, en per tabblad een
+eigen `EmptyState`. De aanvraagkaart heeft dezelfde opbouw als de
+onderdeelkaart: titel, één `Pill` uit `partnerQuoteStatus`, de feiten op
+één regel, wat er speelt als `Notice` (wijziging ontvangen, verlopen,
+gekozen met de drie stappen), en één knop uit `partnerQuoteAction`
+("Offerte indienen", "Verlengen", "Bekijken of aanpassen", "Alle
+gegevens"); de projectpagina in logiesmodus gebruikt dezelfde kaart,
+`FactList` en zijkolom als de activiteitenpagina. De offertesheet is van
+1.264 naar ruim 600 regels: kop met `Pill`, wat er speelt als `Notice`
+(verlengen zit in de `Notice` zelf), de aanvraag als `FactList`, de
+reactie als drie `OptionCard`s, het formulier in secties (Accommodatie,
+Kamers, Verzorging als `OptionCard`s, Prijs, Extra's, Inbegrepen,
+Voorwaarden en geldigheid, Bijlagen, Toelichting) op `FormField`, een
+vaste voet met één primaire knop, en na versturen een `SuccessScreen`
+in de sheet zelf (de pagina sluit hem niet meer). Een gekozen, niet
+gekozen of afgewezen offerte staat er als samenvatting (`FactList`), niet
+als uitgeschakeld formulier. Facturatie: de drie tellerkaarten en
+`PartnerYtdModule` zijn één `FactList` "In het kort" naast de
+maandgrafiek, die op `currentColor` en de tokens staat met een eigen
+legenda; de tabbladen op `PortalTabs` in de URL; elke factuur dezelfde
+kaart met `Pill`s (Commissie open, gefactureerd, betaald; Pdf ontbreekt;
+inschatting); leeg is `EmptyState`, de mailtip een `Notice`. Er is nog
+één factuurdialoog (`InvoiceRegistrationDialog` met een `target` voor
+een onderdeel of logies) op `FormField`, met de pdf verplicht voor
+beide; hij regelt de upload en de registratie zelf
+(`register-partner-invoice`, of `register-accommodation-invoice` plus
+`attach-accommodation-invoice-pdf`) en eindigt in een `SuccessScreen`.
+`AccommodationInvoiceDialog` is weg; een logies die nog te factureren is
+heeft nu ook op Facturatie een knop. De verzamelfactuur staat op
+`FormField` en `Notice`. Het te-factureren bedrag komt uit
+`src/lib/partnerBillableAmount.ts`. De referentiepagina heeft een scherm
+`logiesaanvragen` (de logiespagina op de demogegevens). Ontwerpschuld van
+225 naar 113; `DESIGN_DEBT_MAX=113`.
 
 **Fase 4: aanbod, planning en account (2 dagen).** `PartnerBlockSheet`,
 de kamersoort- en extra-sheets op `ResponsiveSheetContent` en
@@ -472,12 +579,56 @@ uitroeptekens weg, "Export CSV" wordt "Exporteren (csv)", "aanbod" als
 het ene woord voor wat de partner aanbiedt en "activiteit" voor wat de
 klant boekt, één toastsysteem.
 
+*Gebouwd op 12 oktober, zelfde PR als fase 1 tot en met 3.* De
+aanbodpagina heet Aanbod (ook in het menu) en zet het aanbod in drie
+groepen op één woordenlijst (`partnerBlockStatus`: wacht op goedkeuring,
+goedgekeurd, gepubliceerd), elke rij één knop met een `Pill` en "Kan
+beter" als `Pill` `warning`; Kamersoorten en Logies-extra's lezen de
+partner uit `usePartnerPortal`, tonen één lijst met `EmptyState` en
+`LoadingState`. De drie sheets (aanbod, kamersoort, extra) staan op
+`ResponsiveSheetContent` met kop, scrollende body in secties
+(`SheetSection`, gedeeld met de offertesheet) op `FormField`, en een
+vaste voet; de bouwsteensheet heeft geen tabs meer maar de secties
+Algemeen, Prijs, Locatie en koppelingen, Foto, met de fouten bij het veld
+en wat er speelt als `Notice`; faciliteiten en de prijssoort zijn
+`OptionCard`s. De planning staat op de tonen: de status van een onderdeel
+uit `partnerLabel` en `partnerTone` (in de weekkolom een gekleurde stip
+met de tekst voor hulptechnologie), de legenda op de tokens, geen emoji.
+Profiel en Instellingen zijn één formulier in secties met één
+opslaanknop in een vaste voet; de onderdelen met een eigen actie
+(niet-beschikbare periodes, voorwaarden als twee `OptionCard`s, wachtwoord
+op `strongPasswordSchema`) staan eronder, de commissie als `FactList`,
+meekijken als beheerder als `Notice`. Afspraken op `Pill`, `Notice` en
+`EmptyState` met de telling in de kop. Inloggen, nieuw wachtwoord en de
+oude tokenroute delen `PartnerAuthShell`; de velden op `FormField`, de
+fouten inline als `Notice`, de bevestiging als `SuccessScreen` zonder
+automatische doorverwijzing. De handleidingen zijn herschreven op het
+portaal zoals het nu is (werkbank, projecten, aanbod, facturatie), in de
+u-vorm, als één lijst onderwerpen met uitklapbare vragen en `Notice`.
+Copy: de tooltips in `itemStatus.ts` en alle partnerteksten in de u-vorm,
+gedachtestreepjes en uitroeptekens weg, "Exporteren (csv)", sonner weg
+uit het partnerportaal (één toastsysteem: `useToast`). Ontwerpschuld van
+113 naar nul: `DESIGN_DEBT_MAX=0` en een lege baseline; de referentiepagina
+heeft de schermen `aanbod` en `handleidingen` erbij.
+
 **Fase 5: borging (1 dag).** De baseline per bestand voor het
 partnerportaal leeg, `DESIGN_DEBT_MAX` blijft nul; de visuele test
 neemt werkbank, projecten, project, logies en facturatie op via
 `/ontwerp/partnerportaal`, desktop en telefoon; een paragraaf
 "Partnerportaal" in `docs/design-systeem.md` (zijbalk, `PortalHead`,
 `PartnerItemCard`, de woordenlijsten); de bijlage in het
+klantportaalplan verwijst hierheen.
+
+*Gebouwd op 12 oktober, zelfde PR als fase 1 tot en met 4.* De visuele
+test neemt zes schermen van `/ontwerp/partnerportaal` op (werkbank,
+projecten, project, logies, logiesaanvragen, facturatie) op desktop en
+telefoon, met fixtures `partnerportaal-*.har` voor de gedeelde data; de
+referenties zijn gemaakt met dezelfde Chromium als CI. `DESIGN_DEBT_MAX`
+staat op nul met een lege baseline (sinds fase 4). De paragraaf
+"Partnerportaal" in `docs/design-systeem.md` beschrijft de schil,
+`PartnerPage`, `PortalTabs` met `embedded`, de kaarten, de sheets, de ene
+factuurdialoog, `PartnerAuthShell` en de vijf woordenlijsten; de tabel
+"Borging" en de checklist noemen het partnerportaal; de bijlage in het
 klantportaalplan verwijst hierheen.
 
 Samen ongeveer 12 bouwdagen; met de overlap tussen fase 0 en 1 in de

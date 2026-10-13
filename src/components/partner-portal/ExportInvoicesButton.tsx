@@ -155,7 +155,7 @@ export const ExportInvoicesButton = ({
       ) : (
         <Download className="h-4 w-4 mr-2" />
       )}
-      Export CSV ({totalCount})
+      Exporteren (csv, {totalCount})
     </Button>
   );
 };

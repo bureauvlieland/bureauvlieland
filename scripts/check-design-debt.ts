@@ -22,18 +22,19 @@ const listAll = process.argv.includes("--list");
 const writeBaseline = process.argv.includes("--write-baseline");
 const BASELINE_PATH = resolve(root, ".github/design-debt-baseline.json");
 
-// Publieke site en klantportaal. Admin, partner- en logiesportaal volgen later.
+// Publieke site, klantportaal en (sinds partnerportaal fase 1) het
+// partnerportaal, met een baseline per bestand die alleen omlaag mag.
+// Admin- en logiesportaal volgen later.
 const INCLUDE = ["src/pages", "src/components"];
 const EXCLUDE = [
   "src/pages/admin",
   "src/components/admin",
-  "src/components/partner-portal",
   "src/components/accommodation-portal",
   "src/components/ui",
   "src/components/system",
   "src/pages/Ontwerp.tsx",
 ];
-const EXCLUDE_FILE = /^src\/pages\/Partner[A-Za-z]*\.tsx$|__tests__/;
+const EXCLUDE_FILE = /__tests__/;
 
 const PALETTE =
   "(red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)";

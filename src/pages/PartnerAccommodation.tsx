@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Helmet } from "react-helmet";
+import { usePartnerPortal } from "@/hooks/usePartnerPortal";
+import { usePartnerContext } from "@/lib/partnerPortalContext";
 import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { EmptyState, PortalTabs, type PillTone, type PortalTab } from "@/components/system";
+import { PARTNER_QUOTE_TABS, partnerQuoteTab, type PartnerQuoteTab } from "@/lib/accommodationQuoteStatus";
 import { PartnerAccommodationRequestCard } from "@/components/partner-portal/PartnerAccommodationRequestCard";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
-import { AlertCircle, RefreshCw, BedDouble, Bell } from "lucide-react";
+import { RefreshCw, BedDouble } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { reportError } from "@/lib/errorReporting";
 
@@ -71,80 +71,52 @@ interface RequestWithQuote extends AccommodationRequest {
   invoicingMode?: string | null;
 }
 
-const PartnerAccommodationContent = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+/** Lege staat per tabblad: wat hier zou staan en waarom het leeg is. */
+const EMPTY: Record<PartnerQuoteTab, { title: string; description: string }> = {
+  gevraagd: { title: "Geen offerte gevraagd", description: "Nieuwe logiesaanvragen van Bureau Vlieland verschijnen hier." },
+  wacht: { title: "Geen offertes bij de klant", description: "Verstuurde offertes staan hier tot de klant kiest." },
+  verlopen: { title: "Geen verlopen offertes", description: "Een offerte waarvan de geldigheid is verstreken kunt u hier verlengen." },
+  gekozen: { title: "Nog geen gekozen offertes", description: "Zodra de klant uw offerte kiest, staat hij hier." },
+  afgerond: { title: "Geen afgeronde aanvragen", description: "Niet gekozen, afgewezen en geannuleerde aanvragen komen hier." },
+};
+
+export const PartnerAccommodationContent = () => {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState<RequestWithQuote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [partnerId, setPartnerId] = useState<string | null>(null);
-  const [partnerToken, setPartnerToken] = useState<string | null>(null);
-  const [partnerName, setPartnerName] = useState<string>("");
-  const [partnerEmail, setPartnerEmail] = useState<string>("");
-  const [partnerDescription, setPartnerDescription] = useState<string>("");
+  const { partner, partnerToken } = usePartnerPortal();
+  const { demo } = usePartnerContext();
+  const partnerId = partner.id;
+  const partnerName = partner.name;
+  const partnerEmail = partner.contact_email || partner.email;
+  const partnerDescription = partner.accommodation_description || "";
   const [selectedRequest, setSelectedRequest] = useState<RequestWithQuote | null>(null);
   const [showQuoteSheet, setShowQuoteSheet] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
+    const currentPartnerId = partner.id;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      navigate("/partner/login");
+    // Referentiepagina: de verzonnen logiesaanvragen uit het dashboard, niets ophalen.
+    if (demo) {
+      setRequests(
+        (demo.dashboard.accommodationQuotes ?? []).map((q) => ({
+          ...q.accommodation_requests,
+          room_occupancy: null,
+          room_assignment: q.accommodation_requests.room_assignment ?? null,
+          guest_details_updated_at: null,
+          linked_program_id: q.accommodation_requests.linked_program_id ?? null,
+          wants_activities: false,
+          invoicingMode: q.accommodation_requests.invoicing_mode ?? null,
+          quote: { ...q, room_configuration: Array.isArray(q.room_configuration) ? (q.room_configuration as Record<string, unknown>[]) : [] },
+        })),
+      );
+      setIsLoading(false);
       return;
     }
-
-    // Check if admin is impersonating
-    const impersonatePartnerId = searchParams.get("impersonate");
-    let currentPartnerId: string | null = null;
-
-    if (impersonatePartnerId) {
-      const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: session.user.id });
-      
-      if (isAdmin) {
-        currentPartnerId = impersonatePartnerId;
-      }
-    }
-
-    if (!currentPartnerId) {
-      // Get partner ID and token from auth
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, partner_token, name, email, contact_email, accommodation_description")
-        .eq("auth_user_id", session.user.id)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (!partner) {
-        setError("Je account is niet gekoppeld aan een partner.");
-        setIsLoading(false);
-        return;
-      }
-
-      currentPartnerId = partner.id;
-      setPartnerToken(partner.partner_token);
-      setPartnerName(partner.name);
-      setPartnerEmail(partner.contact_email || partner.email);
-      setPartnerDescription((partner as any).accommodation_description || "");
-    } else {
-      // Admin impersonating - fetch the partner token and name
-      const { data: impersonatedPartner } = await supabase
-        .from("partners")
-        .select("partner_token, name, email, contact_email, accommodation_description")
-        .eq("id", currentPartnerId)
-        .maybeSingle();
-      if (impersonatedPartner) {
-        setPartnerToken(impersonatedPartner.partner_token);
-        setPartnerName(impersonatedPartner.name);
-        setPartnerEmail(impersonatedPartner.contact_email || impersonatedPartner.email);
-        setPartnerDescription((impersonatedPartner as any).accommodation_description || "");
-      }
-    }
-
-    setPartnerId(currentPartnerId);
 
     // Fetch quotes for this partner
     const { data: quotes, error: quotesError } = await supabase
@@ -231,7 +203,8 @@ const PartnerAccommodationContent = () => {
 
   useEffect(() => {
     fetchData();
-  }, [navigate, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partner.id]);
 
   const handleQuoteSubmit = async (quoteData: {
     accommodationName: string;
@@ -338,14 +311,8 @@ const PartnerAccommodationContent = () => {
         }).then(() => {});
       }
 
-      toast({
-        title: "Offerte ingediend",
-        description: "Uw offerte is succesvol verstuurd naar Bureau Vlieland. Zij zullen deze beoordelen.",
-      });
-
+      // De sheet blijft open met de bevestiging; sluiten maakt hem leeg.
       await fetchData();
-      setShowQuoteSheet(false);
-      setSelectedRequest(null);
       return true;
     } catch (err) {
       reportError(err, { where: "PartnerAccommodation: Error submitting quote" });
@@ -360,8 +327,6 @@ const PartnerAccommodationContent = () => {
 
   const handleQuoteDecline = async (declineReason: string, proposedArrival?: string, proposedDeparture?: string) => {
     if (!selectedRequest?.quote) return false;
-
-    const hasAlternativeDates = !!(proposedArrival && proposedDeparture);
 
     try {
       // Status + werkbanktaak + historie + dossier-tijdlijn lopen via de edge
@@ -379,16 +344,7 @@ const PartnerAccommodationContent = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast({
-        title: hasAlternativeDates ? "Alternatieve datums voorgesteld" : "Aanvraag afgewezen",
-        description: hasAlternativeDates
-          ? "Bureau Vlieland ontvangt uw voorstel en neemt contact op met de klant."
-          : "De aanvraag is gemarkeerd als niet beschikbaar.",
-      });
-
       await fetchData();
-      setShowQuoteSheet(false);
-      setSelectedRequest(null);
       return true;
     } catch (err) {
       reportError(err, { where: "PartnerAccommodation: Error declining quote" });
@@ -401,249 +357,67 @@ const PartnerAccommodationContent = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-32 w-full mb-6" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
+  const currentTab: PartnerQuoteTab = PARTNER_QUOTE_TABS.some((t) => t.id === searchParams.get("tab")) ? (searchParams.get("tab") as PartnerQuoteTab) : "gevraagd";
+  const setTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "gevraagd") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
 
-  if (error) {
-    return (
-      <div className="p-6 text-center py-16">
-        <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Fout</h1>
-        <p className="text-muted-foreground mb-6">{error}</p>
-      </div>
-    );
-  }
+  // Eén woordenlijst voor de tabs en de kaarten (`accommodationQuoteStatus`).
+  const byTab = new Map<PartnerQuoteTab, RequestWithQuote[]>(PARTNER_QUOTE_TABS.map((t) => [t.id, []]));
+  for (const r of requests) byTab.get(partnerQuoteTab(r.quote?.status))?.push(r);
+  const openCount = (byTab.get("gevraagd")?.length ?? 0) + (byTab.get("verlopen")?.length ?? 0);
+  const visible = byTab.get(currentTab) ?? [];
 
-  // Tab filtering
-  const pendingRequests = requests.filter(r => r.quote?.status === "pending");
-  const submittedRequests = requests.filter(r => r.quote?.status === "submitted");
-  const expiredRequests = requests.filter(r => r.quote?.status === "expired");
-  const acceptedRequests = requests.filter(r => r.quote?.status === "selected");
-  const closedRequests = requests.filter(r => 
-    r.quote?.status === "rejected" || r.quote?.status === "declined" || r.quote?.status === "cancelled"
-  );
+  const tabs: PortalTab[] = PARTNER_QUOTE_TABS.map((t) => {
+    const n = byTab.get(t.id)?.length ?? 0;
+    const tone: PillTone = t.id === "gevraagd" || t.id === "verlopen" ? "warning" : "neutral";
+    return { key: t.id, label: t.label, badge: n > 0 ? { label: String(n), tone } : null };
+  });
+
+  const openRequest = (request: RequestWithQuote) => {
+    setSelectedRequest(request);
+    setShowQuoteSheet(true);
+  };
 
   return (
     <>
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <BedDouble className="h-6 w-6" />
-              Logies Aanvragen
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Bekijk en beantwoord logies aanvragen van Bureau Vlieland
-            </p>
+      <PartnerPage
+        title="Logies"
+        icon={<BedDouble />}
+        description="Logiesaanvragen van Bureau Vlieland: beantwoord ze met een offerte en volg wat de klant kiest."
+        status={openCount > 0 ? { label: openCount === 1 ? "1 aanvraag wacht op u" : `${openCount} aanvragen wachten op u`, tone: "warning" } : null}
+        actions={
+          <Button onClick={() => void fetchData()} variant="outline" size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+            Vernieuwen
+          </Button>
+        }
+        loading={isLoading}
+        error={error}
+      >
+        <PortalTabs tabs={tabs} current={currentTab} onChange={setTab} label="Logiesaanvragen" embedded />
+        {visible.length === 0 ? (
+          <EmptyState icon={<BedDouble />} title={EMPTY[currentTab].title} description={EMPTY[currentTab].description} />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {visible.map((request) => (
+              <PartnerAccommodationRequestCard
+                key={request.id}
+                request={request}
+                quote={request.quote}
+                partnerId={partnerId}
+                partnerName={partnerName}
+                partnerEmail={partnerEmail}
+                partnerToken={partnerToken}
+                onOpen={() => openRequest(request)}
+              />
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            {pendingRequests.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                <Bell className="h-4 w-4" />
-                <span>{pendingRequests.length} nieuw</span>
-              </div>
-            )}
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Vernieuwen
-            </Button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="pending" className="mt-8">
-          <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
-              <TabsTrigger value="pending" className="relative whitespace-nowrap">
-                Actie nodig
-                {pendingRequests.length > 0 && (
-                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                    {pendingRequests.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="submitted" className="whitespace-nowrap">
-                In behandeling
-                {submittedRequests.length > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {submittedRequests.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="expired" className="whitespace-nowrap">
-                Verlopen
-                {expiredRequests.length > 0 && (
-                  <span className="ml-2 bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full">
-                    {expiredRequests.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="accepted" className="whitespace-nowrap">
-                Akkoord
-                {acceptedRequests.length > 0 && (
-                  <span className="ml-2 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
-                    {acceptedRequests.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="closed" className="whitespace-nowrap">
-                Afgerond
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-
-          <TabsContent value="pending" className="mt-6">
-            {pendingRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <BedDouble className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Geen openstaande logies aanvragen.</p>
-                  <p className="text-sm mt-1">Nieuwe aanvragen verschijnen hier.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {pendingRequests.map((request) => (
-                  <PartnerAccommodationRequestCard
-                    key={request.id}
-                    request={request}
-                    quote={request.quote}
-                    partnerId={partnerId || ""}
-                    partnerName={partnerName}
-                    partnerEmail={partnerEmail}
-                    partnerToken={partnerToken}
-                    onSubmitQuote={() => {
-                      setSelectedRequest(request);
-                      setShowQuoteSheet(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="submitted" className="mt-6">
-            {submittedRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <p>Geen verstuurde offertes.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {submittedRequests.map((request) => (
-                  <PartnerAccommodationRequestCard
-                    key={request.id}
-                    request={request}
-                    quote={request.quote}
-                    partnerId={partnerId || ""}
-                    partnerName={partnerName}
-                    partnerEmail={partnerEmail}
-                    partnerToken={partnerToken}
-                    onSubmitQuote={() => {
-                      setSelectedRequest(request);
-                      setShowQuoteSheet(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="expired" className="mt-6">
-            {expiredRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <p>Geen verlopen offertes.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {expiredRequests.map((request) => (
-                  <PartnerAccommodationRequestCard
-                    key={request.id}
-                    request={request}
-                    quote={request.quote}
-                    partnerId={partnerId || ""}
-                    partnerName={partnerName}
-                    partnerEmail={partnerEmail}
-                    partnerToken={partnerToken}
-                    onSubmitQuote={() => {
-                      setSelectedRequest(request);
-                      setShowQuoteSheet(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="accepted" className="mt-6">
-            {acceptedRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <p>Geen akkoord offertes.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {acceptedRequests.map((request) => (
-                  <PartnerAccommodationRequestCard
-                    key={request.id}
-                    request={request}
-                    quote={request.quote}
-                    invoicingMode={request.invoicingMode}
-                    partnerId={partnerId || ""}
-                    partnerName={partnerName}
-                    partnerEmail={partnerEmail}
-                    partnerToken={partnerToken}
-                    onSubmitQuote={() => {
-                      setSelectedRequest(request);
-                      setShowQuoteSheet(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="closed" className="mt-6">
-            {closedRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <p>Geen afgeronde aanvragen.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {closedRequests.map((request) => (
-                  <PartnerAccommodationRequestCard
-                    key={request.id}
-                    request={request}
-                    quote={request.quote}
-                    partnerId={partnerId || ""}
-                    partnerName={partnerName}
-                    partnerEmail={partnerEmail}
-                    partnerToken={partnerToken}
-                    onSubmitQuote={() => {
-                      setSelectedRequest(request);
-                      setShowQuoteSheet(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+        )}
+      </PartnerPage>
 
       {/* Quote Sheet */}
       <PartnerAccommodationQuoteSheet
@@ -669,10 +443,6 @@ const PartnerAccommodationContent = () => {
 const PartnerAccommodation = () => {
   return (
     <PartnerLayout>
-      <Helmet>
-        <title>Logies Aanvragen | Partnerportaal | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
       <PartnerAccommodationContent />
     </PartnerLayout>
   );
