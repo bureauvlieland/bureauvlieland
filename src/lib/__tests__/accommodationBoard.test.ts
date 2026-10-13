@@ -60,8 +60,6 @@ describe("verzorging is nergens meer stil", () => {
       "src/components/customer-portal/AccommodationSection.tsx",
       "src/components/customer-portal/AccommodationQuoteCard.tsx",
       "src/components/customer-portal/AccommodationQuoteDetailSheet.tsx",
-      "src/components/accommodation-portal/AccommodationQuoteCard.tsx",
-      "src/components/accommodation-portal/AccommodationQuoteDetailSheet.tsx",
       "src/lib/stayOverviewPdf.ts",
     ]) {
       expect(read(file)).toContain("getBoardDisplay");

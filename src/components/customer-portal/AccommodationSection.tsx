@@ -20,8 +20,9 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SelectQuoteDialog } from "@/components/accommodation-portal/SelectQuoteDialog";
+import { SelectQuoteDialog } from "./SelectQuoteDialog";
 import type { AccommodationRequest, AccommodationQuote } from "@/types/accommodation";
+import type { AccommodationQuoteExtra } from "@/types/accommodationExtras";
 import {
   ACCOMMODATION_TYPES,
   ROOM_TYPES,
@@ -45,7 +46,7 @@ import { transformImageUrl } from "@/lib/supabaseImage";
 interface AccommodationSectionProps {
   accommodation: AccommodationRequest | null;
   quotes: AccommodationQuote[];
-  extrasByQuoteId?: Record<string, any[]>;
+  extrasByQuoteId?: Record<string, AccommodationQuoteExtra[]>;
   onSelectQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
   selectedDates: Date[];
   onEditAccommodation?: () => void;

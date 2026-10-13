@@ -42,6 +42,8 @@ const PAGES: { name: string; path: string; wachtOp?: string; maxHoogte?: number 
   { name: "klantportaal-logies", path: "/ontwerp/klantportaal?scherm=logies", wachtOp: "Hotel Zeezicht" },
   { name: "klantportaal-akkoord", path: "/ontwerp/klantportaal?scherm=akkoord", wachtOp: "Akkoord en voorwaarden" },
   { name: "klantportaal-deelnemers", path: "/ontwerp/klantportaal?scherm=deelnemers", wachtOp: "Deelnemersweergave" },
+  // De losse logiesaanvraag (/mijn-logies) op dezelfde schil en sectie, met twee offertes om uit te kiezen.
+  { name: "klantportaal-logiesaanvraag", path: "/ontwerp/klantportaal?scherm=logiesaanvraag", wachtOp: "Het Duinhuis" },
   // Het partnerportaal met een vaste, verzonnen partner (src/content/demoPartnerportaal.ts).
   { name: "partnerportaal-werkbank", path: "/ontwerp/partnerportaal?scherm=werkbank", wachtOp: "Vernieuwen" },
   { name: "partnerportaal-projecten", path: "/ontwerp/partnerportaal?scherm=projecten", wachtOp: "Archief" },

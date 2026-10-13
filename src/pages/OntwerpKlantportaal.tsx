@@ -7,17 +7,20 @@ import { ProgramView, type ProgramSection } from "@/components/customer-portal/P
 import { CustomerPortalSplash } from "@/components/customer-portal/CustomerPortalSplash";
 import { ParticipantView } from "@/components/customer-portal/ParticipantView";
 import { calculateStatusSummary } from "@/types/programRequest";
-import { DEMO_ACCOMMODATION, DEMO_PROGRAM, DEMO_QUOTES, DEMO_SELECTED_DATES } from "@/content/demoKlantportaal";
+import { AccommodationQuotesView } from "@/pages/AccommodationQuotes";
+import { DEMO_ACCOMMODATION, DEMO_LOGIES_AANVRAAG, DEMO_LOGIES_OFFERTES, DEMO_PROGRAM, DEMO_QUOTES, DEMO_SELECTED_DATES } from "@/content/demoKlantportaal";
 import logoImage from "@/assets/logo.png";
 
 /**
  * Referentie van het klantportaal met een vast, verzonnen programma
  * (klantportaal fase 4, borging). Bestaat alleen buiten productie, net als
  * /ontwerp, en is de bron voor de visuele regressietest: `?scherm=` kiest
- * overzicht, programma, logies, praktisch, facturatie, akkoord of deelnemers.
- * Alle acties zijn uitgeschakeld; er wordt niets opgeslagen.
+ * overzicht, programma, logies, praktisch, facturatie, akkoord, deelnemers
+ * of logiesaanvraag (de losse logiesaanvraag op `/mijn-logies`, met een
+ * tweede verzonnen aanvraag). Alle acties zijn uitgeschakeld; er wordt
+ * niets opgeslagen.
  */
-type Scherm = PortalView | "deelnemers";
+type Scherm = PortalView | "deelnemers" | "logiesaanvraag";
 
 const SCHERMEN: Record<string, Scherm> = {
   overzicht: "splash",
@@ -27,6 +30,7 @@ const SCHERMEN: Record<string, Scherm> = {
   facturatie: "billing",
   akkoord: "accept",
   deelnemers: "deelnemers",
+  logiesaanvraag: "logiesaanvraag",
 };
 
 const ok = async () => true;
@@ -42,6 +46,11 @@ const OntwerpKlantportaal = () => {
     setScherm(view === "today" || view === "map" ? "program" : view);
     window.scrollTo({ top: 0 });
   };
+
+  // De losse logiesaanvraag heeft een eigen schil; de referentie toont de hele pagina.
+  if (scherm === "logiesaanvraag") {
+    return <AccommodationQuotesView request={DEMO_LOGIES_AANVRAAG} quotes={DEMO_LOGIES_OFFERTES} extrasByQuoteId={{}} onSelectQuote={ok} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

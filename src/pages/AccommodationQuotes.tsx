@@ -1,287 +1,209 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
-import { differenceInDays } from 'date-fns';
-import { RefreshCw, ArrowRight, Home, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { useAccommodationQuotes } from '@/hooks/useAccommodationQuotes';
-import { AccommodationRequestSummary } from '@/components/accommodation-portal/AccommodationRequestSummary';
-import { AccommodationStatusBanner } from '@/components/accommodation-portal/AccommodationStatusBanner';
-import { AccommodationQuoteCard } from '@/components/accommodation-portal/AccommodationQuoteCard';
-import { AccommodationQuoteDetailSheet } from '@/components/accommodation-portal/AccommodationQuoteDetailSheet';
-import { SelectQuoteDialog } from '@/components/accommodation-portal/SelectQuoteDialog';
-import type { AccommodationQuote } from '@/types/accommodation';
-import { ProjectDocumentsPanel } from '@/components/shared/ProjectDocumentsPanel';
-import { useToast } from '@/hooks/use-toast';
-import logo from '@/assets/logo.png';
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet";
+import { differenceInDays } from "date-fns";
+import { ArrowRight, BedDouble, FileText, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Container, EmptyState, LoadingState, Notice } from "@/components/system";
+import { TabHeader } from "@/components/customer-portal/TabHeader";
+import { buildTabHeader } from "@/components/customer-portal/tabHeaderConfig";
+import { AccommodationSection } from "@/components/customer-portal/AccommodationSection";
+import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel";
+import { useAccommodationQuotes } from "@/hooks/useAccommodationQuotes";
+import { useToast } from "@/hooks/use-toast";
 import { reportError } from "@/lib/errorReporting";
+import type { AccommodationQuote, AccommodationRequest } from "@/types/accommodation";
+import type { AccommodationQuoteExtra } from "@/types/accommodationExtras";
+import logoImage from "@/assets/logo.png";
+
+/**
+ * De losse logiesaanvraag (`/mijn-logies/<token>`, logiesportaal op het
+ * ontwerpsysteem): een aanvraag zonder programma, uit de mails van Bureau
+ * Vlieland. Dezelfde schil, kop en logiessectie als het tabblad Logies in
+ * het klantportaal, zodat de klant op beide plekken hetzelfde ziet. Hoort
+ * de aanvraag bij een programma, dan stuurt de pagina door naar dat
+ * programma.
+ */
+const Schil = ({ children, onRefresh }: { children: React.ReactNode; onRefresh?: () => void }) => (
+  <div className="min-h-screen bg-background">
+    <Helmet>
+      <title>Uw logies | Bureau Vlieland</title>
+      <meta name="robots" content="noindex, nofollow" />
+    </Helmet>
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <Container size="full" className="flex items-center justify-between gap-2 py-3 sm:py-4">
+        <Link to="/" className="flex shrink-0 items-center gap-2">
+          <img src={logoImage} alt="Bureau Vlieland" className="h-7 sm:h-8" />
+        </Link>
+        {onRefresh && (
+          <Button variant="ghost" size="sm" onClick={onRefresh} aria-label="Vernieuwen">
+            <RefreshCw className="h-4 w-4 sm:mr-1" aria-hidden="true" />
+            <span className="hidden sm:inline">Vernieuwen</span>
+          </Button>
+        )}
+      </Container>
+    </header>
+    <Container as="main" id="main-content" size="full" className="pt-8 pb-12">
+      {children}
+    </Container>
+  </div>
+);
+
+interface AccommodationQuotesViewProps {
+  request: AccommodationRequest;
+  quotes: AccommodationQuote[];
+  extrasByQuoteId: Record<string, AccommodationQuoteExtra[]>;
+  onSelectQuote: (quoteId: string, signatureName: string, acceptedTerms: boolean) => Promise<boolean>;
+  onRefresh?: () => void;
+  /** De klantcode voor de documenten; zonder code (de referentiepagina) geen documentenkaart. */
+  token?: string;
+}
+
+/** De inhoud van de pagina, los van het ophalen; de referentiepagina gebruikt hem met verzonnen data. */
+export const AccommodationQuotesView = ({ request, quotes, extrasByQuoteId, onSelectQuote, onRefresh, token }: AccommodationQuotesViewProps) => {
+  const arrival = new Date(request.arrival_date);
+  const departure = new Date(request.departure_date);
+  const selectedDates = [arrival, departure].filter((d) => !Number.isNaN(d.getTime()));
+  const hasSelectedQuote = quotes.some((q) => q.status === "selected");
+  const head = buildTabHeader({
+    section: "accommodation",
+    statusSummary: { total: 0, confirmed: 0, pending: 0, alternative: 0 },
+    accommodationQuotes: quotes,
+    hasAccommodationRequest: true,
+    billingComplete: false,
+    termsAccepted: false,
+    customerApprovedCount: 0,
+    customerApprovableCount: 0,
+    customerActionsCount: 0,
+  });
+
+  return (
+    <Schil onRefresh={onRefresh}>
+      <div className="mx-auto max-w-3xl space-y-6">
+        <TabHeader {...head} selectedDates={selectedDates} numberOfPeople={request.number_of_guests} referenceNumber={request.reference_number} />
+
+        <AccommodationSection
+          accommodation={request}
+          quotes={quotes}
+          extrasByQuoteId={extrasByQuoteId}
+          onSelectQuote={onSelectQuote}
+          selectedDates={selectedDates}
+          numberOfPeople={request.number_of_guests}
+        />
+
+        {token && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4 text-primary" aria-hidden="true" />
+                Documenten
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProjectDocumentsPanel
+                accommodationRequestId={request.id}
+                customerToken={token}
+                viewer="customer"
+                canUpload={true}
+                title=""
+                emptyHint="Nog geen documenten. U kunt hier bijvoorbeeld een gastenlijst of kamerindeling uploaden."
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {(request.wants_activities || !hasSelectedQuote) && (
+          <Notice tone="info" title={request.wants_activities ? "Wilt u ook activiteiten toevoegen?" : "Alvast activiteiten bekijken?"}>
+            <p>Maak uw verblijf compleet met activiteiten, excursies en catering. Bureau Vlieland zet het programma voor u klaar.</p>
+            <Button variant="outline" size="sm" className="mt-3" asChild>
+              <Link to="/programma-samenstellen">
+                Programma samenstellen
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </Link>
+            </Button>
+          </Notice>
+        )}
+      </div>
+    </Schil>
+  );
+};
 
 export default function AccommodationQuotes() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isRedirecting, setIsRedirecting] = useState(true);
-  
-  // On mount, check if we should redirect to the unified /mijn-programma URL
+  const { request, quotes, extrasByQuoteId, isLoading, error, refetch, selectQuote } = useAccommodationQuotes(token);
+
+  // Hoort de aanvraag bij een programma, dan is het klantportaal de plek.
   useEffect(() => {
-    const checkAndRedirect = async () => {
+    const check = async () => {
       if (!token) {
         setIsRedirecting(false);
         return;
       }
-
-      // Look up the accommodation request via the secure edge function
-      const { data: payload, error } = await supabase.functions.invoke(
-        'get-accommodation-portal',
-        { body: { token } },
-      );
-
-      if (error || !payload || payload.error) {
-        reportError(error || payload?.error, { where: "AccommodationQuotes: Error checking accommodation redirect" });
+      const { data: payload, error: invokeError } = await supabase.functions.invoke("get-accommodation-portal", { body: { token } });
+      if (invokeError || !payload || payload.error) {
+        reportError(invokeError || payload?.error, { where: "AccommodationQuotes: Error checking accommodation redirect" });
         setIsRedirecting(false);
         return;
       }
-
       const linkedProgramToken = payload.request?.linked_program?.customer_token;
-
-      // If there's a linked program, redirect to the unified URL
       if (linkedProgramToken) {
         navigate(`/mijn-programma/${linkedProgramToken}`, { replace: true });
         return;
       }
-
-      // No linked program found, show the legacy page
       setIsRedirecting(false);
-
     };
-
-    checkAndRedirect();
+    void check();
   }, [token, navigate]);
 
-  const {
-    request,
-    quotes,
-    extrasByQuoteId,
-    isLoading,
-    error,
-    refetch,
-    selectQuote,
-    quotesSummary,
-  } = useAccommodationQuotes(token);
-
-  const [selectedQuoteForDetails, setSelectedQuoteForDetails] = useState<AccommodationQuote | null>(null);
-  const [selectedQuoteForConfirm, setSelectedQuoteForConfirm] = useState<AccommodationQuote | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refetch();
-    setIsRefreshing(false);
-  };
-
-  const handleSelectQuote = async (signatureName: string, acceptedTerms: boolean) => {
-    if (!selectedQuoteForConfirm) return;
-
-    setIsSelecting(true);
-    const success = await selectQuote(selectedQuoteForConfirm.id, signatureName, acceptedTerms);
-    setIsSelecting(false);
-
+  const handleSelectQuote = async (quoteId: string, signatureName: string, acceptedTerms: boolean) => {
+    const success = await selectQuote(quoteId, signatureName, acceptedTerms);
     if (success) {
-      toast({
-        title: 'Offerte gekozen!',
-        description: 'De accommodatie neemt contact met u op.',
-      });
-      setSelectedQuoteForConfirm(null);
+      toast({ title: "Logies gekozen", description: "De accommodatie neemt contact met u op over de reservering." });
     } else {
-      toast({
-        title: 'Fout',
-        description: 'Er ging iets mis. Probeer het opnieuw.',
-        variant: 'destructive',
-      });
+      toast({ title: "Kiezen mislukt", description: "Er ging iets mis. Probeer het opnieuw of neem contact op met Bureau Vlieland.", variant: "destructive" });
     }
+    return success;
   };
 
-  // Loading state
-  if (isLoading) {
+  if (isLoading || isRedirecting) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Aanvraag laden...</p>
-        </div>
-      </div>
+      <Schil>
+        <LoadingState label="Aanvraag laden" />
+      </Schil>
     );
   }
 
-  // Error state
   if (error || !request) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <Home className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h1 className="text-2xl font-bold">Aanvraag niet gevonden</h1>
-          <p className="text-muted-foreground">
-            {error || 'Deze link is niet geldig of de aanvraag is verlopen.'}
-          </p>
-          <Button asChild>
-            <Link to="/">Naar homepage</Link>
-          </Button>
-        </div>
-      </div>
+      <Schil>
+        <EmptyState
+          icon={<BedDouble aria-hidden="true" />}
+          title="Aanvraag niet gevonden"
+          description={error || "Deze link is niet geldig of de aanvraag is verlopen."}
+          action={
+            <Button asChild>
+              <Link to="/">Naar de homepage</Link>
+            </Button>
+          }
+          className="mx-auto max-w-md"
+        />
+      </Schil>
     );
   }
 
-  const numberOfNights = differenceInDays(
-    new Date(request.departure_date),
-    new Date(request.arrival_date)
-  );
-  const hasSelectedQuote = quotesSummary.selected > 0;
-
   return (
-    <div className="min-h-screen bg-muted/30">
-      <Helmet>
-        <title>Uw logies-offertes | Bureau Vlieland</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-      {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/">
-            <img src={logo} alt="Bureau Vlieland" className="h-10" />
-          </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Vernieuwen
-          </Button>
-        </div>
-      </header>
-
-      <main id="main-content" className="container mx-auto px-4 py-8 max-w-3xl">
-        {/* Page title */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Uw Logies Aanvraag</h1>
-          {request.customer_company && (
-            <p className="text-muted-foreground">
-              {request.customer_company} • {request.number_of_guests} gasten • {numberOfNights} nachten
-            </p>
-          )}
-        </div>
-
-        {/* Request summary */}
-        <div className="mb-6">
-          <AccommodationRequestSummary request={request} />
-        </div>
-
-        {/* Status banner */}
-        <div className="mb-8">
-          <AccommodationStatusBanner request={request} quotesSummary={quotesSummary} quotes={quotes} />
-        </div>
-
-        {/* Quotes section */}
-        {quotes.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">
-              {hasSelectedQuote ? 'Je gekozen offerte' : 'Beschikbare offertes'}
-            </h2>
-            <div className="grid gap-4">
-              {quotes.map((quote) => (
-                <AccommodationQuoteCard
-                  key={quote.id}
-                  quote={quote}
-                  numberOfGuests={request.number_of_guests}
-                  numberOfNights={numberOfNights}
-                  onSelect={() => setSelectedQuoteForConfirm(quote)}
-                  onViewDetails={() => setSelectedQuoteForDetails(quote)}
-                  isSelecting={isSelecting && selectedQuoteForConfirm?.id === quote.id}
-                  hasSelectedQuote={hasSelectedQuote}
-                  extrasOverride={extrasByQuoteId[quote.id] ?? []}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Documenten */}
-        {request?.id && token && (
-          <section className="mb-8">
-            <div className="border rounded-lg bg-background p-4">
-              <ProjectDocumentsPanel
-                accommodationRequestId={request.id}
-                customerToken={token}
-                viewer="customer"
-                canUpload={true}
-                title="Documenten"
-                emptyHint="Upload hier bijvoorbeeld een gastenlijst of kamerindeling (Word/Excel/PDF)."
-              />
-            </div>
-          </section>
-        )}
-
-
-        {/* CTA for activities */}
-        {request.wants_activities && (
-          <section className="bg-primary/5 border border-primary/20 rounded-lg p-6">
-            <h3 className="font-semibold mb-2">Wilt u ook activiteiten toevoegen?</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Maak uw verblijf compleet met leuke activiteiten, excursies en catering.
-            </p>
-            <Button asChild>
-              <Link to="/programma-samenstellen">
-                Naar programma samenstellen
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </section>
-        )}
-
-        {/* No activities but still show CTA if no quotes yet */}
-        {!request.wants_activities && quotes.length === 0 && (
-          <section className="text-center py-8">
-            <p className="text-muted-foreground mb-4">
-              Wilt u in de tussentijd alvast activiteiten bekijken?
-            </p>
-            <Button variant="outline" asChild>
-              <Link to="/programma-samenstellen">
-                Bekijk activiteiten
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </section>
-        )}
-      </main>
-
-      {/* Detail sheet */}
-      <AccommodationQuoteDetailSheet
-        quote={selectedQuoteForDetails}
-        open={!!selectedQuoteForDetails}
-        onOpenChange={(open) => !open && setSelectedQuoteForDetails(null)}
-        onSelect={() => {
-          if (selectedQuoteForDetails) {
-            setSelectedQuoteForConfirm(selectedQuoteForDetails);
-          }
-        }}
-        isSelecting={isSelecting}
-        hasSelectedQuote={hasSelectedQuote}
-        numberOfGuests={request.number_of_guests}
-        numberOfNights={numberOfNights}
-        extrasOverride={selectedQuoteForDetails ? (extrasByQuoteId[selectedQuoteForDetails.id] ?? []) : undefined}
-      />
-
-      {/* Confirmation dialog */}
-      <SelectQuoteDialog
-        quote={selectedQuoteForConfirm}
-        open={!!selectedQuoteForConfirm}
-        onOpenChange={(open) => !open && setSelectedQuoteForConfirm(null)}
-        onConfirm={handleSelectQuote}
-        isSelecting={isSelecting}
-      />
-    </div>
+    <AccommodationQuotesView
+      request={request}
+      quotes={quotes}
+      extrasByQuoteId={extrasByQuoteId}
+      onSelectQuote={handleSelectQuote}
+      onRefresh={() => void refetch()}
+      token={token}
+    />
   );
 }
