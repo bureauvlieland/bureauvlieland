@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
+import { directDebitAmount } from "@/lib/purchaseInvoiceDirectDebit";
 
 type MatchStatus = "matched" | "ambiguous" | "unmatched" | "manual" | "internal";
 
@@ -135,6 +136,19 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const allResolved = bookings.every(
     (b) => b.match_status !== "unmatched" && b.match_status !== "ambiguous",
   );
+  // Doeksen incasseert bruto minus ingehouden commissie. Het "Netto bedrag" op
+  // de PDF hoort daar gelijk aan te zijn; zo niet, dan is er iets misgelezen.
+  const expectedNetToPay = data
+    ? directDebitAmount({
+        amount_incl_vat: data.invoice.total_incl_vat,
+        supplier_commission_excl_vat: supplierType === "doeksen" ? data.invoice.total_supplier_commission : 0,
+      })
+    : 0;
+  const netToPayMismatch =
+    data && supplierType === "doeksen" && Number.isFinite(data.invoice.net_to_pay) && data.invoice.net_to_pay > 0
+      && Math.abs(data.invoice.net_to_pay - expectedNetToPay) >= 0.05
+      ? data.invoice.net_to_pay - expectedNetToPay
+      : null;
 
   function updateBooking(idx: number, patch: Partial<Booking>) {
     setBookings((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
@@ -300,8 +314,23 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                       Commissie BV: {EUR(data.invoice.total_supplier_commission)}
                     </div>
                   )}
+                  {supplierType === "doeksen" && (
+                    <div className="text-xs text-muted-foreground">
+                      Incasso: {EUR(expectedNetToPay)}
+                    </div>
+                  )}
                 </div>
               </div>
+              {netToPayMismatch !== null && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Het nettobedrag op de PDF ({EUR(data.invoice.net_to_pay)}) wijkt {EUR(Math.abs(netToPayMismatch))} af
+                    van totaal minus commissie ({EUR(expectedNetToPay)}). Controleer de uitgelezen totalen: de
+                    bankmatching herkent de incasso straks op dat laatste bedrag.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Booking rows */}

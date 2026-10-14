@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { invalidIbans, parseIbanList } from "@/lib/ibanList";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -69,6 +71,8 @@ interface Partner {
   kvk_number: string | null;
   iban: string | null;
   bic: string | null;
+  pays_by_direct_debit: boolean;
+  extra_ibans: string[];
   address_street: string | null;
   address_postal: string | null;
   address_city: string | null;
@@ -155,6 +159,8 @@ const AdminPartnerDetail = () => {
     kvk_number: "",
     iban: "",
     bic: "",
+    pays_by_direct_debit: false,
+    extra_ibans: "",
     address_street: "",
     address_postal: "",
     address_city: "",
@@ -216,6 +222,8 @@ const AdminPartnerDetail = () => {
         kvk_number: data.kvk_number || "",
         iban: (data as any).iban || "",
         bic: (data as any).bic || "",
+        pays_by_direct_debit: data.pays_by_direct_debit ?? false,
+        extra_ibans: (data.extra_ibans ?? []).join("\n"),
         address_street: data.address_street || "",
         address_postal: data.address_postal || "",
         address_city: data.address_city || "",
@@ -349,6 +357,11 @@ const AdminPartnerDetail = () => {
       toast.error("ID is verplicht");
       return;
     }
+    const badIbans = invalidIbans(parseIbanList(formData.extra_ibans));
+    if (badIbans.length > 0) {
+      toast.error(`Geen geldig IBAN bij overige IBAN's: ${badIbans.join(", ")}`);
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -374,6 +387,8 @@ const AdminPartnerDetail = () => {
           kvk_number: formData.kvk_number || null,
           iban: formData.iban?.replace(/\s/g, "").toUpperCase() || null,
           bic: formData.bic?.replace(/\s/g, "").toUpperCase() || null,
+          pays_by_direct_debit: formData.pays_by_direct_debit,
+          extra_ibans: parseIbanList(formData.extra_ibans),
           address_street: formData.address_street || null,
           address_postal: formData.address_postal || null,
           address_city: formData.address_city || null,
@@ -435,6 +450,8 @@ const AdminPartnerDetail = () => {
             kvk_number: formData.kvk_number || null,
             iban: formData.iban?.replace(/\s/g, "").toUpperCase() || null,
             bic: formData.bic?.replace(/\s/g, "").toUpperCase() || null,
+            pays_by_direct_debit: formData.pays_by_direct_debit,
+            extra_ibans: parseIbanList(formData.extra_ibans),
             address_street: formData.address_street || null,
             address_postal: formData.address_postal || null,
             address_city: formData.address_city || null,
@@ -710,6 +727,37 @@ const AdminPartnerDetail = () => {
                       placeholder="INGBNL2A"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="extra_ibans">Overige IBAN's</Label>
+                  <Textarea
+                    id="extra_ibans"
+                    value={formData.extra_ibans}
+                    onChange={(e) => handleChange("extra_ibans", e.target.value)}
+                    placeholder={"NL00 BANK 0123 4567 89\nNL00 BANK 9876 5432 10"}
+                    rows={2}
+                  />
+                  <p className="text-xs text-slate-500">
+                    Eén per regel. Andere rekeningen waarvan deze partner incasseert of betaalt; alleen om
+                    bankregels te herkennen, nooit voor betalingen.
+                  </p>
+                </div>
+
+                {/* Incasso: inkoopfacturen worden door de partner zelf geïncasseerd (bijv. Rederij Doeksen). */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="pays_by_direct_debit">Betaalt via automatische incasso</Label>
+                    <p className="text-xs text-slate-500">
+                      Inkoopfacturen van deze partner gaan nooit in een betaalbatch. Ze blijven
+                      "Doorgestuurd" tot de incasso op het bankafschrift gematcht is.
+                    </p>
+                  </div>
+                  <Switch
+                    id="pays_by_direct_debit"
+                    checked={formData.pays_by_direct_debit}
+                    onCheckedChange={(checked) => handleChange("pays_by_direct_debit", checked)}
+                  />
                 </div>
               </CardContent>
             </Card>

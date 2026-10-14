@@ -30,7 +30,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         .from("partner_purchase_invoices")
         .select(`
           *,
-          partners!inner(id, name, email),
+          partners!inner(id, name, email, pays_by_direct_debit),
           program_requests!inner(id, reference_number, customer_name, customer_company),
           program_request_items!partner_purchase_invoices_item_id_fkey(id, block_name, commission_amount, commission_status, commission_percentage),
           partner_purchase_invoice_allocations(item_id, amount_excl_vat, program_request_items!partner_purchase_invoice_allocations_item_id_fkey(id, block_name, commission_amount, commission_status, commission_percentage)),

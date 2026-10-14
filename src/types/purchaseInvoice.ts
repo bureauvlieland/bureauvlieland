@@ -37,6 +37,8 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
     id: string;
     name: string;
     email: string;
+    /** Partner incasseert zelf (Rederij Doeksen): nooit in een betaalbatch, betaald via bankmatching. */
+    pays_by_direct_debit?: boolean;
   };
   program_request?: {
     id: string;

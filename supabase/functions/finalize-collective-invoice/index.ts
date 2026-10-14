@@ -38,6 +38,8 @@ interface FinalizeBody {
     total_vat: number;
     total_incl_vat: number;
     total_supplier_commission: number;
+    /** "Netto bedrag" van de PDF; alleen ter controle in de sheet, wordt niet opgeslagen. */
+    net_to_pay?: number;
     description?: string | null;
   };
   bookings: BookingInput[];

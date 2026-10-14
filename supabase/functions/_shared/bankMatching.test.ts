@@ -62,6 +62,75 @@ Deno.test("uitgaand: batch op referentie wint van inkoopfactuur op bedrag; batch
   assertEquals(purchase[0], { type: "purchase", id: "p1", label: "T-261008", amount: 206.42, confidence: 0.95 });
 });
 
+const DOEKSEN_IBAN = "NL91ABNA0417164300";
+const DOEKSEN_IBAN_2 = "NL39RABO0300065264";
+const incasso: MatchCandidates = {
+  sales: [],
+  commission: [],
+  batch: [],
+  purchase: [
+    // Catering: Doeksen incasseert het volledige bedrag.
+    { type: "purchase", id: "cat", reference: "20260124", amount: 348.85, ibans: [DOEKSEN_IBAN, null, DOEKSEN_IBAN_2] },
+    // Overtochten: verzamelfactuur, commissie ingehouden, netto geïncasseerd.
+    { type: "purchase", id: "over", reference: "20260301", amount: 1000, netAmount: 920, ibans: [DOEKSEN_IBAN, DOEKSEN_IBAN_2] },
+    // Andere partner, zelfde bedrag als de catering: IBAN maakt het verschil.
+    { type: "purchase", id: "ander", reference: "F-77", amount: 348.85, ibans: ["NL20INGB0001234567"] },
+  ],
+};
+
+Deno.test("incasso: tegenpartij-IBAN + bedrag is een zekere match, ook zonder factuurnummer", () => {
+  const suggestions = suggestionsForLine(
+    { direction: "out", amount: -348.85, description: "SEPA Incasso Rederij Doeksen", counterparty_iban: "NL91 ABNA 0417 1643 00" },
+    incasso,
+  );
+  assertEquals(suggestions[0].id, "cat");
+  assertEquals(suggestions[0].confidence, 0.95);
+  const decision = decideMatch(suggestions);
+  assertEquals(decision.status, "suggested");
+  assertEquals(decision.matchedId, "cat");
+  assertEquals(decision.automatic, true);
+});
+
+Deno.test("incasso: een partner kan van meerdere rekeningen incasseren", () => {
+  const second = suggestionsForLine(
+    { direction: "out", amount: -348.85, description: "SEPA Incasso", counterparty_iban: "nl39 rabo 0300 0652 64" },
+    incasso,
+  );
+  assertEquals(second[0].id, "cat");
+  assertEquals(second[0].confidence, 0.95);
+  assertEquals(decideMatch(second).automatic, true);
+});
+
+Deno.test("incasso: het nettobedrag na ingehouden commissie telt als bedragmatch", () => {
+  const net = suggestionsForLine(
+    { direction: "out", amount: -920, description: "SEPA Incasso", counterparty_iban: DOEKSEN_IBAN },
+    incasso,
+  );
+  assertEquals(net[0].id, "over");
+  assertEquals(net[0].confidence, 0.95);
+  const gross = suggestionsForLine({ direction: "out", amount: -1000, description: "20260301" }, incasso);
+  assertEquals(gross[0].id, "over");
+  assertEquals(gross[0].confidence, 0.95);
+});
+
+Deno.test("incasso: zelfde bedrag bij een andere partner blijft een onzeker voorstel", () => {
+  const suggestions = suggestionsForLine(
+    { direction: "out", amount: -348.85, description: "overboeking", counterparty_iban: "NL00BANK0000000000" },
+    incasso,
+  );
+  assertEquals(suggestions.map((s) => [s.id, s.confidence]), [["cat", 0.4], ["ander", 0.4]]);
+  assertEquals(decideMatch(suggestions).status, "ambiguous");
+});
+
+Deno.test("incasso: alleen de IBAN klopt, dan zwakke voorstellen voor alle open facturen van die partner", () => {
+  const suggestions = suggestionsForLine(
+    { direction: "out", amount: -1268.85, description: "SEPA Incasso", counterparty_iban: DOEKSEN_IBAN },
+    incasso,
+  );
+  assertEquals(suggestions.map((s) => [s.id, s.confidence]), [["cat", 0.3], ["over", 0.3]]);
+  assertEquals(decideMatch(suggestions).automatic, false);
+});
+
 Deno.test("niets past: geen match", () => {
   const decision = decideMatch(suggestionsForLine({ direction: "in", amount: 999, description: "x" }, candidates));
   assertEquals(decision.status, "unmatched");
