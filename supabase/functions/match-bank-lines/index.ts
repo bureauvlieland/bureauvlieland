@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decideMatch, suggestionsForLine, type MatchCandidates } from '../_shared/bankMatching.ts';
+import { directDebitAmount } from '../_shared/purchaseInvoiceDirectDebit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,9 +49,12 @@ Deno.serve(async (req) => {
       .is('credits_invoice_id', null)
       .in('status', ['sent', 'forwarded']);
     if (commissionErr) throw new Error(`Commissiefacturen laden mislukt: ${commissionErr.message}`);
+    // Inkoopfacturen met partner-IBAN en ingehouden commissie: een incasso
+    // (Rederij Doeksen) wordt herkend op IBAN + bedrag, en bij een
+    // verzamelfactuur overtochten is dat bedrag bruto minus commissie.
     const { data: purchaseInvoices, error: purchaseErr } = await supabase
       .from('partner_purchase_invoices')
-      .select('id, invoice_number, amount_incl_vat, partner_id, status')
+      .select('id, invoice_number, amount_incl_vat, supplier_commission_excl_vat, supplier_commission_vat, partner_id, status, partners(iban)')
       .is('bank_line_id', null)
       .neq('status', 'paid');
     if (purchaseErr) throw new Error(`Inkoopfacturen laden mislukt: ${purchaseErr.message}`);
@@ -63,7 +67,14 @@ Deno.serve(async (req) => {
     const candidates: MatchCandidates = {
       sales: (salesInvoices ?? []).map((inv) => ({ type: 'sales', id: inv.id, reference: inv.invoice_number, amount: inv.amount_incl_vat })),
       commission: (commissionInvoices ?? []).map((inv) => ({ type: 'commission', id: inv.id, reference: inv.invoice_number, amount: inv.amount_incl_vat })),
-      purchase: (purchaseInvoices ?? []).map((inv) => ({ type: 'purchase', id: inv.id, reference: inv.invoice_number, amount: inv.amount_incl_vat })),
+      purchase: (purchaseInvoices ?? []).map((inv) => ({
+        type: 'purchase',
+        id: inv.id,
+        reference: inv.invoice_number,
+        amount: inv.amount_incl_vat,
+        netAmount: directDebitAmount(inv),
+        iban: (inv.partners as { iban: string | null } | null)?.iban ?? null,
+      })),
       batch: (batches ?? []).map((b) => ({ type: 'batch', id: b.id, reference: b.batch_reference, amount: b.total_amount })),
     };
 

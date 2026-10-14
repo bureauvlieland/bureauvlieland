@@ -15,6 +15,14 @@ export interface MatchCandidate {
   /** Factuurnummer of batchreferentie, zoals die in de omschrijving kan staan. */
   reference: string | null;
   amount: number | null;
+  /**
+   * Bedrag dat werkelijk van de rekening gaat als de leverancier commissie
+   * inhoudt (verzamelfactuur overtochten Doeksen: bruto minus commissie).
+   * Alleen gevuld als het van `amount` afwijkt.
+   */
+  netAmount?: number | null;
+  /** IBAN van de tegenpartij zoals bij ons bekend (partner-IBAN bij inkoopfacturen). */
+  iban?: string | null;
 }
 
 export interface MatchSuggestion {
@@ -31,6 +39,7 @@ export interface BankLineInput {
   description?: string | null;
   end_to_end_id?: string | null;
   remittance_info?: string | null;
+  counterparty_iban?: string | null;
 }
 
 export interface MatchCandidates {
@@ -49,18 +58,41 @@ const SCORES: Record<MatchType, [number, number, number | null]> = {
   batch: [0.98, 0.7, null],
 };
 
+/**
+ * Alleen de IBAN klopt, het bedrag niet: een zwak voorstel. Zo zie je bij een
+ * incasso die meerdere facturen tegelijk int tenminste welke open staan.
+ */
+const IBAN_ONLY_SCORE = 0.3;
+
+export function normalizeIban(iban: string | null | undefined): string {
+  return (iban ?? "").replace(/\s/g, "").toUpperCase();
+}
+
 export function lineSearchText(line: BankLineInput): string {
   return `${line.description ?? ""} ${line.end_to_end_id ?? ""} ${line.remittance_info ?? ""}`.toUpperCase();
 }
 
-function score(candidate: MatchCandidate, text: string, amount: number): number | null {
+const sameAmount = (a: number | null | undefined, b: number) =>
+  a !== null && a !== undefined && Math.abs(Number(a) - b) < 0.01;
+
+/**
+ * Referentie + bedrag is zeker. IBAN van de tegenpartij + bedrag is even zeker:
+ * dat is hoe een incasso van een partner zonder factuurnummer in de
+ * omschrijving herkend wordt. Het bedrag mag bruto of netto (na ingehouden
+ * commissie) zijn.
+ */
+function score(candidate: MatchCandidate, text: string, amount: number, lineIban: string): number | null {
   const [both, refOnly, amountOnly] = SCORES[candidate.type];
   const ref = (candidate.reference ?? "").toUpperCase();
   const refMatch = !!ref && text.includes(ref);
-  const amountMatch = Math.abs(Number(candidate.amount ?? 0) - amount) < 0.01;
+  const amountMatch = sameAmount(candidate.amount, amount) || sameAmount(candidate.netAmount, amount);
+  const candidateIban = normalizeIban(candidate.iban);
+  const ibanMatch = !!candidateIban && !!lineIban && candidateIban === lineIban;
   if (refMatch && amountMatch) return both;
+  if (ibanMatch && amountMatch) return both;
   if (refMatch) return refOnly;
   if (amountMatch) return amountOnly;
+  if (ibanMatch) return IBAN_ONLY_SCORE;
   return null;
 }
 
@@ -68,6 +100,7 @@ function score(candidate: MatchCandidate, text: string, amount: number): number 
 export function suggestionsForLine(line: BankLineInput, candidates: MatchCandidates): MatchSuggestion[] {
   const text = lineSearchText(line);
   const amount = Math.abs(Number(line.amount));
+  const lineIban = normalizeIban(line.counterparty_iban);
   const pool =
     line.direction === "in"
       ? [...candidates.sales, ...candidates.commission]
@@ -75,7 +108,7 @@ export function suggestionsForLine(line: BankLineInput, candidates: MatchCandida
 
   const suggestions: MatchSuggestion[] = [];
   for (const candidate of pool) {
-    const confidence = score(candidate, text, amount);
+    const confidence = score(candidate, text, amount, lineIban);
     if (confidence === null) continue;
     suggestions.push({
       type: candidate.type,

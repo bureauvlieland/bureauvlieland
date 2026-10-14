@@ -48,7 +48,7 @@ import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/
 import { InvoiceConsistencyPanel } from "@/components/admin/purchase-invoices/InvoiceConsistencyPanel";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
-import { Plus, Link2 } from "lucide-react";
+import { Plus, Link2, Landmark } from "lucide-react";
 import { LinkPurchaseInvoiceDialog } from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
 
 import {
@@ -63,6 +63,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { PurchaseInvoiceWithRelations, PurchaseInvoiceStatus } from "@/types/purchaseInvoice";
 import { isForwardableInvoice, isAwaitingPdfMatch, daysAwaitingPdf } from "@/lib/purchaseInvoiceStatusFlow";
+import { directDebitAmount, isAwaitingDirectDebit, withholdsCommission } from "@/lib/purchaseInvoiceDirectDebit";
 import { reportError } from "@/lib/errorReporting";
 import { resolveInvoiceCommission } from "@/lib/purchaseInvoiceCommission";
 
@@ -187,6 +188,18 @@ export default function AdminPurchaseInvoices() {
             {invoice.payment_batch && (
               <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
                 In batch {invoice.payment_batch.batch_reference}
+              </Badge>
+            )}
+            {isAwaitingDirectDebit(invoice) && (
+              <Badge
+                variant="outline"
+                className="bg-teal-50 text-teal-700 border-teal-200 text-xs"
+                title="Partner incasseert zelf; gaat niet in een betaalbatch. Wordt betaald zodra de incasso op het bankafschrift gematcht is."
+              >
+                <Landmark className="h-3 w-3 mr-1" />
+                Incasso
+                {withholdsCommission(invoice) &&
+                  ` ${directDebitAmount(invoice).toLocaleString("nl-NL", { style: "currency", currency: "EUR" })} na commissie`}
               </Badge>
             )}
           </div>
