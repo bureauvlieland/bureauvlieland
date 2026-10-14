@@ -2,6 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canPartnerInvoiceItem } from "../_shared/partnerInvoicing.ts";
 import { findItemsAlreadyInvoiced, type ItemInvoiceLink } from "../_shared/purchaseInvoiceDuplicateRules.ts";
+import { isPartnerDashboardItemVisible } from "../_shared/partnerDashboardItems.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -133,51 +134,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Filter: active-status items always shown, closed items only if < 3 months old.
-    // Cancelled items (of items in een cancelled aanvraag) blijven nog 12 maanden zichtbaar
-    // zodat partners ze kunnen terugvinden via zoeken/archief.
-    const cutoffDate = new Date();
+    // Welke onderdelen de partner ziet staat in _shared/partnerDashboardItems.ts:
+    // lopende altijd, afgesloten drie maanden, geannuleerd twaalf maanden en
+    // gefactureerd altijd (facturatiehistorie voor Facturatie en de jaarcijfers).
+    const now = new Date();
+    const cutoffDate = new Date(now);
     cutoffDate.setMonth(cutoffDate.getMonth() - 3);
-    const cancelledCutoff = new Date();
+    const cancelledCutoff = new Date(now);
     cancelledCutoff.setFullYear(cancelledCutoff.getFullYear() - 1);
-
-    // Startdatum van de aanvraag (laatste geselecteerde datum) — voor het opruimen
-    // van concept-aanvragen die nooit zijn vrijgegeven en waarvan de datum verstreken is.
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const lastRequestDate = (req: any): string | null => {
-      const dates: unknown = req?.selected_dates;
-      if (!Array.isArray(dates) || dates.length === 0) return null;
-      const parsed = dates
-        .map((d) => (typeof d === "string" ? d.slice(0, 10) : null))
-        .filter((d): d is string => !!d)
-        .sort();
-      return parsed.length ? parsed[parsed.length - 1] : null;
-    };
-
-    const activeStatuses = ["pending", "confirmed", "alternative", "counter_proposed", "accepted", "executed"];
-    const activeItems = (items || []).filter(item => {
-      // Partner heeft factureren zelf gesloten → uit werkbank halen.
-      if (item.partner_dismissed_at) return false;
-      const req = item.program_requests;
-      // Concept-onderdelen (nog niet vrijgegeven) met een verstreken datum: opruimen.
-      const isConceptItem = !!item.skip_partner_notification && item.status === "pending";
-      if (isConceptItem) {
-        const endDate = lastRequestDate(req);
-        if (endDate && endDate < todayIso) return false;
-      }
-
-      const reqCancelled = req?.status === "cancelled" || !!req?.cancelled_at;
-      const itemCancelled = item.status === "cancelled" || item.status === "unavailable";
-      if (reqCancelled || itemCancelled) {
-        const ref = item.updated_at || req?.cancelled_at;
-        return ref ? new Date(ref) > cancelledCutoff : false;
-      }
-      // Project is door Bureau Vlieland afgerond én dit onderdeel is
-      // gefactureerd of gesloten → niet langer relevant in de werkbank.
-      if (req?.completed_at && (item.invoiced_number || item.partner_dismissed_at)) return false;
-      if (activeStatuses.includes(item.status)) return true;
-      return new Date(item.updated_at) > cutoffDate;
-    });
+    const activeItems = (items || []).filter((item) => isPartnerDashboardItemVisible(item, now));
 
     // Onderdelen waarvoor het bureau zelf al een inkoopfactuur registreerde
     // (uit de inbox of handmatig) dragen geen factuurnummer. Het portaal bood ze

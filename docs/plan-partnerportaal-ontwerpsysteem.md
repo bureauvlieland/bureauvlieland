@@ -735,3 +735,21 @@ Gemeten 11 oktober 2026 op main (`6af84f7c`), alleen uit de code.
   (`itemStatus`, `projectStatus`, `partnerCommissionInvoices`,
   `partnerAgreements`, `getPartnerProjectsOverview`, …) en 7
   Deno-tests; geen componenttests, geen visuele opname.
+
+## Facturatiehistorie blijft staan (14 oktober 2026)
+
+Facturatie toonde bij vrijwel alle partners "Nog geen facturen", € 0,00
+gefactureerd en een lege maandgrafiek, terwijl ze tientallen facturen hadden
+geregistreerd (Zeehondentochten Vlieland: 8 onderdelen, 7 facturen). Oorzaak:
+`get-partner-dashboard` liet een gefactureerd onderdeel weg zodra het bureau
+het project afrondde. Dat was bedoeld om de werkbank schoon te houden, maar
+Facturatie, de jaarcijfers en de maandgrafiek lezen dezelfde lijst. Op 14
+oktober stonden zo 56 van de 62 gefactureerde onderdelen (12 partners) buiten
+beeld.
+
+De zichtbaarheidsregels staan nu in `supabase/functions/_shared/partnerDashboardItems.ts`
+(met Deno-test): gefactureerde onderdelen blijven altijd zichtbaar, lopende
+altijd, afgesloten drie maanden, geannuleerde twaalf maanden, door de partner
+gesloten onderdelen nooit. De werkbank slaat gefactureerde onderdelen zelf al
+over (`partnerWerkbank.ts`); in Projecten komen afgeronde projecten in het
+archief terecht.
