@@ -366,6 +366,8 @@ export interface ProgramRequestItem {
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  /** Inkoopfactuur waar een overige-kostenregel (day_index -1) uit voortkomt. */
+  purchase_invoice_id?: string | null;
   partner_instructions?: string | null;
   skip_partner_notification: boolean;
   // Price type snapshot from building block

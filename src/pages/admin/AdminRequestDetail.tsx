@@ -136,6 +136,8 @@ import { PartnerNotificationsCard } from "@/components/admin/PartnerNotification
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 
 import { PurchaseInvoicesCard } from "@/components/admin/PurchaseInvoicesCard";
+import { ExtraCostsCard } from "@/components/admin/ExtraCostsCard";
+import { costPrefillFromInvoice, type CostPrefill } from "@/lib/extraCostLinks";
 import { ProjectProfitSummary } from "@/components/admin/ProjectProfitSummary";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { getItemLineTotal as centralGetItemLineTotal, getDisplayLineTotal, hasOpenAdminPriceChange, isPerPersonItem, isPerDayItem, getEffectivePeople, getNumberOfDays } from "@/lib/portalPricing";
@@ -383,6 +385,9 @@ const AdminRequestDetail = () => {
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
   const [addCostOpen, setAddCostOpen] = useState(false);
   const [editingCost, setEditingCost] = useState<any | null>(null);
+  // Voorinvulling van het kostensheet vanuit een inkoopfactuur ("Opvoeren" op de kaart Inkoopfacturen).
+  const [costPrefill, setCostPrefill] = useState<CostPrefill | null>(null);
+  const extraCostItems = items.filter((item) => item.day_index === -1);
   const [syncBlocksOpen, setSyncBlocksOpen] = useState(false);
   const [createAccommodationOpen, setCreateAccommodationOpen] = useState(false);
   const [statusEmailOpen, setStatusEmailOpen] = useState(false);
@@ -3206,97 +3211,14 @@ const AdminRequestDetail = () => {
                 );
               })()}
 
-              {/* Overige kosten section — altijd zichtbaar zodat losse kosten ook op een 'leeg' project toegevoegd kunnen worden */}
-              {(() => {
-                const extraCosts = items.filter((item) => item.day_index === -1);
-                return (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
-                      <div>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Euro className="h-4 w-4" />
-                          Overige kosten
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                          Losse facturabele kosten buiten het programma
-                        </CardDescription>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => setAddCostOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Kosten toevoegen
-                      </Button>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      {extraCosts.length === 0 ? (
-                        <div className="px-6 py-6 text-center text-sm text-muted-foreground">
-                          Nog geen losse kosten geregistreerd.
-                        </div>
-                      ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Omschrijving</TableHead>
-                              <TableHead>Toelichting</TableHead>
-                              <TableHead>Bedrag</TableHead>
-                              <TableHead className="w-[60px]"></TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {extraCosts.map((item) => (
-                              <TableRow
-                                key={item.id}
-                                className="cursor-pointer hover:bg-muted/50"
-                                onClick={() => setEditingCost(item)}
-                              >
-                                <TableCell className="font-medium">{item.block_name}</TableCell>
-                                <TableCell className="text-muted-foreground text-sm">
-                                  {item.admin_price_notes || "-"}
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  €{(item.admin_price_override ?? 0).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => setEditingCost(item)}
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-destructive hover:text-destructive"
-                                      onClick={async () => {
-                                        if (!confirm("Weet je zeker dat je deze kostenpost wilt verwijderen?")) return;
-                                        const { error } = await supabase
-                                          .from("program_request_items")
-                                          .delete()
-                                          .eq("id", item.id);
-                                        if (error) {
-                                          toast.error("Fout bij verwijderen");
-                                        } else {
-                                          toast.success("Kosten verwijderd");
-                                          fetchRequestData();
-                                        }
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })()}
+              {/* Overige kosten: altijd zichtbaar zodat losse kosten ook op een 'leeg' project toegevoegd kunnen worden */}
+              <ExtraCostsCard
+                costs={extraCostItems}
+                invoices={purchaseInvoices ?? []}
+                onAdd={() => setAddCostOpen(true)}
+                onEdit={(item) => setEditingCost(item)}
+                onChanged={fetchRequestData}
+              />
 
 
               <div className="grid md:grid-cols-3 gap-6">
@@ -3312,7 +3234,14 @@ const AdminRequestDetail = () => {
                   </CardContent>
                 </Card>
                 <div className="md:col-span-2">
-                  <PurchaseInvoicesCard requestId={request.id} />
+                  <PurchaseInvoicesCard
+                    requestId={request.id}
+                    extraCosts={extraCostItems}
+                    onAddAsCost={(invoice) => {
+                      setCostPrefill(costPrefillFromInvoice(invoice));
+                      setAddCostOpen(true);
+                    }}
+                  />
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
@@ -3731,6 +3660,7 @@ const AdminRequestDetail = () => {
             if (!open) {
               setAddCostOpen(false);
               setEditingCost(null);
+              setCostPrefill(null);
             } else if (!editingCost) {
               setAddCostOpen(true);
             }
@@ -3738,6 +3668,8 @@ const AdminRequestDetail = () => {
           requestId={request.id}
           onSuccess={fetchRequestData}
           editingItem={editingCost}
+          prefill={costPrefill}
+          purchaseInvoices={purchaseInvoices ?? []}
         />
       )}
       {/* Create accommodation sheet */}

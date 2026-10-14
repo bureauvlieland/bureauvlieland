@@ -72,3 +72,32 @@ toeristenbelasting, natuurbijdrage, opslag en coördinatiefee:
   de inkoopfactuur van de accommodatie in de commissiewerklijst.
 
 De migratie zet de sleutel meteen op BV-2602-0005.
+
+## Overige kosten gekoppeld aan inkoopfacturen (14 oktober 2026)
+
+Op grote projecten (BV-2604-0002, BV-2608-0004) kwamen inkoopfacturen van
+campings, cateraars en vervoerders op projectniveau binnen, en werden dezelfde
+bedragen met de hand als "Overige kosten" overgenomen. Beide bestonden, maar
+wisten niets van elkaar: geen controle of de doorberekening de inkoop dekt, en
+bij een correctie twee plekken bijwerken.
+
+Een kostenregel (bureau-onderdeel met `day_index` -1) kan nu met
+`purchase_invoice_id` naar een inkoopfactuur van het project wijzen. Koppelen
+is optioneel; losse kosten en losse facturen blijven werken.
+
+- **Kaart Inkoopfacturen**: een factuur zonder kostenregel krijgt "Opvoeren".
+  Die opent het sheet "Kosten toevoegen" met leverancier, omschrijving, bedrag
+  en btw-tarief voorgevuld en legt de koppeling. Een gekoppelde factuur toont
+  welke kostenregels erop wijzen.
+- **Sheet "Kosten toevoegen"**: optioneel veld "Inkoopfactuur" met de facturen
+  van het project; een factuur met precies het ingevulde bedrag staat bovenaan.
+  Kiezen vult alleen de lege velden. Werkt ook bij bewerken, voor regels die er
+  al stonden.
+- **Kaart Overige kosten** (`ExtraCostsCard`): kolom Inkoop met factuurnummer
+  en bedrag, "gedeeld met n regels" als één factuur meerdere regels dekt, en een
+  rode markering met het tekort als de gekoppelde regels de factuur niet dekken.
+  Onder de tabel verkoop, gekoppelde inkoop en marge.
+- Rekenlogica in `src/lib/extraCostLinks.ts` met Vitest.
+
+De commissiewerklijst verandert niet: een factuur die alleen aan een
+bureau-onderdeel hangt telt daar al als projectfactuur.

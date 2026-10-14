@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload } from "lucide-react";
+import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload, Euro } from "lucide-react";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
@@ -14,10 +14,13 @@ import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
 
 interface PurchaseInvoicesCardProps {
   requestId: string;
+  /** Overige-kostenregels van het project; een factuur met zo'n regel toont die, een factuur zonder krijgt "Als kosten opvoeren". */
+  extraCosts?: Array<{ id: string; block_name: string; purchase_invoice_id?: string | null }>;
+  onAddAsCost?: (invoice: PurchaseInvoiceWithRelations) => void;
 }
 
 
-export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
+export function PurchaseInvoicesCard({ requestId, extraCosts = [], onAddAsCost }: PurchaseInvoicesCardProps) {
   const { invoices, isLoading, stats, markAsPaid, getDownloadUrl } = usePurchaseInvoicesByRequest(requestId);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
@@ -121,7 +124,9 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
 
               {/* Invoice list */}
               <div className="space-y-2">
-                {invoices.map((invoice) => (
+                {invoices.map((invoice) => {
+                  const linkedCosts = extraCosts.filter((c) => c.purchase_invoice_id === invoice.id);
+                  return (
                   <div
                     key={invoice.id}
                     className="flex items-center justify-between p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -143,10 +148,28 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                           </>
                         )}
                       </div>
+                      {linkedCosts.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Euro className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          <span className="truncate">Overige kosten: {linkedCosts.map((c) => c.block_name).join(", ")}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(invoice)}
                       <div className="flex items-center gap-1">
+                        {onAddAsCost && linkedCosts.length === 0 && !invoice.refund_pending_at && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => onAddAsCost(invoice)}
+                            title="Als overige kosten opvoeren bij dit project"
+                          >
+                            <Euro className="h-3.5 w-3.5 mr-1" />
+                            Opvoeren
+                          </Button>
+                        )}
                         {invoice.file_path ? (
                           <Button
                             variant="ghost"
@@ -195,7 +218,8 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

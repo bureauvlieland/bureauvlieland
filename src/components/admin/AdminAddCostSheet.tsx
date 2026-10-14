@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +21,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Euro } from "lucide-react";
+import { formatEuro } from "@/lib/formatEuro";
+import {
+  costVatRateFor,
+  invoiceAmountIncl,
+  invoicePartnerName,
+  sortInvoicesForCost,
+  type CostInvoiceLike,
+} from "@/lib/extraCostLinks";
 
 interface EditingCostItem {
   id: string;
@@ -28,6 +36,7 @@ interface EditingCostItem {
   admin_price_override?: number | null;
   admin_price_notes?: string | null;
   vat_rate?: number | null;
+  purchase_invoice_id?: string | null;
 }
 
 interface PrefillData {
@@ -37,6 +46,8 @@ interface PrefillData {
   notes?: string;
   providerName?: string;
   bookingReference?: string;
+  /** Inkoopfactuur waar deze kostenregel uit voortkomt ("Als kosten opvoeren"). */
+  purchaseInvoiceId?: string | null;
 }
 
 interface AdminAddCostSheetProps {
@@ -47,7 +58,14 @@ interface AdminAddCostSheetProps {
   editingItem?: EditingCostItem | null;
   prefill?: PrefillData | null;
   onCreatedItem?: (itemId: string) => void | Promise<void>;
+  /** Inkoopfacturen van dit project, te koppelen aan de kostenregel (optioneel). */
+  purchaseInvoices?: CostInvoiceLike[];
 }
+
+/** Radix Select kent geen lege waarde; dit is "geen inkoopfactuur". */
+const NO_INVOICE = "none";
+
+const parseAmount = (value: string) => parseFloat(value.replace(",", "."));
 
 export const AdminAddCostSheet = ({
   open,
@@ -57,12 +75,14 @@ export const AdminAddCostSheet = ({
   editingItem,
   prefill,
   onCreatedItem,
+  purchaseInvoices = [],
 }: AdminAddCostSheetProps) => {
   const isEdit = !!editingItem;
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [vatRate, setVatRate] = useState("21");
   const [notes, setNotes] = useState("");
+  const [invoiceId, setInvoiceId] = useState<string>(NO_INVOICE);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -76,6 +96,7 @@ export const AdminAddCostSheet = ({
         );
         setVatRate(editingItem.vat_rate != null ? String(editingItem.vat_rate) : "21");
         setNotes(editingItem.admin_price_notes ?? "");
+        setInvoiceId(editingItem.purchase_invoice_id ?? NO_INVOICE);
       } else if (prefill) {
         setDescription(prefill.description ?? "");
         setAmount(
@@ -83,25 +104,52 @@ export const AdminAddCostSheet = ({
         );
         setVatRate(prefill.vatRate != null ? String(prefill.vatRate) : "21");
         setNotes(prefill.notes ?? "");
+        setInvoiceId(prefill.purchaseInvoiceId ?? NO_INVOICE);
       } else {
         setDescription("");
         setAmount("");
         setVatRate("21");
         setNotes("");
+        setInvoiceId(NO_INVOICE);
       }
     }
   }, [open, editingItem, prefill]);
+
+  // De gekoppelde factuur blijft kiesbaar, ook als hij in creditering staat.
+  const parsedAmount = parseAmount(amount);
+  const invoiceOptions = useMemo(
+    () => sortInvoicesForCost(purchaseInvoices, Number.isFinite(parsedAmount) ? parsedAmount : null),
+    [purchaseInvoices, parsedAmount],
+  );
+  const selectedInvoice = invoiceId === NO_INVOICE ? null : purchaseInvoices.find((inv) => inv.id === invoiceId) ?? null;
+  const selectedInvoiceAmount = selectedInvoice ? invoiceAmountIncl(selectedInvoice) : null;
+  const belowPurchase =
+    selectedInvoiceAmount !== null && Number.isFinite(parsedAmount) && parsedAmount < selectedInvoiceAmount;
+
+  // Factuur kiezen vult alleen wat nog leeg is; wat je al typte blijft staan.
+  const handleInvoiceChange = (value: string) => {
+    setInvoiceId(value);
+    const invoice = value === NO_INVOICE ? null : purchaseInvoices.find((inv) => inv.id === value);
+    if (!invoice) return;
+    if (!description.trim()) {
+      const partner = invoicePartnerName(invoice);
+      const text = invoice.description?.trim();
+      setDescription(text ? `${partner}: ${text}` : partner);
+    }
+    if (!amount.trim()) setAmount(String(invoiceAmountIncl(invoice)).replace(".", ","));
+    setVatRate(String(costVatRateFor(invoice)));
+  };
 
   const handleSubmit = async () => {
     if (!description.trim()) {
       toast.error("Omschrijving is verplicht");
       return;
     }
-    const parsedAmount = parseFloat(amount.replace(",", "."));
     if (isNaN(parsedAmount) || !isFinite(parsedAmount)) {
       toast.error("Voer een geldig bedrag in");
       return;
     }
+    const purchaseInvoiceId = invoiceId === NO_INVOICE ? null : invoiceId;
 
     setIsSubmitting(true);
     try {
@@ -112,11 +160,14 @@ export const AdminAddCostSheet = ({
             block_name: description.trim(),
             admin_price_override: parsedAmount,
             admin_price_notes: notes.trim() || null,
+            purchase_invoice_id: purchaseInvoiceId,
           })
           .eq("id", editingItem.id);
         if (error) throw error;
         toast.success("Kosten bijgewerkt");
       } else {
+        const providerName =
+          prefill?.providerName || (selectedInvoice ? invoicePartnerName(selectedInvoice) : "Bureau Vlieland");
         const { data: inserted, error } = await supabase
           .from("program_request_items")
           .insert({
@@ -125,7 +176,7 @@ export const AdminAddCostSheet = ({
             block_name: description.trim(),
             block_category: "overig",
             block_type: "bureau",
-            provider_name: prefill?.providerName || "Bureau Vlieland",
+            provider_name: providerName,
             provider_id: "bureau",
             day_index: -1,
             status: "confirmed",
@@ -134,6 +185,7 @@ export const AdminAddCostSheet = ({
             skip_partner_notification: true,
             price_type: "total",
             vat_rate: Number(vatRate),
+            purchase_invoice_id: purchaseInvoiceId,
             ...(prefill?.bookingReference
               ? { booking_reference: prefill.bookingReference }
               : {}),
@@ -173,6 +225,35 @@ export const AdminAddCostSheet = ({
         </SheetHeader>
 
         <div className="space-y-4 py-6">
+          {purchaseInvoices.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="cost-invoice">Inkoopfactuur (optioneel)</Label>
+              <Select value={invoiceId} onValueChange={handleInvoiceChange}>
+                <SelectTrigger id="cost-invoice">
+                  <SelectValue placeholder="Geen inkoopfactuur" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_INVOICE}>Geen inkoopfactuur</SelectItem>
+                  {invoiceOptions.map((inv) => (
+                    <SelectItem key={inv.id} value={inv.id}>
+                      {inv.invoice_number} · {invoicePartnerName(inv)} · {formatEuro(invoiceAmountIncl(inv))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedInvoice ? (
+                <p className={belowPurchase ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                  Inkoop {formatEuro(selectedInvoiceAmount)} incl. btw
+                  {belowPurchase ? ". Het bedrag hieronder is lager dan de inkoop." : "."}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Koppel de factuur waar deze kosten uit voortkomen; dan zie je inkoop en marge naast elkaar.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="cost-description">Omschrijving *</Label>
             <Input
