@@ -2815,6 +2815,7 @@ export type Database = {
           partner_token: string
           partner_type: string | null
           password_set_at: string | null
+          extra_ibans: string[]
           pays_by_direct_debit: boolean
           phone: string | null
           receives_wedding_referrals: boolean
@@ -2870,6 +2871,7 @@ export type Database = {
           partner_token?: string
           partner_type?: string | null
           password_set_at?: string | null
+          extra_ibans?: string[]
           pays_by_direct_debit?: boolean
           phone?: string | null
           receives_wedding_referrals?: boolean
@@ -2925,6 +2927,7 @@ export type Database = {
           partner_token?: string
           partner_type?: string | null
           password_set_at?: string | null
+          extra_ibans?: string[]
           pays_by_direct_debit?: boolean
           phone?: string | null
           receives_wedding_referrals?: boolean

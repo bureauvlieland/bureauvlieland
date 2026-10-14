@@ -26,10 +26,16 @@ Twee smaken bij Doeksen:
   "Incasso". Wijkt het incassobedrag af door ingehouden commissie, dan staat
   dat bedrag erbij, zodat je bij het bankafschrift niet hoeft te rekenen.
   Regels in `src/lib/purchaseInvoiceDirectDebit.ts`.
+- **Overige IBAN's** op de partnerpagina (`partners.extra_ibans`, migratie
+  `20261014130000`): een partner kan van meerdere rekeningen incasseren of
+  betalen. Het IBAN-veld blijft het ene nummer voor de betaalbatches; de
+  overige nummers dienen alleen om bankregels te herkennen. De matching kijkt
+  naar alle drie: `iban`, het portaal-IBAN `bank_iban` en `extra_ibans`
+  (`supabase/functions/_shared/partnerIbans.ts`).
 - **Bankmatching** (`supabase/functions/_shared/bankMatching.ts`): een
   uitgaande bankregel past bij een inkoopfactuur als het bedrag gelijk is aan
   het bruto bedrag óf aan bruto minus ingehouden commissie. Klopt daarbij de
-  tegenpartij-IBAN met het partner-IBAN, dan is het een zekere match (95%) en
+  tegenpartij-IBAN met een van de IBAN's van de partner, dan is het een zekere match (95%) en
   wordt hij automatisch voorgesteld, ook zonder factuurnummer in de
   omschrijving. Alleen de IBAN zonder passend bedrag geeft zwakke voorstellen
   (30%) voor alle open facturen van die partner. Bevestigen zet de factuur op

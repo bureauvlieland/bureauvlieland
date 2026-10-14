@@ -21,8 +21,12 @@ export interface MatchCandidate {
    * Alleen gevuld als het van `amount` afwijkt.
    */
   netAmount?: number | null;
-  /** IBAN van de tegenpartij zoals bij ons bekend (partner-IBAN bij inkoopfacturen). */
-  iban?: string | null;
+  /**
+   * IBAN's van de tegenpartij zoals bij ons bekend (partner-IBAN voor batches,
+   * het IBAN uit het partnerportaal en de overige IBAN's op de partnerpagina).
+   * Een partner kan van meerdere rekeningen incasseren.
+   */
+  ibans?: Array<string | null | undefined> | null;
 }
 
 export interface MatchSuggestion {
@@ -86,8 +90,8 @@ function score(candidate: MatchCandidate, text: string, amount: number, lineIban
   const ref = (candidate.reference ?? "").toUpperCase();
   const refMatch = !!ref && text.includes(ref);
   const amountMatch = sameAmount(candidate.amount, amount) || sameAmount(candidate.netAmount, amount);
-  const candidateIban = normalizeIban(candidate.iban);
-  const ibanMatch = !!candidateIban && !!lineIban && candidateIban === lineIban;
+  const candidateIbans = (candidate.ibans ?? []).map(normalizeIban).filter(Boolean);
+  const ibanMatch = !!lineIban && candidateIbans.includes(lineIban);
   if (refMatch && amountMatch) return both;
   if (ibanMatch && amountMatch) return both;
   if (refMatch) return refOnly;

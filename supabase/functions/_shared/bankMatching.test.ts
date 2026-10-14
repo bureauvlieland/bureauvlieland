@@ -63,17 +63,18 @@ Deno.test("uitgaand: batch op referentie wint van inkoopfactuur op bedrag; batch
 });
 
 const DOEKSEN_IBAN = "NL91ABNA0417164300";
+const DOEKSEN_IBAN_2 = "NL39RABO0300065264";
 const incasso: MatchCandidates = {
   sales: [],
   commission: [],
   batch: [],
   purchase: [
     // Catering: Doeksen incasseert het volledige bedrag.
-    { type: "purchase", id: "cat", reference: "20260124", amount: 348.85, iban: DOEKSEN_IBAN },
+    { type: "purchase", id: "cat", reference: "20260124", amount: 348.85, ibans: [DOEKSEN_IBAN, null, DOEKSEN_IBAN_2] },
     // Overtochten: verzamelfactuur, commissie ingehouden, netto geïncasseerd.
-    { type: "purchase", id: "over", reference: "20260301", amount: 1000, netAmount: 920, iban: DOEKSEN_IBAN },
+    { type: "purchase", id: "over", reference: "20260301", amount: 1000, netAmount: 920, ibans: [DOEKSEN_IBAN, DOEKSEN_IBAN_2] },
     // Andere partner, zelfde bedrag als de catering: IBAN maakt het verschil.
-    { type: "purchase", id: "ander", reference: "F-77", amount: 348.85, iban: "NL20INGB0001234567" },
+    { type: "purchase", id: "ander", reference: "F-77", amount: 348.85, ibans: ["NL20INGB0001234567"] },
   ],
 };
 
@@ -88,6 +89,16 @@ Deno.test("incasso: tegenpartij-IBAN + bedrag is een zekere match, ook zonder fa
   assertEquals(decision.status, "suggested");
   assertEquals(decision.matchedId, "cat");
   assertEquals(decision.automatic, true);
+});
+
+Deno.test("incasso: een partner kan van meerdere rekeningen incasseren", () => {
+  const second = suggestionsForLine(
+    { direction: "out", amount: -348.85, description: "SEPA Incasso", counterparty_iban: "nl39 rabo 0300 0652 64" },
+    incasso,
+  );
+  assertEquals(second[0].id, "cat");
+  assertEquals(second[0].confidence, 0.95);
+  assertEquals(decideMatch(second).automatic, true);
 });
 
 Deno.test("incasso: het nettobedrag na ingehouden commissie telt als bedragmatch", () => {

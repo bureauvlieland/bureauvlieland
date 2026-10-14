@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decideMatch, suggestionsForLine, type MatchCandidates } from '../_shared/bankMatching.ts';
 import { directDebitAmount } from '../_shared/purchaseInvoiceDirectDebit.ts';
+import { partnerIbans, type PartnerIbanRow } from '../_shared/partnerIbans.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
     // verzamelfactuur overtochten is dat bedrag bruto minus commissie.
     const { data: purchaseInvoices, error: purchaseErr } = await supabase
       .from('partner_purchase_invoices')
-      .select('id, invoice_number, amount_incl_vat, supplier_commission_excl_vat, supplier_commission_vat, partner_id, status, partners(iban)')
+      .select('id, invoice_number, amount_incl_vat, supplier_commission_excl_vat, supplier_commission_vat, partner_id, status, partners(iban, bank_iban, extra_ibans)')
       .is('bank_line_id', null)
       .neq('status', 'paid');
     if (purchaseErr) throw new Error(`Inkoopfacturen laden mislukt: ${purchaseErr.message}`);
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
         reference: inv.invoice_number,
         amount: inv.amount_incl_vat,
         netAmount: directDebitAmount(inv),
-        iban: (inv.partners as { iban: string | null } | null)?.iban ?? null,
+        ibans: partnerIbans(inv.partners as PartnerIbanRow | null),
       })),
       batch: (batches ?? []).map((b) => ({ type: 'batch', id: b.id, reference: b.batch_reference, amount: b.total_amount })),
     };
