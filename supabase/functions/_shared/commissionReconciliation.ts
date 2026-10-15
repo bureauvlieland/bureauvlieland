@@ -137,6 +137,12 @@ export interface ReconProjectInput {
   /** Afrondingsfase van het project (ready_for_invoice, fully_invoiced, …). */
   completion_status?: string | null;
   completed_at?: string | null;
+  /**
+   * Alleen bij een logiesaanvraag (`accommodation_requests`): het programma
+   * (`program_requests.id`) waar die aan hangt, of null als er geen is. Een
+   * programma-project laat dit leeg.
+   */
+  program_request_id?: string | null;
 }
 
 
@@ -152,6 +158,13 @@ export interface ReconRow {
   partnerId: string;
   partnerName: string;
   projectId: string | null;
+  /**
+   * Het programma (`program_requests.id`) om een taak of mail aan te hangen.
+   * Bij programma-onderdelen en inkoopfacturen gelijk aan `projectId`; bij
+   * logies is `projectId` de logiesaanvraag en staat hier het gekoppelde
+   * programma, of null als de logiesaanvraag los staat.
+   */
+  programRequestId: string | null;
   projectReference: string | null;
   /** Bedrijfsnaam indien bekend, anders de klantnaam. */
   projectLabel: string | null;
@@ -626,6 +639,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       partnerId,
       partnerName: partner?.name ?? partnerId,
       projectId: item.request_id,
+      programRequestId: item.item_type === "accommodation"
+        ? (project?.program_request_id ?? null)
+        : item.request_id,
       projectReference: project?.reference_number ?? null,
       projectLabel: project?.customer_company || project?.customer_name || null,
       customerName: project?.customer_name ?? null,
@@ -698,6 +714,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       partnerId,
       partnerName: partner?.name ?? partnerId,
       projectId: inv.request_id,
+      programRequestId: inv.request_id,
       projectReference: project?.reference_number ?? null,
       projectLabel: project?.customer_company || project?.customer_name || null,
       customerName: project?.customer_name ?? null,

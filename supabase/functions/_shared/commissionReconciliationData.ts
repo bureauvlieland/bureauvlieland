@@ -127,7 +127,7 @@ export async function loadReconciliationInputs(
         "purchase_invoice_id, commission_invoice_id, " +
         "commission_exempt, commission_exempt_reason, commission_exempt_at, " +
         "accommodation_requests!inner(id, reference_number, customer_name, customer_company, " +
-        "arrival_date, departure_date, completion_status, completed_at)",
+        "arrival_date, departure_date, completion_status, completed_at, linked_program_id)",
 
     )
     .eq("status", "selected");
@@ -392,6 +392,9 @@ export async function loadReconciliationInputs(
         selected_dates: request.arrival_date ? [request.arrival_date] : null,
         completion_status: request.completion_status ?? null,
         completed_at: request.completed_at ?? null,
+        // Een logiesaanvraag is geen program_request; taken en mails hangen
+        // aan het gekoppelde programma.
+        program_request_id: request.linked_program_id ?? null,
       });
     }
     // Kamerprijs en extra's worden apart naar ex btw teruggerekend — ze hebben

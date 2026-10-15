@@ -142,3 +142,18 @@ Deno.test("bron op een concept- of definitieve commissiefactuur staat 'in concep
   const unlinked = await loadReconciliationInputs(fakeClient({ accommodation_quotes: [quote], partners: [partner] }), {});
   assertEquals(unlinked.items[0].in_commission_draft, false);
 });
+
+Deno.test("logiesaanvraag: het gekoppelde programma komt als program_request_id op het project", async () => {
+  const linked = {
+    ...quote,
+    accommodation_requests: { ...quote.accommodation_requests, linked_program_id: "prog-1" },
+  };
+  const inputs = await loadReconciliationInputs(fakeClient({ accommodation_quotes: [linked], partners: [partner] }), {});
+  const project = inputs.projects.find((p) => p.id === "ar1");
+  assertEquals(project?.program_request_id, "prog-1");
+  // De regel zelf blijft aan de logiesaanvraag hangen.
+  assertEquals(inputs.items[0].request_id, "ar1");
+
+  const loose = await loadReconciliationInputs(fakeClient({ accommodation_quotes: [quote], partners: [partner] }), {});
+  assertEquals(loose.projects.find((p) => p.id === "ar1")?.program_request_id, null);
+});
