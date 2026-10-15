@@ -32,6 +32,57 @@ export function shouldFlag(
   return false;
 }
 
+export type FlagTodoRow = Pick<
+  ReconRow,
+  | "status"
+  | "itemId"
+  | "invoiceId"
+  | "partnerId"
+  | "partnerName"
+  | "label"
+  | "projectReference"
+  | "programRequestId"
+  | "invoiceNumber"
+  | "salesExclVat"
+  | "purchaseExclVat"
+  | "commissionAtRisk"
+>;
+
+/**
+ * De taak voor een gesignaleerde regel, of null als er geen entiteit is om
+ * de taak aan te hangen. `related_request_id` wijst altijd naar een
+ * programma (`program_requests`): bij logies is dat het programma waar de
+ * logiesaanvraag aan hangt, niet de logiesaanvraag zelf. Die laatste is geen
+ * program_request, en de insert viel daar van 4 tot 15 oktober elke dag op
+ * om (foreign key `admin_todos_related_request_id_fkey`).
+ */
+export function todoForRow(r: FlagTodoRow) {
+  const isMissing = r.status === "missing_invoice";
+  // Literals bewust uitgeschreven: de contract-test grep't op
+  // `auto_type: "..."` om drift met reconcile-admin-todos te voorkomen.
+  const autoType = isMissing
+    ? { auto_type: "commission_missing_invoice" as const }
+    : { auto_type: "commission_unlinked_invoice" as const };
+
+  const entityId = isMissing ? r.itemId : r.invoiceId;
+  if (!entityId) return null;
+
+  const project = r.projectReference ? ` (${r.projectReference})` : "";
+  return {
+    title: isMissing
+      ? `Inkoopfactuur ontbreekt: ${r.partnerName} — ${r.label}${project}`
+      : `Inkoopfactuur niet gekoppeld: ${r.partnerName} — factuur ${r.invoiceNumber ?? "?"}`,
+    description: isMissing
+      ? `Dit onderdeel is uitgevoerd (verkoopwaarde ${euro(r.salesExclVat ?? 0)} ex btw) maar er is geen inkoopfactuur van ${r.partnerName} geregistreerd. Zonder factuur wordt er geen commissie (${euro(r.commissionAtRisk)}) gefactureerd. Vraag de factuur op of factureer de commissie op verkoopwaarde.`
+      : `Deze inkoopfactuur van ${r.partnerName} (${euro(r.purchaseExclVat ?? 0)} ex btw) is geregistreerd maar niet gekoppeld aan een programma-onderdeel of logies-offerte, waardoor de commissie (${euro(r.commissionAtRisk)}) buiten beeld blijft. Koppel de factuur of markeer hem commissievrij.`,
+    priority: r.commissionAtRisk >= 250 ? "high" : "normal",
+    status: "todo",
+    related_request_id: r.programRequestId ?? null,
+    related_partner_id: r.partnerId ?? null,
+    ...autoType,
+    auto_entity_id: entityId,
+  };
+}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -89,34 +140,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const toInsert = flagged
       .map((r) => {
-        const isMissing = r.status === "missing_invoice";
-        // Literals bewust uitgeschreven: de contract-test grep't op
-        // `auto_type: "..."` om drift met reconcile-admin-todos te voorkomen.
-        const autoType = isMissing
-          ? { auto_type: "commission_missing_invoice" as const }
-          : { auto_type: "commission_unlinked_invoice" as const };
-
-        const entityId = isMissing ? r.itemId : r.invoiceId;
-        if (!entityId) return null;
-        const key = `${autoType.auto_type}:${entityId}`;
+        const todo = todoForRow(r);
+        if (!todo) return null;
+        const key = `${todo.auto_type}:${todo.auto_entity_id}`;
         if (existingKeys.has(key)) return null;
         existingKeys.add(key);
-
-        const project = r.projectReference ? ` (${r.projectReference})` : "";
-        return {
-          title: isMissing
-            ? `Inkoopfactuur ontbreekt: ${r.partnerName} — ${r.label}${project}`
-            : `Inkoopfactuur niet gekoppeld: ${r.partnerName} — factuur ${r.invoiceNumber ?? "?"}`,
-          description: isMissing
-            ? `Dit onderdeel is uitgevoerd (verkoopwaarde ${euro(r.salesExclVat ?? 0)} ex btw) maar er is geen inkoopfactuur van ${r.partnerName} geregistreerd. Zonder factuur wordt er geen commissie (${euro(r.commissionAtRisk)}) gefactureerd. Vraag de factuur op of factureer de commissie op verkoopwaarde.`
-            : `Deze inkoopfactuur van ${r.partnerName} (${euro(r.purchaseExclVat ?? 0)} ex btw) is geregistreerd maar niet gekoppeld aan een programma-onderdeel of logies-offerte, waardoor de commissie (${euro(r.commissionAtRisk)}) buiten beeld blijft. Koppel de factuur of markeer hem commissievrij.`,
-          priority: r.commissionAtRisk >= 250 ? "high" : "normal",
-          status: "todo",
-          related_request_id: r.projectId ?? null,
-          related_partner_id: r.partnerId ?? null,
-          ...autoType,
-          auto_entity_id: entityId,
-        };
+        return todo;
       })
       .filter(Boolean) as Record<string, unknown>[];
 

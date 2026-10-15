@@ -38,6 +38,7 @@ export interface EdgeFunctionCoverage {
 const TESTED: Record<string, "deno" | "e2e"> = {
   "auto-close-past-execution": "deno",
   "cancel-program-request": "deno",
+  "flag-missing-partner-invoices": "deno",
   "inbound-purchase-invoice": "e2e",
   "mailjet-event-webhook": "deno",
   "notify-partner-cancellation": "deno",

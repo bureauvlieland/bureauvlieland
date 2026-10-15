@@ -13,6 +13,7 @@ const row = (overrides: Partial<ReconRow> = {}): ReconRow => ({
   partnerId: "partner-1",
   partnerName: "Partner 1",
   projectId: "req-1",
+  programRequestId: "req-1",
   projectReference: "BV-2606-0001",
   projectLabel: "Acme BV",
   customerName: "Jan Jansen",

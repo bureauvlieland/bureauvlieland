@@ -433,6 +433,67 @@ describe("buildReconciliationRows", () => {
   });
 });
 
+describe("programRequestId: waar een taak of mail aan hangt", () => {
+  const lodgingProjects = [
+    ...projects,
+    {
+      id: "acc-1",
+      reference_number: "LOG-2602-0004",
+      customer_name: "Nancy",
+      customer_company: null,
+      program_request_id: "req-1",
+    },
+    {
+      id: "acc-2",
+      reference_number: "LOG-2603-0005",
+      customer_name: "Piet",
+      customer_company: null,
+      program_request_id: null,
+    },
+  ];
+
+  it("programma-onderdeel: het eigen project", () => {
+    const [row] = buildReconciliationRows({ items: [item()], invoices: [], projects, partners });
+    expect(row.projectId).toBe("req-1");
+    expect(row.programRequestId).toBe("req-1");
+  });
+
+  it("logies: het programma waar de logiesaanvraag aan hangt, niet de logiesaanvraag zelf", () => {
+    const [row] = buildReconciliationRows({
+      items: [item({ id: "quote-1", request_id: "acc-1", item_type: "accommodation" })],
+      invoices: [],
+      projects: lodgingProjects,
+      partners,
+    });
+    expect(row.projectId).toBe("acc-1");
+    expect(row.projectReference).toBe("LOG-2602-0004");
+    expect(row.programRequestId).toBe("req-1");
+  });
+
+  it("losse logiesaanvraag zonder programma: null", () => {
+    const [row] = buildReconciliationRows({
+      items: [item({ id: "quote-2", request_id: "acc-2", item_type: "accommodation" })],
+      invoices: [],
+      projects: lodgingProjects,
+      partners,
+    });
+    expect(row.projectId).toBe("acc-2");
+    expect(row.programRequestId).toBeNull();
+  });
+
+  it("inkoopfactuur: het project van de factuur", () => {
+    const [row] = buildReconciliationRows({
+      items: [],
+      invoices: [invoice({ request_id: null })],
+      projects,
+      partners,
+    });
+    expect(row.programRequestId).toBeNull();
+    const [linked] = buildReconciliationRows({ items: [], invoices: [invoice()], projects, partners });
+    expect(linked.programRequestId).toBe("req-1");
+  });
+});
+
 describe("summarizeReconciliation", () => {
   it("telt statussen en commissie-risico correct op", () => {
     const rows = buildReconciliationRows({
