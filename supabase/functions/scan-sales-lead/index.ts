@@ -2,7 +2,7 @@
 // Triggered by inbound-email after a new sales_inbox row is created; can also be
 // called from the admin UI to rescan.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
+import { aiChatCompletions, aiConfigured, aiErrorMessage, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
 
     if (!aiResp.ok) {
       const errText = await aiResp.text().catch(() => "");
-      const msg = `AI gateway ${aiResp.status}: ${errText.substring(0, 500)}`;
+      const msg = `AI ${aiResp.status}: ${aiErrorMessage(aiResp.status, errText)}`;
       await supabase
         .from("sales_inbox")
         .update({ scan_status: "failed", scan_error: msg })

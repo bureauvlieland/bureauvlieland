@@ -6,7 +6,7 @@ import {
   INVOICE_SCAN_USER_INSTRUCTION,
   normalizeScannedInvoice,
 } from "../_shared/purchaseInvoiceScan.ts";
-import { aiChatCompletions, aiConfigured, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
+import { aiChatCompletions, aiConfigured, aiErrorMessage, AI_NOT_CONFIGURED_MESSAGE } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       const text = await aiResp.text();
       await supabase
         .from("purchase_invoice_inbox")
-        .update({ scan_status: "failed", scan_error: `AI ${aiResp.status}: ${text.substring(0, 500)}` })
+        .update({ scan_status: "failed", scan_error: `AI ${aiResp.status}: ${aiErrorMessage(aiResp.status, text)}` })
         .eq("id", inbox_id);
       return new Response(JSON.stringify({ error: "AI failed" }), {
         status: 500,

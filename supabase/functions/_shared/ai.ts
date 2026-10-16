@@ -14,8 +14,9 @@
  *                        verdwenen model.
  *
  * Staan beide sleutels er, dan gaat Claude voor en is Gemini de terugval bij
- * een storing (429/5xx) aan de Claude-kant. Modelnamen mogen nog met "google/"
- * beginnen (zoals de oude Lovable-gateway ze noemde); die prefix gaat eraf.
+ * een storing (429/5xx) of een sleutel die niet (meer) werkt (401/403) aan de
+ * Claude-kant. Modelnamen mogen nog met "google/" beginnen (zoals de oude
+ * Lovable-gateway ze noemde); die prefix gaat eraf.
  */
 
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.124.0";
@@ -70,6 +71,34 @@ export function modelChain(model: string, fallbacks: string[] = AI_FALLBACK_MODE
 /** Een status waarbij een ander model het alsnog kan redden (limiet, onbekend model, ongeldig verzoek voor dit model). */
 export function isModelFallbackStatus(status: number): boolean {
   return status === 429 || status === 404 || status === 400 || status === 503;
+}
+
+/**
+ * Een Claude-status waarbij Gemini het werk kan overnemen: limiet, storing,
+ * of een sleutel die Anthropic niet (meer) accepteert. Een 400 of 422 ligt
+ * aan het verzoek zelf en wordt bij Gemini niet beter.
+ */
+export function isProviderFallbackStatus(status: number): boolean {
+  return status === 401 || status === 403 || status === 429 || status >= 500;
+}
+
+/**
+ * Foutmelding van Claude in gewone taal, met Anthropics eigen tekst erachter.
+ * De SDK zet de status voor de JSON-body ("401 {...}"); die prefix gaat eraf.
+ * Nooit de sleutel.
+ */
+export function anthropicErrorMessage(status: number, raw: string): string {
+  const detail = aiErrorMessage(status, raw.replace(/^\d{3}\s+/, ""));
+  switch (status) {
+    case 401:
+      return `AI-sleutel van Claude is ongeldig: vervang het secret ANTHROPIC_API_KEY bij de edge functions (${detail}).`;
+    case 403:
+      return `Claude weigert de AI-sleutel: controleer het secret ANTHROPIC_API_KEY en het Anthropic-account (${detail}).`;
+    case 429:
+      return `Claude zit aan zijn limiet; probeer het zo opnieuw (${detail}).`;
+    default:
+      return status >= 500 ? `Storing bij Claude (${status}); probeer het zo opnieuw (${detail}).` : detail;
+  }
 }
 
 /** Leesbare foutmelding uit een Google-foutantwoord, zonder sleutel of ruis. */
@@ -133,7 +162,7 @@ async function anthropicChatCompletions(body: Record<string, unknown> & { model:
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       const status = err.status ?? 500;
-      const message = err.message.slice(0, 300);
+      const message = anthropicErrorMessage(status, err.message);
       lastAiError = { status, message, model: CLAUDE_MODEL };
       console.error(`AI anthropic ${CLAUDE_MODEL} → ${status}: ${message}`);
       return jsonResponse({ error: { message } }, status);
@@ -157,8 +186,8 @@ export async function aiChatCompletions(
   lastAiError = null;
   if (anthropicKey()) {
     const res = await anthropicChatCompletions(body);
-    // Storing aan de Claude-kant en er is een Gemini-sleutel: probeer Gemini.
-    if (!res.ok && (res.status === 429 || res.status >= 500) && apiKey()) {
+    // Storing of ongeldige sleutel aan de Claude-kant en er is een Gemini-sleutel: probeer Gemini.
+    if (!res.ok && isProviderFallbackStatus(res.status) && apiKey()) {
       console.warn(`AI: Claude gaf ${res.status}, terugval op Gemini`);
       return await geminiChatCompletions(body, options);
     }

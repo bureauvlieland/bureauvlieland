@@ -49,7 +49,8 @@ Alle AI-aanroepen lopen via `supabase/functions/_shared/ai.ts`. Staat het
 secret `ANTHROPIC_API_KEY` bij de edge functions, dan gaat alles naar Claude
 (`claude-opus-5`); anders naar Gemini via `GEMINI_API_KEY`, met terugval op
 andere Gemini-modellen als een model verdwijnt of aan zijn limiet zit. Beide
-sleutels tegelijk kan: Claude eerst, Gemini bij een storing.
+sleutels tegelijk kan: Claude eerst, Gemini bij een storing of als Anthropic
+de sleutel niet (meer) accepteert (401/403).
 
 Sleutel toevoegen: Supabase-dashboard → Edge Functions → Secrets →
 `ANTHROPIC_API_KEY`. Geen herdeploy nodig; functies lezen het secret bij de
