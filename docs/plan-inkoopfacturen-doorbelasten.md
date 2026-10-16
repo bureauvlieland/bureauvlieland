@@ -9,7 +9,8 @@ programma, met suggesties voor overige kosten, zodat er snel een goede
 klantfactuur uit komt. Doorsturen naar Snelstart en de betaalbatch blijven
 zoals ze zijn.
 
-Testproject in productie: **BV-2608-0004** (zie hoofdstuk 7).
+Testproject in productie: **BV-2608-0004** (zie hoofdstuk 7; de nulmeting
+is op 16 oktober gedaan met alleen-lezen queries op de productiedatabase).
 
 ## Samenvatting
 
@@ -44,7 +45,17 @@ commissieverdeling wegschrijft. De klantfactuur krijgt eigen opgeslagen regels
 en één berekening. Snelstart, betaalbatch, statusflow en de commissie-trigger
 blijven ongewijzigd.
 
-Circa 9 bouwdagen in vijf fasen. Fase 1 en 2 geven de tijdwinst; fase 3
+Verzamelfacturen die meer projecten raken (Doeksen, Fortuna) krijgen één
+kop en regels per project (3.5), zodat betaling en Snelstart op de kop
+blijven en elk project alleen zijn eigen regels ziet.
+
+De nulmeting op BV-2608-0004 laat de pijn in zijn zuiverste vorm zien: het
+project heeft nul programma-onderdelen, geen logiesofferte en vier
+inkoopfacturen van samen € 10.055. Er is nu niets om regels aan te koppelen,
+dus de klantfactuur zou uit alleen de automatische posten bestaan. Het
+werkblad moet daarom ook zonder onderdelen werken (3.3).
+
+Circa 10 bouwdagen in vijf fasen. Fase 1 en 2 geven de tijdwinst; fase 3
 maakt de cijfers overal gelijk.
 
 ## 1. Hoe het nu werkt
@@ -91,7 +102,7 @@ Bevindingen uit de code; niets is in productie nagelopen.
 | 7 | Verwijderen of opnieuw verwerken van een inkoopfactuur laat de klantregels staan. De klant krijgt dan bedragen van een factuur die niet meer bestaat. | `usePurchaseInvoices.ts:260`, `usePurchaseInvoiceInbox.ts:98` |
 | 8 | Drie regels voor "wanneer tellen factuurregels": altijd (overzicht, openstaand, SQL-trigger, voorbeeldregels, portaal), alleen bij `use_actual_costs` (facturatiepagina en de totalen van het voorbeeld), alle regels van het project (btw-verdeling bij registreren en in de UBL). Voorbeeld en totaal kunnen van elkaar afwijken. | `adminInvoicingTotals.ts:87`, `FinancialOverviewCard.tsx:133`, `forward-bureau-invoice/index.ts:319` |
 | 9 | Overige kosten zijn pseudo-onderdelen (`day_index = -1`, `provider_id 'bureau'`, `admin_price_override` = bedrag incl.). Hun `vat_rate` wordt in overzicht en voorbeeld genegeerd (altijd 21 %), en in de bewerkmodus kun je hem niet wijzigen. Ze zijn niet gekoppeld aan de inkoopfactuur die ze veroorzaakt. | `AdminAddCostSheet.tsx`, `useItemVatRates.ts:40` |
-| 10 | Andere routes belasten niet door: "Koppelen achteraf" (`LinkPurchaseInvoiceDialog`) en verzamelfacturen (`finalize-collective-invoice`) maken geen klantregels. Overtochten houden dus de offerteprijs. | |
+| 10 | Andere routes belasten niet door: "Koppelen achteraf" (`LinkPurchaseInvoiceDialog`) en verzamelfacturen (`finalize-collective-invoice`) maken geen klantregels. Overtochten houden dus de offerteprijs. Een verzamelfactuur zonder project is bovendien onzichtbaar voor de facturenlijst, Snelstart en de batch (`program_requests!inner`). Eén factuurnummer op twee projecten wordt twee kop-rijen (Fortuna 202600127). | `usePurchaseInvoices.ts`, `forward-purchase-invoice`, `generate-payment-batch` |
 | 11 | Geen ingang vanaf het project: `PurchaseInvoicesCard` heeft geen "toevoegen" of "koppelen", de inbox geeft geen project mee. Het project wordt altijd met de hand gekozen; de AI-suggestie (referentienummer = score 100) wordt bewust nooit automatisch toegepast. | `AdminPurchaseInvoiceInbox.tsx:295`, `purchaseInvoiceProjectSuggestion.ts` |
 | 12 | Zes berekeningen van het projecttotaal: fee engine versus oude schaal, open prijswijziging versus offerteprijs, revisiekosten wel of niet, logies-btw hard op 9. De SQL-trigger leest `coordination_fee_tiers` als `min_people/max_people` terwijl de frontend `{maxPeople, fee}` schrijft. | zie tabel in 3.4 |
 | 13 | De klantfactuur is een kop plus PDF. "Restant factureren" vult het volledige projecttotaal voor in plaats van het openstaande bedrag (het effect in `RegisterBureauInvoiceDialog.tsx:182` overschrijft de schaling). De UBL naar Snelstart bouwt zijn regels uit de btw-verhouding van álle regels van het project, niet uit de factuur zelf. | `RegisterBureauInvoiceDialog.tsx`, `forward-bureau-invoice/index.ts:319-417` |
@@ -121,7 +132,9 @@ Bevindingen uit de code; niets is in productie nagelopen.
    bevroren, PDF uit de opgeslagen regels).
 6. **Snelstart, betaalbatch, statusflow, partnerportaal-registratie en de
    bankmatching blijven ongemoeid.** Ze lezen alleen de kop van de
-   inkoopfactuur en die kop verandert niet.
+   inkoopfactuur en die kop verandert niet. De enige uitzondering is de
+   join op het project, die voor verzamelfacturen een `left join` wordt
+   (3.5).
 
 ### 3.2 Registreren (nieuw)
 
@@ -198,11 +211,19 @@ Gedrag:
   afgeleide klantregels en allocaties (database, `ON DELETE CASCADE`) en zet
   het onderdeel terug op de offerteprijs. Is er al een klantfactuur
   geregistreerd die die regels bevat, dan weigert de app met een melding.
-- Verzamelfacturen (Doeksen): het bestaande `CollectiveInvoiceSheet` blijft
-  de plek om boekingen aan projecten te koppelen; elke gematchte boeking
-  verschijnt daarna als inkoopregel in het werkblad van dat project (bron:
-  `partner_purchase_invoice_ticket_matches`), zodat overtochten net als de
-  rest worden doorbelast. Fase 2b.
+- **Project zonder programma-onderdelen** (BV-2608-0004: kampeerterrein,
+  maaltijden, bagagevervoer, Staatsbosbeheer, alles zonder onderdeel): het
+  werkblad werkt dan als lijst. Elke inkoopregel wordt standaard een
+  klantregel **zonder onderdeel**, gegroepeerd per inkoopfactuur (partner
+  als kopregel op de factuur: "Kampeerterrein Stortemelk, factuur 26013731"
+  met de regels eronder), met de btw van de regel. De matcher doet alleen
+  nog "niet doorbelasten" (de regel Toeristenbelasting € 704,34 van
+  Stortemelk, omdat het bureau zelf 153 × 3 × tarief rekent) en de
+  naamsuggestie. Zo wordt de klantfactuur in één bevestiging gebouwd uit de
+  inkoopfacturen, wat precies de vraag van Erwin is.
+- Verzamelfacturen over meerdere projecten: zie 3.5. Het werkblad van een
+  project toont de regels van dat project, ook als de factuur zelf op een
+  ander of op geen project staat.
 
 ### 3.4 Eén berekening en een factuur met regels
 
@@ -231,6 +252,56 @@ Daarmee verdwijnt ook de ratio-truc in `forward-bureau-invoice` en de
 `vat_breakdown`-jsonb. Bestaande facturen zonder regels blijven leesbaar via
 hun PDF; het voorbeeld toont voor die facturen de samenvattende regel, zoals
 nu.
+
+### 3.5 Verzamelfacturen over meerdere projecten
+
+Twee soorten komen voor in de data:
+
+- **Rederij Doeksen**: één factuur (3263242, € 6.059) met negen boekingen
+  voor drie projecten plus een interne boeking. Vandaag: `request_id` NULL,
+  `is_collective`, boekingen in `partner_purchase_invoice_ticket_matches`,
+  alleen `partner_purchase_price` op het onderdeel, geen klantregels. De
+  factuur is onzichtbaar voor de facturenlijst, voor Snelstart en voor de
+  batch, omdat die alle drie `program_requests!inner` joinen;
+  `finalize-collective-invoice` zet hem daarom zelf op `forwarded`.
+- **Fortuna** (202600127, Gasunie € 659 en Thuisproeverij € 160): één
+  factuurnummer als twee kop-rijen op twee projecten. Dat is de huidige
+  "extra projecten"-splitsing. Gevolg: twee betalingen aan de partner voor
+  één factuur, twee boekingen in Snelstart met hetzelfde nummer, een
+  uitzondering in de uniciteitsindex en geen orderregels bij de hoofdrij.
+
+Voorstel: **één factuur is één kop; de regels dragen het project.**
+
+- `purchase_invoice_lines.request_id` (nieuw) zegt bij welk project een
+  regel hoort. Staan alle regels op één project, dan staat dat ook op de
+  kop. Anders is de kop `is_collective` met `request_id` NULL.
+- **Verdelen** gebeurt op de inkoopfactuur zelf (inkoopfacturenpagina en
+  direct na registreren): per regel een project, met suggesties uit de
+  regeltekst (referentienummer, klantnaam, datum ↔ projectdata; dezelfde
+  `suggestProjectFromText`, maar per regel) en bij Doeksen uit de
+  boekingsreferentie, zoals `parse-collective-invoice` die nu al oplevert.
+  `CollectiveInvoiceSheet` wordt deze verdeelstap; de boekingskolommen
+  (`booking_reference`, `departure_date`, `match_status`) verhuizen naar
+  `purchase_invoice_lines`, en `partner_purchase_invoice_ticket_matches`
+  vervalt na migratie.
+- Daarna ziet elk project in zijn werkblad alleen zijn eigen regels en
+  belast ze door zoals elke andere regel. Allocaties per onderdeel werken
+  al over projecten heen (het onderdeel kent zijn project), dus de
+  commissie-trigger verandert niet. De commissiewerklijst groepeert "losse
+  inkoopfactuur" nu per kop-project; die moet regels zonder onderdeel per
+  `request_id` van de regel gaan groeperen (kleine aanpassing in
+  `get-commission-reconciliation`).
+- **Betaling en Snelstart blijven op de kop**: één betaling, één boeking.
+  Daarvoor moeten `forward-purchase-invoice`, `generate-payment-batch`, de
+  kandidatenquery in `AdminPaymentBatches` en `usePurchaseInvoices` hun
+  `program_requests!inner` een `left join` maken en bij een verzamelfactuur
+  "Verzamel: BV-…, BV-…" tonen (projecten uit de regels). De
+  betalingsomschrijving wordt dan `Factuur {nummer} - verzamel`. Dat is de
+  enige wijziging aan die twee functies; de kop en de statussen blijven
+  gelijk. De incasso-afhandeling van Doeksen
+  (`docs/incasso-inkoopfacturen.md`) rekent al op de kop en verandert niet.
+- De twee bestaande Fortuna-rijen blijven staan als historie; de
+  "extra projecten"-splitsing verdwijnt uit de registratiedialoog.
 
 ## 4. Matchregels
 
@@ -272,18 +343,23 @@ een edge function `classify-purchase-invoice-lines` naar het voorbeeld van
 
 Minimaal, om statusflow, commissie, Snelstart en batch intact te laten.
 
-**`purchase_invoice_lines`** (bestaat): `+ charge_status` (`open` |
-`charged` | `skipped`, default `open`), `+ skip_reason` (text),
-`+ ticket_match_id` (FK `partner_purchase_invoice_ticket_matches`, voor
-verzamelfacturen). `charged` wordt afgeleid: er bestaat een klantregel met
-deze bron.
+**`purchase_invoice_lines`** (bestaat): `+ request_id` (FK
+`program_requests`, het project van de regel; bij een gewone factuur gelijk
+aan de kop), `+ charge_status` (`open` | `charged` | `skipped`, default
+`open`), `+ skip_reason` (text), en voor verzamelfacturen
+`+ booking_reference`, `+ departure_date`, `+ match_status` (overgenomen uit
+`partner_purchase_invoice_ticket_matches`, die daarna vervalt). `charged`
+wordt afgeleid: er bestaat een klantregel met deze bron. Migratie: bestaande
+regels krijgen de `request_id` van hun kop; de negen Doeksen-boekingen
+worden regels.
 
 **`program_item_billing_lines`** (bestaat, wordt "klantregels"):
-`+ request_id` (FK, zodat overige kosten zonder onderdeel ook een regel
-kunnen zijn; `item_id` wordt nullable), `+ purchase_invoice_line_id` (FK,
+`+ request_id` (FK, zodat regels zonder onderdeel mogelijk zijn, zoals bij
+BV-2608-0004; `item_id` wordt nullable), `+ purchase_invoice_line_id` (FK,
 `ON DELETE CASCADE`), `+ purchase_invoice_id` (FK, `ON DELETE CASCADE`),
 `+ source` (`purchase_invoice` | `manual`), `+ kind` (`program` |
-`extra_cost`). Migratie: bestaande regels krijgen `source = 'manual'` en
+`extra_cost` | `direct`; `direct` is een regel zonder onderdeel, op de
+factuur gegroepeerd onder de partner en het factuurnummer). Migratie: bestaande regels krijgen `source = 'manual'` en
 `request_id` uit het onderdeel; `use_actual_costs` wordt op de bestaande
 rijen genegeerd en daarna verwijderd; `final_billing_locked_at` blijft als
 "definitief"-stempel.
@@ -316,7 +392,8 @@ Wat **niet** verandert: `partner_purchase_invoices` (kop, statussen
 `pending` / `pending_email_match` / `forwarded` / `paid`, `request_id`,
 `payment_batch_id`, `refund_pending_at`), `payment_batches`,
 `purchase_invoice_reconciliation_findings`, de partner-guards, de
-commissietabellen.
+commissietabellen. De enige aanpassing aan Snelstart en batch is de `left
+join` op het project voor verzamelfacturen (3.5).
 
 ## 6. Fasen
 
@@ -325,11 +402,11 @@ commissietabellen.
 | 0 | Besluiten (hoofdstuk 8), meting op productie: hoeveel inkoopfacturen zonder allocatie, hoeveel onderdelen met klantregels, hoeveel overige-kostenposten; controle van BV-2608-0004 | 0,5 |
 | 1 | **Lichte registratie.** Dialoog terugbrengen tot partner, project (voorgekozen op referentienummer), nummer, datum, bedragen, regels, PDF-check. Orderregels altijd opslaan. Toewijzingsblokken, logiesblok, extra projecten en de copy-checkbox eruit. Ingang vanaf het project. Lekken dichten die los van het werkblad al fout zijn: klantregels en allocaties mee verwijderen bij verwijderen/opnieuw verwerken, dubbele toeristenbelasting, btw van overige kosten. | 1,5 |
 | 2 | **Werkblad Doorbelasten** met de matcher (lib + tests), bestemmingen, bevestigen in één transactie (databasefunctie `apply_purchase_line_charges`: klantregels + allocaties + `charge_status` + overige-kostenposten), per onderdeel "offerteprijs houden", "nog te verwerken"-teller, marge per onderdeel. Migratie van 5 (klantregels, inkoopregels). | 3 |
-| 2b | Logies-offerte als bestemming (via `apply-purchase-invoice-to-lodging`) en verzamelfacturen als inkoopregels in het werkblad | 1 |
+| 2b | **Verzamelfacturen** (3.5): `request_id` op de regel, verdeelstap per regel met suggesties, `CollectiveInvoiceSheet` daarin opgaan, `left join` in Snelstart, batch en facturenlijst, commissiewerklijst per regelproject; logies-offerte als bestemming (via `apply-purchase-invoice-to-lodging`) | 2 |
 | 3 | **Eén berekening** (`projectInvoiceSpec`) op alle zes plekken; `use_actual_costs` weg; `bureau_invoice_lines` met bevriezen bij registreren/versturen; PDF en UBL uit opgeslagen regels; "Restant factureren" vult het openstaande bedrag; SQL-trigger leest het opgeslagen totaal | 2,5 |
 | 4 | **Opruimen**: `LineAssignmentBlock`, allocatie-editor, `LodgingAllocationBlock` in de dialoog, `ExtraProjectSplitBlock`, "Orderregels boeken" in `MatchedRegistrationBanner`, `AdminItemBillingLinesEditor`-popover (wordt een link naar het werkblad), `purchaseInvoiceBillingLines.ts`, `purchaseInvoiceLineAssignment.ts`, `vat_breakdown`; documentatie; roadmap | 0,5 |
 
-Totaal circa 9 bouwdagen. Na fase 1 en 2 is de dagelijkse tijdwinst er; fase
+Totaal circa 10 bouwdagen. Na fase 1 en 2 is de dagelijkse tijdwinst er; fase
 3 is nodig om de cijfers op project, facturatiepagina, voorbeeld en portaal
 gelijk te krijgen en kan als aparte PR-reeks.
 
@@ -338,27 +415,70 @@ bevatten migraties en gaan dus via "Deploy Supabase".
 
 ## 7. Testproject BV-2608-0004
 
-Erwin noemt BV-2608-0004 als productieproject om dit op te testen. De
-productiedatabase was in deze sessie niet leesbaar, dus de cijfers van dat
-project zijn hier niet nagelopen. Het acceptatiescenario, uit te voeren op
-een preview (let op: previews schrijven in de echte database):
+Erwin noemt BV-2608-0004 als productieproject om dit op te testen.
 
-1. **Nulmeting (fase 0)**: noteer van BV-2608-0004 de onderdelen met
-   offerteprijs, de inkoopfacturen (kop, regels, allocaties), de bestaande
-   klantregels en overige kosten, het projecttotaal zoals het overzicht,
-   de facturatiepagina en het factuurvoorbeeld het nú tonen (verwacht: niet
-   alle drie gelijk) en eventuele geregistreerde klantfacturen.
+### Nulmeting (16 oktober 2026, alleen-lezen op productie)
+
+Stedelijk Gymnasium Haarlem, 153 personen, 15 t/m 18 september,
+`bureau_central`, voorwaarden geaccepteerd 2 oktober, status
+`ready_for_invoice`, `fee_snapshot` aanwezig, geen uitgesloten posten.
+
+| Wat | Stand |
+|---|---|
+| Programma-onderdelen | **0** (ook geen overige kosten) |
+| Logiesofferte | geen |
+| Klantregels (`program_item_billing_lines`) | 0 |
+| Klantfacturen (`bureau_invoices`) | 0 |
+| Inkoopfacturen | 4, samen € 10.055 incl.; drie `forwarded` (2 oktober), één `pending` (Staatsbosbeheer, 16 oktober, de factuur die Erwin net verwerkte) |
+| Allocaties | 0; alle vier hangen alleen aan het project |
+
+De inkoopregels:
+
+| Partner, nummer | Regels | Bijzonderheid |
+|---|---|---|
+| Kampeerterrein Stortemelk 26013731, € 6.346 | Toeristenbelasting € 704,34 (0 %), Verblijfskosten € 4.219,80 (9 %), Reserveringskosten € 16,20 (21 %), Inzet personeel + tenthuur € 1.406 (21 %) | kop `vat_rate` 0 ("gemengd"); de toeristenbelastingregel mag niet naar de klant, het bureau rekent zelf 153 × 3 × tarief |
+| De Bolder 26.000018, € 2.866 | 3 × "Vega maaltijd met toetje" 91 stuks à € 9,63 (9 %), per dag 15-9, 16-9, 17-9 | datum per regel, aantal 91 ≠ 153 |
+| Bagagevervoer Vlieland 2026-0137, € 765 | één regel "BTW 21%" € 632,23 | de scan vond geen orderregels en nam de btw-uitsplitsing als regel; omschrijving is onbruikbaar voor de klant, de kop-omschrijving ("Bagagevervoer groepstarief … (153 x)") wel |
+| Staatsbosbeheer 33035715, € 77 | Eindschoonmaak € 50, Tientje voor de Natuur € 9,99, Administratiekosten € 17,50 (21 %) | typisch "overige kosten" |
+
+Gevolg voor vandaag: zonder onderdelen bestaat het projecttotaal in het
+overzicht, de facturatiepagina en het factuurvoorbeeld alleen uit de
+automatische posten (coördinatie, toeristenbelasting, natuurbijdrage,
+opslag). "Factuur maken" zou een factuur zonder de € 10.055 opleveren;
+de enige weg is nu per regel een overige-kostenpost met de hand aanmaken.
+
+Breder beeld (productie, 16 oktober): van de 19 volledig gefactureerde
+projecten in 2026 hadden er 13 klantregels uit inkoopfacturen en 2 helemaal
+geen onderdelen; van de 66 inkoopfacturen hangen er 17 alleen aan een
+project, 45 hebben allocaties (alle 25 partnerregistraties, 20 van de 41
+admin-registraties). Er zijn 80 klantregels op 25 onderdelen, waarvan er
+maar 23 op een onderdeel met `use_actual_costs` staan (knelpunt 8 in de
+praktijk). 35 overige-kostenposten, 4 met een ander tarief dan 21 % dat
+in het overzicht wordt genegeerd (knelpunt 9).
+
+### Acceptatiescenario
+
+Uit te voeren op een preview (let op: previews schrijven in de echte
+database).
+
+1. **Nulmeting** is gedaan (hierboven); herhaal de drie totalen (overzicht,
+   facturatiepagina, voorbeeld) vlak voor de test.
 2. **Fase 1**: registreer de nieuwe inkoopfactuur van Erwin ("net verwerkt")
    via de inbox; het project moet voorgekozen staan op referentienummer; na
    opslaan verschijnen de orderregels bij het project onder "nog te
    verwerken".
-3. **Fase 2**: open het werkblad; controleer per regel het voorstel en de
-   reden; bevestig; controleer dat (a) het onderdeel "werkelijk" toont met
-   het verschil ten opzichte van de offerte, (b) de allocaties en de
-   commissie op het onderdeel kloppen in de commissiewerklijst, (c) een
-   toeristenbelastingregel op "niet doorbelasten" staat en niet dubbel op de
-   factuur komt, (d) een restregel als overige kosten verschijnt met de btw
-   van de regel.
+3. **Fase 2**: open het werkblad; het project heeft geen onderdelen, dus
+   alle 11 regels staan als klantregel zonder onderdeel, gegroepeerd per
+   partner. Controleer dat (a) Toeristenbelasting € 704,34 op "niet
+   doorbelasten" staat en het bureau zijn eigen toeristenbelasting
+   (153 × 3 × tarief) rekent, (b) de regel "BTW 21%" van Bagagevervoer de
+   kop-omschrijving als naam voorstelt, (c) de btw per regel (0/9/21) klopt
+   in de btw-groepen, (d) de Staatsbosbeheer-regels als overige kosten
+   staan, (e) het totaal na bevestigen € 9.350,99 aan doorbelaste inkoop
+   plus de automatische posten is, (f) de commissiewerklijst de vier
+   facturen als "losse inkoopfactuur" van dit project kent.
+   Herhaal daarna op een project mét onderdelen (bijvoorbeeld BV-2606-0013,
+   8 onderdelen, nog zonder inkoopfacturen) om de matcher te zien werken.
 4. **Fase 3**: "Factuur maken" toont hetzelfde totaal als het overzicht en de
    facturatiepagina; registreren slaat regels op; de PDF en de UBL naar
    Snelstart komen uit die regels; het klantportaal toont dezelfde
@@ -391,14 +511,23 @@ een preview (let op: previews schrijven in de echte database):
    allocatie telt meteen voor de commissie. Zo laten (plan), of partners ook
    op projectniveau laten registreren en de verdeling altijd door het bureau
    laten doen?
+8. **Verzamelfacturen**: één kop met regels per project (plan, 3.5), met de
+   kleine `left join`-aanpassing in Snelstart en batch? Of de huidige
+   splitsing in losse kop-rijen per project houden, met twee betalingen en
+   twee boekingen voor één factuur?
+9. **Projecten zonder onderdelen** (BV-2608-0004 en 2 van de 19
+   gefactureerde projecten): is dat een bewuste werkwijze voor grote groepen
+   die buiten de wizard om zijn geregeld? Dan is de lijstmodus van het
+   werkblad (3.3) de hoofdroute, geen uitzondering.
 
 ## 9. Bewust niet in dit plan
 
 - Wijzigen van de commissieberekening of -flow; het werkblad voedt alleen de
   allocaties die de bestaande trigger al leest.
-- Wijzigen van `forward-purchase-invoice`, `generate-payment-batch`, de
-  statussen van inkoopfacturen, de bankmatching of de incasso-afhandeling
-  (`docs/incasso-inkoopfacturen.md`).
+- Wijzigen van de statussen van inkoopfacturen, de bankmatching of de
+  incasso-afhandeling (`docs/incasso-inkoopfacturen.md`).
+  `forward-purchase-invoice` en `generate-payment-batch` veranderen alleen
+  in de join op het project (3.5).
 - AI die bestemmingen zonder bevestiging wegschrijft.
 - Deelfacturen per onderdeel (bijvoorbeeld alleen de catering apart
   factureren); deel- en slotfactuur blijven op bedrag.
