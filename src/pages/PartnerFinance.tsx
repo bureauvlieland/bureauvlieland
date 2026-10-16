@@ -13,6 +13,7 @@ import { UploadInvoicePdfPartnerDialog, type UploadPdfTarget } from "@/component
 import { MissingPdfBanner } from "@/components/partner-portal/MissingPdfBanner";
 import { PartnerCommissionInvoiceList } from "@/components/partner-portal/PartnerCommissionInvoiceList";
 import { summarizePartnerCommissionInvoices } from "@/lib/partnerCommissionInvoices";
+import { sumPendingCommission } from "@/lib/partnerPendingCommission";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle2, FileText, Mail, Receipt, Upload } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -148,9 +149,17 @@ const PartnerFinanceContent = () => {
   const totalToBeInvoiced = toBeInvoicedItems.reduce((sum, i) => sum + getPartnerBillableAmount(i), 0) + toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total || 0), 0);
   // Commissie: wat het bureau werkelijk factureerde (commissiefacturen), niet het snapshot op de onderdelen.
   const commissionTotals = summarizePartnerCommissionInvoices(commissionInvoices);
+  // Verwacht: over wat de partner al factureerde maar het bureau nog niet in
+  // rekening bracht (commission_status = pending), plus over wat de partner zelf nog factureert.
+  const pendingCommission = sumPendingCommission(invoicedItems, activityCommission) + sumPendingCommission(invoicedAccommodations, accommodationCommission);
   const totalExpectedCommission =
     toBeInvoicedItems.reduce((sum, i) => sum + (getPartnerBillableAmount(i) ? expectedActivityCommission(getPartnerBillableAmount(i), i.commission_percentage) : 0), 0) +
     toBeInvoicedAccommodations.reduce((sum, q) => sum + (q.price_total ? expectedAccommodationCommission(q) : 0), 0);
+  const expectedCommissionParts = [
+    pendingCommission > 0 ? `${formatEuro(pendingCommission)} over wat u al factureerde` : null,
+    totalExpectedCommission > 0 ? `${formatEuro(totalExpectedCommission)} over wat u nog factureert` : null,
+  ].filter((part): part is string => part !== null);
+  const expectedCommissionValue = expectedCommissionParts.length > 1 ? `${formatEuro(pendingCommission + totalExpectedCommission)}: ${expectedCommissionParts.join(", ")}` : expectedCommissionParts[0];
 
   const toBeInvoicedCount = toBeInvoicedItems.length + toBeInvoicedAccommodations.length;
   const invoicedCount = invoicedItems.length + invoicedAccommodations.length;
@@ -183,7 +192,7 @@ const PartnerFinanceContent = () => {
     { label: "Gefactureerd", value: `${formatEuro(totalInvoiced)}${invoicedCount > 0 ? ` (${invoicedCount} ${invoicedCount === 1 ? "factuur" : "facturen"})` : ""}` },
     { label: "Nog te factureren", value: toBeInvoicedCount > 0 ? `${formatEuro(totalToBeInvoiced)} (${parts.join(", ")})` : "Niets" },
     { label: "Commissie", value: `${commissionLabel}: ${formatEuro(commissionTotals.invoiced)} gefactureerd, ${formatEuro(commissionTotals.open)} open, ${formatEuro(commissionTotals.paid)} betaald` },
-    ...(totalExpectedCommission > 0 ? [{ label: "Verwachte commissie", value: `${formatEuro(totalExpectedCommission)} over wat u nog factureert` }] : []),
+    ...(expectedCommissionValue ? [{ label: "Verwachte commissie", value: expectedCommissionValue }] : []),
     { label: `Omzet ${year}`, value: formatEuro(ytdRevenue) },
     ...(openCommission?.count ? [{ label: "Open commissiefactuur", value: `${formatEuro(openCommission.amountInclVat)} (${openCommission.count === 1 ? "1 factuur" : `${openCommission.count} facturen`})` }] : []),
   ];
