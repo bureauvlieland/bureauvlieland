@@ -3116,8 +3116,11 @@ export type Database = {
           description: string
           id: string
           item_id: string
+          purchase_invoice_id: string | null
+          purchase_invoice_line_id: string | null
           quantity: number
           sort_order: number
+          source: string
           unit_price_excl_vat: number
           updated_at: string
           vat_amount: number
@@ -3130,8 +3133,11 @@ export type Database = {
           description?: string
           id?: string
           item_id: string
+          purchase_invoice_id?: string | null
+          purchase_invoice_line_id?: string | null
           quantity?: number
           sort_order?: number
+          source?: string
           unit_price_excl_vat?: number
           updated_at?: string
           vat_amount?: number
@@ -3144,8 +3150,11 @@ export type Database = {
           description?: string
           id?: string
           item_id?: string
+          purchase_invoice_id?: string | null
+          purchase_invoice_line_id?: string | null
           quantity?: number
           sort_order?: number
+          source?: string
           unit_price_excl_vat?: number
           updated_at?: string
           vat_amount?: number
@@ -3157,6 +3166,20 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_item_billing_lines_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_item_billing_lines_purchase_invoice_line_id_fkey"
+            columns: ["purchase_invoice_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoice_lines"
             referencedColumns: ["id"]
           },
         ]
@@ -3376,6 +3399,7 @@ export type Database = {
           invoiced_file_path: string | null
           invoiced_number: string | null
           is_custom_quote: boolean
+          keep_quoted_price: boolean
           item_quote_status: string | null
           location_address: string | null
           location_lat: number | null
@@ -3495,6 +3519,7 @@ export type Database = {
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           is_custom_quote?: boolean
+          keep_quoted_price?: boolean
           item_quote_status?: string | null
           location_address?: string | null
           location_lat?: number | null
@@ -3614,6 +3639,7 @@ export type Database = {
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           is_custom_quote?: boolean
+          keep_quoted_price?: boolean
           item_quote_status?: string | null
           location_address?: string | null
           location_lat?: number | null
@@ -4342,11 +4368,15 @@ export type Database = {
         Row: {
           amount_excl_vat: number
           amount_incl_vat: number
+          charge_status: string
+          charged_at: string | null
           created_at: string
           description: string
           id: string
           invoice_id: string
+          item_id: string | null
           quantity: number
+          skip_reason: string | null
           sort_order: number
           unit_price: number
           vat_amount: number
@@ -4355,11 +4385,15 @@ export type Database = {
         Insert: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          charge_status?: string
+          charged_at?: string | null
           created_at?: string
           description: string
           id?: string
           invoice_id: string
+          item_id?: string | null
           quantity?: number
+          skip_reason?: string | null
           sort_order?: number
           unit_price?: number
           vat_amount?: number
@@ -4368,11 +4402,15 @@ export type Database = {
         Update: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          charge_status?: string
+          charged_at?: string | null
           created_at?: string
           description?: string
           id?: string
           invoice_id?: string
+          item_id?: string | null
           quantity?: number
+          skip_reason?: string | null
           sort_order?: number
           unit_price?: number
           vat_amount?: number
@@ -4384,6 +4422,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
             referencedColumns: ["id"]
           },
         ]
@@ -5205,6 +5250,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_purchase_line_charges: {
+        Args: { p_request_id: string; p_decisions: Json }
+        Returns: Json
+      }
       append_customer_program_history: {
         Args: {
           p_action: string

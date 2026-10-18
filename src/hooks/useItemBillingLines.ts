@@ -4,6 +4,7 @@ import {
   ProgramItemBillingLine,
   ProgramItemBillingLineInput,
   computeBillingLineAmounts,
+  isPurchaseSourcedLine,
 } from "@/types/programItemBillingLine";
 import { toast } from "sonner";
 
@@ -27,17 +28,23 @@ export const useItemBillingLines = (itemId: string | null) => {
     fetchLines();
   }, [fetchLines]);
 
+  /**
+   * Vervangt de handmatige regels; regels uit een inkoopregel (werkblad
+   * Doorbelasten) blijven staan en horen niet in `inputs`.
+   */
   const saveAll = async (inputs: ProgramItemBillingLineInput[]) => {
     if (!itemId) return false;
-    // Delete existing lines and reinsert (simpler than diffing)
+    const purchaseSourced = lines.filter(isPurchaseSourcedLine);
     const { error: delErr } = await supabase
       .from("program_item_billing_lines")
       .delete()
-      .eq("item_id", itemId);
+      .eq("item_id", itemId)
+      .eq("source", "manual");
     if (delErr) {
       toast.error("Fout bij opslaan factuurregels");
       return false;
     }
+    const offset = purchaseSourced.length;
     if (inputs.length > 0) {
       const rows = inputs.map((input, idx) => {
         const amounts = computeBillingLineAmounts(
@@ -51,7 +58,8 @@ export const useItemBillingLines = (itemId: string | null) => {
           quantity: input.quantity,
           unit_price_excl_vat: input.unit_price_excl_vat,
           vat_rate: input.vat_rate,
-          sort_order: input.sort_order ?? idx,
+          sort_order: offset + (input.sort_order ?? idx),
+          source: "manual",
           ...amounts,
         };
       });
@@ -63,10 +71,14 @@ export const useItemBillingLines = (itemId: string | null) => {
         return false;
       }
     }
-    // Mark item as locked
+    // Regels aanwezig (handmatig of uit inkoop) = regels leidend.
+    const hasAnyLines = inputs.length > 0 || purchaseSourced.length > 0;
     await supabase
       .from("program_request_items")
-      .update({ final_billing_locked_at: inputs.length > 0 ? new Date().toISOString() : null })
+      .update({
+        final_billing_locked_at: hasAnyLines ? new Date().toISOString() : null,
+        use_actual_costs: hasAnyLines,
+      })
       .eq("id", itemId);
     await fetchLines();
     toast.success("Factuurregels opgeslagen");

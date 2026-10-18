@@ -693,13 +693,39 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
   }
 
   // ── 2. Regels vanuit de inkoopkant (facturen zonder koppeling) ──────────
+  // Sinds het werkblad Doorbelasten kan een factuur deels aan onderdelen
+  // hangen en deels aan kostenposten (bureau-regels, dus "rowless"). Dat
+  // kostenpostdeel heeft wél allocaties maar levert hierboven geen regel op;
+  // het komt hier terug als restregel, zodat de commissie erover niet stil
+  // verdwijnt. Niet-doorbelaste regels (toeristenbelasting) hebben géén
+  // allocatie en blijven buiten de grondslag, zoals de huisregel wil.
+  const rowlessAllocatedExcl = (inv: ReconInvoiceInput): number => {
+    const allocs = inv.allocation_amounts;
+    if (!allocs) return 0;
+    let sum = 0;
+    for (const [itemId, amount] of Object.entries(allocs)) {
+      if (rowlessItemIds.has(itemId)) sum += toNumber(amount) ?? 0;
+    }
+    return sum;
+  };
+  const allocatedExcl = (inv: ReconInvoiceInput): number | null => {
+    const allocs = inv.allocation_amounts;
+    if (!allocs || Object.keys(allocs).length === 0) return null;
+    return Object.values(allocs).reduce((s, a) => s + (toNumber(a) ?? 0), 0);
+  };
+
   for (const inv of input.invoices) {
-    if (isLinked(inv)) continue;
+    const linked = isLinked(inv);
+    const remainder = linked ? rowlessAllocatedExcl(inv) : 0;
+    if (linked && remainder <= 0.005) continue;
 
     const partnerId = inv.partner_id ?? "";
     const partner = partnerMap.get(partnerId);
     const project = inv.request_id ? projectMap.get(inv.request_id) : undefined;
-    const purchaseExcl = toNumber(inv.amount_excl_vat);
+    // Een verdeelde factuur telt alleen wat verdeeld is (niet-doorbelaste
+    // regels vallen buiten de grondslag); een factuur zonder verdeling telt
+    // het hele bedrag, zoals voorheen.
+    const purchaseExcl = linked ? remainder : (allocatedExcl(inv) ?? toNumber(inv.amount_excl_vat));
     // Een losse inkoopfactuur hangt aan geen onderdeel, dus geldt het
     // activiteitenpercentage van de partner.
     const commissionPct = getCommissionRate(partner, "activity");
@@ -707,7 +733,7 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
     const purchaseCommission = exempt ? 0 : (purchaseExcl ?? 0) * (commissionPct / 100);
 
     rows.push({
-      key: `invoice:${inv.id}`,
+      key: linked ? `invoice:${inv.id}:rest` : `invoice:${inv.id}`,
       // Aan een project gekoppeld is genoeg; alleen een factuur zonder project
       // én zonder onderdeel blijft "niet gekoppeld".
       status: exempt ? "exempt" : inv.request_id ? "match" : "unlinked_invoice",
@@ -722,7 +748,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       itemId: null,
       invoiceId: inv.id,
       itemType: "purchase_invoice",
-      label: `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"}`,
+      label: linked
+        ? `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"} (overige kosten)`
+        : `Inkoopfactuur ${inv.invoice_number ?? "zonder nummer"}`,
       salesExclVat: null,
       purchaseExclVat: purchaseExcl,
       differenceExclVat: null,
