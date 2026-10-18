@@ -68,7 +68,6 @@ async function resetItemsWithoutLines(itemIds: string[]): Promise<number> {
   const { error: resetError } = await supabase
     .from("program_request_items")
     .update({
-      use_actual_costs: false,
       final_billing_locked_at: null,
       updated_at: new Date().toISOString(),
     })

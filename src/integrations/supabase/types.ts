@@ -1175,6 +1175,81 @@ export type Database = {
           },
         ]
       }
+      bureau_invoice_lines: {
+        Row: {
+          amount_excl_vat: number
+          amount_incl_vat: number
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          item_id: string | null
+          kind: string
+          quantity: number
+          quantity_label: string | null
+          section: string
+          sort_order: number
+          sub_description: string | null
+          unit_price_excl_vat: number
+          unit_suffix: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id: string
+          item_id?: string | null
+          kind?: string
+          quantity?: number
+          quantity_label?: string | null
+          section?: string
+          sort_order?: number
+          sub_description?: string | null
+          unit_price_excl_vat?: number
+          unit_suffix?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Update: {
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          item_id?: string | null
+          kind?: string
+          quantity?: number
+          quantity_label?: string | null
+          section?: string
+          sort_order?: number
+          sub_description?: string | null
+          unit_price_excl_vat?: number
+          unit_suffix?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bureau_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "bureau_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bureau_invoice_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bureau_invoices: {
         Row: {
           amount_excl_vat: number
@@ -3460,7 +3535,6 @@ export type Database = {
           status_updated_by: string | null
           ticket_last_emailed_at: string | null
           updated_at: string
-          use_actual_costs: boolean
           vat_rate: number | null
           version: number
         }
@@ -3580,7 +3654,6 @@ export type Database = {
           status_updated_by?: string | null
           ticket_last_emailed_at?: string | null
           updated_at?: string
-          use_actual_costs?: boolean
           vat_rate?: number | null
           version?: number
         }
@@ -3700,7 +3773,6 @@ export type Database = {
           status_updated_by?: string | null
           ticket_last_emailed_at?: string | null
           updated_at?: string
-          use_actual_costs?: boolean
           vat_rate?: number | null
           version?: number
         }
@@ -3777,6 +3849,8 @@ export type Database = {
           guest_names: string | null
           has_horeca_on_site: boolean | null
           id: string
+          invoice_spec_total_incl_vat: number | null
+          invoice_spec_updated_at: string | null
           invoicing_mode: string
           last_published_at: string | null
           linked_accommodation_id: string | null
@@ -3854,6 +3928,8 @@ export type Database = {
           guest_names?: string | null
           has_horeca_on_site?: boolean | null
           id?: string
+          invoice_spec_total_incl_vat?: number | null
+          invoice_spec_updated_at?: string | null
           invoicing_mode?: string
           last_published_at?: string | null
           linked_accommodation_id?: string | null
@@ -3931,6 +4007,8 @@ export type Database = {
           guest_names?: string | null
           has_horeca_on_site?: boolean | null
           id?: string
+          invoice_spec_total_incl_vat?: number | null
+          invoice_spec_updated_at?: string | null
           invoicing_mode?: string
           last_published_at?: string | null
           linked_accommodation_id?: string | null
@@ -5348,6 +5426,7 @@ export type Database = {
           request_id: string
         }[]
       }
+      recalculate_program_completion_for_request: { Args: { p_request_id: string }; Returns: undefined }
       get_partner_id: { Args: { _user_id: string }; Returns: string }
       get_partner_linked_program_invoicing_modes: {
         Args: { p_program_ids: string[] }

@@ -7,9 +7,11 @@ import type { PurchaseInvoice } from "@/types/purchaseInvoice";
 
 interface ProjectProfitSummaryProps {
   purchaseInvoices: PurchaseInvoice[];
-  /** Totaal-omzet aan klant — INCL. BTW (komt uit financieel overzicht) */
-  bureauInvoicedAmount: number;
-  /** Coördinatiefee incl. BTW (zit al in bureauInvoicedAmount; alleen ter info) */
+  /** Te factureren projecttotaal incl. btw (projectInvoiceSpec). */
+  projectedRevenueInclVat: number;
+  /** Netto geregistreerd op bureaufacturen incl. btw (creditnota's afgetrokken). */
+  invoicedRevenueInclVat: number;
+  /** Coördinatiefee incl. btw (zit al in de omzet; alleen ter info) */
   coordinationFee: number;
   /** Partner-commissies (ex BTW) die in de omzet zitten — alleen ter info */
   totalCommissions?: number;
@@ -29,14 +31,15 @@ interface ProjectProfitSummaryProps {
  */
 export const ProjectProfitSummary = ({
   purchaseInvoices,
-  bureauInvoicedAmount,
+  projectedRevenueInclVat,
+  invoicedRevenueInclVat,
   coordinationFee,
   totalCommissions = 0,
   expectedPartnerCosts = 0,
   className,
 }: ProjectProfitSummaryProps) => {
   const summary = useMemo(() => {
-    const revenueInclVat = bureauInvoicedAmount;
+    const revenueInclVat = projectedRevenueInclVat;
 
     const totalPurchaseInclVat = purchaseInvoices.reduce(
       (sum, inv) => sum + Number(inv.amount_incl_vat ?? 0),
@@ -73,8 +76,10 @@ export const ProjectProfitSummary = ({
       grossMarginExclApprox,
       marginPercentage,
       invoiceCount: purchaseInvoices.length,
+      invoicedRevenueInclVat,
+      stillToInvoice: Math.max(0, revenueInclVat - invoicedRevenueInclVat),
     };
-  }, [purchaseInvoices, bureauInvoicedAmount, coordinationFee, totalCommissions, expectedPartnerCosts]);
+  }, [purchaseInvoices, projectedRevenueInclVat, invoicedRevenueInclVat, coordinationFee, totalCommissions, expectedPartnerCosts]);
 
   const formatPrice = (amount: number) =>
     amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -97,9 +102,19 @@ export const ProjectProfitSummary = ({
           {/* Omzet */}
           <div className="space-y-1">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Omzet (gefactureerd aan klant, incl. BTW)</span>
+              <span className="text-muted-foreground">Omzet (projecttotaal aan klant, incl. BTW)</span>
               <span className="font-medium text-primary">€{formatPrice(summary.revenueInclVat)}</span>
             </div>
+            <div className="flex items-center justify-between text-xs pl-4 text-muted-foreground">
+              <span>· waarvan gefactureerd</span>
+              <span>€{formatPrice(summary.invoicedRevenueInclVat)}</span>
+            </div>
+            {summary.stillToInvoice > 0.005 && (
+              <div className="flex items-center justify-between text-xs pl-4 text-muted-foreground">
+                <span>· nog te factureren</span>
+                <span>€{formatPrice(summary.stillToInvoice)}</span>
+              </div>
+            )}
             {summary.coordinationFee > 0 && (
               <div className="flex items-center justify-between text-xs pl-4 text-muted-foreground">
                 <span>· waarvan coördinatiefee</span>

@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { InvoiceType } from "@/types/bureauInvoice";
 import { reportError } from "@/lib/errorReporting";
+import type { StoredInvoiceLineInput } from "@/lib/bureauInvoiceLines";
 
 interface SendBureauInvoiceToCustomerDialogProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ interface SendBureauInvoiceToCustomerDialogProps {
   description?: string;
   /** Existing registered invoice to send; when set, do not insert a duplicate row. */
   existingInvoiceId?: string | null;
+  /** Regels die bij registreren worden bevroren bij de factuur (`bureau_invoice_lines`). */
+  linesToStore?: StoredInvoiceLineInput[];
   /** Async; resolves with the PDF blob to send. */
   onGeneratePdf: () => Promise<Blob | null>;
   onSent?: () => void;
@@ -64,6 +67,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
   invoiceType = "partial",
   description,
   existingInvoiceId = null,
+  linesToStore = [],
   onGeneratePdf,
   onSent,
 }: SendBureauInvoiceToCustomerDialogProps) => {
@@ -137,6 +141,14 @@ export const SendBureauInvoiceToCustomerDialog = ({
           throw insertError;
         }
         invoiceId = inserted?.id ?? null;
+
+        const storedInvoiceId = invoiceId;
+        if (storedInvoiceId && linesToStore.length > 0) {
+          const { error: linesError } = await supabase
+            .from("bureau_invoice_lines")
+            .insert(linesToStore.map((line) => ({ ...line, invoice_id: storedInvoiceId })));
+          if (linesError) reportError(linesError, { where: "SendBureauInvoiceToCustomerDialog: factuurregels opslaan" });
+        }
 
         await supabase.from("program_request_history").insert({
           request_id: requestId,

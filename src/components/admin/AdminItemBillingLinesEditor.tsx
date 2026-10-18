@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -53,8 +51,6 @@ export const AdminItemBillingLinesEditor = ({
   const { invoices: linkedInvoices, loading: invoicesLoading, refetch: refetchInvoices } = usePurchaseInvoicesForItem(isOpen ? itemId : null);
   const [draft, setDraft] = useState<ProgramItemBillingLineInput[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [useActualCosts, setUseActualCosts] = useState(false);
-  const [initialUseActualCosts, setInitialUseActualCosts] = useState(false);
 
   const hasLines = lines.length > 0;
   const totalIncl = lines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
@@ -63,21 +59,6 @@ export const AdminItemBillingLinesEditor = ({
   const purchaseLines = useMemo(() => lines.filter(isPurchaseSourcedLine), [lines]);
   const manualLines = useMemo(() => lines.filter((l) => !isPurchaseSourcedLine(l)), [lines]);
   const purchaseTotalIncl = purchaseLines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
-
-  // Load current use_actual_costs flag when opening
-  useEffect(() => {
-    if (!isOpen || !itemId) return;
-    supabase
-      .from("program_request_items")
-      .select("use_actual_costs")
-      .eq("id", itemId)
-      .maybeSingle()
-      .then(({ data }) => {
-        const v = Boolean((data as any)?.use_actual_costs);
-        setUseActualCosts(v);
-        setInitialUseActualCosts(v);
-      });
-  }, [isOpen, itemId]);
 
   // Initialize draft when opening
   useEffect(() => {
@@ -159,24 +140,9 @@ export const AdminItemBillingLinesEditor = ({
     setDraft((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const persistUseActualCosts = async (next: boolean) => {
-    if (next === initialUseActualCosts) return true;
-    const { error } = await supabase
-      .from("program_request_items")
-      .update({ use_actual_costs: next })
-      .eq("id", itemId);
-    if (error) {
-      toast.error("Toggle 'werkelijke kosten' opslaan mislukt");
-      return false;
-    }
-    setInitialUseActualCosts(next);
-    return true;
-  };
-
   const handleSave = async () => {
     setIsSaving(true);
     const ok = await saveAll(draft);
-    if (ok) await persistUseActualCosts(useActualCosts);
     setIsSaving(false);
     if (ok) setIsOpen(false);
   };
@@ -184,7 +150,6 @@ export const AdminItemBillingLinesEditor = ({
   const handleClearAll = async () => {
     setIsSaving(true);
     const ok = await saveAll([]);
-    if (ok) await persistUseActualCosts(false);
     setIsSaving(false);
     if (ok) setIsOpen(false);
   };
@@ -224,8 +189,6 @@ export const AdminItemBillingLinesEditor = ({
       const merged = [...prev, ...imported];
       return merged.map((d, i) => ({ ...d, sort_order: i }));
     });
-    // Default: when importing actuals, also flip toggle on
-    setUseActualCosts(true);
     toast.success(`${imported.length} regel(s) overgenomen uit factuur ${invoice.invoice_number}`);
   };
 
@@ -333,23 +296,10 @@ export const AdminItemBillingLinesEditor = ({
             </div>
           )}
 
-          {/* Toggle */}
-          <div className="flex items-center justify-between gap-2 border rounded-md p-2 bg-background">
-            <div className="space-y-0.5">
-              <Label htmlFor="use-actual-costs" className="text-xs font-medium cursor-pointer">
-                Werkelijke kosten leidend in overzicht
-              </Label>
-              <p className="text-[10px] text-muted-foreground">
-                Aan: Financieel Overzicht toont som van deze regels. Uit: offerteprijs blijft leidend.
-              </p>
-            </div>
-            <Switch
-              id="use-actual-costs"
-              checked={useActualCosts}
-              onCheckedChange={setUseActualCosts}
-              disabled={!hasLines && draft.length === 0}
-            />
-          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Regels aanwezig = regels leidend: het Financieel Overzicht, het factuurvoorbeeld en het
+            klantportaal tonen dan de som van deze regels in plaats van de offerteprijs.
+          </p>
 
           {loading ? (
             <div className="flex justify-center py-8">

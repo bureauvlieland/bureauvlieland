@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -29,7 +29,9 @@ import type {
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
-import { calculateAdminInvoicingTotals } from "@/lib/adminInvoicingTotals";
+import { buildProjectInvoiceSpec, scaleVatGroups } from "@/lib/projectInvoiceSpec";
+import { syncInvoiceSpecTotals } from "@/hooks/useProjectInvoiceSpec";
+import { sumBillableRevisions } from "@/lib/feeEngine";
 import {
   countUnforwardedInvoices,
   matchesSearch,
@@ -38,15 +40,6 @@ import {
 } from "@/lib/adminInvoicingView";
 import { usePricingStructures } from "@/hooks/usePricing";
 import { resolveFeeStructure } from "@/lib/feeEngine";
-import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
-import { getItemLineTotal as centralLineTotal } from "@/lib/portalPricing";
-
-interface InvoiceVatSuggestion {
-  totalExclVat: number;
-  totalVat: number;
-  grandTotalInclVat: number;
-  vatGroups: { rate: number; exclVat: number; vatAmount: number }[];
-}
 
 type InvoicingTab = "ready" | "partial" | "forward" | "lodging" | "completed";
 
@@ -54,8 +47,8 @@ const COMPLETED_PAGE_SIZE = 20;
 
 const AdminInvoicing = () => {
   const queryClient = useQueryClient();
-  const { getCoordinationFee, getVatRate, settings } = useAppSettings();
-  const { activeStructure } = usePricingStructures();
+  const { settings, isLoading: isSettingsLoading } = useAppSettings();
+  const { activeStructure, isLoading: isStructuresLoading } = usePricingStructures();
   const [activeTab, setActiveTab] = useState<InvoicingTab>("ready");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<InvoicingSort>("event_oldest");
@@ -125,7 +118,7 @@ const AdminInvoicing = () => {
       
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select("id, request_id, block_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people, use_actual_costs, vat_rate")
+        .select("id, request_id, block_id, day_index, block_name, block_category, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people, vat_rate")
         .in("request_id", requestIds);
 
       if (itemsError) throw itemsError;
@@ -138,8 +131,23 @@ const AdminInvoicing = () => {
 
       if (invoicesError) throw invoicesError;
 
+      // Wijzigingsrondes na akkoord: eigen regel op de factuur.
+      const { data: revisionRows, error: revisionError } = await supabase
+        .from("program_revision_charges")
+        .select("request_id, billable, amount")
+        .in("request_id", requestIds);
+      if (revisionError) throw revisionError;
+      const revisionTotals = new Map<string, number>();
+      for (const requestId of requestIds) {
+        revisionTotals.set(
+          requestId,
+          sumBillableRevisions((revisionRows ?? []).filter((r) => r.request_id === requestId) as { billable: boolean; amount: number }[]),
+        );
+      }
+
       const accommodationByRequestId = new Map<string, {
         id: string;
+        accommodation_name: string;
         price_total: number | null;
         vat_rate: number | null;
       }>();
@@ -148,7 +156,7 @@ const AdminInvoicing = () => {
       if (linkedAccommodationIds.length > 0) {
         const { data: accommodationQuotes, error: accommodationError } = await supabase
           .from("accommodation_quotes")
-          .select("id, request_id, price_total, vat_rate")
+          .select("id, request_id, accommodation_name, price_total, vat_rate")
           .eq("status", "selected")
           .in("request_id", linkedAccommodationIds);
 
@@ -162,7 +170,7 @@ const AdminInvoicing = () => {
         if (quoteIds.length > 0) {
           const { data: accommodationExtras, error: extrasError } = await supabase
             .from("accommodation_quote_extras")
-            .select("id, quote_id, quantity, unit_price, pricing_type, vat_rate")
+            .select("id, quote_id, name, quantity, unit_price, pricing_type, vat_rate")
             .in("quote_id", quoteIds);
           if (extrasError) throw extrasError;
           accommodationExtras?.forEach((extra) => {
@@ -183,6 +191,10 @@ const AdminInvoicing = () => {
         selected_accommodation_vat_rate: request.linked_accommodation_id
           ? accommodationByRequestId.get(request.linked_accommodation_id)?.vat_rate ?? null
           : null,
+        selected_accommodation_name: request.linked_accommodation_id
+          ? accommodationByRequestId.get(request.linked_accommodation_id)?.accommodation_name ?? null
+          : null,
+        revision_fees_total: revisionTotals.get(request.id) ?? 0,
         selected_accommodation_extras: request.linked_accommodation_id
           ? accommodationExtrasByQuoteId.get(accommodationByRequestId.get(request.linked_accommodation_id)?.id ?? "") ?? []
           : [],
@@ -201,88 +213,82 @@ const AdminInvoicing = () => {
     () => requests.flatMap((request) => request.items.map((item) => item.id)),
     [requests],
   );
-  const { linesByItem } = useItemBillingLinesBatch(allItemIds);
+  const { linesByItem, loading: isLinesLoading } = useItemBillingLinesBatch(allItemIds);
   const allItems = useMemo(() => requests.flatMap((request) => request.items), [requests]);
-  const { getItemVatRate } = useItemVatRates(allItems);
+  const { vatRateMap } = useItemVatRates(allItems);
 
-  // Totalen één keer per project (niet per kaart en niet per render).
+  // De ene berekening (projectInvoiceSpec), één keer per project.
   const rows = useMemo<InvoicingRow[]>(
     () =>
-      requests.map((request) => ({
-        request,
-        totals: {
-          ...calculateAdminInvoicingTotals(
-            request,
-            {
-              coordinationFee: getCoordinationFee(request.number_of_people),
-              feeStructure: resolveFeeStructure((request as any).fee_snapshot, activeStructure),
-              requestDate: (request as any).created_at ?? null,
-              touristTaxPerPersonPerDay: settings.tourist_tax_pp_per_day,
-              natureContributionPerPerson: settings.nature_contribution_pp,
-              bureauCentralSurchargePerPerson: settings.bureau_central_surcharge_pp,
-            },
-            linesByItem,
-          ),
-        },
-      })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [requests, linesByItem, activeStructure, settings],
+      requests.map((request) => {
+        const spec = buildProjectInvoiceSpec({
+          request: {
+            number_of_people: request.number_of_people,
+            selected_dates: request.selected_dates,
+            invoicing_mode: request.invoicing_mode,
+            excluded_fees: request.excluded_fees,
+            created_at: request.created_at,
+            reference_number: request.reference_number,
+          },
+          items: request.items,
+          linesByItem,
+          blockVatRates: vatRateMap,
+          accommodation:
+            request.linked_accommodation_id && request.selected_accommodation_base_total != null
+              ? {
+                  accommodation_name: request.selected_accommodation_name ?? "Logies",
+                  price_total: Number(request.selected_accommodation_base_total) || 0,
+                  vat_rate: request.selected_accommodation_vat_rate,
+                  extras: (request.selected_accommodation_extras ?? []).map((extra) => ({
+                    id: extra.id,
+                    name: extra.name ?? "Extra",
+                    quantity: Number(extra.quantity) || 0,
+                    unit_price: Number(extra.unit_price) || 0,
+                    pricing_type: extra.pricing_type,
+                    vat_rate: extra.vat_rate,
+                  })),
+                }
+              : null,
+          settings,
+          feeStructure: resolveFeeStructure(request.fee_snapshot, activeStructure),
+          revisionFeesTotal: request.revision_fees_total ?? 0,
+          invoices: request.invoices,
+        });
+        return {
+          request,
+          spec,
+          totals: {
+            programItemsTotal: spec.totals.programItems,
+            extraCostsTotal: spec.totals.extraCosts,
+            coordinationFee: spec.totals.coordinationFee,
+            touristTax: spec.totals.touristTax,
+            natureContribution: spec.totals.natureContribution,
+            centralSurcharge: spec.totals.centralSurcharge,
+            revisionFees: spec.totals.revisionFees,
+            accommodationTotal: spec.totals.lodging + spec.totals.lodgingExtras,
+            grandTotalInclVat: spec.totals.inclVat,
+            invoicedTotal: spec.totals.invoiced,
+            outstanding: spec.totals.outstanding,
+          },
+        };
+      }),
+    [requests, linesByItem, vatRateMap, activeStructure, settings],
   );
 
-  const calculateInvoiceVatSuggestion = (request: ProgramRequestWithItems, totals: InvoiceTotals): InvoiceVatSuggestion => {
-    const numberOfDays = Math.max(request.selected_dates?.length ?? 0, 1);
-    const vatGroups: Record<number, { exclVat: number; vatAmount: number }> = {};
-    const addToGroup = (rate: number, amountInclVat: number, exclVat?: number, vatAmount?: number) => {
-      if (amountInclVat <= 0 && !exclVat && !vatAmount) return;
-      const key = Number(rate) || 0;
-      if (!vatGroups[key]) vatGroups[key] = { exclVat: 0, vatAmount: 0 };
-      vatGroups[key].exclVat += exclVat ?? calculateExclVat(amountInclVat, key);
-      vatGroups[key].vatAmount += vatAmount ?? calculateVatAmount(amountInclVat, key);
-    };
-    const addItem = (item: ProgramRequestWithItems["items"][number]) => {
-      const itemLines = linesByItem[item.id] ?? [];
-      if (item.use_actual_costs && itemLines.length > 0) {
-        itemLines.forEach((line) => {
-          addToGroup(Number(line.vat_rate), Number(line.amount_incl_vat || 0), Number(line.amount_excl_vat || 0), Number(line.vat_amount || 0));
-        });
-        return;
-      }
-      const amountInclVat = centralLineTotal(item as never, request.number_of_people, numberOfDays) ?? 0;
-      addToGroup(getItemVatRate(item), amountInclVat);
-    };
-
-    request.items
-      .filter((item) => item.status !== "cancelled" && item.day_index !== -1)
-      .forEach(addItem);
-    request.items
-      .filter((item) => item.status !== "cancelled" && item.day_index === -1)
-      .forEach(addItem);
-
-    const isExcluded = (key: string) =>
-      Array.isArray(request.excluded_fees) && request.excluded_fees.includes(key);
-    const standardVatRate = getVatRate("standard");
-    if (!isExcluded("coordination_fee")) addToGroup(standardVatRate, getCoordinationFee(request.number_of_people));
-    if (!isExcluded("central_surcharge")) addToGroup(standardVatRate, request.invoicing_mode === "bureau_central" ? settings.bureau_central_surcharge_pp * request.number_of_people : 0);
-    const touristTaxTotal = isExcluded("tourist_tax") ? 0 : settings.tourist_tax_pp_per_day * request.number_of_people * numberOfDays;
-    const natureTotal = isExcluded("nature_contribution") ? 0 : settings.nature_contribution_pp * request.number_of_people;
-    addToGroup(0, touristTaxTotal + natureTotal);
-    if (!isExcluded("accommodation")) {
-      addToGroup(getVatRate("accommodation"), Number(request.selected_accommodation_base_total ?? 0));
-      (request.selected_accommodation_extras ?? []).forEach((extra) => {
-        addToGroup(Number(extra.vat_rate ?? getVatRate("accommodation")), getAccommodationExtraTotal(extra));
-      });
-    }
-
-    const vatGroupsList = Object.entries(vatGroups)
-      .map(([rate, value]) => ({ rate: Number(rate), exclVat: value.exclVat, vatAmount: value.vatAmount }))
-      .sort((a, b) => a.rate - b.rate);
-    return {
-      totalExclVat: vatGroupsList.reduce((sum, group) => sum + group.exclVat, 0),
-      totalVat: vatGroupsList.reduce((sum, group) => sum + group.vatAmount, 0),
-      grandTotalInclVat: totals.grandTotalInclVat,
-      vatGroups: vatGroupsList,
-    };
-  };
+  // Opgeslagen projecttotaal gelijk houden met de berekening, zodat de
+  // SQL-trigger voor de voltooiingsstatus hetzelfde getal ziet.
+  const specSyncReady = !isLoading && !isLinesLoading && !isSettingsLoading && !isStructuresLoading && rows.length > 0;
+  useEffect(() => {
+    if (!specSyncReady) return;
+    void syncInvoiceSpecTotals(
+      rows.map((row) => ({
+        requestId: row.request.id,
+        storedTotal: row.request.invoice_spec_total_incl_vat,
+        computedTotal: row.spec.totals.inclVat,
+      })),
+    );
+    // De rijen veranderen bij elke herberekening; schrijven gebeurt alleen bij een verschil.
+  }, [specSyncReady, rows]);
 
   const { data: standaloneLodging = [], isLoading: isLoadingLodging } = useQuery({
     queryKey: ["admin-invoicing-standalone-lodging"],
@@ -377,10 +383,10 @@ const AdminInvoicing = () => {
   );
 
   const selectedRow = rows.find((row) => row.request.id === selectedRowId) ?? null;
-  const selectedVat = useMemo(
-    () => (selectedRow ? calculateInvoiceVatSuggestion(selectedRow.request, selectedRow.totals) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedRow, linesByItem, settings],
+  // Btw-groepen van het openstaande deel, pro rata uit de specificatie.
+  const selectedVatGroups = useMemo(
+    () => (selectedRow ? scaleVatGroups(selectedRow.spec.vatGroups, selectedRow.totals.outstanding) : []),
+    [selectedRow],
   );
 
   const handleInvoiceSuccess = () => {
@@ -538,7 +544,7 @@ const AdminInvoicing = () => {
         )}
       </div>
 
-      {selectedRow && selectedVat && (
+      {selectedRow && (
         <RegisterBureauInvoiceDialog
           isOpen
           onClose={() => setSelectedRowId(null)}
@@ -546,10 +552,9 @@ const AdminInvoicing = () => {
           suggestedAmount={selectedRow.totals.outstanding}
           outstandingAmount={selectedRow.totals.outstanding}
           projectTotal={selectedRow.totals.grandTotalInclVat}
-          alreadyInvoiced={selectedRow.totals.grandTotalInclVat - selectedRow.totals.outstanding}
-          suggestedExclVat={selectedVat.totalExclVat}
-          suggestedVatAmount={selectedVat.totalVat}
-          suggestedVatGroups={selectedVat.vatGroups}
+          alreadyInvoiced={selectedRow.totals.invoicedTotal}
+          suggestedVatGroups={selectedVatGroups}
+          spec={selectedRow.spec}
           onSuccess={handleInvoiceSuccess}
         />
       )}

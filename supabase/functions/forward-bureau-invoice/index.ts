@@ -316,6 +316,25 @@ Deno.serve(async (req) => {
       paymentTermDays: Number(await readSetting(supabase, "bureau_payment_term_days", "14")) || 14,
     };
 
+    // Bevroren factuurregels (bureau_invoice_lines, fase 3): de UBL-regels
+    // komen daaruit. Groepsregels (item_group) dragen geen btw; hun subregels
+    // wel. Een klein centverschil met de kop gaat op de laatste btw-regel.
+    const { data: storedRows } = await supabase
+      .from("bureau_invoice_lines")
+      .select("kind, description, quantity, unit_price_excl_vat, vat_rate, amount_excl_vat, vat_amount")
+      .eq("invoice_id", invoiceId)
+      .order("sort_order", { ascending: true });
+    const storedLines: BillingLineRow[] = ((storedRows || []) as Array<BillingLineRow & { kind: string }>)
+      .filter((r) => r.kind !== "item_group")
+      .map((r) => ({
+        description: r.description,
+        quantity: Number(r.quantity) || 1,
+        unit_price_excl_vat: Number(r.unit_price_excl_vat) || 0,
+        vat_rate: round2(Number(r.vat_rate) || 0),
+        amount_excl_vat: round2(Number(r.amount_excl_vat) || 0),
+        vat_amount: round2(Number(r.vat_amount) || 0),
+      }));
+
     // Fetch billing lines for this project's items to derive per-VAT-rate totals
     const { data: items } = await supabase
       .from("program_request_items")
@@ -353,7 +372,26 @@ Deno.serve(async (req) => {
 
     let lines: BillingLineRow[] = [];
 
-    if (rateTotals.size === 0 || projectExcl <= 0) {
+    const storedExcl = round2(storedLines.reduce((s, l) => s + l.amount_excl_vat, 0));
+    const storedVat = round2(storedLines.reduce((s, l) => s + l.vat_amount, 0));
+    const storedMatches =
+      storedLines.length > 0 &&
+      Math.abs(storedExcl - invoiceExcl) <= 0.05 &&
+      Math.abs(storedVat - invoiceVat) <= 0.05;
+
+    if (storedMatches) {
+      lines = storedLines;
+      const diffExcl = round2(invoiceExcl - storedExcl);
+      const diffVat = round2(invoiceVat - storedVat);
+      if (diffExcl !== 0 || diffVat !== 0) {
+        let idx = lines.length - 1;
+        for (let i = lines.length - 1; i >= 0; i--) {
+          if (lines[i].vat_rate > 0) { idx = i; break; }
+        }
+        lines[idx].amount_excl_vat = round2(lines[idx].amount_excl_vat + diffExcl);
+        lines[idx].vat_amount = round2(lines[idx].vat_amount + diffVat);
+      }
+    } else if (rateTotals.size === 0 || projectExcl <= 0) {
       // Fallback: single summary line derived from the invoice totals only
       const rate = invoiceExcl > 0 ? round2((invoiceVat / invoiceExcl) * 100) : 21;
       lines = [{
