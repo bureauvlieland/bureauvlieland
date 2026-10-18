@@ -456,6 +456,65 @@ export function invoiceKey(partnerId: string | null | undefined, invoiceNumber: 
   return `${(partnerId ?? "").trim().toLowerCase()}::${(invoiceNumber ?? "").trim().toLowerCase()}`;
 }
 
+/** Eén regel van een verzamelfactuur, met het project waar hij bij hoort. */
+export interface ReconInvoiceLineInput {
+  invoice_id: string;
+  request_id: string | null;
+  item_id: string | null;
+  charge_status: string;
+  amount_excl_vat: number | null;
+}
+
+/**
+ * Een verzamelfactuur (kop zonder project) uiteen in één virtuele factuur per
+ * project van haar regels, zodat elk project zijn eigen losse-factuurregel in
+ * de werklijst krijgt. Niet-doorbelaste regels (toeristenbelasting, intern)
+ * vallen buiten de grondslag; de verdeling per onderdeel volgt uit de regels
+ * met een bestemming. Facturen mét project blijven ongemoeid.
+ */
+export function splitCollectiveInvoices(
+  invoices: ReconInvoiceInput[],
+  lines: ReconInvoiceLineInput[],
+): ReconInvoiceInput[] {
+  const linesByInvoice = new Map<string, ReconInvoiceLineInput[]>();
+  for (const line of lines) {
+    const arr = linesByInvoice.get(line.invoice_id) ?? [];
+    arr.push(line);
+    linesByInvoice.set(line.invoice_id, arr);
+  }
+
+  const out: ReconInvoiceInput[] = [];
+  for (const inv of invoices) {
+    const invLines = inv.request_id ? [] : (linesByInvoice.get(inv.id) ?? []);
+    const projectIds = [...new Set(invLines.map((l) => l.request_id).filter((id): id is string => !!id))];
+    if (projectIds.length === 0) {
+      out.push(inv);
+      continue;
+    }
+    for (const requestId of projectIds) {
+      const projectLines = invLines.filter((l) => l.request_id === requestId && l.charge_status !== "skipped");
+      const amountExcl = projectLines.reduce((s, l) => s + (toNumber(l.amount_excl_vat) ?? 0), 0);
+      const allocationAmounts: Record<string, number> = {};
+      for (const l of projectLines) {
+        if (!l.item_id || !(l.charge_status === "charged" || l.charge_status === "kept_quote")) continue;
+        allocationAmounts[l.item_id] = (allocationAmounts[l.item_id] ?? 0) + (toNumber(l.amount_excl_vat) ?? 0);
+      }
+      const allocatedIds = Object.keys(allocationAmounts);
+      out.push({
+        ...inv,
+        id: `${inv.id}::${requestId}`,
+        request_id: requestId,
+        item_id: null,
+        amount_excl_vat: Math.round(amountExcl * 100) / 100,
+        amount_incl_vat: null,
+        allocated_item_ids: allocatedIds,
+        allocation_amounts: allocatedIds.length > 0 ? allocationAmounts : null,
+      });
+    }
+  }
+  return out;
+}
+
 export interface BuildReconInput {
   items: ReconItemInput[];
   invoices: ReconInvoiceInput[];

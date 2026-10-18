@@ -209,6 +209,17 @@ export function confidenceFor(score: number): Confidence {
   return "none";
 }
 
+export type LodgingExtraCategory = "fb" | "facilities" | "transport" | "other";
+
+/** Categorie van een extra bij een logies-offerte, uit de omschrijving. */
+export function lodgingExtraCategory(description: string): LodgingExtraCategory {
+  const text = description.toLowerCase();
+  if (/ontbijt|lunch|diner|dinner|drank|borrel|bbq|barbecue|maaltijd|koffie|thee|catering|buffet|wijn|bier/.test(text)) return "fb";
+  if (/zaal|ruimte|vergader|sauna|zwembad|wellness|fiets|huur|linnen|handdoek|schoonmaak|eindschoonmaak/.test(text)) return "facilities";
+  if (/vervoer|transfer|taxi|bus|boot|overtocht/.test(text)) return "transport";
+  return "other";
+}
+
 /** Standaardnaam van de kostenpost waar de restregels van een factuur op komen. */
 export function defaultCostName(invoice: MatchableInvoice): string {
   const partner = invoice.partnerName?.trim();

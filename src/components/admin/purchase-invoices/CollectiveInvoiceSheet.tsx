@@ -12,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
-import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { directDebitAmount } from "@/lib/purchaseInvoiceDirectDebit";
 
 type MatchStatus = "matched" | "ambiguous" | "unmatched" | "manual" | "internal";
@@ -77,18 +76,6 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [forwarding, setForwarding] = useState(false);
   const [forwardToSnelstart, setForwardToSnelstart] = useState(true);
-  const [extraCostTarget, setExtraCostTarget] = useState<{
-    idx: number;
-    project: { request_id: string; reference_number: string | null; customer_label: string };
-    prefill: {
-      description: string;
-      amount: number;
-      vatRate: number;
-      notes: string;
-      providerName: string;
-      bookingReference: string;
-    };
-  } | null>(null);
 
   useEffect(() => {
     if (open && inboxItem) {
@@ -195,34 +182,15 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     });
   }
 
+  // Een boeking op een project zonder onderdeel: de regel komt op het project
+  // en wordt daar in het werkblad Doorbelasten een kostenpost. Hier hoeft
+  // niets meer te worden aangemaakt.
   function bookAsExtraOnProject(
     idx: number,
     project: { request_id: string; reference_number: string | null; customer_label: string },
   ) {
-    const b = bookings[idx];
-    const vatRate = b.amount_excl_vat > 0
-      ? Math.round((b.vat_amount / b.amount_excl_vat) * 100)
-      : 9;
-    const datesLabel = (b.departure_dates || []).join(" / ");
-    const isIsla = supplierType === "isla";
-    const description = isIsla
-      ? (b.description || `Bagagevervoer Isla Vlieland${datesLabel ? ` — ${datesLabel}` : ""}`)
-      : `Overtocht Rederij Doeksen${datesLabel ? ` — ${datesLabel}` : ""}`;
-    const notes = isIsla
-      ? `Verzamelfactuur Isla Vlieland${b.customer_name ? ` · ${b.customer_name}` : ""}${datesLabel ? ` · ${datesLabel}` : ""}`
-      : `Verzamelfactuur Doeksen · Resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`;
-    setExtraCostTarget({
-      idx,
-      project,
-      prefill: {
-        description,
-        amount: b.amount_incl_vat,
-        vatRate,
-        notes,
-        providerName: isIsla ? "Isla Vlieland B.V." : "Rederij Doeksen",
-        bookingReference: b.resnr,
-      },
-    });
+    updateBooking(idx, { item_id: null, match_status: "manual", project });
+    toast.success(`Regel gaat naar ${project.reference_number || project.customer_label}; doorbelasten doe je daar in het werkblad`);
   }
 
   async function finalize() {
@@ -248,6 +216,8 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
               supplier_commission: b.supplier_commission,
               match_status: b.match_status,
               item_id: b.item_id,
+              request_id: b.project?.request_id ?? null,
+              description: b.description ?? null,
             })),
             forward_to_snelstart: forwardToSnelstart,
             origin: window.location.origin,
@@ -400,29 +370,6 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
         )}
       </SheetContent>
 
-      {extraCostTarget && (
-        <AdminAddCostSheet
-          open={!!extraCostTarget}
-          onOpenChange={(o) => {
-            if (!o) setExtraCostTarget(null);
-          }}
-          requestId={extraCostTarget.project.request_id}
-          onSuccess={() => {}}
-          prefill={extraCostTarget.prefill}
-          onCreatedItem={async (newItemId) => {
-            const { idx, project } = extraCostTarget;
-            updateBooking(idx, {
-              item_id: newItemId,
-              match_status: "manual",
-              project,
-            });
-            toast.success(
-              `Toegevoegd als overige kosten bij ${project.reference_number || project.customer_label}`,
-            );
-            setExtraCostTarget(null);
-          }}
-        />
-      )}
     </Sheet>
   );
 }

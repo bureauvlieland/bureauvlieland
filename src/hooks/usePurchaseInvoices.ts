@@ -32,14 +32,26 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         .select(`
           *,
           partners!inner(id, name, email, pays_by_direct_debit),
-          program_requests!inner(id, reference_number, customer_name, customer_company),
+          program_requests(id, reference_number, customer_name, customer_company),
           program_request_items!partner_purchase_invoices_item_id_fkey(id, block_name, commission_amount, commission_status, commission_percentage),
           partner_purchase_invoice_allocations(item_id, amount_excl_vat, program_request_items!partner_purchase_invoice_allocations_item_id_fkey(id, block_name, commission_amount, commission_status, commission_percentage)),
-          payment_batches(id, batch_reference, requested_execution_date)
+          payment_batches(id, batch_reference, requested_execution_date),
+          purchase_invoice_lines(request_id, program_requests(id, reference_number))
         `)
         .order("created_at", { ascending: false });
 
-      if (filters?.requestId) query = query.eq("request_id", filters.requestId);
+      // Een verzamelfactuur (kop zonder project) hoort bij elk project waar
+      // een regel van haar op staat.
+      if (filters?.requestId) {
+        const { data: lineRows } = await supabase
+          .from("purchase_invoice_lines")
+          .select("invoice_id")
+          .eq("request_id", filters.requestId);
+        const lineInvoiceIds = Array.from(new Set((lineRows ?? []).map((r) => r.invoice_id)));
+        query = lineInvoiceIds.length > 0
+          ? query.or(`request_id.eq.${filters.requestId},id.in.(${lineInvoiceIds.join(",")})`)
+          : query.eq("request_id", filters.requestId);
+      }
       if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
       if (filters?.status && filters.status !== 'all') query = query.eq("status", filters.status);
       if (filters?.search) query = query.ilike("invoice_number", `%${filters.search}%`);
@@ -58,6 +70,13 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           program_request_item: a.program_request_items,
         })),
         payment_batch: invoice.payment_batches,
+        line_projects: Array.from(
+          new Map<string, { id: string; reference_number: string | null }>(
+            ((invoice.purchase_invoice_lines || []) as Array<{ request_id: string | null; program_requests: { id: string; reference_number: string | null } | null }>)
+              .filter((l) => l.request_id && l.program_requests)
+              .map((l) => [l.request_id as string, { id: l.program_requests!.id, reference_number: l.program_requests!.reference_number }]),
+          ).values(),
+        ),
       })) as PurchaseInvoiceWithRelations[];
 
       // Enrich rows without item_id: look up a matching selected accommodation_quote

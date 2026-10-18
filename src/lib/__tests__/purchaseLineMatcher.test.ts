@@ -144,3 +144,13 @@ describe("voorstellen per regel", () => {
     if (m.proposal.kind === "new_cost") expect(m.proposal.reason).toContain("geen onderdeel van deze partner");
   });
 });
+
+describe("categorie van een logies-extra", () => {
+  it("herkent eten en drinken, faciliteiten en vervoer", async () => {
+    const { lodgingExtraCategory } = await import("@/lib/purchaseLineMatcher");
+    expect(lodgingExtraCategory("Ontbijtbuffet 40 personen")).toBe("fb");
+    expect(lodgingExtraCategory("Zaalhuur vergaderruimte")).toBe("facilities");
+    expect(lodgingExtraCategory("Transfer naar de haven")).toBe("transport");
+    expect(lodgingExtraCategory("Servicekosten")).toBe("other");
+  });
+});

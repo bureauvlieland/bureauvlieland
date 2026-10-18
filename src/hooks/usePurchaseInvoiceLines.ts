@@ -20,11 +20,17 @@ export interface PurchaseInvoiceLineRow {
   charge_status: ChargeStatus;
   skip_reason: string | null;
   charged_at: string | null;
+  /** Het project van de regel; bij een verzamelfactuur per regel verschillend. */
+  request_id: string | null;
+  booking_reference: string | null;
+  departure_date: string | null;
+  lodging_quote_id: string | null;
+  lodging_target: "room" | "extra" | null;
 }
 
 export const PURCHASE_INVOICE_LINES_KEY = "purchase-invoice-lines";
 
-/** Alle orderregels van alle inkoopfacturen van een project. */
+/** Alle orderregels die bij een project horen, ook die van verzamelfacturen. */
 export function usePurchaseInvoiceLinesByRequest(requestId: string | null | undefined) {
   return useQuery({
     queryKey: [PURCHASE_INVOICE_LINES_KEY, requestId],
@@ -32,14 +38,28 @@ export function usePurchaseInvoiceLinesByRequest(requestId: string | null | unde
     queryFn: async (): Promise<PurchaseInvoiceLineRow[]> => {
       const { data, error } = await supabase
         .from("purchase_invoice_lines")
-        .select("*, partner_purchase_invoices!inner(request_id)")
-        .eq("partner_purchase_invoices.request_id", requestId!)
+        .select("*")
+        .eq("request_id", requestId!)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map((row) => {
-        const { partner_purchase_invoices: _ignored, ...line } = row as typeof row & { partner_purchase_invoices: unknown };
-        return line as unknown as PurchaseInvoiceLineRow;
-      });
+      return (data ?? []) as unknown as PurchaseInvoiceLineRow[];
+    },
+  });
+}
+
+/** Alle orderregels van één inkoopfactuur (voor het verdelen over projecten). */
+export function usePurchaseInvoiceLinesByInvoice(invoiceId: string | null | undefined) {
+  return useQuery({
+    queryKey: [PURCHASE_INVOICE_LINES_KEY, "invoice", invoiceId],
+    enabled: !!invoiceId,
+    queryFn: async (): Promise<PurchaseInvoiceLineRow[]> => {
+      const { data, error } = await supabase
+        .from("purchase_invoice_lines")
+        .select("*")
+        .eq("invoice_id", invoiceId!)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as PurchaseInvoiceLineRow[];
     },
   });
 }
@@ -96,6 +116,7 @@ export function useCreateLinesFromInvoice() {
   return useMutation({
     mutationFn: async (invoice: {
       id: string;
+      request_id?: string | null;
       description: string | null;
       invoice_number: string;
       amount_excl_vat: number;
@@ -106,6 +127,7 @@ export function useCreateLinesFromInvoice() {
     }) => {
       const rows: Array<{
         invoice_id: string;
+        request_id: string | null;
         description: string;
         quantity: number;
         unit_price: number;
@@ -129,6 +151,7 @@ export function useCreateLinesFromInvoice() {
           const name = allocations.find((x) => x.item_id === a.item_id)?.program_request_item?.block_name;
           rows.push({
             invoice_id: invoice.id,
+            request_id: invoice.request_id ?? null,
             description: a.notes || name || `Factuur ${invoice.invoice_number}`,
             quantity: 1,
             unit_price: Number(a.amount_excl_vat),
@@ -146,6 +169,7 @@ export function useCreateLinesFromInvoice() {
       } else {
         rows.push({
           invoice_id: invoice.id,
+          request_id: invoice.request_id ?? null,
           description: invoice.description?.trim() || `Factuur ${invoice.invoice_number}`,
           quantity: 1,
           unit_price: Number(invoice.amount_excl_vat),
@@ -169,6 +193,174 @@ export function useCreateLinesFromInvoice() {
     onError: (error: Error) => {
       reportError(error, { where: "useCreateLinesFromInvoice" });
       toast.error(error.message || "Orderregels aanmaken mislukt");
+    },
+  });
+}
+
+/**
+ * Regels naar een (ander) project verplaatsen. Een verplaatste regel begint
+ * daar opnieuw: bestemming en klantregels gaan weg. Daarna volgt de kop de
+ * regels: één project → op de kop; meerdere → verzamelfactuur.
+ */
+export function useMoveLinesToProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { invoiceId: string; moves: Array<{ lineId: string; requestId: string | null }> }) => {
+      let changed = 0;
+      for (const move of input.moves) {
+        const { error: lineErr } = await supabase
+          .from("purchase_invoice_lines")
+          .update({
+            request_id: move.requestId,
+            item_id: null,
+            charge_status: "open",
+            skip_reason: null,
+            charged_at: null,
+          })
+          .eq("id", move.lineId);
+        if (lineErr) throw lineErr;
+        const { error: blErr } = await supabase
+          .from("program_item_billing_lines")
+          .delete()
+          .eq("purchase_invoice_line_id", move.lineId);
+        if (blErr) throw blErr;
+        changed += 1;
+      }
+      const { data, error } = await supabase.rpc("sync_collective_invoice_header", { p_invoice_id: input.invoiceId });
+      if (error) throw error;
+      return { changed, header: data as { changed: boolean; is_collective?: boolean } | null };
+    },
+    onSuccess: ({ changed, header }) => {
+      invalidateAfterCharges(queryClient);
+      toast.success(
+        header?.is_collective
+          ? `${changed} ${changed === 1 ? "regel" : "regels"} verplaatst; de factuur is nu een verzamelfactuur`
+          : `${changed} ${changed === 1 ? "regel" : "regels"} verplaatst`,
+      );
+    },
+    onError: (error: Error) => {
+      reportError(error, { where: "useMoveLinesToProject" });
+      toast.error(error.message || "Verplaatsen mislukt");
+    },
+  });
+}
+
+export interface LodgingQuoteOption {
+  id: string;
+  partner_id: string | null;
+  accommodation_name: string;
+  price_total: number;
+  vat_rate: number | null;
+  status: string;
+}
+
+/** Logies-offertes van de logiesaanvragen die aan dit programma hangen. */
+export function useLodgingQuotesForProject(requestId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["lodging-quotes-for-project", requestId],
+    enabled: !!requestId,
+    queryFn: async (): Promise<LodgingQuoteOption[]> => {
+      const { data: reqs, error: reqErr } = await supabase
+        .from("accommodation_requests")
+        .select("id")
+        .eq("linked_program_id", requestId!);
+      if (reqErr) throw reqErr;
+      const reqIds = (reqs ?? []).map((r) => r.id);
+      if (reqIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("accommodation_quotes")
+        .select("id, partner_id, accommodation_name, price_total, vat_rate, status")
+        .in("request_id", reqIds)
+        .in("status", ["selected", "accepted", "pending", "sent"])
+        .order("status");
+      if (error) throw error;
+      return (data ?? []) as LodgingQuoteOption[];
+    },
+  });
+}
+
+export interface LodgingLineDecision {
+  line: PurchaseInvoiceLineRow;
+  quoteId: string;
+  target: "room" | "extra";
+  category: "fb" | "facilities" | "transport" | "other";
+}
+
+/**
+ * Regels op een logies-offerte toepassen: kamerregels overschrijven de
+ * kamerprijs, extra-regels worden extra's bij de offerte
+ * (`apply-purchase-invoice-to-lodging`). Daarna krijgt de regel de offerte
+ * als bestemming; terugdraaien gaat via de offerte zelf.
+ */
+export function useApplyLodgingLines() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      decisions: LodgingLineDecision[];
+      invoices: Record<string, { partner_id: string | null; invoice_number: string | null }>;
+    }) => {
+      const byQuote = new Map<string, LodgingLineDecision[]>();
+      for (const d of input.decisions) {
+        const arr = byQuote.get(d.quoteId) ?? [];
+        arr.push(d);
+        byQuote.set(d.quoteId, arr);
+      }
+      let applied = 0;
+      for (const [quoteId, decisions] of byQuote) {
+        const invoiceId = decisions[0].line.invoice_id;
+        const invoice = input.invoices[invoiceId];
+        const room = decisions.filter((d) => d.target === "room");
+        const extra = decisions.filter((d) => d.target === "extra");
+        const { data, error } = await supabase.functions.invoke("apply-purchase-invoice-to-lodging", {
+          body: {
+            quote_id: quoteId,
+            purchase_invoice_id: invoiceId,
+            partner_id: invoice?.partner_id ?? null,
+            invoice_number: invoice?.invoice_number ?? undefined,
+            room_lines: room.map((d) => ({
+              amount_incl_vat: Number(d.line.amount_incl_vat),
+              amount_excl_vat: Number(d.line.amount_excl_vat),
+              vat_rate: Number(d.line.vat_rate),
+              description: d.line.description,
+            })),
+            extra_lines: extra.map((d) => ({
+              category: d.category,
+              description: d.line.description,
+              amount_incl_vat: Number(d.line.amount_incl_vat),
+              vat_rate: Number(d.line.vat_rate),
+            })),
+          },
+        });
+        if (error) throw error;
+        if (data && typeof data === "object" && "error" in data && data.error) {
+          throw new Error(String((data as { error: unknown }).error));
+        }
+        for (const d of decisions) {
+          const { error: lineErr } = await supabase
+            .from("purchase_invoice_lines")
+            .update({
+              item_id: null,
+              lodging_quote_id: quoteId,
+              lodging_target: d.target,
+              charge_status: "charged",
+              skip_reason: null,
+              charged_at: new Date().toISOString(),
+            })
+            .eq("id", d.line.id);
+          if (lineErr) throw lineErr;
+          applied += 1;
+        }
+      }
+      return applied;
+    },
+    onSuccess: (applied) => {
+      invalidateAfterCharges(queryClient);
+      queryClient.invalidateQueries({ queryKey: ["lodging-quotes-for-project"] });
+      toast.success(`${applied} ${applied === 1 ? "regel" : "regels"} op de logies-offerte toegepast`);
+    },
+    onError: (error: Error) => {
+      reportError(error, { where: "useApplyLodgingLines" });
+      toast.error(error.message || "Toepassen op logies-offerte mislukt");
     },
   });
 }

@@ -26,6 +26,10 @@ interface BookingInput {
   supplier_commission: number;
   match_status: "matched" | "ambiguous" | "unmatched" | "manual" | "internal";
   item_id: string | null;
+  /** Het project van deze boeking (ook zonder onderdeel); null bij intern. */
+  request_id?: string | null;
+  /** Isla: omschrijving van de regel. */
+  description?: string | null;
 }
 
 interface FinalizeBody {
@@ -165,6 +169,38 @@ Deno.serve(async (req) => {
       .from("partner_purchase_invoice_ticket_matches")
       .insert(matchRows);
     if (matchErr) console.error("Insert matches failed:", matchErr);
+
+    // 2b) Orderregels per boeking, elk met het project waar de boeking bij
+    //     hoort. Zo verschijnt elke boeking in het werkblad Doorbelasten van
+    //     dat project; de kop blijft één factuur (betaling en Snelstart).
+    const isDoeksen = body.partner_id !== "bagagevervoer-vlieland";
+    const lineRows = body.bookings.map((b, idx) => {
+      const dates = (b.departure_dates || []).join(" / ");
+      const description = isDoeksen
+        ? `Overtocht Doeksen resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}${dates ? ` · ${dates}` : ""}`
+        : (b.description || `Bagagevervoer${b.customer_name ? ` · ${b.customer_name}` : ""}${dates ? ` · ${dates}` : ""}`);
+      const internal = b.match_status === "internal";
+      const vatRate = b.amount_excl_vat > 0 ? Math.round((b.vat_amount / b.amount_excl_vat) * 100) : 0;
+      return {
+        invoice_id: invoice.id,
+        description: description.slice(0, 500),
+        quantity: 1,
+        unit_price: b.amount_excl_vat,
+        amount_excl_vat: b.amount_excl_vat,
+        vat_rate: vatRate,
+        vat_amount: b.vat_amount,
+        amount_incl_vat: b.amount_incl_vat,
+        sort_order: idx,
+        request_id: internal ? null : (b.request_id ?? null),
+        item_id: internal ? null : (b.item_id ?? null),
+        charge_status: internal ? "skipped" : "open",
+        skip_reason: internal ? "bureaukosten" : null,
+        booking_reference: isDoeksen ? b.resnr : null,
+        departure_date: b.departure_dates?.[0] || null,
+      };
+    });
+    const { error: linesErr } = await adminClient.from("purchase_invoice_lines").insert(lineRows);
+    if (linesErr) console.error("Insert lines failed:", linesErr);
 
     // 3) Update linked program_request_items
     const linked = body.bookings.filter(
