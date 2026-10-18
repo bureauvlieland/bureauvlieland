@@ -11,6 +11,7 @@ import type {
 } from "@/types/purchaseInvoice";
 import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { isAwaitingPdfMatch } from "@/lib/purchaseInvoiceStatusFlow";
+import { clearCustomerLinesForItems, linkedItemIds } from "@/lib/purchaseInvoiceCleanup";
 import { reportError } from "@/lib/errorReporting";
 
 type RawAllocationRow = {
@@ -174,7 +175,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
-      toast.success("Inkoopfactuur geregistreerd");
+      // De melding komt van de dialoog zelf, met de link naar het project erbij.
     },
     onError: (error: any) => {
       reportError(error, { where: "usePurchaseInvoices: Error creating purchase invoice" });
@@ -261,6 +262,10 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
     mutationFn: async (invoice: PurchaseInvoiceWithRelations) => {
       const { id, item_id, request_id, file_path, invoice_number, partner_id, amount_excl_vat } = invoice;
 
+      // Klantregels die deze factuur op onderdelen heeft gezet gaan mee: anders
+      // blijft de klant bedragen betalen van een factuur die niet meer bestaat.
+      const itemsWithLinesCleared = await clearCustomerLinesForItems(linkedItemIds(invoice));
+
       // Cascade-cleanup children first
       await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", id);
       await supabase.from("partner_purchase_invoice_allocations").delete().eq("invoice_id", id);
@@ -327,13 +332,20 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         });
       }
 
-      return id;
+      return { id, itemsWithLinesCleared };
     },
-    onSuccess: () => {
+    onSuccess: ({ itemsWithLinesCleared }) => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
-      toast.success("Inkoopfactuur verwijderd");
+      queryClient.invalidateQueries({ queryKey: ["item-billing-lines"] });
+      if (itemsWithLinesCleared > 0) {
+        toast.success(
+          `Inkoopfactuur verwijderd. De klantregels op ${itemsWithLinesCleared === 1 ? "1 onderdeel zijn" : `${itemsWithLinesCleared} onderdelen zijn`} weggehaald; de klant krijgt daar weer de offerteprijs.`,
+        );
+      } else {
+        toast.success("Inkoopfactuur verwijderd");
+      }
     },
     onError: (error) => {
       reportError(error, { where: "usePurchaseInvoices: Error deleting purchase invoice" });

@@ -10,6 +10,7 @@ import { nl } from "date-fns/locale";
 import { normalizeInvoiceNumber } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { resolveStatusAfterPdfLink } from "@/lib/purchaseInvoiceStatusFlow";
 import { computeBillingLineAmounts } from "@/types/programItemBillingLine";
+import { isTouristTaxDescription } from "@/lib/purchaseInvoiceLineAssignment";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -207,9 +208,16 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
     }
     setBookingId(match.id);
     try {
-      // 1. Bouw billing-line rijen op basis van scan
+      // 1. Bouw billing-line rijen op basis van scan. Toeristenbelasting van de
+      //    partner blijft eraf: die staat al als eigen post op de klantfactuur.
       const defaultVat = item.scan_result?.vat_rate ?? 21;
-      const billingRows = scannedLineItems.map((li, idx) => {
+      const chargeableLineItems = scannedLineItems.filter((li) => !isTouristTaxDescription(li.description));
+      const skippedTouristTax = scannedLineItems.length - chargeableLineItems.length;
+      if (chargeableLineItems.length === 0) {
+        toast.error("Alle gescande regels zijn toeristenbelasting; die wordt niet doorbelast.");
+        return;
+      }
+      const billingRows = chargeableLineItems.map((li, idx) => {
         const qty = Number(li.quantity ?? 1) || 1;
         const totalExcl = li.total_excl_vat != null ? Number(li.total_excl_vat) : null;
         const unitExcl =
@@ -293,7 +301,11 @@ export function MatchedRegistrationBanner({ item, onLinked }: Props) {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
       queryClient.invalidateQueries({ queryKey: ["program-item-billing-lines"] });
-      toast.success(`${billingRows.length} orderregels geboekt op het project`);
+      toast.success(
+        skippedTouristTax > 0
+          ? `${billingRows.length} orderregels geboekt op het project; ${skippedTouristTax === 1 ? "de toeristenbelastingregel is" : `${skippedTouristTax} toeristenbelastingregels zijn`} niet doorbelast`
+          : `${billingRows.length} orderregels geboekt op het project`,
+      );
     } catch (err) {
       reportError(err, { where: "MatchedRegistrationBanner: Book lines failed" });
       toast.error(err instanceof Error ? err.message : "Boeken mislukt");

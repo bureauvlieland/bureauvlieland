@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   allocationsFromLineAssignments,
+  isTouristTaxDescription,
   summarizeLineAssignments,
   type AssignableLine,
   type LineTarget,
@@ -156,5 +157,20 @@ describe("verdeelregels uit de toewijzing", () => {
     const allocations = allocationsFromLineAssignments(hotelLines, [toItem("logies")]);
     expect(allocations).toHaveLength(1);
     expect(allocations[0].amount_excl_vat).toBe(5000);
+  });
+});
+
+describe("herkenning van toeristenbelasting", () => {
+  it("herkent de gangbare schrijfwijzen", () => {
+    expect(isTouristTaxDescription("Toeristenbelasting")).toBe(true);
+    expect(isTouristTaxDescription("toeristen belasting 3 nachten")).toBe(true);
+    expect(isTouristTaxDescription("Verblijfsbelasting")).toBe(true);
+    expect(isTouristTaxDescription("Tourist tax 40 pers")).toBe(true);
+  });
+
+  it("laat gewone regels met rust", () => {
+    expect(isTouristTaxDescription("Verblijfskosten")).toBe(false);
+    expect(isTouristTaxDescription("Tientje voor de Natuur")).toBe(false);
+    expect(isTouristTaxDescription(null)).toBe(false);
   });
 });

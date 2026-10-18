@@ -112,6 +112,7 @@ export const AdminAddCostSheet = ({
             block_name: description.trim(),
             admin_price_override: parsedAmount,
             admin_price_notes: notes.trim() || null,
+            vat_rate: Number(vatRate),
           })
           .eq("id", editingItem.id);
         if (error) throw error;
