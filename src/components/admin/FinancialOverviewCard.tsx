@@ -182,6 +182,7 @@ export const FinancialOverviewCard = ({
                           itemName={line.description}
                           suggestedAmount={line.amountInclVat}
                           defaultVatRate={line.vatRate}
+                          requestId={requestId}
                         />
                       )}
                     </div>
@@ -204,6 +205,7 @@ export const FinancialOverviewCard = ({
                     itemName={item.block_name}
                     suggestedAmount={null}
                     defaultVatRate={resolveItemVatRate(item, blockVatRates)}
+                    requestId={requestId}
                   />
                 </div>
               </div>
@@ -231,6 +233,7 @@ export const FinancialOverviewCard = ({
                           itemName={line.description}
                           suggestedAmount={line.amountInclVat}
                           defaultVatRate={line.vatRate}
+                          requestId={requestId}
                         />
                       )}
                     </div>

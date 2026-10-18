@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   datesInText,
+  isTouristTaxDescription,
   keywords,
   matchPurchaseLines,
   type MatchableInvoice,
@@ -37,6 +38,15 @@ const bolder: MatchableInvoice = {
 describe("tekstherkenning", () => {
   it("haalt kernwoorden uit een omschrijving", () => {
     expect([...keywords("15-9 Vega maaltijd met toetje voor 91 personen")]).toEqual(["vega", "maaltijd", "toetje"]);
+  });
+
+  it("herkent toeristenbelasting in vier schrijfwijzen", () => {
+    expect(isTouristTaxDescription("Toeristenbelasting 40 pers")).toBe(true);
+    expect(isTouristTaxDescription("Verblijfsbelasting")).toBe(true);
+    expect(isTouristTaxDescription("Tourist tax")).toBe(true);
+    expect(isTouristTaxDescription("City Tax")).toBe(true);
+    expect(isTouristTaxDescription("Overnachtingen")).toBe(false);
+    expect(isTouristTaxDescription(null)).toBe(false);
   });
 
   it("leest datums in drie schrijfwijzen", () => {

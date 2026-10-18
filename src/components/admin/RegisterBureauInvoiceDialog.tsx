@@ -159,7 +159,6 @@ export const RegisterBureauInvoiceDialog = ({
           invoice_date: format(data.invoice_date, "yyyy-MM-dd"),
           amount_excl_vat: data.amount_excl_vat,
           vat_amount: data.vat_amount,
-          vat_breakdown: manualVatLines,
           invoice_type: data.invoice_type,
           description: data.description || null,
           created_by: session.session?.user.id,

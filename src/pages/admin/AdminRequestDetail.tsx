@@ -2701,6 +2701,7 @@ const AdminRequestDetail = () => {
                                               itemName={item.block_name}
                                               suggestedAmount={item.quoted_price ?? item.admin_price_override}
                                               defaultVatRate={getItemVatRate(item)}
+                                              requestId={request.id}
                                             />
                                           </div>
                                         </TableCell>
