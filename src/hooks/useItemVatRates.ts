@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveItemVatRate, type ItemForVatRate } from "@/lib/itemVatRate";
 
-type ItemWithBlockId = { block_id: string | null };
+type ItemWithBlockId = ItemForVatRate & { block_id: string | null };
 
 /**
  * Resolves VAT rates per building block id.
@@ -37,12 +38,12 @@ export const useItemVatRates = <T extends ItemWithBlockId>(
 
   const effectiveMap = overrideMap ?? vatRateMap;
 
-  const getItemVatRate = useCallback((item: ItemWithBlockId): number => {
-    if (item.block_id && effectiveMap[item.block_id] !== undefined) {
-      return effectiveMap[item.block_id];
-    }
-    return 21;
-  }, [effectiveMap]);
+  // Bouwsteen eerst; een post zonder bouwsteen (overige kosten) heeft een eigen
+  // tarief; anders 21.
+  const getItemVatRate = useCallback(
+    (item: ItemWithBlockId): number => resolveItemVatRate(item, effectiveMap),
+    [effectiveMap],
+  );
 
   return { vatRateMap: effectiveMap, getItemVatRate };
 };

@@ -64,6 +64,16 @@ export interface AllocationDraft {
   notes: string;
 }
 
+/**
+ * Herkent een factuurregel voor toeristenbelasting aan de omschrijving. Zo'n
+ * regel betaalt het bureau wel aan de partner, maar belast het nooit door: op
+ * de klantfactuur staat de eigen toeristenbelasting al.
+ */
+export function isTouristTaxDescription(description: string | null | undefined): boolean {
+  if (!description) return false;
+  return /toeristen\s*belasting|verblijfs\s*belasting|tourist\s*tax|city\s*tax/i.test(description);
+}
+
 const targetFor = (targets: LineTarget[], index: number): LineTarget =>
   targets[index] ?? { kind: "unassigned" };
 

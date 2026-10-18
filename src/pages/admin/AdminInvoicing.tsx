@@ -125,7 +125,7 @@ const AdminInvoicing = () => {
       
       const { data: itemsData, error: itemsError } = await supabase
         .from("program_request_items")
-        .select("id, request_id, block_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people, use_actual_costs")
+        .select("id, request_id, block_id, day_index, block_name, block_type, provider_name, status, quoted_price, admin_price_override, price_type, override_people, use_actual_costs, vat_rate")
         .in("request_id", requestIds);
 
       if (itemsError) throw itemsError;

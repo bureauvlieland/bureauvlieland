@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizeForMatch,
+  shouldPreselectProject,
   suggestProjectFromText,
   type SuggestableProject,
 } from "@/lib/purchaseInvoiceProjectSuggestion";
@@ -85,5 +86,20 @@ describe("projectsuggestie uit de factuurtekst", () => {
 describe("normalizeForMatch", () => {
   it("maakt tekst vergelijkbaar", () => {
     expect(normalizeForMatch("  Café  de Één-Hoorn B.V.! ")).toBe("cafe de een hoorn b v");
+  });
+});
+
+describe("vast voorkiezen van het project", () => {
+  it("kiest voor bij ons referentienummer op de factuur", () => {
+    const suggestion = suggestProjectFromText("Betreft: BV-2606-0012, groepsreis", projects);
+    expect(suggestion?.reason).toBe("reference");
+    expect(shouldPreselectProject(suggestion)).toBe(true);
+  });
+
+  it("laat een naamtreffer een suggestie", () => {
+    const suggestion = suggestProjectFromText(doeksenTekst, projects);
+    expect(suggestion?.reason).toBe("company");
+    expect(shouldPreselectProject(suggestion)).toBe(false);
+    expect(shouldPreselectProject(null)).toBe(false);
   });
 });

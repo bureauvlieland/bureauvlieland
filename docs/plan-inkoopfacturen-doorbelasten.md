@@ -58,6 +58,36 @@ werkblad moet daarom ook zonder onderdelen werken (3.3).
 Circa 10 bouwdagen in vijf fasen. Fase 1 en 2 geven de tijdwinst; fase 3
 maakt de cijfers overal gelijk.
 
+## Voortgang
+
+**Fase 1 (18 oktober 2026), lichte registratie.** `AddPurchaseInvoiceDialog`
+is van 2.100 naar ruim 1.100 regels: partner, project, nummer, datum,
+orderregels, kop-bedragen, omschrijving en de PDF-controle. Weg zijn het
+toewijzen per regel (`LineAssignmentBlock`), de verdeling per onderdeel, het
+logiesblok, "Extra projecten" en de checkbox "Direct overnemen"; een factuur
+hangt na opslaan alleen aan het project (`item_id` NULL, geen allocaties) en
+de orderregels worden altijd bewaard. Staat ons referentienummer op de
+factuur, dan is het project vast voorgekozen
+(`shouldPreselectProject`, alleen bij `reason === "reference"`); een treffer
+op bedrijfs- of klantnaam blijft een klikbare suggestie. Na opslaan één
+melding met de knop "Naar project" (Financiën). `PurchaseInvoicesCard` op het
+project heeft "Toevoegen" met het project voorgevuld. Lekken gedicht:
+verwijderen en opnieuw verwerken halen de klantregels weg van de onderdelen
+waar de factuur aan hing en zetten `use_actual_costs` en
+`final_billing_locked_at` terug (`purchaseInvoiceCleanup.ts`, met melding
+hoeveel onderdelen); "Orderregels boeken" in de inbox-banner slaat regels
+met toeristenbelasting over (`isTouristTaxDescription`); het eigen
+`vat_rate` van een post zonder bouwsteen telt nu overal mee
+(`resolveItemVatRate` in `useItemVatRates`, het factuurvoorbeeld en de
+facturatiepagina) en is in de bewerkmodus van "Kosten bewerken" te wijzigen.
+
+Tot fase 2 er is, loopt doorbelasten niet meer via de registratie: de
+klantregel-editor op het onderdeel (potlood in het financieel overzicht) en
+"Koppelen" op de inkoopfacturenpagina (voor de commissieverdeling) zijn
+tijdelijk de enige routes. De nu onbereikbare blokken (`LineAssignmentBlock`,
+`LodgingAllocationBlock`, `ExtraProjectSplitBlock`,
+`purchaseInvoiceBillingLines.ts`) blijven staan tot fase 4.
+
 ## 1. Hoe het nu werkt
 
 ```

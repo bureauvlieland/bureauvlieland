@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload } from "lucide-react";
+import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload, Plus } from "lucide-react";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
+import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { InvoiceForwardHistoryPopover } from "@/components/admin/InvoiceForwardHistoryPopover";
@@ -21,6 +22,7 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
   const { invoices, isLoading, stats, markAsPaid, getDownloadUrl } = usePurchaseInvoicesByRequest(requestId);
   const [forwardDialogInvoice, setForwardDialogInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const openForward = (invoice: PurchaseInvoiceWithRelations) => {
     setForwardDialogInvoice(invoice);
@@ -76,19 +78,28 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Inkoopfacturen Partners
-          </CardTitle>
-          <CardDescription>
-            Facturen van partners aan Bureau Vlieland
-          </CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Inkoopfacturen Partners
+              </CardTitle>
+              <CardDescription>
+                Facturen van partners aan Bureau Vlieland
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Toevoegen
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {!invoices || invoices.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground text-sm">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>Nog geen inkoopfacturen ontvangen</p>
+              <p className="text-xs mt-1">Facturen uit de inkoop-inbox of via &ldquo;Toevoegen&rdquo; komen hier op het project.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -201,6 +212,12 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
           )}
         </CardContent>
       </Card>
+
+      <AddPurchaseInvoiceDialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        defaultRequestId={requestId}
+      />
 
       <ForwardToAccountingDialog
         invoice={forwardDialogInvoice}

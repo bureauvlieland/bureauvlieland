@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
 import {
   Dialog,
@@ -46,36 +47,28 @@ import { usePurchaseInvoices } from "@/hooks/usePurchaseInvoices";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import type { PurchaseInvoiceLine } from "@/types/purchaseInvoice";
-import {
-  useItemsWithExistingPurchaseInvoice,
-  useLikelyDuplicatePurchaseInvoice,
-} from "@/lib/purchaseInvoiceDuplicateCheck";
+import { useLikelyDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { looksLikeProjectReference } from "@/lib/purchaseInvoiceDuplicateRules";
 import { useRegisterPartnerIban } from "@/hooks/usePartnerIbanSuggestions";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  ExtraProjectSplitBlock,
-  type ExtraProjectSplit,
-} from "@/components/admin/purchase-invoices/ExtraProjectSplitBlock";
-import {
-  LodgingAllocationBlock,
-  type LodgingLineAllocation,
-} from "@/components/admin/purchase-invoices/LodgingAllocationBlock";
 import { reportError } from "@/lib/errorReporting";
-import { buildBillingLineRowsByItem } from "@/lib/purchaseInvoiceBillingLines";
-import { LineAssignmentBlock } from "@/components/admin/purchase-invoices/LineAssignmentBlock";
-import {
-  allocationsFromLineAssignments,
-  summarizeLineAssignments,
-  type LineTarget,
-} from "@/lib/purchaseInvoiceLineAssignment";
 import { buildLinesFromScan } from "@/lib/purchaseInvoiceScanLines";
 import {
   PROJECT_MATCH_LABELS,
+  shouldPreselectProject,
   suggestProjectFromText,
 } from "@/lib/purchaseInvoiceProjectSuggestion";
 
-
+/**
+ * Registreren van een inkoopfactuur: alleen wat de leverancier stuurt.
+ *
+ * Partner, project (als geheel), nummer, datum, bedragen en de orderregels
+ * zoals gescand. Wat er van de factuur aan de klant wordt doorbelast, en op
+ * welk onderdeel, wordt niet hier beslist maar op het project zelf — met het
+ * hele programma in beeld (`docs/plan-inkoopfacturen-doorbelasten.md`).
+ * Tot 16 oktober 2026 moest je hier per gescande regel een onderdeel kiezen
+ * voordat je mocht opslaan; die blokken zijn weg.
+ */
 
 interface ScanLineItem {
   description: string;
@@ -125,8 +118,6 @@ type Step = "upload" | "scanning" | "verify";
 
 const emptyLine = (): LineRow => ({ description: "", quantity: "1", unit_price: "", vat_rate: "21" });
 
-
-
 function computeLineTotals(line: LineRow) {
   const qty = parseFloat(line.quantity) || 0;
   const unit = parseFloat(line.unit_price) || 0;
@@ -166,8 +157,6 @@ function computeLineTotals(line: LineRow) {
   };
 }
 
-
-
 export function AddPurchaseInvoiceDialog({
   open,
   onClose,
@@ -175,6 +164,7 @@ export function AddPurchaseInvoiceDialog({
   defaultPartnerId,
   inboxItem,
 }: AddPurchaseInvoiceDialogProps) {
+  const navigate = useNavigate();
   const { createInvoice } = usePurchaseInvoices();
   const { markProcessed } = usePurchaseInvoiceInbox();
 
@@ -188,10 +178,8 @@ export function AddPurchaseInvoiceDialog({
   // Form state
   const [partnerId, setPartnerId] = useState<string>(defaultPartnerId || "");
   const [requestId, setRequestId] = useState<string>(defaultRequestId || "");
-  const [itemId, setItemId] = useState<string>("");
-  const [allocations, setAllocations] = useState<Array<{ item_id: string; amount_excl_vat: string; vat_rate: string; notes?: string }>>([]);
-  /** Bestemming per gescande factuurregel; leeg = het oude handmatige verdelen. */
-  const [lineTargets, setLineTargets] = useState<LineTarget[]>([]);
+  /** Het project dat op grond van ons referentienummer vast is voorgekozen. */
+  const [autoPickedProjectId, setAutoPickedProjectId] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState<Date | undefined>(undefined);
   const [amountExcl, setAmountExcl] = useState<string>("");
@@ -200,12 +188,6 @@ export function AddPurchaseInvoiceDialog({
   const [amountIncl, setAmountIncl] = useState<string>("");
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<LineRow[]>([]);
-  const [extraProjects, setExtraProjects] = useState<ExtraProjectSplit[]>([]);
-
-  // Logies-allocatie (1-op-1 doorzetten naar accommodation_quote)
-  const [lodgingEnabled, setLodgingEnabled] = useState(false);
-  const [lodgingQuoteId, setLodgingQuoteId] = useState<string | null>(null);
-  const [lodgingAllocations, setLodgingAllocations] = useState<LodgingLineAllocation[]>([]);
 
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
@@ -215,10 +197,6 @@ export function AddPurchaseInvoiceDialog({
   const [pdfTotalIncl, setPdfTotalIncl] = useState<string>("");
   const [amountMismatchReason, setAmountMismatchReason] = useState<string>("");
   const [manuallyConfirmedNoPdfTotal, setManuallyConfirmedNoPdfTotal] = useState(false);
-  // Default ON: kosten van inkoopfactuur worden direct overgenomen als
-  // verkoopfactuurregels, zodat ze gegarandeerd op de klantfactuur landen.
-  const [copyToBillingLines, setCopyToBillingLines] = useState(true);
-
 
   // Dubbel-controle: zelfde partner + zelfde nummer, óf zelfde bedrag op
   // hetzelfde project / rond dezelfde datum. Die tweede vangt de factuur die
@@ -234,25 +212,12 @@ export function AddPurchaseInvoiceDialog({
     { enabled: open },
   );
   const duplicateInvoice = duplicateMatch?.invoice ?? null;
-
-  // Onderdelen die al een inkoopfactuur van deze partner hebben.
-  const selectedItemIds = useMemo(() => {
-    const ids = [itemId, ...allocations.map((a) => a.item_id)];
-    for (const e of extraProjects) ids.push(...e.allocations.map((a) => a.item_id));
-    return ids.filter(Boolean);
-  }, [itemId, allocations, extraProjects]);
-  const selectedItemsKey = selectedItemIds.join(",");
-  const { data: itemsAlreadyInvoiced } = useItemsWithExistingPurchaseInvoice(
-    partnerId,
-    selectedItemIds,
-    { enabled: open },
-  );
+  const hasDuplicateWarning = !!duplicateInvoice;
 
   // Reset override when key fields change
   useEffect(() => {
     setAcceptDuplicate(false);
-  }, [partnerId, invoiceNumber, amountIncl, requestId, selectedItemsKey]);
-
+  }, [partnerId, invoiceNumber, amountIncl, requestId]);
 
   const { data: partners } = useQuery({
     queryKey: ["partners-active-list"],
@@ -283,57 +248,19 @@ export function AddPurchaseInvoiceDialog({
     enabled: open,
   });
 
-  const { data: items } = useQuery({
-    queryKey: ["program-items-for-invoice", requestId, partnerId],
-    queryFn: async () => {
-      if (!requestId) return [];
-      let q = supabase
-        .from("program_request_items")
-        .select("id, block_name, provider_id, day_index")
-        .eq("request_id", requestId);
-      if (partnerId) q = q.eq("provider_id", partnerId);
-      const { data, error } = await q.order("day_index");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!requestId,
-  });
-
-  // Items for extra project splits (one query for all selected extra projectIds)
-  const extraProjectIds = extraProjects.map((e) => e.requestId).filter(Boolean);
-  const { data: extraItems } = useQuery({
-    queryKey: ["program-items-for-extras", extraProjectIds.sort().join(","), partnerId],
-    queryFn: async () => {
-      if (extraProjectIds.length === 0) return [];
-      let q = supabase
-        .from("program_request_items")
-        .select("id, block_name, provider_id, day_index, request_id")
-        .in("request_id", extraProjectIds);
-      if (partnerId) q = q.eq("provider_id", partnerId);
-      const { data, error } = await q.order("day_index");
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: extraProjectIds.length > 0,
-  });
-
-  const alreadyInvoicedItems = useMemo(() => {
-    if (!itemsAlreadyInvoiced || itemsAlreadyInvoiced.size === 0) return [];
-    const allItems = [...(items ?? []), ...(extraItems ?? [])] as Array<{ id: string; block_name?: string | null }>;
-    return Array.from(itemsAlreadyInvoiced.entries()).map(([id, link]) => ({
-      itemId: id,
-      label: allItems.find((it) => it.id === id)?.block_name || "Onderdeel",
-      invoiceNumber: link.invoice_number || "(zonder nummer)",
-    }));
-  }, [itemsAlreadyInvoiced, items, extraItems]);
-  const hasDuplicateWarning = !!duplicateInvoice || alreadyInvoicedItems.length > 0;
-
   // Reset on open
   useEffect(() => {
     if (!open) return;
 
     setScanFailed(false);
     setIsDragging(false);
+    setAutoPickedProjectId(null);
+    setPartnerId(defaultPartnerId || "");
+    setRequestId(defaultRequestId || "");
+    setVatAmount("");
+    setAmountIncl("");
+    setAmountMismatchReason("");
+    setManuallyConfirmedNoPdfTotal(false);
 
     if (inboxItem) {
       setStep("verify");
@@ -341,11 +268,6 @@ export function AddPurchaseInvoiceDialog({
       setFilePath(inboxItem.attachment_path || null);
       const result = inboxItem.scan_result as ScanResult | null;
       setScanResult(result);
-      setPartnerId(defaultPartnerId || "");
-      setRequestId(defaultRequestId || "");
-      setItemId("");
-      setAllocations([]);
-      setLineTargets([]);
       setInvoiceNumber(result?.invoice_number || "");
       if (result?.invoice_date) {
         const d = new Date(result.invoice_date);
@@ -355,40 +277,21 @@ export function AddPurchaseInvoiceDialog({
       }
       setAmountExcl(result?.amount_excl_vat != null ? String(result.amount_excl_vat) : "");
       setVatRate(result?.vat_rate != null ? String(result.vat_rate) : "21");
-      setVatAmount("");
-      setAmountIncl("");
       setPdfTotalIncl(result?.amount_incl_vat != null ? String(result.amount_incl_vat) : "");
-      setAmountMismatchReason("");
-      setManuallyConfirmedNoPdfTotal(false);
       setDescription(result?.description || inboxItem.subject || "");
       setLines(buildLinesFromScan(result));
-      setExtraProjects([]);
-      setLodgingEnabled(false);
-      setLodgingQuoteId(null);
-      setLodgingAllocations([]);
-
     } else {
       setStep("upload");
       setFile(null);
       setFilePath(null);
       setScanResult(null);
-      setPartnerId(defaultPartnerId || "");
-      setRequestId(defaultRequestId || "");
-      setItemId("");
-      setAllocations([]);
-      setLineTargets([]);
       setInvoiceNumber("");
       setInvoiceDate(undefined);
       setAmountExcl("");
       setVatRate("21");
-      setVatAmount("");
-      setAmountIncl("");
+      setPdfTotalIncl("");
       setDescription("");
       setLines([]);
-      setExtraProjects([]);
-      setLodgingEnabled(false);
-      setLodgingQuoteId(null);
-      setLodgingAllocations([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
 
@@ -426,18 +329,6 @@ export function AddPurchaseInvoiceDialog({
       setVatRate(String(lineTotals.dominantRate));
     }
   }, [lineTotals]);
-
-  // Houd lodgingAllocations qua lengte synchroon met lines
-  useEffect(() => {
-    setLodgingAllocations((prev) => {
-      if (prev.length === lines.length) return prev;
-      const next: LodgingLineAllocation[] = [];
-      for (let i = 0; i < lines.length; i++) {
-        next.push(prev[i] || { target: "skip" });
-      }
-      return next;
-    });
-  }, [lines.length]);
 
   // When NO lines, recalc header vat amount from excl + rate
   useEffect(() => {
@@ -491,6 +382,15 @@ export function AddPurchaseInvoiceDialog({
   const suggestedProject = projectSuggestion
     ? projects?.find((p) => p.id === projectSuggestion.projectId)
     : undefined;
+
+  // Ons referentienummer op de factuur: dan staat het project vast voorgekozen.
+  // Eén keer per keer openen, en nooit over een keuze van de gebruiker heen.
+  useEffect(() => {
+    if (!open || requestId || autoPickedProjectId) return;
+    if (!projectSuggestion || !shouldPreselectProject(projectSuggestion)) return;
+    setRequestId(projectSuggestion.projectId);
+    setAutoPickedProjectId(projectSuggestion.projectId);
+  }, [open, requestId, autoPickedProjectId, projectSuggestion]);
 
   const processFile = async (selected: File) => {
     if (selected.type !== "application/pdf") {
@@ -596,7 +496,6 @@ export function AddPurchaseInvoiceDialog({
     );
   };
 
-
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
 
@@ -605,7 +504,7 @@ export function AddPurchaseInvoiceDialog({
     if (!requestId) return toast.error("Selecteer een project");
     if (!invoiceNumber) return toast.error("Factuurnummer is verplicht");
     if (!isValidInvoiceNumberInput(invoiceNumber))
-      return toast.error("Vul het echte factuurnummer in (minimaal \u00e9\u00e9n cijfer, geen 'nvt' of '-')");
+      return toast.error("Vul het echte factuurnummer in (minimaal één cijfer, geen 'nvt' of '-')");
     if (!invoiceDate) return toast.error("Factuurdatum is verplicht");
     const excl = parseFloat(amountExcl);
     if (isNaN(excl) || excl <= 0) return toast.error("Bedrag excl. BTW is verplicht");
@@ -617,9 +516,7 @@ export function AddPurchaseInvoiceDialog({
     }
     if (hasDuplicateWarning && !acceptDuplicate) {
       return toast.error(
-        duplicateInvoice
-          ? `Deze factuur lijkt al geregistreerd te zijn (${duplicateInvoice.invoice_number}). Vink "Toch opslaan" aan om door te gaan.`
-          : `Er hangt al een inkoopfactuur van deze leverancier aan ${alreadyInvoicedItems.length === 1 ? "dit onderdeel" : "deze onderdelen"}. Vink "Toch opslaan" aan om door te gaan.`,
+        `Deze factuur lijkt al geregistreerd te zijn (${duplicateInvoice?.invoice_number}). Vink "Toch opslaan" aan om door te gaan.`,
       );
     }
 
@@ -641,29 +538,10 @@ export function AddPurchaseInvoiceDialog({
       return toast.error(guard.blockers.join(" • "));
     }
 
-
-
-    // Validate allocations if any are set
-    const validAllocations = allocations
-      .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
-      .map((a, idx) => {
-        const allocExcl = parseFloat(a.amount_excl_vat) || 0;
-        const rate = parseFloat(a.vat_rate) || 0;
-        const vat = allocExcl * (rate / 100);
-        return {
-          item_id: a.item_id,
-          amount_excl_vat: allocExcl,
-          vat_rate: rate,
-          vat_amount: vat,
-          amount_incl_vat: allocExcl + vat,
-          notes: a.notes || null,
-          sort_order: idx,
-        };
-      });
-
     setIsSubmitting(true);
     try {
-      // Build line payload (only valid lines)
+      // De orderregels zijn de factuur. Ze worden altijd bewaard: het werkblad
+      // op het project belast ze straks regel voor regel door.
       const validLines: PurchaseInvoiceLine[] = lines
         .filter((l) => l.description.trim() && parseFloat(l.unit_price) > 0)
         .map((l, idx) => {
@@ -680,84 +558,13 @@ export function AddPurchaseInvoiceDialog({
           };
         });
 
-      // Header values priority:
-      //   a) Top split-blocks (primary BTW-splits + extras) — leidend wanneer ingevuld
-      //   b) Manueel ingevuld amountExcl + vatRate
-      //   c) Fallback: orderregels-totaal
+      // Kop: uit de regels als die er zijn, anders de handmatige bedragen.
+      // Een gemengd btw-tarief staat als 0 op de kop; de regels kennen het echte tarief.
       let headerExcl: number;
       let headerVatRate: number;
       let headerVat: number;
       let headerIncl: number;
-
-      const round2pre = (n: number) => Math.round(n * 100) / 100;
-      const validExtrasCount = extraProjects.filter((e) => !!e.requestId).length;
-
-      const primarySplitExclSum = allocations
-        .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
-        .reduce((s, a) => s + (parseFloat(a.amount_excl_vat) || 0), 0);
-      const primarySplitInclSum = allocations
-        .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
-        .reduce((s, a) => {
-          const c = calculateVatAmounts(parseFloat(a.amount_excl_vat) || 0, parseFloat(a.vat_rate) || 0);
-          return s + c.amountInclVat;
-        }, 0);
-
-      const extrasExclTop = extraProjects.reduce((sum, e) => {
-        if (!e.requestId) return sum;
-        const headerEx = parseFloat(e.amountExclVat);
-        if (headerEx > 0) return sum + headerEx;
-        return sum + e.allocations.reduce((s, a) => s + (parseFloat(a.amount_excl_vat) || 0), 0);
-      }, 0);
-      const extrasInclTop = extraProjects.reduce((sum, e) => {
-        if (!e.requestId) return sum;
-        const headerEx = parseFloat(e.amountExclVat);
-        if (headerEx > 0) {
-          const c = calculateVatAmounts(headerEx, parseFloat(e.vatRate) || 0);
-          return sum + c.amountInclVat;
-        }
-        return sum + e.allocations.reduce((s, a) => {
-          const c = calculateVatAmounts(parseFloat(a.amount_excl_vat) || 0, parseFloat(a.vat_rate) || 0);
-          return s + c.amountInclVat;
-        }, 0);
-      }, 0);
-
-      // Regels die als toeristenbelasting zijn gemarkeerd horen wél in het bedrag
-      // dat we de partner betalen, maar niet in de verdeling over de onderdelen.
-      // Zonder deze correctie zou de factuur voor dat bedrag te laag geregistreerd
-      // worden en zou de partner te weinig uitbetaald krijgen.
-      // De regel-toewijzing en de splitsing over extra projecten verdelen allebei
-      // dezelfde factuur. Ze staan daarom nooit tegelijk aan; extra projecten winnen.
-      const usesLineAssignment = validExtrasCount === 0
-        && lineTargets.some((t) => t?.kind === "item" || t?.kind === "tourist_tax");
-      const assignableLines = lines
-        .map((l) => {
-          const t = computeLineTotals(l);
-          return {
-            description: l.description,
-            amountExclVat: t.amount_excl_vat,
-            vatRate: t.vat_rate,
-            amountInclVat: t.amount_incl_vat,
-          };
-        })
-        .filter((l) => l.amountExclVat > 0);
-      const assignmentSummary = summarizeLineAssignments(assignableLines, lineTargets);
-      const touristTaxIncl = assignmentSummary.touristTaxInclVat;
-
-      const topInputExcl = primarySplitExclSum + extrasExclTop;
-      const topInputIncl = primarySplitInclSum + extrasInclTop;
-
-      if (usesLineAssignment && validLines.length > 0 && lineTotals) {
-        // De gescande regels zijn de factuur; de verdeling is een deel daarvan.
-        headerExcl = lineTotals.totalExcl;
-        headerVat = lineTotals.totalVat;
-        headerIncl = lineTotals.totalIncl;
-        headerVatRate = lineTotals.isMixed ? 0 : lineTotals.dominantRate;
-      } else if (topInputExcl > 0) {
-        headerExcl = round2pre(topInputExcl);
-        headerIncl = round2pre(topInputIncl);
-        headerVat = round2pre(headerIncl - headerExcl);
-        headerVatRate = 0;
-      } else if (validLines.length > 0 && lineTotals) {
+      if (validLines.length > 0 && lineTotals) {
         headerExcl = lineTotals.totalExcl;
         headerVat = lineTotals.totalVat;
         headerIncl = lineTotals.totalIncl;
@@ -770,160 +577,9 @@ export function AddPurchaseInvoiceDialog({
         headerIncl = calc.amountInclVat;
       }
 
-      const round2 = (n: number) => Math.round(n * 100) / 100;
-      // Tolerance scales with line count: 1ct per regel, cap €0.10
-      const toleranceFor = (count: number) => Math.min(0.1, Math.max(0.01, 0.01 * count));
-      // Rebalance last allocation to absorb sub-cent rounding so totals match exactly
-      const rebalance = <T extends { amount_excl_vat: number; amount_incl_vat: number; vat_amount: number; vat_rate: number }>(
-        rows: T[],
-        targetIncl: number,
-      ) => {
-        if (rows.length === 0) return;
-        const sum = rows.reduce((s, r) => s + r.amount_incl_vat, 0);
-        const diff = round2(targetIncl - sum);
-        if (Math.abs(diff) < 0.005) return;
-        const last = rows[rows.length - 1];
-        last.amount_incl_vat = round2(last.amount_incl_vat + diff);
-        // recompute excl + vat for the adjusted row keeping its rate
-        const rate = last.vat_rate || 0;
-        const recalc = rate > 0
-          ? { excl: round2(last.amount_incl_vat / (1 + rate / 100)) }
-          : { excl: last.amount_incl_vat };
-        last.amount_excl_vat = recalc.excl;
-        last.vat_amount = round2(last.amount_incl_vat - last.amount_excl_vat);
-      };
-
-      // Validate extra project splits — alle bedragen op 2 decimalen geronden
-      const validExtras = extraProjects
-        .filter((e) => {
-          if (!e.requestId) return false;
-          const hasHeader = parseFloat(e.amountExclVat) > 0;
-          const hasAllocs = e.allocations.some(
-            (a) => a.item_id && parseFloat(a.amount_excl_vat) > 0,
-          );
-          return hasHeader || hasAllocs;
-        })
-        .map((e) => {
-          const eAllocs = e.allocations
-            .filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0)
-            .map((a, idx) => {
-              const aExcl = parseFloat(a.amount_excl_vat) || 0;
-              const aRate = parseFloat(a.vat_rate) || 0;
-              const calc = calculateVatAmounts(aExcl, aRate);
-              return {
-                item_id: a.item_id,
-                amount_excl_vat: calc.amountExclVat,
-                vat_rate: calc.vatRate,
-                vat_amount: calc.vatAmount,
-                amount_incl_vat: calc.amountInclVat,
-                notes: a.notes || null,
-                sort_order: idx,
-              };
-            });
-          const headerExclInput = parseFloat(e.amountExclVat);
-          const useDerived = !(headerExclInput > 0) && eAllocs.length > 0;
-          let eExcl: number;
-          let eIncl: number;
-          let eRate: number;
-          let eVat: number;
-          if (useDerived) {
-            eExcl = round2(eAllocs.reduce((s, a) => s + a.amount_excl_vat, 0));
-            eIncl = round2(eAllocs.reduce((s, a) => s + a.amount_incl_vat, 0));
-            eVat = round2(eIncl - eExcl);
-            eRate = 0;
-          } else {
-            const calc = calculateVatAmounts(headerExclInput || 0, parseFloat(e.vatRate) || 0);
-            eExcl = calc.amountExclVat;
-            eIncl = calc.amountInclVat;
-            eVat = calc.vatAmount;
-            eRate = calc.vatRate;
-            // Auto-rebalance interne allocaties zodat ze exact optellen tot eIncl
-            if (eAllocs.length > 0) {
-              rebalance(eAllocs, eIncl);
-            }
-          }
-          return {
-            requestId: e.requestId,
-            amount_excl_vat: eExcl,
-            vat_rate: eRate,
-            vat_amount: eVat,
-            amount_incl_vat: eIncl,
-            allocations: eAllocs,
-            copyToBillingLines: !!e.copyToBillingLines,
-          };
-        });
-
-      // Compute primary share when extras exist
-      const extrasExclSum = round2(validExtras.reduce((s, e) => s + e.amount_excl_vat, 0));
-      const extrasInclSum = round2(validExtras.reduce((s, e) => s + e.amount_incl_vat, 0));
-      if (validExtras.length > 0) {
-        if (extrasExclSum > headerExcl + 0.01) {
-          setIsSubmitting(false);
-          return toast.error(
-            `Som van extra projecten (€${extrasExclSum.toFixed(2)}) is hoger dan factuurtotaal excl. BTW (€${headerExcl.toFixed(2)})`,
-          );
-        }
-        const primaryExcl = round2(headerExcl - extrasExclSum);
-        const primaryIncl = round2(headerIncl - extrasInclSum);
-        const primaryVat = round2(primaryIncl - primaryExcl);
-        if (primaryExcl <= 0.01) {
-          setIsSubmitting(false);
-          return toast.error("Het hoofdproject heeft geen restbedrag — verwijder een extra project of pas het bedrag aan.");
-        }
-        headerExcl = primaryExcl;
-        headerIncl = primaryIncl;
-        headerVat = primaryVat;
-      }
-
-      // Heb je regels toegewezen, dan mag er niets blijven liggen: een regel zonder
-      // bestemming wordt niet doorbelast en telt niet mee voor de commissie, en dat
-      // zou hier stilzwijgend gebeuren.
-      if (usesLineAssignment && !assignmentSummary.isComplete) {
-        setIsSubmitting(false);
-        return toast.error(
-          `Nog €${assignmentSummary.unassignedExclVat.toFixed(2)} niet toegewezen (${assignmentSummary.unassignedCount} ${assignmentSummary.unassignedCount === 1 ? "regel" : "regels"}). Kies een onderdeel, of markeer de regel als toeristenbelasting.`,
-        );
-      }
-
-      // Validate primary allocations match adjusted primary header — met tolerantie + auto-rebalance
-      if (validAllocations.length > 0) {
-        const allocSum = round2(validAllocations.reduce((s, a) => s + a.amount_incl_vat, 0));
-        // Toeristenbelasting hoort niet in de verdeling, dus ook niet in het doel.
-        const allocTarget = round2(headerIncl - touristTaxIncl);
-        const diff = Math.abs(allocSum - allocTarget);
-        const tol = toleranceFor(validAllocations.length);
-        if (diff > tol) {
-          setIsSubmitting(false);
-          return toast.error(
-            `Verdeling klopt niet: €${allocSum.toFixed(2)} toegewezen vs €${allocTarget.toFixed(2)} ${validExtras.length > 0 ? "(hoofdproject)" : touristTaxIncl > 0 ? "factuurtotaal minus toeristenbelasting" : "factuurtotaal"} — verschil €${diff.toFixed(2)}`,
-          );
-        }
-        if (diff > 0.005) {
-          rebalance(validAllocations as any, allocTarget);
-        }
-      }
-
-      // Validate each extra's internal allocations — zelfde aanpak
-      for (const e of validExtras) {
-        if (e.allocations.length > 0) {
-          const s = round2(e.allocations.reduce((sum, a) => sum + a.amount_incl_vat, 0));
-          const diff = Math.abs(s - e.amount_incl_vat);
-          const tol = toleranceFor(e.allocations.length);
-          if (diff > tol) {
-            setIsSubmitting(false);
-            return toast.error(
-              `Onderdeel-verdeling extra project klopt niet: €${s.toFixed(2)} vs €${e.amount_incl_vat.toFixed(2)} — verschil €${diff.toFixed(2)}`,
-            );
-          }
-          if (diff > 0.005) {
-            rebalance(e.allocations as any, e.amount_incl_vat);
-          }
-        }
-      }
-
       const created = await createInvoice.mutateAsync({
         request_id: requestId,
-        item_id: validAllocations.length > 0 ? null : (itemId || null),
+        item_id: null,
         partner_id: partnerId,
         invoice_number: invoiceNumber,
         invoice_date: format(invoiceDate, "yyyy-MM-dd"),
@@ -934,123 +590,24 @@ export function AddPurchaseInvoiceDialog({
         description: description || null,
         file_path: filePath,
         registered_by: "admin",
-        lines: validExtras.length === 0 && validLines.length > 0 ? validLines : undefined,
-        allocations: validAllocations.length > 0 ? validAllocations : undefined,
+        lines: validLines.length > 0 ? validLines : undefined,
         allowDuplicate: acceptDuplicate,
         pdf_total_incl_vat: pdfTotalNum ?? undefined,
         amount_mismatch_reason: amountMismatchReason.trim() || undefined,
       });
 
-      // Create one purchase invoice per extra project (shared invoice_number + file_path)
-      for (const e of validExtras) {
-        const createdExtra = await createInvoice.mutateAsync({
-          request_id: e.requestId,
-          item_id: null,
-          partner_id: partnerId,
-          invoice_number: invoiceNumber,
-          invoice_date: format(invoiceDate, "yyyy-MM-dd"),
-          amount_excl_vat: e.amount_excl_vat,
-          vat_rate: e.vat_rate,
-          vat_amount: e.vat_amount,
-          amount_incl_vat: e.amount_incl_vat,
-          description: description ? `${description} (deel project)` : `Aandeel factuur ${invoiceNumber}`,
-          file_path: filePath,
-          registered_by: "admin",
-          allocations: e.allocations.length > 0 ? e.allocations : undefined,
-          allowDuplicate: true,
-        });
-
-        // Optional: copy invoice allocations into program_item_billing_lines for the extra project
-        if (e.copyToBillingLines && createdExtra?.id && e.allocations.length > 0) {
-          const uniqueExtraItems = Array.from(new Set(e.allocations.map((a) => a.item_id)));
-          if (uniqueExtraItems.length === 1) {
-            const targetItemId = uniqueExtraItems[0];
-            try {
-              await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
-              const rowsToInsert = e.allocations.map((a, idx) => ({
-                item_id: targetItemId,
-                description: a.notes || `${description || `Factuur ${invoiceNumber}`} (BTW ${a.vat_rate}%)`,
-                quantity: 1,
-                unit_price_excl_vat: a.amount_excl_vat,
-                vat_rate: a.vat_rate,
-                vat_amount: a.vat_amount,
-                amount_excl_vat: a.amount_excl_vat,
-                amount_incl_vat: a.amount_incl_vat,
-                sort_order: idx,
-              }));
-              await supabase.from("program_item_billing_lines").insert(rowsToInsert);
-              await supabase
-                .from("program_request_items")
-                .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
-                .eq("id", targetItemId);
-              toast.success("Factuurregels overgenomen op programma-onderdeel (extra project)");
-            } catch (err) {
-              reportError(err, { where: "AddPurchaseInvoiceDialog: copyToBillingLines (extra) failed" });
-              toast.error("Overnemen naar factuurregels (extra project) mislukt");
-            }
-          }
-        }
-      }
-
-
-      // Doorbelasten aan de klant: de factuurregels vervangen de geoffreerde prijs
-      // van het onderdeel. Bij een verdeling over meerdere onderdelen krijgt elk
-      // onderdeel zijn eigen deel — eerder viel de doorbelasting dan stilzwijgend weg.
-      if (copyToBillingLines && created?.id) {
-        const rowsByItem = buildBillingLineRowsByItem({
-          allocations: validAllocations,
-          lines: validLines.map((l) => ({
-            description: l.description,
-            quantity: l.quantity,
-            amount_excl_vat: l.amount_excl_vat,
-            vat_rate: l.vat_rate,
-            vat_amount: l.vat_amount,
-            amount_incl_vat: l.amount_incl_vat,
-          })),
-          headerItemId: itemId || null,
-          header: {
-            amount_excl_vat: headerExcl,
-            vat_rate: headerVatRate,
-            vat_amount: headerVat,
-            amount_incl_vat: headerIncl,
-          },
-          description,
-          invoiceNumber,
-        });
-
-        for (const [targetItemId, rowsToInsert] of rowsByItem) {
-          try {
-            await supabase.from("program_item_billing_lines").delete().eq("item_id", targetItemId);
-            await supabase.from("program_item_billing_lines").insert(rowsToInsert);
-            await supabase
-              .from("program_request_items")
-              .update({ use_actual_costs: true, final_billing_locked_at: new Date().toISOString() })
-              .eq("id", targetItemId);
-          } catch (e) {
-            reportError(e, {
-              where: "AddPurchaseInvoiceDialog: copyToBillingLines failed",
-              itemId: targetItemId,
-            });
-            toast.error("Overnemen naar factuurregels mislukt");
-          }
-        }
-
-        if (rowsByItem.size === 1) {
-          toast.success("Factuurregels overgenomen op programma-onderdeel");
-        } else if (rowsByItem.size > 1) {
-          toast.success(`Factuurregels overgenomen op ${rowsByItem.size} programma-onderdelen`);
-        } else {
-          // Aangevinkt, maar er is niets om over te nemen: zeg dat, want anders
-          // blijft de klant de geoffreerde prijs gefactureerd krijgen.
-          toast.warning(
-            "Doorbelasten stond aan, maar er is geen onderdeel gekoppeld — de klant houdt de geoffreerde prijs.",
-          );
-        }
-      }
-
       if (inboxItem && created?.id) {
         await markProcessed.mutateAsync({ id: inboxItem.id, invoiceId: created.id });
       }
+
+      const project = projects?.find((p) => p.id === requestId);
+      toast.success(`Inkoopfactuur ${invoiceNumber} geregistreerd op ${project?.reference_number || "het project"}`, {
+        description: "Doorbelasten aan de klant doe je op het project, onder Financiën.",
+        action: {
+          label: "Naar project",
+          onClick: () => navigate(`/admin/projecten/${requestId}?tab=financien`),
+        },
+      });
       onClose();
     } catch (err: any) {
       reportError(err, { where: "AddPurchaseInvoiceDialog" });
@@ -1092,6 +649,7 @@ export function AddPurchaseInvoiceDialog({
           </DialogTitle>
           <DialogDescription>
             Upload de PDF — de factuur wordt automatisch gescand en de velden worden voorgevuld.
+            Doorbelasten aan de klant doe je daarna op het project.
           </DialogDescription>
         </DialogHeader>
 
@@ -1278,10 +836,6 @@ export function AddPurchaseInvoiceDialog({
                               value={searchValue}
                               onSelect={() => {
                                 setRequestId(p.id);
-                                setItemId("");
-                                setAllocations([]);
-                                setLineTargets([]);
-      setLineTargets([]);
                                 setProjectSearchOpen(false);
                               }}
                             >
@@ -1305,6 +859,15 @@ export function AddPurchaseInvoiceDialog({
                   </Command>
                 </PopoverContent>
               </Popover>
+              {requestId && requestId === autoPickedProjectId && projectSuggestion && (
+                <p className="text-xs text-muted-foreground flex items-start gap-1">
+                  <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
+                  <span>
+                    Voorgekozen op grond van ons referentienummer op de factuur
+                    {" "}(&ldquo;{projectSuggestion.matchedOn}&rdquo;). Klopt het niet, kies dan een ander project.
+                  </span>
+                </p>
+              )}
               {suggestedProject && suggestedProject.id !== requestId && projectSuggestion && (
                 <button
                   type="button"
@@ -1329,430 +892,6 @@ export function AddPurchaseInvoiceDialog({
                 </p>
               )}
             </div>
-
-            {/* Logies-allocatie (1-op-1 doorzetten naar accommodation_quote) */}
-            {requestId && partnerId && (
-              <LodgingAllocationBlock
-                programRequestId={requestId}
-                partnerId={partnerId}
-                lines={lines.map((l) => {
-                  const t = computeLineTotals(l);
-                  return {
-                    description: l.description,
-                    amount_incl_vat: t.amount_incl_vat,
-                    amount_excl_vat: t.amount_excl_vat,
-                    vat_rate: t.vat_rate,
-                  };
-                })}
-                quoteId={lodgingQuoteId}
-                onQuoteIdChange={setLodgingQuoteId}
-                allocations={lodgingAllocations}
-                onAllocationsChange={setLodgingAllocations}
-                enabled={lodgingEnabled}
-                onEnabledChange={setLodgingEnabled}
-              />
-            )}
-
-
-
-            {/* Regels toewijzen: elke gescande regel naar een onderdeel of naar
-                toeristenbelasting. Vult daarmee de verdeling hieronder. */}
-            {requestId && items && items.length > 0 && lines.length > 0
-              && extraProjects.length === 0 && (() => {
-              const assignable = lines
-                .map((l) => {
-                  const t = computeLineTotals(l);
-                  return {
-                    description: l.description,
-                    amountExclVat: t.amount_excl_vat,
-                    vatRate: t.vat_rate,
-                    amountInclVat: t.amount_incl_vat,
-                  };
-                })
-                .filter((l) => l.amountExclVat > 0);
-              if (assignable.length === 0) return null;
-
-              const applyTargets = (next: LineTarget[]) => {
-                setLineTargets(next);
-                // De toewijzing vult de verdeling: geen apart opslagpad, en de
-                // controles die er al op zitten blijven gewoon werken.
-                const drafts = allocationsFromLineAssignments(assignable, next);
-                setAllocations(
-                  drafts.map((d) => ({
-                    item_id: d.item_id,
-                    amount_excl_vat: d.amount_excl_vat.toFixed(2),
-                    vat_rate: String(d.vat_rate),
-                    notes: d.notes,
-                  })),
-                );
-              };
-
-              return (
-                <LineAssignmentBlock
-                  lines={assignable}
-                  targets={lineTargets}
-                  onTargetsChange={applyTargets}
-                  items={items.map((it: any) => ({
-                    id: it.id,
-                    label: it.block_name || "Onderdeel",
-                  }))}
-                />
-              );
-            })()}
-
-            {/* Allocatie: verdeel het factuurbedrag over één of meerdere programma-onderdelen */}
-            {requestId && items && items.length > 0 && (() => {
-              const invoiceIncl = parseFloat(amountIncl) || 0;
-              const invoiceExcl = parseFloat(amountExcl) || 0;
-              // Subtract extras (per-project shares) so primary-project allocaties tegen het juiste deelbedrag worden geijkt
-              const extrasInclSum = extraProjects.reduce((s, e) => {
-                const eh = parseFloat(e.amountExclVat);
-                const er = parseFloat(e.vatRate) || 0;
-                if (eh > 0) return s + eh * (1 + er / 100);
-                return s + e.allocations.reduce((ss, a) => {
-                  const ae = parseFloat(a.amount_excl_vat) || 0;
-                  const ar = parseFloat(a.vat_rate) || 0;
-                  return ss + ae * (1 + ar / 100);
-                }, 0);
-              }, 0);
-              const totalIncl = Math.max(0, invoiceIncl - extrasInclSum);
-              const hasExtras = extrasInclSum > 0.005;
-              const allocTotalIncl = allocations.reduce((sum, a) => {
-                const excl = parseFloat(a.amount_excl_vat) || 0;
-                const rate = parseFloat(a.vat_rate) || 0;
-                return sum + excl * (1 + rate / 100);
-              }, 0);
-              const diff = totalIncl - allocTotalIncl;
-              const matches = Math.abs(diff) < 0.01;
-              const availableItems = items;
-
-              const addAllocation = (item_id: string) => {
-                setAllocations((prev) => [
-                  ...prev,
-                  { item_id, amount_excl_vat: "", vat_rate: vatRate || "21", notes: "" },
-                ]);
-              };
-              const splitAllocation = (idx: number) => {
-                setAllocations((prev) => {
-                  const src = prev[idx];
-                  if (!src) return prev;
-                  const usedRates = prev
-                    .filter((a) => a.item_id === src.item_id)
-                    .map((a) => a.vat_rate);
-                  const nextRate = ["21", "9", "0"].find((r) => !usedRates.includes(r)) || "21";
-                  const copy = [...prev];
-                  copy.splice(idx + 1, 0, { item_id: src.item_id, amount_excl_vat: "", vat_rate: nextRate, notes: "" });
-                  return copy;
-                });
-              };
-              const updateAllocation = (idx: number, patch: Partial<typeof allocations[number]>) => {
-                setAllocations((prev) => prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
-              };
-              const removeAllocation = (idx: number) => {
-                setAllocations((prev) => prev.filter((_, i) => i !== idx));
-              };
-              const distributeEvenly = () => {
-                if (allocations.length === 0 || totalIncl <= 0) return;
-                const totalExcl = parseFloat(amountExcl) || 0;
-                const per = totalExcl / allocations.length;
-                const headerRate = vatRate || "21";
-                setAllocations((prev) => prev.map((a) => ({ ...a, amount_excl_vat: per.toFixed(2), vat_rate: a.vat_rate || headerRate })));
-              };
-
-              // Groepeer alle gescande orderregels per BTW-tarief en zet die
-              // 1-op-1 als allocaties op het gekozen programma-onderdeel neer,
-              // zodat je niet handmatig per BTW-tarief hoeft in te tikken.
-              const validScanLines = lines.filter((l) => {
-                const t = computeLineTotals(l);
-                return t.amount_excl_vat > 0;
-              });
-              const fillTargetItemId =
-                itemId || (availableItems.length === 1 ? (availableItems[0] as any).id : "");
-              const canFillFromLines = !!fillTargetItemId && validScanLines.length > 0;
-              const fillFromScannedLines = () => {
-                if (!canFillFromLines) return;
-                const byRate = new Map<number, number>();
-                for (const l of validScanLines) {
-                  const t = computeLineTotals(l);
-                  byRate.set(t.vat_rate, (byRate.get(t.vat_rate) || 0) + t.amount_excl_vat);
-                }
-                const next = Array.from(byRate.entries())
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([rate, excl]) => ({
-                    item_id: fillTargetItemId,
-                    amount_excl_vat: (Math.round(excl * 100) / 100).toFixed(2),
-                    vat_rate: String(rate),
-                    notes: "",
-                  }));
-                setAllocations(next);
-                setCopyToBillingLines(true);
-                toast.success(`${validScanLines.length} orderregels toegewezen aan onderdeel`);
-              };
-
-              return (
-                <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div>
-                      <Label className="text-sm">Toewijzen aan programma-onderdelen (optioneel)</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Verdeel het factuurbedrag over één of meerdere onderdelen.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {canFillFromLines && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={fillFromScannedLines}
-                          title="Groepeer alle orderregels per BTW-tarief en boek ze op het gekozen onderdeel"
-                        >
-                          Vul uit orderregels ({validScanLines.length})
-                        </Button>
-                      )}
-                      {allocations.length > 0 && (
-                        <Button type="button" variant="ghost" size="sm" onClick={distributeEvenly}>
-                          Verdeel gelijk
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {allocations.length > 0 && (
-                    <div className="space-y-2">
-                      {allocations.map((alloc, idx) => {
-                        const it: any = items.find((i: any) => i.id === alloc.item_id);
-                        const excl = parseFloat(alloc.amount_excl_vat) || 0;
-                        const rate = parseFloat(alloc.vat_rate) || 0;
-                        const vat = excl * (rate / 100);
-                        const incl = excl + vat;
-                        return (
-                          <div key={idx} className="grid grid-cols-12 gap-2 items-center text-sm bg-background rounded-md p-2 border border-border">
-                            <div className="col-span-4 truncate">
-                              <div className="font-medium truncate">
-                                {it ? `Dag ${it.day_index + 1}: ${it.block_name}` : "Onbekend onderdeel"}
-                              </div>
-                            </div>
-                            <div className="col-span-3">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="Excl. €"
-                                value={alloc.amount_excl_vat}
-                                onChange={(e) => updateAllocation(idx, { amount_excl_vat: e.target.value })}
-                                className="h-8"
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <Select value={alloc.vat_rate} onValueChange={(v) => updateAllocation(idx, { vat_rate: v })}>
-                                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="0">0%</SelectItem>
-                                  <SelectItem value="9">9%</SelectItem>
-                                  <SelectItem value="21">21%</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="col-span-1 text-right text-xs tabular-nums text-muted-foreground">
-                              €{incl.toFixed(2)}
-                            </div>
-                            <div className="col-span-2 flex justify-end gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                title="Voeg een extra BTW-regel toe voor hetzelfde onderdeel"
-                                onClick={() => splitAllocation(idx)}
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" />
-                                BTW-regel
-                              </Button>
-                              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeAllocation(idx)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {availableItems.length > 0 && (
-                    <Select value="" onValueChange={(v) => v && addAllocation(v)}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder={allocations.length === 0 ? "+ Onderdeel toevoegen" : "+ Nog een onderdeel toevoegen"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableItems.map((it: any) => (
-                          <SelectItem key={it.id} value={it.id}>
-                            Dag {it.day_index + 1}: {it.block_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-
-                  {allocations.length > 0 && (
-                    <div className={cn(
-                      "flex items-center justify-between gap-2 text-xs px-2 py-1.5 rounded-md",
-                      matches ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300" : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300"
-                    )}>
-                      <span>
-                        Toegewezen: <strong>€{allocTotalIncl.toFixed(2)}</strong> van €{totalIncl.toFixed(2)} (incl. BTW){hasExtras ? " — hoofdproject-aandeel" : ""}
-                      </span>
-                      <span>
-                        {matches ? "✓ Klopt" : `Verschil: €${diff.toFixed(2)}`}
-                      </span>
-                    </div>
-                  )}
-                  {(() => {
-                    const filledAllocs = allocations.filter((a) => a.item_id && parseFloat(a.amount_excl_vat) > 0);
-                    const uniqueItems = new Set(filledAllocs.map((a) => a.item_id));
-                    const canCopy =
-                      (filledAllocs.length >= 1 && uniqueItems.size === 1) ||
-                      (filledAllocs.length === 0 && !!itemId);
-                    const hasMultiItems = uniqueItems.size > 1;
-                    if (canCopy) {
-                      return (
-                        <label className="flex items-start gap-2 text-xs bg-background border border-border rounded-md p-2 cursor-pointer">
-                          <Checkbox
-                            checked={copyToBillingLines}
-                            onCheckedChange={(c) => setCopyToBillingLines(Boolean(c))}
-                            className="mt-0.5"
-                          />
-                          <span>
-                            <strong>Direct overnemen als factuurregels</strong> op het programma-onderdeel
-                            <span className="block text-muted-foreground">
-                              Vervangt bestaande factuurregels en zet 'werkelijke kosten leidend' aan. Bij meerdere BTW-regels op hetzelfde onderdeel worden ze allemaal overgenomen.
-                            </span>
-                          </span>
-                        </label>
-                      );
-                    }
-                    if (hasMultiItems) {
-                      return (
-                        <div className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-md p-2">
-                          <strong>Overnemen als factuurregels</strong> is niet beschikbaar bij verdeling over meerdere programma-onderdelen — splits dit handmatig per onderdeel als je inkoop = verkoop wilt vastleggen.
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-              );
-            })()}
-
-            {/* Extra projecten: splits factuur naar meerdere projecten */}
-            {requestId && (() => {
-              const headerExclNum = parseFloat(amountExcl) || 0;
-              const headerInclNum = parseFloat(amountIncl) || 0;
-              // Per project: excl + incl (header-modus óf afgeleid uit onderdelen)
-              const extraRows = extraProjects.map((e) => {
-                const eh = parseFloat(e.amountExclVat);
-                const er = parseFloat(e.vatRate) || 0;
-                if (eh > 0) {
-                  return { excl: eh, incl: eh * (1 + er / 100), mixed: false };
-                }
-                let excl = 0;
-                let incl = 0;
-                const rates = new Set<number>();
-                e.allocations.forEach((a) => {
-                  const ae = parseFloat(a.amount_excl_vat) || 0;
-                  if (ae <= 0) return;
-                  const ar = parseFloat(a.vat_rate) || 0;
-                  excl += ae;
-                  incl += ae * (1 + ar / 100);
-                  rates.add(ar);
-                });
-                return { excl, incl, mixed: rates.size > 1 };
-              });
-              const extrasExcl = extraRows.reduce((s, r) => s + r.excl, 0);
-              const extrasIncl = extraRows.reduce((s, r) => s + r.incl, 0);
-              const primaryShareExcl = headerExclNum - extrasExcl;
-              const primaryShareIncl = headerInclNum - extrasIncl;
-              const balancedExcl = extrasExcl <= headerExclNum + 0.01 && primaryShareExcl >= -0.01;
-              const balancedIncl = extrasIncl <= headerInclNum + 0.01 && primaryShareIncl >= -0.01;
-              const balanced = balancedExcl && balancedIncl;
-              const addExtra = () => {
-                setExtraProjects((prev) => [
-                  ...prev,
-                  { requestId: "", amountExclVat: "", vatRate: vatRate || "21", allocations: [], copyToBillingLines: true },
-                ]);
-              };
-              return (
-                <div className="space-y-2 rounded-md border border-dashed border-border p-3 bg-muted/20">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div>
-                      <Label className="text-sm">Extra projecten (splits factuur)</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Heeft deze factuur posten voor meerdere projecten? Voeg er hier extra toe — er wordt dan per project een aparte inkoopfactuur aangemaakt. Voor mixed BTW: laat header-bedrag leeg en voeg onderdelen toe per tarief.
-                      </p>
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={addExtra}>
-                      <Plus className="h-3 w-3 mr-1" /> Project toevoegen
-                    </Button>
-                  </div>
-
-                  {extraProjects.length > 0 && (
-                    <>
-                      <div className="space-y-2">
-                        {extraProjects.map((split, idx) => (
-                          <ExtraProjectSplitBlock
-                            key={idx}
-                            index={idx}
-                            split={split}
-                            projects={(projects as any) || []}
-                            itemsForProject={(extraItems as any || []).filter((it: any) => it.request_id === split.requestId)}
-                            partnerId={partnerId}
-                            onChange={(patch) =>
-                              setExtraProjects((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)))
-                            }
-                            onRemove={() =>
-                              setExtraProjects((prev) => prev.filter((_, i) => i !== idx))
-                            }
-                          />
-                        ))}
-                      </div>
-                      <div
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-md space-y-0.5",
-                          balanced
-                            ? "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300"
-                            : "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
-                        )}
-                      >
-                        <div className="opacity-80 mb-1">
-                          Controle: zo wordt deze inkoopfactuur over projecten verdeeld.
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Hoofdproject (rest van factuurtotaal)</span>
-                          <span className="tabular-nums">€{primaryShareExcl.toFixed(2)} excl · €{primaryShareIncl.toFixed(2)} incl</span>
-                        </div>
-                        {extraRows.map((r, i) => {
-                          const p = (projects as any || []).find((pp: any) => pp.id === extraProjects[i]?.requestId);
-                          const label = p
-                            ? `${p.reference_number || "Geen ref"} — ${p.customer_company || p.customer_name}`
-                            : `Extra project ${i + 1}`;
-                          return (
-                            <div key={i} className="flex justify-between">
-                              <span>Extra project {i + 1}: {label}{r.mixed ? " (gemengd BTW)" : ""}</span>
-                              <span className="tabular-nums">€{r.excl.toFixed(2)} excl · €{r.incl.toFixed(2)} incl</span>
-                            </div>
-                          );
-                        })}
-                        <div className="flex justify-between border-t border-current/20 pt-0.5 font-medium">
-                          <span>{balanced ? "✓ Klopt — sluit aan op factuurtotaal" : primaryShareExcl < -0.01 || primaryShareIncl < -0.01 ? "⚠ Extras > factuurtotaal" : "⚠ Verschil met factuurtotaal"}</span>
-                          <span className="tabular-nums">Factuurtotaal: €{headerExclNum.toFixed(2)} excl · €{headerInclNum.toFixed(2)} incl</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
-
-
 
             {/* Invoice details */}
             <div className="grid grid-cols-2 gap-3">
@@ -1786,13 +925,13 @@ export function AddPurchaseInvoiceDialog({
               </div>
             </div>
 
-            {hasDuplicateWarning && (
+            {hasDuplicateWarning && duplicateInvoice && (
               <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 p-3 space-y-2">
                 <div className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                   <div className="space-y-1">
                     <p className="font-medium">Mogelijk dubbele inkoopfactuur</p>
-                    {duplicateInvoice && duplicateMatch?.reason === "number" && (
+                    {duplicateMatch?.reason === "number" && (
                       <p className="text-xs">
                         Factuurnummer <strong>{duplicateInvoice.invoice_number}</strong> is al geregistreerd
                         voor deze leverancier op {duplicateInvoice.invoice_date} voor €
@@ -1800,7 +939,7 @@ export function AddPurchaseInvoiceDialog({
                         {" "}(status: {duplicateInvoice.status}).
                       </p>
                     )}
-                    {duplicateInvoice && duplicateMatch?.reason === "amount" && (
+                    {duplicateMatch?.reason === "amount" && (
                       <p className="text-xs">
                         Deze leverancier heeft al een factuur van €
                         {Number(duplicateInvoice.amount_incl_vat ?? duplicateInvoice.amount_excl_vat).toFixed(2)}
@@ -1808,11 +947,6 @@ export function AddPurchaseInvoiceDialog({
                         Waarschijnlijk is dit dezelfde factuur met een ander nummer. Koppel de PDF dan aan die registratie via de inbox in plaats van hier een nieuwe te maken.
                       </p>
                     )}
-                    {alreadyInvoicedItems.map((it) => (
-                      <p key={it.itemId} className="text-xs">
-                        Onderdeel <strong>{it.label}</strong> heeft al inkoopfactuur <strong>{it.invoiceNumber}</strong> van deze leverancier.
-                      </p>
-                    ))}
                   </div>
                 </div>
                 <label className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-100 cursor-pointer">
@@ -1824,8 +958,6 @@ export function AddPurchaseInvoiceDialog({
                 </label>
               </div>
             )}
-
-
 
             {/* Order lines */}
             <div className="space-y-2">
@@ -2076,7 +1208,6 @@ export function AddPurchaseInvoiceDialog({
                 </div>
               );
             })()}
-
 
             {scanFailed && file && (
               <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">

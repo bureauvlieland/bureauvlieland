@@ -5,10 +5,13 @@
  * Houtmolen" onderaan een Doeksen-factuur, of ons eigen referentienummer. Die
  * aanwijzing staat al in de gescande tekst; hij werd alleen niet gebruikt.
  *
- * De suggestie is nadrukkelijk een suggestie: hij vult niets vanzelf in, want een
- * verkeerd gekoppelde factuur belandt op de verkeerde klantfactuur én op de
- * verkeerde commissiegrondslag. Daarom staat er ook bij wáárom een project wordt
- * voorgesteld, zodat je het in één oogopslag kunt beoordelen.
+ * Een treffer op ons eigen referentienummer is zeker genoeg om het project vast
+ * voor te kiezen: dat nummer staat alleen op facturen die bij dat project horen,
+ * en je bevestigt het nog met opslaan. Een treffer op bedrijfs- of klantnaam
+ * blijft een suggestie die je zelf aanklikt, want een verkeerd gekoppelde factuur
+ * belandt op de verkeerde klantfactuur én op de verkeerde commissiegrondslag.
+ * Daarom staat er ook bij wáárom een project wordt voorgesteld, zodat je het in
+ * één oogopslag kunt beoordelen.
  */
 
 export interface SuggestableProject {
@@ -107,6 +110,11 @@ export function suggestProjectFromText(
   if (!best) return null;
   const { projectId, reason, matchedOn } = best;
   return { projectId, reason, matchedOn };
+}
+
+/** Alleen ons referentienummer op de factuur is zeker genoeg om vast voor te kiezen. */
+export function shouldPreselectProject(suggestion: ProjectSuggestion | null): boolean {
+  return suggestion?.reason === "reference";
 }
 
 export const PROJECT_MATCH_LABELS: Record<ProjectMatchReason, string> = {

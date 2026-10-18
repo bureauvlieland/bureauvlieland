@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PurchaseInvoiceInboxItem, InboxStatus } from "@/types/purchaseInvoiceInbox";
 import { reportError } from "@/lib/errorReporting";
+import { clearCustomerLinesForItems, linkedItemIds } from "@/lib/purchaseInvoiceCleanup";
 
 export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
   const queryClient = useQueryClient();
@@ -106,6 +107,15 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
           .eq("id", invoiceId)
           .maybeSingle();
 
+        // Klantregels die deze factuur op onderdelen zette gaan mee terug.
+        const { data: allocationRows } = await supabase
+          .from("partner_purchase_invoice_allocations")
+          .select("item_id")
+          .eq("invoice_id", invoiceId);
+        await clearCustomerLinesForItems(
+          linkedItemIds({ item_id: inv?.item_id ?? null, allocations: allocationRows ?? [] }),
+        );
+
         // Cascade cleanup children
         await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", invoiceId);
         await supabase.from("partner_purchase_invoice_allocations").delete().eq("invoice_id", invoiceId);
@@ -161,6 +171,7 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-inbox-count"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["item-billing-lines"] });
       toast.success("Verwerking ongedaan gemaakt — klaar om opnieuw te verwerken");
     },
     onError: (err: Error) => {

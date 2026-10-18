@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveItemVatRate } from "@/lib/itemVatRate";
 import ambassadeurLogo from "@/assets/ambassadeur-waddenzee-werelderfgoed.png";
 import { toast } from "sonner";
 import { categoryLabels } from "@/types/buildingBlock";
@@ -88,6 +89,8 @@ interface ProgramItem {
   override_people: number | null;
   status: string;
   booking_reference?: string | null;
+  /** Eigen tarief van een post zonder bouwsteen (overige kosten). */
+  vat_rate?: number | null;
 }
 
 interface LoadedBureauInvoice {
@@ -498,12 +501,8 @@ const AdminInvoicePreview = () => {
               (categoryOrder.indexOf(b) === -1 ? 99 : categoryOrder.indexOf(b))
   );
 
-  const getItemVatRate = (item: ProgramItem): number => {
-    if (item.block_id && vatRateMap[item.block_id] !== undefined) {
-      return vatRateMap[item.block_id];
-    }
-    return Number(settings.default_vat_rate || 21);
-  };
+  const getItemVatRate = (item: ProgramItem): number =>
+    resolveItemVatRate(item, vatRateMap, Number(settings.default_vat_rate || 21));
 
   const calculateTotals = () => {
     const numberOfPeople = request?.number_of_people || 0;
