@@ -162,6 +162,7 @@ import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
+import { ChargeWorksheetCard } from "@/components/admin/charge/ChargeWorksheetCard";
 import { AdminAddCustomItemSheet } from "@/components/admin/AdminAddCustomItemSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
@@ -271,6 +272,8 @@ interface ProgramRequestItem {
   invoiced_amount: number | null;
   invoiced_number: string | null;
   commission_status: string | null;
+  /** Offerteprijs houden: inkoopregels tellen voor de commissie, maar vervangen de prijs niet. */
+  keep_quoted_price?: boolean | null;
   // Quote mode fields
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;
@@ -3205,6 +3208,16 @@ const AdminRequestDetail = () => {
                   </Card>
                 );
               })()}
+
+              {/* Doorbelasten: inkoopregels naar onderdelen, kostenposten of niet */}
+              <ChargeWorksheetCard
+                requestId={request.id}
+                items={items}
+                numberOfPeople={request.number_of_people}
+                selectedDates={(request.selected_dates as string[]) || []}
+                linesByItem={billingLinesByItem}
+                onChanged={() => fetchRequestData({ silent: true })}
+              />
 
               {/* Overige kosten section — altijd zichtbaar zodat losse kosten ook op een 'leeg' project toegevoegd kunnen worden */}
               {(() => {

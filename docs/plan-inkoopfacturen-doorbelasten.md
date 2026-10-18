@@ -88,6 +88,57 @@ tijdelijk de enige routes. De nu onbereikbare blokken (`LineAssignmentBlock`,
 `LodgingAllocationBlock`, `ExtraProjectSplitBlock`,
 `purchaseInvoiceBillingLines.ts`) blijven staan tot fase 4.
 
+**Fase 2 (18 oktober 2026), werkblad Doorbelasten.** Op het tabblad
+Financiën van het project staat `ChargeWorksheetCard`
+(`src/components/admin/charge/`): links alle inkoopregels van alle
+inkoopfacturen van het project, gegroepeerd per factuur, elk met een
+voorgestelde bestemming en de reden; rechts het programma met per onderdeel
+offerte, werkelijk (som van de klantregels) en verschil, een schakelaar
+"Offerteprijs houden", en daaronder de kostenposten. Eén knop "Bevestig (n)"
+roept de databasefunctie `apply_purchase_line_charges` aan (migratie
+`20261018120000`), die in één transactie per regel de klantregel schrijft
+(of niet, bij "offerteprijs houden" of "niet doorbelasten"), nieuwe
+kostenposten aanmaakt (items met `day_index -1`, één per partner, naam
+aanpasbaar), de vlaggen op de onderdelen zet en de verdeling voor de
+commissie (`partner_purchase_invoice_allocations`) opnieuw uit de regels
+opbouwt. De matcher (`src/lib/purchaseLineMatcher.ts`, met tests) volgt
+hoofdstuk 4: enige onderdeel +40, al gekoppeld +60, bedrag gelijk +50,
+factuurtotaal gelijk +40 (niet voor bijkomende kosten), datum +30, woorden
++10 per woord tot +30, aantal +15; ≥ 80 zeker (aangevinkt), 50–79
+waarschijnlijk (voorgesteld, niet aangevinkt), anders kostenpost;
+toeristenbelasting altijd "niet doorbelasten". Zonder onderdelen
+(BV-2608-0004) wordt elke regel een klantregel op een kostenpost op naam
+van de partner.
+
+Datamodel (zie hoofdstuk 5, iets eenvoudiger dan gepland): klantregels
+blijven aan een onderdeel hangen (`item_id` niet nullable; een regel zonder
+onderdeel komt op een kostenpost, zodat overzicht, voorbeeld, portaal en de
+SQL-trigger hem nu al zien) en krijgen `source`, `purchase_invoice_line_id`
+en `purchase_invoice_id` (`ON DELETE CASCADE`). Inkoopregels krijgen
+`item_id`, `charge_status` (`open`, `charged`, `kept_quote`, `skipped`,
+`legacy`), `skip_reason` en `charged_at`; regels van facturen die vóór het
+werkblad al verdeeld waren staan op `legacy` en houden hun oude verdeling
+tot ze opnieuw worden verdeeld. `program_request_items.keep_quoted_price`
+is de schakelaar (partners kunnen hem niet aanraken; guard uitgebreid).
+Facturen zonder orderregels (partnerregistraties, handmatige koppen)
+krijgen in het werkblad "Orderregels aanmaken": één regel per verdeling
+(status `legacy`, bestemming al ingevuld) of één regel uit de kop.
+
+Aangrenzend: de klantregel-editor toont regels uit inkoop alleen-lezen en
+bewaart ze bij opslaan (`useItemBillingLines.saveAll` vervangt alleen
+`source = 'manual'`); verwijderen of opnieuw verwerken van een
+inkoopfactuur haalt nu alleen de klantregels mét die bron weg en zet alleen
+onderdelen die leeg raken terug op de offerteprijs (zonder bron: de regel
+van fase 1). De commissie-reconciliatie telt bij een verdeelde factuur het
+verdeelde bedrag (niet-doorbelaste regels vallen buiten de grondslag) en
+geeft het kostenpostdeel van een gemengd verdeelde factuur een eigen
+restregel "Inkoopfactuur … (overige kosten)", zodat die commissie niet
+stil verdwijnt (`commissionReconciliation.ts`, met tests).
+
+Niet in deze ronde (fase 2b): logies-offerte als bestemming,
+verzamelfacturen over meerdere projecten, en de `left join` in Snelstart
+en batch.
+
 ## 1. Hoe het nu werkt
 
 ```

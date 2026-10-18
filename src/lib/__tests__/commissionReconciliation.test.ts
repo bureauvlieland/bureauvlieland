@@ -200,7 +200,9 @@ describe("inkoopfacturen aan bureau-regels", () => {
     expect(rows.map((r) => r.key)).toEqual(["invoice:inv-1"]);
   });
 
-  it("houdt de factuur bij het echte onderdeel als er ook een partnerregel aan hangt", () => {
+  it("houdt de factuur bij het echte onderdeel en laat het bureau-deel als restregel terugkomen", () => {
+    // Tot het werkblad Doorbelasten (18 oktober 2026) verdween de € 300 op de
+    // bureau-regel stil uit de werklijst; nu is het een eigen regel.
     const rows = buildReconciliationRows({
       items: [
         item({ id: "item-1" }),
@@ -215,8 +217,9 @@ describe("inkoopfacturen aan bureau-regels", () => {
       projects,
       partners,
     });
-    expect(rows.map((r) => r.key)).toEqual(["item:item-1"]);
+    expect(rows.map((r) => r.key)).toEqual(["item:item-1", "invoice:inv-1:rest"]);
     expect(rows[0].purchaseExclVat).toBe(700);
+    expect(rows[1].purchaseExclVat).toBe(300);
   });
 
   it("dekt de partneronderdelen zonder eigen factuur in hetzelfde project af", () => {
@@ -873,5 +876,63 @@ describe("commissiepercentage per soort", () => {
     expect(row.purchaseCommission).toBeGreaterThan(row.salesCommission!);
     // En het blijft een match: de offerte is mét deze factuur overschreven.
     expect(row.status).toBe("match");
+  });
+});
+
+describe("werkblad Doorbelasten: kostenposten en niet-doorbelaste regels", () => {
+  const kostenpost = item({ id: "kosten-1", block_type: "bureau", provider_id: "bureau", quoted_price: null });
+
+  it("telt bij een factuur die alleen op kostenposten is verdeeld het verdeelde bedrag", () => {
+    // Kampeerterrein: € 5.000 verblijf naar een kostenpost, € 700 toeristenbelasting niet doorbelast.
+    const rows = buildReconciliationRows({
+      items: [kostenpost],
+      invoices: [
+        invoice({
+          amount_excl_vat: 5700,
+          allocated_item_ids: ["kosten-1"],
+          allocation_amounts: { "kosten-1": 5000 },
+        }),
+      ],
+      projects,
+      partners,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].itemType).toBe("purchase_invoice");
+    expect(rows[0].purchaseExclVat).toBe(5000);
+    expect(rows[0].commissionAtRisk).toBeCloseTo(500, 6);
+  });
+
+  it("geeft het kostenpostdeel van een gemengd verdeelde factuur een eigen restregel", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ id: "diner" }), kostenpost],
+      invoices: [
+        invoice({
+          amount_excl_vat: 1200,
+          allocated_item_ids: ["diner", "kosten-1"],
+          allocation_amounts: { diner: 1000, "kosten-1": 150 },
+        }),
+      ],
+      projects,
+      partners,
+    });
+    const dinerRow = rows.find((r) => r.itemId === "diner");
+    const restRow = rows.find((r) => r.key === "invoice:inv-1:rest");
+    expect(dinerRow?.purchaseExclVat).toBe(1000);
+    expect(restRow?.purchaseExclVat).toBe(150);
+    expect(restRow?.label).toContain("overige kosten");
+    // De € 50 zonder allocatie (niet doorbelast) telt nergens mee.
+    const covered = worklistInvoiceCoverage(rows);
+    expect(covered.get("inv-1")).toBeCloseTo(1150, 6);
+  });
+
+  it("laat een volledig aan onderdelen verdeelde factuur ongemoeid", () => {
+    const rows = buildReconciliationRows({
+      items: [item({ id: "diner" })],
+      invoices: [invoice({ allocated_item_ids: ["diner"], allocation_amounts: { diner: 1000 } })],
+      projects,
+      partners,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].itemId).toBe("diner");
   });
 });

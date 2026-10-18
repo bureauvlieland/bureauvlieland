@@ -25,6 +25,7 @@ import {
   ProgramItemBillingLineInput,
   VAT_RATE_OPTIONS,
   computeBillingLineAmounts,
+  isPurchaseSourcedLine,
 } from "@/types/programItemBillingLine";
 
 interface AdminItemBillingLinesEditorProps {
@@ -57,6 +58,11 @@ export const AdminItemBillingLinesEditor = ({
 
   const hasLines = lines.length > 0;
   const totalIncl = lines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
+  // Regels uit het werkblad Doorbelasten zijn hier alleen te zien, niet te
+  // bewerken: wijzig de bestemming van de inkoopregel op het project.
+  const purchaseLines = useMemo(() => lines.filter(isPurchaseSourcedLine), [lines]);
+  const manualLines = useMemo(() => lines.filter((l) => !isPurchaseSourcedLine(l)), [lines]);
+  const purchaseTotalIncl = purchaseLines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
 
   // Load current use_actual_costs flag when opening
   useEffect(() => {
@@ -76,9 +82,9 @@ export const AdminItemBillingLinesEditor = ({
   // Initialize draft when opening
   useEffect(() => {
     if (!isOpen) return;
-    if (lines.length > 0) {
+    if (manualLines.length > 0) {
       setDraft(
-        lines.map((l) => ({
+        manualLines.map((l) => ({
           description: l.description,
           quantity: Number(l.quantity),
           unit_price_excl_vat: Number(l.unit_price_excl_vat),
@@ -86,6 +92,9 @@ export const AdminItemBillingLinesEditor = ({
           sort_order: l.sort_order,
         })),
       );
+    } else if (purchaseLines.length > 0) {
+      // Er staan al regels uit inkoop; begin met een leeg handmatig deel.
+      setDraft([]);
     } else {
       // Pre-fill with suggested amount, treating it as incl. VAT and back-calculating excl.
       const rate = defaultVatRate ?? 21;
@@ -101,12 +110,21 @@ export const AdminItemBillingLinesEditor = ({
         },
       ]);
     }
-  }, [isOpen, lines, suggestedAmount, defaultVatRate, itemName]);
+  }, [isOpen, manualLines, purchaseLines, suggestedAmount, defaultVatRate, itemName]);
 
   const draftTotals = useMemo(() => {
     const byRate: Record<number, { excl: number; vat: number; incl: number }> = {};
     let totalExcl = 0;
     let totalVat = 0;
+    purchaseLines.forEach((l) => {
+      const r = Number(l.vat_rate);
+      if (!byRate[r]) byRate[r] = { excl: 0, vat: 0, incl: 0 };
+      byRate[r].excl += Number(l.amount_excl_vat);
+      byRate[r].vat += Number(l.vat_amount);
+      byRate[r].incl += Number(l.amount_incl_vat);
+      totalExcl += Number(l.amount_excl_vat);
+      totalVat += Number(l.vat_amount);
+    });
     draft.forEach((d) => {
       const a = computeBillingLineAmounts(d.quantity, d.unit_price_excl_vat, d.vat_rate);
       const r = d.vat_rate;
@@ -118,7 +136,7 @@ export const AdminItemBillingLinesEditor = ({
       totalVat += a.vat_amount;
     });
     return { byRate, totalExcl, totalVat, totalIncl: totalExcl + totalVat };
-  }, [draft]);
+  }, [draft, purchaseLines]);
 
   const updateDraft = (idx: number, patch: Partial<ProgramItemBillingLineInput>) => {
     setDraft((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
@@ -295,6 +313,26 @@ export const AdminItemBillingLinesEditor = ({
             </div>
           )}
 
+          {purchaseLines.length > 0 && (
+            <div className="border rounded-md bg-muted/20 p-2 space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">
+                Uit inkoopfacturen (via Doorbelasten) · {formatCurrency(purchaseTotalIncl)} incl.
+              </div>
+              {purchaseLines.map((l) => (
+                <div key={l.id} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="truncate">
+                    {l.description}
+                    <span className="ml-1 text-[10px] text-muted-foreground">({Number(l.vat_rate)}%)</span>
+                  </span>
+                  <span className="tabular-nums">{formatCurrency(Number(l.amount_incl_vat))}</span>
+                </div>
+              ))}
+              <p className="text-[10px] text-muted-foreground">
+                Wijzig deze regels in het werkblad Doorbelasten op het tabblad Financiën.
+              </p>
+            </div>
+          )}
+
           {/* Toggle */}
           <div className="flex items-center justify-between gap-2 border rounded-md p-2 bg-background">
             <div className="space-y-0.5">
@@ -335,7 +373,7 @@ export const AdminItemBillingLinesEditor = ({
                     {draft.length === 0 && (
                       <tr>
                         <td colSpan={6} className="text-center py-4 text-muted-foreground">
-                          Geen regels. Voeg er één toe.
+                          {purchaseLines.length > 0 ? "Geen handmatige regels." : "Geen regels. Voeg er één toe."}
                         </td>
                       </tr>
                     )}
@@ -441,7 +479,7 @@ export const AdminItemBillingLinesEditor = ({
               </div>
 
               <div className="flex justify-between gap-2 pt-2">
-                {hasLines && (
+                {manualLines.length > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -449,7 +487,7 @@ export const AdminItemBillingLinesEditor = ({
                     disabled={isSaving}
                     className="text-destructive hover:text-destructive"
                   >
-                    Alles wissen
+                    {purchaseLines.length > 0 ? "Handmatige regels wissen" : "Alles wissen"}
                   </Button>
                 )}
                 <div className="flex gap-2 ml-auto">

@@ -11,7 +11,7 @@ import type {
 } from "@/types/purchaseInvoice";
 import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { isAwaitingPdfMatch } from "@/lib/purchaseInvoiceStatusFlow";
-import { clearCustomerLinesForItems, linkedItemIds } from "@/lib/purchaseInvoiceCleanup";
+import { clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
 import { reportError } from "@/lib/errorReporting";
 
 type RawAllocationRow = {
@@ -264,7 +264,7 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
 
       // Klantregels die deze factuur op onderdelen heeft gezet gaan mee: anders
       // blijft de klant bedragen betalen van een factuur die niet meer bestaat.
-      const itemsWithLinesCleared = await clearCustomerLinesForItems(linkedItemIds(invoice));
+      const itemsWithLinesCleared = await clearCustomerLinesForInvoice(invoice);
 
       // Cascade-cleanup children first
       await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", id);

@@ -11,7 +11,15 @@ export interface ProgramItemBillingLine {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  /** manual = regeleditor; purchase_invoice = werkblad Doorbelasten (niet los bewerkbaar). */
+  source?: "manual" | "purchase_invoice" | string;
+  purchase_invoice_line_id?: string | null;
+  purchase_invoice_id?: string | null;
 }
+
+/** Regels uit een inkoopregel wijzig je in het werkblad, niet in de editor. */
+export const isPurchaseSourcedLine = (line: Pick<ProgramItemBillingLine, "source">) =>
+  line.source === "purchase_invoice";
 
 export interface ProgramItemBillingLineInput {
   description: string;

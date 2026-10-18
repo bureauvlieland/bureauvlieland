@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PurchaseInvoiceInboxItem, InboxStatus } from "@/types/purchaseInvoiceInbox";
 import { reportError } from "@/lib/errorReporting";
-import { clearCustomerLinesForItems, linkedItemIds } from "@/lib/purchaseInvoiceCleanup";
+import { clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
 
 export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
   const queryClient = useQueryClient();
@@ -112,9 +112,11 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
           .from("partner_purchase_invoice_allocations")
           .select("item_id")
           .eq("invoice_id", invoiceId);
-        await clearCustomerLinesForItems(
-          linkedItemIds({ item_id: inv?.item_id ?? null, allocations: allocationRows ?? [] }),
-        );
+        await clearCustomerLinesForInvoice({
+          id: invoiceId,
+          item_id: inv?.item_id ?? null,
+          allocations: allocationRows ?? [],
+        });
 
         // Cascade cleanup children
         await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", invoiceId);
