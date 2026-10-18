@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .select(`
         *,
         partners!inner(id, name, email),
-        program_requests!inner(id, reference_number, customer_name, customer_company)
+        program_requests(id, reference_number, customer_name, customer_company)
       `)
       .eq("id", invoiceId)
       .single();
@@ -81,6 +81,32 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Invoice not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Een verzamelfactuur heeft geen project op de kop; de regels wel. Toon
+    // dan de projecten van de regels, zodat de boekhouding weet waar hij bij hoort.
+    let projectLabel = invoice.program_requests?.reference_number || "Geen referentie";
+    let customerLabel = invoice.program_requests?.customer_company || invoice.program_requests?.customer_name || "—";
+    if (!invoice.program_requests) {
+      const { data: lineProjects } = await supabase
+        .from("purchase_invoice_lines")
+        .select("request_id, program_requests(reference_number, customer_company, customer_name)")
+        .eq("invoice_id", invoiceId)
+        .not("request_id", "is", null);
+      const seen = new Map<string, { ref: string; customer: string }>();
+      for (const row of (lineProjects ?? []) as unknown as Array<{ request_id: string; program_requests: { reference_number: string | null; customer_company: string | null; customer_name: string | null } | null }>) {
+        if (!row.program_requests || seen.has(row.request_id)) continue;
+        seen.set(row.request_id, {
+          ref: row.program_requests.reference_number || "zonder referentie",
+          customer: row.program_requests.customer_company || row.program_requests.customer_name || "",
+        });
+      }
+      if (seen.size > 0) {
+        projectLabel = `Verzamel: ${[...seen.values()].map((p) => p.ref).join(", ")}`;
+        customerLabel = [...seen.values()].map((p) => p.customer).filter(Boolean).join(", ") || "—";
+      } else {
+        projectLabel = "Verzamelfactuur (nog niet verdeeld)";
+      }
     }
 
     // Get Snelstart email from settings
@@ -134,11 +160,11 @@ Deno.serve(async (req) => {
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #666;">Projectreferentie:</td>
-            <td style="padding: 8px 0;">${invoice.program_requests.reference_number || "Geen referentie"}</td>
+            <td style="padding: 8px 0;">${projectLabel}</td>
           </tr>
           <tr>
             <td style="padding: 8px 0; color: #666;">Klant:</td>
-            <td style="padding: 8px 0;">${invoice.program_requests.customer_company || invoice.program_requests.customer_name}</td>
+            <td style="padding: 8px 0;">${customerLabel}</td>
           </tr>
           ${invoice.description ? `
           <tr>

@@ -48,8 +48,10 @@ import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/
 import { InvoiceConsistencyPanel } from "@/components/admin/purchase-invoices/InvoiceConsistencyPanel";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
-import { Plus, Link2, Landmark } from "lucide-react";
+import { Plus, Link2, Landmark, Split } from "lucide-react";
 import { LinkPurchaseInvoiceDialog } from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
+import { DistributeLinesDialog } from "@/components/admin/purchase-invoices/DistributeLinesDialog";
+import { Pill } from "@/components/system";
 
 import {
   AlertDialog,
@@ -81,6 +83,7 @@ export default function AdminPurchaseInvoices() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [linkTargetInvoice, setLinkTargetInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
+  const [distributeInvoice, setDistributeInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
 
 
   const { invoices, isLoading, stats, markAsPaid, markAsForwarded, deleteInvoice, getDownloadUrl } = usePurchaseInvoices({
@@ -479,15 +482,35 @@ export default function AdminPurchaseInvoices() {
                       </TableCell>
                       <TableCell>{invoice.partner?.name}</TableCell>
                       <TableCell>
-                        <Link
-                          to={`/admin/projecten/${invoice.request_id}`}
-                          className="text-primary hover:underline"
-                        >
-                          {invoice.program_request?.reference_number || "Geen ref"}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          {invoice.program_request?.customer_company || invoice.program_request?.customer_name}
-                        </div>
+                        {invoice.request_id ? (
+                          <>
+                            <Link
+                              to={`/admin/projecten/${invoice.request_id}`}
+                              className="text-primary hover:underline"
+                            >
+                              {invoice.program_request?.reference_number || "Geen ref"}
+                            </Link>
+                            <div className="text-xs text-muted-foreground">
+                              {invoice.program_request?.customer_company || invoice.program_request?.customer_name}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <Pill tone="info">Verzamelfactuur</Pill>
+                            <div className="text-xs text-muted-foreground">
+                              {(invoice.line_projects ?? []).length > 0
+                                ? (invoice.line_projects ?? []).map((p, idx) => (
+                                    <span key={p.id}>
+                                      {idx > 0 && ", "}
+                                      <Link to={`/admin/projecten/${p.id}`} className="text-primary hover:underline">
+                                        {p.reference_number || "Geen ref"}
+                                      </Link>
+                                    </span>
+                                  ))
+                                : "nog niet verdeeld"}
+                            </div>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">
                         {(invoice.description || "").replace(/^\[via e-mail\]\s*/, "") || invoice.program_request_item?.block_name || "-"}
@@ -519,6 +542,14 @@ export default function AdminPurchaseInvoices() {
                       <TableCell>{getStatusBadge(invoice)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDistributeInvoice(invoice)}
+                            title="Regels verdelen over projecten (verzamelfactuur)"
+                          >
+                            <Split className="h-4 w-4" />
+                          </Button>
                           {!invoice.item_id && !invoice.accommodation_quote && !(invoice.allocations?.length) && (
                             <Button
                               variant="ghost"
@@ -635,6 +666,8 @@ export default function AdminPurchaseInvoices() {
       />
 
 
+
+      <DistributeLinesDialog invoice={distributeInvoice} onClose={() => setDistributeInvoice(null)} />
 
       {/* Single delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

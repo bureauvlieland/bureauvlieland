@@ -6,7 +6,10 @@ export type PurchaseInvoiceStatus = 'pending' | 'pending_email_match' | 'forward
 
 export interface PurchaseInvoice {
   id: string;
-  request_id: string;
+  /** NULL bij een verzamelfactuur: de regels dragen dan elk hun eigen project. */
+  request_id: string | null;
+  /** Eén factuur voor meerdere projecten (Doeksen, Fortuna); de regels hebben elk een project. */
+  is_collective?: boolean;
   item_id: string | null;
   partner_id: string;
   invoice_number: string;
@@ -78,6 +81,8 @@ export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
     batch_reference: string;
     requested_execution_date: string;
   } | null;
+  /** Projecten van de regels (verzamelfactuur): referentie per project. */
+  line_projects?: Array<{ id: string; reference_number: string | null }>;
 }
 
 export interface PurchaseInvoiceLine {

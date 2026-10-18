@@ -16,6 +16,7 @@ import {
   exclVatFromIncl,
   firstSelectedDate,
   daysSince,
+  splitCollectiveInvoices,
   type ReconInvoiceInput,
   type ReconItemInput,
 } from "../commissionReconciliation";
@@ -934,5 +935,47 @@ describe("werkblad Doorbelasten: kostenposten en niet-doorbelaste regels", () =>
     });
     expect(rows).toHaveLength(1);
     expect(rows[0].itemId).toBe("diner");
+  });
+});
+
+describe("verzamelfacturen: regels dragen het project", () => {
+  it("splitst een kop zonder project in één virtuele factuur per project van de regels", () => {
+    const [a, b] = splitCollectiveInvoices(
+      [invoice({ request_id: null, amount_excl_vat: 1000 })],
+      [
+        { invoice_id: "inv-1", request_id: "req-1", item_id: "boot-1", charge_status: "charged", amount_excl_vat: 600 },
+        { invoice_id: "inv-1", request_id: "req-2", item_id: null, charge_status: "open", amount_excl_vat: 300 },
+        { invoice_id: "inv-1", request_id: null, item_id: null, charge_status: "skipped", amount_excl_vat: 100 },
+      ],
+    );
+    expect(a.id).toBe("inv-1::req-1");
+    expect(a.request_id).toBe("req-1");
+    expect(a.amount_excl_vat).toBe(600);
+    expect(a.allocation_amounts).toEqual({ "boot-1": 600 });
+    expect(b.id).toBe("inv-1::req-2");
+    expect(b.amount_excl_vat).toBe(300);
+    expect(b.allocation_amounts).toBeNull();
+  });
+
+  it("laat een factuur met project en een verzamelfactuur zonder regels met rust", () => {
+    const normal = invoice();
+    const empty = invoice({ id: "inv-2", request_id: null });
+    expect(splitCollectiveInvoices([normal, empty], [])).toEqual([normal, empty]);
+  });
+
+  it("geeft elk project een eigen losse-factuurregel in de werklijst", () => {
+    const invoices = splitCollectiveInvoices(
+      [invoice({ request_id: null, partner_id: "zuiver", amount_excl_vat: 900 })],
+      [
+        { invoice_id: "inv-1", request_id: "req-1", item_id: null, charge_status: "open", amount_excl_vat: 500 },
+        { invoice_id: "inv-1", request_id: "req-2", item_id: null, charge_status: "open", amount_excl_vat: 400 },
+      ],
+    );
+    const rows = buildReconciliationRows({ items: [], invoices, projects, partners });
+    expect(rows.map((r) => [r.projectId, r.purchaseExclVat])).toEqual([
+      ["req-1", 500],
+      ["req-2", 400],
+    ]);
+    expect(rows[0].commissionAtRisk).toBeCloseTo(75, 6);
   });
 });

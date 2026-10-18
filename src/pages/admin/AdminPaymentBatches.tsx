@@ -161,7 +161,7 @@ export default function AdminPaymentBatches() {
         .select(`
           id, invoice_number, invoice_date, amount_incl_vat, description, status, payment_batch_id, request_id,
           partners!inner(id, name, iban, pays_by_direct_debit),
-          program_requests!inner(reference_number)
+          program_requests(reference_number)
         `)
         .eq("status", "forwarded")
         .eq("partners.pays_by_direct_debit", false)
@@ -411,7 +411,7 @@ export default function AdminPaymentBatches() {
                               )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {c.program_requests?.reference_number || "-"}
+                              {c.program_requests?.reference_number || (c.request_id ? "-" : "verzamel")}
                             </TableCell>
                             <TableCell className="text-right font-mono">
                               €{Number(c.amount_incl_vat).toFixed(2)}

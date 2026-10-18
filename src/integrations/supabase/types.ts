@@ -4368,14 +4368,19 @@ export type Database = {
         Row: {
           amount_excl_vat: number
           amount_incl_vat: number
+          booking_reference: string | null
           charge_status: string
           charged_at: string | null
           created_at: string
+          departure_date: string | null
           description: string
           id: string
           invoice_id: string
           item_id: string | null
+          lodging_quote_id: string | null
+          lodging_target: string | null
           quantity: number
+          request_id: string | null
           skip_reason: string | null
           sort_order: number
           unit_price: number
@@ -4385,14 +4390,19 @@ export type Database = {
         Insert: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          booking_reference?: string | null
           charge_status?: string
           charged_at?: string | null
           created_at?: string
+          departure_date?: string | null
           description: string
           id?: string
           invoice_id: string
           item_id?: string | null
+          lodging_quote_id?: string | null
+          lodging_target?: string | null
           quantity?: number
+          request_id?: string | null
           skip_reason?: string | null
           sort_order?: number
           unit_price?: number
@@ -4402,14 +4412,19 @@ export type Database = {
         Update: {
           amount_excl_vat?: number
           amount_incl_vat?: number
+          booking_reference?: string | null
           charge_status?: string
           charged_at?: string | null
           created_at?: string
+          departure_date?: string | null
           description?: string
           id?: string
           invoice_id?: string
           item_id?: string | null
+          lodging_quote_id?: string | null
+          lodging_target?: string | null
           quantity?: number
+          request_id?: string | null
           skip_reason?: string | null
           sort_order?: number
           unit_price?: number
@@ -4429,6 +4444,20 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_lodging_quote_id_fkey"
+            columns: ["lodging_quote_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -5252,6 +5281,10 @@ export type Database = {
     Functions: {
       apply_purchase_line_charges: {
         Args: { p_request_id: string; p_decisions: Json }
+        Returns: Json
+      }
+      sync_collective_invoice_header: {
+        Args: { p_invoice_id: string }
         Returns: Json
       }
       append_customer_program_history: {

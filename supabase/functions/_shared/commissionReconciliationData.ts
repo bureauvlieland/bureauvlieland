@@ -24,6 +24,8 @@ import {
   type ReconPartnerInput,
   type ReconProjectInput,
   type ReconSettings,
+  splitCollectiveInvoices,
+  type ReconInvoiceLineInput,
 } from "./commissionReconciliation.ts";
 
 /** Statussen waarbij het onderdeel daadwerkelijk verkocht is en dus commissie hoort op te leveren. */
@@ -205,6 +207,20 @@ export async function loadReconciliationInputs(
     }
   }
 
+  // ── Verzamelfacturen: regels dragen het project ──────────────────────────
+  const collectiveIds = rawInvoices.filter((i) => !i.request_id).map((i) => i.id);
+  const collectiveLines: ReconInvoiceLineInput[] = [];
+  if (collectiveIds.length) {
+    const { data: lineRows, error: lineError } = await client
+      .from("purchase_invoice_lines")
+      .select("invoice_id, request_id, item_id, charge_status, amount_excl_vat")
+      .in("invoice_id", collectiveIds);
+    if (lineError) {
+      throw new Error(`purchase_invoice_lines lookup failed: ${lineError.message}`);
+    }
+    for (const l of lineRows ?? []) collectiveLines.push(l as ReconInvoiceLineInput);
+  }
+
   // ── Onderdelen met een inkoopfactuur maar zonder verkochte status ────────
   // Een gekoppelde inkoopfactuur bewijst dat het werk geleverd is, ook als het
   // onderdeel nooit op "bevestigd" is gezet. Zonder deze stap verdwijnen die
@@ -306,6 +322,7 @@ export async function loadReconciliationInputs(
       [
         ...rawItems.map((i) => i.request_id),
         ...rawInvoices.map((i) => i.request_id),
+        ...collectiveLines.map((l) => l.request_id),
       ].filter(Boolean),
     ),
   ];
@@ -452,7 +469,7 @@ export async function loadReconciliationInputs(
 
   const allItems = [...items, ...accommodationItems];
 
-  const invoices: ReconInvoiceInput[] = rawInvoices
+  const baseInvoices: ReconInvoiceInput[] = rawInvoices
     .filter((i) => !i.request_id || !skipRequestIds.has(i.request_id))
     .map((i) => ({
       id: i.id,
@@ -473,6 +490,8 @@ export async function loadReconciliationInputs(
       allocated_item_ids: allocMap.get(i.id) ?? [],
       allocation_amounts: allocAmountMap.get(i.id) ?? null,
     }));
+  const invoices: ReconInvoiceInput[] = splitCollectiveInvoices(baseInvoices, collectiveLines)
+    .filter((i) => !i.request_id || !skipRequestIds.has(i.request_id));
 
   const linkedInvoiceKeys = new Set<string>();
   for (const item of allItems) {

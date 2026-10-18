@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
         id, invoice_number, invoice_date, amount_incl_vat, description, payment_batch_id, status,
         refund_pending_at, amount_mismatch_reason, pdf_total_incl_vat, request_id,
         partners!inner(id, name, iban, bic, pays_by_direct_debit),
-        program_requests!inner(reference_number)
+        program_requests(reference_number)
       `)
       .in("id", invoiceIds);
     if (invErr || !invoices) {
@@ -254,7 +254,9 @@ Deno.serve(async (req) => {
       const amount = Number(inv.amount_incl_vat).toFixed(2);
       const endToEnd = sanitizeRef(`${batchRef}-${idx + 1}-${inv.invoice_number}`.replace(/[^A-Za-z0-9-]/g, ""));
       const cdtrName = sanitizeName(inv.partners.name);
-      const projectRef = inv.program_requests?.reference_number || "";
+      // Een verzamelfactuur heeft geen project op de kop: één betaling, één
+      // omschrijving "verzamel"; de projecten staan op de regels.
+      const projectRef = inv.program_requests?.reference_number || (inv.request_id ? "" : "verzamel");
       const remit = sanitizeRemittance(`Factuur ${inv.invoice_number}${projectRef ? " - " + projectRef : ""}`);
       const bicBlock = partnerBic
         ? `        <CdtrAgt><FinInstnId><BIC>${xmlEscape(partnerBic)}</BIC></FinInstnId></CdtrAgt>\n`

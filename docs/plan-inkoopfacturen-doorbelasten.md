@@ -135,9 +135,45 @@ geeft het kostenpostdeel van een gemengd verdeelde factuur een eigen
 restregel "Inkoopfactuur … (overige kosten)", zodat die commissie niet
 stil verdwijnt (`commissionReconciliation.ts`, met tests).
 
-Niet in deze ronde (fase 2b): logies-offerte als bestemming,
-verzamelfacturen over meerdere projecten, en de `left join` in Snelstart
-en batch.
+**Fase 2b (18 oktober 2026), verzamelfacturen en logies.** Eén factuur is
+één kop; de regels dragen het project (`purchase_invoice_lines.request_id`,
+migratie `20261018150000`; bestaande regels krijgen het project van de kop,
+nieuwe regels erven het via een trigger). Het werkblad van een project toont
+alle regels met dat project, ook die van een verzamelfactuur (kop zonder
+project), met de pill "Verzamelfactuur" en het deel voor dit project. Op de
+inkoopfacturenpagina staat per factuur "Regels verdelen over projecten"
+(`DistributeLinesDialog`): per regel een project, met suggesties uit ons
+referentienummer of de klantnaam in de regeltekst en, bij overtochten, de
+boekingsreferentie op een onderdeel; opslaan verplaatst de regels (bestemming
+en klantregels van een verplaatste regel gaan weg) en laat de kop de regels
+volgen (`sync_collective_invoice_header`: één project op de kop, anders
+`request_id` NULL en `is_collective`). In het werkblad kan een regel ook
+"Hoort bij een ander project" krijgen. De Doeksen/Isla-route
+(`CollectiveInvoiceSheet`, `finalize-collective-invoice`) schrijft nu per
+boeking een orderregel met project, boekingsreferentie en afvaartdatum
+(gematchte boekingen met het onderdeel al als bestemming, interne boekingen
+als niet doorbelast); het maken van een kostenpost vanuit de sheet is weg,
+dat doet het werkblad. `partner_purchase_invoice_ticket_matches` wordt nog
+gevuld maar niet meer gelezen (opruimen in fase 4).
+
+Snelstart (`forward-purchase-invoice`), de betaalbatch
+(`generate-payment-batch`), de batchpagina en de facturenlijst hebben een
+`left join` op het project: een verzamelfactuur is één betaling met
+omschrijving "Factuur … - verzamel" en in de Snelstart-mail "Verzamel: BV-…,
+BV-…" uit de regels; de facturenlijst toont de projecten van de regels. De
+commissie-reconciliatie splitst een kop zonder project in één virtuele
+factuur per project van de regels (`splitCollectiveInvoices`, met tests),
+met het verdeelde bedrag als grondslag en de verdeling uit de regels.
+
+Logies-offerte als bestemming: per regel "Kamer: <offerte>" of "Extra bij:
+<offerte>" (offertes van de logiesaanvragen aan dit programma, die van
+dezelfde partner eerst). Bevestigen roept per offerte
+`apply-purchase-invoice-to-lodging` aan (kamerregels vervangen de
+kamerprijs met snapshot, extra's worden extra's met de categorie uit de
+omschrijving via `lodgingExtraCategory`) en zet `lodging_quote_id` op de
+regel. Zo'n regel is daarna alleen via de offerte zelf terug te draaien,
+niet via "Wijzig" in het werkblad. De oude `LodgingAllocationBlock` en de
+"Koppelen"-dialoog blijven staan tot fase 4.
 
 ## 1. Hoe het nu werkt
 
