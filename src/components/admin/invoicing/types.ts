@@ -1,6 +1,9 @@
+import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
+
 export interface AccommodationExtraForInvoicing {
   id: string;
   quote_id: string;
+  name?: string | null;
   quantity: number;
   unit_price: number;
   pricing_type: string | null;
@@ -40,6 +43,10 @@ export interface ProgramRequestWithItems {
   completion_override_outstanding?: number | null;
   terms_accepted_at: string | null;
   created_at: string;
+  fee_snapshot?: unknown;
+  invoice_spec_total_incl_vat?: number | null;
+  /** Som van de aangevinkte wijzigingsrondes na klantakkoord. */
+  revision_fees_total?: number;
   items: {
     id: string;
     block_id: string | null;
@@ -52,11 +59,13 @@ export interface ProgramRequestWithItems {
     admin_price_override?: number | null;
     price_type?: string | null;
     override_people?: number | null;
-    use_actual_costs?: boolean | null;
+    block_category?: string | null;
+    vat_rate?: number | null;
   }[];
   invoices: InvoicingInvoice[];
   selected_accommodation_base_total?: number | null;
   selected_accommodation_vat_rate?: number | null;
+  selected_accommodation_name?: string | null;
   selected_accommodation_extras?: AccommodationExtraForInvoicing[];
 }
 
@@ -74,8 +83,9 @@ export interface InvoiceTotals {
   outstanding: number;
 }
 
-/** Project plus eenmaal berekende totalen, zodat kaarten niet zelf rekenen. */
+/** Project plus eenmaal berekende specificatie en totalen, zodat kaarten niet zelf rekenen. */
 export interface InvoicingRow {
   request: ProgramRequestWithItems;
   totals: InvoiceTotals;
+  spec: ProjectInvoiceSpec;
 }

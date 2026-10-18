@@ -5,14 +5,13 @@ import { cn } from "@/lib/utils";
 import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { calculateExclVat, calculateVatAmount } from "@/lib/appSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
 import { isFeeExcluded } from "@/lib/excludedFees";
-import { getDisplayUnitPrice, getDisplayLineTotal, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
-import { computeAutomaticFees } from "@/lib/customerFeeTotals";
+import { getDisplayUnitPrice, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
+import { buildProjectInvoiceSpec, type SpecItemInput } from "@/lib/projectInvoiceSpec";
 import type { FeeStructureSet } from "@/types/pricing";
 
 interface PriceSummaryCardProps {
@@ -41,11 +40,6 @@ interface PriceSummaryCardProps {
   revisionFeesTotal?: number;
 }
 
-const calcVatBreakdown = (amountInclVat: number, vatRate: number = 21) => ({
-  exclVat: calculateExclVat(amountInclVat, vatRate),
-  vatAmount: calculateVatAmount(amountInclVat, vatRate),
-});
-
 export const PriceSummaryCard = ({
   items,
   numberOfPeople,
@@ -65,7 +59,7 @@ export const PriceSummaryCard = ({
   revisionFeesTotal = 0,
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
-  const { getCoordinationFee, getVatRate, settings: appSettings } = useAppSettings();
+  const { settings: appSettings } = useAppSettings();
 
   // Prefer server-resolved data; only call the hook when not provided (admin/back-office contexts).
   const itemIds = useMemo(() => items.map(i => i.id), [items]);
@@ -101,196 +95,122 @@ export const PriceSummaryCard = ({
   }, [items, blockVatRatesProp]);
 
   const effectiveVatRates = blockVatRatesProp ?? vatRateMap;
-  const getItemVatRate = (item: ProgramRequestItem): number => {
-    if (item.block_id && effectiveVatRates[item.block_id] !== undefined) {
-      return effectiveVatRates[item.block_id];
-    }
-    return 21;
-  };
-
 
 
   const formatPrice = (amount: number) =>
     amount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  // Dezelfde berekening als het beheer (projectInvoiceSpec); hier alleen
+  // vertaald naar de regels van deze kaart. Logies-extra's blijven los.
   const summary = useMemo(() => {
+    const spec = buildProjectInvoiceSpec({
+      request: {
+        number_of_people: numberOfPeople,
+        selected_dates: arrivalDate ? [arrivalDate] : null,
+        invoicing_mode: invoicingMode,
+        excluded_fees: excludedFees,
+        created_at: requestDate,
+      },
+      numberOfDays,
+      items: items as unknown as SpecItemInput[],
+      linesByItem,
+      blockVatRates: effectiveVatRates,
+      accommodation: selectedAccommodationQuote
+        ? {
+            id: selectedAccommodationQuote.id,
+            accommodation_name: selectedAccommodationQuote.accommodation_name,
+            partner_name: selectedAccommodationQuote.partner?.name ?? null,
+            price_total: Number(selectedAccommodationQuote.price_total) || 0,
+            vat_rate: selectedAccommodationQuote.vat_rate,
+            extras: accommodationExtras,
+          }
+        : null,
+      settings: appSettings,
+      feeStructure,
+      revisionFeesTotal,
+      bundleExtras: false,
+    });
+
+    const lineByItem = new Map(spec.lines.filter((l) => l.itemId).map((l) => [l.itemId!, l]));
     const relevantItems = items.filter(
       (item) => item.block_type !== "self_arranged" && item.status !== "cancelled"
     );
-
     const selfArrangedItems = items.filter(
       (item) => item.block_type === "self_arranged" && item.status !== "cancelled"
     );
 
-    // Build order lines with unified pricing
-    const orderLines = relevantItems.map(item => {
+    const orderLines = relevantItems.map((item) => {
+      const line = lineByItem.get(item.id);
       const itemLines = linesByItem[item.id];
-      const hasBillingLines = Array.isArray(itemLines) && itemLines.length > 0;
-
-      // If admin has defined definitive billing lines (split-VAT, extras), use their sum.
-      if (hasBillingLines) {
-        const linesTotal = itemLines.reduce((s, l) => s + Number(l.amount_incl_vat || 0), 0);
+      if (line && line.subLines && line.subLines.length > 0) {
         return {
           item,
           hasQuotedPrice: true,
           isPreliminary: false,
           isDefinitive: true,
-          effectivePrice: linesTotal,
+          effectivePrice: line.amountInclVat as number | null,
           unitPrice: null as number | null,
           isPerPerson: false,
           peopleCount: 1,
           isPerDay: false,
           dayCount: 1,
-          billingLines: itemLines,
+          billingLines: itemLines as typeof itemLines | undefined,
         };
       }
-
-      // "(voorlopig)" = er is nog géén door de partner bevestigde groepsprijs.
-      // Open admin-prijswijzigingen worden apart gesignaleerd via de "Prijs gewijzigd"-
-      // badge op het item zelf — niet via dit label.
-      const hasQuotedPrice = item.quoted_price != null;
-      const isPreliminary = item.quoted_price == null && item.admin_price_override != null;
-
       const effectivePeople = getEffectivePeople(item, numberOfPeople);
       const ppMultiplier = isPerPersonItem(item) ? effectivePeople : 1;
-      const dayMultiplier = isPerDayItem(item) ? numberOfDays : 1;
-
-      const effectivePrice = getDisplayLineTotal(item, numberOfPeople, numberOfDays);
-      const unitPrice = getDisplayUnitPrice(item, numberOfPeople);
-
       const isPerDay = isPerDayItem(item);
       return {
         item,
-        hasQuotedPrice,
-        isPreliminary,
+        hasQuotedPrice: item.quoted_price != null,
+        isPreliminary: Boolean(line?.isPreliminary),
         isDefinitive: false,
-        effectivePrice,
-        unitPrice,
+        effectivePrice: line ? (line.amountInclVat as number | null) : null,
+        unitPrice: line ? getDisplayUnitPrice(item, numberOfPeople) : null,
         isPerPerson: ppMultiplier > 1,
         peopleCount: ppMultiplier,
         isPerDay,
-        dayCount: dayMultiplier,
+        dayCount: isPerDay ? numberOfDays : 1,
         billingLines: undefined as typeof itemLines | undefined,
       };
     });
 
-    const pricedLines = orderLines.filter(l => l.effectivePrice !== null);
-    const pendingLines = orderLines.filter(l => l.effectivePrice === null);
-
-    // Automatische posten — respecteert per-project uitsluitingen (excluded_fees).
-    // Grondslag voor de opslag centrale facturatie: alle doorbelaste
-    // partnerkosten incl. logies en logies-extra's.
-    // Factureert de accommodatie rechtstreeks aan de klant, dan staan kamer en
-    // extra's niet op onze factuur en tellen ze nergens mee.
-    const accommodationBilledDirectly = isFeeExcluded(excludedFees, "accommodation");
+    const accommodationBilledDirectly = spec.accommodationBilledDirectly;
     const billableAccommodationExtras = accommodationBilledDirectly ? [] : accommodationExtras;
-    const partnerCostsTotal =
-      pricedLines.reduce((s, l) => s + (l.effectivePrice ?? 0), 0) +
-      (accommodationBilledDirectly ? 0 : selectedAccommodationQuote?.price_total || 0) +
-      billableAccommodationExtras.reduce((s, e) => s + calculateExtraTotal(e), 0);
+    const extrasWithTotals = billableAccommodationExtras.map((extra) => ({ extra, total: calculateExtraTotal(extra) }));
+    const lodgingLine = spec.lines.find((l) => l.kind === "lodging");
 
-    const fees = computeAutomaticFees({
-      numberOfPeople,
-      numberOfDays,
-      isBureauCentral,
-      coordinationFeeForPeople: getCoordinationFee(numberOfPeople),
-      settings: {
-        tourist_tax_pp_per_day: appSettings.tourist_tax_pp_per_day,
-        nature_contribution_pp: appSettings.nature_contribution_pp,
-        bureau_central_surcharge_pp: appSettings.bureau_central_surcharge_pp,
-      },
-      excludedFees,
-      feeStructure,
-      partnerCostsTotal,
-      requestDate,
-      arrivalDate,
-      revisionFeesTotal,
-    });
-    const { touristTax, natureContribution, coordinationFee, centralSurcharge, revisionFees } = fees;
-    const standardVatRate = getVatRate("standard");
-
-    // Accommodation
-    const accommodationTotal = accommodationBilledDirectly ? 0 : selectedAccommodationQuote?.price_total || 0;
-    // Keep accommodation VAT aligned with admin FinancialOverviewCard and lodging invoicing flow.
-    const accommodationVatRate = 9;
-
-    // Accommodation extras (breakfast, lunch, diner, etc.)
-    const extrasWithTotals = billableAccommodationExtras.map((extra) => {
-      const total = calculateExtraTotal(extra);
-      return { extra, total };
-    });
-    const accommodationExtrasTotal = extrasWithTotals.reduce((s, e) => s + e.total, 0);
-
-    // VAT breakdown — includes ALL priced items (confirmed + preliminary)
     const allVatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
-    const addVat = (amount: number, rate: number) => {
-      const bd = calcVatBreakdown(amount, rate);
-      if (!allVatLines[rate]) allVatLines[rate] = { exclVat: 0, vatAmount: 0 };
-      allVatLines[rate].exclVat += bd.exclVat;
-      allVatLines[rate].vatAmount += bd.vatAmount;
-    };
-    const addZeroVat = (amount: number) => {
-      if (!allVatLines[0]) allVatLines[0] = { exclVat: 0, vatAmount: 0 };
-      allVatLines[0].exclVat += amount;
-    };
-
-    // Add all priced items to VAT breakdown — billing lines are split per VAT rate
-    orderLines.forEach(l => {
-      if (l.effectivePrice === null || l.effectivePrice === undefined) return;
-      if (l.billingLines && l.billingLines.length > 0) {
-        l.billingLines.forEach(bl => {
-          const rate = Number(bl.vat_rate ?? 21);
-          if (!allVatLines[rate]) allVatLines[rate] = { exclVat: 0, vatAmount: 0 };
-          allVatLines[rate].exclVat += Number(bl.amount_excl_vat || 0);
-          allVatLines[rate].vatAmount += Number(bl.vat_amount || 0);
-        });
-      } else {
-        addVat(l.effectivePrice, getItemVatRate(l.item));
-      }
-    });
-    if (coordinationFee + centralSurcharge + revisionFees > 0) addVat(coordinationFee + centralSurcharge + revisionFees, standardVatRate);
-    if (accommodationTotal > 0) addVat(accommodationTotal, accommodationVatRate);
-    // Each extra has its own VAT rate (often 9% for F&B, 21% for services)
-    extrasWithTotals.forEach(({ extra, total }) => {
-      if (total > 0) addVat(total, Number(extra.vat_rate ?? 9));
-    });
-    if (touristTax + natureContribution > 0) addZeroVat(touristTax + natureContribution);
-
-    const totalExclVat = Object.values(allVatLines).reduce((s, v) => s + v.exclVat, 0);
-    const totalVatAmount = Object.values(allVatLines).reduce((s, v) => s + v.vatAmount, 0);
-    const itemsTotal = pricedLines.reduce((s, l) => s + (l.effectivePrice || 0), 0);
-    const grandTotalInclVat = itemsTotal + coordinationFee + centralSurcharge + revisionFees + accommodationTotal + accommodationExtrasTotal + touristTax + natureContribution;
-    const hasPreliminaryItems = orderLines.some(l => l.isPreliminary);
+    for (const g of spec.vatGroups) allVatLines[g.rate] = { exclVat: g.exclVat, vatAmount: g.vatAmount };
 
     return {
       orderLines,
       selfArrangedItems,
-      pendingCount: pendingLines.length,
-      hasPreliminaryItems,
-      coordinationFee,
-      centralSurcharge,
-      revisionFees,
-      standardVatRate,
-      touristTax,
-      natureContribution,
-      showTouristTax: fees.showTouristTax,
-      showNatureContribution: fees.showNatureContribution,
-      showCoordinationFee: fees.showCoordinationFee,
-      accommodationTotal,
-      accommodationVatRate,
+      pendingCount: spec.unpricedItems.length,
+      hasPreliminaryItems: orderLines.some((l) => l.isPreliminary),
+      coordinationFee: spec.totals.coordinationFee,
+      centralSurcharge: spec.totals.centralSurcharge,
+      revisionFees: spec.totals.revisionFees,
+      touristTax: spec.totals.touristTax,
+      natureContribution: spec.totals.natureContribution,
+      showTouristTax: !isFeeExcluded(excludedFees, "tourist_tax"),
+      showNatureContribution: !isFeeExcluded(excludedFees, "nature_contribution"),
+      showCoordinationFee: !isFeeExcluded(excludedFees, "coordination_fee"),
+      accommodationTotal: spec.totals.lodging,
+      accommodationVatRate: lodgingLine?.vatRate ?? Number(appSettings.accommodation_vat_rate ?? 9),
       accommodationName: selectedAccommodationQuote?.accommodation_name || "",
       accommodationPartnerName: selectedAccommodationQuote?.partner?.name || "",
       hasAccommodation: !!selectedAccommodationQuote,
       accommodationBilledDirectly,
       extrasWithTotals,
-      accommodationExtrasTotal,
+      accommodationExtrasTotal: spec.totals.lodgingExtras,
       allVatLines,
-      totalExclVat,
-      totalVatAmount,
-      grandTotalInclVat,
-      hasPrices: pricedLines.length > 0 || !!selectedAccommodationQuote,
+      totalExclVat: spec.totals.exclVat,
+      totalVatAmount: spec.totals.vat,
+      grandTotalInclVat: spec.totals.inclVat,
+      hasPrices: orderLines.some((l) => l.effectivePrice !== null) || !!selectedAccommodationQuote,
     };
-  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, getCoordinationFee, getVatRate, vatRateMap, linesByItem, appSettings.bureau_central_surcharge_pp, appSettings.tourist_tax_pp_per_day, appSettings.nature_contribution_pp, isBureauCentral, excludedFees, feeStructure, requestDate, arrivalDate, revisionFeesTotal]);
+  }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, effectiveVatRates, linesByItem, appSettings, invoicingMode, excludedFees, feeStructure, requestDate, arrivalDate, revisionFeesTotal]);
 
   // Don't show if there are no prices yet and no items at all
   if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {

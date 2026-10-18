@@ -39,6 +39,8 @@ import { toast } from "sonner";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
+import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
+import { chooseStoredLines } from "@/lib/bureauInvoiceLines";
 
 const formSchema = z.object({
   invoice_number: z.string().min(1, "Factuurnummer is verplicht"),
@@ -56,11 +58,8 @@ interface RegisterBureauInvoiceDialogProps {
   onClose: () => void;
   requestId: string;
   suggestedAmount?: number;
-  /** Exacte excl./BTW-uitsplitsing van het projecttotaal (uit het Financieel
-   *  Overzicht). Indien meegegeven wordt de prefill hierop gebaseerd in plaats
-   *  van een vlakke 21%-terugrekening. */
-  suggestedExclVat?: number;
-  suggestedVatAmount?: number;
+  /** Btw-groepen van het voorgestelde bedrag (het openstaande deel van het
+   *  project, pro rata uit `scaleVatGroups`). De invulvelden volgen hun som. */
   suggestedVatGroups?: { rate: number; exclVat: number; vatAmount: number }[];
   /** Bedrag dat nog open staat op het project (projecttotaal − reeds gefactureerd). */
   outstandingAmount?: number;
@@ -68,6 +67,8 @@ interface RegisterBureauInvoiceDialogProps {
   projectTotal?: number;
   /** Reeds gefactureerd bedrag incl. BTW. */
   alreadyInvoiced?: number;
+  /** Specificatie van het project; dekt de factuur het hele project, dan worden haar regels bevroren bij de factuur. */
+  spec?: ProjectInvoiceSpec | null;
   onSuccess: () => void;
 }
 
@@ -76,16 +77,14 @@ export const RegisterBureauInvoiceDialog = ({
   onClose,
   requestId,
   suggestedAmount = 0,
-  suggestedExclVat,
-  suggestedVatAmount,
   suggestedVatGroups = [],
   outstandingAmount,
   projectTotal,
   alreadyInvoiced,
+  spec = null,
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [vatBreakdown, setVatBreakdown] = useState<{ rate: number; excl: number; vat: number }[]>([]);
   const [manualVatLines, setManualVatLines] = useState<{ rate: number; exclVat: number; vatAmount: number }[]>([]);
   const [overrideConfirmed, setOverrideConfirmed] = useState(false);
 
@@ -101,9 +100,7 @@ export const RegisterBureauInvoiceDialog = ({
     },
   });
 
-  // On open: prefill from the outstanding project total. Billing lines are only
-  // shown as an informational VAT breakdown (they often cover slechts een deel
-  // van het project, dus nooit de invulvelden ermee overschrijven).
+  // Bij openen: voorstel = het openstaande deel van het project.
   useEffect(() => {
     if (!isOpen || !requestId) return;
     form.setValue(
@@ -115,69 +112,13 @@ export const RegisterBureauInvoiceDialog = ({
         alreadyInvoicedInclVat: alreadyInvoiced,
       }),
     );
+    // Prefill: de btw-groepen van het openstaande bedrag; de invulvelden
+    // volgen hun som (effect hieronder). Zonder groepen: vlak 21 %.
     const initialVatLines = suggestedVatGroups.length > 0
       ? suggestedVatGroups.map((line) => ({ ...line }))
       : [{ rate: 21, exclVat: Math.round((suggestedAmount / 1.21) * 100) / 100, vatAmount: Math.round((suggestedAmount - suggestedAmount / 1.21) * 100) / 100 }];
     setManualVatLines(initialVatLines);
-    if (suggestedAmount > 0) {
-
-      const baseTotal = (suggestedExclVat ?? 0) + (suggestedVatAmount ?? 0);
-      if (suggestedExclVat != null && suggestedVatAmount != null && baseTotal > 0) {
-        // Exacte uitsplitsing uit het Financieel Overzicht (gemengd 9%/21%).
-        // Schaal proportioneel mee als er al deels gefactureerd is
-        // (openstaand < projecttotaal).
-        const factor = suggestedAmount / baseTotal;
-        const excl = Math.round(suggestedExclVat * factor * 100) / 100;
-        form.setValue("amount_excl_vat", excl);
-        form.setValue("vat_amount", Math.round((suggestedAmount - excl) * 100) / 100);
-      } else {
-        form.setValue("amount_excl_vat", Math.round((suggestedAmount / 1.21) * 100) / 100);
-        form.setValue("vat_amount", Math.round((suggestedAmount - suggestedAmount / 1.21) * 100) / 100);
-      }
-    }
-    (async () => {
-      const { data: items } = await supabase
-        .from("program_request_items")
-        .select("id")
-        .eq("request_id", requestId)
-        .in("status", ["confirmed", "accepted", "executed"]);
-      const itemIds = (items || []).map((i) => i.id);
-      if (itemIds.length === 0) {
-        setVatBreakdown([]);
-        return;
-      }
-      const { data: lines } = await supabase
-        .from("program_item_billing_lines")
-        .select("vat_rate, amount_excl_vat, vat_amount, amount_incl_vat")
-        .in("item_id", itemIds);
-      if (!lines || lines.length === 0) {
-        setVatBreakdown([]);
-        return;
-      }
-      // Group by VAT rate
-      const byRate: Record<number, { excl: number; vat: number }> = {};
-      let totalExcl = 0;
-      let totalVat = 0;
-      lines.forEach((l) => {
-        const r = Number(l.vat_rate);
-        if (!byRate[r]) byRate[r] = { excl: 0, vat: 0 };
-        byRate[r].excl += Number(l.amount_excl_vat);
-        byRate[r].vat += Number(l.vat_amount);
-        totalExcl += Number(l.amount_excl_vat);
-        totalVat += Number(l.vat_amount);
-      });
-      const breakdown = Object.entries(byRate)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([rate, v]) => ({ rate: Number(rate), excl: v.excl, vat: v.vat }));
-      setVatBreakdown(breakdown);
-      // Alleen invullen vanuit factuurregels als er géén projectvoorstel is
-      // (bv. losstaande registratie zonder berekend openstaand bedrag).
-      if (suggestedAmount <= 0) {
-        form.setValue("amount_excl_vat", Math.round(totalExcl * 100) / 100);
-        form.setValue("vat_amount", Math.round(totalVat * 100) / 100);
-      }
-    })();
-  }, [isOpen, requestId, suggestedAmount, suggestedExclVat, suggestedVatAmount, suggestedVatGroups, outstandingAmount, projectTotal, alreadyInvoiced, form]);
+  }, [isOpen, requestId, suggestedAmount, suggestedVatGroups, outstandingAmount, projectTotal, alreadyInvoiced, form]);
 
   useEffect(() => {
     const excl = Math.round(manualVatLines.reduce((sum, line) => sum + Number(line.exclVat || 0), 0) * 100) / 100;
@@ -210,19 +151,46 @@ export const RegisterBureauInvoiceDialog = ({
       const { data: session } = await supabase.auth.getSession();
 
       // Insert bureau invoice
-      const { error: invoiceError } = await supabase.from("bureau_invoices").insert({
-        request_id: requestId,
-        invoice_number: data.invoice_number,
-        invoice_date: format(data.invoice_date, "yyyy-MM-dd"),
-        amount_excl_vat: data.amount_excl_vat,
-        vat_amount: data.vat_amount,
-        vat_breakdown: manualVatLines,
-        invoice_type: data.invoice_type,
-        description: data.description || null,
-        created_by: session.session?.user.id,
-      });
+      const { data: inserted, error: invoiceError } = await supabase
+        .from("bureau_invoices")
+        .insert({
+          request_id: requestId,
+          invoice_number: data.invoice_number,
+          invoice_date: format(data.invoice_date, "yyyy-MM-dd"),
+          amount_excl_vat: data.amount_excl_vat,
+          vat_amount: data.vat_amount,
+          vat_breakdown: manualVatLines,
+          invoice_type: data.invoice_type,
+          description: data.description || null,
+          created_by: session.session?.user.id,
+        })
+        .select("id")
+        .single();
 
       if (invoiceError) throw invoiceError;
+
+      // Regels bevriezen: de hele specificatie als deze factuur het hele
+      // project dekt, anders een samenvatting per btw-tarief.
+      const storedLines = chooseStoredLines({
+        spec,
+        invoiceType: data.invoice_type,
+        invoiceNumber: data.invoice_number,
+        amountInclVat: totalInclVat,
+        alreadyInvoicedInclVat: alreadyInvoiced ?? 0,
+        vatGroups: manualVatLines.map((l) => ({
+          rate: Number(l.rate),
+          exclVat: Number(l.exclVat) || 0,
+          vatAmount: Number(l.vatAmount) || 0,
+          inclVat: (Number(l.exclVat) || 0) + (Number(l.vatAmount) || 0),
+        })),
+        subDescription: data.description || null,
+      });
+      if (inserted?.id && storedLines.length > 0) {
+        const { error: linesError } = await supabase
+          .from("bureau_invoice_lines")
+          .insert(storedLines.map((line) => ({ ...line, invoice_id: inserted.id })));
+        if (linesError) reportError(linesError, { where: "RegisterBureauInvoiceDialog: factuurregels opslaan" });
+      }
 
       // Add history entry
       await supabase.from("program_request_history").insert({
@@ -458,20 +426,6 @@ export const RegisterBureauInvoiceDialog = ({
                       <span>BTW {g.rate}%</span>
                       <span className="tabular-nums">
                         excl. €{g.exclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW €{g.vatAmount.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="border-t my-1" />
-                </>
-              )}
-              {vatBreakdown.length > 0 && (
-                <>
-                  <p className="text-xs text-muted-foreground font-medium">Ter info — werkelijke-kostenregels (alleen items met ingeboekte facturen):</p>
-                  {vatBreakdown.map((b) => (
-                    <div key={b.rate} className="flex justify-between text-muted-foreground">
-                      <span>BTW {b.rate}%</span>
-                      <span className="tabular-nums">
-                        excl. €{b.excl.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · BTW €{b.vat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   ))}

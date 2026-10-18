@@ -6,7 +6,7 @@
  * met de actieve structuur als fallback voor projecten zonder snapshot.
  *
  * Toeristenbelasting en natuurbijdrage vallen hier bewust buiten: die logica
- * blijft ongewijzigd in `customerFeeTotals` / `adminInvoicingTotals`.
+ * zit in `projectInvoiceSpec` (één berekening voor alle schermen).
  */
 import {
   DEFAULT_FEE_STRUCTURE,

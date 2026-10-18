@@ -77,7 +77,6 @@ export const useItemBillingLines = (itemId: string | null) => {
       .from("program_request_items")
       .update({
         final_billing_locked_at: hasAnyLines ? new Date().toISOString() : null,
-        use_actual_costs: hasAnyLines,
       })
       .eq("id", itemId);
     await fetchLines();

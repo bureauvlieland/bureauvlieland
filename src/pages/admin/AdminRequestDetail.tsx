@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -111,7 +111,7 @@ import {
 import { describeGroupSituation } from "@/types/programRequest";
 import { getItemSendPhase, getItemSendCounts } from "@/lib/projectWorkflow";
 
-import { FinancialOverviewCard, type InvoiceVatSuggestion } from "@/components/admin/FinancialOverviewCard";
+import { FinancialOverviewCard } from "@/components/admin/FinancialOverviewCard";
 import { AdminPostChargesSection } from "@/components/admin/AdminPostChargesSection";
 import { RegisterBureauInvoiceDialog } from "@/components/admin/RegisterBureauInvoiceDialog";
 
@@ -128,7 +128,8 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
-import { calculateProjectGrandTotal, calculateProjectOutstandingAmount } from "@/lib/projectFinancials";
+import { useProjectInvoiceSpec, useSyncInvoiceSpecTotal, type SpecRequestRow } from "@/hooks/useProjectInvoiceSpec";
+import { scaleVatGroups, type SpecAccommodationInput } from "@/lib/projectInvoiceSpec";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
@@ -143,7 +144,6 @@ import { deriveItemDisplayStatus } from "@/lib/itemStatus";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { MicroPill } from "@/components/shared/MicroPill";
 import { ItemEmailLogPopover } from "@/components/admin/ItemEmailLogPopover";
-import { useAppSettings } from "@/hooks/useAppSettings";
 // Bureau-managed item-check via gedeelde helper (provider_id ∈ BUREAU_PROVIDER_IDS).
 // Eén bron van waarheid samen met supabase/functions/_shared/bureau-item.ts.
 import { isBureauItem } from "@/lib/bureauItem";
@@ -170,7 +170,6 @@ import { NotifyDateChangeDialog } from "@/components/admin/NotifyDateChangeDialo
 import { NotifyHeadcountChangeDialog } from "@/components/admin/NotifyHeadcountChangeDialog";
 import { downloadAllEvents } from "@/lib/calendarExport";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
-import { calculateExtrasTotal } from "@/types/accommodationExtras";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, RefreshCw, CalendarIcon, AlertTriangle, Info, Eye, BellRing, MessageSquare, MessageCircle, Undo2, RotateCcw, Heart } from "lucide-react";
 import { WeddingReferralDialog } from "@/components/admin/WeddingReferralDialog";
@@ -376,7 +375,6 @@ const AdminRequestDetail = () => {
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-  const [invoiceVatSuggestion, setInvoiceVatSuggestion] = useState<InvoiceVatSuggestion | null>(null);
   
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [addCustomItemOpen, setAddCustomItemOpen] = useState(false);
@@ -554,13 +552,10 @@ const AdminRequestDetail = () => {
   const { invoices: purchaseInvoices } = usePurchaseInvoicesByRequest(id || "");
 
   // VAT rates per item (from building_blocks)
-  const { getItemVatRate } = useItemVatRates(items);
+  const { vatRateMap, getItemVatRate } = useItemVatRates(items);
 
   // Definitive billing lines per item (override quoted_price in financial overview)
-  const { linesByItem: billingLinesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
-
-  // App settings for coordination fee + surcharges
-  const { getCoordinationFee: calcCoordFee, settings: appSettings } = useAppSettings();
+  const { linesByItem: billingLinesByItem, loading: billingLinesLoading } = useItemBillingLinesBatch(items.map((i) => i.id));
 
   // Selected accommodation quote for this request
   const [selectedAccommodationQuote, setSelectedAccommodationQuote] = useState<{
@@ -649,49 +644,40 @@ const AdminRequestDetail = () => {
 
   const { data: accommodationExtras = [] } = useQuoteExtras(selectedAccommodationQuote?.id);
 
-  // Calculate bureau invoiced amount for profit summary (incl. coordination fee)
-  const numberOfPeople = request?.number_of_people ?? 20;
-  const coordinationFeeForProfit = calcCoordFee(numberOfPeople);
-
-  // Number of days from selected_dates
-  const numberOfDays = (() => {
-    const dates = (request?.selected_dates as string[]) || [];
-    return Math.max(dates.length, 1);
-  })();
-
-  // Extra cost lines matching customer portal
-  const touristTax = appSettings.tourist_tax_pp_per_day * numberOfPeople * numberOfDays;
-  const natureContribution = appSettings.nature_contribution_pp * numberOfPeople;
-  const centralSurcharge = request?.invoicing_mode === "bureau_central"
-    ? appSettings.bureau_central_surcharge_pp * numberOfPeople
-    : 0;
-  // Per-project uitgesloten automatische kostenposten (excluded_fees) tellen
-  // niet mee in totaal/openstaand — zelfde gedrag als FinancialOverviewCard.
-  const excludedFeesList: string[] = ((request as any)?.excluded_fees ?? []) as string[];
-  const feeExcluded = (key: string) => excludedFeesList.includes(key);
-  const effectiveCoordinationFee = feeExcluded("coordination_fee") ? 0 : coordinationFeeForProfit;
-  const effectiveTouristTax = feeExcluded("tourist_tax") ? 0 : touristTax;
-  const effectiveNatureContribution = feeExcluded("nature_contribution") ? 0 : natureContribution;
-  const effectiveCentralSurcharge = feeExcluded("central_surcharge") ? 0 : centralSurcharge;
-  const accommodationBaseTotal = selectedAccommodationQuote?.price_total ?? 0;
-  const accommodationExtrasTotal = calculateExtrasTotal(accommodationExtras);
-  // Logies die de accommodatie rechtstreeks aan de klant factureert staat niet
-  // op onze factuur en telt niet mee in totaal en openstaand.
-  const accommodationTotal = feeExcluded("accommodation")
-    ? 0
-    : accommodationBaseTotal + accommodationExtrasTotal;
-
-  const bureauInvoicedAmount = request ? calculateProjectGrandTotal({
+  // De ene berekening van het project: regels, btw-groepen, totaal en
+  // openstaand (projectInvoiceSpec). Financieel overzicht, voltooiingsstatus,
+  // marge en de registratiedialoog lezen allemaal hieruit.
+  const specAccommodation = useMemo<SpecAccommodationInput | null>(
+    () =>
+      selectedAccommodationQuote
+        ? {
+            id: selectedAccommodationQuote.id,
+            accommodation_name: selectedAccommodationQuote.accommodation_name,
+            price_total: Number(selectedAccommodationQuote.price_total) || 0,
+            vat_rate: selectedAccommodationQuote.vat_rate,
+            extras: accommodationExtras,
+          }
+        : null,
+    [selectedAccommodationQuote, accommodationExtras],
+  );
+  const { spec: invoiceSpec, isReady: specReady } = useProjectInvoiceSpec({
+    request: (request as unknown as SpecRequestRow | null) ?? null,
     items,
-    numberOfPeople: request.number_of_people,
-    numberOfDays,
-    coordinationFee: effectiveCoordinationFee,
-    touristTax: effectiveTouristTax,
-    natureContribution: effectiveNatureContribution,
-    centralSurcharge: effectiveCentralSurcharge,
-    accommodationTotal,
     linesByItem: billingLinesByItem,
-  }) : 0;
+    blockVatRates: vatRateMap,
+    accommodation: specAccommodation,
+    invoices: bureauInvoices,
+  });
+  useSyncInvoiceSpecTotal(
+    request?.id,
+    invoiceSpec,
+    (request as unknown as SpecRequestRow | null)?.invoice_spec_total_incl_vat,
+    specReady && !billingLinesLoading && !isLoading,
+  );
+  const outstandingVatGroups = useMemo(
+    () => (invoiceSpec ? scaleVatGroups(invoiceSpec.vatGroups, invoiceSpec.totals.outstanding) : []),
+    [invoiceSpec],
+  );
 
   // Calculate expected partner costs from items (for when no purchase invoices exist yet)
   const expectedPartnerCosts = (() => {
@@ -1227,23 +1213,8 @@ const AdminRequestDetail = () => {
     return summary;
   };
 
-  const calculateOutstandingAmount = () => {
-    // Gebruik dezelfde berekening als FinancialOverviewCard "Openstaand"
-    // zodat Voltooiingsstatus en Financieel Overzicht altijd hetzelfde
-    // bedrag tonen.
-    return calculateProjectOutstandingAmount({
-      items,
-      invoices: bureauInvoices,
-      numberOfPeople: request?.number_of_people ?? 0,
-      numberOfDays,
-      coordinationFee: effectiveCoordinationFee,
-      touristTax: effectiveTouristTax,
-      natureContribution: effectiveNatureContribution,
-      centralSurcharge: effectiveCentralSurcharge,
-      accommodationTotal,
-      linesByItem: billingLinesByItem,
-    });
-  };
+  // Openstaand volgens dezelfde berekening als het Financieel Overzicht.
+  const calculateOutstandingAmount = () => invoiceSpec?.totals.outstanding ?? 0;
 
   if (isLoading) {
     return (
@@ -3340,30 +3311,19 @@ const AdminRequestDetail = () => {
                   onRefresh={() => fetchRequestData({ silent: true })}
                 />
 
+                {invoiceSpec && (
                 <FinancialOverviewCard
                   requestId={request.id}
-                  numberOfPeople={request.number_of_people}
-                  numberOfDays={numberOfDays}
-                  items={items}
+                  spec={invoiceSpec}
                   invoices={bureauInvoices}
-                  onRegisterInvoice={(vatSuggestion) => {
-                    setInvoiceVatSuggestion(vatSuggestion ?? null);
-                    setInvoiceDialogOpen(true);
-                  }}
+                  blockVatRates={vatRateMap}
+                  onRegisterInvoice={() => setInvoiceDialogOpen(true)}
                   onForwardInvoice={(inv) =>
                     navigate(
                       `/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`
                     )
                   }
                   isQuoteMode={isQuoteMode}
-                  touristTax={touristTax}
-                  natureContribution={natureContribution}
-                  centralSurcharge={centralSurcharge}
-                  accommodationTotal={accommodationTotal}
-                  accommodationBaseTotal={accommodationBaseTotal}
-                  accommodationExtras={accommodationExtras}
-                  accommodationName={selectedAccommodationQuote?.accommodation_name}
-                  linesByItem={billingLinesByItem}
                   excludedFees={(request as any).excluded_fees ?? []}
                   onToggleFee={async (key, nextExcluded) => {
                     const current: string[] = ((request as any).excluded_fees ?? []) as string[];
@@ -3382,6 +3342,7 @@ const AdminRequestDetail = () => {
                     }
                   }}
                 />
+                )}
               </div>
               {/* Partner-nacalculatie */}
               <AdminPostChargesSection
@@ -3392,8 +3353,9 @@ const AdminRequestDetail = () => {
               {/* Margin overview */}
               <ProjectProfitSummary
                 purchaseInvoices={purchaseInvoices || []}
-                bureauInvoicedAmount={bureauInvoicedAmount}
-                coordinationFee={coordinationFeeForProfit}
+                projectedRevenueInclVat={invoiceSpec?.totals.inclVat ?? 0}
+                invoicedRevenueInclVat={invoiceSpec?.totals.invoiced ?? 0}
+                coordinationFee={invoiceSpec?.totals.coordinationFee ?? 0}
                 expectedPartnerCosts={expectedPartnerCosts}
               />
             </TabsContent>
@@ -3633,16 +3595,11 @@ const AdminRequestDetail = () => {
         onClose={() => setInvoiceDialogOpen(false)}
         requestId={request?.id || ""}
         suggestedAmount={calculateOutstandingAmount()}
-        suggestedExclVat={invoiceVatSuggestion?.totalExclVat}
-        suggestedVatAmount={invoiceVatSuggestion?.totalVat}
-        suggestedVatGroups={invoiceVatSuggestion?.vatGroups}
+        suggestedVatGroups={outstandingVatGroups}
         outstandingAmount={calculateOutstandingAmount()}
-        projectTotal={invoiceVatSuggestion?.grandTotalInclVat}
-        alreadyInvoiced={
-          invoiceVatSuggestion?.grandTotalInclVat != null
-            ? Math.max(0, invoiceVatSuggestion.grandTotalInclVat - calculateOutstandingAmount())
-            : undefined
-        }
+        projectTotal={invoiceSpec?.totals.inclVat}
+        alreadyInvoiced={invoiceSpec?.totals.invoiced}
+        spec={invoiceSpec}
         onSuccess={fetchRequestData}
       />
 

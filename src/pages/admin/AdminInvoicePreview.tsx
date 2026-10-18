@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { billingCountryLabel } from "@/lib/billingDetails";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -29,11 +29,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveItemVatRate } from "@/lib/itemVatRate";
 import ambassadeurLogo from "@/assets/ambassadeur-waddenzee-werelderfgoed.png";
 import { toast } from "sonner";
-import { categoryLabels } from "@/types/buildingBlock";
-import { getDisplayLineTotal, getNumberOfDays } from "@/lib/portalPricing";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
@@ -41,11 +38,13 @@ import {
   ForwardBureauInvoiceDialog,
   type BureauInvoiceForForward,
 } from "@/components/admin/ForwardBureauInvoiceDialog";
-import { calculateUnifiedInvoiceTotals } from "@/lib/invoiceTotals";
+import { buildProjectInvoiceSpec, scaleVatGroups, type ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
+import { chooseStoredLines, totalsFromStoredLines, type StoredInvoiceLine } from "@/lib/bureauInvoiceLines";
+import { specToCategories, storedLinesToCategories, summaryCategory } from "@/lib/invoiceDisplayLines";
 import { isFeeExcluded } from "@/lib/excludedFees";
 import { usePricingStructures, useRevisionCharges } from "@/hooks/usePricing";
 import { resolveFeeStructure } from "@/lib/feeEngine";
-import { renderInvoicePdf, type InvoiceCategory, type InvoiceLineRow } from "@/lib/invoicePdfRenderer";
+import { renderInvoicePdf, type InvoiceCategory } from "@/lib/invoicePdfRenderer";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
@@ -167,23 +166,13 @@ interface AccommodationQuoteData {
 }
 
 interface AccommodationExtraData {
+  id?: string;
   name: string;
   description: string | null;
   quantity: number;
   unit_price: number;
   pricing_type: string;
   vat_rate: number;
-}
-
-interface BundledExtra {
-  name: string;
-  description: string | null;
-  quantity: number;
-  unit_price: number;
-  pricing_type: string;
-  vat_rate: number;
-  count: number;
-  total: number;
 }
 
 const formatCurrency = (amount: number) =>
@@ -208,6 +197,8 @@ const AdminInvoicePreview = () => {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [forwardInvoice, setForwardInvoice] = useState<BureauInvoiceForForward | null>(null);
   const [loadedInvoice, setLoadedInvoice] = useState<LoadedBureauInvoice | null>(null);
+  // Bevroren regels van de geopende factuur (bureau_invoice_lines); leeg bij oudere facturen.
+  const [loadedInvoiceLines, setLoadedInvoiceLines] = useState<StoredInvoiceLine[]>([]);
   const [priorInvoices, setPriorInvoices] = useState<Array<{ id: string; invoice_number: string; invoice_date: string; amount_incl_vat: number; invoice_type: string }>>([]);
 
   // Load billing lines per item (definitive lines override quoted_price)
@@ -222,7 +213,10 @@ const AdminInvoicePreview = () => {
   // deze factuur.
   const accommodationExcluded = isFeeExcluded(request?.excluded_fees, "accommodation");
   const accommodationQuote = accommodationExcluded ? null : loadedAccommodationQuote;
-  const accommodationExtras = accommodationExcluded ? [] : loadedAccommodationExtras;
+  const accommodationExtras = useMemo(
+    () => (accommodationExcluded ? [] : loadedAccommodationExtras),
+    [accommodationExcluded, loadedAccommodationExtras],
+  );
 
   // Form state
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -259,6 +253,7 @@ const AdminInvoicePreview = () => {
     const invoiceId = searchParams.get("invoiceId");
     if (!invoiceId) {
       setLoadedInvoice(null);
+      setLoadedInvoiceLines([]);
       return;
     }
     if (!request) return;
@@ -290,6 +285,12 @@ const AdminInvoicePreview = () => {
         description: data.description,
       };
       setLoadedInvoice(normalizedInvoice);
+      const { data: lineRows } = await supabase
+        .from("bureau_invoice_lines")
+        .select("*")
+        .eq("invoice_id", invoiceId)
+        .order("sort_order", { ascending: true });
+      setLoadedInvoiceLines((lineRows ?? []) as unknown as StoredInvoiceLine[]);
       if (action === "forward") {
         setForwardInvoice({
           ...normalizedInvoice,
@@ -394,7 +395,7 @@ const AdminInvoicePreview = () => {
           // Fetch extras
           const { data: extrasData } = await supabase
             .from("accommodation_quote_extras")
-            .select("name, description, quantity, unit_price, pricing_type, vat_rate")
+            .select("id, name, description, quantity, unit_price, pricing_type, vat_rate")
             .eq("quote_id", quoteData.id)
             .order("sort_order", { ascending: true });
 
@@ -446,501 +447,52 @@ const AdminInvoicePreview = () => {
     }
   };
 
-  const getItemPrice = (item: ProgramItem) =>
-    item.admin_price_override ?? item.quoted_price ?? 0;
-
-  const getItemTotal = (item: ProgramItem) => {
-    const people = item.override_people ?? request?.number_of_people ?? 1;
-    const days = getNumberOfDays(request?.selected_dates);
-    return getDisplayLineTotal(item as any, people, days) ?? 0;
-  };
-
-  const getExtraTotal = (extra: AccommodationExtraData) => {
-    if (extra.pricing_type === "fixed") return extra.unit_price;
-    return extra.unit_price * extra.quantity;
-  };
-
-  // Bundel extras met identieke omschrijving + prijs + BTW tot één factuurregel
-  const bundledExtras: BundledExtra[] = (() => {
-    const groups = new Map<string, BundledExtra>();
-    for (const extra of accommodationExtras) {
-      const key = `${extra.name}|${extra.description ?? ""}|${extra.unit_price}|${extra.vat_rate}|${extra.pricing_type}`;
-      const existing = groups.get(key);
-      if (existing) {
-        existing.count += 1;
-        existing.quantity += extra.quantity;
-        existing.total += getExtraTotal(extra);
-      } else {
-        groups.set(key, {
-          name: extra.name,
-          description: extra.description,
-          quantity: extra.quantity,
-          unit_price: extra.unit_price,
-          pricing_type: extra.pricing_type,
-          vat_rate: extra.vat_rate,
-          count: 1,
-          total: getExtraTotal(extra),
-        });
-      }
-    }
-    return Array.from(groups.values());
-  })();
-
-  // Group items by category
-  const groupedByCategory = items.reduce((acc, item) => {
-    const cat = item.block_category || "overig";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {} as Record<string, ProgramItem[]>);
-
-  const categoryOrder = ["locaties", "catering", "outdoor", "excursies", "entertainment", "vervoer", "overig", "services"];
-
-  const sortedCategories = Object.keys(groupedByCategory).sort(
-    (a, b) => (categoryOrder.indexOf(a) === -1 ? 99 : categoryOrder.indexOf(a)) -
-              (categoryOrder.indexOf(b) === -1 ? 99 : categoryOrder.indexOf(b))
-  );
-
-  const getItemVatRate = (item: ProgramItem): number =>
-    resolveItemVatRate(item, vatRateMap, Number(settings.default_vat_rate || 21));
-
-  const calculateTotals = () => {
-    const numberOfPeople = request?.number_of_people || 0;
-    const numberOfDays = Math.max(request?.selected_dates?.length || 0, 1);
-    const rawUnified = request
-      ? calculateUnifiedInvoiceTotals({
-          request,
-          items,
-          appSettings: settings,
-          selectedAccommodationTotal: accommodationQuote?.price_total ?? 0,
-          accommodationExtras: accommodationExtras as any,
-          linesByItem,
-          feeStructure: resolveFeeStructure((request as any).fee_snapshot, activeStructure),
-          requestDate: (request as any).created_at ?? null,
-          revisionFeesTotal: revisionBillableTotal,
-        })
-      : {
-          coordinationFee: 0,
-          touristTax: 0,
-          natureContribution: 0,
-          centralSurcharge: 0,
-          grandTotalInclVat: 0,
-          invoicedTotal: 0,
-          outstanding: 0,
-          programItemsTotal: 0,
-          extraCostsTotal: 0,
-          accommodationTotal: 0,
-        };
-
-    // Honor per-project excluded fees (set in Financieel Overzicht via "Uitgesloten van factuur").
-    const excludedFees: string[] = ((request as any)?.excluded_fees ?? []) as string[];
-    const isExcluded = (k: string) => excludedFees.includes(k);
-    const removed =
-      (isExcluded("coordination_fee") ? rawUnified.coordinationFee : 0) +
-      (isExcluded("central_surcharge") ? rawUnified.centralSurcharge : 0) +
-      (isExcluded("tourist_tax") ? rawUnified.touristTax : 0) +
-      (isExcluded("nature_contribution") ? rawUnified.natureContribution : 0);
-    const unified = {
-      ...rawUnified,
-      coordinationFee: isExcluded("coordination_fee") ? 0 : rawUnified.coordinationFee,
-      centralSurcharge: isExcluded("central_surcharge") ? 0 : rawUnified.centralSurcharge,
-      touristTax: isExcluded("tourist_tax") ? 0 : rawUnified.touristTax,
-      natureContribution: isExcluded("nature_contribution") ? 0 : rawUnified.natureContribution,
-      grandTotalInclVat: rawUnified.grandTotalInclVat - removed,
-    };
-
-    const standardVatRate = Number(settings.default_vat_rate || 21);
-    const vatGroups: Record<number, number> = {};
-
-    items.forEach((item) => {
-      const lines = linesByItem[item.id];
-      if (lines && lines.length > 0) {
-        lines.forEach((line) => {
-          const rate = Number(line.vat_rate);
-          vatGroups[rate] = (vatGroups[rate] || 0) + Number(line.amount_incl_vat);
-        });
-      } else {
-        const total = getItemTotal(item);
-        const rate = getItemVatRate(item);
-        vatGroups[rate] = (vatGroups[rate] || 0) + total;
-      }
-    });
-
-    vatGroups[standardVatRate] = (vatGroups[standardVatRate] || 0) + unified.coordinationFee + unified.centralSurcharge;
-
-    if (accommodationQuote) {
-      const rate = Number(accommodationQuote.vat_rate || 9);
-      vatGroups[rate] = (vatGroups[rate] || 0) + Number(accommodationQuote.price_total || 0);
-    }
-
-    accommodationExtras.forEach((extra) => {
-      const total = getExtraTotal(extra);
-      const rate = Number(extra.vat_rate || 9);
-      vatGroups[rate] = (vatGroups[rate] || 0) + total;
-    });
-
-    if (unified.touristTax + unified.natureContribution > 0) {
-      vatGroups[0] = (vatGroups[0] || 0) + unified.touristTax + unified.natureContribution;
-    }
-
-    let totalExclVat = 0;
-    let totalVat = 0;
-    const vatLines: { rate: number; exclVat: number; vatAmount: number }[] = [];
-
-    Object.entries(vatGroups)
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .forEach(([rateStr, amountInclVat]) => {
-        const rate = Number(rateStr);
-        const exclVat = amountInclVat / (1 + rate / 100);
-        const vatAmount = amountInclVat - exclVat;
-        vatLines.push({ rate, exclVat, vatAmount });
-        totalExclVat += exclVat;
-        totalVat += vatAmount;
-      });
-
-    return {
-      ...unified,
-      isBureauCentral: request?.invoicing_mode === "bureau_central",
-      numberOfPeople,
-      numberOfDays,
-      totalExclVat,
-      totalVat,
-      totalInclVat: unified.grandTotalInclVat,
-      vatLines,
-    };
-  };
-
-  /**
-   * Build the PDF blob using the native invoice renderer.
-   * The HTML preview on screen is for read-only inspection — the
-   * downloaded/sent PDF is drawn natively for crisp, paginated A4 output.
-   */
-  const buildPdfBlob = async (): Promise<Blob | null> => {
+  // De ene berekening van het project (projectInvoiceSpec): regels, btw-groepen, totaal.
+  const spec = useMemo<ProjectInvoiceSpec | null>(() => {
     if (!request) return null;
-
-    const totalsLocal = calculateTotals();
-    const fmt = (n: number) =>
-      new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
-
-    const loadedInvoiceForPdf = loadedInvoice?.invoice_number === invoiceNumber ? loadedInvoice : null;
-    const priorOtherLocal = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
-    const priorOtherSumLocal = priorOtherLocal.reduce(
-      (sum, p) => sum + (p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat)),
-      0,
-    );
-    const loadedInvoiceTypeForPdf = loadedInvoiceForPdf
-      ? resolveBureauInvoiceType({
-          storedType: loadedInvoiceForPdf.invoice_type,
-          invoiceAmountInclVat: Number(loadedInvoiceForPdf.amount_incl_vat),
-          projectTotalInclVat: totalsLocal.totalInclVat,
-          outstandingAmountInclVat: Math.max(0, totalsLocal.totalInclVat - priorOtherSumLocal),
-          alreadyInvoicedInclVat: priorOtherSumLocal,
-        })
-      : null;
-    const isCreditPdf = loadedInvoiceTypeForPdf === "credit";
-    const pdfSign = isCreditPdf ? -1 : 1;
-    const scaledTotals = loadedInvoiceForPdf
-      ? buildScaledVatTotals(
-          totalsLocal.vatLines,
-          Number(loadedInvoiceForPdf.amount_excl_vat),
-          Number(loadedInvoiceForPdf.vat_amount),
-        )
-      : totalsLocal;
-    const selectedTotalsLocal = loadedInvoiceForPdf && isCreditPdf
-      ? {
-          totalExclVat: -scaledTotals.totalExclVat,
-          totalVat: -scaledTotals.totalVat,
-          totalInclVat: -scaledTotals.totalInclVat,
-          vatLines: scaledTotals.vatLines.map((l) => ({
-            ...l,
-            exclVat: -l.exclVat,
-            vatAmount: -l.vatAmount,
-          })),
-        }
-      : scaledTotals;
-    // ── Build categorized line rows
-    const categories: InvoiceCategory[] = [];
-    const numberOfDays = Math.max(request.selected_dates?.length || 0, 1);
-
-
-    // Eindfacturen die het volledige project dekken krijgen de volledige
-    // specificatie; deel-/slot-/creditfacturen een compacte samenvattingsregel.
-    const showFullSpecPdf = loadedInvoiceForPdf
-      ? shouldShowFullSpecification({
-          resolvedType: (loadedInvoiceTypeForPdf ?? "partial") as InvoiceType,
-          alreadyInvoicedInclVat: priorOtherSumLocal,
-          invoiceAmountInclVat: Number(loadedInvoiceForPdf.amount_incl_vat),
-          projectTotalInclVat: totalsLocal.totalInclVat,
-        })
-      : false;
-
-    if (loadedInvoiceForPdf && !showFullSpecPdf) {
-      const typeLabel =
-        invoiceTypeLabels[loadedInvoiceTypeForPdf as InvoiceType] ||
-        String(loadedInvoiceTypeForPdf || loadedInvoiceForPdf.invoice_type);
-      const amountIncl = pdfSign * Number(loadedInvoiceForPdf.amount_incl_vat);
-      categories.push({
-        label: typeLabel,
-        rows: [
-          {
-            description: `${typeLabel} ${loadedInvoiceForPdf.invoice_number}`,
-            subDescription:
-              loadedInvoiceForPdf.description ||
-              `Project ${request.reference_number ?? request.customer_name}`,
-            qty: "1",
-            unitPrice: fmt(amountIncl),
-            amount: fmt(amountIncl),
-          },
-        ],
-      });
-    } else {
-
-
-
-    for (const cat of sortedCategories) {
-      const catItems = groupedByCategory[cat];
-      const catLabel = (categoryLabels as Record<string, string>)[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
-      const rows: InvoiceLineRow[] = [];
-
-      for (const item of catItems) {
-        const billingLines = linesByItem[item.id];
-        if (billingLines && billingLines.length > 0) {
-          const itemTotal = billingLines.reduce((s, b) => s + Number(b.amount_incl_vat), 0);
-          rows.push({
-            description: item.block_name,
-            subDescription: [item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null].filter(Boolean).join(" • "),
-            qty: "",
-            unitPrice: "",
-            amount: fmt(itemTotal),
-            bold: true,
-          });
-          for (const bl of billingLines) {
-            rows.push({
-              description: bl.description || "Regel",
-              qty: String(Number(bl.quantity)),
-              unitPrice: fmt(Number(bl.unit_price_excl_vat)),
-              unitPriceSuffix: `${bl.vat_rate}%`,
-              amount: fmt(Number(bl.amount_incl_vat)),
-              isSubRow: true,
-            });
+    return buildProjectInvoiceSpec({
+      request: {
+        number_of_people: request.number_of_people,
+        selected_dates: request.selected_dates,
+        invoicing_mode: request.invoicing_mode,
+        excluded_fees: request.excluded_fees,
+        created_at: (request as unknown as { created_at?: string | null }).created_at ?? null,
+        reference_number: request.reference_number,
+      },
+      items,
+      linesByItem,
+      blockVatRates: vatRateMap,
+      accommodation: accommodationQuote
+        ? {
+            id: accommodationQuote.id,
+            accommodation_name: accommodationQuote.accommodation_name,
+            partner_name: accommodationQuote.partner_name,
+            price_total: Number(accommodationQuote.price_total) || 0,
+            vat_rate: accommodationQuote.vat_rate,
+            nights: accommodationNights,
+            extras: accommodationExtras,
           }
-          continue;
-        }
-
-        const isPerPerson =
-          item.price_type === "per_person" || item.price_type === "per_person_per_day";
-        const isPerDay = item.price_type === "per_person_per_day";
-        const lineTotal = getItemTotal(item);
-        const effectivePeople = item.override_people ?? request.number_of_people ?? 1;
-
-        let unitPrice = getItemPrice(item);
-        let qty: string;
-        if (item.quoted_price != null) {
-          if (isPerDay) {
-            const divisor = effectivePeople * numberOfDays || 1;
-            unitPrice = item.quoted_price / divisor;
-            qty = `${effectivePeople}×${numberOfDays}d`;
-          } else if (isPerPerson) {
-            unitPrice = item.quoted_price / (effectivePeople || 1);
-            qty = String(effectivePeople);
-          } else {
-            unitPrice = item.quoted_price;
-            qty = "1";
-          }
-        } else {
-          qty = isPerPerson
-            ? isPerDay
-              ? `${effectivePeople}×${numberOfDays}d`
-              : String(effectivePeople)
-            : "1";
-        }
-
-        rows.push({
-          description: item.block_name,
-          subDescription: [item.admin_price_notes || item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null].filter(Boolean).join(" • "),
-          qty,
-          unitPrice: fmt(unitPrice),
-          unitPriceSuffix: isPerDay ? "p.p.p.d." : isPerPerson ? "p.p." : "",
-          amount: fmt(lineTotal),
-        });
-      }
-
-      if (rows.length > 0) categories.push({ label: catLabel, rows });
-    }
-
-    // Logies
-    if (accommodationQuote) {
-      const rows: InvoiceLineRow[] = [
-        {
-          description: accommodationQuote.accommodation_name,
-          subDescription: `${accommodationQuote.partner_name}${
-            accommodationNights > 0
-              ? ` • ${accommodationNights} ${accommodationNights === 1 ? "nacht" : "nachten"}`
-              : ""
-          }`,
-          qty: "1",
-          unitPrice: fmt(accommodationQuote.price_total),
-          amount: fmt(accommodationQuote.price_total),
-        },
-      ];
-      categories.push({ label: "Logies", rows });
-    }
-
-    // Logies-extra's (gebundeld op identieke omschrijving + prijs + BTW)
-    if (bundledExtras.length > 0) {
-      const rows: InvoiceLineRow[] = bundledExtras.map((extra) => {
-        const isFixed = extra.pricing_type === "fixed";
-        return {
-          description: extra.name,
-          subDescription: extra.description ?? undefined,
-          qty: isFixed ? String(extra.count) : String(extra.quantity),
-          unitPrice: fmt(extra.unit_price),
-          unitPriceSuffix: isFixed ? "" : "p.p.",
-          amount: fmt(extra.total),
-        };
-      });
-      categories.push({ label: "Extra's bij logies", rows });
-    }
-
-    // Coördinatie & bijdragen
-    const coordRows: InvoiceLineRow[] = [];
-    if (totalsLocal.coordinationFee > 0) {
-      coordRows.push({
-        description: "Coördinatiekosten",
-        subDescription: `${totalsLocal.numberOfPeople} personen`,
-        qty: "1",
-        unitPrice: fmt(totalsLocal.coordinationFee),
-        amount: fmt(totalsLocal.coordinationFee),
-      });
-    }
-    if (totalsLocal.centralSurcharge > 0) {
-      const pp = totalsLocal.centralSurcharge / Math.max(totalsLocal.numberOfPeople, 1);
-      coordRows.push({
-        description: "Opslag centrale facturatie",
-        subDescription: `${totalsLocal.numberOfPeople} personen`,
-        qty: String(totalsLocal.numberOfPeople),
-        unitPrice: fmt(pp),
-        unitPriceSuffix: "p.p.",
-        amount: fmt(totalsLocal.centralSurcharge),
-      });
-    }
-    if (totalsLocal.touristTax > 0) {
-      const totalQty = totalsLocal.numberOfPeople * totalsLocal.numberOfDays;
-      const pp = totalsLocal.touristTax / Math.max(totalQty, 1);
-      coordRows.push({
-        description: "Toeristenbelasting",
-        subDescription: `${totalsLocal.numberOfPeople} pers. × ${totalsLocal.numberOfDays} ${
-          totalsLocal.numberOfDays === 1 ? "dag" : "dagen"
-        }`,
-        qty: String(totalQty),
-        unitPrice: fmt(pp),
-        unitPriceSuffix: "p.p.p.d.",
-        amount: fmt(totalsLocal.touristTax),
-      });
-    }
-    if (totalsLocal.natureContribution > 0) {
-      const pp = totalsLocal.natureContribution / Math.max(totalsLocal.numberOfPeople, 1);
-      coordRows.push({
-        description: "Natuurbijdrage",
-        subDescription: `Bijdrage natuurbeheer Staatsbosbeheer · ${totalsLocal.numberOfPeople} personen`,
-        qty: String(totalsLocal.numberOfPeople),
-        unitPrice: fmt(pp),
-        unitPriceSuffix: "p.p.",
-        amount: fmt(totalsLocal.natureContribution),
-      });
-    }
-    if (coordRows.length > 0) {
-      categories.push({ label: "Coördinatie & bijdragen", rows: coordRows });
-    }
-    }
-
-    // ── Customer block
-    const billingNameLocal =
-      request.billing_company_name || request.customer_company || request.customer_name;
-    const contactName = request.billing_contact_name || request.customer_name;
-    const postalCity = [
-      [request.billing_address_postal, request.billing_address_city].filter(Boolean).join(" "),
-      request.billing_country && request.billing_country !== "NL" ? billingCountryLabel(request.billing_country) : null,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    const eventDates = request.selected_dates
-      .map((d) => format(new Date(d), "d MMM yyyy", { locale: nl }))
-      .join(" – ");
-
-    const blob = await renderInvoicePdf({
-      bureau: {
-        legalName: legalName || companyName,
-        street,
-        postalCode,
-        city,
-        phone,
-        email: adminEmail,
-        website: websiteSetting,
-        iban,
-        kvkNumber,
-        vatNumber,
-      },
-      customer: {
-        name: billingNameLocal,
-        contactName: contactName !== billingNameLocal ? contactName : undefined,
-        street: request.billing_address_street ?? undefined,
-        postalCity: postalCity || undefined,
-        vatNumber: request.billing_vat_number ?? undefined,
-        customerNumber: request.reference_number ?? undefined,
-        billingReference: request.billing_reference ?? undefined,
-      },
-      meta: {
-        invoiceNumber,
-        invoiceDate,
-        dueDate,
-        paymentTermDays,
-        deliveryDate: eventDates || undefined,
-      },
-      categories,
-      totals: {
-        totalExclVat: selectedTotalsLocal.totalExclVat,
-        totalVat: selectedTotalsLocal.totalVat,
-        totalInclVat: selectedTotalsLocal.totalInclVat,
-        vatLines: selectedTotalsLocal.vatLines,
-      },
-      notes: notes || loadedInvoiceForPdf?.description || undefined,
-      priorInvoices: loadedInvoiceForPdf ? [] : priorOtherLocal.map((p) => ({
-        invoiceNumber: p.invoice_number,
-        invoiceDate: new Date(p.invoice_date),
-        amountInclVat:
-          p.invoice_type === "credit"
-            ? -Number(p.amount_incl_vat)
-            : Number(p.amount_incl_vat),
-      })),
+        : null,
+      settings,
+      feeStructure: resolveFeeStructure((request as unknown as { fee_snapshot?: unknown }).fee_snapshot, activeStructure),
+      revisionFeesTotal: revisionBillableTotal,
+      bundleExtras: true,
     });
+  }, [request, items, linesByItem, vatRateMap, accommodationQuote, accommodationNights, accommodationExtras, settings, activeStructure, revisionBillableTotal]);
 
-
-    return blob;
-  };
-
-  const generatePDF = async () => {
-    setIsGenerating(true);
-    try {
-      const blob = await buildPdfBlob();
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Factuur-${invoiceNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success("Factuur PDF gedownload");
-    } catch (error) {
-      reportError(error, { where: "AdminInvoicePreview: Error generating PDF" });
-      toast.error("Fout bij genereren PDF");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  const calculateTotals = () => ({
+    coordinationFee: spec?.totals.coordinationFee ?? 0,
+    touristTax: spec?.totals.touristTax ?? 0,
+    natureContribution: spec?.totals.natureContribution ?? 0,
+    centralSurcharge: spec?.totals.centralSurcharge ?? 0,
+    isBureauCentral: spec?.isBureauCentral ?? false,
+    numberOfPeople: spec?.numberOfPeople ?? 0,
+    numberOfDays: spec?.numberOfDays ?? 1,
+    totalExclVat: spec?.totals.exclVat ?? 0,
+    totalVat: spec?.totals.vat ?? 0,
+    totalInclVat: spec?.totals.inclVat ?? 0,
+    vatLines: (spec?.vatGroups ?? []).map((g) => ({ rate: g.rate, exclVat: g.exclVat, vatAmount: g.vatAmount })),
+  });
 
   if (isLoading || isAppSettingsLoading) {
     return (
@@ -986,7 +538,7 @@ const AdminInvoicePreview = () => {
     request.billing_country && request.billing_country !== "NL" ? billingCountryLabel(request.billing_country) : null,
   ].filter(Boolean);
 
-  const totalItemCount = items.length + (accommodationQuote ? 1 : 0) + bundledExtras.length;
+  const totalItemCount = spec ? spec.lines.filter((l) => l.kind !== "fee" && l.kind !== "revision").length : 0;
 
   // ── Slot mode (restantfactuur voor het openstaande bedrag) ───────────────
   // Toon één regel "Slotfactuur project ..." met pro-rata BTW-uitsplitsing,
@@ -1020,51 +572,43 @@ const AdminInvoicePreview = () => {
     setSearchParams(params, { replace: true });
   };
 
-  // Pro-rata uitsplitsing van het openstaand bedrag over de bestaande
-  // BTW-tarieven, zodat BTW-aangifte sluitend blijft over de hele projectreeks.
-  const slotTotals = (() => {
-    if (!isSlotMode || isExistingInvoiceView) return null;
-    const fullIncl = totals.totalInclVat;
-    if (fullIncl <= 0) return null;
-    const factor = netDueIncl / fullIncl;
-    let runningExcl = 0;
-    let runningVat = 0;
-    const lines = totals.vatLines.map((l) => {
-      const exclVat = Math.round(l.exclVat * factor * 100) / 100;
-      const vatAmount = Math.round(l.vatAmount * factor * 100) / 100;
-      runningExcl += exclVat;
-      runningVat += vatAmount;
-      return { rate: l.rate, exclVat, vatAmount };
-    });
-    // Rondingsverschil op laatste regel corrigeren zodat incl = netDue exact.
-    if (lines.length > 0) {
-      const diff = netDueIncl - (runningExcl + runningVat);
-      // Voeg verschil toe aan de excl-vat van de eerste regel met BTW>0,
-      // anders aan de eerste regel.
-      const idx = lines.findIndex((l) => l.rate > 0) === -1 ? 0 : lines.findIndex((l) => l.rate > 0);
-      lines[idx].exclVat = Math.round((lines[idx].exclVat + diff / (1 + lines[idx].rate / 100)) * 100) / 100;
-      lines[idx].vatAmount = Math.round((lines[idx].vatAmount + diff - diff / (1 + lines[idx].rate / 100)) * 100) / 100;
-    }
-    const totalExclVat = lines.reduce((s, l) => s + l.exclVat, 0);
-    const totalVat = lines.reduce((s, l) => s + l.vatAmount, 0);
+  // Bij eerdere termijnen registreren en versturen we alleen het restant
+  // (netDueIncl), met de btw pro rata over de groepen van de specificatie.
+  const dueTotals = (() => {
+    if (isExistingInvoiceView || !spec || !hasPriorInvoices) return null;
+    if (netDueIncl >= totals.totalInclVat - 0.005) return null;
+    const groups = scaleVatGroups(spec.vatGroups, netDueIncl);
     return {
-      totalExclVat,
-      totalVat,
-      totalInclVat: netDueIncl,
-      vatLines: lines,
+      totalExclVat: round2(groups.reduce((s, g) => s + g.exclVat, 0)),
+      totalVat: round2(groups.reduce((s, g) => s + g.vatAmount, 0)),
+      totalInclVat: round2(netDueIncl),
+      vatLines: groups.map((g) => ({ rate: g.rate, exclVat: g.exclVat, vatAmount: g.vatAmount })),
     };
   })();
 
   const isCreditView = isExistingInvoiceView && displayLoadedInvoiceType === "credit";
   const creditSign = isCreditView ? -1 : 1;
 
-  const existingInvoiceTotals = loadedInvoice
-    ? buildScaledVatTotals(
-        totals.vatLines,
-        Number(loadedInvoice.amount_excl_vat),
-        Number(loadedInvoice.vat_amount),
-      )
-    : null;
+  // Een geregistreerde factuur: btw-groepen uit haar bevroren regels als die
+  // er zijn en op de kop sluiten, anders pro rata uit de specificatie.
+  const existingInvoiceTotals = (() => {
+    if (!loadedInvoice) return null;
+    if (loadedInvoiceLines.length > 0) {
+      const fromLines = totalsFromStoredLines(loadedInvoiceLines);
+      if (
+        Math.abs(fromLines.exclVat - Number(loadedInvoice.amount_excl_vat)) <= 0.05 &&
+        Math.abs(fromLines.vat - Number(loadedInvoice.vat_amount)) <= 0.05
+      ) {
+        return {
+          totalExclVat: round2(Number(loadedInvoice.amount_excl_vat)),
+          totalVat: round2(Number(loadedInvoice.vat_amount)),
+          totalInclVat: round2(Number(loadedInvoice.amount_excl_vat) + Number(loadedInvoice.vat_amount)),
+          vatLines: fromLines.vatGroups.map((g) => ({ rate: g.rate, exclVat: g.exclVat, vatAmount: g.vatAmount })),
+        };
+      }
+    }
+    return buildScaledVatTotals(totals.vatLines, Number(loadedInvoice.amount_excl_vat), Number(loadedInvoice.vat_amount));
+  })();
 
   const signedExistingTotals = existingInvoiceTotals && isCreditView
     ? {
@@ -1079,18 +623,15 @@ const AdminInvoicePreview = () => {
       }
     : existingInvoiceTotals;
 
-  const effectiveTotalExclVat = isExistingInvoiceView && signedExistingTotals
-    ? signedExistingTotals.totalExclVat
-    : slotTotals?.totalExclVat ?? totals.totalExclVat;
-  const effectiveTotalVat = isExistingInvoiceView && signedExistingTotals
-    ? signedExistingTotals.totalVat
-    : slotTotals?.totalVat ?? totals.totalVat;
-  const effectiveTotalInclVat = isExistingInvoiceView && signedExistingTotals
-    ? signedExistingTotals.totalInclVat
-    : slotTotals?.totalInclVat ?? totals.totalInclVat;
-  const effectiveVatLines = isExistingInvoiceView && signedExistingTotals
-    ? signedExistingTotals.vatLines
-    : slotTotals?.vatLines ?? totals.vatLines;
+  // Wat deze factuur registreert en verstuurt (restant bij eerdere termijnen).
+  const registerTotals = isExistingInvoiceView && signedExistingTotals ? signedExistingTotals : dueTotals ?? totals;
+  const effectiveTotalExclVat = registerTotals.totalExclVat;
+  const effectiveTotalVat = registerTotals.totalVat;
+  const effectiveTotalInclVat = registerTotals.totalInclVat;
+  const effectiveVatLines = registerTotals.vatLines;
+  // Wat het totalenblok toont: bij "termijn met regels" het hele project met
+  // de eerdere termijnen eronder, bij een slotfactuur alleen het restant.
+  const displayTotals = isExistingInvoiceView && signedExistingTotals ? signedExistingTotals : isSlotMode && dueTotals ? dueTotals : totals;
 
   const outgoingInvoiceType = isExistingInvoiceView && displayLoadedInvoiceType
     ? displayLoadedInvoiceType
@@ -1122,6 +663,144 @@ const AdminInvoicePreview = () => {
   const slotSubDescription = priorRefList
     ? `Restant na reeds gefactureerde termijn${priorInvoices.length > 2 ? "en" : ""}: ${priorRefList}`
     : "Restant openstaand bedrag";
+
+  // Regels op scherm en PDF: bevroren regels van een geregistreerde factuur,
+  // anders de samenvattende regel (slot, of oude factuur zonder regels),
+  // anders de specificatie.
+  const loadedTypeLabel = displayLoadedInvoiceType
+    ? invoiceTypeLabels[displayLoadedInvoiceType] || String(displayLoadedInvoiceType)
+    : "";
+  const invoiceCategories: InvoiceCategory[] = (() => {
+    if (isExistingInvoiceView && loadedInvoice) {
+      if (loadedInvoiceLines.length > 0) return storedLinesToCategories(loadedInvoiceLines, formatCurrency, creditSign);
+      if (showFullSpecification && spec) return specToCategories(spec, formatCurrency);
+      return [
+        summaryCategory(
+          {
+            label: loadedTypeLabel || loadedInvoice.invoice_type,
+            description: `${loadedTypeLabel || loadedInvoice.invoice_type} ${loadedInvoice.invoice_number}`,
+            subDescription: loadedInvoice.description || `Project ${request.reference_number ?? request.customer_name}`,
+            amountInclVat: creditSign * Number(loadedInvoice.amount_incl_vat),
+          },
+          formatCurrency,
+        ),
+      ];
+    }
+    if (isSlotMode) {
+      return [
+        summaryCategory(
+          { label: "Termijnfactuur", description: slotDescription, subDescription: slotSubDescription, amountInclVat: netDueIncl },
+          formatCurrency,
+        ),
+      ];
+    }
+    return spec ? specToCategories(spec, formatCurrency) : [];
+  })();
+
+  // Regels die bij registreren worden bevroren bij de factuur.
+  const linesToStore = isExistingInvoiceView
+    ? []
+    : chooseStoredLines({
+        spec,
+        invoiceType: outgoingInvoiceType,
+        invoiceNumber,
+        amountInclVat: effectiveTotalInclVat,
+        alreadyInvoicedInclVat: priorSumExcludingCurrent,
+        vatGroups: effectiveVatLines.map((l) => ({ rate: l.rate, exclVat: l.exclVat, vatAmount: l.vatAmount, inclVat: round2(l.exclVat + l.vatAmount) })),
+        subDescription: isSlotMode ? slotSubDescription : notes || null,
+      });
+
+  /**
+   * Build the PDF blob using the native invoice renderer. The HTML preview on
+   * screen is for read-only inspection; the PDF is drawn natively for crisp,
+   * paginated A4 output. Both come from `invoiceCategories`.
+   */
+  const buildPdfBlob = async (): Promise<Blob | null> => {
+    const billingNameLocal =
+      request.billing_company_name || request.customer_company || request.customer_name;
+    const contactName = request.billing_contact_name || request.customer_name;
+    const postalCity = [
+      [request.billing_address_postal, request.billing_address_city].filter(Boolean).join(" "),
+      request.billing_country && request.billing_country !== "NL" ? billingCountryLabel(request.billing_country) : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const eventDates = request.selected_dates
+      .map((d) => format(new Date(d), "d MMM yyyy", { locale: nl }))
+      .join(" – ");
+
+    const priorOther = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
+
+    return renderInvoicePdf({
+      bureau: {
+        legalName: legalName || companyName,
+        street,
+        postalCode,
+        city,
+        phone,
+        email: adminEmail,
+        website: websiteSetting,
+        iban,
+        kvkNumber,
+        vatNumber,
+      },
+      customer: {
+        name: billingNameLocal,
+        contactName: contactName !== billingNameLocal ? contactName : undefined,
+        street: request.billing_address_street ?? undefined,
+        postalCity: postalCity || undefined,
+        vatNumber: request.billing_vat_number ?? undefined,
+        customerNumber: request.reference_number ?? undefined,
+        billingReference: request.billing_reference ?? undefined,
+      },
+      meta: {
+        invoiceNumber,
+        invoiceDate,
+        dueDate,
+        paymentTermDays,
+        deliveryDate: eventDates || undefined,
+      },
+      categories: invoiceCategories,
+      totals: {
+        totalExclVat: displayTotals.totalExclVat,
+        totalVat: displayTotals.totalVat,
+        totalInclVat: displayTotals.totalInclVat,
+        vatLines: displayTotals.vatLines,
+      },
+      notes: notes || loadedInvoice?.description || undefined,
+      priorInvoices:
+        isExistingInvoiceView || isSlotMode
+          ? []
+          : priorOther.map((p) => ({
+              invoiceNumber: p.invoice_number,
+              invoiceDate: new Date(p.invoice_date),
+              amountInclVat: p.invoice_type === "credit" ? -Number(p.amount_incl_vat) : Number(p.amount_incl_vat),
+            })),
+    });
+  };
+
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await buildPdfBlob();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Factuur-${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Factuur PDF gedownload");
+    } catch (error) {
+      reportError(error, { where: "AdminInvoicePreview: Error generating PDF" });
+      toast.error("Fout bij genereren PDF");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const closeSendDialog = () => {
     setSendDialogOpen(false);
@@ -1336,7 +1015,7 @@ const AdminInvoicePreview = () => {
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Ontvanger: {billingName}</p>
                   <p>Posten: {totalItemCount} items{accommodationQuote ? " (incl. logies)" : ""}</p>
-                  <p>Totaal: {formatCurrency(effectiveTotalInclVat)}</p>
+                  <p>Te factureren: {formatCurrency(effectiveTotalInclVat)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -1442,316 +1121,45 @@ const AdminInvoicePreview = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {isExistingInvoiceView && loadedInvoice && !showFullSpecification ? (
-                            <>
+                          {invoiceCategories.map((cat) => (
+                            <React.Fragment key={cat.label}>
                               <tr>
                                 <td
                                   colSpan={4}
                                   className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
                                   style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
                                 >
-                                  {invoiceTypeLabels[displayLoadedInvoiceType as InvoiceType] || loadedInvoice.invoice_type}
+                                  {cat.label}
                                 </td>
                               </tr>
-                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                <td className="py-1.5 px-2">
-                                  <p className="font-medium">
-                                    {(invoiceTypeLabels[displayLoadedInvoiceType as InvoiceType] || loadedInvoice.invoice_type)} {loadedInvoice.invoice_number}
-                                  </p>
-                                  <p className="text-[9px] text-gray-500">
-                                    {loadedInvoice.description || `Project ${request.reference_number ?? ""}`.trim()}
-                                  </p>
-                                </td>
-                                <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">{formatCurrency(creditSign * Number(loadedInvoice.amount_incl_vat))}</td>
-                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(creditSign * Number(loadedInvoice.amount_incl_vat))}</td>
-                              </tr>
-
-                            </>
-                          ) : isSlotMode ? (
-                            <>
-                              <tr>
-                                <td
-                                  colSpan={4}
-                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
-                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
-                                >
-                                  Termijnfactuur
-                                </td>
-                              </tr>
-                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                <td className="py-1.5 px-2">
-                                  <p className="font-medium">{slotDescription}</p>
-                                  <p className="text-[9px] text-gray-500">{slotSubDescription}</p>
-                                </td>
-                                <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">{formatCurrency(netDueIncl)}</td>
-                                <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(netDueIncl)}</td>
-                              </tr>
-                            </>
-                          ) : (
-                          <>
-                          {sortedCategories.map((cat) => {
-                            const catItems = groupedByCategory[cat];
-                            const catLabel = (categoryLabels as Record<string, string>)[cat] || cat.charAt(0).toUpperCase() + cat.slice(1);
-
-
-                            return (
-                              <React.Fragment key={cat}>
-                                {/* Category header row */}
-                                <tr>
-                                  <td
-                                    colSpan={4}
-                                    className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
-                                    style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
-                                  >
-                                    {catLabel}
-                                  </td>
-                                </tr>
-                                {catItems.map((item) => {
-                                  const billingLines = linesByItem[item.id];
-                                  // Definitive billing lines: one main row + indented subrows
-                                  if (billingLines && billingLines.length > 0) {
-                                    const itemTotal = billingLines.reduce((s, b) => s + Number(b.amount_incl_vat), 0);
-                                    return (
-                                      <React.Fragment key={item.id}>
-                                        <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                          <td className="py-1.5 px-2">
-                                            <p className="font-medium">{item.block_name}</p>
-                                            <p className="text-[9px] text-gray-400">
-                                              {item.provider_name}
-                                              {item.booking_reference && <span> • Boekingsnr: {item.booking_reference}</span>}
-                                            </p>
-                                          </td>
-                                          <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
-                                          <td className="py-1.5 px-2 text-right text-gray-400 text-[9px]">—</td>
-                                          <td className="py-1.5 px-2 text-right font-semibold">
-                                            {formatCurrency(itemTotal)}
-                                          </td>
-                                        </tr>
-                                        {billingLines.map((bl) => (
-                                          <tr key={bl.id}>
-                                            <td className="py-0.5 pl-6 pr-2 text-[10px] text-gray-600">
-                                              {bl.description || "Regel"}
-                                            </td>
-                                            <td className="py-0.5 px-2 text-right text-[10px] text-gray-500">
-                                              {Number(bl.quantity)}
-                                            </td>
-                                            <td className="py-0.5 px-2 text-right text-[10px] text-gray-500">
-                                              {formatCurrency(Number(bl.unit_price_excl_vat))}
-                                              <span className="text-[8px] text-gray-400 ml-1">{bl.vat_rate}%</span>
-                                            </td>
-                                            <td className="py-0.5 px-2 text-right text-[10px] text-gray-600">
-                                              {formatCurrency(Number(bl.amount_incl_vat))}
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </React.Fragment>
-                                    );
-                                  }
-
-                                  const isPerPerson = item.price_type === "per_person" || item.price_type === "per_person_per_day";
-                                  const isPerDay = item.price_type === "per_person_per_day";
-                                  const lineTotal = getItemTotal(item);
-                                  const numberOfDays = request.selected_dates?.length || 1;
-                                  const effectivePeople = item.override_people ?? request.number_of_people ?? 1;
-                                  // When quoted_price is set, derive a consistent unit price from the total
-                                  // so that qty × unit always equals lineTotal in the display.
-                                  let unitPrice = getItemPrice(item);
-                                  let qty: string;
-                                  if (item.quoted_price != null) {
-                                    if (isPerDay) {
-                                      const divisor = effectivePeople * numberOfDays || 1;
-                                      unitPrice = item.quoted_price / divisor;
-                                      qty = `${effectivePeople}×${numberOfDays}d`;
-                                    } else if (isPerPerson) {
-                                      unitPrice = item.quoted_price / (effectivePeople || 1);
-                                      qty = String(effectivePeople);
-                                    } else {
-                                      unitPrice = item.quoted_price;
-                                      qty = "1";
-                                    }
-                                  } else {
-                                    qty = isPerPerson
-                                      ? (isPerDay ? `${effectivePeople}×${numberOfDays}d` : String(effectivePeople))
-                                      : "1";
-                                  }
-
-                                  return (
-                                    <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                      <td className="py-1.5 px-2">
-                                        <p className="font-medium">{item.block_name}</p>
-                                        {item.admin_price_notes && (
-                                          <p className="text-[9px] text-gray-500">{item.admin_price_notes}</p>
-                                        )}
-                                        <p className="text-[9px] text-gray-400">
-                                          {item.provider_name}
-                                          {item.booking_reference && <span> • Boekingsnr: {item.booking_reference}</span>}
-                                        </p>
-                                      </td>
-                                      <td className="py-1.5 px-2 text-right">
-                                        {qty}
-                                      </td>
-                                      <td className="py-1.5 px-2 text-right">
-                                        {formatCurrency(unitPrice)}
-                                        {isPerDay && (
-                                          <span className="text-[8px] text-gray-400 ml-1">p.p.p.d.</span>
-                                        )}
-                                        {isPerPerson && !isPerDay && (
-                                          <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1.5 px-2 text-right font-medium">
-                                        {formatCurrency(lineTotal)}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          })}
-
-                          {/* Accommodation / Logies section */}
-                          {accommodationQuote && (
-                            <>
-                              <tr>
-                                <td
-                                  colSpan={4}
-                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
-                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
-                                >
-                                  Logies
-                                </td>
-                              </tr>
-                              <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                <td className="py-1.5 px-2">
-                                  <p className="font-medium">{accommodationQuote.accommodation_name}</p>
-                                  <p className="text-[9px] text-gray-400">{accommodationQuote.partner_name}</p>
-                                  {accommodationNights > 0 && (
-                                    <p className="text-[9px] text-gray-400">{accommodationNights} {accommodationNights === 1 ? "nacht" : "nachten"}</p>
-                                  )}
-                                </td>
-                                <td className="py-1.5 px-2 text-right">1</td>
-                                <td className="py-1.5 px-2 text-right">
-                                  {formatCurrency(accommodationQuote.price_total)}
-                                </td>
-                                <td className="py-1.5 px-2 text-right font-medium">
-                                  {formatCurrency(accommodationQuote.price_total)}
-                                </td>
-                              </tr>
-                            </>
-                          )}
-
-                          {/* Accommodation extras */}
-                          {accommodationExtras.length > 0 && (
-                            <>
-                              <tr>
-                                <td
-                                  colSpan={4}
-                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
-                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
-                                >
-                                  Extra's bij logies
-                                </td>
-                              </tr>
-                              {bundledExtras.map((extra, idx) => {
-                                const isFixed = extra.pricing_type === "fixed";
-
-                                return (
-                                  <tr key={`extra-${idx}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                    <td className="py-1.5 px-2">
-                                      <p className="font-medium">{extra.name}</p>
-                                      {extra.description && (
-                                        <p className="text-[9px] text-gray-500">{extra.description}</p>
-                                      )}
+                              {cat.rows.map((row, idx) =>
+                                row.isSubRow ? (
+                                  <tr key={idx}>
+                                    <td className="py-0.5 pl-6 pr-2 text-[10px] text-gray-600">{row.description}</td>
+                                    <td className="py-0.5 px-2 text-right text-[10px] text-gray-500">{row.qty || "—"}</td>
+                                    <td className="py-0.5 px-2 text-right text-[10px] text-gray-500">
+                                      {row.unitPrice || "—"}
+                                      {row.unitPriceSuffix && <span className="text-[8px] text-gray-400 ml-1">{row.unitPriceSuffix}</span>}
                                     </td>
-                                    <td className="py-1.5 px-2 text-right">
-                                      {isFixed ? extra.count : extra.quantity}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right">
-                                      {formatCurrency(extra.unit_price)}
-                                      {!isFixed && (
-                                        <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
-                                      )}
-                                    </td>
-                                    <td className="py-1.5 px-2 text-right font-medium">
-                                      {formatCurrency(extra.total)}
-                                    </td>
+                                    <td className="py-0.5 px-2 text-right text-[10px] text-gray-600">{row.amount}</td>
                                   </tr>
-                                );
-                              })}
-                            </>
-                          )}
-
-                          {/* Coordination fee + levies + central surcharge */}
-                          {(totals.coordinationFee > 0 || totals.touristTax > 0 || totals.natureContribution > 0 || totals.centralSurcharge > 0) && (
-                            <>
-                              <tr>
-                                <td
-                                  colSpan={4}
-                                  className="pt-3 pb-1 px-2 font-semibold text-[9px] uppercase tracking-[0.15em]"
-                                  style={{ color: "#64748b", borderBottom: "1px solid #e2e8f0" }}
-                                >
-                                  Coördinatie & bijdragen
-                                </td>
-                              </tr>
-                              {totals.coordinationFee > 0 && (
-                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                  <td className="py-1.5 px-2">
-                                    <p className="font-medium">Coördinatiekosten</p>
-                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right">1</td>
-                                  <td className="py-1.5 px-2 text-right">{formatCurrency(totals.coordinationFee)}</td>
-                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.coordinationFee)}</td>
-                                </tr>
+                                ) : (
+                                  <tr key={idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                    <td className="py-1.5 px-2">
+                                      <p className={row.bold ? "font-semibold" : "font-medium"}>{row.description}</p>
+                                      {row.subDescription && <p className="text-[9px] text-gray-400">{row.subDescription}</p>}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-right">{row.qty || <span className="text-gray-400 text-[9px]">—</span>}</td>
+                                    <td className="py-1.5 px-2 text-right">
+                                      {row.unitPrice || <span className="text-gray-400 text-[9px]">—</span>}
+                                      {row.unitPriceSuffix && <span className="text-[8px] text-gray-400 ml-1">{row.unitPriceSuffix}</span>}
+                                    </td>
+                                    <td className={`py-1.5 px-2 text-right ${row.bold ? "font-semibold" : "font-medium"}`}>{row.amount}</td>
+                                  </tr>
+                                ),
                               )}
-                              {totals.centralSurcharge > 0 && (
-                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                  <td className="py-1.5 px-2">
-                                    <p className="font-medium">Opslag centrale facturatie</p>
-                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} personen</p>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
-                                  <td className="py-1.5 px-2 text-right">
-                                    {formatCurrency(totals.centralSurcharge / Math.max(totals.numberOfPeople, 1))}
-                                    <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.centralSurcharge)}</td>
-                                </tr>
-                              )}
-                              {totals.touristTax > 0 && (
-                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                  <td className="py-1.5 px-2">
-                                    <p className="font-medium">Toeristenbelasting</p>
-                                    <p className="text-[9px] text-gray-400">{totals.numberOfPeople} pers. × {totals.numberOfDays} {totals.numberOfDays === 1 ? "dag" : "dagen"}</p>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople * totals.numberOfDays}</td>
-                                  <td className="py-1.5 px-2 text-right">
-                                    {formatCurrency(totals.touristTax / Math.max(totals.numberOfPeople * totals.numberOfDays, 1))}
-                                    <span className="text-[8px] text-gray-400 ml-1">p.p.p.d.</span>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.touristTax)}</td>
-                                </tr>
-                              )}
-                              {totals.natureContribution > 0 && (
-                                <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
-                                  <td className="py-1.5 px-2">
-                                    <p className="font-medium">Natuurbijdrage</p>
-                                    <p className="text-[9px] text-gray-400">Bijdrage natuurbeheer Staatsbosbeheer · {totals.numberOfPeople} personen</p>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right">{totals.numberOfPeople}</td>
-                                  <td className="py-1.5 px-2 text-right">
-                                    {formatCurrency(totals.natureContribution / Math.max(totals.numberOfPeople, 1))}
-                                    <span className="text-[8px] text-gray-400 ml-1">p.p.</span>
-                                  </td>
-                                  <td className="py-1.5 px-2 text-right font-medium">{formatCurrency(totals.natureContribution)}</td>
-                                </tr>
-                              )}
-                            </>
-                          )}
-                          </>
-                          )}
+                            </React.Fragment>
+                          ))}
                         </tbody>
                       </table>
 
@@ -1760,9 +1168,9 @@ const AdminInvoicePreview = () => {
                         <div className="w-[260px] text-[10.5px]">
                           <div className="flex justify-between py-1">
                             <span className="text-gray-600">Subtotaal excl. BTW</span>
-                            <span>{formatCurrency(effectiveTotalExclVat)}</span>
+                            <span>{formatCurrency(displayTotals.totalExclVat)}</span>
                           </div>
-                          {effectiveVatLines.map((line) => (
+                          {displayTotals.vatLines.map((line) => (
                             <div key={line.rate} className="flex justify-between py-0.5 text-[10px] text-gray-500">
                               <span>BTW {line.rate}% over {formatCurrency(line.exclVat)}</span>
                               <span>{formatCurrency(line.vatAmount)}</span>
@@ -1773,7 +1181,7 @@ const AdminInvoicePreview = () => {
                             style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
                           >
                             <span>Totaal incl. BTW</span>
-                            <span>{formatCurrency(effectiveTotalInclVat)}</span>
+                            <span>{formatCurrency(displayTotals.totalInclVat)}</span>
                           </div>
                           {!isSlotMode && !isExistingInvoiceView && (() => {
                             const relevantPrior = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
@@ -1898,6 +1306,7 @@ const AdminInvoicePreview = () => {
         invoiceType={outgoingInvoiceType}
         description={notes || loadedInvoice?.description || undefined}
         existingInvoiceId={isExistingInvoiceView ? loadedInvoice?.id ?? null : null}
+        linesToStore={linesToStore}
         onGeneratePdf={buildPdfBlob}
         onSent={() => navigate(`/admin/projecten/${request.id}`)}
       />

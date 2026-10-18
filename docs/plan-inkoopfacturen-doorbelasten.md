@@ -175,6 +175,46 @@ regel. Zo'n regel is daarna alleen via de offerte zelf terug te draaien,
 niet via "Wijzig" in het werkblad. De oude `LodgingAllocationBlock` en de
 "Koppelen"-dialoog blijven staan tot fase 4.
 
+**Fase 3 (18 oktober 2026), één berekening.** `src/lib/projectInvoiceSpec.ts`
+(met tests) bouwt uit het project de hele klantfactuur: regels per onderdeel
+(klantregels als subregels), kostenposten, logies en extra's, de fees uit
+de fee-engine (of de oude schaal zonder structuur), toeristenbelasting,
+natuurbijdrage en wijzigingsrondes; daaruit de secties in factuurvolgorde,
+de btw-groepen (excl. per groep afgerond, btw = incl. − excl.) en de
+totalen incl. geregistreerd en openstaand. Regel: klantregels aanwezig =
+klantregels leidend; `use_actual_costs` is weg (kolom, guard, de
+databasefunctie van het werkblad, de regeleditor en de schermen). De zes
+plekken lezen nu deze ene berekening: het Financieel Overzicht
+(`FinancialOverviewCard` toont alleen nog), de voltooiingsstatus en de
+marge op het project (`useProjectInvoiceSpec`), de facturatiepagina
+(`AdminInvoicing`, nu ook met wijzigingsrondes), het factuurvoorbeeld en de
+PDF (`AdminInvoicePreview`, scherm en PDF uit dezelfde
+`invoiceCategories`), het klantportaal (`PriceSummaryCard`, met het
+btw-tarief van de logiesofferte in plaats van vast 9 %) en de
+SQL-trigger: de app schrijft `program_requests.invoice_spec_total_incl_vat`
+weg (project, facturatiepagina) en `recalculate_program_completion_status`
+leest dat; zonder opgeslagen totaal rekent hij nog zelf, met de juiste
+staffelvorm (`maxPeople`). De oude rekenmodules (`adminInvoicingTotals`,
+`invoiceTotals`, `projectFinancials`, `customerFeeTotals`) zijn verwijderd;
+hun tests zijn overgezet op de specificatie.
+
+Klantfacturen hebben regels: `bureau_invoice_lines` (migratie
+`20261018180000`), geschreven bij "Factuur registreren" en "Verstuur naar
+klant" (`chooseStoredLines`): een eindfactuur die het hele project dekt
+krijgt de regels van de specificatie (`item_group` + `sub` voor
+onderdelen met klantregels), een deel-, slot- of creditfactuur één
+samenvattende regel per btw-tarief. Zodra de factuur naar de boekhouding is
+(`forwarded_to_accounting_at`) zijn de regels bevroren (trigger). Het
+voorbeeld toont een geregistreerde factuur uit haar regels; de UBL naar
+Snelstart (`forward-bureau-invoice`) komt uit de regels als ze op de kop
+sluiten en valt anders terug op de oude verdeling. Oudere facturen zonder
+regels blijven de samenvattende regel tonen. "Restant factureren" vult het
+openstaande bedrag met de btw pro rata uit de specificatie
+(`scaleVatGroups`), in de registratiedialoog én in het voorbeeld; de
+"termijn met regels" registreert ook alleen nog het restant, met de hele
+specificatie en de eerdere termijnen op de PDF. De marge toont het
+projecttotaal met daaronder gefactureerd en nog te factureren.
+
 ## 1. Hoe het nu werkt
 
 ```
@@ -348,7 +388,8 @@ Nieuwe module `src/lib/projectInvoiceSpec.ts`, met tests, die uit het
 project (onderdelen, klantregels, logies, overige kosten, `excluded_fees`,
 `fee_snapshot`, revisiekosten) de volledige specificatie bouwt: regels,
 btw-groepen, totaal. Regel: **klantregels aanwezig = klantregels leidend**;
-de vlag `use_actual_costs` vervalt. Deze ene functie wordt gebruikt door:
+de vlag `use_actual_costs` vervalt. Deze ene functie wordt gebruikt door
+(gebouwd in fase 3, zie Voortgang):
 
 | Plek | Nu | Straks |
 |---|---|---|
