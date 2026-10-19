@@ -48,8 +48,7 @@ import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/
 import { InvoiceConsistencyPanel } from "@/components/admin/purchase-invoices/InvoiceConsistencyPanel";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
-import { Plus, Link2, Landmark, Split } from "lucide-react";
-import { LinkPurchaseInvoiceDialog } from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
+import { Plus, Landmark, Split } from "lucide-react";
 import { DistributeLinesDialog } from "@/components/admin/purchase-invoices/DistributeLinesDialog";
 import { Pill } from "@/components/system";
 
@@ -82,7 +81,6 @@ export default function AdminPurchaseInvoices() {
   const [deleteTarget, setDeleteTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [uploadPdfTarget, setUploadPdfTarget] = useState<PurchaseInvoiceWithRelations | null>(null);
-  const [linkTargetInvoice, setLinkTargetInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
   const [distributeInvoice, setDistributeInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
 
 
@@ -550,17 +548,6 @@ export default function AdminPurchaseInvoices() {
                           >
                             <Split className="h-4 w-4" />
                           </Button>
-                          {!invoice.item_id && !invoice.accommodation_quote && !(invoice.allocations?.length) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setLinkTargetInvoice(invoice)}
-                              title="Koppel aan programma-onderdeel of logies-offerte"
-                              className="text-primary hover:bg-primary/10"
-                            >
-                              <Link2 className="h-4 w-4" />
-                            </Button>
-                          )}
                           {invoice.file_path ? (
 
                             <Button
@@ -641,31 +628,6 @@ export default function AdminPurchaseInvoices() {
         invoice={uploadPdfTarget}
         onClose={() => setUploadPdfTarget(null)}
       />
-
-      {/* Losse factuur koppelen aan onderdeel of logies-offerte */}
-      <LinkPurchaseInvoiceDialog
-        invoice={
-          linkTargetInvoice
-            ? {
-                id: linkTargetInvoice.id,
-                partner_id: linkTargetInvoice.partner_id ?? null,
-                partner_name: linkTargetInvoice.partner?.name ?? null,
-                invoice_number: linkTargetInvoice.invoice_number ?? null,
-                invoice_date: linkTargetInvoice.invoice_date ?? null,
-                amount_incl_vat:
-                  linkTargetInvoice.amount_incl_vat !== null &&
-                  linkTargetInvoice.amount_incl_vat !== undefined
-                    ? Number(linkTargetInvoice.amount_incl_vat)
-                    : null,
-                request_id: linkTargetInvoice.request_id ?? null,
-              }
-            : null
-        }
-        open={!!linkTargetInvoice}
-        onOpenChange={(o) => !o && setLinkTargetInvoice(null)}
-      />
-
-
 
       <DistributeLinesDialog invoice={distributeInvoice} onClose={() => setDistributeInvoice(null)} />
 

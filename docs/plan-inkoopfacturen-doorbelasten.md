@@ -86,7 +86,8 @@ klantregel-editor op het onderdeel (potlood in het financieel overzicht) en
 "Koppelen" op de inkoopfacturenpagina (voor de commissieverdeling) zijn
 tijdelijk de enige routes. De nu onbereikbare blokken (`LineAssignmentBlock`,
 `LodgingAllocationBlock`, `ExtraProjectSplitBlock`,
-`purchaseInvoiceBillingLines.ts`) blijven staan tot fase 4.
+`purchaseInvoiceBillingLines.ts`) bleven staan tot fase 4 en zijn toen
+verwijderd.
 
 **Fase 2 (18 oktober 2026), werkblad Doorbelasten.** Op het tabblad
 Financiën van het project staat `ChargeWorksheetCard`
@@ -153,8 +154,8 @@ volgen (`sync_collective_invoice_header`: één project op de kop, anders
 boeking een orderregel met project, boekingsreferentie en afvaartdatum
 (gematchte boekingen met het onderdeel al als bestemming, interne boekingen
 als niet doorbelast); het maken van een kostenpost vanuit de sheet is weg,
-dat doet het werkblad. `partner_purchase_invoice_ticket_matches` wordt nog
-gevuld maar niet meer gelezen (opruimen in fase 4).
+dat doet het werkblad. `partner_purchase_invoice_ticket_matches` werd nog
+gevuld maar niet meer gelezen en is in fase 4 verwijderd.
 
 Snelstart (`forward-purchase-invoice`), de betaalbatch
 (`generate-payment-batch`), de batchpagina en de facturenlijst hebben een
@@ -173,7 +174,7 @@ kamerprijs met snapshot, extra's worden extra's met de categorie uit de
 omschrijving via `lodgingExtraCategory`) en zet `lodging_quote_id` op de
 regel. Zo'n regel is daarna alleen via de offerte zelf terug te draaien,
 niet via "Wijzig" in het werkblad. De oude `LodgingAllocationBlock` en de
-"Koppelen"-dialoog blijven staan tot fase 4.
+"Koppelen"-dialoog bleven staan tot fase 4 en zijn toen verwijderd.
 
 **Fase 3 (18 oktober 2026), één berekening.** `src/lib/projectInvoiceSpec.ts`
 (met tests) bouwt uit het project de hele klantfactuur: regels per onderdeel
@@ -215,6 +216,26 @@ openstaande bedrag met de btw pro rata uit de specificatie
 specificatie en de eerdere termijnen op de PDF. De marge toont het
 projecttotaal met daaronder gefactureerd en nog te factureren.
 
+**Fase 4 (18 oktober 2026), opruimen.** Weg zijn de routes van vóór het
+werkblad: `LineAssignmentBlock`, `LodgingAllocationBlock`,
+`ExtraProjectSplitBlock`, `purchaseInvoiceBillingLines.ts` en
+`purchaseInvoiceLineAssignment.ts` (de toeristenbelastingherkenning
+`isTouristTaxDescription` woont nu in `purchaseLineMatcher.ts`), de knop
+"Orderregels boeken" in `MatchedRegistrationBanner` (de inbox koppelt alleen
+nog de PDF aan een bestaande registratie; doorbelasten gebeurt in het
+werkblad), de "Koppelen"-dialoog (`LinkPurchaseInvoiceDialog` met
+`purchaseInvoiceLinkTargets` en `purchaseInvoiceSplit`) op de
+inkoopfacturenpagina en in de werkbank (de losse taak "inkoopfactuur zonder
+onderdeel" stuurt nu naar het werkblad van het project, of zonder project
+naar "Regels verdelen over projecten"), en het blok "Gekoppelde
+inkoopfacturen" met de knoppen Vervang/Voeg toe in de klantregel-editor
+(`usePurchaseInvoicesForItem`; bijvangst 4 is daarmee weg). De editor
+blijft voor handmatige regels en linkt naar het werkblad. Migratie
+`20261018200000` laat `bureau_invoices.vat_breakdown` vallen (de
+btw-uitsplitsing staat in `bureau_invoice_lines`) en de tabel
+`partner_purchase_invoice_ticket_matches`; `finalize-collective-invoice`
+schrijft die niet meer. Daarmee is het plan afgerond.
+
 ## 1. Hoe het nu werkt
 
 ```
@@ -253,7 +274,7 @@ Bevindingen uit de code; niets is in productie nagelopen.
 | 1 | Doorbelasten kan alleen tijdens het registreren en alleen als elke regel een onderdeel krijgt. Geen toewijzing = klant houdt de offerteprijs, met slechts een toast als melding. | `AddPurchaseInvoiceDialog.tsx` (LineAssignmentBlock, `copyToBillingLines`) |
 | 2 | De onderdeellijst in de dialoog is gefilterd op `provider_id = partner`. Klopt de partner niet met de aanbieder op het onderdeel, dan verschijnen de toewijzingsblokken helemaal niet. Overige kosten (`provider_id 'bureau'`) zijn nooit een doel. | `AddPurchaseInvoiceDialog.tsx:294` |
 | 3 | Drie toewijzings-UI's in één modal: regels toewijzen, de allocatie-editor eronder (blijft bewerkbaar, kan uit de pas lopen) en het logiesblok met AI-classificatie dat nooit wordt opgeslagen (`apply-purchase-invoice-to-lodging` heeft geen aanroeper). | idem |
-| 4 | Het kop-onderdeel (`item_id`) wordt in de dialoog nooit gezet; de tak "orderregels importeren" in de regeleditor (`link_type === "direct"`) werkt daardoor niet voor facturen uit de dialoog. | `AdminItemBillingLinesEditor.tsx:177` |
+| 4 | ~~Het kop-onderdeel (`item_id`) wordt in de dialoog nooit gezet; de tak "orderregels importeren" in de regeleditor (`link_type === "direct"`) werkt daardoor niet voor facturen uit de dialoog.~~ Opgelost in fase 4: die tak is weg. | `AdminItemBillingLinesEditor.tsx` |
 | 5 | Toeristenbelasting kan dubbel op de klantfactuur komen: als één regel "toeristenbelasting" is en de rest naar één onderdeel gaat, kopieert `buildBillingLineRowsByItem` tóch alle regels. "Orderregels boeken" in de inbox-banner kopieert altijd alle ruwe scanregels. | `purchaseInvoiceBillingLines.ts:135`, `MatchedRegistrationBanner.tsx:233` |
 | 6 | Elke schrijfactie wist eerst álle regels van het onderdeel. Een tweede inkoopfactuur op hetzelfde onderdeel overschrijft de eerste zonder melding. | `AddPurchaseInvoiceDialog.tsx:1023`, `useItemBillingLines.ts:33` |
 | 7 | Verwijderen of opnieuw verwerken van een inkoopfactuur laat de klantregels staan. De klant krijgt dan bedragen van een factuur die niet meer bestaat. | `usePurchaseInvoices.ts:260`, `usePurchaseInvoiceInbox.ts:98` |

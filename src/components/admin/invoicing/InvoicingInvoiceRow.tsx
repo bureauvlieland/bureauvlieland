@@ -76,11 +76,6 @@ export const InvoicingInvoiceRow = ({ requestId, invoice }: Props) => {
         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="font-medium">{invoice.invoice_number}</span>
         <span className="text-muted-foreground">· {formatCurrency(totalIncl)}</span>
-        {Array.isArray(invoice.vat_breakdown) && invoice.vat_breakdown.length > 0 && (
-          <span className="text-xs text-muted-foreground">
-            · {invoice.vat_breakdown.map((line) => `${line.rate}%: ${formatCurrency(line.vatAmount)}`).join(" · ")}
-          </span>
-        )}
         {forwarded ? (
           <Pill tone="success">Doorgestuurd</Pill>
         ) : (

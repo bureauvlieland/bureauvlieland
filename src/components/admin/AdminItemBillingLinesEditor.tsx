@@ -13,12 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Receipt, Plus, Trash2, Loader2, CheckCircle2, FileDown, AlertTriangle } from "lucide-react";
+import { Receipt, Plus, Trash2, Loader2, CheckCircle2, AlertTriangle, ArrowRightLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useItemBillingLines } from "@/hooks/useItemBillingLines";
-import { usePurchaseInvoicesForItem, type LinkedPurchaseInvoice } from "@/hooks/usePurchaseInvoicesForItem";
 import {
   ProgramItemBillingLineInput,
   VAT_RATE_OPTIONS,
@@ -33,6 +33,8 @@ interface AdminItemBillingLinesEditorProps {
   suggestedAmount: number | null;
   /** Default VAT rate from the building block */
   defaultVatRate: number;
+  /** Project van het onderdeel; geeft een link naar het werkblad Doorbelasten. */
+  requestId?: string;
   disabled?: boolean;
 }
 
@@ -44,11 +46,11 @@ export const AdminItemBillingLinesEditor = ({
   itemName,
   suggestedAmount,
   defaultVatRate,
+  requestId,
   disabled = false,
 }: AdminItemBillingLinesEditorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { lines, saveAll, loading } = useItemBillingLines(itemId);
-  const { invoices: linkedInvoices, loading: invoicesLoading, refetch: refetchInvoices } = usePurchaseInvoicesForItem(isOpen ? itemId : null);
   const [draft, setDraft] = useState<ProgramItemBillingLineInput[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -154,44 +156,6 @@ export const AdminItemBillingLinesEditor = ({
     if (ok) setIsOpen(false);
   };
 
-  const importFromInvoice = (invoice: LinkedPurchaseInvoice, mode: "replace" | "append") => {
-    // Prefer invoice lines; otherwise fall back to allocation or invoice header as 1 line.
-    let imported: ProgramItemBillingLineInput[] = [];
-    if (invoice.lines.length > 0 && invoice.link_type === "direct") {
-      imported = invoice.lines.map((l, i) => ({
-        description: l.description || `Factuur ${invoice.invoice_number}`,
-        quantity: Number(l.quantity) || 1,
-        unit_price_excl_vat: Number(l.amount_excl_vat) / (Number(l.quantity) || 1),
-        vat_rate: Number(l.vat_rate),
-        sort_order: i,
-      }));
-    } else if (invoice.allocation) {
-      const a = invoice.allocation;
-      imported = [{
-        description: a.notes || `Factuur ${invoice.invoice_number}`,
-        quantity: 1,
-        unit_price_excl_vat: Number(a.amount_excl_vat),
-        vat_rate: Number(a.vat_rate),
-        sort_order: 0,
-      }];
-    } else {
-      imported = [{
-        description: `Factuur ${invoice.invoice_number}`,
-        quantity: 1,
-        unit_price_excl_vat: Number(invoice.amount_excl_vat),
-        vat_rate: Number(invoice.vat_rate),
-        sort_order: 0,
-      }];
-    }
-
-    setDraft((prev) => {
-      if (mode === "replace") return imported.map((d, i) => ({ ...d, sort_order: i }));
-      const merged = [...prev, ...imported];
-      return merged.map((d, i) => ({ ...d, sort_order: i }));
-    });
-    toast.success(`${imported.length} regel(s) overgenomen uit factuur ${invoice.invoice_number}`);
-  };
-
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -225,56 +189,18 @@ export const AdminItemBillingLinesEditor = ({
           <div>
             <h4 className="font-semibold text-sm">Factuurregels (definitief)</h4>
             <p className="text-xs text-muted-foreground">
-              Deze regels worden gebruikt op de verkoopfactuur. Mix van BTW-tarieven mogelijk binnen één onderdeel (bv. zaalhuur 21% + diner 9%).
+              Handmatige regels voor de verkoopfactuur, met een mix van btw-tarieven binnen één onderdeel
+              (bv. zaalhuur 21% + diner 9%). Regels uit inkoopfacturen komen via het werkblad Doorbelasten.
             </p>
+            {requestId && (
+              <Link
+                to={`/admin/projecten/${requestId}?tab=financien`}
+                className="mt-1 inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+              >
+                <ArrowRightLeft className="h-3 w-3" /> Naar werkblad Doorbelasten
+              </Link>
+            )}
           </div>
-
-          {/* Linked purchase invoices */}
-          {!invoicesLoading && linkedInvoices.length > 0 && (
-            <div className="border rounded-md bg-muted/20 p-2 space-y-1.5">
-              <div className="text-xs font-medium text-muted-foreground">Gekoppelde inkoopfacturen</div>
-              {linkedInvoices.map((inv) => {
-                const shown = inv.link_type === "allocation" && inv.allocation
-                  ? inv.allocation.amount_incl_vat
-                  : inv.amount_incl_vat;
-                return (
-                  <div key={inv.id} className="flex items-center justify-between gap-2 text-xs bg-background rounded p-1.5 border">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">
-                        {inv.invoice_number} · {inv.partner_id}
-                        {inv.link_type === "allocation" && (
-                          <span className="ml-1 text-[10px] text-muted-foreground">(deel)</span>
-                        )}
-                      </div>
-                      <div className="text-muted-foreground tabular-nums">
-                        {formatCurrency(shown)} incl. · {new Date(inv.invoice_date).toLocaleDateString("nl-NL")}
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => importFromInvoice(inv, "replace")}
-                        title="Vervang huidige regels door regels uit deze factuur"
-                      >
-                        <FileDown className="h-3 w-3 mr-1" /> Vervang
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => importFromInvoice(inv, "append")}
-                        title="Voeg regels toe aan bestaande regels"
-                      >
-                        + Voeg toe
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
           {purchaseLines.length > 0 && (
             <div className="border rounded-md bg-muted/20 p-2 space-y-1">

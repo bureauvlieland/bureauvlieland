@@ -12,7 +12,15 @@
  * `apply_purchase_line_charges` schrijft (docs/plan-inkoopfacturen-doorbelasten.md, §4).
  */
 
-import { isTouristTaxDescription } from "@/lib/purchaseInvoiceLineAssignment";
+/**
+ * Herkent een factuurregel voor toeristenbelasting aan de omschrijving. Zo'n
+ * regel betaalt het bureau wel aan de partner, maar belast het nooit door: op
+ * de klantfactuur staat de eigen toeristenbelasting al.
+ */
+export function isTouristTaxDescription(description: string | null | undefined): boolean {
+  if (!description) return false;
+  return /toeristen\s*belasting|verblijfs\s*belasting|tourist\s*tax|city\s*tax/i.test(description);
+}
 
 export interface MatchableLine {
   id: string;

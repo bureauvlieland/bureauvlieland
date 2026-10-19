@@ -149,28 +149,7 @@ Deno.serve(async (req) => {
       return j({ error: "Failed to create invoice", details: invErr?.message }, 500);
     }
 
-    // 2) Insert match rows
-    const matchRows = body.bookings.map((b) => ({
-      invoice_id: invoice.id,
-      item_id: b.item_id,
-      booking_reference: b.resnr,
-      customer_label: b.customer_name,
-      departure_date: b.departure_dates?.[0] || null,
-      route: b.routes?.join("/") || null,
-      amount_excl_vat: b.amount_excl_vat,
-      vat_amount: b.vat_amount,
-      amount_incl_vat: b.amount_incl_vat,
-      tourist_tax: b.tourist_tax,
-      supplier_commission: b.supplier_commission,
-      match_status: b.match_status,
-    }));
-
-    const { error: matchErr } = await adminClient
-      .from("partner_purchase_invoice_ticket_matches")
-      .insert(matchRows);
-    if (matchErr) console.error("Insert matches failed:", matchErr);
-
-    // 2b) Orderregels per boeking, elk met het project waar de boeking bij
+    // 2) Orderregels per boeking, elk met het project waar de boeking bij
     //     hoort. Zo verschijnt elke boeking in het werkblad Doorbelasten van
     //     dat project; de kop blijft één factuur (betaling en Snelstart).
     const isDoeksen = body.partner_id !== "bagagevervoer-vlieland";

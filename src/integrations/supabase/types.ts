@@ -1269,7 +1269,6 @@ export type Database = {
           status: string
           updated_at: string
           vat_amount: number
-          vat_breakdown: Json
         }
         Insert: {
           amount_excl_vat: number
@@ -1289,7 +1288,6 @@ export type Database = {
           status?: string
           updated_at?: string
           vat_amount: number
-          vat_breakdown?: Json
         }
         Update: {
           amount_excl_vat?: number
@@ -1309,7 +1307,6 @@ export type Database = {
           status?: string
           updated_at?: string
           vat_amount?: number
-          vat_breakdown?: Json
         }
         Relationships: [
           {
@@ -2479,81 +2476,6 @@ export type Database = {
           },
           {
             foreignKeyName: "partner_purchase_invoice_allocations_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "program_request_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      partner_purchase_invoice_ticket_matches: {
-        Row: {
-          amount_excl_vat: number
-          amount_incl_vat: number
-          booking_reference: string
-          created_at: string
-          customer_label: string | null
-          departure_date: string | null
-          id: string
-          invoice_id: string
-          item_id: string | null
-          match_confidence: number | null
-          match_status: string
-          notes: string | null
-          route: string | null
-          supplier_commission: number
-          tourist_tax: number
-          updated_at: string
-          vat_amount: number
-        }
-        Insert: {
-          amount_excl_vat?: number
-          amount_incl_vat?: number
-          booking_reference: string
-          created_at?: string
-          customer_label?: string | null
-          departure_date?: string | null
-          id?: string
-          invoice_id: string
-          item_id?: string | null
-          match_confidence?: number | null
-          match_status?: string
-          notes?: string | null
-          route?: string | null
-          supplier_commission?: number
-          tourist_tax?: number
-          updated_at?: string
-          vat_amount?: number
-        }
-        Update: {
-          amount_excl_vat?: number
-          amount_incl_vat?: number
-          booking_reference?: string
-          created_at?: string
-          customer_label?: string | null
-          departure_date?: string | null
-          id?: string
-          invoice_id?: string
-          item_id?: string | null
-          match_confidence?: number | null
-          match_status?: string
-          notes?: string | null
-          route?: string | null
-          supplier_commission?: number
-          tourist_tax?: number
-          updated_at?: string
-          vat_amount?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "partner_purchase_invoice_ticket_matches_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "partner_purchase_invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_purchase_invoice_ticket_matches_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "program_request_items"

@@ -4,15 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListTodo, Check, X, ExternalLink, Link2, Archive } from "lucide-react";
+import { ListTodo, Check, X, ExternalLink, ArrowRightLeft, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  LinkPurchaseInvoiceDialog,
-  type LinkableInvoice,
-} from "@/components/admin/purchase-invoices/LinkPurchaseInvoiceDialog";
 import { CommissionExemptDialog } from "@/components/admin/CommissionExemptDialog";
+
+interface LinkableInvoice {
+  id: string;
+  partner_id: string | null;
+  partner_name?: string | null;
+  invoice_number: string | null;
+  invoice_date: string | null;
+  amount_incl_vat: number | null;
+  request_id?: string | null;
+}
 
 interface TodoRow {
   id: string;
@@ -38,7 +44,6 @@ const PRIORITY_TONE: Record<TodoRow["priority"], string> = {
 export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onResolved?: () => void }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [linkOpen, setLinkOpen] = useState(false);
   const [exemptOpen, setExemptOpen] = useState(false);
 
   const { data: todo, isLoading } = useQuery<TodoRow | null>({
@@ -180,8 +185,21 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
                 )}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                <Button size="sm" className="h-7 gap-1" onClick={() => setLinkOpen(true)}>
-                  <Link2 className="h-3.5 w-3.5" /> Factuur koppelen
+                {/* Doorbelasten en de verdeling voor de commissie gebeuren in het
+                    werkblad op het project; zonder project eerst de regels verdelen. */}
+                <Button
+                  size="sm"
+                  className="h-7 gap-1"
+                  onClick={() =>
+                    navigate(
+                      invoice.request_id
+                        ? `/admin/projecten/${invoice.request_id}?tab=financien`
+                        : `/admin/inkoopfacturen?search=${encodeURIComponent(invoice.invoice_number ?? "")}`,
+                    )
+                  }
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  {invoice.request_id ? "Naar werkblad Doorbelasten" : "Regels verdelen over projecten"}
                 </Button>
                 <Button
                   size="sm"
@@ -206,15 +224,6 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
         </CardContent>
       </Card>
 
-      <LinkPurchaseInvoiceDialog
-        invoice={invoice ?? null}
-        open={linkOpen}
-        onOpenChange={setLinkOpen}
-        onLinked={() => {
-          refreshAll();
-          onResolved?.();
-        }}
-      />
       {todo.auto_entity_id && (
         <CommissionExemptDialog
           open={exemptOpen}

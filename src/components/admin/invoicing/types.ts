@@ -16,7 +16,6 @@ export interface InvoicingInvoice {
   invoice_date: string;
   amount_excl_vat: number;
   vat_amount: number;
-  vat_breakdown: { rate: number; exclVat: number; vatAmount: number }[] | null;
   amount_incl_vat: number | null;
   invoice_type: string;
   description: string | null;
