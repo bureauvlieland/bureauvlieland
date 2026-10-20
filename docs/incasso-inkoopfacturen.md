@@ -16,7 +16,7 @@ Twee smaken bij Doeksen:
 | Soort factuur | Commissie | Wat Doeksen incasseert |
 |---|---|---|
 | Catering (losse inkoopfactuur per project) | niet ingehouden, loopt via de commissiefactuur | het volledige bedrag incl. btw |
-| Overtochten (verzamelfactuur) | ingehouden op de factuur, opgeslagen als `supplier_commission_excl_vat` | bruto incl. btw minus de ingehouden commissie ("Netto bedrag" op de PDF) |
+| Overtochten (verzamelfactuur) | ingehouden op de factuur, opgeslagen als `supplier_commission_excl_vat` | tickets incl. btw plus toeristenbelasting (kolom "TB", 0 % btw) minus de ingehouden commissie ("Netto bedrag" op de PDF). De factuur wordt opgeslagen mét toeristenbelasting, als eigen regel per boeking op "niet doorbelasten"; `collectiveInvoiceTotals` leidt uit het nettobedrag af of de TB al in het totaal zat. |
 
 ## Wat er is gebouwd
 

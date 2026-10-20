@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
-import { directDebitAmount } from "@/lib/purchaseInvoiceDirectDebit";
+import { collectiveInvoiceTotals } from "@/lib/collectiveInvoiceTotals";
 
 type MatchStatus = "matched" | "ambiguous" | "unmatched" | "manual" | "internal";
 
@@ -123,14 +123,19 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const allResolved = bookings.every(
     (b) => b.match_status !== "unmatched" && b.match_status !== "ambiguous",
   );
-  // Doeksen incasseert bruto minus ingehouden commissie. Het "Netto bedrag" op
-  // de PDF hoort daar gelijk aan te zijn; zo niet, dan is er iets misgelezen.
-  const expectedNetToPay = data
-    ? directDebitAmount({
-        amount_incl_vat: data.invoice.total_incl_vat,
-        supplier_commission_excl_vat: supplierType === "doeksen" ? data.invoice.total_supplier_commission : 0,
+  // Doeksen incasseert tickets plus toeristenbelasting minus ingehouden
+  // commissie. Het "Netto bedrag" op de PDF hoort daar gelijk aan te zijn; zo
+  // niet, dan is er iets misgelezen.
+  const totals = data
+    ? collectiveInvoiceTotals({
+        total_incl_vat: data.invoice.total_incl_vat,
+        total_tourist_tax: supplierType === "doeksen" ? data.invoice.total_tourist_tax : 0,
+        total_supplier_commission: supplierType === "doeksen" ? data.invoice.total_supplier_commission : 0,
+        net_to_pay: data.invoice.net_to_pay,
       })
-    : 0;
+    : null;
+  const expectedNetToPay = totals?.expectedNetToPay ?? 0;
+  const touristTaxOnTop = !!totals && totals.touristTax > 0 && !totals.touristTaxIncluded;
   const netToPayMismatch =
     data && supplierType === "doeksen" && Number.isFinite(data.invoice.net_to_pay) && data.invoice.net_to_pay > 0
       && Math.abs(data.invoice.net_to_pay - expectedNetToPay) >= 0.05
@@ -279,6 +284,11 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                   <div className="text-xl font-bold font-mono">
                     {EUR(data.invoice.total_incl_vat)}
                   </div>
+                  {touristTaxOnTop && totals && (
+                    <div className="text-xs text-muted-foreground">
+                      + toeristenbelasting {EUR(totals.touristTax)} = {EUR(totals.grossInclTouristTax)}
+                    </div>
+                  )}
                   {supplierType === "doeksen" && data.invoice.total_supplier_commission > 0 && (
                     <div className="text-xs text-emerald-700">
                       Commissie BV: {EUR(data.invoice.total_supplier_commission)}
@@ -296,7 +306,7 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
                     Het nettobedrag op de PDF ({EUR(data.invoice.net_to_pay)}) wijkt {EUR(Math.abs(netToPayMismatch))} af
-                    van totaal minus commissie ({EUR(expectedNetToPay)}). Controleer de uitgelezen totalen: de
+                    van totaal{touristTaxOnTop ? " plus toeristenbelasting" : ""} minus commissie ({EUR(expectedNetToPay)}). Controleer de uitgelezen totalen: de
                     bankmatching herkent de incasso straks op dat laatste bedrag.
                   </span>
                 </div>
