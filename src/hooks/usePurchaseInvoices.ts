@@ -1,3 +1,4 @@
+import { isCustomerBilled } from "@/lib/invoiceBilledTo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,7 +54,10 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
           : query.eq("request_id", filters.requestId);
       }
       if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
-      if (filters?.status && filters.status !== 'all') query = query.eq("status", filters.status);
+      // "customer_billed" is geen status maar een zicht: facturen die de gast
+      // rechtstreeks betaalde (alleen commissiegrondslag).
+      if (filters?.status === "customer_billed") query = query.eq("billed_to", "customer");
+      else if (filters?.status && filters.status !== 'all') query = query.eq("status", filters.status);
       if (filters?.search) query = query.ilike("invoice_number", `%${filters.search}%`);
 
       const { data, error } = await query;
@@ -110,7 +114,9 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
   });
 
   const stats: PurchaseInvoiceStats = {
-    pending: invoices?.filter(i => i.status === 'pending').length || 0,
+    // Een factuur aan de gast wacht nergens op: het bureau stuurt hem niet door.
+    pending: invoices?.filter(i => i.status === 'pending' && !isCustomerBilled(i)).length || 0,
+    customerBilled: invoices?.filter(i => isCustomerBilled(i)).length || 0,
     awaitingPdf: invoices?.filter(i => isAwaitingPdfMatch(i)).length || 0,
     forwarded: invoices?.filter(i => i.status === 'forwarded').length || 0,
     paid: invoices?.filter(i => i.status === 'paid').length || 0,

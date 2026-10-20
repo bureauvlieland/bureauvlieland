@@ -1,3 +1,4 @@
+import { isCustomerBilled } from "../_shared/invoiceBilledTo.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { findDuplicateGroupsInSelection } from "../_shared/purchaseInvoiceDuplicateRules.ts";
 
@@ -143,7 +144,7 @@ Deno.serve(async (req) => {
       .from("partner_purchase_invoices")
       .select(`
         id, invoice_number, invoice_date, amount_incl_vat, description, payment_batch_id, status,
-        refund_pending_at, amount_mismatch_reason, pdf_total_incl_vat, request_id,
+        refund_pending_at, amount_mismatch_reason, pdf_total_incl_vat, request_id, billed_to,
         partners!inner(id, name, iban, bic, pays_by_direct_debit),
         program_requests(reference_number)
       `)
@@ -183,6 +184,9 @@ Deno.serve(async (req) => {
       // Blokkeert de batch NIET — echte openstaande afwijkingen worden via purchase_invoice_reconciliation_findings gevangen (zie hierboven).
       if (inv.partners?.pays_by_direct_debit) {
         errors.push(`Partner ${inv.partners?.name} betaalt via automatische incasso en hoort niet in een betaalbatch`);
+      }
+      if (isCustomerBilled(inv)) {
+        errors.push(`Factuur ${inv.invoice_number} (${inv.partners?.name}) is aan de gast gericht en al door de gast betaald; hoort niet in een betaalbatch`);
       }
       const ibanRaw = (inv.partners?.iban || "").replace(/\s/g, "").toUpperCase();
       if (!ibanRaw) errors.push(`Partner ${inv.partners?.name} heeft geen IBAN`);

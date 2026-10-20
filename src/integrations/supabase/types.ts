@@ -227,6 +227,7 @@ export type Database = {
           invoiced_amount: number | null
           invoiced_date: string | null
           invoiced_file_path: string | null
+          invoiced_billed_to: string
           invoiced_number: string | null
           partner_id: string
           partner_notes: string | null
@@ -283,6 +284,7 @@ export type Database = {
           invoiced_amount?: number | null
           invoiced_date?: string | null
           invoiced_file_path?: string | null
+          invoiced_billed_to?: string
           invoiced_number?: string | null
           partner_id: string
           partner_notes?: string | null
@@ -339,6 +341,7 @@ export type Database = {
           invoiced_amount?: number | null
           invoiced_date?: string | null
           invoiced_file_path?: string | null
+          invoiced_billed_to?: string
           invoiced_number?: string | null
           partner_id?: string
           partner_notes?: string | null
@@ -2490,6 +2493,7 @@ export type Database = {
           amount_mismatch_reason: string | null
           approved_at: string | null
           bank_line_id: string | null
+          billed_to: string
           commission_exempt: boolean
           commission_exempt_at: string | null
           commission_exempt_by: string | null
@@ -2528,6 +2532,7 @@ export type Database = {
           amount_mismatch_reason?: string | null
           approved_at?: string | null
           bank_line_id?: string | null
+          billed_to?: string
           commission_exempt?: boolean
           commission_exempt_at?: string | null
           commission_exempt_by?: string | null
@@ -2566,6 +2571,7 @@ export type Database = {
           amount_mismatch_reason?: string | null
           approved_at?: string | null
           bank_line_id?: string | null
+          billed_to?: string
           commission_exempt?: boolean
           commission_exempt_at?: string | null
           commission_exempt_by?: string | null

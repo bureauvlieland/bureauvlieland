@@ -286,6 +286,13 @@ export function rowPills(row: ReconRow): WorklistPill[] {
       title: "Losse inkoopfactuur, nog niet aan een onderdeel of logies gekoppeld.",
     });
   }
+  if (row.customerPaid) {
+    pills.push({
+      tone: "info",
+      label: "Gast betaalde rechtstreeks",
+      title: "De partner factureerde de gast; het bureau betaalt deze factuur niet. De commissie gaat over het factuurbedrag ex btw.",
+    });
+  }
   if (isDeviationRow(row)) {
     pills.push({
       tone: "warning",

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { isCustomerBilled } from "@/lib/invoiceBilledTo";
 import { Helmet } from "react-helmet";
 import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -87,9 +88,11 @@ const AdminFinancialDashboardContent = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("partner_purchase_invoices")
-        .select("id, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, status, partner_id, request_id");
+        .select("id, invoice_date, amount_excl_vat, vat_amount, amount_incl_vat, status, partner_id, request_id, billed_to");
       if (error) throw error;
-      return data || [];
+      // Facturen die de gast rechtstreeks betaalde zijn geen inkoop van het
+      // bureau; ze tellen alleen mee in de commissie.
+      return (data || []).filter((inv) => !isCustomerBilled(inv));
     },
   });
 

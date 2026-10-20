@@ -1,11 +1,14 @@
 // Statusstroom van inkoopfacturen die partners "via e-mail" registreren.
 // Dependency-vrij zodat dit ook in node/vitest laadt zonder JSDOM.
+import { isCustomerBilled } from "@/lib/invoiceBilledTo";
 
 export const PENDING_EMAIL_MATCH = "pending_email_match" as const;
 
 export interface StatusFlowRow {
   status?: string | null;
   file_path?: string | null;
+  /** `customer`: de gast betaalde rechtstreeks; het bureau stuurt niets door en betaalt niets. */
+  billed_to?: string | null;
 }
 
 /**
@@ -31,9 +34,11 @@ export function resolveStatusAfterPdfLink(
 /**
  * Mag deze factuur mee in de doorstuur-/betaalstroom?
  * `pending_email_match` met PDF telt gewoon mee — anders vallen die facturen
- * stil uit de crediteurenstroom.
+ * stil uit de crediteurenstroom. Een factuur aan de gast nooit: die heeft de
+ * gast al betaald, het bureau stuurt hem niet door en betaalt hem niet.
  */
 export function isForwardableInvoice(row: StatusFlowRow): boolean {
+  if (isCustomerBilled(row)) return false;
   if (row.status === "pending" || row.status === "forwarded") return true;
   return row.status === PENDING_EMAIL_MATCH && !!row.file_path;
 }

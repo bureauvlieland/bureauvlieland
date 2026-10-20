@@ -157,3 +157,19 @@ Deno.test("logiesaanvraag: het gekoppelde programma komt als program_request_id 
   const loose = await loadReconciliationInputs(fakeClient({ accommodation_quotes: [quote], partners: [partner] }), {});
   assertEquals(loose.projects.find((p) => p.id === "ar1")?.program_request_id, null);
 });
+
+Deno.test("factuur aan de gast: billed_to en invoiced_billed_to komen als vlag door, leeg valt terug op bureau", async () => {
+  const client = fakeClient({
+    accommodation_quotes: [{ ...quote, invoiced_number: "H-1", invoiced_amount: 900, invoiced_billed_to: "customer" }],
+    partners: [partner],
+    partner_purchase_invoices: [
+      { id: "inv-c", partner_id: "p1", request_id: "r1", item_id: null, invoice_number: "9", invoice_date: "2026-09-05", amount_excl_vat: 100, amount_incl_vat: 121, commission_exempt: false, status: "pending", created_at: "2026-09-05", billed_to: "customer" },
+      { id: "inv-b", partner_id: "p1", request_id: "r1", item_id: null, invoice_number: "10", invoice_date: "2026-09-05", amount_excl_vat: 100, amount_incl_vat: 121, commission_exempt: false, status: "pending", created_at: "2026-09-05", billed_to: null },
+    ],
+  });
+  const inputs = await loadReconciliationInputs(client, {});
+  assertEquals(inputs.items[0].invoice_billed_to, "customer");
+  const byId = new Map(inputs.invoices.map((i) => [i.id, i]));
+  assertEquals(byId.get("inv-c")?.billed_to, "customer");
+  assertEquals(byId.get("inv-b")?.billed_to, "bureau");
+});

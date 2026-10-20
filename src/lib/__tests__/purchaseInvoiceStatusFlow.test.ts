@@ -39,3 +39,13 @@ describe("purchaseInvoiceStatusFlow", () => {
     ).toBeNull();
   });
 });
+
+describe("factuur aan de gast", () => {
+  it("gaat nooit mee in de doorstuur- of betaalstroom, ongeacht de status", () => {
+    expect(isForwardableInvoice({ status: "pending", file_path: "x.pdf", billed_to: "customer" })).toBe(false);
+    expect(isForwardableInvoice({ status: "forwarded", file_path: null, billed_to: "customer" })).toBe(false);
+    expect(isForwardableInvoice({ status: "pending_email_match", file_path: "x.pdf", billed_to: "customer" })).toBe(false);
+    expect(isForwardableInvoice({ status: "pending", file_path: null, billed_to: "bureau" })).toBe(true);
+    expect(isForwardableInvoice({ status: "pending", file_path: null, billed_to: null })).toBe(true);
+  });
+});

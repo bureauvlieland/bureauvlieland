@@ -2,6 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { canPartnerInvoiceItem } from "../_shared/partnerInvoicing.ts";
 import { findItemsAlreadyInvoiced, type ItemInvoiceLink } from "../_shared/purchaseInvoiceDuplicateRules.ts";
+import { normalizeBilledTo } from "../_shared/invoiceBilledTo.ts";
 import { isPartnerDashboardItemVisible } from "../_shared/partnerDashboardItems.ts";
 
 const corsHeaders = {
@@ -149,11 +150,14 @@ Deno.serve(async (req) => {
     // dan opnieuw aan als "te factureren", en zo is één factuur twee keer
     // geregistreerd en uitbetaald. Neem het nummer van die factuur over, zodat
     // het onderdeel als gefactureerd telt.
+    // Daarnaast: aan wie de factuur gericht was (`billed_to`), zodat het
+    // portaal "Aan de gast" kan tonen bij een factuur die de gast zelf betaalde.
+    const activeItemIds = activeItems.map((i) => i.id);
     const unnumberedIds = activeItems.filter((i) => !i.invoiced_number).map((i) => i.id);
-    if (unnumberedIds.length > 0) {
+    if (activeItemIds.length > 0) {
       const { data: partnerInvoices } = await supabase
         .from("partner_purchase_invoices")
-        .select("id, item_id, invoice_number, invoice_date, file_path")
+        .select("id, item_id, invoice_number, invoice_date, file_path, billed_to")
         .eq("partner_id", partner.id)
         .is("refund_pending_at", null);
       const invoiceRows = (partnerInvoices || []) as Array<{
@@ -162,13 +166,14 @@ Deno.serve(async (req) => {
         invoice_number: string | null;
         invoice_date: string | null;
         file_path: string | null;
+        billed_to: string | null;
       }>;
       if (invoiceRows.length > 0) {
         const { data: allocationRows } = await supabase
           .from("partner_purchase_invoice_allocations")
           .select("item_id, invoice_id")
           .in("invoice_id", invoiceRows.map((r) => r.id))
-          .in("item_id", unnumberedIds);
+          .in("item_id", activeItemIds);
         const byId = new Map(invoiceRows.map((r) => [r.id, r]));
         const links: ItemInvoiceLink[] = [
           ...invoiceRows.map((r) => ({ item_id: r.item_id, invoice_id: r.id, invoice_number: r.invoice_number })),
@@ -178,11 +183,13 @@ Deno.serve(async (req) => {
             invoice_number: byId.get(a.invoice_id)?.invoice_number ?? null,
           })),
         ];
-        const found = findItemsAlreadyInvoiced(unnumberedIds, links);
+        const found = findItemsAlreadyInvoiced(activeItemIds, links);
         for (const item of activeItems) {
           const link = found.get(item.id);
           if (!link) continue;
           const inv = byId.get(link.invoice_id);
+          item.invoiced_billed_to = normalizeBilledTo(inv?.billed_to);
+          if (!unnumberedIds.includes(item.id)) continue;
           item.invoiced_number = link.invoice_number || "(geregistreerd door Bureau Vlieland)";
           item.invoiced_date = item.invoiced_date ?? inv?.invoice_date ?? null;
           item.invoiced_file_path = item.invoiced_file_path ?? inv?.file_path ?? null;
@@ -367,6 +374,9 @@ Deno.serve(async (req) => {
         ];
 
         const invoicingModeByProgramId = new Map<string, string>();
+        // Logies dat het bureau van zijn factuur haalde: de accommodatie rekent
+        // rechtstreeks met de gast af, dus de factuurkeuze staat vooraf op "aan de gast".
+        const accommodationDirectByProgramId = new Set<string>();
         // Gastenlijst en dieetwensen vult de klant op het programma in; de
         // logiespartner moet ze ook zien (voorheen zag hij alleen special_requests).
         const guestInfoByProgramId = new Map<string, { guest_names: string | null; dietary_notes: string | null }>();
@@ -374,12 +384,15 @@ Deno.serve(async (req) => {
         if (linkedProgramIds.length > 0) {
           const { data: programModes } = await supabase
             .from("program_requests")
-            .select("id, invoicing_mode, guest_names, dietary_notes")
+            .select("id, invoicing_mode, guest_names, dietary_notes, excluded_fees")
             .in("id", linkedProgramIds);
 
           (programModes || []).forEach((program) => {
             if (program?.id && program?.invoicing_mode) {
               invoicingModeByProgramId.set(program.id, program.invoicing_mode);
+            }
+            if (program?.id && Array.isArray(program.excluded_fees) && program.excluded_fees.includes("accommodation")) {
+              accommodationDirectByProgramId.add(program.id);
             }
             if (program?.id) {
               guestInfoByProgramId.set(program.id, {
@@ -402,6 +415,7 @@ Deno.serve(async (req) => {
             accommodation_requests: {
               ...quote.accommodation_requests,
               invoicing_mode: invoicingMode,
+              accommodation_billed_directly: !!linkedProgramId && accommodationDirectByProgramId.has(linkedProgramId),
               program_guest_names: guestInfo?.guest_names ?? null,
               program_dietary_notes: guestInfo?.dietary_notes ?? null,
               ...(isBureauCentral

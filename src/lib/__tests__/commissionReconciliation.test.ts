@@ -979,3 +979,102 @@ describe("verzamelfacturen: regels dragen het project", () => {
     expect(rows[0].commissionAtRisk).toBeCloseTo(75, 6);
   });
 });
+
+describe("factuur aan de gast (billed_to = customer)", () => {
+  // De gast rekende rechtstreeks met de partner af; de boeking liep via het
+  // bureau. De grondslag en de commissie blijven exact hetzelfde als bij een
+  // factuur aan het bureau; alleen de vlag `customerPaid` komt erbij.
+  it("rekent dezelfde commissie over een factuur die de gast betaalde", () => {
+    const bureau = buildReconciliationRows({
+      items: [item()],
+      invoices: [invoice({ item_id: "item-1", amount_excl_vat: 1000, billed_to: "bureau" })],
+      projects,
+      partners,
+    })[0];
+    const customer = buildReconciliationRows({
+      items: [item()],
+      invoices: [invoice({ item_id: "item-1", amount_excl_vat: 1000, billed_to: "customer" })],
+      projects,
+      partners,
+    })[0];
+    expect(customer.purchaseExclVat).toBe(bureau.purchaseExclVat);
+    expect(customer.purchaseCommission).toBe(bureau.purchaseCommission);
+    expect(customer.commissionAtRisk).toBe(bureau.commissionAtRisk);
+    expect(customer.defaultBasis).toBe("purchase");
+    expect(customer.readiness).toBe("billable");
+    expect(bureau.customerPaid).toBe(false);
+    expect(customer.customerPaid).toBe(true);
+    expect(customer.purchaseInvoices?.[0].billedTo).toBe("customer");
+  });
+
+  it("zonder vlag geldt de factuur als factuur aan het bureau", () => {
+    const row = buildReconciliationRows({
+      items: [item()],
+      invoices: [invoice({ item_id: "item-1" })],
+      projects,
+      partners,
+    })[0];
+    expect(row.customerPaid).toBe(false);
+    expect(row.purchaseInvoices?.[0].billedTo).toBe("bureau");
+  });
+
+  it("is pas 'door de gast betaald' als álle facturen in de grondslag aan de gast gericht zijn", () => {
+    const row = buildReconciliationRows({
+      items: [item()],
+      invoices: [
+        invoice({ id: "inv-1", invoice_number: "7", item_id: "item-1", amount_excl_vat: 600, billed_to: "customer" }),
+        invoice({ id: "inv-2", invoice_number: "8", item_id: "item-1", amount_excl_vat: 400, billed_to: "bureau" }),
+      ],
+      projects,
+      partners,
+    })[0];
+    expect(row.purchaseExclVat).toBe(1000);
+    expect(row.customerPaid).toBe(false);
+  });
+
+  it("logies: de eindfactuur op de offerte aan de gast telt als grondslag én als door de gast betaald", () => {
+    const row = buildReconciliationRows({
+      items: [
+        item({
+          item_type: "accommodation",
+          quoted_price: 2000,
+          vat_rate: 0,
+          invoiced_number: "H-1",
+          invoiced_amount: 1800,
+          invoice_billed_to: "customer",
+          execution_end_date: "2026-06-11",
+        }),
+      ],
+      invoices: [],
+      projects,
+      partners,
+    })[0];
+    expect(row.purchaseExclVat).toBe(1800);
+    expect(row.purchaseCommission).toBeCloseTo(180, 6);
+    expect(row.customerPaid).toBe(true);
+  });
+
+  it("logies zonder geregistreerde factuur is niet 'door de gast betaald', ook niet met de vlag", () => {
+    const row = buildReconciliationRows({
+      items: [item({ item_type: "accommodation", invoice_billed_to: "customer" })],
+      invoices: [],
+      projects,
+      partners,
+    })[0];
+    expect(row.purchaseExclVat).toBeNull();
+    expect(row.customerPaid).toBe(false);
+  });
+
+  it("losse inkoopfactuur aan de gast: zelfde regel, met de vlag", () => {
+    const row = buildReconciliationRows({
+      items: [],
+      invoices: [invoice({ item_id: null, amount_excl_vat: 250, billed_to: "customer" })],
+      projects,
+      partners,
+    })[0];
+    expect(row.itemType).toBe("purchase_invoice");
+    expect(row.purchaseCommission).toBeCloseTo(25, 6);
+    expect(row.customerPaid).toBe(true);
+    expect(row.purchaseInvoices?.[0].billedTo).toBe("customer");
+  });
+});

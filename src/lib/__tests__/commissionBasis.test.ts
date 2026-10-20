@@ -41,6 +41,7 @@ const row = (overrides: Partial<ReconRow> = {}): ReconRow => ({
   ageDays: 10,
   commissionComponents: null,
   hasMixedRates: false,
+  customerPaid: false,
   ...overrides,
 });
 

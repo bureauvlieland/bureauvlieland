@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload, Plus } from "lucide-react";
+import { Package, Download, Mail, Check, Clock, CheckCircle, ArrowRight, Upload, Plus, UserRound } from "lucide-react";
+import { isCustomerBilled } from "@/lib/invoiceBilledTo";
 import { usePurchaseInvoicesByRequest } from "@/hooks/usePurchaseInvoices";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { ForwardToAccountingDialog } from "@/components/admin/ForwardToAccountingDialog";
@@ -36,6 +37,18 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
   };
 
   const getStatusBadge = (invoice: PurchaseInvoiceWithRelations) => {
+    if (isCustomerBilled(invoice)) {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-teal-50 text-teal-700 border-teal-200 text-xs"
+          title="De gast heeft deze factuur rechtstreeks aan de partner betaald. Alleen grondslag voor de commissie; niet doorsturen, niet betalen, niet doorbelasten."
+        >
+          <UserRound className="h-3 w-3 mr-1" />
+          Gast betaalde rechtstreeks
+        </Badge>
+      );
+    }
     switch (invoice.status) {
       case "pending":
         return (
@@ -179,29 +192,33 @@ export function PurchaseInvoicesCard({ requestId }: PurchaseInvoicesCardProps) {
                             <Upload className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => openForward(invoice)}
-                          title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
-                        >
-                          <Mail className="h-3.5 w-3.5" />
-                        </Button>
-                        <InvoiceForwardHistoryPopover
-                          invoiceId={invoice.id}
-                          onResend={() => openForward(invoice)}
-                        />
-                        {invoice.status !== "paid" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => markAsPaid.mutate(invoice.id)}
-                            title="Markeer als betaald"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </Button>
+                        {!isCustomerBilled(invoice) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => openForward(invoice)}
+                              title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                            </Button>
+                            <InvoiceForwardHistoryPopover
+                              invoiceId={invoice.id}
+                              onResend={() => openForward(invoice)}
+                            />
+                            {invoice.status !== "paid" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => markAsPaid.mutate(invoice.id)}
+                                title="Markeer als betaald"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

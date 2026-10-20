@@ -11,6 +11,7 @@ import {
 } from "../_shared/purchaseInvoiceDuplicateRules.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
+import { isValidBilledTo, normalizeBilledTo } from "../_shared/invoiceBilledTo.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -88,6 +89,9 @@ Deno.serve(async (req) => {
       notes,
       filePath,
       viaEmail,
+      // Aan wie de partner factureerde: "bureau" (default) of "customer" (de
+      // gast betaalde rechtstreeks; alleen commissiegrondslag).
+      billedTo: billedToRaw,
       // Legacy single-item mode:
       itemId,
       invoicedAmount,
@@ -117,6 +121,14 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (billedToRaw !== undefined && billedToRaw !== null && !isValidBilledTo(billedToRaw)) {
+      return new Response(
+        JSON.stringify({ error: "Ongeldige waarde voor billedTo (bureau of customer)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const billedTo = normalizeBilledTo(billedToRaw);
+    const customerPaid = billedTo === "customer";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -347,6 +359,7 @@ Deno.serve(async (req) => {
         file_path: filePath || null,
         status: headerStatus,
         registered_by: "partner",
+        billed_to: billedTo,
       })
       .select()
       .single();
@@ -411,8 +424,11 @@ Deno.serve(async (req) => {
           invoiced_date: invoicedDate,
           commission_percentage: commissionPercentage,
           collective: isCollective,
+          billed_to: billedTo,
         },
-        notes: isCollective
+        notes: customerPaid
+          ? `Partner heeft factuur ${invoicedNumber} aan de gast geregistreerd voor onderdeel "${it?.block_name}" (€${a.amount_excl_vat}, door de gast betaald; alleen commissie)`
+          : isCollective
           ? `Partner heeft onderdeel "${it?.block_name}" gefactureerd op verzamelfactuur ${invoicedNumber} (€${a.amount_excl_vat})`
           : `Partner heeft inkoopfactuur ${invoicedNumber} geregistreerd aan Bureau Vlieland (€${a.amount_excl_vat})`,
       });
@@ -432,8 +448,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Purchase invoice processing todo (once per invoice)
-    if (invoicingMode === "bureau_central") {
+    // Purchase invoice processing todo (once per invoice). Een factuur aan de
+    // gast is geen kostenpost van het bureau: niets door te sturen of te betalen.
+    if (invoicingMode === "bureau_central" && !customerPaid) {
       await supabase.from("admin_todos").insert({
         title: `Inkoopfactuur verwerken: ${partner.name} - ${invoicedNumber}`,
         description: `Partner ${partner.name} heeft inkoopfactuur ${invoicedNumber} (€${totalExcl}) geregistreerd voor project ${project.reference_number || requestId}. Factuur doorsturen naar Snelstart.`,
@@ -462,6 +479,12 @@ Deno.serve(async (req) => {
            De factuur wordt automatisch gekoppeld zodra hij binnenkomt.
          </div>`
       : "";
+    const customerPaidBanner = customerPaid
+      ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;padding:12px 16px;border-radius:8px;margin:16px 0;font-size:14px;">
+           <strong>Aan de gast gericht:</strong> de gast heeft deze factuur rechtstreeks aan de partner betaald.
+           Bureau Vlieland betaalt niets en stuurt de factuur niet door naar Snelstart; alleen de commissie wordt gefactureerd.
+         </div>`
+      : "";
 
     const bureauEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -469,6 +492,7 @@ Deno.serve(async (req) => {
         <p><strong>${partner.name}</strong> heeft een ${isCollective ? "verzamelfactuur" : "factuur"} geregistreerd voor project <strong>${project.reference_number || requestId}</strong> (${customerName}).</p>
 
         ${viaEmailBanner}
+        ${customerPaidBanner}
 
         <div style="background:#f7fafc;padding:20px;border-radius:8px;margin:20px 0;">
           <h3 style="margin-top:0;color:#2d3748;">Factuurgegevens</h3>
@@ -496,7 +520,7 @@ Deno.serve(async (req) => {
     `;
 
     const bureauRecipient = getRecipientEmail(await getBureauAdminEmail(supabase), origin);
-    const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd${isViaEmail ? " (via e-mail)" : ""}: ${partner.name} - ${project.reference_number || customerName}`;
+    const bureauSubject = `${getSubjectPrefix(origin)}${isCollective ? "Verzamelfactuur" : "Factuur"} geregistreerd${isViaEmail ? " (via e-mail)" : ""}${customerPaid ? " (aan de gast)" : ""}: ${partner.name} - ${project.reference_number || customerName}`;
     const sendResult = await sendEmailNotification(
       bureauRecipient,
       "Bureau Vlieland",
@@ -526,6 +550,7 @@ Deno.serve(async (req) => {
         invoicingMode,
         collective: isCollective,
         viaEmail: isViaEmail,
+        billedTo,
         itemCount: dbItems.length,
         invoiceId: newInvoice.id,
       },
@@ -535,6 +560,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         invoiceId: newInvoice.id,
+        billedTo,
         commission: {
           percentage: commissionPercentage,
           amount: totalCommission,

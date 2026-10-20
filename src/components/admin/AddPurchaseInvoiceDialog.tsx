@@ -188,6 +188,9 @@ export function AddPurchaseInvoiceDialog({
   const [vatAmount, setVatAmount] = useState<string>("");
   const [amountIncl, setAmountIncl] = useState<string>("");
   const [description, setDescription] = useState("");
+  // De gast heeft deze factuur rechtstreeks aan de partner betaald: wél
+  // commissiegrondslag, maar niets door te sturen of te betalen.
+  const [customerPaid, setCustomerPaid] = useState(false);
   const [lines, setLines] = useState<LineRow[]>([]);
 
   const [partnerSearchOpen, setPartnerSearchOpen] = useState(false);
@@ -292,6 +295,7 @@ export function AddPurchaseInvoiceDialog({
       setVatRate("21");
       setPdfTotalIncl("");
       setDescription("");
+      setCustomerPaid(false);
       setLines([]);
     }
   }, [open, defaultRequestId, defaultPartnerId, inboxItem]);
@@ -585,6 +589,7 @@ export function AddPurchaseInvoiceDialog({
         description: description || null,
         file_path: filePath,
         registered_by: "admin",
+        billed_to: customerPaid ? "customer" : "bureau",
         lines: validLines.length > 0 ? validLines : undefined,
         allowDuplicate: acceptDuplicate,
         pdf_total_incl_vat: pdfTotalNum ?? undefined,
@@ -1117,6 +1122,21 @@ export function AddPurchaseInvoiceDialog({
                 rows={2}
               />
             </div>
+
+            <label className="flex items-start gap-2 rounded-md border p-3 text-sm cursor-pointer">
+              <Checkbox
+                checked={customerPaid}
+                onCheckedChange={(v) => setCustomerPaid(v === true)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">De gast heeft deze factuur rechtstreeks aan de partner betaald</span>
+                <span className="block text-xs text-muted-foreground">
+                  De factuur telt alleen als grondslag voor de commissie. Hij gaat niet naar Snelstart, niet in een
+                  betaalbatch en wordt niet aan de klant doorbelast.
+                </span>
+              </span>
+            </label>
 
             {/* PDF-totaal verificatie */}
             {(() => {

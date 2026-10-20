@@ -48,7 +48,8 @@ import { DuplicateCandidatesBanner } from "@/components/admin/purchase-invoices/
 import { InvoiceConsistencyPanel } from "@/components/admin/purchase-invoices/InvoiceConsistencyPanel";
 import { UploadInvoicePdfDialog } from "@/components/admin/UploadInvoicePdfDialog";
 import { MissingPdfReminderButton } from "@/components/admin/MissingPdfReminderButton";
-import { Plus, Landmark, Split } from "lucide-react";
+import { Plus, Landmark, Split, UserRound } from "lucide-react";
+import { isCustomerBilled } from "@/lib/invoiceBilledTo";
 import { DistributeLinesDialog } from "@/components/admin/purchase-invoices/DistributeLinesDialog";
 import { Pill } from "@/components/system";
 
@@ -71,7 +72,7 @@ import { resolveInvoiceCommission } from "@/lib/purchaseInvoiceCommission";
 export default function AdminPurchaseInvoices() {
   const [selectedRequestId, setSelectedRequestId] = useState<string>("all");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<PurchaseInvoiceStatus | "all">("all");
+  const [selectedStatus, setSelectedStatus] = useState<PurchaseInvoiceStatus | "customer_billed" | "all">("all");
   // Diep-link vanuit de commissie-werklijst: ?search=<factuurnummer>
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
@@ -84,7 +85,7 @@ export default function AdminPurchaseInvoices() {
   const [distributeInvoice, setDistributeInvoice] = useState<PurchaseInvoiceWithRelations | null>(null);
 
 
-  const { invoices, isLoading, stats, markAsPaid, markAsForwarded, deleteInvoice, getDownloadUrl } = usePurchaseInvoices({
+  const { invoices, isLoading, stats, markAsPaid, markAsForwarded, updateInvoice, deleteInvoice, getDownloadUrl } = usePurchaseInvoices({
     requestId: selectedRequestId !== "all" ? selectedRequestId : undefined,
     partnerId: selectedPartnerId !== "all" ? selectedPartnerId : undefined,
     status: selectedStatus,
@@ -146,7 +147,25 @@ export default function AdminPurchaseInvoices() {
     await markAsPaid.mutateAsync(id);
   };
 
+  // Omzetten tussen "aan het bureau" en "aan de gast" kan zolang het bureau
+  // nog niets met de factuur deed: niet doorgestuurd, niet betaald, niet in een batch.
+  const canToggleBilledTo = (invoice: PurchaseInvoiceWithRelations) =>
+    !invoice.payment_batch_id && invoice.status !== "forwarded" && invoice.status !== "paid";
+
   const getStatusBadge = (invoice: PurchaseInvoiceWithRelations) => {
+    // De gast betaalde rechtstreeks: er is niets door te sturen of te betalen.
+    if (isCustomerBilled(invoice)) {
+      return (
+        <Badge
+          variant="outline"
+          className="bg-teal-50 text-teal-700 border-teal-200"
+          title="De gast heeft deze factuur rechtstreeks aan de partner betaald. Alleen grondslag voor de commissie; niet doorsturen, niet betalen."
+        >
+          <UserRound className="h-3 w-3 mr-1" />
+          Gast betaalde rechtstreeks
+        </Badge>
+      );
+    }
     switch (invoice.status) {
       case "pending_email_match": {
         if (invoice.file_path) {
@@ -248,7 +267,7 @@ export default function AdminPurchaseInvoices() {
               Inkoopfacturen
             </h1>
             <p className="text-muted-foreground">
-              Facturen van partners aan Bureau Vlieland
+              Facturen van partners aan Bureau Vlieland, en facturen aan de gast die alleen voor de commissie tellen
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -338,7 +357,7 @@ export default function AdminPurchaseInvoices() {
                 </SelectContent>
               </Select>
 
-              <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as PurchaseInvoiceStatus | "all")}>
+              <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as PurchaseInvoiceStatus | "customer_billed" | "all")}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Alle statussen" />
                 </SelectTrigger>
@@ -348,6 +367,7 @@ export default function AdminPurchaseInvoices() {
                   <SelectItem value="pending_email_match">Wacht op PDF</SelectItem>
                   <SelectItem value="forwarded">Doorgestuurd</SelectItem>
                   <SelectItem value="paid">Betaald</SelectItem>
+                  <SelectItem value="customer_billed">Gast betaalde rechtstreeks{stats.customerBilled > 0 ? ` (${stats.customerBilled})` : ""}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -569,26 +589,47 @@ export default function AdminPurchaseInvoices() {
                               <Upload className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setForwardDialogInvoice(invoice)}
-                            title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
-                          >
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <InvoiceForwardHistoryPopover
-                            invoiceId={invoice.id}
-                            onResend={() => setForwardDialogInvoice(invoice)}
-                          />
-                          {invoice.status !== "paid" && (
+                          {!isCustomerBilled(invoice) && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setForwardDialogInvoice(invoice)}
+                                title={invoice.status === "pending" ? "Doorsturen naar Snelstart" : "Opnieuw doorsturen"}
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                              <InvoiceForwardHistoryPopover
+                                invoiceId={invoice.id}
+                                onResend={() => setForwardDialogInvoice(invoice)}
+                              />
+                              {invoice.status !== "paid" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleMarkAsPaid(invoice.id)}
+                                  title="Markeer als betaald"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                          {canToggleBilledTo(invoice) && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleMarkAsPaid(invoice.id)}
-                              title="Markeer als betaald"
+                              onClick={() =>
+                                updateInvoice.mutate({ id: invoice.id, billed_to: isCustomerBilled(invoice) ? "bureau" : "customer" })
+                              }
+                              title={
+                                isCustomerBilled(invoice)
+                                  ? "Toch een factuur aan Bureau Vlieland: het bureau stuurt hem door en betaalt"
+                                  : "De gast heeft deze factuur rechtstreeks betaald: alleen commissie, niet doorsturen of betalen"
+                              }
+                              className={isCustomerBilled(invoice) ? "text-teal-700 hover:text-teal-800 hover:bg-teal-50" : undefined}
                             >
-                              <Check className="h-4 w-4" />
+                              <UserRound className="h-4 w-4" />
                             </Button>
                           )}
                           <Button
