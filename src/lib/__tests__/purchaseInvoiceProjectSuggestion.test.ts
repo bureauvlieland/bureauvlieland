@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   normalizeForMatch,
   shouldPreselectProject,
+  stripSalutation,
   suggestProjectFromText,
+  surnameOf,
   type SuggestableProject,
 } from "@/lib/purchaseInvoiceProjectSuggestion";
 
@@ -80,6 +82,65 @@ describe("projectsuggestie uit de factuurtekst", () => {
       project({ id: "p-oud", customer_company: "Timmerfabriek de Houtmolen" }),
     ];
     expect(suggestProjectFromText(doeksenTekst, dubbel)?.projectId).toBe("p-recent");
+  });
+});
+
+describe("particuliere klant met aanhef en voorletters", () => {
+  // Zo staat de klant bij ons: met aanhef en voorletter. Badhotel Bruin zette
+  // op de logiesfactuur alleen "Mw. Swagerman", en het project werd niet gevonden.
+  const swagerman = [
+    project({ id: "p-swagerman", reference_number: "BV-2606-0013", customer_name: "Mevrouw. M. Swagerman" }),
+  ];
+
+  it("vindt de klant als de partner de aanhef anders schrijft", () => {
+    expect(suggestProjectFromText("Logies Classic Garden, gast: Mw. M. Swagerman", swagerman)).toMatchObject({
+      projectId: "p-swagerman",
+      reason: "customer",
+      matchedOn: "Mevrouw. M. Swagerman",
+    });
+  });
+
+  it("vindt de klant op alleen de achternaam, met minder gewicht", () => {
+    expect(suggestProjectFromText("Logies t.n.v. Swagerman, 3 kamers", swagerman)).toMatchObject({
+      projectId: "p-swagerman",
+      reason: "surname",
+      matchedOn: "swagerman",
+    });
+    expect(shouldPreselectProject(suggestProjectFromText("gast Swagerman", swagerman))).toBe(false);
+  });
+
+  it("laat de volledige naam winnen van alleen de achternaam", () => {
+    const twee = [
+      project({ id: "p-ander", customer_name: "Dhr. K. Swagerman" }),
+      project({ id: "p-deze", customer_name: "Mevrouw. M. Swagerman" }),
+    ];
+    expect(suggestProjectFromText("Gast: M. Swagerman", twee)?.projectId).toBe("p-deze");
+  });
+
+  it("doet geen suggestie op een korte of veelvoorkomende achternaam", () => {
+    const jansen = [project({ id: "p-jansen", customer_name: "Mw. A. Jansen" })];
+    expect(suggestProjectFromText("Consumpties Jansen", jansen)).toBeNull();
+  });
+
+  it("matcht alleen op hele woorden, zodat 'de Boer' niet in 'boerderij' zit", () => {
+    const deBoer = [project({ id: "p-boer", customer_name: "Fam. de Boer" })];
+    expect(suggestProjectFromText("Lunch op de boerderij", deBoer)).toBeNull();
+    expect(suggestProjectFromText("Lunch voor fam. De Boer", deBoer)?.projectId).toBe("p-boer");
+  });
+
+  it("haalt de aanhef van de naam af", () => {
+    expect(stripSalutation("mevrouw m swagerman")).toBe("m swagerman");
+    expect(stripSalutation("dhr en mw jansen")).toBe("jansen");
+    expect(stripSalutation("de heer p de vries")).toBe("p de vries");
+    expect(stripSalutation("karin de boer")).toBe("karin de boer");
+  });
+
+  it("kent de achternaam met voorvoegsels", () => {
+    expect(surnameOf("m swagerman")).toBe("swagerman");
+    expect(surnameOf("karin de boer")).toBe("de boer");
+    expect(surnameOf("p van der berg")).toBe("van der berg");
+    expect(surnameOf("swagerman")).toBeNull();
+    expect(surnameOf("de vries")).toBeNull();
   });
 });
 

@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
+import { collectiveInvoiceTotals } from "../_shared/collectiveInvoiceTotals.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -41,8 +42,10 @@ interface FinalizeBody {
     total_excl_vat: number;
     total_vat: number;
     total_incl_vat: number;
+    /** Kolom "TB" van Doeksen, 0 % btw. Komt bovenop total_incl_vat tenzij net_to_pay anders uitwijst. */
+    total_tourist_tax?: number;
     total_supplier_commission: number;
-    /** "Netto bedrag" van de PDF; alleen ter controle in de sheet, wordt niet opgeslagen. */
+    /** "Netto bedrag" van de PDF; wijst uit of de toeristenbelasting al in het totaal zit, wordt niet opgeslagen. */
     net_to_pay?: number;
     description?: string | null;
   };
@@ -122,6 +125,23 @@ Deno.serve(async (req) => {
       ? +((body.invoice.total_vat / body.invoice.total_excl_vat) * 100).toFixed(2)
       : 0;
 
+    // Doeksen zet de toeristenbelasting naast het ticketbedrag en incasseert
+    // tickets + toeristenbelasting − commissie. De factuur die we opslaan moet
+    // dat volledige bedrag dragen, anders herkent de bankmatching de incasso
+    // niet en ontbreekt de toeristenbelasting als inkoop.
+    // Alleen Doeksen heeft reservatienummers, toeristenbelasting en ingehouden
+    // commissie; elke andere partner (Isla, Jan van Vlieland, …) niet.
+    const isDoeksen = body.partner_id === "rederij";
+    const bookingTouristTax = body.bookings.reduce((s, b) => s + (Number(b.tourist_tax) || 0), 0);
+    const totals = collectiveInvoiceTotals({
+      total_incl_vat: body.invoice.total_incl_vat,
+      total_tourist_tax: isDoeksen ? (body.invoice.total_tourist_tax ?? bookingTouristTax) : 0,
+      total_supplier_commission: isDoeksen ? body.invoice.total_supplier_commission : 0,
+      net_to_pay: body.invoice.net_to_pay,
+    });
+    const touristTaxOnTop = totals.touristTax > 0 && !totals.touristTaxIncluded;
+    const invoiceExcl = +(body.invoice.total_excl_vat + (touristTaxOnTop ? totals.touristTax : 0)).toFixed(2);
+
     const { data: invoice, error: invErr } = await adminClient
       .from("partner_purchase_invoices")
       .insert({
@@ -130,10 +150,10 @@ Deno.serve(async (req) => {
         is_collective: true,
         invoice_number: body.invoice.invoice_number,
         invoice_date: body.invoice.invoice_date,
-        amount_excl_vat: body.invoice.total_excl_vat,
+        amount_excl_vat: invoiceExcl,
         vat_rate: supplierVat,
         vat_amount: body.invoice.total_vat,
-        amount_incl_vat: body.invoice.total_incl_vat,
+        amount_incl_vat: totals.grossInclTouristTax,
         supplier_commission_excl_vat: body.invoice.total_supplier_commission,
         supplier_commission_vat: 0,
         description: body.invoice.description || `Verzamelfactuur ${body.invoice.invoice_number}`,
@@ -152,15 +172,14 @@ Deno.serve(async (req) => {
     // 2) Orderregels per boeking, elk met het project waar de boeking bij
     //     hoort. Zo verschijnt elke boeking in het werkblad Doorbelasten van
     //     dat project; de kop blijft één factuur (betaling en Snelstart).
-    const isDoeksen = body.partner_id !== "bagagevervoer-vlieland";
-    const lineRows = body.bookings.map((b, idx) => {
+    const lineRows = body.bookings.flatMap((b, idx) => {
       const dates = (b.departure_dates || []).join(" / ");
       const description = isDoeksen
         ? `Overtocht Doeksen resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}${dates ? ` · ${dates}` : ""}`
         : (b.description || `Bagagevervoer${b.customer_name ? ` · ${b.customer_name}` : ""}${dates ? ` · ${dates}` : ""}`);
       const internal = b.match_status === "internal";
       const vatRate = b.amount_excl_vat > 0 ? Math.round((b.vat_amount / b.amount_excl_vat) * 100) : 0;
-      return {
+      const rows = [{
         invoice_id: invoice.id,
         description: description.slice(0, 500),
         quantity: 1,
@@ -169,14 +188,38 @@ Deno.serve(async (req) => {
         vat_rate: vatRate,
         vat_amount: b.vat_amount,
         amount_incl_vat: b.amount_incl_vat,
-        sort_order: idx,
+        sort_order: idx * 2,
         request_id: internal ? null : (b.request_id ?? null),
         item_id: internal ? null : (b.item_id ?? null),
         charge_status: internal ? "skipped" : "open",
         skip_reason: internal ? "bureaukosten" : null,
         booking_reference: isDoeksen ? b.resnr : null,
         departure_date: b.departure_dates?.[0] || null,
-      };
+      }];
+      // De toeristenbelasting van deze boeking als eigen regel: het bureau
+      // betaalt hem aan Doeksen, maar belast hem nooit door — op de klantfactuur
+      // staat de eigen toeristenbelasting al. Vandaar meteen "niet doorbelasten".
+      const touristTax = Number(b.tourist_tax) || 0;
+      if (isDoeksen && touristTaxOnTop && touristTax > 0) {
+        rows.push({
+          invoice_id: invoice.id,
+          description: `Toeristenbelasting Doeksen resnr ${b.resnr}${b.customer_name ? ` · ${b.customer_name}` : ""}`.slice(0, 500),
+          quantity: 1,
+          unit_price: touristTax,
+          amount_excl_vat: touristTax,
+          vat_rate: 0,
+          vat_amount: 0,
+          amount_incl_vat: touristTax,
+          sort_order: idx * 2 + 1,
+          request_id: internal ? null : (b.request_id ?? null),
+          item_id: null,
+          charge_status: "skipped",
+          skip_reason: internal ? "bureaukosten" : "toeristenbelasting",
+          booking_reference: b.resnr,
+          departure_date: b.departure_dates?.[0] || null,
+        });
+      }
+      return rows;
     });
     const { error: linesErr } = await adminClient.from("purchase_invoice_lines").insert(lineRows);
     if (linesErr) console.error("Insert lines failed:", linesErr);
@@ -319,6 +362,10 @@ function buildSummaryHtml(body: FinalizeBody, invoice: any): string {
     <h2>Verzamelfactuur ${body.invoice.invoice_number}</h2>
     <p><strong>Datum:</strong> ${body.invoice.invoice_date}<br/>
        <strong>Totaal incl. BTW:</strong> € ${body.invoice.total_incl_vat.toFixed(2)}<br/>
+       ${Number(invoice.amount_incl_vat) > body.invoice.total_incl_vat + 0.005
+         ? `<strong>Toeristenbelasting (0% btw):</strong> € ${(Number(invoice.amount_incl_vat) - body.invoice.total_incl_vat).toFixed(2)}<br/>
+       <strong>Factuurbedrag:</strong> € ${Number(invoice.amount_incl_vat).toFixed(2)}<br/>`
+         : ""}
        <strong>Commissie BV (verrekend):</strong> € ${body.invoice.total_supplier_commission.toFixed(2)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
       <thead><tr style="background:#f7f7f7">

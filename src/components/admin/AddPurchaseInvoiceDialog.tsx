@@ -53,6 +53,7 @@ import { useRegisterPartnerIban } from "@/hooks/usePartnerIbanSuggestions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { reportError } from "@/lib/errorReporting";
 import { buildLinesFromScan } from "@/lib/purchaseInvoiceScanLines";
+import { suggestPartner } from "@/lib/purchaseInvoicePartnerSuggestion";
 import {
   PROJECT_MATCH_LABELS,
   shouldPreselectProject,
@@ -342,17 +343,11 @@ export function AddPurchaseInvoiceDialog({
     }
   }, [amountExcl, vatRate, lines.length]);
 
+  // Op IBAN, op naam, of op dezelfde woorden in een andere volgorde: "Jan van
+  // Vlieland Fietsverhuur & Bagagevervoer" is bij ons "Fietsverhuur Jan van Vlieland".
   const suggestedPartnerId = useMemo(() => {
-    if (!scanResult?.supplier_name || !partners) return null;
-    const supplier = scanResult.supplier_name.toLowerCase().trim();
-    const exact = partners.find((p) => p.name.toLowerCase() === supplier);
-    if (exact) return exact.id;
-    const partial = partners.find(
-      (p) =>
-        supplier.includes(p.name.toLowerCase()) ||
-        p.name.toLowerCase().includes(supplier),
-    );
-    return partial?.id || null;
+    if (!scanResult || !partners) return null;
+    return suggestPartner(scanResult, partners)?.partnerId ?? null;
   }, [scanResult, partners]);
 
   /**

@@ -18,6 +18,8 @@
  * btw-overzicht leidend.
  */
 
+import { isTouristTaxDescription } from "@/lib/purchaseLineMatcher";
+
 export interface ScanLineItem {
   description: string;
   quantity: number | null;
@@ -33,6 +35,7 @@ export interface ScanVatBreakdownEntry {
 }
 
 export interface ScanResultLike {
+  description?: string | null;
   amount_excl_vat: number | null;
   vat_rate: number | null;
   vat_amount: number | null;
@@ -122,14 +125,63 @@ export function breakdownExclVat(entry: ScanVatBreakdownEntry): number {
   return Math.abs(round2(given * (rate / 100)) - vat) <= 0.02 ? given : derived;
 }
 
-const rowsFromBreakdown = (breakdown: ScanVatBreakdownEntry[]): ScanLineRow[] =>
-  breakdown
+/**
+ * Noemt een factuur toeristenbelasting? Dan is de 0%-groep uit het btw-overzicht
+ * (vrijwel altijd) die belasting. Die naam moet op de regel staan: het werkblad
+ * Doorbelasten herkent toeristenbelasting aan de omschrijving en slaat hem dan
+ * over, want die rekent het bureau zelf aan de klant. Een regel die "BTW 0%"
+ * heet, glipt daar als gewone kostenpost doorheen.
+ */
+const mentionsTouristTax = (result: Pick<ScanResultLike, "description" | "line_items">): boolean =>
+  isTouristTaxDescription(result.description) ||
+  (result.line_items ?? []).some((li) => isTouristTaxDescription(li.description));
+
+/**
+ * Tot hoeveel verschil tussen het btw-overzicht en het factuurtotaal we als
+ * afronding beschouwen. Hotels en kassasystemen ronden de btw per regel af, en
+ * een grondslag die de scanner uit het btw-bedrag terugrekent zit er een paar
+ * cent naast. Een groter verschil (aanbetaling, verkeerd gelezen bedrag) moet
+ * juist zichtbaar blijven in de verificatie tegen het PDF-totaal.
+ */
+export const BREAKDOWN_ROUNDING_TOLERANCE = 0.25;
+
+/**
+ * Laat de regels uit het btw-overzicht precies optellen tot het factuurtotaal.
+ *
+ * Het btw-bedrag per tarief staat letterlijk op de factuur en blijft staan; het
+ * restje gaat in de grondslag van de grootste groep, waar het relatief het minst
+ * uitmaakt. Zo komt de som op het bedrag dat de partner betaald wil hebben, en
+ * blokkeert de verificatie niet op een centverschil dat niemand kan wegwerken.
+ */
+const absorbRoundingDifference = (rows: ScanLineRow[], headerIncl: number | null): ScanLineRow[] => {
+  if (headerIncl == null || !(headerIncl > 0) || rows.length === 0) return rows;
+  const total = round2(rows.reduce((s, r) => s + Number(r.amount_incl_override ?? 0), 0));
+  const diff = round2(headerIncl - total);
+  if (diff === 0 || Math.abs(diff) > BREAKDOWN_ROUNDING_TOLERANCE) return rows;
+
+  const largest = rows.reduce((best, r, idx) =>
+    Number(r.unit_price) > Number(rows[best].unit_price) ? idx : best, 0);
+  return rows.map((r, idx) => {
+    if (idx !== largest) return r;
+    const excl = round2(Number(r.unit_price) + diff);
+    const vat = Number(r.vat_amount_override ?? 0);
+    return { ...r, unit_price: String(excl), amount_incl_override: String(round2(excl + vat)) };
+  });
+};
+
+const rowsFromBreakdown = (
+  breakdown: ScanVatBreakdownEntry[],
+  result: Pick<ScanResultLike, "description" | "line_items" | "amount_incl_vat">,
+): ScanLineRow[] => {
+  const touristTax = mentionsTouristTax(result);
+  const rows = breakdown
     .filter((b) => (Number(b.amount_excl) || 0) > 0 || (Number(b.vat_amount) || 0) > 0)
     .map((b) => {
       const excl = breakdownExclVat(b);
       const vat = Number(b.vat_amount) || 0;
+      const rate = Number(b.vat_rate) || 0;
       return {
-        description: `BTW ${b.vat_rate}%`,
+        description: rate === 0 && touristTax ? "Toeristenbelasting" : `BTW ${b.vat_rate}%`,
         quantity: "1",
         unit_price: String(excl),
         vat_rate: String(b.vat_rate),
@@ -137,6 +189,12 @@ const rowsFromBreakdown = (breakdown: ScanVatBreakdownEntry[]): ScanLineRow[] =>
         amount_incl_override: b.vat_amount != null ? String(round2(excl + vat)) : undefined,
       };
     });
+  if (rows.some((r) => r.amount_incl_override == null)) return rows;
+  return absorbRoundingDifference(
+    rows,
+    result.amount_incl_vat != null ? Number(result.amount_incl_vat) : null,
+  );
+};
 
 const rowsFromItems = (
   items: ScanLineItem[],
@@ -272,7 +330,7 @@ export function buildLinesFromScan(result: ScanResultLike | null): ScanLineRow[]
   // Eén tarief in het overzicht en regels die de kop tegenspreken: dan is dat ene
   // tarief nog altijd betrouwbaarder dan wat er per regel is ingevuld.
   if (breakdown.length > 1 || (breakdown.length === 1 && itemsAllHaveRate)) {
-    const rows = rowsFromBreakdown(breakdown);
+    const rows = rowsFromBreakdown(breakdown, result);
     if (rows.length > 0) return rows;
   }
 
