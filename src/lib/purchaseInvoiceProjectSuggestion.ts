@@ -21,7 +21,7 @@ export interface SuggestableProject {
   customer_company: string | null;
 }
 
-export type ProjectMatchReason = "reference" | "company" | "customer";
+export type ProjectMatchReason = "reference" | "company" | "customer" | "surname";
 
 export interface ProjectSuggestion {
   projectId: string;
@@ -35,6 +35,7 @@ const SCORES: Record<ProjectMatchReason, number> = {
   reference: 100,
   company: 60,
   customer: 40,
+  surname: 30,
 };
 
 /**
@@ -55,6 +56,44 @@ export function normalizeForMatch(value: string): string {
 const LEGAL_SUFFIXES = /\b(bv|b v|nv|n v|vof|v o f|cv|c v|bvba|gmbh|ltd|inc|stichting|vereniging)\b/g;
 
 const stripLegalForm = (value: string) => value.replace(LEGAL_SUFFIXES, " ").trim().replace(/\s+/g, " ");
+
+/**
+ * Aanhef en titels zoals wij ze bij de klant opslaan ("Mevrouw. M. Swagerman",
+ * "Dhr. en mw. Jansen"). Een partner schrijft de gast zelden precies zo op zijn
+ * factuur, dus ze mogen niet meetellen in wat er gevonden moet worden.
+ */
+const SALUTATION = "(?:mevrouw|mevr|mw|mej|mejuffrouw|de heer|dhr|hr|meneer|mr|mrs|ms|fam|familie|dr|drs|ir|ing|prof)";
+const LEADING_SALUTATIONS = new RegExp(`^(?:${SALUTATION}(?:\\s+en\\s+${SALUTATION})?\\s+)+`);
+
+/** Voorvoegsels die bij de achternaam horen: "de Boer", "van der Berg". */
+const SURNAME_PREFIXES = new Set(["de", "den", "der", "het", "t", "van", "von", "ten", "ter", "te", "op", "in", "aan", "la", "le", "du", "da"]);
+
+/** Haalt de aanhef van een klantnaam af: "mevrouw m swagerman" → "m swagerman". */
+export function stripSalutation(value: string): string {
+  return value.replace(LEADING_SALUTATIONS, "").trim();
+}
+
+/**
+ * De achternaam uit een klantnaam zonder aanhef: het laatste woord plus de
+ * voorvoegsels ervoor. "karin de boer" → "de boer", "m swagerman" → "swagerman".
+ * Eén enkel woord is al de achternaam; die geeft niets extra's terug.
+ */
+export function surnameOf(value: string): string | null {
+  const words = value.split(" ").filter(Boolean);
+  if (words.length < 2) return null;
+  let start = words.length - 1;
+  while (start > 0 && SURNAME_PREFIXES.has(words[start - 1])) start -= 1;
+  if (start === 0) return null;
+  return words.slice(start).join(" ");
+}
+
+/**
+ * Staat `needle` als hele woorden in `haystack`? Beide zijn al genormaliseerd,
+ * dus een spatie is de enige woordgrens. Zonder deze grens vindt "de boer" ook
+ * "op de boerderij".
+ */
+const containsWords = (haystack: string, needle: string) =>
+  ` ${haystack} `.includes(` ${needle} `);
 
 /**
  * Te korte of te algemene namen leveren toevalstreffers op. "Ad" of "De Zon"
@@ -82,29 +121,41 @@ export function suggestProjectFromText(
   const consider = (
     projectId: string,
     reason: ProjectMatchReason,
-    raw: string | null,
+    needle: string | null,
+    matchedOn: string,
     { requireDistinctive = true }: { requireDistinctive?: boolean } = {},
   ) => {
-    if (!raw) return;
-    const needle = reason === "reference"
-      ? normalizeForMatch(raw)
-      : stripLegalForm(normalizeForMatch(raw));
     if (!needle) return;
     if (requireDistinctive && !isDistinctive(needle)) return;
-    if (!haystack.includes(needle)) return;
+    if (!containsWords(haystack, needle)) return;
 
     const score = SCORES[reason];
     // Bij gelijke score wint het project dat als eerste langskomt; de aanroeper
     // levert ze op datum aan, dus dat is het meest recente.
     if (best && best.score >= score) return;
-    best = { projectId, reason, matchedOn: raw, score };
+    best = { projectId, reason, matchedOn, score };
   };
 
   for (const project of projects) {
     // Ons eigen referentienummer op hun factuur is het sterkste signaal dat er is.
-    consider(project.id, "reference", project.reference_number, { requireDistinctive: false });
-    consider(project.id, "company", project.customer_company);
-    consider(project.id, "customer", project.customer_name);
+    if (project.reference_number) {
+      consider(project.id, "reference", normalizeForMatch(project.reference_number), project.reference_number, {
+        requireDistinctive: false,
+      });
+    }
+    if (project.customer_company) {
+      consider(project.id, "company", stripLegalForm(normalizeForMatch(project.customer_company)), project.customer_company);
+    }
+    // Een particuliere klant staat bij ons met aanhef en voorletters ("Mevrouw.
+    // M. Swagerman"); de partner schrijft meestal "Mw. Swagerman" of alleen
+    // "Swagerman" op de factuur. Daarom telt de aanhef niet mee en wordt ook op
+    // de achternaam alleen gezocht — met minder gewicht, want die is minder uniek.
+    if (project.customer_name) {
+      const customer = stripSalutation(normalizeForMatch(project.customer_name));
+      consider(project.id, "customer", customer, project.customer_name);
+      const surname = surnameOf(customer);
+      if (surname) consider(project.id, "surname", surname, surname);
+    }
   }
 
   if (!best) return null;
@@ -121,4 +172,5 @@ export const PROJECT_MATCH_LABELS: Record<ProjectMatchReason, string> = {
   reference: "referentienummer op de factuur",
   company: "bedrijfsnaam op de factuur",
   customer: "klantnaam op de factuur",
+  surname: "achternaam van de klant op de factuur",
 };

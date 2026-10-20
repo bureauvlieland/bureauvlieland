@@ -30,8 +30,11 @@ Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regel
 VAT BREAKDOWN (KRITIEK):
 - Vrijwel elke factuur toont onderaan een BTW-overzicht/grondslag-tabel met de subtotalen per tarief (bv. "9% over 871,56 = 78,44" en "21% over 231,40 = 48,60"). Lees dit overzicht ZORGVULDIG.
 - Vul vat_breakdown ALTIJD in met één entry per uniek BTW-tarief dat op de factuur voorkomt (sla 0%-regels met bedrag 0 over).
-- Staat er alleen een BTW-BEDRAG per tarief (bv. "BTW laag € 35,60") en geen grondslag? Bereken de grondslag dan zelf: bedrag ÷ (tarief/100).
+- Staat de grondslag per tarief op de factuur (kolom "Grondslag", "Excl.", "Over" of "Bedrag")? Neem die dan LETTERLIJK over, cent voor cent. NOOIT zelf herberekenen uit het BTW-bedrag: hotels en kassa's ronden de BTW per regel af, waardoor bedrag ÷ tarief een paar cent naast de gedrukte grondslag zit.
+- Staat er ALLEEN een BTW-BEDRAG per tarief (bv. "BTW laag € 35,60") en geen grondslag? Alleen dan bereken je de grondslag zelf: bedrag ÷ (tarief/100).
+- Neem ook het BTW-BEDRAG per tarief letterlijk over zoals gedrukt; dat is het bedrag dat de partner afdraagt.
 - amount_excl in vat_breakdown is ALTIJD exclusief BTW (de grondslag/Exclusief-kolom, NIET de bruto-kolom).
+- Toeristenbelasting staat vaak als aparte 0%-groep in het overzicht (of als losse regel onder het totaal). Neem die op als entry met vat_rate 0 en vat_amount 0; sla alleen 0%-entries met bedrag 0 over.
 - Som van vat_breakdown[].amount_excl MOET gelijk zijn aan amount_excl_vat (header).
 - Som van vat_breakdown[].vat_amount MOET gelijk zijn aan vat_amount (header).
 - BIJ GEMENGDE TARIEVEN (meerdere entries in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen — dat leidt tot foute herberekening.
@@ -54,8 +57,13 @@ ORDERREGELS:
 - Per regel MOET je vat_rate invullen (BTW-tarief van die specifieke regel: 0, 9 of 21).
 - Als regel-tarieven niet duidelijk te lezen zijn maar er WEL een BTW-overzicht is, mag line_items leeg blijven — vat_breakdown is dan leidend. Verzin liever geen tarief per regel dan een verkeerd tarief: het BTW-overzicht wint toch.
 
+FACTUURTOTAAL:
+- amount_incl_vat = het totaal van de factuur zoals gedrukt ("Totaal", "Factuurbedrag", "Totaal incl. BTW").
+- Staat er een aanbetaling, voorschot of "reeds voldaan" en daaronder een lager "te betalen"/"restant"? Neem dan tóch het volledige factuurtotaal, NIET het restant. Het restant is een betaalinstructie, geen factuurbedrag.
+
 REKENKUNDIGE CHECK:
-- amount_excl_vat + vat_amount = amount_incl_vat (controleer dit altijd!).`;
+- amount_excl_vat + vat_amount = amount_incl_vat (controleer dit altijd!).
+- Klopt dat niet op een paar cent na, dan heb je waarschijnlijk een bedrag herberekend in plaats van overgenomen: kijk opnieuw naar wat er gedrukt staat.`;
 
 /** De tool-definitie met het schema; identiek voor beide scanroutes. */
 export const INVOICE_SCAN_TOOL = {

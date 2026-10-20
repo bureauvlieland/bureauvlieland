@@ -80,14 +80,15 @@ describe("voor te vullen factuurregels", () => {
     const rows = buildLinesFromScan(doeksen);
 
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({ vat_rate: "9", unit_price: "395.56", vat_amount_override: "35.6" });
+    // Het overzicht telt op tot € 508,20; de 5 cent afronding zit in de grootste
+    // grondslag, de btw-bedragen blijven precies wat er op de factuur staat.
+    expect(rows[0]).toMatchObject({ vat_rate: "9", unit_price: "395.51", vat_amount_override: "35.6" });
     expect(rows[1]).toMatchObject({ vat_rate: "21", unit_price: "63.67", vat_amount_override: "13.37" });
 
-    // En daarmee komt het factuurtotaal weer bij de € 508,15 van de PDF in de buurt,
+    // En daarmee komt het factuurtotaal precies op de € 508,15 van de PDF,
     // in plaats van de € 512,11 die eruit kwam toen de gegokte tarieven wonnen.
     const totalIncl = rows.reduce((s, r) => s + Number(r.amount_incl_override), 0);
-    expect(totalIncl).toBeCloseTo(508.2, 2);
-    expect(Math.abs(totalIncl - 512.11)).toBeGreaterThan(3);
+    expect(totalIncl).toBeCloseTo(508.15, 2);
   });
 
   it("houdt de gescande regels als ze wél kloppen", () => {
@@ -142,6 +143,8 @@ describe("wat er op de factuur staat wint van wat de scanner erbij verzint", () 
   it("leidt de grondslag af uit het btw-bedrag als de opgegeven grondslag niet past", () => {
     const rows = buildLinesFromScan({
       ...doeksen,
+      // Totaal gelijk aan het overzicht, zodat er geen afronding te verdelen valt.
+      amount_incl_vat: 508.2,
       // Scanner geeft een grondslag die niet bij het btw-bedrag hoort.
       vat_breakdown: [
         { vat_rate: 9, amount_excl: 362.57, vat_amount: 35.6 },
@@ -203,5 +206,70 @@ describe("wat er op de factuur staat wint van wat de scanner erbij verzint", () 
     expect(buildLinesFromScan({
       amount_excl_vat: null, vat_rate: null, vat_amount: null, amount_incl_vat: null, line_items: [],
     })).toEqual([]);
+  });
+});
+
+/**
+ * De logiesfactuur van Badhotel Bruin (oktober 2026): drie kamers, twee
+ * nachten, toeristenbelasting en restaurant. De scanner gaf regels die elkaar
+ * tegenspraken (stuksprijs 40,92 bij een regeltotaal van 37,87), dus het
+ * btw-overzicht werd leidend. Dat telde op tot € 2727,42 terwijl de factuur
+ * € 2727,33 zegt: 9 cent, en de verificatie blokkeerde het opslaan.
+ */
+const badhotel: ScanResultLike = {
+  description: "Logies (Classic Garden kamers 16-10-2026 t/m 18-10-2026), toeristenbelasting en restaurantconsumpties",
+  amount_excl_vat: 2334.8,
+  vat_rate: null,
+  vat_amount: 392.53,
+  amount_incl_vat: 2727.33,
+  line_items: [
+    { description: "Logies Classic Garden", quantity: 6, unit_price: 125.31, total_excl_vat: 751.87, vat_rate: 9 },
+    { description: "Restaurant 59012 (17-10-2026, Tafel 1)", quantity: 1, unit_price: 40.92, total_excl_vat: 37.87, vat_rate: 9 },
+    { description: "Toeristenbelasting", quantity: 12, unit_price: 3.01, total_excl_vat: 36.12, vat_rate: 0 },
+  ],
+  vat_breakdown: [
+    { vat_rate: 0, amount_excl: 36.12, vat_amount: 0 },
+    { vat_rate: 9, amount_excl: 751.87, vat_amount: 67.68 },
+    { vat_rate: 21, amount_excl: 1546.9, vat_amount: 324.85 },
+  ],
+};
+
+describe("regels uit het btw-overzicht van een logiesfactuur", () => {
+  it("noemt de 0%-groep toeristenbelasting als de factuur die noemt", () => {
+    const rows = buildLinesFromScan(badhotel);
+    expect(rows.map((r) => r.description)).toEqual(["Toeristenbelasting", "BTW 9%", "BTW 21%"]);
+  });
+
+  it("houdt 'BTW 0%' als er geen toeristenbelasting op de factuur staat", () => {
+    const rows = buildLinesFromScan({
+      ...badhotel,
+      description: "Logies en restaurant",
+      line_items: badhotel.line_items.filter((li) => li.vat_rate !== 0),
+    });
+    expect(rows[0].description).toBe("BTW 0%");
+  });
+
+  it("laat de regels precies optellen tot het factuurtotaal bij een centverschil", () => {
+    const rows = buildLinesFromScan(badhotel);
+    const totalIncl = rows.reduce((s, r) => s + Number(r.amount_incl_override), 0);
+    expect(totalIncl).toBeCloseTo(2727.33, 2);
+
+    // De 9 cent zit in de grootste grondslag; de btw-bedragen zijn onaangeroerd.
+    expect(rows[2]).toMatchObject({ vat_rate: "21", unit_price: "1546.81", vat_amount_override: "324.85", amount_incl_override: "1871.66" });
+    expect(rows[1]).toMatchObject({ unit_price: "751.87", vat_amount_override: "67.68" });
+    expect(rows[0]).toMatchObject({ unit_price: "36.12" });
+  });
+
+  it("laat een groter verschil staan, want dat is geen afronding", () => {
+    // Een aanbetaling van € 500 die van het te betalen bedrag af is: dat moet de
+    // verificatie juist laten zien, niet wegwerken.
+    const rows = buildLinesFromScan({ ...badhotel, amount_incl_vat: 2227.42 });
+    const totalIncl = rows.reduce((s, r) => s + Number(r.amount_incl_override), 0);
+    expect(totalIncl).toBeCloseTo(2727.42, 2);
+  });
+
+  it("doet niets zonder factuurtotaal", () => {
+    const rows = buildLinesFromScan({ ...badhotel, amount_incl_vat: null });
+    expect(rows[2].unit_price).toBe("1546.9");
   });
 });
