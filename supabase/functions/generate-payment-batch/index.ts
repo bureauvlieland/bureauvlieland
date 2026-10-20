@@ -248,11 +248,26 @@ Deno.serve(async (req) => {
     const now = new Date();
     const creDtTm = now.toISOString().replace(/\.\d{3}Z$/, "");
 
-    const txBlocks = (invoices as any[]).map((inv, idx) => {
+    const dbtrAgtBlock = bureauBic
+      ? `      <DbtrAgt><FinInstnId><BIC>${xmlEscape(bureauBic)}</BIC></FinInstnId></DbtrAgt>`
+      : `      <DbtrAgt><FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId></DbtrAgt>`;
+
+    // Eén PmtInf (batch) per betaling.
+    //
+    // Mijn ING Zakelijk boekt een PmtInf altijd als één "Verzamelbetaling" op het
+    // rekeningoverzicht, ook met <BtchBookg>false</BtchBookg> (BATCH-2610-0001 kwam
+    // als één afschrijving van 12.668,32 binnen in Snelstart). Daardoor was er geen
+    // match tussen de losse inkoopfacturen en de afschrijving. Met één PmtInf per
+    // factuur schrijft ING elke betaling apart af; de Batch ID (= PmtInfId) komt in
+    // de omschrijving op het afschrift en bevat het factuurnummer, zodat Snelstart
+    // de inkoopfactuur op bedrag + factuurnummer kan koppelen.
+    const pmtInfBlocks = (invoices as any[]).map((inv, idx) => {
       const partnerIban = (inv.partners.iban as string).replace(/\s/g, "").toUpperCase();
       const partnerBic = ((inv.partners.bic as string) || "").replace(/\s/g, "").toUpperCase();
       const amount = Number(inv.amount_incl_vat).toFixed(2);
-      const endToEnd = sanitizeRef(`${batchRef}-${idx + 1}-${inv.invoice_number}`.replace(/[^A-Za-z0-9-]/g, ""));
+      // Zelfde referentie als Batch ID (PmtInfId) én EndToEndId: uniek per batch,
+      // en het factuurnummer staat erin. Max 35 tekens, alleen A-Z, 0-9 en '-'.
+      const paymentRef = sanitizeRef(`${batchRef}-${idx + 1}-${inv.invoice_number}`.replace(/[^A-Za-z0-9-]/g, ""));
       const cdtrName = sanitizeName(inv.partners.name);
       // Een verzamelfactuur heeft geen project op de kop: één betaling, één
       // omschrijving "verzamel"; de projecten staan op de regels.
@@ -261,21 +276,28 @@ Deno.serve(async (req) => {
       const bicBlock = partnerBic
         ? `        <CdtrAgt><FinInstnId><BIC>${xmlEscape(partnerBic)}</BIC></FinInstnId></CdtrAgt>\n`
         : "";
-      return `      <CdtTrfTxInf>
-        <PmtId><EndToEndId>${xmlEscape(endToEnd)}</EndToEndId></PmtId>
+      return `    <PmtInf>
+      <PmtInfId>${xmlEscape(paymentRef)}</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${amount}</CtrlSum>
+      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf>
+      <ReqdExctnDt>${executionDate}</ReqdExctnDt>
+      <Dbtr><Nm>${xmlEscape(bureauName)}</Nm></Dbtr>
+      <DbtrAcct><Id><IBAN>${xmlEscape(bureauIban)}</IBAN></Id><Ccy>EUR</Ccy></DbtrAcct>
+${dbtrAgtBlock}
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId><EndToEndId>${xmlEscape(paymentRef)}</EndToEndId></PmtId>
         <Amt><InstdAmt Ccy="EUR">${amount}</InstdAmt></Amt>
 ${bicBlock}        <Cdtr><Nm>${xmlEscape(cdtrName)}</Nm></Cdtr>
         <CdtrAcct><Id><IBAN>${xmlEscape(partnerIban)}</IBAN></Id></CdtrAcct>
         <RmtInf><Ustrd>${xmlEscape(remit)}</Ustrd></RmtInf>
-      </CdtTrfTxInf>`;
+      </CdtTrfTxInf>
+    </PmtInf>`;
     }).join("\n");
 
-    const dbtrAgtBlock = bureauBic
-      ? `        <DbtrAgt><FinInstnId><BIC>${xmlEscape(bureauBic)}</BIC></FinInstnId></DbtrAgt>`
-      : `        <DbtrAgt><FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId></DbtrAgt>`;
-
-    // BtchBookg=false: de bank boekt elke betaling los af (met eigen omschrijving)
-    // in plaats van één samengesteld bedrag op het rekeningoverzicht.
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <CstmrCdtTrfInitn>
@@ -286,20 +308,7 @@ ${bicBlock}        <Cdtr><Nm>${xmlEscape(cdtrName)}</Nm></Cdtr>
       <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
       <InitgPty><Nm>${xmlEscape(bureauName)}</Nm></InitgPty>
     </GrpHdr>
-    <PmtInf>
-      <PmtInfId>${xmlEscape(batchRef)}-01</PmtInfId>
-      <PmtMtd>TRF</PmtMtd>
-      <BtchBookg>false</BtchBookg>
-      <NbOfTxs>${transactionCount}</NbOfTxs>
-      <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
-      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf>
-      <ReqdExctnDt>${executionDate}</ReqdExctnDt>
-      <Dbtr><Nm>${xmlEscape(bureauName)}</Nm></Dbtr>
-      <DbtrAcct><Id><IBAN>${xmlEscape(bureauIban)}</IBAN></Id><Ccy>EUR</Ccy></DbtrAcct>
-${dbtrAgtBlock}
-      <ChrgBr>SLEV</ChrgBr>
-${txBlocks}
-    </PmtInf>
+${pmtInfBlocks}
   </CstmrCdtTrfInitn>
 </Document>`;
 

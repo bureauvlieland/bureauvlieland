@@ -67,6 +67,32 @@ describe("broncontract: batchgeneratie zet status op betaald", () => {
   });
 });
 
+describe("broncontract: SEPA-bestand met één PmtInf per betaling", () => {
+  const src = readFileSync(
+    resolve(process.cwd(), "supabase/functions/generate-payment-batch/index.ts"),
+    "utf8",
+  );
+
+  it("maakt per factuur een eigen batch (PmtInf) met 1 transactie", () => {
+    // Mijn ING Zakelijk boekt elke PmtInf als één verzamelbetaling, ongeacht
+    // BtchBookg. Alleen met één PmtInf per factuur komt elke betaling los op
+    // het afschrift en kan Snelstart de inkoopfactuur koppelen.
+    const pmtInf = src.slice(src.indexOf("<PmtInf>"), src.indexOf("</PmtInf>"));
+    expect(pmtInf).toContain("<NbOfTxs>1</NbOfTxs>");
+    expect(pmtInf).toContain("<CtrlSum>${amount}</CtrlSum>");
+    expect(pmtInf).toContain("<PmtInfId>${xmlEscape(paymentRef)}</PmtInfId>");
+    expect(pmtInf).toContain("<EndToEndId>${xmlEscape(paymentRef)}</EndToEndId>");
+    // De PmtInf-template zit in de map over de facturen, niet erbuiten.
+    expect(src.indexOf("<PmtInf>")).toBeGreaterThan(src.indexOf("(invoices as any[]).map("));
+  });
+
+  it("houdt in de GrpHdr het totaal van alle betalingen", () => {
+    const grpHdr = src.slice(src.indexOf("<GrpHdr>"), src.indexOf("</GrpHdr>"));
+    expect(grpHdr).toContain("<NbOfTxs>${transactionCount}</NbOfTxs>");
+    expect(grpHdr).toContain("<CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>");
+  });
+});
+
 describe("broncontract: annuleren draait terug", () => {
   const src = readFileSync(
     resolve(process.cwd(), "src/pages/admin/AdminPaymentBatches.tsx"),
